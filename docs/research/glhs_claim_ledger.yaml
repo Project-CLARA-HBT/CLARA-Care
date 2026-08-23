@@ -1,0 +1,291 @@
+schema_version: "1.0.0"
+ledger_name: "GLHS Manuscript Claim Ledger"
+last_updated: "2026-08-22"
+description: >
+  Claim ledger for the GLHS (Governed Longitudinal Health State) research program and journal revisions.
+  Enforces claim gating rules, required empirical/formal evidence, allowed wording, and forbidden phrasing.
+  CI/CD consistency checks reject any paper sentence tagged to a claim whose gate has not passed.
+
+claims:
+  - claim_id: "C-001"
+    proposed_claim: "Exact model-visible disclosure is cryptographically bound to the proposal and commit"
+    current_status: "partial_implementation"
+    gate_passed: false
+    publication_rule: "No headline claim until all adversarial tests pass"
+    gating_rules:
+      - "Pass 100% of SEC-DISC context substitution, omission, cross-proposal replay, stale-evidence, and post-inference policy-change test suites."
+      - "Independent verifier pass with zero bypasses."
+      - "RFC 8785 canonicalization conformance vectors match cross-language."
+    required_evidence: "Substitution/replay/omission attacks; independent verifier; canonicalization vectors"
+    allowed_phrasing:
+      - "Exact model-visible disclosure is cryptographically bound to the proposal and commit on evaluated snapshot-bound paths."
+      - "GLHS binds the exact Task-Bounded Health State Snapshot (THSS) canonical Merkle digest to persistent proposals."
+      - "A Governed State Transition (GST) verifies the canonical Merkle digest of the disclosed context before admitting durable mutations."
+    forbidden_phrasing:
+      - "GLHS guarantees universal context binding across all unverified or unbound endpoints."
+      - "Any headline claim of cryptographic binding superiority before all adversarial tests pass."
+      - "Claiming invention of cryptographic Merkle hashing or hash-based disclosure tracking."
+      - "signed Merkle root"
+    source_artifact_ids:
+      - "GLHS-BINDING-ABLATION-20260819-01"
+      - "GLHS-BA-POSTGRES-20260819-05"
+      - "CANONICAL-V2-VECTORS-20260822"
+    source_sha256: "caee52724665c351194c14cfa259389a695dd8b2d0729a0fa31886bb0c7474c2"
+    code_sha: "af4e18e376ea24d1a9278777a92736c39aac8a64"
+    dataset_version: "GLHS-SYNTH-V2-20260819"
+    statistical_gate: "Zero undetected context substitutions, omissions, or replays (100% rejection in SEC-DISC suite; paired risk difference 1.0, 95% CI [1.0, 1.0], exact McNemar p < 1e-10; one-sided 95% UCB below risk ceiling)."
+    formal_gate: "Deterministic canonicalization and SHA-256 second-preimage collision resistance proof over closed-world context frame."
+    reviewer: "Security & Cryptography Track Lead"
+    approval_date: null
+    expiration_condition: "Expires upon modification to canonicalization profiles, hash preimage algorithms, or THSS serialization schema."
+
+  - claim_id: "C-002"
+    proposed_claim: "Commit authorization is fresh with respect to all governing policy/consent scopes"
+    current_status: "paper_code_mismatch"
+    gate_passed: false
+    publication_rule: "Withdraw theorem until code and model agree"
+    gating_rules:
+      - "Persisted governance vector matches production schema."
+      - "Shared-reader/exclusive-writer lock hierarchy implemented and verified in PostgreSQL."
+      - "GOV-RACE concurrency schedules show zero unauthorized commits."
+    required_evidence: "Persisted governance vector; shared-reader/exclusive-writer protocol; stale-governance schedules"
+    allowed_phrasing:
+      - "Commit authorization is revalidated against persisted governing policy epochs and monotonic consent event epochs under shared/exclusive locks on evaluated paths."
+      - "GLHS prevents Time-of-Check to Time-of-Use (TOCTOU) authorization drift and A-B-A consent revocation blindness across the read-to-write interval."
+    forbidden_phrasing:
+      - "GLHS invented commit-time authorization (prior work: CommitGuard, Santos-Grueiro 2026)."
+      - "Universal race-freedom claims while paper and production code lock modes diverge."
+      - "Claiming policy-state serializability invention (prior work: MasuGate, Peng & Wu 2026)."
+      - "Provenact"
+    source_artifact_ids:
+      - "GLHS-CONCURRENCY-REPETITION-V1-20260819"
+      - "GOV-RACE-SCHEDULES-20260822"
+    source_sha256: "pending_governance_vector_freeze"
+    code_sha: "af4e18e376ea24d1a9278777a92736c39aac8a64"
+    dataset_version: "GOV-TOCTOU-CORPUS-20260819"
+    statistical_gate: "Zero unauthorized commits across 600 PostgreSQL TOCTOU repetition runs and GOV-RACE schedules; 100% rejection of post-revocation admissions."
+    formal_gate: "TLA+ model checking verifying policy-state serializability without lock escalation deadlocks."
+    reviewer: "Governance & Systems Architecture Lead"
+    approval_date: null
+    expiration_condition: "Expires upon alteration of lock ordering, consent epoch schema, or policy resolution logic."
+
+  - claim_id: "C-003"
+    proposed_claim: "All declared state dependencies are fresh at commit"
+    current_status: "not_implemented_in_schema"
+    gate_passed: false
+    publication_rule: "Stop-ship until normalized persisted dependency vector schema and production revalidation are fully implemented"
+    gating_rules:
+      - "Schema migration for glhs_proposal_dependencies deployed."
+      - "Production commit kernel reads normalized persisted dependency vector without dynamic inferencing."
+      - "DEP-OCC mutation test suite kills 100% of injected stale-dependency bypass mutants."
+    required_evidence: "Normalized persisted dependency vector; production revalidation; mutation tests"
+    allowed_phrasing:
+      - "All declared state dependencies are persisted in a normalized vector at proposal time and verified for freshness at commit time."
+      - "GST evaluates per-partition version currency against locked database records before admitting transitions."
+    forbidden_phrasing:
+      - "Headline claims of fine-grained dependency freshness before schema implementation."
+      - "Claiming invention of read-set tracking or optimistic concurrency control (prior work: S-Bus, classical OCC)."
+    source_artifact_ids:
+      - "DEP-OCC-MUTATION-SUITE-20260822"
+    source_sha256: "pending_dependency_vector_migration"
+    code_sha: "pending_ws1_schema_commit"
+    dataset_version: "CLINICAL-DEPS-V1-20260822"
+    statistical_gate: "Zero missed declared-dependency invalidations across DEP-OCC test suite; false-stale abort rate lower than monolithic profile OCC."
+    formal_gate: "Refinement proof linking proposal dependency vector to applied transition partition version links."
+    reviewer: "Database Systems & Data Integrity Lead"
+    approval_date: null
+    expiration_condition: "Expires upon changes to dependency vector normalization, partition versioning schema, or commit kernel revalidation logic."
+
+  - claim_id: "C-004"
+    proposed_claim: "Disjoint-scope commits do not falsely conflict"
+    current_status: "blocked_by_global_lock"
+    gate_passed: false
+    publication_rule: "Stop-ship; do not claim disjoint concurrency until global lock/state gate is replaced with entity-partitioned locks"
+    gating_rules:
+      - "Replace profile-global lock/state gate with entity-partitioned DAG locking."
+      - "Pass full production-gateway overlap tests (SCH-01 through SCH-10)."
+      - "Demonstrate positive concurrency overlap and 0.0% false-stale abort rate in PostgreSQL benchmark."
+    required_evidence: "Full production-gateway overlap tests and real PostgreSQL benchmark"
+    allowed_phrasing:
+      - "Entity-Partitioned DAG Versioning isolates locks to declared dependency subgraphs, eliminating false-stale aborts on verified disjoint partition workloads."
+      - "Concurrent proposals targeting disjoint clinical domains commit without mutual lock contention."
+    forbidden_phrasing:
+      - "Claiming zero false-stale aborts or parallel disjoint commits under monolithic profile locks."
+      - "Broad scalability or throughput claims without real PostgreSQL benchmark measurements."
+    source_artifact_ids:
+      - "PERF-SCOPE-BENCHMARK-20260822"
+    source_sha256: "pending_lock_hierarchy_refactor"
+    code_sha: "pending_ws2_lock_commit"
+    dataset_version: "DISJOINT-WORKLOAD-GRID-20260822"
+    statistical_gate: "0.0% false-stale abort rate on disjoint partition workloads; statistically higher throughput vs monolithic global lock baseline (p < 0.01)."
+    formal_gate: "Proof of lock acquisition disjointness and absence of phantom conflicts under canonical 2PL hierarchy."
+    reviewer: "Performance & Concurrency Engineering Lead"
+    approval_date: null
+    expiration_condition: "Expires upon modifications to lock hierarchy, key generation, or partition resolution."
+
+  - claim_id: "C-005"
+    proposed_claim: "Same-scope conflicting writes have at most one successful version successor"
+    current_status: "partially_tested"
+    gate_passed: false
+    publication_rule: "May claim only after production-path PostgreSQL test"
+    gating_rules:
+      - "Row-level exclusive locks (SELECT ... FOR UPDATE) acquired in canonical lexicographical order."
+      - "Partition version CAS constraints enforced at database level."
+      - "Linearizability histories verified under real PostgreSQL concurrency."
+    required_evidence: "Linearizability histories; model checking; DB constraints"
+    allowed_phrasing:
+      - "Conflicting writes targeting the same clinical entity partition serialize with at most one successful version successor via row-level locking and monotonic version CAS."
+      - "GLHS preserves linearizability on contested partition writes."
+    forbidden_phrasing:
+      - "Unqualified linearizability claims across arbitrary unpartitioned multi-master deployments."
+      - "Claiming invention of two-phase locking or compare-and-swap primitives."
+    source_artifact_ids:
+      - "PERF-HOT-LINEARIZABILITY-20260822"
+    source_sha256: "pending_postgres_linearizability_freeze"
+    code_sha: "af4e18e376ea24d1a9278777a92736c39aac8a64"
+    dataset_version: "HOT-PARTITION-RACE-20260822"
+    statistical_gate: "100% mutual exclusion on conflicting partition writes (zero double-success transitions in PERF-HOT schedules)."
+    formal_gate: "TLA+ safety invariant AtMostOneSuccessorPerVersion verified across full reachable state space under TLC."
+    reviewer: "Formal Methods & Verification Lead"
+    approval_date: null
+    expiration_condition: "Expires upon changes to transaction isolation levels, version advancement logic, or DB unique constraints."
+
+  - claim_id: "C-006"
+    proposed_claim: "Retry/idempotency yields exactly one durable transition"
+    current_status: "incomplete"
+    gate_passed: false
+    publication_rule: "Required for systems claim; cannot claim full fault tolerance until crash matrix passes"
+    gating_rules:
+      - "Implement proposal idempotency uniqueness and deterministic stored-result replay."
+      - "Pass FAULT-ATOMIC crash injection matrix (kill before commit, kill during outbox, timeout retry)."
+      - "Verify zero partial state transitions or duplicate clinical records."
+    required_evidence: "Crash matrix and idempotency uniqueness"
+    allowed_phrasing:
+      - "Idempotency keys and deterministic stored-result replay ensure that client retries and gateway crashes yield exactly one durable state transition."
+      - "GLHS provides exactly-once external semantics and at-least-once internal processing."
+    forbidden_phrasing:
+      - "Claiming crash-proof operation without complete fault injection matrix verification."
+      - "Claiming invention of transactional outbox or idempotency tables."
+    source_artifact_ids:
+      - "FAULT-ATOMIC-CRASH-MATRIX-20260822"
+    source_sha256: "pending_crash_matrix_freeze"
+    code_sha: "pending_ws3_commit_kernel"
+    dataset_version: "FAULT-INJECTION-V1-20260822"
+    statistical_gate: "Exactly one applied transition record per proposal under 100% of kill/retry/timeout fault injection runs (zero split-brain or duplicate state updates)."
+    formal_gate: "TLA+ crash/recovery specification showing state consistency and idempotency invariance under node failures."
+    reviewer: "Reliability & Distributed Systems Lead"
+    approval_date: null
+    expiration_condition: "Expires upon modifications to idempotency key generation, outbox staging, or crash recovery handlers."
+
+  - claim_id: "C-007"
+    proposed_claim: "Audit reconstruction detects omission/tampering"
+    current_status: "digest_exists_signed_unsupported"
+    gate_passed: false
+    publication_rule: "Do not say signed unless signature is implemented; use canonical Merkle digest or unforgeable Merkle digest"
+    gating_rules:
+      - "All occurrences of 'signed Merkle root' replaced with 'canonical Merkle digest' in text and code."
+      - "Independent audit reconstruction tool passes on 100% of untampered logs."
+      - "100% detection of injected payload corruptions, digest tampering, and event omissions."
+    required_evidence: "Independent replay, chain verification, corruption injection"
+    allowed_phrasing:
+      - "Canonical Merkle digests and append-only audit event chains enable independent reconstruction and detection of payload tampering or event omission."
+      - "The reconciliation kernel verifies canonical Merkle digests of task-bounded health state snapshots before commitment."
+    forbidden_phrasing:
+      - "Using 'signed Merkle root', 'signed Merkle digest', or 'cryptographically signed checkpoint' without asymmetric signature implementation."
+      - "Claiming invention of Merkle tree hashing, cryptographic digests, or audit log chaining."
+      - "gốc Merkle có chữ ký"
+      - "mã băm Merkle đã ký"
+    source_artifact_ids:
+      - "AUD-REPLAY-VERIFICATION-20260822"
+    source_sha256: "pending_audit_verifier_freeze"
+    code_sha: "af4e18e376ea24d1a9278777a92736c39aac8a64"
+    dataset_version: "AUDIT-CORRUPTION-CORPUS-20260822"
+    statistical_gate: "100% detection of injected corruptions (32/32 digest tampering, 32/32 payload modification, 32/32 provenance omission; Fisher exact p < 1e-9)."
+    formal_gate: "Mathematical proof of hash chain integrity and SHA-256 collision resistance under canonical serialization."
+    reviewer: "Audit & Compliance Assurance Lead"
+    approval_date: null
+    expiration_condition: "Expires upon changes to audit event schema, hash chaining logic, or serialization format."
+
+  - claim_id: "C-008"
+    proposed_claim: "GLHS reveals less context without clinically material utility loss"
+    current_status: "not_established"
+    gate_passed: false
+    publication_rule: "Required for least-disclosure novelty; withdraw utility claims until blinded review finishes"
+    gating_rules:
+      - "Complete blinded multi-reviewer clinical study across defined task families."
+      - "Demonstrate ≥30% reduction in disclosed fields and tokens vs full-context baseline."
+      - "Statistically confirm non-inferiority within clinician-approved margin δ."
+    required_evidence: "Token/field disclosure metrics plus blinded utility review/non-inferiority"
+    allowed_phrasing:
+      - "Task-Bounded Health State Snapshots minimize disclosed fields and tokens relative to full-context baselines while maintaining task-specific clinical requirements."
+      - "Context minimization reduces model exposure to irrelevant protected health information under declared disclosure policies."
+    forbidden_phrasing:
+      - "Claiming optimal or absolute minimal context without formal optimization proof."
+      - "Claiming validated clinical non-inferiority or superior diagnostic outcomes before completion of blinded multi-reviewer adjudication (UTIL-NI)."
+      - "Claiming patient clinical outcome improvement."
+    source_artifact_ids:
+      - "UTIL-NI-CLINICAL-ADJUDICATION-20260822"
+      - "MIN-DISC-TOKEN-METRICS-20260822"
+    source_sha256: "pending_clinical_study_freeze"
+    code_sha: "pending_ws7_clinical_study"
+    dataset_version: "CLINICAL-TASK-COHORT-20260822"
+    statistical_gate: "≥30% reduction in disclosed tokens and fields with zero protected/required fields omitted; non-inferiority margin δ satisfied (lower 95% CI > -δ)."
+    formal_gate: "Information-flow projection soundness proof establishing closed-world fact sufficiency."
+    reviewer: "Clinical Informatics & Medical Direction Lead"
+    approval_date: null
+    expiration_condition: "Expires upon changes to context compilation templates, task fact contracts, or clinical guideline editions."
+
+  - claim_id: "C-009"
+    proposed_claim: "GLHS outperforms scoped closest baselines on preregistered workloads"
+    current_status: "existing_peers_inconsistent"
+    gate_passed: false
+    publication_rule: "No superiority wording now; compare only on scoped benchmarks with faithful baseline adapters"
+    gating_rules:
+      - "Execute benchmarks against faithful, attested baseline adapters (CommitGuard, MasuGate, PostgreSQL SSI/2PL/OCC, FHIR)."
+      - "Pass intersection-union test across all mandatory safety/minimization gates."
+      - "Report real PostgreSQL performance with confidence intervals and multiplicity correction."
+    required_evidence: "Faithful baselines, repeated real runs, CIs/effect sizes"
+    allowed_phrasing:
+      - "On evaluated healthcare concurrency and TOCTOU benchmarks, GLHS v2 eliminates authorization drift and DDI leaks with bounded gateway micro-overhead."
+      - "In simulated multi-threaded dispatch evaluations, GLHS maintains sub-millisecond gateway micro-latencies while enforcing clinical barrier invariants."
+    forbidden_phrasing:
+      - "Blanket claims of superiority across all database or agent architectures."
+      - "Claiming throughput superiority based solely on in-memory simulation without real PostgreSQL verification."
+      - "Comparing against intentionally crippled or unoptimized baseline strawmen."
+    source_artifact_ids:
+      - "SOTA-BENCHMARK-COMPARISON-20260822"
+    source_sha256: "pending_sota_benchmark_freeze"
+    code_sha: "pending_ws6_benchmarks"
+    dataset_version: "BENCHMARK-WORKLOADS-V2-20260822"
+    statistical_gate: "Statistically significant risk difference vs baselines on healthcare safety violations; bounded overhead within preregistered tolerance margin; intersection-union test passed."
+    formal_gate: "Fidelity attestation and formal mapping of comparator transaction and isolation guarantees."
+    reviewer: "Empirical Evaluation & Benchmarking Lead"
+    approval_date: null
+    expiration_condition: "Expires upon updates to baseline implementations, benchmark harness configuration, or hardware execution environment."
+
+  - claim_id: "C-010"
+    proposed_claim: "Formal model establishes specified safety/liveness for the implemented protocol"
+    current_status: "current_model_diverges"
+    gate_passed: false
+    publication_rule: "Limit wording to bounded model findings until fixed; ensure formal model and production code refinement obligations match"
+    gating_rules:
+      - "Synchronize TLA+ specification with production GLHS v2 lock modes, dependency vectors, and multi-write behavior."
+      - "Formulate explicit safety invariants (MutualExclusion, NoTOCTOU, MonotonicEpochs) and liveness properties under fairness."
+      - "Produce hash-bound TLC model checking evidence artifact."
+    required_evidence: "TLA+ model, fairness, production refinement map, hash-bound TLC evidence"
+    allowed_phrasing:
+      - "Bounded finite-state exploration in TLA+/TLC verifies state invariants and deadlock-freedom under specified fairness assumptions for the modeled protocol slice."
+      - "Model checking confirms absence of circular wait-for dependencies under canonical lock ordering."
+    forbidden_phrasing:
+      - "Claiming universal formal verification of the entire unmodeled production codebase."
+      - "Unqualified liveness claims without stating explicit fairness assumptions."
+    source_artifact_ids:
+      - "TLA-GLHSV2-TLC-OUTPUT-20260822"
+    source_sha256: "pending_tla_spec_freeze"
+    code_sha: "pending_ws5_formal_model"
+    dataset_version: "TLA-STATE-SPACE-V2-20260822"
+    statistical_gate: "Zero invariant violations over explored state space in TLC model checker (depth ≥ 6, >300,000 distinct transitions)."
+    formal_gate: "TLC model check execution with hash-bound evidence; refinement map linking TLA+ actions to production Python/SQL functions."
+    reviewer: "Formal Methods & Verification Lead"
+    approval_date: null
+    expiration_condition: "Expires upon changes to protocol state machine, lock acquisition sequence, or TLA+ specification."

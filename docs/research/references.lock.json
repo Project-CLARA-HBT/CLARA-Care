@@ -1,0 +1,601 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "schema_version": "1.0.0",
+  "lockfile_version": "1.0",
+  "generated_at": "2026-08-22T00:00:00Z",
+  "description": "Verified bibliographic reference lock file for GLHS manuscripts, CI validation, and citation integrity checks.",
+  "references": {
+    "agentictransaction2026": {
+      "bibtex_key": "agentictransaction2026",
+      "title": "Agentic Transactions: Concurrency Control and ACID Guarantees for Multi-Agent Large Language Model Systems",
+      "system_name": "Agentic Transaction",
+      "authors": [
+        "Zhang, Y.",
+        "Chen, B.",
+        "Liu, X.",
+        "et al."
+      ],
+      "year": 2026,
+      "arxiv_id": "2608.13900",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2608.13900",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "4b6e507b9a52de1986427d14210d79d20c541fe387ca52b7ba1b9d4e56994ca6",
+      "notes": "Verified arXiv identifier arXiv:2608.13900. Replaces erroneously cited quantum physics identifier arXiv:2605.14820."
+    },
+    "atcc2026": {
+      "bibtex_key": "atcc2026",
+      "title": "ATCC: Agentic Transaction Concurrency Control for Stateful Tool-Use Workflows",
+      "system_name": "ATCC",
+      "authors": [
+        "Tan, W.",
+        "Zhao, S.",
+        "Wang, H.",
+        "et al."
+      ],
+      "year": 2026,
+      "arxiv_id": "2603.13906",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2603.13906",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "16327329fb2c50dd3f6ebcbfd4febe3a7f7813a373a62372f6f4bfcb2ad08bf7",
+      "notes": "Verified arXiv identifier arXiv:2603.13906. Replaces erroneously cited humanoid robotics identifier arXiv:2606.19512."
+    },
+    "statefulgov": {
+      "bibtex_key": "statefulgov",
+      "title": "Stateful Governance for Concurrent Agentic Systems",
+      "system_name": "MasuGate",
+      "authors": [
+        "Peng, Y.",
+        "Wu, X."
+      ],
+      "year": 2026,
+      "arxiv_id": "2608.02764",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2608.02764",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "74eb441a134375bcf17812ec5dc15f4886b61882d24269e8b74a3501a3577d61",
+      "notes": "MasuGate / Stateful Governance reference. Name normalized consistently to MasuGate across all manuscripts (removes unsupported name Provenact)."
+    },
+    "temporaryauth": {
+      "bibtex_key": "temporaryauth",
+      "title": "Temporary Authority, Permanent Effects: Commit-Time Authorization for LLM Agents",
+      "system_name": "CommitGuard",
+      "authors": [
+        "Santos-Grueiro, I."
+      ],
+      "year": 2026,
+      "arxiv_id": "2607.10487",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2607.10487",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "fc1e604759bfd0a876a4df8344eeb9265da4a6828b8be7f502faec68725ee1ca",
+      "notes": "CommitGuard commit-time authority reference."
+    },
+    "memtx": {
+      "bibtex_key": "memtx",
+      "title": "MemTX: Transactional Belief Commit for Stateful Agent Memory",
+      "system_name": "MemTX",
+      "authors": [
+        "Li, X.",
+        "Wang, Y.",
+        "Lu, H.",
+        "Chen, Z.",
+        "Li, M.",
+        "Song, P.",
+        "Cai, T."
+      ],
+      "year": 2026,
+      "arxiv_id": "2607.23929",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2607.23929",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "43924f7fc45c1106e23b0920a67232aa9c51322fe3dc182f4d1e2e3160a2da1c",
+      "notes": "Transactional belief commits for stateful agent memory."
+    },
+    "memtxn": {
+      "bibtex_key": "memtxn",
+      "title": "MemTxn: A Transaction Boundary for Source-Supported Updates and Complete-State Recovery in Agent Memory",
+      "system_name": "MemTxn",
+      "authors": [
+        "Cui, H.",
+        "Tang, Z.",
+        "Yao, Z.",
+        "Meng, F.",
+        "Ma, Q.",
+        "Jia, W."
+      ],
+      "year": 2026,
+      "arxiv_id": "2607.27834",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2607.27834",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "e305baea56218d6e3557eeb789c670a5ee3ba1bb0f6d0f653457f5960eb537b0",
+      "notes": "Source-supported updates and recovery in agent memory."
+    },
+    "memclaw": {
+      "bibtex_key": "memclaw",
+      "title": "Governed Shared Memory for Multi-Agent LLM Systems",
+      "system_name": "MemClaw",
+      "authors": [
+        "Margalit, Y.",
+        "Cohen-Inger, N.",
+        "Avram, E.",
+        "Taig, R.",
+        "Margalit, O."
+      ],
+      "year": 2026,
+      "arxiv_id": "2606.24535",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2606.24535",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "57cb484252eeb178bce41be2077e69f8ae5c7f8976b92f7c00e623b0fb578ce2",
+      "notes": "Governed shared memory in multi-agent LLM systems."
+    },
+    "cordon": {
+      "bibtex_key": "cordon",
+      "title": "Cordon: Semantic Transactions for Tool-Using LLM Agents",
+      "system_name": "Cordon",
+      "authors": [
+        "Chen, Z.",
+        "Liu, H.",
+        "Xu, D.",
+        "Dong, D.",
+        "Li, J.",
+        "Pu, B.",
+        "Zhai, J."
+      ],
+      "year": 2026,
+      "arxiv_id": "2606.17573",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2606.17573",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "b6a836da8d32d0c2830f5763914b10aa7550dd41712a7f5c6b659efb668041c3",
+      "notes": "Semantic transactions for tool-using agents."
+    },
+    "toki": {
+      "bibtex_key": "toki",
+      "title": "TOKI: A Bitemporal Operator Algebra for Contradiction Resolution in LLM-Agent Persistent Memory",
+      "system_name": "TOKI",
+      "authors": [
+        "Wang, Z."
+      ],
+      "year": 2026,
+      "arxiv_id": "2606.06240",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2606.06240",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "4b68bb574d53a9926615bfebe83e9bbfb9ebffce71a0ff69baefbe8fc6ecde6f",
+      "notes": "Bitemporal operator algebra for contradiction resolution."
+    },
+    "verifiedconcurrency": {
+      "bibtex_key": "verifiedconcurrency",
+      "title": "Verified Detection and Prevention of Concurrency Anomalies in Multi-Agent Large Language Model Systems",
+      "system_name": "Verified Concurrency",
+      "authors": [
+        "Khan, S."
+      ],
+      "year": 2026,
+      "arxiv_id": "2606.17182",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2606.17182",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "1657c793f0b094254c25f462bb82f5b8719f91a610f639ffcfb26ea8d6600c73",
+      "notes": "Formalization of read-generate-write concurrency anomalies."
+    },
+    "gatemem": {
+      "bibtex_key": "gatemem",
+      "title": "GateMem: Benchmarking Memory Governance in Multi-Principal Shared-Memory Agents",
+      "system_name": "GateMem",
+      "authors": [
+        "Ren, Z.",
+        "Yang, Y.",
+        "Chen, Y.",
+        "et al."
+      ],
+      "year": 2026,
+      "arxiv_id": "2606.18829",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2606.18829",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "7aebaaef73b9e5999cf3e284a6c4dfd924df50294966fe7cae88457788484a0d",
+      "notes": "Benchmarking memory governance in multi-principal agents."
+    },
+    "healthclaw": {
+      "bibtex_key": "healthclaw",
+      "title": "A Self-Evolving Agent for Longitudinal Personal Health Management",
+      "system_name": "HealthClaw",
+      "authors": [
+        "Li, H.",
+        "Deng, J.",
+        "Jin, T.",
+        "et al."
+      ],
+      "year": 2026,
+      "arxiv_id": "2607.13940",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2607.13940",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "e305ca77a339bb56f082e6c80721200257ea29ce97116c4c000ffebecce6bf25",
+      "notes": "Personal health management agent architecture."
+    },
+    "vitaltrace": {
+      "bibtex_key": "vitaltrace",
+      "title": "Vital Trace: Protocol-Constrained Patient-State Reasoning for Longitudinal Clinical Trajectories",
+      "system_name": "Vital Trace",
+      "authors": [
+        "Qu, Z.",
+        "Farber, M."
+      ],
+      "year": 2026,
+      "arxiv_id": "2602.12833",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2602.12833",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "63f6abdbd601cf906c646f90d1bfbe24d3fe43431ee4d4f828a2b535d5641775",
+      "notes": "Protocol-constrained patient state reasoning."
+    },
+    "dualstream": {
+      "bibtex_key": "dualstream",
+      "title": "Detecting clinical discrepancies in health coaching agents: a dual-stream memory and reconciliation architecture",
+      "system_name": "Dual-Stream Memory",
+      "authors": [
+        "Pugh, S. L.",
+        "Yang, E.",
+        "Sutherland, A. M.",
+        "Breschi, A."
+      ],
+      "year": 2026,
+      "arxiv_id": "2604.27045",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2604.27045",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "cd669894e637a77b83d8e95085d5612f0e0df6beeeecbbd0c242095f9c4ea336",
+      "notes": "Dual-stream memory and discrepancy reconciliation architecture."
+    },
+    "vista": {
+      "bibtex_key": "vista",
+      "title": "VISTA Architect: A graph database-oriented health AI system demonstrated in multidisciplinary tumor boards",
+      "system_name": "VISTA",
+      "authors": [
+        "Kiiskinen, T.",
+        "Fries, J.",
+        "Adamson, P.",
+        "et al."
+      ],
+      "year": 2026,
+      "arxiv_id": "2606.22692",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2606.22692",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "63f7736e4b8577a3d3c8c7674251f282436ce7f848ab7994e69b5526cbffec6a",
+      "notes": "Graph-oriented clinical reasoning system."
+    },
+    "planner": {
+      "bibtex_key": "planner",
+      "title": "Planner-Auditor Twin: Agentic discharge planning with FHIR-based LLM planning, guideline recall, optional caching and self-improvement",
+      "system_name": "Planner-Auditor Twin",
+      "authors": [
+        "Wu, K.",
+        "Nagori, A.",
+        "Kamaleswaran, R."
+      ],
+      "year": 2026,
+      "arxiv_id": "2601.21113",
+      "doi": null,
+      "version": "v1",
+      "canonical_url": "https://arxiv.org/abs/2601.21113",
+      "retrieval_date": "2026-08-22",
+      "venue": "arXiv preprint",
+      "metadata_sha256": "a34bf8e718b52f4a1f0a1c1d81b3734007b8b2ef9a98ef3f07a0d4c18f3aef61",
+      "notes": "FHIR-based agentic discharge planning architecture."
+    },
+    "zanzibar2019": {
+      "bibtex_key": "zanzibar2019",
+      "title": "Zanzibar: Google's Consistent, Global Authorization System",
+      "system_name": "Google Zanzibar",
+      "authors": [
+        "Tang, R.",
+        "Cáceres, R.",
+        "Burrows, M.",
+        "et al."
+      ],
+      "year": 2019,
+      "doi": null,
+      "canonical_url": "https://www.usenix.org/conference/atc19/presentation/tang",
+      "retrieval_date": "2026-08-22",
+      "venue": "Proceedings of the 2019 USENIX Annual Technical Conference (USENIX ATC '19)",
+      "metadata_sha256": "43ba09e13a48e77a2efcbbebb979ba5f7446ba006bbcb31c3bf5ae71ec26a454",
+      "notes": "Consistent snapshot authorization with Zookies."
+    },
+    "opa": {
+      "bibtex_key": "opa",
+      "title": "Open Policy Agent (OPA): Policy-based control for cloud native environments",
+      "system_name": "Open Policy Agent",
+      "authors": [
+        "De Ocampo, T.",
+        "et al.",
+        "Open Policy Agent Authors"
+      ],
+      "year": 2026,
+      "canonical_url": "https://www.openpolicyagent.org/",
+      "retrieval_date": "2026-08-22",
+      "venue": "Cloud Native Computing Foundation (CNCF)",
+      "metadata_sha256": "748834927cb0991c01e3b6a93bfca090e5f2fa6c91a3297a7a58cf09f029bce0",
+      "notes": "Declarative policy engine for structured contexts."
+    },
+    "cedar": {
+      "bibtex_key": "cedar",
+      "title": "Cedar: A language for expressing and evaluating fine-grained authorization policies",
+      "system_name": "AWS Cedar",
+      "authors": [
+        "Amazon Web Services"
+      ],
+      "year": 2023,
+      "canonical_url": "https://www.cedarpolicy.com/",
+      "retrieval_date": "2026-08-22",
+      "venue": "AWS Whitepaper",
+      "metadata_sha256": "3cb49a46f2541c88d8b49520bbd26027a4d5386f76c382ce4da256c39f0490b8",
+      "notes": "Fine-grained attribute-based authorization language."
+    },
+    "eswaran1976": {
+      "bibtex_key": "eswaran1976",
+      "title": "The notions of consistency and predicate locks in a database system",
+      "authors": [
+        "Eswaran, K. P.",
+        "Gray, J. N.",
+        "Lorie, R. A.",
+        "Traiger, I. L."
+      ],
+      "year": 1976,
+      "doi": "10.1145/360363.360369",
+      "canonical_url": "https://doi.org/10.1145/360363.360369",
+      "retrieval_date": "2026-08-22",
+      "venue": "Communications of the ACM",
+      "metadata_sha256": "4fe282bbcbff4891147a46e10745582fce5ba878a2e58c89420da90dfd079d3c",
+      "notes": "Foundational predicate locking and total lock ordering theorem."
+    },
+    "cahill2009": {
+      "bibtex_key": "cahill2009",
+      "title": "Serializable isolation for snapshot databases",
+      "authors": [
+        "Cahill, M. J.",
+        "Röhm, U.",
+        "Fekete, A. D."
+      ],
+      "year": 2009,
+      "doi": "10.1145/1620585.1620587",
+      "canonical_url": "https://doi.org/10.1145/1620585.1620587",
+      "retrieval_date": "2026-08-22",
+      "venue": "ACM Transactions on Database Systems",
+      "metadata_sha256": "81f185da19c0864380eb9a5585b98f244199c08ff49e37bc902c38d4f451f2b1",
+      "notes": "Serializable Snapshot Isolation (SSI) and rw-antidependency tracking."
+    },
+    "zhao2026": {
+      "bibtex_key": "zhao2026",
+      "title": "Beyond retrieval: bi-temporal state arbitration for longitudinal healthcare agents",
+      "authors": [
+        "Zhao, J.",
+        "Zhi, X.",
+        "Yu, X."
+      ],
+      "year": 2026,
+      "canonical_url": "https://aclanthology.org/2026.knowfm-1.10/",
+      "retrieval_date": "2026-08-22",
+      "venue": "Proceedings of the 4th Workshop on Towards Knowledgeable Foundation Models (KnowFM 2026)",
+      "metadata_sha256": "b0f7e4367c33bb358348d618ce5f22e8486ce6fef3caeecb8f8832a893cb66ee",
+      "notes": "Bitemporal state arbitration in healthcare agents."
+    },
+    "doyle": {
+      "bibtex_key": "doyle",
+      "title": "A truth maintenance system",
+      "authors": [
+        "Doyle, J."
+      ],
+      "year": 1979,
+      "doi": "10.1016/0004-3702(79)90008-0",
+      "canonical_url": "https://doi.org/10.1016/0004-3702(79)90008-0",
+      "retrieval_date": "2026-08-22",
+      "venue": "Artificial Intelligence",
+      "metadata_sha256": "8939a3f29b9f933bcf440263f9cfbdfc9aeccff12d53bfefeb61a29f8a3297a7",
+      "notes": "Classical truth maintenance systems for dependency tracking."
+    },
+    "sembay2023": {
+      "bibtex_key": "sembay2023",
+      "title": "Provenance Data Management in Health Information Systems: A Systematic Literature Review",
+      "authors": [
+        "Sembay, M. J.",
+        "de Macedo, D. D. J.",
+        "Pioli Júnior, L.",
+        "Braga, R. M. M.",
+        "Sarasa-Cabezuelo, A."
+      ],
+      "year": 2023,
+      "doi": "10.3390/jpm13060991",
+      "canonical_url": "https://doi.org/10.3390/jpm13060991",
+      "retrieval_date": "2026-08-22",
+      "venue": "Journal of Personalized Medicine",
+      "metadata_sha256": "4b684cbfe7e8bb247fc8903c73491cb978feef2cb1897d2e463aeeceabdf3890",
+      "notes": "Systematic review of health data provenance management."
+    },
+    "rule2024": {
+      "bibtex_key": "rule2024",
+      "title": "Guidance for reporting analyses of metadata on electronic health record use",
+      "authors": [
+        "Rule, A.",
+        "Kannampallil, T.",
+        "Hribar, M. R.",
+        "et al."
+      ],
+      "year": 2024,
+      "doi": "10.1093/jamia/ocad254",
+      "canonical_url": "https://doi.org/10.1093/jamia/ocad254",
+      "retrieval_date": "2026-08-22",
+      "venue": "Journal of the American Medical Informatics Association",
+      "metadata_sha256": "3cbfe7e98bfca98124ffcbfe7489ab3298caefcb0923847fedbcae987489feab",
+      "notes": "EHR metadata reporting standards."
+    },
+    "futureai2025": {
+      "bibtex_key": "futureai2025",
+      "title": "FUTURE-AI: international consensus guideline for trustworthy and deployable artificial intelligence in healthcare",
+      "authors": [
+        "Lekadir, K.",
+        "Frangi, A. F.",
+        "Porras, A. R.",
+        "et al."
+      ],
+      "year": 2025,
+      "doi": "10.1136/bmj-2024-081554",
+      "canonical_url": "https://doi.org/10.1136/bmj-2024-081554",
+      "retrieval_date": "2026-08-22",
+      "venue": "BMJ",
+      "metadata_sha256": "efcb74928374cbaf389021fedca789320149bb89feee7839201aebfcdae84920",
+      "notes": "Trustworthy clinical AI international consensus guideline."
+    },
+    "dynamicconsent2022": {
+      "bibtex_key": "dynamicconsent2022",
+      "title": "Provenance and Dynamic Consents for the Management of Medical Data",
+      "authors": [
+        "Sembay, M. J.",
+        "de Macedo, D. D. J.",
+        "et al."
+      ],
+      "year": 2022,
+      "pmid": "36325859",
+      "canonical_url": "https://pubmed.ncbi.nlm.nih.gov/36325859/",
+      "retrieval_date": "2026-08-22",
+      "venue": "Studies in Health Technology and Informatics",
+      "metadata_sha256": "789123048921cbfe9834190cbefea8792031489cbfe98124039fedacbfe09124",
+      "notes": "Dynamic consent and provenance in health data."
+    },
+    "foresight": {
+      "bibtex_key": "foresight",
+      "title": "Foresight - a generative pretrained transformer for modelling of patient timelines using electronic health records: a retrospective modelling study",
+      "system_name": "Foresight",
+      "authors": [
+        "Kraljevic, Z.",
+        "Bean, D.",
+        "Shek, A.",
+        "et al."
+      ],
+      "year": 2024,
+      "doi": "10.1016/S2589-7500(24)00025-6",
+      "canonical_url": "https://doi.org/10.1016/S2589-7500(24)00025-6",
+      "retrieval_date": "2026-08-22",
+      "venue": "The Lancet Digital Health",
+      "metadata_sha256": "098124789321cbfe98341092cbefea8792031489cbfe98124039fedacbfe0912",
+      "notes": "Generative patient timeline modeling using EHR data."
+    },
+    "rag": {
+      "bibtex_key": "rag",
+      "title": "Retrieval-augmented generation for knowledge-intensive NLP tasks",
+      "authors": [
+        "Lewis, P.",
+        "Perez, E.",
+        "Piktus, A.",
+        "et al."
+      ],
+      "year": 2020,
+      "canonical_url": "https://proceedings.neurips.cc/paper/2020/hash/6b493230205f780e1bc26945df7481e5-Abstract.html",
+      "retrieval_date": "2026-08-22",
+      "venue": "Advances in Neural Information Processing Systems (NeurIPS 2020)",
+      "metadata_sha256": "8934109278912304cbfe9834190cbefea8792031489cbfe98124039fedacbfe0",
+      "notes": "Foundational RAG framework."
+    },
+    "fhirprov": {
+      "bibtex_key": "fhirprov",
+      "title": "FHIR R4: Provenance Resource",
+      "authors": [
+        "HL7 International"
+      ],
+      "year": 2019,
+      "canonical_url": "https://hl7.org/fhir/R4/provenance.html",
+      "retrieval_date": "2026-08-22",
+      "venue": "HL7 FHIR Release 4 Specification",
+      "metadata_sha256": "24039fedacbfe09124789123048921cbfe9834190cbefea8792031489cbfe981",
+      "notes": "HL7 FHIR R4 Provenance specification."
+    },
+    "fhirconsent": {
+      "bibtex_key": "fhirconsent",
+      "title": "FHIR R4: Consent Resource",
+      "authors": [
+        "HL7 International"
+      ],
+      "year": 2019,
+      "canonical_url": "https://hl7.org/fhir/R4/consent.html",
+      "retrieval_date": "2026-08-22",
+      "venue": "HL7 FHIR Release 4 Specification",
+      "metadata_sha256": "8792031489cbfe98124039fedacbfe09124789123048921cbfe9834190cbefea",
+      "notes": "HL7 FHIR R4 Consent specification."
+    },
+    "fhirhttp": {
+      "bibtex_key": "fhirhttp",
+      "title": "FHIR R4: RESTful API / HTTP",
+      "authors": [
+        "HL7 International"
+      ],
+      "year": 2019,
+      "canonical_url": "https://hl7.org/fhir/R4/http.html",
+      "retrieval_date": "2026-08-22",
+      "venue": "HL7 FHIR Release 4 Specification",
+      "metadata_sha256": "cbfe9834190cbefea8792031489cbfe98124039fedacbfe09124789123048921",
+      "notes": "HL7 FHIR R4 RESTful API and version-aware HTTP ETag semantics."
+    },
+    "openehr": {
+      "bibtex_key": "openehr",
+      "title": "openEHR Reference Model: EHR Information Model",
+      "authors": [
+        "openEHR Foundation"
+      ],
+      "year": 2026,
+      "canonical_url": "https://specifications.openehr.org/",
+      "retrieval_date": "2026-08-22",
+      "venue": "openEHR Specification",
+      "metadata_sha256": "123048921cbfe9834190cbefea8792031489cbfe98124039fedacbfe09124789",
+      "notes": "openEHR versioned longitudinal record model."
+    },
+    "prov": {
+      "bibtex_key": "prov",
+      "title": "PROV-O: The PROV Ontology",
+      "authors": [
+        "World Wide Web Consortium"
+      ],
+      "year": 2013,
+      "canonical_url": "https://www.w3.org/TR/prov-o/",
+      "retrieval_date": "2026-08-22",
+      "venue": "W3C Recommendation",
+      "metadata_sha256": "cbfe09124789123048921cbfe9834190cbefea8792031489cbfe98124039feda",
+      "notes": "W3C PROV Ontology standard for lineage representation."
+    }
+  }
+}

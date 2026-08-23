@@ -2,6 +2,10 @@
 
 Strict RFC 8785 byte-level canonical serialization with deterministic
 type dispatch for dataclasses, dates, datetimes, UUIDs, sets, and Decimals.
+Supports cryptographic profiles:
+- 'clara.canonical-json.v1-legacy-python': historical Python json.dumps semantics
+- 'clara.canonical-json.v1-custom': frozen custom JCS-like serializer (no '+' exponent)
+- 'clara.canonical-json.v2-rfc8785': strict RFC 8785 canonical JSON (default for new writes)
 """
 
 from __future__ import annotations
@@ -22,8 +26,46 @@ JsonScalar: TypeAlias = None | bool | int | float | str
 JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 
 DIGEST_ALGORITHM = "sha-256"
-CANONICALIZATION_PROFILE = "clara.canonical-json.v1"
-LEGACY_CANONICALIZATION_PROFILE = "python-json-sort-default-str.v1"
+
+PROFILE_V1_LEGACY_PYTHON = "clara.canonical-json.v1-legacy-python"
+PROFILE_V1_CUSTOM = "clara.canonical-json.v1-custom"
+PROFILE_V2_RFC8785 = "clara.canonical-json.v2-rfc8785"
+
+CANONICALIZATION_PROFILE = PROFILE_V2_RFC8785
+CANONICALIZATION_PROFILE_V2 = PROFILE_V2_RFC8785
+CANONICALIZATION_PROFILE_V1_CUSTOM = PROFILE_V1_CUSTOM
+CANONICALIZATION_PROFILE_V1_LEGACY_PYTHON = PROFILE_V1_LEGACY_PYTHON
+
+# Backward compatibility / legacy aliases
+LEGACY_CANONICALIZATION_PROFILE = PROFILE_V1_LEGACY_PYTHON
+CANONICALIZATION_PROFILE_V1 = PROFILE_V1_CUSTOM
+
+_PROFILE_ALIASES: dict[str, str] = {
+    PROFILE_V2_RFC8785: PROFILE_V2_RFC8785,
+    "glhs.canonical.v2": PROFILE_V2_RFC8785,
+    "glhs.v2": PROFILE_V2_RFC8785,
+    PROFILE_V1_CUSTOM: PROFILE_V1_CUSTOM,
+    "clara.canonical-json.v1": PROFILE_V1_CUSTOM,
+    "glhs.canonical.v1": PROFILE_V1_CUSTOM,
+    "glhs.v1": PROFILE_V1_CUSTOM,
+    PROFILE_V1_LEGACY_PYTHON: PROFILE_V1_LEGACY_PYTHON,
+    "python-json-sort-default-str.v1": PROFILE_V1_LEGACY_PYTHON,
+}
+
+SUPPORTED_PROFILES: frozenset[str] = frozenset([
+    PROFILE_V2_RFC8785,
+    PROFILE_V1_CUSTOM,
+    PROFILE_V1_LEGACY_PYTHON,
+])
+
+
+def resolve_profile(profile: str) -> str:
+    """Resolve profile name or alias to canonical profile identifier."""
+    resolved = _PROFILE_ALIASES.get(profile)
+    if resolved is None:
+        raise ValueError(f"unsupported_canonicalization_profile:{profile}")
+    return resolved
+
 
 # Character replacement map for RFC 8785 Section 3.2.2.2 string escaping
 _CHAR_REPLACEMENTS = {
@@ -41,19 +83,35 @@ for _i in range(0x20):
 
 
 def _serialize_str(s: str) -> str:
-    """Serialize string per RFC 8785 strict character escaping rules."""
+    """Serialize string per RFC 8785 strict character escaping rules.
+
+    Rejects lone surrogates (0xD800 - 0xDFFF) per RFC 8785 and I-JSON (RFC 7493).
+    """
+    for ch in s:
+        if 0xD800 <= ord(ch) <= 0xDFFF:
+            raise ValueError(f"canonical_json_lone_surrogate: U+{ord(ch):04X}")
     return '"' + s.translate(_CHAR_REPLACEMENTS) + '"'
 
 
 def _utf16_sort_key(s: str) -> bytes:
-    """UTF-16 code unit sort key per RFC 8785 Section 3.2.3."""
+    """UTF-16 code unit sort key per RFC 8785 Section 3.2.3.
+
+    Rejects lone surrogates and non-string keys.
+    """
     if not isinstance(s, str):
         raise TypeError(f"canonical_json_dict_key_must_be_str:{type(s).__name__}")
+    for ch in s:
+        if 0xD800 <= ord(ch) <= 0xDFFF:
+            raise ValueError(f"canonical_json_lone_surrogate: U+{ord(ch):04X}")
     return s.encode("utf-16-be")
 
 
-def _float_to_jcs(val: float) -> str:
-    """Format float per RFC 8785 / ECMAScript Number::toString rules."""
+def _float_to_jcs(val: float, *, positive_exp_sign: bool = True) -> str:
+    """Format float per RFC 8785 / ECMAScript Number::toString rules.
+
+    If positive_exp_sign is True (v2 RFC 8785), positive exponents include '+', e.g. 1e+21.
+    If positive_exp_sign is False (v1 custom), positive exponents omit '+', e.g. 1e21.
+    """
     if math.isnan(val) or math.isinf(val):
         raise ValueError("canonical_json_non_finite_number")
     if val == 0.0:
@@ -94,7 +152,8 @@ def _float_to_jcs(val: float) -> str:
     # Section 3.2.2.3 Number Serialization
     if n <= -6 or n > 21:
         e = n - 1
-        e_str = str(e)
+        exp_sign = "+" if (positive_exp_sign and e >= 0) else ""
+        e_str = f"{exp_sign}{e}"
         if k == 1:
             return f"{sign}{m}e{e_str}"
         return f"{sign}{m[0]}.{m[1:]}e{e_str}"
@@ -107,7 +166,7 @@ def _float_to_jcs(val: float) -> str:
     raise RuntimeError("Unhandled float serialization state")
 
 
-def _json_default(obj: object) -> object:
+def _json_default(obj: object, *, profile: str = PROFILE_V2_RFC8785) -> object:
     """Deterministic canonical serializer for non-primitive Python types."""
     if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
         return dataclasses.asdict(obj)
@@ -123,7 +182,7 @@ def _json_default(obj: object) -> object:
         try:
             return sorted(obj)
         except TypeError:
-            return sorted(obj, key=lambda x: canonical_json_bytes(x))
+            return sorted(obj, key=lambda x: canonical_json_bytes(x, profile=profile))
     if isinstance(obj, Decimal):
         if not obj.is_finite():
             raise ValueError("canonical_json_non_finite_number")
@@ -141,8 +200,8 @@ def _json_default(obj: object) -> object:
     raise ValueError(f"canonical_json_unsupported_type:{type(obj).__name__}")
 
 
-def _serialize(obj: object) -> str:
-    """Recursive RFC 8785 canonical serializer with injective type dispatch."""
+def _serialize(obj: object, *, profile: str = PROFILE_V2_RFC8785) -> str:
+    """Recursive canonical serializer with injective type dispatch."""
     if obj is None:
         return "null"
     if isinstance(obj, bool):
@@ -150,41 +209,84 @@ def _serialize(obj: object) -> str:
     if isinstance(obj, int):
         return str(obj)
     if isinstance(obj, float):
-        return _float_to_jcs(obj)
+        positive_exp = profile == PROFILE_V2_RFC8785
+        return _float_to_jcs(obj, positive_exp_sign=positive_exp)
     if isinstance(obj, str):
         return _serialize_str(obj)
     if isinstance(obj, (list, tuple)):
-        return "[" + ",".join(_serialize(item) for item in obj) + "]"
+        return "[" + ",".join(_serialize(item, profile=profile) for item in obj) + "]"
     if isinstance(obj, (dict, Mapping)):
         sorted_keys = sorted(obj.keys(), key=_utf16_sort_key)
-        return "{" + ",".join(f"{_serialize_str(k)}:{_serialize(obj[k])}" for k in sorted_keys) + "}"
-    return _serialize(_json_default(obj))
+        return (
+            "{"
+            + ",".join(
+                f"{_serialize_str(k)}:{_serialize(obj[k], profile=profile)}"
+                for k in sorted_keys
+            )
+            + "}"
+        )
+    return _serialize(_json_default(obj, profile=profile), profile=profile)
 
 
-def canonical_json_bytes(payload: object) -> bytes:
-    """Strict byte-level canonical JSON serialization per RFC 8785."""
-    return _serialize(payload).encode("utf-8")
+def canonicalize_json(payload: object, *, profile: str = CANONICALIZATION_PROFILE) -> str:
+    """Serialize payload to canonical JSON string under specified profile."""
+    resolved = resolve_profile(profile)
+    if resolved == PROFILE_V1_LEGACY_PYTHON:
+        return json.dumps(
+            payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+    return _serialize(payload, profile=resolved)
+
+
+def canonical_json_bytes(payload: object, *, profile: str = CANONICALIZATION_PROFILE) -> bytes:
+    """Strict byte-level canonical JSON serialization per specified profile."""
+    return canonicalize_json(payload, profile=profile).encode("utf-8")
 
 
 canonical_bytes = canonical_json_bytes
 
 
-def consistency_fingerprint(payload: object) -> str:
+def canonical_hash(
+    payload: object,
+    *,
+    profile: str = CANONICALIZATION_PROFILE,
+    algorithm: str = DIGEST_ALGORITHM,
+) -> str:
+    """Compute cryptographic digest of canonically serialized payload."""
+    if algorithm != DIGEST_ALGORITHM:
+        raise ValueError(f"unsupported_digest_algorithm:{algorithm}")
+    return hashlib.sha256(canonical_json_bytes(payload, profile=profile)).hexdigest()
+
+
+def consistency_fingerprint(
+    payload: object,
+    *,
+    profile: str = CANONICALIZATION_PROFILE,
+) -> str:
     """Return SHA-256 consistency fingerprint for payload."""
-    return hashlib.sha256(canonical_json_bytes(payload)).hexdigest()
+    return canonical_hash(payload, profile=profile, algorithm=DIGEST_ALGORITHM)
 
 
-def fast_canonical_digest(value: object) -> str:
+def fast_canonical_digest(
+    value: object,
+    *,
+    profile: str = CANONICALIZATION_PROFILE,
+) -> str:
     """Return SHA-256 consistency fingerprint (zero-copy for bytes/memoryview)."""
     if isinstance(value, (bytes, bytearray, memoryview)):
         return hashlib.sha256(memoryview(value)).hexdigest()
-    return consistency_fingerprint(value)
+    return consistency_fingerprint(value, profile=profile)
 
 
 def zero_copy_merkle_tree_digest(
     data: bytes | bytearray | memoryview | Sequence[bytes | memoryview | str | object],
     *,
     chunk_size: int = 4096,
+    profile: str = CANONICALIZATION_PROFILE,
 ) -> str:
     """Compute a zero-copy byte-level SHA-256 Merkle tree root digest.
 
@@ -213,7 +315,7 @@ def zero_copy_merkle_tree_digest(
             elif isinstance(item, str):
                 b = item.encode("utf-8")
             else:
-                b = canonical_json_bytes(item)
+                b = canonical_json_bytes(item, profile=profile)
             h = hashlib.sha256(b"\x00")
             h.update(b)
             leaf_hashes.append(h.digest())
@@ -234,33 +336,23 @@ def zero_copy_merkle_tree_digest(
 
 
 merkle_tree_digest = zero_copy_merkle_tree_digest
-
-
-def fast_merkle_digest(
-    leaves: bytes | bytearray | memoryview | Sequence[object],
-) -> str:
-    """Compute Merkle tree root digest."""
-    return zero_copy_merkle_tree_digest(leaves)
+fast_merkle_digest = zero_copy_merkle_tree_digest
 
 
 def legacy_consistency_fingerprint(value: object) -> str:
     """Reproduce the pre-versioned digest for historical snapshot validation."""
-    raw = json.dumps(
-        value,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-        default=str,
-    )
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return consistency_fingerprint(value, profile=PROFILE_V1_LEGACY_PYTHON)
 
 
-def fingerprint_for_profile(value: object, *, profile: str, algorithm: str) -> str:
+def fingerprint_for_profile(
+    value: object,
+    *,
+    profile: str,
+    algorithm: str = DIGEST_ALGORITHM,
+) -> str:
     """Validate profile and return digest accordingly."""
     if algorithm != DIGEST_ALGORITHM:
         raise ValueError("unsupported_digest_algorithm")
-    if profile == CANONICALIZATION_PROFILE:
-        return consistency_fingerprint(value)
-    if profile == LEGACY_CANONICALIZATION_PROFILE:
-        return legacy_consistency_fingerprint(value)
-    raise ValueError("unsupported_canonicalization_profile")
+    resolved = resolve_profile(profile)
+    return consistency_fingerprint(value, profile=resolved)
+

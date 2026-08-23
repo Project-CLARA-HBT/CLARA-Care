@@ -38,6 +38,7 @@ from clara_api.db.models import (
     HealthSourceReference,
     PhrProfile,
     User,
+    UserConsent,
 )
 from clara_api.glhs.commitment_gateway import (
     COMMITMENT_POLICY_VERSION,
@@ -141,6 +142,14 @@ def _create_test_fixture(
         allowed_data_classes=frozenset({"medications", "conditions", "observations"}),
     )
 
+    db.add(
+        UserConsent(
+            user_id=user.id,
+            consent_type="medical_disclaimer",
+            consent_version=version,
+            accepted_at=datetime.now(UTC),
+        )
+    )
     core_consent.PhrConsentService.grant(db, user_id=user.id, purpose=purpose, version=version)
     db.commit()
 
@@ -463,7 +472,7 @@ def test_aba_consent_revocation_blindness_prevention_commitment_gst(db: Session)
     db.commit()
 
     version_input = CommitmentVersionInput(
-        action="prescribe_medication",
+        action="take_medication",
         target={"system": "http://rxnorm.info", "code": "atorvastatin"},
         anchor_valid_time=now,
         anchor_known_time=now,

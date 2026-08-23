@@ -17,7 +17,6 @@ for p in (str(_REPO_ROOT), str(_PRODUCT_AI_DIR), str(_ML_SRC), str(_API_SRC)):
         sys.path.insert(0, p)
 
 import os
-
 from concurrent.futures import ThreadPoolExecutor
 
 from clara_ml.llm.capabilities import RouteClass
@@ -26,6 +25,7 @@ from clara_ml.llm.model_registry import ModelTask
 from clara_ml.llm.provider_adapters import ModelRequest
 
 from evaluation.product_ai.common import (
+    CaseEvaluationResult,
     MockEvaluationAdapter,
     TaskCase,
     TaskReport,
@@ -91,7 +91,7 @@ def run_benchmark(
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             evaluated = list(executor.map(_eval_single_case, cases))
         case_results = [r for r, _ in evaluated]
-        latencies = [l for _, l in evaluated]
+        latencies = [lat for _, lat in evaluated]
     finally:
         os.environ.pop("CLARA_MODEL_ROUTE_TASK_MEDICAL_SAFETY_ROUTER_PROVIDER", None)
         os.environ.pop("CLARA_MODEL_ROUTE_TASK_MEDICAL_SAFETY_ROUTER_MODEL", None)

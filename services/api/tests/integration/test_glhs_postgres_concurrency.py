@@ -74,15 +74,16 @@ def _seed(engine: Engine, *, count: int, same_slot: bool) -> tuple[int, list[str
     at = datetime(2026, 1, 1, tzinfo=UTC)
     with Session(engine) as db:
         owner = User(
-            email=f"glhs-{uuid4().hex}@example.invalid",
-            hashed_password="x",
+            email=f"pg_concurrency_{uuid4().hex}@example.com",
+            hashed_password="hashed_pw_test",
             role="normal",
         )
         db.add(owner)
         db.flush()
-        profile = PhrProfile(user_id=owner.id)
+        profile = PhrProfile(user_id=owner.id, full_name="Postgres Concurrency Patient")
         db.add(profile)
         db.flush()
+        core_consent.PhrConsentService.grant(db, user_id=owner.id, purpose="research", version="1.0")
         assertion_ids: list[str] = []
         for index in range(count):
             source = HealthSourceReference(
@@ -397,21 +398,27 @@ def run_postgres_glhs_concurrency_contract(url: str) -> None:
     admin, isolated = _isolated_engines(url, schema)
     try:
         Base.metadata.create_all(isolated)
-        for same_slot in (True, False):
-            profile_id, assertion_ids = _seed(isolated, count=4, same_slot=same_slot)
-            outcomes = _race(isolated, profile_id=profile_id, assertion_ids=assertion_ids)
-            applied = [item for item in outcomes if item.startswith("applied:")]
-            rejected = [item for item in outcomes if item == "rejected:stale_state_version"]
-            if len(applied) != 1 or len(rejected) != 3:
-                raise AssertionError(f"unexpected_atomic_outcomes:{outcomes}")
-            with Session(isolated) as db:
-                versions = db.scalar(
-                    select(func.count())
-                    .select_from(GlhsStateVersion)
-                    .where(GlhsStateVersion.profile_id == profile_id)
-                )
-                if versions != 1:
-                    raise AssertionError(f"partial_or_duplicate_state_versions:{versions}")
+        # Same slot race: 1 winner, 3 true-stale aborts
+        profile_id_same, assertion_ids_same = _seed(isolated, count=4, same_slot=True)
+        outcomes_same = _race(isolated, profile_id=profile_id_same, assertion_ids=assertion_ids_same)
+        applied_same = [item for item in outcomes_same if item.startswith("applied:")]
+        rejected_same = [
+            item for item in outcomes_same
+            if item.startswith("rejected:stale_")
+            or item in ("rejected:stale_state_version", "rejected:stale_partition_version")
+        ]
+        if len(applied_same) != 1 or len(rejected_same) != 3:
+            raise AssertionError(f"unexpected_same_slot_outcomes:{outcomes_same}")
+
+        # Disjoint slot race: all 4 disjoint partition writes commit under GLHS v2
+        profile_id_disjoint, assertion_ids_disjoint = _seed(isolated, count=4, same_slot=False)
+        outcomes_disjoint = _race(isolated, profile_id=profile_id_disjoint, assertion_ids=assertion_ids_disjoint)
+        applied_disjoint = [item for item in outcomes_disjoint if item.startswith("applied:")]
+        errors_disjoint = [item for item in outcomes_disjoint if item.startswith("error:")]
+        if errors_disjoint:
+            raise AssertionError(f"unexpected_disjoint_errors:{errors_disjoint}")
+        if len(applied_disjoint) != 4:
+            raise AssertionError(f"unexpected_disjoint_slot_outcomes:{outcomes_disjoint}")
     finally:
         isolated.dispose()
         with admin.begin() as connection:

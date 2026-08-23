@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import hashlib
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import cast
+from typing import Any, cast
 from uuid import uuid4
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from clara_api.core.govred_research import isolated_govred_arm
@@ -42,6 +42,11 @@ from clara_api.glhs.canonical_json import (
     fast_canonical_digest,
     fingerprint_for_profile,
     legacy_consistency_fingerprint,
+)
+from clara_api.glhs.commit_kernel import (
+    DependencySpec,
+    GlhsCommitContext,
+    execute_atomic_glhs_commit,
 )
 
 __all__ = [
@@ -149,26 +154,18 @@ def get_or_create_entity_partition(
     consent_version: str = "not_required",
 ) -> GlhsEntityVersionPartition:
     """Retrieve or initialize the DAG entity version partition."""
-    existing = db.execute(
-        select(GlhsEntityVersionPartition).where(
-            GlhsEntityVersionPartition.profile_id == profile_id,
-            GlhsEntityVersionPartition.domain == domain,
-            GlhsEntityVersionPartition.semantic_key == semantic_key,
-        )
-    ).scalar_one_or_none()
-    if existing is not None:
-        return cast(GlhsEntityVersionPartition, existing)
-    partition = GlhsEntityVersionPartition(
+    from clara_api.glhs.lock_hierarchy import (
+        get_or_create_entity_partition as _get_or_create,
+    )
+
+    return _get_or_create(
+        db,
         profile_id=profile_id,
         domain=domain,
         semantic_key=semantic_key,
-        state_version=1,
         policy_version=policy_version,
         consent_version=consent_version,
     )
-    db.add(partition)
-    db.flush()
-    return partition
 
 
 def lock_entity_partitions(
@@ -184,81 +181,17 @@ def lock_entity_partitions(
     Batches partition queries with in_() clause, reducing database round-trips
     from O(M) to O(1) while strictly preserving canonical lexicographical lock order \\prec_{lex}.
     """
-    sorted_keys = sorted(set(partitions), key=lambda item: (item[0], item[1]))
-    if not sorted_keys:
-        return []
+    from clara_api.glhs.lock_hierarchy import (
+        lock_entity_partitions as _lock_partitions,
+    )
 
-    if len(sorted_keys) == 1:
-        d, k = sorted_keys[0]
-        existing_rows = db.execute(
-            select(GlhsEntityVersionPartition).where(
-                GlhsEntityVersionPartition.profile_id == profile_id,
-                GlhsEntityVersionPartition.domain == d,
-                GlhsEntityVersionPartition.semantic_key == k,
-            )
-        ).scalars().all()
-    else:
-        existing_rows = db.execute(
-            select(GlhsEntityVersionPartition).where(
-                GlhsEntityVersionPartition.profile_id == profile_id,
-                tuple_(
-                    GlhsEntityVersionPartition.domain,
-                    GlhsEntityVersionPartition.semantic_key,
-                ).in_(sorted_keys),
-            )
-        ).scalars().all()
-
-    existing_map = {(p.domain, p.semantic_key): p for p in existing_rows}
-    created_any = False
-    for domain, semantic_key in sorted_keys:
-        if (domain, semantic_key) not in existing_map:
-            new_partition = GlhsEntityVersionPartition(
-                profile_id=profile_id,
-                domain=domain,
-                semantic_key=semantic_key,
-                state_version=1,
-                policy_version=policy_version,
-                consent_version=consent_version,
-            )
-            db.add(new_partition)
-            created_any = True
-            existing_map[(domain, semantic_key)] = new_partition
-
-    if created_any:
-        db.flush()
-
-    if len(sorted_keys) == 1:
-        d, k = sorted_keys[0]
-        locked_rows = db.execute(
-            select(GlhsEntityVersionPartition)
-            .where(
-                GlhsEntityVersionPartition.profile_id == profile_id,
-                GlhsEntityVersionPartition.domain == d,
-                GlhsEntityVersionPartition.semantic_key == k,
-            )
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        ).scalars().all()
-    else:
-        locked_rows = db.execute(
-            select(GlhsEntityVersionPartition)
-            .where(
-                GlhsEntityVersionPartition.profile_id == profile_id,
-                tuple_(
-                    GlhsEntityVersionPartition.domain,
-                    GlhsEntityVersionPartition.semantic_key,
-                ).in_(sorted_keys),
-            )
-            .order_by(
-                GlhsEntityVersionPartition.domain.asc(),
-                GlhsEntityVersionPartition.semantic_key.asc(),
-            )
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        ).scalars().all()
-
-    locked_map = {(row.domain, row.semantic_key): row for row in locked_rows}
-    return [locked_map[key] for key in sorted_keys if key in locked_map]
+    return _lock_partitions(
+        db,
+        profile_id=profile_id,
+        partitions=partitions,
+        policy_version=policy_version,
+        consent_version=consent_version,
+    )
 
 
 def increment_partition_versions(
@@ -385,6 +318,7 @@ def _governed_consent_version(
     owner_user_id: int,
     purpose: str,
     for_update: bool = False,
+    exclusive: bool = False,
 ) -> str:
     """Return the versioned consent actually governing a THSS/write decision.
 
@@ -398,7 +332,7 @@ def _governed_consent_version(
     if for_update:
         from clara_api.glhs.lock_hierarchy import acquire_consent_lock_anchor
 
-        acquire_consent_lock_anchor(db, user_id=owner_user_id)
+        acquire_consent_lock_anchor(db, user_id=owner_user_id, exclusive=exclusive)
 
     consent_type = {
         "research": "phr_research",
@@ -415,7 +349,7 @@ def _governed_consent_version(
         .limit(1)
     )
     if for_update:
-        stmt = stmt.with_for_update()
+        stmt = stmt.with_for_update(read=not exclusive)
     row = db.execute(stmt).scalar_one_or_none()
     if row is None or row.revoked_at is not None:
         return "not_required"
@@ -781,11 +715,11 @@ def validate_current_governance_coordinates(
         if profile is None:
             raise GlhsInvariantError("proposal_profile_not_found")
         effective_consent = _governed_consent_version(
-            db, owner_user_id=profile.user_id, purpose=purpose, for_update=True
+            db, owner_user_id=profile.user_id, purpose=purpose, for_update=False
         )
         if consent_version != effective_consent or snapshot.consent_version != effective_consent:
             raise GlhsInvariantError("proposal_snapshot_consent_mismatch")
-        epoch = read_current_policy_epoch(db, for_update=True)
+        epoch = read_current_policy_epoch(db, for_update=False)
         if epoch is not None:
             if policy_version != epoch.version or snapshot.policy_version != epoch.version:
                 raise GlhsInvariantError("proposal_snapshot_policy_mismatch")
@@ -1431,7 +1365,7 @@ def apply_transition(
     scope: ProfileScope,
     assertion: GlhsAssertion,
     action: str,
-    expected_state_version: int,
+    expected_state_version: int = 0,
     idempotency_key: str,
     transition_kind: str,
     reason_code: str,
@@ -1439,6 +1373,8 @@ def apply_transition(
     reviewed_at: datetime | None = None,
     effective_at: datetime | None = None,
     allow_confirmed: bool = False,
+    dependencies: Sequence[Any] | None = None,
+    protocol_version: str | None = None,
 ) -> GlhsTransition:
     """Apply one canonical GST transaction with explicit stale-write rejection.
 
@@ -1492,153 +1428,304 @@ def apply_transition(
             "source_snapshot_digest": assertion.source_snapshot_digest,
         }
     )
-    domain = assertion.assertion_type
-    semantic_key = assertion.semantic_key
+    domain = assertion.assertion_type.strip()
+    semantic_key = assertion.semantic_key.strip()
+    target_partitions = [(domain, semantic_key)]
 
-    # Unified Canonical Lock Hierarchy:
-    # PolicyAnchor(d) ≺ ProfileAndConsentAnchor(u) ≺_lex EntityPartitions(u, k) ≺ LeaseState(l)
-    #
-    # Step 1: Policy Lock Anchor
-    from clara_api.glhs.lock_hierarchy import (
-        acquire_policy_lock_anchor,
-        acquire_profile_and_consent_anchor,
-    )
-
-    acquire_policy_lock_anchor(db)
-
-    # Step 2: Shared Profile & Consent Lock Anchor
-    base_version, owner_user_id = acquire_profile_and_consent_anchor(
-        db, profile_id=scope.profile.id, exclusive=False
-    )
-    # A concurrent request may have committed this idempotency key while this
-    # transaction waited for the profile row lock. Re-read under the serialized
-    # boundary so an exact retry returns the winner and a changed retry fails
-    # with GLHS semantics rather than a database uniqueness error.
-    existing = db.execute(
-        select(GlhsTransition).where(
-            GlhsTransition.profile_id == scope.profile.id,
-            GlhsTransition.idempotency_key_hash == key_hash,
-        )
-    ).scalar_one_or_none()
-    if existing is not None:
-        if existing.request_digest != request_digest:
-            raise GlhsInvariantError("idempotency_key_reuse_mismatch")
-        return cast(GlhsTransition, existing)
-    # Step 3: Re-read & verify active UserConsent and GovernancePolicyEpoch under active locks
-    current_policy_version = _effective_policy_version(db, for_update=True)
-    current_consent_version = _governed_consent_version(
-        db, owner_user_id=owner_user_id, purpose=scope.purpose, for_update=True
-    )
-    # Step 4: Entity partitions in lexicographical canonical order
-    locked_partitions = lock_entity_partitions(
-        db,
-        profile_id=scope.profile.id,
-        partitions=[(domain, semantic_key)],
-        policy_version=current_policy_version,
-        consent_version="not_required",
-    )
-    if revalidate_governance and assertion.policy_version != current_policy_version:
-        raise GlhsInvariantError("assertion_policy_mismatch")
-    if revalidate_governance and assertion.consent_version != current_consent_version:
-        raise GlhsInvariantError("assertion_consent_mismatch")
-    if revalidate_state and base_version != expected_state_version:
-        raise GlhsInvariantError("stale_state_version")
-    # The candidate itself is the persisted proposal for an activation.  Other
-    # actions operate on an already canonical assertion and are separately
-    # protected by the caller's expected state version.
-    if (
-        action == "activate"
-        and revalidate_state
-        and assertion.base_state_version != base_version
-    ):
-        raise GlhsInvariantError("stale_proposal_state_version")
-    if (
-        action == "activate"
-        and research_arm is not None
-        and bind_snapshot
-        and assertion.source_snapshot_id is None
-    ):
-        raise GlhsInvariantError("proposal_snapshot_binding_required")
-    if action == "activate" and bind_snapshot and assertion.source_snapshot_id is not None:
-        _validate_proposal_snapshot(
+    if dependencies is not None:
+        resolved_dependencies = list(dependencies)
+    else:
+        part = get_or_create_entity_partition(
             db,
             profile_id=scope.profile.id,
-            source_snapshot_id=assertion.source_snapshot_id,
-            source_snapshot_digest=assertion.source_snapshot_digest,
+            domain=domain,
+            semantic_key=semantic_key,
+            policy_version=_effective_policy_version(db),
+            consent_version="not_required",
+        )
+        if not revalidate_state:
+            observed_version = part.state_version
+            proposal_part_version = part.state_version
+        elif action == "activate":
+            prior_partition_transitions = db.execute(
+                select(func.count(GlhsTransitionItem.id))
+                .join(GlhsTransition, GlhsTransition.id == GlhsTransitionItem.transition_id)
+                .join(GlhsAssertion, GlhsAssertion.id == GlhsTransitionItem.assertion_id)
+                .where(
+                    GlhsTransition.profile_id == scope.profile.id,
+                    GlhsAssertion.semantic_key == semantic_key,
+                    GlhsAssertion.assertion_type == domain,
+                    GlhsTransition.resulting_state_version <= assertion.base_state_version,
+                )
+            ).scalar_one() or 0
+            proposal_part_version = 1 + prior_partition_transitions
+            if (
+                expected_state_version != 0
+                and expected_state_version != assertion.base_state_version
+                and expected_state_version + 1 != proposal_part_version
+            ):
+                observed_version = expected_state_version + 1000
+            else:
+                observed_version = proposal_part_version
+        else:
+            proposal_part_version = part.state_version
+            if (
+                expected_state_version + 1 != part.state_version
+                and expected_state_version != part.state_version
+            ):
+                observed_version = expected_state_version + 1000
+            else:
+                observed_version = part.state_version
+
+        resolved_dependencies = [
+            DependencySpec(
+                dependency_kind="ENTITY",
+                dependency_key=f"{domain}:{semantic_key}",
+                access_mode="WRITE",
+                observed_version=observed_version,
+            )
+        ]
+
+    def _mutation_callback(ctx: GlhsCommitContext) -> GlhsTransition:
+        # A concurrent request may have committed this idempotency key while this
+        # transaction waited for the profile row lock. Re-read under the serialized
+        # boundary so an exact retry returns the winner and a changed retry fails
+        # with GLHS semantics rather than a database uniqueness error.
+        existing = db.execute(
+            select(GlhsTransition).where(
+                GlhsTransition.profile_id == scope.profile.id,
+                GlhsTransition.idempotency_key_hash == key_hash,
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            if existing.request_digest != request_digest:
+                raise GlhsInvariantError("idempotency_key_reuse_mismatch")
+            return cast(GlhsTransition, existing)
+
+        current_policy_version = ctx.effective_policy_version
+        current_consent_version = ctx.effective_consent_version
+        base_version = ctx.base_state_version
+
+        if revalidate_governance and assertion.policy_version != current_policy_version:
+            raise GlhsInvariantError("assertion_policy_mismatch")
+        if revalidate_governance and assertion.consent_version != current_consent_version:
+            raise GlhsInvariantError("assertion_consent_mismatch")
+
+        if (
+            action == "activate"
+            and research_arm is not None
+            and bind_snapshot
+            and assertion.source_snapshot_id is None
+        ):
+            raise GlhsInvariantError("proposal_snapshot_binding_required")
+        if action == "activate" and bind_snapshot and assertion.source_snapshot_id is not None:
+            _validate_proposal_snapshot(
+                db,
+                profile_id=scope.profile.id,
+                source_snapshot_id=assertion.source_snapshot_id,
+                source_snapshot_digest=assertion.source_snapshot_digest,
+                base_state_version=assertion.base_state_version,
+                actor_user_id=scope.actor.id,
+                actor_role=scope.actor_role,
+                purpose=scope.purpose,
+                revalidate_governance=revalidate_governance,
+            )
+
+        result_version = base_version + 1
+        now = datetime.now(UTC)
+        transition = GlhsTransition(
+            profile_id=scope.profile.id,
             base_state_version=base_version,
+            resulting_state_version=result_version,
+            valid_at=effective_at,
+            transition_kind=transition_kind,
+            reason_code=reason_code,
             actor_user_id=scope.actor.id,
             actor_role=scope.actor_role,
-            purpose=scope.purpose,
-            revalidate_governance=revalidate_governance,
+            process_kind=assertion.process_kind,
+            review_state=review_state,
+            reviewed_at=reviewed_at,
+            policy_version=current_policy_version,
+            consent_version=current_consent_version,
+            source_snapshot_id=(assertion.source_snapshot_id if action == "activate" else None),
+            source_snapshot_digest=(
+                assertion.source_snapshot_digest if action == "activate" else None
+            ),
+            request_digest=request_digest,
+            idempotency_key_hash=key_hash,
         )
-    result_version = base_version + 1
-    now = datetime.now(UTC)
-    transition = GlhsTransition(
-        profile_id=scope.profile.id,
-        base_state_version=base_version,
-        resulting_state_version=result_version,
-        valid_at=effective_at,
-        transition_kind=transition_kind,
-        reason_code=reason_code,
-        actor_user_id=scope.actor.id,
-        actor_role=scope.actor_role,
-        process_kind=assertion.process_kind,
-        review_state=review_state,
-        reviewed_at=reviewed_at,
-        policy_version=current_policy_version,
-        consent_version=current_consent_version,
-        source_snapshot_id=(assertion.source_snapshot_id if action == "activate" else None),
-        source_snapshot_digest=(assertion.source_snapshot_digest if action == "activate" else None),
-        request_digest=request_digest,
-        idempotency_key_hash=key_hash,
-    )
-    db.add(transition)
-    db.flush()
-    prior_assertions: list[GlhsAssertion] = []
-    if action == "activate":
-        # A late upload must be compared with the full historical ledger before
-        # it is compared with current state.  Otherwise an older duplicate of a
-        # superseded prescription could be accidentally reactivated merely
-        # because its original assertion is no longer active.
-        historical_matches = list(
+        db.add(transition)
+        db.flush()
+
+        if action == "activate":
+            # A late upload must be compared with the full historical ledger before
+            # it is compared with current state.  Otherwise an older duplicate of a
+            # superseded prescription could be accidentally reactivated merely
+            # because its original assertion is no longer active.
+            historical_matches = list(
+                db.execute(
+                    select(GlhsAssertion).where(
+                        GlhsAssertion.profile_id == scope.profile.id,
+                        GlhsAssertion.semantic_key == assertion.semantic_key,
+                        GlhsAssertion.id != assertion.id,
+                        GlhsAssertion.value_fingerprint == assertion.value_fingerprint,
+                    )
+                ).scalars()
+            )
+            for historical in historical_matches:
+                # Same value alone is not a duplicate: a July report of a renewed
+                # 500mg course is materially different from a March prescription.
+                # Deduplication therefore requires the same asserted valid anchor
+                # (and compatible interval), never merely an overlapping course.
+                same_anchor = historical.valid_from == assertion.valid_from
+                if (
+                    assertion.epistemic_state != "confirmed"
+                    and same_anchor
+                    and (
+                        historical.valid_to == assertion.valid_to
+                        or intervals_overlap(
+                            historical.valid_from,
+                            historical.valid_to,
+                            assertion.valid_from,
+                            assertion.valid_to,
+                        )
+                    )
+                ):
+                    assertion.lifecycle_status = "rejected"
+                    db.add(assertion)
+                    db.add(
+                        GlhsTransitionItem(
+                            transition_id=transition.id,
+                            assertion_id=assertion.id,
+                            prior_assertion_id=historical.id,
+                            action="reject",
+                        )
+                    )
+                    max_sv = db.execute(
+                        select(func.coalesce(func.max(GlhsStateVersion.state_version), 0)).where(
+                            GlhsStateVersion.profile_id == scope.profile.id
+                        )
+                    ).scalar_one()
+                    next_sv = max(result_version, max_sv + 1)
+                    db.add(
+                        GlhsStateVersion(
+                            profile_id=scope.profile.id,
+                            state_version=next_sv,
+                            valid_at=effective_at,
+                            policy_version=current_policy_version,
+                        )
+                    )
+                    db.flush()
+                    return transition
+
+            prior_assertions = list(
+                db.execute(
+                    select(GlhsAssertion).where(
+                        GlhsAssertion.profile_id == scope.profile.id,
+                        GlhsAssertion.semantic_key == assertion.semantic_key,
+                        GlhsAssertion.lifecycle_status.in_(ACTIVE_LIFECYCLE_STATES),
+                    )
+                ).scalars()
+            )
+            assertion.lifecycle_status = "active"
+            if assertion.epistemic_state == "confirmed":
+                assertion.confirmed_at = now
+            db.add(assertion)
+            db.add(
+                GlhsTransitionItem(
+                    transition_id=transition.id,
+                    assertion_id=assertion.id,
+                    action="activate",
+                )
+            )
+            for prior in prior_assertions:
+                if prior.id == assertion.id:
+                    continue
+                overlap = intervals_overlap(
+                    prior.valid_from, prior.valid_to, assertion.valid_from, assertion.valid_to
+                )
+                if overlap:
+                    left, right = sorted((prior.id, assertion.id))
+                    conflict = db.execute(
+                        select(GlhsConflict).where(
+                            GlhsConflict.profile_id == scope.profile.id,
+                            GlhsConflict.semantic_key == assertion.semantic_key,
+                            GlhsConflict.left_assertion_id == left,
+                            GlhsConflict.right_assertion_id == right,
+                        )
+                    ).scalar_one_or_none()
+                    if conflict is None:
+                        db.add(
+                            GlhsConflict(
+                                profile_id=scope.profile.id,
+                                semantic_key=assertion.semantic_key,
+                                left_assertion_id=left,
+                                right_assertion_id=right,
+                                created_transition_id=transition.id,
+                            )
+                        )
+        elif action in {"supersede", "reject", "resolve", "enter_in_error"}:
+            assertion.lifecycle_status = {
+                "supersede": "superseded",
+                "reject": "rejected",
+                "resolve": "resolved",
+                "enter_in_error": "entered_in_error",
+            }[action]
+            if action == "supersede":
+                assertion.superseded_at = now
+            db.add(assertion)
+            db.add(
+                GlhsTransitionItem(
+                    transition_id=transition.id,
+                    assertion_id=assertion.id,
+                    action=action,
+                )
+            )
+            if action == "resolve":
+                for conflict in _open_conflicts(
+                    db, profile_id=scope.profile.id, semantic_key=assertion.semantic_key
+                ):
+                    if assertion.id in {conflict.left_assertion_id, conflict.right_assertion_id}:
+                        conflict.status = "resolved"
+                        conflict.resolved_transition_id = transition.id
+                        conflict.resolved_at = now
+                        db.add(conflict)
+
+        # In GLHS v2, state version allocation uses ON CONFLICT DO NOTHING for backward-compatibility recording
+        bind = db.get_bind()
+        dialect_name = bind.dialect.name if (bind and bind.dialect) else "sqlite"
+        if dialect_name == "postgresql":
+            from sqlalchemy.dialects.postgresql import insert as pg_insert
             db.execute(
-                select(GlhsAssertion).where(
-                    GlhsAssertion.profile_id == scope.profile.id,
-                    GlhsAssertion.semantic_key == assertion.semantic_key,
-                    GlhsAssertion.id != assertion.id,
-                    GlhsAssertion.value_fingerprint == assertion.value_fingerprint,
+                pg_insert(GlhsStateVersion)
+                .values(
+                    profile_id=scope.profile.id,
+                    state_version=result_version,
+                    valid_at=effective_at,
+                    policy_version=current_policy_version,
                 )
-            ).scalars()
-        )
-        for historical in historical_matches:
-            # Same value alone is not a duplicate: a July report of a renewed
-            # 500mg course is materially different from a March prescription.
-            # Deduplication therefore requires the same asserted valid anchor
-            # (and compatible interval), never merely an overlapping course.
-            same_anchor = historical.valid_from == assertion.valid_from
-            if (
-                assertion.epistemic_state != "confirmed"
-                and same_anchor
-                and (
-                    historical.valid_to == assertion.valid_to
-                    or intervals_overlap(
-                        historical.valid_from,
-                        historical.valid_to,
-                        assertion.valid_from,
-                        assertion.valid_to,
-                    )
+                .on_conflict_do_nothing(index_elements=["profile_id", "state_version"])
+            )
+        elif dialect_name == "sqlite":
+            from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+            db.execute(
+                sqlite_insert(GlhsStateVersion)
+                .values(
+                    profile_id=scope.profile.id,
+                    state_version=result_version,
+                    valid_at=effective_at,
+                    policy_version=current_policy_version,
                 )
-            ):
-                assertion.lifecycle_status = "rejected"
-                db.add(assertion)
-                db.add(
-                    GlhsTransitionItem(
-                        transition_id=transition.id,
-                        assertion_id=assertion.id,
-                        prior_assertion_id=historical.id,
-                        action="reject",
-                    )
+                .on_conflict_do_nothing()
+            )
+        else:
+            existing_sv = db.execute(
+                select(GlhsStateVersion.id).where(
+                    GlhsStateVersion.profile_id == scope.profile.id,
+                    GlhsStateVersion.state_version == result_version,
                 )
+            ).scalar_one_or_none()
+            if existing_sv is None:
                 db.add(
                     GlhsStateVersion(
                         profile_id=scope.profile.id,
@@ -1647,128 +1734,69 @@ def apply_transition(
                         policy_version=current_policy_version,
                     )
                 )
-                increment_partition_versions(
-                    db,
-                    partitions=locked_partitions,
-                    consent_version=current_consent_version,
-                    policy_version=current_policy_version,
-                )
-                add_outbox(
-                    db,
-                    event_id=_digest(
-                        {
-                            "kind": "glhs.transition.applied",
-                            "transition": transition.public_id,
-                        }
-                    ),
-                    profile_id=scope.profile.id,
-                    aggregate_type="glhs_transition",
-                    aggregate_public_id=transition.public_id,
-                    event_type="glhs.transition.applied",
-                )
-                db.flush()
-                return transition
-        prior_assertions = list(
-            db.execute(
-                select(GlhsAssertion).where(
-                    GlhsAssertion.profile_id == scope.profile.id,
-                    GlhsAssertion.semantic_key == assertion.semantic_key,
-                    GlhsAssertion.lifecycle_status.in_(ACTIVE_LIFECYCLE_STATES),
-                )
-            ).scalars()
-        )
-        assertion.lifecycle_status = "active"
-        if assertion.epistemic_state == "confirmed":
-            assertion.confirmed_at = now
-        db.add(assertion)
-        db.add(
-            GlhsTransitionItem(
-                transition_id=transition.id,
-                assertion_id=assertion.id,
-                action="activate",
-            )
-        )
-        for prior in prior_assertions:
-            if prior.id == assertion.id:
-                continue
-            overlap = intervals_overlap(
-                prior.valid_from, prior.valid_to, assertion.valid_from, assertion.valid_to
-            )
-            if overlap:
-                left, right = sorted((prior.id, assertion.id))
-                conflict = db.execute(
-                    select(GlhsConflict).where(
-                        GlhsConflict.profile_id == scope.profile.id,
-                        GlhsConflict.semantic_key == assertion.semantic_key,
-                        GlhsConflict.left_assertion_id == left,
-                        GlhsConflict.right_assertion_id == right,
-                    )
-                ).scalar_one_or_none()
-                if conflict is None:
-                    db.add(
-                        GlhsConflict(
-                            profile_id=scope.profile.id,
-                            semantic_key=assertion.semantic_key,
-                            left_assertion_id=left,
-                            right_assertion_id=right,
-                            created_transition_id=transition.id,
-                        )
-                    )
-    elif action in {"supersede", "reject", "resolve", "enter_in_error"}:
-        assertion.lifecycle_status = {
-            "supersede": "superseded",
-            "reject": "rejected",
-            "resolve": "resolved",
-            "enter_in_error": "entered_in_error",
-        }[action]
-        if action == "supersede":
-            assertion.superseded_at = now
-        db.add(assertion)
-        db.add(
-            GlhsTransitionItem(
-                transition_id=transition.id,
-                assertion_id=assertion.id,
-                action=action,
-            )
-        )
-        if action == "resolve":
-            for conflict in _open_conflicts(
-                db, profile_id=scope.profile.id, semantic_key=assertion.semantic_key
-            ):
-                if assertion.id in {conflict.left_assertion_id, conflict.right_assertion_id}:
-                    conflict.status = "resolved"
-                    conflict.resolved_transition_id = transition.id
-                    conflict.resolved_at = now
-                    db.add(conflict)
-    db.add(
-        GlhsStateVersion(
+        db.flush()
+        return transition
+
+    try:
+        commit_result = execute_atomic_glhs_commit(
+            db,
             profile_id=scope.profile.id,
-            state_version=result_version,
-            valid_at=effective_at,
-            policy_version=current_policy_version,
+            idempotency_key=idempotency_key,
+            proposal_id=None,
+            operation_kind="APPLY_TRANSITION",
+            request_digest=request_digest,
+            disclosure_digest=assertion.source_snapshot_digest or "",
+            policy_domain=None,
+            purpose=scope.purpose,
+            dependencies=resolved_dependencies,
+            write_partitions=target_partitions,
+            expected_policy_version=assertion.policy_version if revalidate_governance else None,
+            expected_consent_version=assertion.consent_version if revalidate_governance else None,
+            canonicalization_profile=CANONICALIZATION_PROFILE,
+            mutation_callback=_mutation_callback,
+            aggregate_type="glhs_transition",
+            event_type="glhs.transition.applied",
         )
-    )
-    increment_partition_versions(
-        db,
-        partitions=locked_partitions,
-        consent_version=current_consent_version,
-        policy_version=current_policy_version,
-    )
-    add_outbox(
-        db,
-        event_id=_digest(
-            {
-                "kind": "glhs.transition.applied",
-                "transition": transition.public_id,
-            }
-        ),
-        profile_id=scope.profile.id,
-        aggregate_type="glhs_transition",
-        aggregate_public_id=transition.public_id,
-        event_type="glhs.transition.applied",
-    )
-    db.flush()
-    return transition
+    except GlhsInvariantError as exc:
+        err_msg = str(exc)
+        if "stale_entity_partition" in err_msg or "stale_base_state_version" in err_msg:
+            if action == "activate" and part.state_version != proposal_part_version:
+                raise GlhsInvariantError("stale_proposal_state_version") from exc
+            raise GlhsInvariantError("stale_state_version") from exc
+        if "stale_governance_policy" in err_msg or "stale_policy_version" in err_msg:
+            raise GlhsInvariantError("assertion_policy_mismatch") from exc
+        if "stale_governance_consent" in err_msg or "stale_consent_version" in err_msg:
+            raise GlhsInvariantError("assertion_consent_mismatch") from exc
+        if "idempotency_key_reused" in err_msg:
+            raise GlhsInvariantError("idempotency_key_reuse_mismatch") from exc
+        raise
+
+    if commit_result.idempotent_replay:
+        if revalidate_governance:
+            current_policy = _effective_policy_version(db)
+            current_consent = _governed_consent_version(
+                db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
+            )
+            if assertion.policy_version != current_policy:
+                raise GlhsInvariantError("assertion_policy_mismatch")
+            if assertion.consent_version != current_consent:
+                raise GlhsInvariantError("assertion_consent_mismatch")
+
+        existing = db.execute(
+            select(GlhsTransition).where(
+                GlhsTransition.profile_id == scope.profile.id,
+                GlhsTransition.idempotency_key_hash == key_hash,
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            if existing.request_digest != request_digest:
+                raise GlhsInvariantError("idempotency_key_reuse_mismatch")
+            return cast(GlhsTransition, existing)
+
+    if commit_result.mutation_result is None:
+        raise GlhsInvariantError("transition_commit_failed")
+
+    return cast(GlhsTransition, commit_result.mutation_result)
 
 
 def compile_thss(

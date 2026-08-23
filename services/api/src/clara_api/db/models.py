@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     CheckConstraint,
     Date,
@@ -2494,13 +2495,20 @@ class GlhsClinicalCommitmentVersion(Base):
 
 
 class GlhsClinicalCommitmentProposal(Base):
-    """Reviewable proposal; never itself a canonical commitment transition."""
+    """Reviewable proposal; never itself a canonical commitment transition.
+
+    Note: ``base_state_version`` is retained for v1 compatibility and is
+    deprecated in GLHS v2; v2 proposals commit via normalized dependency vectors.
+    """
 
     __tablename__ = "glhs_clinical_commitment_proposals"
     __table_args__ = (
         Index("ix_glhs_prop_inf_binding", "inference_context_binding_id"),
         Index("ix_glhs_prop_inf_actor", "inference_actor_user_id"),
         Index("ix_glhs_prop_review_actor", "review_actor_user_id"),
+        Index("ix_glhs_prop_disclosure_manifest", "disclosure_manifest_id"),
+        Index("ix_glhs_prop_dep_vector_digest", "dependency_vector_digest"),
+        Index("ix_glhs_prop_sealed_at", "sealed_at"),
         CheckConstraint(
             "context_binding_mode IN ('snapshot_bound', 'base_version_only')",
             name="ck_glhs_proposal_binding_mode",
@@ -2524,6 +2532,10 @@ class GlhsClinicalCommitmentProposal(Base):
             "(context_binding_mode = 'snapshot_bound' AND "
             "source_snapshot_id IS NOT NULL AND source_snapshot_digest IS NOT NULL)",
             name="ck_glhs_proposal_binding_requires_snapshot",
+        ),
+        CheckConstraint(
+            "protocol_version <> ''",
+            name="ck_glhs_proposal_protocol_version",
         ),
     )
 
@@ -2583,7 +2595,37 @@ class GlhsClinicalCommitmentProposal(Base):
     reviewed_proposal_id: Mapped[int | None] = mapped_column(
         ForeignKey("glhs_clinical_commitment_proposals.id", ondelete="SET NULL"), nullable=True
     )
+    protocol_version: Mapped[str] = mapped_column(
+        String(64), default="glhs.v1", server_default="glhs.v1"
+    )
+    dependency_vector_digest: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+    disclosure_manifest_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_snapshot_manifests.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    canonicalization_profile: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    inference_run_digest: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+    sealed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    dependencies: Mapped[list["GlhsProposalDependency"]] = relationship(
+        "GlhsProposalDependency", back_populates="proposal"
+    )
+    disclosure_manifest: Mapped["GlhsSnapshotManifest | None"] = relationship(
+        "GlhsSnapshotManifest"
+    )
+    applied_transition: Mapped["GlhsAppliedTransition | None"] = relationship(
+        "GlhsAppliedTransition", back_populates="proposal", uselist=False
+    )
 
 
 class GlhsClinicalCommitmentTransition(Base):
@@ -2668,6 +2710,207 @@ class GlhsClinicalCommitmentTransition(Base):
     )
 
 
+class GlhsProposalDependency(Base):
+    """Normalized, cryptographically verifiable dependency vector row for GLHS proposals."""
+
+    __tablename__ = "glhs_proposal_dependencies"
+    __table_args__ = (
+        UniqueConstraint(
+            "proposal_id",
+            "dependency_kind",
+            "dependency_key",
+            name="uq_glhs_proposal_dependency_key",
+        ),
+        Index(
+            "ix_glhs_prop_dep_lookup",
+            "dependency_kind",
+            "dependency_key",
+            "observed_version",
+        ),
+        Index("ix_glhs_prop_dep_proposal", "proposal_id"),
+        CheckConstraint(
+            "observed_version >= 0",
+            name="ck_glhs_proposal_dep_observed_version_nonneg",
+        ),
+        CheckConstraint(
+            "access_mode IN ('READ', 'WRITE')",
+            name="ck_glhs_proposal_dep_access_mode",
+        ),
+        CheckConstraint(
+            "dependency_kind IN ('GOVERNANCE', 'ENTITY', 'EVIDENCE', 'LEASE')",
+            name="ck_glhs_proposal_dep_kind",
+        ),
+        CheckConstraint(
+            "dependency_key <> ''",
+            name="ck_glhs_proposal_dep_key_nonempty",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    proposal_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_clinical_commitment_proposals.id", ondelete="RESTRICT"),
+        index=True,
+    )
+    dependency_kind: Mapped[str] = mapped_column(String(32), index=True)
+    dependency_key: Mapped[str] = mapped_column(String(255), index=True)
+    access_mode: Mapped[str] = mapped_column(String(16))
+    observed_version: Mapped[int] = mapped_column(BigInteger)
+    observed_digest: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+    valid_from: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    valid_to: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    transaction_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    canonicalization_profile: Mapped[str] = mapped_column(
+        String(64), default="glhs.canonical.v2", server_default="glhs.canonical.v2"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    proposal: Mapped["GlhsClinicalCommitmentProposal"] = relationship(
+        "GlhsClinicalCommitmentProposal", back_populates="dependencies"
+    )
+
+
+class GlhsAppliedTransition(Base):
+    """Immutable record of an atomically committed GLHS state transition."""
+
+    __tablename__ = "glhs_applied_transitions"
+    __table_args__ = (
+        UniqueConstraint("proposal_id", name="uq_glhs_applied_trans_proposal_id"),
+        UniqueConstraint(
+            "tenant_id",
+            "operation_kind",
+            "idempotency_key",
+            name="uq_glhs_applied_trans_idempotency",
+        ),
+        CheckConstraint(
+            "transition_status IN ('COMMITTED', 'ABORTED', 'REJECTED')",
+            name="ck_glhs_applied_trans_status",
+        ),
+        CheckConstraint(
+            "operation_kind <> ''",
+            name="ck_glhs_applied_trans_op_kind_nonempty",
+        ),
+        CheckConstraint(
+            "idempotency_key <> ''",
+            name="ck_glhs_applied_trans_idemp_key_nonempty",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(64), default="default", server_default="default"
+    )
+    proposal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_clinical_commitment_proposals.id", ondelete="RESTRICT"),
+        unique=True,
+        index=True,
+        nullable=True,
+    )
+    operation_kind: Mapped[str] = mapped_column(String(64))
+    idempotency_key: Mapped[str] = mapped_column(String(128), index=True)
+    transition_status: Mapped[str] = mapped_column(
+        String(32), default="COMMITTED", server_default="COMMITTED"
+    )
+    request_digest: Mapped[str] = mapped_column(
+        String(64), default="", server_default=""
+    )
+    result_digest: Mapped[str] = mapped_column(
+        String(64), default="", server_default=""
+    )
+    dependency_vector_digest: Mapped[str] = mapped_column(
+        String(64), default="", server_default=""
+    )
+    disclosure_digest: Mapped[str] = mapped_column(
+        String(64), default="", server_default=""
+    )
+    audit_event_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+    committed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+    proposal: Mapped["GlhsClinicalCommitmentProposal"] = relationship(
+        "GlhsClinicalCommitmentProposal", back_populates="applied_transition"
+    )
+    partition_links: Mapped[list["GlhsTransitionPartitionLink"]] = relationship(
+        "GlhsTransitionPartitionLink", back_populates="transition"
+    )
+
+
+class GlhsTransitionPartitionLink(Base):
+    """Binds applied transition records to specific partition version increments."""
+
+    __tablename__ = "glhs_transition_partition_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "transition_id", "partition_id", name="uq_glhs_trans_partition_link"
+        ),
+        CheckConstraint(
+            "successor_version = predecessor_version + 1",
+            name="ck_glhs_trans_partition_successor_step",
+        ),
+        CheckConstraint(
+            "predecessor_version >= 0",
+            name="ck_glhs_trans_partition_predecessor_nonneg",
+        ),
+        CheckConstraint(
+            "successor_version >= 1",
+            name="ck_glhs_trans_partition_successor_positive",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=_public_id
+    )
+    transition_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_applied_transitions.id", ondelete="RESTRICT"), index=True
+    )
+    partition_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_entity_version_partitions.id", ondelete="RESTRICT"),
+        index=True,
+    )
+    predecessor_version: Mapped[int] = mapped_column(BigInteger)
+    successor_version: Mapped[int] = mapped_column(BigInteger)
+    predecessor_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    successor_digest: Mapped[str] = mapped_column(
+        String(64), default="", server_default=""
+    )
+    write_digest: Mapped[str] = mapped_column(String(64), default="", server_default="")
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+    transition: Mapped["GlhsAppliedTransition"] = relationship(
+        "GlhsAppliedTransition", back_populates="partition_links"
+    )
+    partition: Mapped["GlhsEntityVersionPartition"] = relationship(
+        "GlhsEntityVersionPartition"
+    )
+
+
 def _reject_glhs_ledger_mutation(*_args: object, **_kwargs: object) -> None:
     raise ValueError("GLHS ledger rows are immutable; append a governed transition")
 
@@ -2746,6 +2989,9 @@ for _immutable_glhs_model in (
     GlhsClinicalCommitmentVersion,
     GlhsClinicalCommitmentProposal,
     GlhsClinicalCommitmentTransition,
+    GlhsProposalDependency,
+    GlhsAppliedTransition,
+    GlhsTransitionPartitionLink,
 ):
     sa_event.listen(_immutable_glhs_model, "before_update", _reject_glhs_ledger_mutation)
     sa_event.listen(_immutable_glhs_model, "before_delete", _reject_glhs_ledger_mutation)

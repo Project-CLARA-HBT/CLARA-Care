@@ -15,9 +15,12 @@ Generates structured JSON reports and evaluates against locked thresholds:
 from __future__ import annotations
 
 import argparse
+import inspect
 import logging
+import os
 import sys
 import time
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -30,12 +33,14 @@ for p in (str(_REPO_ROOT), str(_ML_SRC), str(_API_SRC)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-import os
-
 from clara_ml.llm.model_gateway import ModelGateway
 
 from evaluation.product_ai.care_navigation.run import run_benchmark as run_care_nav
-from evaluation.product_ai.common import MockEvaluationAdapter, save_report
+from evaluation.product_ai.common import (
+    EvaluationTarget,
+    MockEvaluationAdapter,
+    save_report_atomic,
+)
 from evaluation.product_ai.disclosure_safety.run import run_benchmark as run_disclosure
 from evaluation.product_ai.document_extraction.run import (
     run_benchmark as run_doc_extract,
@@ -60,50 +65,171 @@ BENCHMARK_SUITES = {
     "prompt_injection": run_prompt_inj,
 }
 
-EVALUATION_TARGETS = [
-    {
-        "provider": "unofficial_gemini_gateway",
-        "model": "gemini-3.7-flash-tiered",
-        "role": "candidate_quality_multimodal",
-    },
-    {
-        "provider": "unofficial_gemini_gateway",
-        "model": "gemini-3.6-flash-high",
-        "role": "candidate_fast_multimodal",
-    },
-    {
-        "provider": "unofficial_gemini_gateway",
-        "model": "claude-sonnet-4-6",
-        "role": "candidate_quality_reasoning",
-    },
-    {
-        "provider": "deepseek",
-        "model": "deepseek-v4-pro",
-        "role": "baseline_reasoning",
-    },
-]
+EVALUATION_TARGETS: tuple[EvaluationTarget, ...] = (
+    EvaluationTarget(
+        provider="unofficial_gemini_gateway",
+        model="gemini-3.7-flash-tiered",
+        role="candidate_quality_multimodal",
+        target_type="candidate",
+        execution_mode="mock",
+        endpoint_class="unofficial_gemini_gateway",
+    ),
+    EvaluationTarget(
+        provider="unofficial_gemini_gateway",
+        model="gemini-3.6-flash-high",
+        role="candidate_fast_multimodal",
+        target_type="candidate",
+        execution_mode="mock",
+        endpoint_class="unofficial_gemini_gateway",
+    ),
+    EvaluationTarget(
+        provider="unofficial_gemini_gateway",
+        model="claude-sonnet-4-6",
+        role="candidate_quality_reasoning",
+        target_type="candidate",
+        execution_mode="mock",
+        endpoint_class="unofficial_gemini_gateway",
+    ),
+    EvaluationTarget(
+        provider="deepseek",
+        model="deepseek-v4-pro",
+        role="baseline_reasoning",
+        target_type="baseline",
+        execution_mode="mock",
+        endpoint_class="deepseek",
+    ),
+)
+
+
+def validate_cli_identifiers(
+    models: list[str] | None = None,
+    suites: list[str] | None = None,
+    targets: list[EvaluationTarget] | tuple[EvaluationTarget, ...] | None = None,
+    available_suites: list[str] | dict[str, Any] | None = None,
+) -> tuple[list[EvaluationTarget], list[str]]:
+    """Validate CLI model and suite identifiers against typed registry.
+
+    Fails closed with exit code 2 if:
+    - An explicitly provided model list is empty (e.g. models == [])
+    - An explicitly provided suite list is empty (e.g. suites == [])
+    - Any requested model is not found in known evaluation targets
+    - Any requested suite is not found in known benchmark suites
+    """
+    known_targets = list(targets if targets is not None else EVALUATION_TARGETS)
+    target_by_model: dict[str, EvaluationTarget] = {t.model: t for t in known_targets}
+
+    if isinstance(available_suites, dict):
+        known_suites = list(available_suites.keys())
+    elif available_suites is not None:
+        known_suites = list(available_suites)
+    else:
+        known_suites = list(BENCHMARK_SUITES.keys())
+
+    if models is not None:
+        if len(models) == 0:
+            msg = "CLI validation error: explicit --models selection is empty."
+            logger.error(msg)
+            sys.stderr.write(f"{msg}\n")
+            sys.exit(2)
+        invalid_models = [m for m in models if m not in target_by_model]
+        if invalid_models:
+            msg = (
+                f"CLI validation error: unknown model identifiers: {invalid_models}. "
+                f"Valid models are: {sorted(target_by_model.keys())}"
+            )
+            logger.error(msg)
+            sys.stderr.write(f"{msg}\n")
+            sys.exit(2)
+        resolved_targets = [target_by_model[m] for m in models]
+    else:
+        resolved_targets = list(known_targets)
+
+    if suites is not None:
+        if len(suites) == 0:
+            msg = "CLI validation error: explicit --suites selection is empty."
+            logger.error(msg)
+            sys.stderr.write(f"{msg}\n")
+            sys.exit(2)
+        invalid_suites = [s for s in suites if s not in known_suites]
+        if invalid_suites:
+            msg = (
+                f"CLI validation error: unknown suite identifiers: {invalid_suites}. "
+                f"Valid suites are: {sorted(known_suites)}"
+            )
+            logger.error(msg)
+            sys.stderr.write(f"{msg}\n")
+            sys.exit(2)
+        resolved_suites = list(suites)
+    else:
+        resolved_suites = list(known_suites)
+
+    return resolved_targets, resolved_suites
 
 
 def run_all_benchmarks(
     output_dir: Path | None = None,
-    targets: list[dict[str, str]] | None = None,
+    targets: Sequence[EvaluationTarget | dict[str, Any]] | None = None,
     suites: list[str] | None = None,
     live: bool = False,
     router_base_url: str = "https://router.theclaracare.com/v1",
     router_api_key: str = "",
 ) -> dict[str, Any]:
     """Execute all benchmark suites across all target model providers/aliases."""
-    eval_targets = targets or EVALUATION_TARGETS
+    raw_targets = targets or EVALUATION_TARGETS
+    eval_targets: list[EvaluationTarget] = []
+    for t in raw_targets:
+        if isinstance(t, EvaluationTarget):
+            eval_targets.append(t)
+        elif isinstance(t, dict):
+            eval_targets.append(
+                EvaluationTarget(
+                    provider=t["provider"],
+                    model=t["model"],
+                    role=t["role"],
+                    target_type=t.get("target_type", "candidate"),
+                    execution_mode=t.get("execution_mode", "mock"),
+                    endpoint_class=t.get("endpoint_class", "offline_mock"),
+                    revision=t.get("revision", "v1"),
+                )
+            )
+
     target_suites = suites or list(BENCHMARK_SUITES.keys())
     out_dir = output_dir or (_REPO_ROOT / "artifacts" / "product_ai" / "reports")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if live:
+        # EVAL-LIVE-01: Refuse live=True when provider has no real credentials/adapter
+        for target in eval_targets:
+            provider = target.provider
+            model = target.model
+            if provider == "deepseek":
+                ds_key = (os.environ.get("DEEPSEEK_API_KEY") or "").strip()
+                if not ds_key:
+                    raise RuntimeError(
+                        f"Cannot run live evaluation for target '{provider}::{model}': "
+                        "DEEPSEEK_API_KEY is not set or empty."
+                    )
+            elif provider == "unofficial_gemini_gateway":
+                gemini_key = (
+                    router_api_key
+                    or os.environ.get("ROUTER_API_KEY")
+                    or os.environ.get("CLARA_UNOFFICIAL_GEMINI_API_KEY")
+                    or ""
+                ).strip()
+                if not gemini_key:
+                    raise RuntimeError(
+                        f"Cannot run live evaluation for target '{provider}::{model}': "
+                        "ROUTER_API_KEY / CLARA_UNOFFICIAL_GEMINI_API_KEY is not set or empty."
+                    )
+            else:
+                raise RuntimeError(
+                    f"Cannot run live evaluation for unknown/unsupported live provider '{provider}'."
+                )
+
         resolved_key = (
             router_api_key
             or os.environ.get("ROUTER_API_KEY")
             or os.environ.get("CLARA_UNOFFICIAL_GEMINI_API_KEY")
-            or os.environ.get("DEEPSEEK_API_KEY")
             or ""
         )
         resolved_base_url = (
@@ -131,18 +257,18 @@ def run_all_benchmarks(
     start_all = time.monotonic()
 
     for target in eval_targets:
-        provider = target["provider"]
-        model = target["model"]
+        provider = target.provider
+        model = target.model
         target_key = f"{provider}::{model}"
         logger.info("==================================================================")
         logger.info(
-            "Evaluating Target: Provider=%s | Model=%s (%s)", provider, model, target["role"]
+            "Evaluating Target: Provider=%s | Model=%s (%s)", provider, model, target.role
         )
         logger.info("==================================================================")
 
         # Setup gateway
         gateway = ModelGateway()
-        if not live or provider == "deepseek":
+        if not live:
             gateway.register_adapter(
                 provider, MockEvaluationAdapter(provider_alias=provider, model_name=model)
             )
@@ -154,18 +280,16 @@ def run_all_benchmarks(
             runner_fn = BENCHMARK_SUITES[suite_name]
             logger.info("  -> Running suite: %s ...", suite_name)
             try:
-                try:
-                    report = runner_fn(
-                        gateway=gateway,
-                        provider=provider,
-                        model=model,
-                        output_dir=out_dir,
-                        live=live,
-                    )
-                except TypeError:
-                    report = runner_fn(
-                        gateway=gateway, provider=provider, model=model, output_dir=out_dir
-                    )
+                sig = inspect.signature(runner_fn)
+                call_kwargs: dict[str, Any] = {
+                    "gateway": gateway,
+                    "provider": provider,
+                    "model": model,
+                    "output_dir": out_dir,
+                }
+                if "live" in sig.parameters:
+                    call_kwargs["live"] = live
+                report = runner_fn(**call_kwargs)
                 target_suite_reports.append(report)
                 logger.info(
                     "     Result: %s | Pass Rate: %.1f%% | Overall: %s",
@@ -187,7 +311,7 @@ def run_all_benchmarks(
         summary_results["target_summaries"][target_key] = {
             "provider": provider,
             "model": model,
-            "role": target["role"],
+            "role": target.role,
             "all_suites_passed": target_passed,
             "suite_count": len(target_suite_reports),
             "passed_suites": sum(1 for r in target_suite_reports if r.overall_passed),
@@ -233,11 +357,11 @@ def run_all_benchmarks(
     total_time = round((time.monotonic() - start_all), 2)
     summary_results["duration_seconds"] = total_time
 
-    # Save summary report
+    # Save summary report atomically (EVAL-ATOMIC-01)
     summary_file = out_dir / (
         "product_ai_live_evaluation_summary.json" if live else "product_ai_evaluation_summary.json"
     )
-    save_report(summary_results, summary_file)
+    save_report_atomic(summary_results, summary_file)
     logger.info("==================================================================")
     logger.info(
         "Evaluation Complete in %.2fs. All Targets Passed: %s",
@@ -271,24 +395,36 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--models",
-        default="gemini-3.7-flash-tiered,gemini-3.6-flash-high,claude-sonnet-4-6",
-        help="Comma-separated model names to evaluate",
+        default=None,
+        help="Comma-separated model names to evaluate (default: all registered targets)",
     )
     parser.add_argument(
         "--suites",
-        default="",
+        default=None,
         help="Comma-separated suite names to evaluate (default: all)",
     )
     args = parser.parse_args()
 
-    selected_models = [m.strip() for m in args.models.split(",") if m.strip()]
-    filtered_targets = [t for t in EVALUATION_TARGETS if t["model"] in selected_models]
-    selected_suites = [s.strip() for s in args.suites.split(",") if s.strip()] or None
+    selected_models = (
+        [m.strip() for m in args.models.split(",") if m.strip()]
+        if args.models is not None
+        else None
+    )
+    selected_suites = (
+        [s.strip() for s in args.suites.split(",") if s.strip()]
+        if args.suites is not None
+        else None
+    )
+
+    filtered_targets, validated_suites = validate_cli_identifiers(
+        models=selected_models,
+        suites=selected_suites,
+    )
 
     results = run_all_benchmarks(
         output_dir=Path(args.output),
-        targets=filtered_targets if filtered_targets else None,
-        suites=selected_suites,
+        targets=filtered_targets,
+        suites=validated_suites,
         live=args.live,
         router_base_url=args.router_base_url,
         router_api_key=args.router_api_key,

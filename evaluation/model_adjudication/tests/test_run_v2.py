@@ -363,6 +363,9 @@ def test_run_end_to_end_writes_rows_and_summary(tmp_path: Path) -> None:
 
 def test_run_fails_closed_without_router_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CLARA_ROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("ROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("CLARA_UNOFFICIAL_GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     with pytest.raises(RuntimeError, match="router_key_missing"):
         _call(
             model=MODELS[0],

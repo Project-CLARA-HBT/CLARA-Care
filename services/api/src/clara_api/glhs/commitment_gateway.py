@@ -23,10 +23,20 @@ from clara_api.db.models import (
     GlhsEntityVersionPartition,
     GlhsEvidence,
     GlhsInferenceContextBinding,
+    GlhsProposalDependency,
     GlhsSnapshotManifest,
     GlhsStateVersion,
+    GovernancePolicyEpoch,
 )
-from clara_api.glhs.canonical_json import fast_canonical_digest
+from clara_api.glhs.canonical_json import (
+    CANONICALIZATION_PROFILE,
+    fast_canonical_digest,
+)
+from clara_api.glhs.commit_kernel import (
+    GlhsCommitContext,
+    compute_dependency_vector_digest,
+    execute_atomic_glhs_commit,
+)
 from clara_api.glhs.commitments import (
     COMMITMENT_SCHEMA_VERSION,
     derive_lifecycle_predicates,
@@ -38,7 +48,7 @@ from clara_api.glhs.gateway import (
     _governed_consent_version,
     current_state_version,
     get_or_create_entity_partition,
-    increment_partition_versions,
+    increment_partition_versions,  # noqa: F401
     lock_entity_partitions,
     read_current_policy_epoch,
     reconstruct_snapshot_artifact,
@@ -301,7 +311,7 @@ def _validate_current_proposal_context(
     snapshot: GlhsSnapshotManifest | None = None,
 ) -> None:
     if policy_version is None:
-        epoch = read_current_policy_epoch(db, for_update=True)
+        epoch = read_current_policy_epoch(db, for_update=False)
         policy_version = epoch.version if epoch is not None else COMMITMENT_POLICY_VERSION
     if proposal.policy_version != policy_version:
         raise GlhsInvariantError("commitment_proposal_policy_mismatch")
@@ -1233,6 +1243,146 @@ def get_or_create_commitment(
     return row
 
 
+def _build_proposal_dependencies(
+    db: Session,
+    *,
+    scope: ProfileScope,
+    commitment: GlhsClinicalCommitment,
+    observed_evidence: Iterable[GlhsEvidence],
+    policy_version: str,
+    consent_version: str,
+    epoch: GovernancePolicyEpoch | None = None,
+    granular_attributes: tuple[str, ...] | list[str] | None = None,
+) -> list[GlhsProposalDependency]:
+    target_partitions = adaptive_split_partition_coordinates(
+        commitment.domain, commitment.semantic_key, granular_attributes
+    )
+    deps: list[GlhsProposalDependency] = []
+
+    # 1. Entity partition(s)
+    for part_domain, part_key in target_partitions:
+        part = get_or_create_entity_partition(
+            db,
+            profile_id=scope.profile.id,
+            domain=part_domain,
+            semantic_key=part_key,
+            policy_version=policy_version,
+            consent_version="not_required",
+        )
+        deps.append(
+            GlhsProposalDependency(
+                public_id=str(uuid4()),
+                dependency_kind="ENTITY",
+                dependency_key=f"{part_domain}:{part_key}",
+                access_mode="WRITE",
+                observed_version=part.state_version,
+                observed_digest=None,
+                canonicalization_profile=CANONICALIZATION_PROFILE,
+            )
+        )
+
+    # 2. Governance Policy
+    observed_policy_ver = epoch.id if epoch is not None else 1
+    deps.append(
+        GlhsProposalDependency(
+            public_id=str(uuid4()),
+            dependency_kind="GOVERNANCE",
+            dependency_key=f"policy:{commitment.domain}",
+            access_mode="READ",
+            observed_version=observed_policy_ver,
+            observed_digest=policy_version,
+            canonicalization_profile=CANONICALIZATION_PROFILE,
+        )
+    )
+
+    # 3. Governance Consent
+    deps.append(
+        GlhsProposalDependency(
+            public_id=str(uuid4()),
+            dependency_kind="GOVERNANCE",
+            dependency_key=f"consent:{scope.purpose}",
+            access_mode="READ",
+            observed_version=1,
+            observed_digest=consent_version,
+            canonicalization_profile=CANONICALIZATION_PROFILE,
+        )
+    )
+
+    # 4. Evidence
+    for item in observed_evidence:
+        deps.append(
+            GlhsProposalDependency(
+                public_id=str(uuid4()),
+                dependency_kind="EVIDENCE",
+                dependency_key=f"evidence:{item.public_id}",
+                access_mode="READ",
+                observed_version=1,
+                observed_digest=item.fingerprint,
+                valid_from=item.valid_from,
+                valid_to=item.valid_to,
+                canonicalization_profile=CANONICALIZATION_PROFILE,
+            )
+        )
+
+    unique_deps: dict[tuple[str, str], GlhsProposalDependency] = {}
+    for d in deps:
+        k = (d.dependency_kind, d.dependency_key)
+        if k not in unique_deps:
+            unique_deps[k] = d
+    return list(unique_deps.values())
+
+
+def _persist_proposal_dependencies(
+    db: Session,
+    *,
+    proposal: GlhsClinicalCommitmentProposal,
+    scope: ProfileScope,
+    commitment: GlhsClinicalCommitment,
+    observed_evidence: Iterable[GlhsEvidence],
+    policy_version: str,
+    consent_version: str,
+    epoch: GovernancePolicyEpoch | None = None,
+    granular_attributes: tuple[str, ...] | list[str] | None = None,
+) -> list[GlhsProposalDependency]:
+    deps = _build_proposal_dependencies(
+        db,
+        scope=scope,
+        commitment=commitment,
+        observed_evidence=observed_evidence,
+        policy_version=policy_version,
+        consent_version=consent_version,
+        epoch=epoch,
+        granular_attributes=granular_attributes,
+    )
+    for d in deps:
+        d.proposal_id = proposal.id
+    db.add_all(deps)
+    db.flush()
+    return deps
+
+
+def load_persisted_proposal_dependencies(
+    db: Session,
+    proposal: GlhsClinicalCommitmentProposal | None = None,
+    *,
+    proposal_id: int | None = None,
+) -> list[GlhsProposalDependency]:
+    """Load normalized persisted dependency vector rows for a proposal from the database."""
+    target_id = proposal.id if proposal is not None else proposal_id
+    if target_id is None:
+        raise GlhsInvariantError("proposal_id_required")
+    return list(
+        db.execute(
+            select(GlhsProposalDependency)
+            .where(GlhsProposalDependency.proposal_id == target_id)
+            .order_by(
+                GlhsProposalDependency.dependency_kind,
+                GlhsProposalDependency.dependency_key,
+            )
+        ).scalars().all()
+    )
+
+
 def propose_bound_commitment_transition(
     db: Session,
     *,
@@ -1342,6 +1492,16 @@ def propose_bound_commitment_transition(
         )
         if snapshot_binding is not None:
             raise GlhsInvariantError("commitment_lineage_binding_required")
+    deps = _build_proposal_dependencies(
+        db,
+        scope=scope,
+        commitment=commitment,
+        observed_evidence=observed_evidence,
+        policy_version=policy_version,
+        consent_version=consent_version,
+        epoch=epoch,
+    )
+    dep_digest = compute_dependency_vector_digest(deps)
     row = GlhsClinicalCommitmentProposal(
         public_id=str(uuid4()),
         commitment_id=commitment.id,
@@ -1365,9 +1525,17 @@ def propose_bound_commitment_transition(
         source_snapshot_digest=source_snapshot_digest,
         policy_version=policy_version,
         consent_version=consent_version,
+        protocol_version="glhs.v2",
+        dependency_vector_digest=dep_digest,
+        canonicalization_profile=CANONICALIZATION_PROFILE,
+        sealed_at=datetime.now(UTC),
     )
     row.proposal_digest = _canonical_digest(_proposal_envelope(row))
     db.add(row)
+    db.flush()
+    for d in deps:
+        d.proposal_id = row.id
+    db.add_all(deps)
     db.flush()
     return row
 
@@ -1467,6 +1635,16 @@ def propose_base_commitment_transition(
     )
     epoch = read_current_policy_epoch(db)
     policy_version = epoch.version if epoch is not None else COMMITMENT_POLICY_VERSION
+    deps = _build_proposal_dependencies(
+        db,
+        scope=scope,
+        commitment=commitment,
+        observed_evidence=observed_evidence,
+        policy_version=policy_version,
+        consent_version=consent_version,
+        epoch=epoch,
+    )
+    dep_digest = compute_dependency_vector_digest(deps)
     row = GlhsClinicalCommitmentProposal(
         public_id=str(uuid4()),
         commitment_id=commitment.id,
@@ -1490,9 +1668,17 @@ def propose_base_commitment_transition(
         source_snapshot_digest=None,
         policy_version=policy_version,
         consent_version=consent_version,
+        protocol_version="glhs.v2",
+        dependency_vector_digest=dep_digest,
+        canonicalization_profile=CANONICALIZATION_PROFILE,
+        sealed_at=datetime.now(UTC),
     )
     row.proposal_digest = _canonical_digest(_proposal_envelope(row))
     db.add(row)
+    db.flush()
+    for d in deps:
+        d.proposal_id = row.id
+    db.add_all(deps)
     db.flush()
     return row
 
@@ -1628,6 +1814,16 @@ def review_model_commitment_proposal(
     )
     if expected_origin is None:
         raise GlhsInvariantError("commitment_review_authority_required")
+    deps = _build_proposal_dependencies(
+        db,
+        scope=scope,
+        commitment=commitment,
+        observed_evidence=evidence,
+        policy_version=policy_version,
+        consent_version=consent_version,
+        epoch=epoch,
+    )
+    dep_digest = compute_dependency_vector_digest(deps)
     reviewed = GlhsClinicalCommitmentProposal(
         public_id=str(uuid4()),
         commitment_id=commitment.id,
@@ -1658,9 +1854,17 @@ def review_model_commitment_proposal(
         policy_version=policy_version,
         consent_version=consent_version,
         reviewed_proposal_id=proposal.id,
+        protocol_version="glhs.v2",
+        dependency_vector_digest=dep_digest,
+        canonicalization_profile=CANONICALIZATION_PROFILE,
+        sealed_at=datetime.now(UTC),
     )
     reviewed.proposal_digest = _canonical_digest(_proposal_envelope(reviewed))
     db.add(reviewed)
+    db.flush()
+    for d in deps:
+        d.proposal_id = reviewed.id
+    db.add_all(deps)
     db.flush()
     return reviewed
 
@@ -1746,52 +1950,7 @@ def apply_commitment_transition(
         if existing.request_digest != request_digest:
             raise GlhsInvariantError("commitment_idempotency_reuse_mismatch")
         return cast(GlhsClinicalCommitmentTransition, existing)
-    dep_keys = _resolve_dependency_partition_keys(commitment.domain, data.dependencies)
-    target_partitions = adaptive_split_partition_coordinates(
-        commitment.domain,
-        commitment.semantic_key,
-        granular_attributes,
-    )
-    target_and_dep_keys = canonical_sort_coordinates(set(target_partitions) | dep_keys)
-    # Unified Canonical Lock Hierarchy:
-    # PolicyAnchor(d) ≺ ProfileAndConsentAnchor(u) ≺_lex EntityPartitions(u, k) ≺ LeaseState(l)
-    #
-    # Step 1: Policy Lock Anchor
-    from clara_api.glhs.lock_hierarchy import (
-        acquire_policy_lock_anchor,
-        acquire_profile_and_consent_anchor,
-    )
-
-    acquire_policy_lock_anchor(db, policy_domain=commitment.domain)
-
-    # Step 2: Profile state PhrProfile with SELECT ... FOR UPDATE & advisory locks
-    base, owner_user_id = acquire_profile_and_consent_anchor(
-        db, profile_id=scope.profile.id, exclusive=False
-    )
-    # Re-check after lock acquisition: another transaction may have committed
-    # the same key while this writer waited. This prevents a raw unique-key
-    # failure and makes an identical concurrent retry deterministic.
-    existing = db.execute(
-        select(GlhsClinicalCommitmentTransition).where(
-            GlhsClinicalCommitmentTransition.profile_id == scope.profile.id,
-            GlhsClinicalCommitmentTransition.idempotency_key_hash == key_hash,
-        )
-    ).scalar_one_or_none()
-    if existing is not None:
-        if existing.request_digest != request_digest:
-            raise GlhsInvariantError("commitment_idempotency_reuse_mismatch")
-        return cast(GlhsClinicalCommitmentTransition, existing)
-    if base != expected_state_version or proposal.base_state_version != base:
-        raise GlhsInvariantError("stale_commitment_proposal")
-    # The caller's proposal object was checked before waiting on the profile
-    # lock. Re-read it now so commit-time admission cannot rely on stale ORM
-    # state if another transaction changed the persisted lineage meanwhile.
-    observed_partition_versions = (
-        getattr(proposal, "observed_partition_versions", None)
-        or getattr(proposal, "observed_partition_versions_json", None)
-        or getattr(proposal, "expected_partition_versions", None)
-        or getattr(proposal, "partition_versions", None)
-    )
+    # Re-read proposal from DB and reload dependencies
     proposal = _reload_proposal(db, proposal_id=proposal.id)
     _validate_proposal_digest(proposal)
     if proposal.commitment_id != commitment.id:
@@ -1802,37 +1961,15 @@ def apply_commitment_transition(
         raise GlhsInvariantError("commitment_proposal_transition_mismatch")
     if not set(evidence_ids).issubset(set(proposal.observed_evidence_ids_json or ())):
         raise GlhsInvariantError("commitment_proposal_evidence_mismatch")
-    # Step 3: Re-read & verify active UserConsent and GovernancePolicyEpoch under active locks
-    consent_version = _governed_consent_version(
-        db, owner_user_id=owner_user_id, purpose=scope.purpose, for_update=True
+
+    persisted_deps = load_persisted_proposal_dependencies(db, proposal=proposal)
+
+    target_partitions = adaptive_split_partition_coordinates(
+        commitment.domain,
+        commitment.semantic_key,
+        granular_attributes,
     )
-    epoch = read_current_policy_epoch(db, for_update=True)
-    policy_version = epoch.version if epoch is not None else COMMITMENT_POLICY_VERSION
-    # Step 4: Entity partitions in lexicographical canonical order
-    locked_partitions = lock_entity_partitions(
-        db,
-        profile_id=scope.profile.id,
-        partitions=target_and_dep_keys,
-        policy_version=policy_version,
-        consent_version="not_required",
-    )
-    if observed_partition_versions:
-        for part in locked_partitions:
-            part_tuple = (part.domain, part.semantic_key)
-            part_colon = f"{part.domain}:{part.semantic_key}"
-            expected_ver = None
-            if isinstance(observed_partition_versions, dict):
-                if part_tuple in observed_partition_versions:
-                    expected_ver = observed_partition_versions[part_tuple]
-                elif part_colon in observed_partition_versions:
-                    expected_ver = observed_partition_versions[part_colon]
-                elif part.semantic_key in observed_partition_versions:
-                    expected_ver = observed_partition_versions[part.semantic_key]
-            if expected_ver is not None and part.state_version != expected_ver:
-                raise GlhsInvariantError("stale_commitment_proposal")
-    # GLHS-B05/B-010: after acquiring the profile/state lock, re-resolve the
-    # root inference binding from the database (never from the proposal payload)
-    # and re-read the exact root snapshot before persisting anything.
+
     root_proposal = _resolve_proposal_lineage_root(db, proposal=proposal)
     request_digest = _commitment_request_digest(
         commitment=commitment,
@@ -1859,17 +1996,7 @@ def apply_commitment_transition(
         ).scalar_one_or_none()
         if root_snapshot is None:
             raise GlhsInvariantError("commitment_snapshot_history_incomplete")
-    _validate_current_proposal_context(
-        db,
-        scope=scope,
-        proposal=proposal,
-        evidence_ids=evidence_ids,
-        current_version=base,
-        consent_version=consent_version,
-        policy_version=policy_version,
-        binding=root_binding,
-        snapshot=root_snapshot,
-    )
+
     prior = db.execute(
         select(GlhsClinicalCommitmentVersion)
         .where(GlhsClinicalCommitmentVersion.commitment_id == commitment.id)
@@ -1907,106 +2034,164 @@ def apply_commitment_transition(
         has_supersession_predicate=predicates["supersession_predicate"] is not None,
         has_partial_predicate=predicates["partial_predicate"] is not None,
     )
-    version_no = 1 if prior is None else prior.version_no + 1
-    version = GlhsClinicalCommitmentVersion(
-        commitment_id=commitment.id,
-        base_state_version=base,
-        version_no=version_no,
-        lifecycle_state=data.lifecycle_state,
-        evidence_state=data.evidence_state,
-        timeliness_state=data.timeliness_state,
-        action=data.action,
-        target_json=data.target,
-        dependencies_json=list(data.dependencies),
-        conditional_trigger_json=predicates["conditional_trigger"],
-        fulfillment_predicate_json=predicates["fulfillment_predicate"],
-        cancellation_predicate_json=predicates["cancellation_predicate"],
-        supersession_predicate_json=predicates["supersession_predicate"],
-        partial_predicate_json=predicates["partial_predicate"],
-        conflict_rules_json={"rule": policy.conflict_rule},
-        abstention_rules_json={"rule": policy.abstention_rule},
-        anchor_valid_time=_utc(data.anchor_valid_time),
-        anchor_known_time=_utc(data.anchor_known_time),
-        state_effective_at=(
-            _utc(data.state_effective_at)
-            if data.state_effective_at is not None
-            else _utc(data.anchor_valid_time)
-        ),
-        earliest_valid_time=(
-            _utc(data.earliest_valid_time) if data.earliest_valid_time is not None else None
-        ),
-        due_time=_utc(data.due_time) if data.due_time is not None else None,
-        grace_end=_utc(data.grace_end) if data.grace_end is not None else None,
-        authority_class=data.authority_class,
-        schema_version=COMMITMENT_SCHEMA_VERSION,
-        policy_version=policy_version,
-        consent_version=consent_version,
-    )
-    db.add(version)
-    db.flush()
+
     now = datetime.now(UTC)
-    transition = GlhsClinicalCommitmentTransition(
-        public_id=str(uuid4()),
-        profile_id=scope.profile.id,
-        commitment_id=commitment.id,
-        prior_version_id=prior.id if prior else None,
-        result_version_id=version.id,
-        base_state_version=base,
-        resulting_state_version=base + 1,
-        valid_at=_utc(data.anchor_valid_time),
-        known_at=_utc(known_at) if known_at is not None else now,
-        transition_kind=transition_kind,
-        reason_code=reason_code,
-        evidence_ids_json=evidence_ids,
-        predicate_clause_json=predicates,
-        actor_user_id=scope.actor.id,
-        actor_role=scope.actor_role,
-        origin=proposal.origin,
-        policy_version=policy_version,
-        consent_version=consent_version,
-        proposal_id=proposal.id,
-        inference_context_binding_id=(
-            root_binding.id if root_binding is not None else None
-        ),
-        root_proposal_id=(
-            root_proposal.id if root_binding is not None else None
-        ),
-        source_snapshot_id=proposal.source_snapshot_id,
-        source_snapshot_digest=proposal.source_snapshot_digest,
-        request_digest=request_digest,
-        idempotency_key_hash=key_hash,
-    )
-    db.add(transition)
-    db.add(
-        GlhsStateVersion(
-            profile_id=scope.profile.id,
-            state_version=base + 1,
-            valid_at=data.anchor_valid_time,
-            policy_version=policy_version,
+
+    def _mutation_callback(ctx: GlhsCommitContext) -> GlhsClinicalCommitmentTransition:
+        epoch = read_current_policy_epoch(db, for_update=False)
+        effective_policy_ver = epoch.version if epoch is not None else COMMITMENT_POLICY_VERSION
+        _validate_current_proposal_context(
+            db,
+            scope=scope,
+            proposal=proposal,
+            evidence_ids=evidence_ids,
+            current_version=ctx.base_state_version,
+            consent_version=ctx.effective_consent_version,
+            policy_version=effective_policy_ver,
+            binding=root_binding,
+            snapshot=root_snapshot,
         )
-    )
-    touched_partition_keys = set(target_partitions)
-    touched_partitions = [
-        part
-        for part in locked_partitions
-        if (part.domain, part.semantic_key) in touched_partition_keys
-    ]
-    increment_partition_versions(
-        db,
-        partitions=touched_partitions,
-        consent_version=consent_version,
-        policy_version=policy_version,
-    )
-    add_outbox(
-        db,
-        event_id=_canonical_digest({"kind": "commitment.transition", "id": transition.public_id}),
-        profile_id=scope.profile.id,
-        aggregate_type="glhs_clinical_commitment",
-        aggregate_public_id=commitment.public_id,
-        event_type="glhs.commitment.transition.applied",
-    )
-    db.flush()
-    return transition
+
+        version_no = 1 if prior is None else prior.version_no + 1
+        version = GlhsClinicalCommitmentVersion(
+            commitment_id=commitment.id,
+            base_state_version=ctx.base_state_version,
+            version_no=version_no,
+            lifecycle_state=data.lifecycle_state,
+            evidence_state=data.evidence_state,
+            timeliness_state=data.timeliness_state,
+            action=data.action,
+            target_json=data.target,
+            dependencies_json=list(data.dependencies),
+            conditional_trigger_json=predicates["conditional_trigger"],
+            fulfillment_predicate_json=predicates["fulfillment_predicate"],
+            cancellation_predicate_json=predicates["cancellation_predicate"],
+            supersession_predicate_json=predicates["supersession_predicate"],
+            partial_predicate_json=predicates["partial_predicate"],
+            conflict_rules_json={"rule": policy.conflict_rule},
+            abstention_rules_json={"rule": policy.abstention_rule},
+            anchor_valid_time=_utc(data.anchor_valid_time),
+            anchor_known_time=_utc(data.anchor_known_time),
+            state_effective_at=(
+                _utc(data.state_effective_at)
+                if data.state_effective_at is not None
+                else _utc(data.anchor_valid_time)
+            ),
+            earliest_valid_time=(
+                _utc(data.earliest_valid_time) if data.earliest_valid_time is not None else None
+            ),
+            due_time=_utc(data.due_time) if data.due_time is not None else None,
+            grace_end=_utc(data.grace_end) if data.grace_end is not None else None,
+            authority_class=data.authority_class,
+            schema_version=COMMITMENT_SCHEMA_VERSION,
+            policy_version=effective_policy_ver,
+            consent_version=ctx.effective_consent_version,
+        )
+        db.add(version)
+        db.flush()
+
+        trans = GlhsClinicalCommitmentTransition(
+            public_id=str(uuid4()),
+            profile_id=scope.profile.id,
+            commitment_id=commitment.id,
+            prior_version_id=prior.id if prior else None,
+            result_version_id=version.id,
+            base_state_version=ctx.base_state_version,
+            resulting_state_version=ctx.base_state_version + 1,
+            valid_at=_utc(data.anchor_valid_time),
+            known_at=_utc(known_at) if known_at is not None else now,
+            transition_kind=transition_kind,
+            reason_code=reason_code,
+            evidence_ids_json=evidence_ids,
+            predicate_clause_json=predicates,
+            actor_user_id=scope.actor.id,
+            actor_role=scope.actor_role,
+            origin=proposal.origin,
+            policy_version=effective_policy_ver,
+            consent_version=ctx.effective_consent_version,
+            proposal_id=proposal.id,
+            inference_context_binding_id=(
+                root_binding.id if root_binding is not None else None
+            ),
+            root_proposal_id=(
+                root_proposal.id if root_binding is not None else None
+            ),
+            source_snapshot_id=proposal.source_snapshot_id,
+            source_snapshot_digest=proposal.source_snapshot_digest,
+            request_digest=request_digest,
+            idempotency_key_hash=key_hash,
+        )
+        db.add(trans)
+        db.add(
+            GlhsStateVersion(
+                profile_id=scope.profile.id,
+                state_version=ctx.base_state_version + 1,
+                valid_at=data.anchor_valid_time,
+                policy_version=effective_policy_ver,
+            )
+        )
+        add_outbox(
+            db,
+            event_id=_canonical_digest({"kind": "commitment.transition", "id": trans.public_id}),
+            profile_id=scope.profile.id,
+            aggregate_type="glhs_clinical_commitment",
+            aggregate_public_id=commitment.public_id,
+            event_type="glhs.commitment.transition.applied",
+        )
+        db.flush()
+        return trans
+
+    try:
+        result = execute_atomic_glhs_commit(
+            db,
+            profile_id=scope.profile.id,
+            idempotency_key=idempotency_key,
+            proposal_id=proposal.id,
+            tenant_id="default",
+            operation_kind="COMMIT_COMMITMENT_TRANSITION",
+            request_digest=request_digest,
+            disclosure_digest=proposal.source_snapshot_digest or "",
+            policy_domain=commitment.domain,
+            purpose=scope.purpose,
+            dependencies=persisted_deps,
+            write_partitions=target_partitions,
+            expected_base_state_version=proposal.base_state_version,
+            canonicalization_profile=CANONICALIZATION_PROFILE,
+            mutation_callback=_mutation_callback,
+            aggregate_type="glhs_clinical_commitment",
+            aggregate_public_id=commitment.public_id,
+            event_type="",
+        )
+    except GlhsInvariantError as exc:
+        err_msg = str(exc)
+        if "stale_entity_partition" in err_msg or "stale_base_state_version" in err_msg:
+            raise GlhsInvariantError("stale_commitment_proposal") from exc
+        if "stale_governance_policy" in err_msg:
+            raise GlhsInvariantError("commitment_proposal_policy_mismatch") from exc
+        if "stale_governance_consent" in err_msg:
+            raise GlhsInvariantError("commitment_proposal_consent_mismatch") from exc
+        if "idempotency_key_reused" in err_msg:
+            raise GlhsInvariantError("commitment_idempotency_reuse_mismatch") from exc
+        raise
+
+    if result.idempotent_replay:
+        existing_trans = db.execute(
+            select(GlhsClinicalCommitmentTransition).where(
+                GlhsClinicalCommitmentTransition.profile_id == scope.profile.id,
+                GlhsClinicalCommitmentTransition.idempotency_key_hash == key_hash,
+            )
+        ).scalar_one_or_none()
+        if existing_trans is not None:
+            return cast(GlhsClinicalCommitmentTransition, existing_trans)
+        existing_trans = db.execute(
+            select(GlhsClinicalCommitmentTransition).where(
+                GlhsClinicalCommitmentTransition.proposal_id == proposal.id
+            )
+        ).scalar_one_or_none()
+        if existing_trans is not None:
+            return cast(GlhsClinicalCommitmentTransition, existing_trans)
+
+    return cast(GlhsClinicalCommitmentTransition, result.mutation_result)
 
 
 def reconstruct_commitments(

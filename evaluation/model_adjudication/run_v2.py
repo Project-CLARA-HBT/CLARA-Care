@@ -46,14 +46,14 @@ def _validate_evidence(evidence: Any) -> list[str]:
     if isinstance(evidence, dict):
         if not evidence:
             raise ValueError("model_review_evidence_empty")
-        ids = [key for key in evidence if isinstance(key, str) and key]
-        if len(ids) != len(evidence):
+        dict_ids = [key for key in evidence if isinstance(key, str) and key]
+        if len(dict_ids) != len(evidence):
             raise TypeError("model_review_evidence_id_invalid")
-        return ids
+        return dict_ids
     if isinstance(evidence, list):
         if not evidence:
             raise ValueError("model_review_evidence_empty")
-        ids: list[str] = []
+        list_ids: list[str] = []
         for item in evidence:
             if (
                 not isinstance(item, dict)
@@ -62,10 +62,10 @@ def _validate_evidence(evidence: Any) -> list[str]:
                 or not item["id"]
             ):
                 raise TypeError("model_review_evidence_item_invalid")
-            ids.append(item["id"])
-        if len(set(ids)) != len(ids):
+            list_ids.append(item["id"])
+        if len(set(list_ids)) != len(list_ids):
             raise ValueError("model_review_evidence_duplicate_ids")
-        return ids
+        return list_ids
     raise TypeError("model_review_evidence_invalid")
 
 
@@ -255,10 +255,10 @@ def _call(
     urlopen: UrlOpen | None = None,
 ) -> dict[str, Any]:
     key = (
-        os.environ.get("ROUTER_API_KEY", "")
+        os.environ.get("CLARA_ROUTER_API_KEY", "")
+        or os.environ.get("ROUTER_API_KEY", "")
         or os.environ.get("CLARA_UNOFFICIAL_GEMINI_API_KEY", "")
         or os.environ.get("DEEPSEEK_API_KEY", "")
-        or os.environ.get("CLARA_ROUTER_API_KEY", "")
     ).strip()
     if not key:
         raise RuntimeError("model_review_router_key_missing")
@@ -325,6 +325,36 @@ def _call(
     raise RuntimeError(f"model_review_call_failed:{last_error}")
 
 
+def _write_atomic_file(path: Path, content: str | bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    mode = "w" if isinstance(content, str) else "wb"
+    encoding = "utf-8" if isinstance(content, str) else None
+    with open(path, mode, encoding=encoding) as f:
+        f.write(content)
+        f.flush()
+        os.fsync(f.fileno())
+
+
+def _atomic_promote_dir(staging_dir: Path, target_dir: Path) -> None:
+    """Atomically promote staging_dir to target_dir via os.replace."""
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
+    if target_dir.exists():
+        backup_dir = target_dir.with_name(
+            f".{target_dir.name}.old_{os.getpid()}_{int(time.time() * 1000)}"
+        )
+        try:
+            os.replace(target_dir, backup_dir)
+        except OSError:
+            import shutil
+
+            shutil.rmtree(target_dir, ignore_errors=True)
+    os.replace(staging_dir, target_dir)
+    if "backup_dir" in locals() and backup_dir.exists():
+        import shutil
+
+        shutil.rmtree(backup_dir, ignore_errors=True)
+
+
 def run(
     *,
     manifest_path: Path,
@@ -340,14 +370,36 @@ def run(
         "Do not infer hidden hypotheses, systems, or reviewer identity.\n"
         "RUBRIC:\n" + json.dumps(manifest["rubric"], sort_keys=True)
     )
-    output_dir.mkdir(parents=True, exist_ok=True)
-    raw = output_dir / "raw"
-    raw.mkdir(exist_ok=True)
+
+    staging_dir = output_dir.parent / f"{output_dir.name}.staging"
+    staging_raw = staging_dir / "raw"
+    staging_raw.mkdir(parents=True, exist_ok=True)
+
+    journal_path = staging_dir / "journal.jsonl"
+    journal_records: dict[str, dict[str, Any]] = {}
+    if journal_path.exists():
+        try:
+            for line in journal_path.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    item = json.loads(line)
+                    if isinstance(item, dict) and "case_id" in item and "record" in item:
+                        journal_records[item["case_id"]] = item["record"]
+        except Exception:
+            journal_records = {}
+
     records: list[dict[str, Any]] = []
     for case in manifest["cases"]:
+        case_id = case["case_id"]
+        raw_file = staging_raw / f"{case_id}.json"
+
+        # Check if case was already completed in journal and exists on disk
+        if case_id in journal_records and raw_file.exists():
+            records.append(journal_records[case_id])
+            continue
+
         prompt = prompt_template + "\nEVIDENCE:\n" + json.dumps(case["evidence"], sort_keys=True)
         row = {
-            "case_id": case["case_id"],
+            "case_id": case_id,
             "protocol": case["protocol"],
             "allowed_labels": list(allowed_by_protocol[case["protocol"]]),
             "evidence_ids": case["evidence_ids"],
@@ -368,10 +420,32 @@ def run(
             )
             result["reviewer_id"] = reviewer_id
             row["reviews"].append(result)
-        (raw / f"{case['case_id']}.json").write_text(
-            json.dumps(row, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-        )
+
+        _write_atomic_file(raw_file, json.dumps(row, indent=2, sort_keys=True) + "\n")
+
+        # Append to journal with fsync
+        journal_entry = json.dumps({"case_id": case_id, "record": row}, sort_keys=True) + "\n"
+        with open(journal_path, "a", encoding="utf-8") as jf:
+            jf.write(journal_entry)
+            jf.flush()
+            os.fsync(jf.fileno())
+
         records.append(row)
+
+    # Compute raw inventory with SHA-256
+    raw_inventory: list[dict[str, Any]] = []
+    for row in records:
+        case_file = staging_raw / f"{row['case_id']}.json"
+        file_bytes = case_file.read_bytes()
+        raw_inventory.append(
+            {
+                "case_id": row["case_id"],
+                "path": f"raw/{row['case_id']}.json",
+                "sha256": hashlib.sha256(file_bytes).hexdigest(),
+                "terminal_state": "completed",
+            }
+        )
+
     summary = {
         "schema_version": RUN_VERSION,
         "status": "independent_reviews_complete",
@@ -381,10 +455,16 @@ def run(
         "router_base_url": BASE_URL,
         "case_count": len(records),
         "raw_outputs": [f"raw/{row['case_id']}.json" for row in records],
+        "raw_inventory": raw_inventory,
     }
-    (output_dir / "model_review_results.json").write_text(
-        json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+
+    _write_atomic_file(
+        staging_dir / "model_review_results.json",
+        json.dumps(summary, indent=2, sort_keys=True) + "\n",
     )
+
+    # Atomically promote staging_dir to output_dir
+    _atomic_promote_dir(staging_dir, output_dir)
     return summary
 
 

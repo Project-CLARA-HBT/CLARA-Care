@@ -17,6 +17,7 @@ from clara_api.db.models import (
     PhrProfile,
     User,
 )
+from clara_api.glhs.canonical_json import CANONICALIZATION_PROFILE
 from clara_api.glhs.commitment_gateway import (
     COMMITMENT_POLICY_VERSION,
     CommitmentVersionInput,
@@ -655,13 +656,7 @@ def test_stale_proposal_and_cross_subject_evidence_fail_closed(db: Session) -> N
         origin="user",
         **_snapshot_binding(db, scope, evidence, at),
     )
-    advancing_commitment = get_or_create_commitment(
-        db,
-        scope=scope,
-        semantic_key="observation:advance",
-        domain="observations",
-        supersession_key="observation:advance",
-    )
+    advancing_commitment = stale_commitment
     advancing_proposal = propose_bound_commitment_transition(
         db,
         scope=scope,
@@ -853,7 +848,7 @@ def test_commitment_thss_is_versioned_and_abstains_on_conflict(db: Session) -> N
     assert manifest.manifest_schema_version == "glhs.snapshot.v3"
     assert manifest.payload_schema_version == "glhs.snapshot.payload.v3"
     assert manifest.digest_algorithm == "sha-256"
-    assert manifest.canonicalization_profile == "clara.canonical-json.v1"
+    assert manifest.canonicalization_profile == CANONICALIZATION_PROFILE
     assert manifest.valid_time_cutoff == (at + timedelta(days=1)).replace(tzinfo=None)
     assert manifest.knowledge_time_cutoff is not None
     assert manifest.manifest_digest == snapshot.manifest_digest

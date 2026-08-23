@@ -16,6 +16,9 @@ from evaluation.model_adjudication.run import (
 
 def test_run_fails_closed_without_router_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CLARA_ROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("ROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("CLARA_UNOFFICIAL_GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     with pytest.raises(RuntimeError, match="router_key_missing"):
         _call(model="gemini-3.6-flash-high", prompt="{}")
 

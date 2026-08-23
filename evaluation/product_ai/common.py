@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import sys
+import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -43,6 +44,31 @@ from clara_ml.llm.provider_adapters import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class EvaluationTarget:
+    provider: str
+    model: str
+    role: str
+    target_type: str = "candidate"  # "candidate" | "baseline"
+    execution_mode: str = "mock"  # "mock" | "live" | "replay"
+    endpoint_class: str = "offline_mock"
+    revision: str = "v1"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "provider": self.provider,
+            "model": self.model,
+            "role": self.role,
+            "target_type": self.target_type,
+            "execution_mode": self.execution_mode,
+            "endpoint_class": self.endpoint_class,
+            "revision": self.revision,
+        }
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
 
 
 @dataclass(frozen=True)
@@ -96,6 +122,9 @@ class CaseEvaluationResult:
     expected: dict[str, Any]
     latency_ms: float = 0.0
     error: str | None = None
+    execution_mode: str = "mock"  # "mock" | "live" | "replay"
+    endpoint_class: str = "offline_mock"
+    response_provenance: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -107,6 +136,9 @@ class CaseEvaluationResult:
             "expected": self.expected,
             "latency_ms": self.latency_ms,
             "error": self.error,
+            "execution_mode": self.execution_mode,
+            "endpoint_class": self.endpoint_class,
+            "response_provenance": self.response_provenance,
         }
 
 
@@ -129,6 +161,9 @@ class TaskReport:
     latency_p95_ms: float
     case_results: tuple[CaseEvaluationResult, ...]
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    execution_mode: str = "mock"
+    endpoint_class: str = "offline_mock"
+    response_provenance: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -149,6 +184,9 @@ class TaskReport:
             "latency_p95_ms": self.latency_p95_ms,
             "case_results": [cr.to_dict() for cr in self.case_results],
             "timestamp": self.timestamp,
+            "execution_mode": self.execution_mode,
+            "endpoint_class": self.endpoint_class,
+            "response_provenance": self.response_provenance,
         }
 
 
@@ -288,13 +326,43 @@ def evaluate_thresholds(
     return all_passed, checks
 
 
-def save_report(report: TaskReport | dict[str, Any], output_path: Path) -> None:
-    """Save structured evaluation report to JSON file."""
+def write_json_atomic(
+    data: Any,
+    output_path: Path,
+    indent: int = 2,
+    sort_keys: bool = False,
+    ensure_ascii: bool = False,
+) -> None:
+    """Write JSON data to a destination path atomically via staging and fsync."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    staging_path = output_path.with_name(
+        f".{output_path.name}.staging_{os.getpid()}_{int(time.time() * 1000)}"
+    )
+    try:
+        with open(staging_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=indent, sort_keys=sort_keys, ensure_ascii=ensure_ascii)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(staging_path, output_path)
+    except Exception:
+        if staging_path.exists():
+            try:
+                staging_path.unlink()
+            except OSError:
+                pass
+        raise
+
+
+def save_report_atomic(report: TaskReport | dict[str, Any], output_path: Path) -> None:
+    """Save structured evaluation report to JSON file atomically."""
     report_dict = report.to_dict() if isinstance(report, TaskReport) else report
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(report_dict, f, indent=2, ensure_ascii=False)
-    logger.info("Saved evaluation report to %s", output_path)
+    write_json_atomic(report_dict, output_path, indent=2, sort_keys=False, ensure_ascii=False)
+    logger.info("Saved evaluation report atomically to %s", output_path)
+
+
+def save_report(report: TaskReport | dict[str, Any], output_path: Path) -> None:
+    """Save structured evaluation report to JSON file (atomically)."""
+    save_report_atomic(report, output_path)
 
 
 class MockEvaluationAdapter:
@@ -305,12 +373,16 @@ class MockEvaluationAdapter:
     """
 
     provider_id = "mock_evaluation_gateway"
+    execution_mode = "mock"
+    endpoint_class = "offline_mock"
 
     def __init__(
         self, provider_alias: str = "deepseek", model_name: str = "deepseek-v4-pro"
     ) -> None:
         self.provider_id = provider_alias
         self.model_name = model_name
+        self.execution_mode = "mock"
+        self.endpoint_class = "offline_mock"
 
     def capabilities(self, route: ResolvedRoute | None = None) -> set[ModelCapability]:
         return {

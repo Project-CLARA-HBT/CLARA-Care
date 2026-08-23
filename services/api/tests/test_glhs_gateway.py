@@ -22,6 +22,7 @@ from clara_api.db.models import (
     UserConsent,
 )
 from clara_api.glhs.canonical_json import (
+    CANONICALIZATION_PROFILE,
     LEGACY_CANONICALIZATION_PROFILE,
     legacy_consistency_fingerprint,
 )
@@ -422,7 +423,7 @@ def test_proposal_and_thss_are_co_versioned_with_consent(db: Session) -> None:
         "glhs.snapshot.payload.v3"
     )
     assert reconstructed["snapshot_artifact"]["canonicalization_profile"] == (
-        "clara.canonical-json.v1"
+        CANONICALIZATION_PROFILE
     )
     assert reconstructed["snapshot"]["consent_version"] == snapshot.consent_version
     assert reconstructed["reconstruction_cutoffs"]["valid_at"]

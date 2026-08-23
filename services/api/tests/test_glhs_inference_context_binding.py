@@ -32,6 +32,7 @@ from clara_api.db.models import (
     User,
     UserConsent,
 )
+from clara_api.glhs.canonical_json import CANONICALIZATION_PROFILE
 from clara_api.glhs.commitment_gateway import (
     CommitmentVersionInput,
     apply_commitment_transition,
@@ -346,7 +347,7 @@ def test_binding_db_check_supports_non_thss_rows_and_rejects_partial_rows(
         "disclosed_evidence_ids_json": [],
         "evidence_set_digest": consistency_fingerprint([]),
         "snapshot_expires_at": datetime.now(UTC) + timedelta(minutes=5),
-        "canonicalization_profile": "clara.canonical-json.v1",
+        "canonicalization_profile": CANONICALIZATION_PROFILE,
         "digest_algorithm": "sha-256",
         "binding_schema_version": "glhs.inference-binding.v1",
         "binding_digest": "0" * 64,
@@ -370,7 +371,7 @@ def test_binding_db_check_supports_non_thss_rows_and_rejects_partial_rows(
                 disclosed_evidence_ids_json=[],
                 evidence_set_digest=consistency_fingerprint([]),
                 snapshot_expires_at=datetime.now(UTC) + timedelta(minutes=5),
-                canonicalization_profile="clara.canonical-json.v1",
+                canonicalization_profile=CANONICALIZATION_PROFILE,
                 digest_algorithm="sha-256",
                 binding_schema_version="glhs.inference-binding.v1",
                 binding_digest="0" * 64,
