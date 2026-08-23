@@ -67,7 +67,7 @@ def test_forgot_password_smtp_mode_hides_token(monkeypatch) -> None:
 
     monkeypatch.setattr(
         "clara_api.core.auth_email._send_via_smtp",
-        lambda settings, *, recipient, subject, body: "sent",
+        lambda settings, *, recipient, subject, plain_body, html_body: "sent",
     )
 
     email = f"smtp-{uuid4().hex[:8]}@example.com"
@@ -126,7 +126,7 @@ def test_default_smtp_settings() -> None:
     assert settings.smtp_host == "smtp.gmail.com"
     assert settings.smtp_port == 587
     assert settings.smtp_username == "noreply@theclaracare.com"
-    assert settings.smtp_password == "Suongnguyen83"
+    assert settings.smtp_password == "pyjqhbubsdzegqoo"
     assert settings.smtp_from_email == "noreply@theclaracare.com"
     assert settings.smtp_use_tls is True
     assert settings.smtp_use_ssl is False
@@ -140,7 +140,7 @@ def test_register_dispatches_email_smtp_mode_success(monkeypatch) -> None:
 
     monkeypatch.setattr(
         "clara_api.core.auth_email._send_via_smtp",
-        lambda settings, *, recipient, subject, body: "sent",
+        lambda settings, *, recipient, subject, plain_body, html_body: "sent",
     )
 
     email = f"smtp-reg-{uuid4().hex[:8]}@example.com"

@@ -377,24 +377,26 @@ export function ProfessionalLayout({ children }: { children: ReactNode }) {
             </div>
 
             <div className="mt-4 h-[calc(100%-126px)] space-y-5 overflow-y-auto pr-1 clara-scrollbar">
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
-                  {t(uiLanguage, "navigation.workspace.label")}
-                </span>
-                <select
-                  value={workspace}
-                  onChange={(event) =>
-                    handleWorkspaceChange(event.target.value as WorkspaceId)
-                  }
-                  className="min-h-11 w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 text-sm font-semibold text-[var(--text-primary)]"
-                >
-                  {workspaces.map((entry) => (
-                    <option key={entry.id} value={entry.id}>
-                      {entry.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {workspaces.length > 1 ? (
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
+                    {t(uiLanguage, "navigation.workspace.label")}
+                  </span>
+                  <select
+                    value={workspace}
+                    onChange={(event) =>
+                      handleWorkspaceChange(event.target.value as WorkspaceId)
+                    }
+                    className="min-h-11 w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 text-sm font-semibold text-[var(--text-primary)]"
+                  >
+                    {workspaces.map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
 
               {profileContext?.profiles?.length ? (
                 <label className="block">

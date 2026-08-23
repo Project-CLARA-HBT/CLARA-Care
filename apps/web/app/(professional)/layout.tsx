@@ -1,10 +1,14 @@
 import type { ReactNode } from "react";
-import { ProfessionalLayout } from "@/components/shell/professional-layout";
+import { ShellLayoutContext } from "@/components/shell/shell-context";
 
 export default function ProfessionalRouteLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  return <ProfessionalLayout>{children}</ProfessionalLayout>;
+  return (
+    <ShellLayoutContext.Provider value="professional">
+      {children}
+    </ShellLayoutContext.Provider>
+  );
 }

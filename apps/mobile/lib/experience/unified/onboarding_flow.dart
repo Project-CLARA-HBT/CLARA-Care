@@ -51,6 +51,11 @@ class _UnifiedOnboardingGateState extends State<UnifiedOnboardingGate> {
   /// `null` while loading; `true` ⇒ show onboarding; `false` ⇒ show [child].
   bool? _needsOnboarding;
 
+  bool get _isProfessional {
+    final role = (widget.sessionStore.role ?? 'normal').trim().toLowerCase();
+    return role == 'doctor' || role == 'researcher' || role == 'admin';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -59,14 +64,15 @@ class _UnifiedOnboardingGateState extends State<UnifiedOnboardingGate> {
 
   Future<void> _load() async {
     final token = widget.sessionStore.accessToken;
-    if (token == null || token.isEmpty) {
+    if (token == null || token.isEmpty || _isProfessional) {
       if (mounted) setState(() => _needsOnboarding = false);
       return;
     }
     try {
       final data = await widget.apiClient.getPhrOnboarding(accessToken: token);
       if (!mounted) return;
-      setState(() => _needsOnboarding = data['needs_onboarding'] == true);
+      setState(() =>
+          _needsOnboarding = !_isProfessional && data['needs_onboarding'] == true);
     } catch (_) {
       // Fail-open: never strand the user behind a flaky onboarding read.
       if (!mounted) return;

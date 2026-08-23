@@ -1,16 +1,24 @@
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PreferenceProvider } from "@/components/shell/preference-provider";
+import { SessionBoundary } from "@/components/shell/session-boundary";
+import { ProfileBoundary } from "@/components/shell/profile-boundary";
+import { ShellModeProvider } from "@/components/shell/shell-mode-provider";
+import { CommandPaletteProvider } from "@/components/shell/command-palette-provider";
+import AppShell from "@/components/app-shell";
 
 const mocks = vi.hoisted(() => {
   const routerReplace = vi.fn();
+  const routerPush = vi.fn();
   return {
     apiGet: vi.fn(),
     getOnboarding: vi.fn(),
     getProfileContext: vi.fn(),
     listFamilyNotifications: vi.fn(),
     routerReplace,
-    router: { replace: routerReplace },
+    routerPush,
+    router: { replace: routerReplace, push: routerPush, refresh: vi.fn() },
     pathname: "/chat",
   };
 });
@@ -32,22 +40,6 @@ vi.mock("next/link", () => ({
     <a href={href} {...props}>
       {children}
     </a>
-  ),
-}));
-
-vi.mock("@/components/sidebar-nav", () => ({
-  default: () => (
-    <aside aria-label="Shared primary navigation" data-testid="shared-sidebar" />
-  ),
-}));
-
-vi.mock("@/components/navigation/app-topbar", () => ({
-  default: () => <header data-testid="shared-topbar" />,
-}));
-
-vi.mock("@/components/navigation/mobile-bottom-nav", () => ({
-  default: () => (
-    <nav aria-label="Shared mobile navigation" data-testid="mobile-bottom-nav" />
   ),
 }));
 
@@ -84,9 +76,23 @@ vi.mock("@/lib/visit-family", () => ({
   listFamilyNotifications: mocks.listFamilyNotifications,
 }));
 
-import AppShell from "@/components/app-shell";
+function renderShell(children: ReactNode) {
+  return render(
+    <PreferenceProvider initialLanguage="vi">
+      <SessionBoundary>
+        <ProfileBoundary>
+          <ShellModeProvider>
+            <CommandPaletteProvider>
+              <AppShell>{children}</AppShell>
+            </CommandPaletteProvider>
+          </ShellModeProvider>
+        </ProfileBoundary>
+      </SessionBoundary>
+    </PreferenceProvider>,
+  );
+}
 
-describe("AppShell authenticated Chat navigation", () => {
+describe("AppShell Spatial Editorial Architecture", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.pathname = "/chat";
@@ -94,9 +100,17 @@ describe("AppShell authenticated Chat navigation", () => {
     mocks.apiGet.mockResolvedValue({ data: { role: "normal" } });
     mocks.getOnboarding.mockResolvedValue({ needs_onboarding: false });
     mocks.getProfileContext.mockResolvedValue({
-      active_profile_id: "",
+      active_profile_id: "prof-1",
       reset_required: false,
-      profiles: [],
+      profiles: [
+        {
+          id: "prof-1",
+          display_name: "Nguyen Van A",
+          kind: "self",
+          active: true,
+          created_at: "2026-01-01T00:00:00Z",
+        },
+      ],
     });
     mocks.listFamilyNotifications.mockResolvedValue([]);
     vi.stubGlobal(
@@ -114,19 +128,20 @@ describe("AppShell authenticated Chat navigation", () => {
     );
   });
 
-  it("keeps every shared navigation surface mounted on /chat", async () => {
-    render(
-      <AppShell>
-        <div>Chat content</div>
-      </AppShell>,
-    );
+  it("mounts GlobalContextBar (top) and FloatingPrimaryDock (bottom) on /chat", async () => {
+    renderShell(<div>Chat content</div>);
 
-    expect(screen.getByTestId("shared-sidebar")).toBeInTheDocument();
-    expect(screen.getByTestId("shared-topbar")).toBeInTheDocument();
+    // Top: GlobalContextBar
     expect(
-      screen.getByRole("button", { name: "Mở điều hướng trên điện thoại" }),
+      screen.getByRole("banner", { name: "Thanh ngữ cảnh toàn cục" }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("mobile-bottom-nav")).toBeInTheDocument();
+
+    // Bottom: FloatingPrimaryDock
+    expect(
+      screen.getByRole("navigation", { name: "Thanh điều hướng chính" }),
+    ).toBeInTheDocument();
+
+    // Content
     expect(screen.getByText("Chat content")).toBeInTheDocument();
 
     await waitFor(() => {
@@ -137,32 +152,36 @@ describe("AppShell authenticated Chat navigation", () => {
     expect(mocks.routerReplace).not.toHaveBeenCalled();
   });
 
-  it("uses bundled SVG controls in the mobile shell when the icon font is unavailable", async () => {
-    render(
-      <AppShell>
-        <div>Chat content</div>
-      </AppShell>,
-    );
+  it("opens CommandPalette on universal Ctrl+K / Cmd+K keyboard shortcut", async () => {
+    renderShell(<div>Chat content</div>);
 
-    const trigger = screen.getByRole("button", { name: "Mở điều hướng trên điện thoại" });
-    expect(trigger.querySelector('[data-icon="menu"]')).toBeTruthy();
-    fireEvent.click(trigger);
-    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: "Đóng menu" }).querySelector('[data-icon="close"]')).toBeTruthy();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // Trigger Cmd+K
+    fireEvent.keyDown(window, { key: "k", metaKey: true });
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    const input = screen.getByRole("combobox");
+    expect(input).toBeInTheDocument();
+    expect(input).toHaveAttribute("data-pii-safe", "true");
   });
 
-  it("keeps nested welcome steps inside the focused authenticated utility shell", async () => {
+  it("retains backwards compatibility for utility onboarding routes without global chrome", async () => {
     mocks.pathname = "/welcome/body";
     mocks.getOnboarding.mockResolvedValue({ needs_onboarding: true });
 
-    const { container } = render(
-      <AppShell>
-        <div>Body measurements</div>
-      </AppShell>,
-    );
+    const { container } = renderShell(<div>Body measurements</div>);
 
     expect(screen.getByText("Body measurements")).toBeInTheDocument();
-    expect(screen.queryByTestId("shared-sidebar")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("banner", { name: "Thanh ngữ cảnh toàn cục" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("navigation", { name: "Thanh điều hướng chính" }),
+    ).not.toBeInTheDocument();
     expect(container.querySelectorAll("main")).toHaveLength(1);
     await waitFor(() => expect(mocks.getOnboarding).toHaveBeenCalled());
     expect(mocks.routerReplace).not.toHaveBeenCalled();
@@ -172,14 +191,23 @@ describe("AppShell authenticated Chat navigation", () => {
     mocks.pathname = "/today";
     mocks.getOnboarding.mockResolvedValue({ needs_onboarding: true });
 
-    render(
-      <AppShell>
-        <div>Today content</div>
-      </AppShell>,
-    );
+    renderShell(<div>Today content</div>);
 
     await waitFor(() => {
       expect(mocks.routerReplace).toHaveBeenCalledWith("/welcome/start");
     });
+  });
+
+  it("does not redirect a doctor with needs_onboarding to /welcome/start", async () => {
+    mocks.pathname = "/council";
+    mocks.apiGet.mockResolvedValue({ data: { role: "doctor" } });
+    mocks.getOnboarding.mockResolvedValue({ needs_onboarding: true });
+
+    renderShell(<div>Council workspace</div>);
+
+    await waitFor(() => {
+      expect(screen.getByText("Council workspace")).toBeInTheDocument();
+    });
+    expect(mocks.routerReplace).not.toHaveBeenCalledWith("/welcome/start");
   });
 });

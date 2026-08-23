@@ -97,6 +97,15 @@ describe("You & Privacy Route Pages", () => {
       expect(screen.getByTestId("notifications-summary")).toBeInTheDocument();
       expect(screen.getByTestId("professional-mode-card")).toBeInTheDocument();
       expect(screen.getByText("Dị ứng nặng Penicillin")).toBeInTheDocument();
+
+      // Trigger Quick Emergency QR Modal
+      const openQrBtn = screen.getByTestId("open-emergency-qr-btn");
+      fireEvent.click(openQrBtn);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("emergency-qr-modal")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Mã QR Cấp Cứu Y Tế")).toBeInTheDocument();
     });
   });
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { HealthPageHeader } from "@/components/consumer/health-page-header";
+import { EmergencyQrModal } from "@/components/consumer/emergency-qr-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -25,6 +26,7 @@ export default function YouProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [qrModalOpen, setQrModalOpen] = useState(false);
 
   // Demographics form state
   const [fullName, setFullName] = useState("");
@@ -242,16 +244,18 @@ export default function YouProfilePage() {
           <div className="h-64 rounded-[var(--radius-xl)] bg-[var(--surface-panel)] border border-[color:var(--shell-border)]" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Form Editors */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Form Editors (Span 7) */}
           <div className="space-y-6 lg:col-span-7">
             {/* 1. Demographics & Contact Info */}
             <section
-              className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-4"
+              className="rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-4"
               data-testid="demographics-editor-section"
             >
-              <div className="flex items-center gap-2 text-[var(--text-brand)]">
-                <Icon name="user-card" size="1.25rem" />
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[var(--surface-muted)] flex items-center justify-center text-[var(--text-brand)]">
+                  <Icon name="user-card" size="1.25rem" />
+                </div>
                 <h2 className="text-sm font-bold text-[var(--text-primary)]">
                   {isEn ? "Demographics & Contact Information" : "Thông tin cá nhân & Liên lạc"}
                 </h2>
@@ -369,11 +373,13 @@ export default function YouProfilePage() {
 
             {/* 2. Emergency Contact Editor */}
             <section
-              className="rounded-[var(--radius-xl)] border border-[color:var(--status-danger-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-4"
+              className="rounded-[var(--radius-2xl)] border border-[color:var(--status-danger-border)]/60 bg-[var(--surface-panel)] p-6 shadow-sm space-y-4"
               data-testid="emergency-contact-section"
             >
-              <div className="flex items-center gap-2 text-[var(--status-danger-text)]">
-                <Icon name="emergency" size="1.25rem" />
+              <div className="flex items-center gap-3 text-[var(--status-danger-text)]">
+                <div className="w-8 h-8 rounded-lg bg-[var(--status-danger-bg)] flex items-center justify-center">
+                  <Icon name="emergency" size="1.25rem" />
+                </div>
                 <h2 className="text-sm font-bold text-[var(--text-primary)]">
                   {isEn ? "Primary Emergency Contact" : "Người liên hệ khẩn cấp chính"}
                 </h2>
@@ -431,11 +437,13 @@ export default function YouProfilePage() {
 
             {/* 3. Medical Alert Badges Editor */}
             <section
-              className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-4"
+              className="rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-4"
               data-testid="medical-alerts-editor-section"
             >
-              <div className="flex items-center gap-2 text-[var(--status-warn-text)]">
-                <Icon name="warning" size="1.25rem" />
+              <div className="flex items-center gap-3 text-[var(--status-warn-text)]">
+                <div className="w-8 h-8 rounded-lg bg-[var(--surface-muted)] flex items-center justify-center">
+                  <Icon name="warning" size="1.25rem" />
+                </div>
                 <h2 className="text-sm font-bold text-[var(--text-primary)]">
                   {isEn ? "Critical Medical Alert Badges" : "Huy hiệu Cảnh báo Y tế Khẩn cấp"}
                 </h2>
@@ -500,10 +508,10 @@ export default function YouProfilePage() {
             </section>
           </div>
 
-          {/* Right Column: Emergency Card Preview & Field Inclusion Toggle */}
-          <div className="space-y-6 lg:col-span-5">
+          {/* Right Column: Emergency Card Preview & Field Inclusion Toggle (Span 5) */}
+          <div className="space-y-6 lg:col-span-5 lg:sticky lg:top-24">
             <section
-              className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-4"
+              className="rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-4"
               data-testid="emergency-card-config-panel"
             >
               <div className="flex items-center justify-between">
@@ -518,7 +526,7 @@ export default function YouProfilePage() {
                   : "Chọn các mục lâm sàng được phép hiển thị trên thẻ cấp cứu mở nhanh khi khóa máy."}
               </p>
 
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {[
                   { key: "allergies", label: isEn ? "Allergies & Reactions" : "Dị ứng & Phản ứng" },
                   { key: "current_medications", label: isEn ? "Active Medications" : "Thuốc đang sử dụng" },
@@ -528,7 +536,7 @@ export default function YouProfilePage() {
                 ].map((item) => (
                   <label
                     key={item.key}
-                    className="flex items-center justify-between p-2.5 rounded-[var(--radius-md)] bg-[var(--surface-muted)] hover:bg-[var(--surface-hover)] cursor-pointer text-xs font-semibold text-[var(--text-primary)]"
+                    className="flex items-center justify-between p-2.5 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] hover:bg-[var(--surface-hover)] cursor-pointer text-xs font-semibold text-[var(--text-primary)] transition"
                   >
                     <span>{item.label}</span>
                     <input
@@ -548,15 +556,15 @@ export default function YouProfilePage() {
               </div>
             </section>
 
-            {/* Live Card Preview */}
+            {/* Live High-Contrast Card Preview */}
             <div
-              className="rounded-[var(--radius-2xl)] border-2 border-[color:var(--status-danger-border)] bg-[var(--bg-elev-3)] p-5 shadow-md space-y-4"
+              className="rounded-[var(--radius-2xl)] border-2 border-[color:var(--status-danger-border)] bg-[var(--bg-elev-3)] p-5 shadow-2xl space-y-4 relative overflow-hidden"
               data-testid="live-emergency-card-preview"
             >
               <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] pb-3">
                 <div className="flex items-center gap-2 text-[var(--status-danger-text)]">
-                  <Icon name="emergency" size="1.5rem" />
-                  <span className="font-bold tracking-wider text-xs uppercase">
+                  <Icon name="emergency" size="1.4rem" />
+                  <span className="font-bold tracking-widest text-xs uppercase">
                     CLARA EMERGENCY MEDICAL ID
                   </span>
                 </div>
@@ -568,28 +576,28 @@ export default function YouProfilePage() {
               </div>
 
               <div>
-                <h4 className="text-base font-bold text-[var(--text-primary)]">
+                <h4 className="text-lg font-bold text-[var(--text-primary)] leading-tight">
                   {fullName || profileData?.display_name || (isEn ? "Personal Profile" : "Hồ sơ cá nhân")}
                 </h4>
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
                   {dateOfBirth ? `${isEn ? "DOB:" : "NS:"} ${dateOfBirth}` : ""}
                 </p>
               </div>
 
               {/* Alert Badges in Preview */}
               {medicalAlerts.length > 0 ? (
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <p className="text-[11px] font-bold text-[var(--status-danger-text)] uppercase tracking-wide">
-                    {isEn ? "Medical Alerts" : "Cảnh báo y tế đặc biệt"}
+                    {isEn ? "Medical Alerts" : "Cảnh báo Y tế Đặc biệt"}
                   </p>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="space-y-1">
                     {medicalAlerts.map((a, i) => (
-                      <span
+                      <div
                         key={i}
-                        className="rounded bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] px-2 py-0.5 text-[11px] font-bold"
+                        className="rounded-lg bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[color:var(--status-danger-border)] px-2.5 py-1 text-xs font-bold"
                       >
                         {a}
-                      </span>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -661,26 +669,60 @@ export default function YouProfilePage() {
 
               {/* Emergency Contact */}
               {includedFields.emergency_contact && emergencyContactName ? (
-                <div className="rounded-lg bg-[var(--surface-panel)] border border-[color:var(--shell-border)] p-2.5 text-xs text-[var(--text-secondary)]">
-                  <span className="font-bold text-[var(--text-primary)] block mb-0.5">
-                    {isEn ? "Emergency Contact:" : "Liên hệ khẩn cấp:"}
-                  </span>
-                  {emergencyContactName} ({emergencyContactRelationship}) ·{" "}
-                  <span className="font-mono text-[var(--text-primary)] font-bold">
-                    {emergencyContactPhone}
-                  </span>
+                <div className="rounded-xl bg-[var(--surface-panel)] border border-[color:var(--shell-border)] p-3 text-xs text-[var(--text-secondary)] flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-[var(--text-secondary)] block mb-0.5">
+                      {isEn ? "Emergency Contact:" : "Liên hệ khẩn cấp:"}
+                    </span>
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {emergencyContactName} ({emergencyContactRelationship}) ·{" "}
+                      <strong className="font-mono text-[var(--text-brand)]">
+                        {emergencyContactPhone}
+                      </strong>
+                    </span>
+                  </div>
+                  <Icon name="contact" size="1.2rem" className="text-[var(--text-brand)]" />
                 </div>
               ) : null}
 
-              <p className="text-[10px] text-[var(--text-muted)] border-t border-[color:var(--shell-border)]/60 pt-2 italic">
+              {/* Quick QR Share Action */}
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setQrModalOpen(true)}
+                  className="w-full justify-center gap-2 rounded-xl text-xs font-bold border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] hover:opacity-90"
+                >
+                  <Icon name="scan" size="1rem" />
+                  <span>{isEn ? "Show Emergency QR Code" : "Xem Mã QR Cấp Cứu Nhanh"}</span>
+                </Button>
+              </div>
+
+              <p className="text-[10px] text-[var(--text-muted)] border-t border-[color:var(--shell-border)]/60 pt-2 italic text-center">
                 {isEn
-                  ? "Self-declared emergency medical summary for first responder decision support only. Not a medical prescription."
+                  ? "Self-declared emergency medical summary for first responder decision support. Not a doctor prescription."
                   : "Bản tóm tắt y tế khẩn cấp tự khai báo hỗ trợ người cấp cứu. Không thay thế chẩn đoán bác sĩ."}
               </p>
             </div>
           </div>
         </div>
       )}
+
+      {/* Quick Emergency QR Modal */}
+      <EmergencyQrModal
+        open={qrModalOpen}
+        onClose={() => setQrModalOpen(false)}
+        patientName={fullName || profileData?.display_name || "Nguyễn Văn A"}
+        bloodType={bloodType}
+        emergencyContact={{
+          name: emergencyContactName,
+          phone: emergencyContactPhone,
+          relationship: emergencyContactRelationship,
+        }}
+        medicalAlerts={medicalAlerts}
+        isEn={isEn}
+      />
     </div>
   );
 }

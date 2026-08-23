@@ -109,7 +109,7 @@ test.describe("Today real-data states", () => {
     await page.goto("/today", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Bạn chưa có việc cần làm hôm nay" })).toBeVisible();
     await expect(page.getByText(/CLARA không tự thêm việc thay bạn/)).toBeVisible();
-    await expect(page.getByRole("link", { name: "Tạo hành trình" })).toHaveAttribute("href", "/lifemap/new");
+    await expect(page.getByRole("link", { name: "Bắt đầu hành trình" })).toHaveAttribute("href", "/lifemap/new");
     await expectNoHorizontalOverflow(page);
     await page.screenshot({ path: `test-results/today-first-time-${test.info().project.name}.png`, fullPage: true });
   });

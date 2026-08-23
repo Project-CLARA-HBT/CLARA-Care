@@ -198,5 +198,47 @@ void main() {
       expect(_child_, findsOneWidget);
       expect(_carousel, findsNothing);
     });
+
+    testWidgets(
+        '(e) professional role (doctor) presents professional orientation without PHR questions',
+        (tester) async {
+      final storage = InMemoryOnboardingStorage();
+      final store = OnboardingStore(storage: storage);
+      final transport = RecordingAnalyticsTransport();
+      final analytics = _recordingAnalytics(transport);
+
+      await pumpExperience(
+        tester,
+        OnboardingGate(
+          store: store,
+          analytics: analytics,
+          role: 'doctor',
+          child: _child,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Carousel displays professional orientation content
+      expect(_carousel, findsOneWidget);
+      expect(find.text('CLARA cho công việc lâm sàng'), findsOneWidget);
+      expect(
+        find.text('CLARA là trợ lý AI hỗ trợ ra quyết định lâm sàng và tra cứu y khoa có dẫn chứng. CLARA không thay thế đánh giá chuyên môn của bạn.'),
+        findsOneWidget,
+      );
+
+      // Verify no personal biometric prompts exist in the professional track
+      expect(find.text('Chiều cao'), findsNothing);
+      expect(find.text('Cân nặng'), findsNothing);
+      expect(find.text('Nhóm máu'), findsNothing);
+
+      // Skip directly to child post-onboarding surface (Council/Scribe/AppShell)
+      await tester.tap(_skip);
+      await tester.pumpAndSettle();
+
+      expect(_child_, findsOneWidget);
+      expect(_carousel, findsNothing);
+      expect(await store.hasSeenOnboarding(), isTrue);
+      expect(transport.capturedNames, contains(kOnboardingSkippedEvent));
+    });
   });
 }

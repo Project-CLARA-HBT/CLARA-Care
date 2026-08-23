@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import CouncilEmptyState from "@/components/council/council-empty-state";
+import CouncilFlowStepper from "@/components/council/council-flow-stepper";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import { Icon, resolveIconName } from "@/components/ui/icon";
 import Modal from "@/components/ui/modal";
@@ -849,6 +850,7 @@ export default function CouncilPage() {
       >
         <div className="space-y-5">
           <CouncilWorkspaceNav />
+          <CouncilFlowStepper currentStep="case" />
           <CouncilEmptyState
             title={t(language, "council.overview.empty.title")}
             description={
@@ -877,6 +879,7 @@ export default function CouncilPage() {
     >
       <div className="space-y-5">
         <CouncilWorkspaceNav />
+        <CouncilFlowStepper currentStep="case" caseId={caseItem?.id} />
 
         <section
           className={`rounded-[14px] border border-t-[color:var(--card-top-border)] p-4 ${banner.className}`}

@@ -31,7 +31,9 @@ import 'council_surface_v3.dart';
 import 'scribe_surface_v3.dart';
 import 'social_surface_v3.dart';
 import '../language_controller.dart';
+import '../presentation_mode.dart';
 import '../theme_controller.dart';
+import 'phr_surface_v3.dart';
 import 'settings_screen_v3.dart';
 
 /// A single More entry (icon + title + subtitle + destination builder).
@@ -59,6 +61,7 @@ class MoreScreenV3 extends StatelessWidget {
     required this.role,
     this.themeController,
     this.languageController,
+    this.presentationModeController,
   });
 
   final ApiClient apiClient;
@@ -72,6 +75,9 @@ class MoreScreenV3 extends StatelessWidget {
   /// App-wide language state, threaded to Settings (Language section).
   final LanguageController? languageController;
 
+  /// Optional presentation mode controller for mode switching.
+  final PresentationModeController? presentationModeController;
+
   // Scribe opens for the doctor role (existing) and, per the redesign request,
   // also for admin. Still fail-closed: requires the `scribe_mobile_enabled`
   // capability gate on top of the authorized role.
@@ -83,6 +89,27 @@ class MoreScreenV3 extends StatelessWidget {
 
   List<_MoreEntry> _entries(ConsumerTerminology copy) {
     final entries = <_MoreEntry>[];
+
+    final modeController = presentationModeController ??
+        (permittedModesForRole(role).length > 1
+            ? PresentationModeController(initialRole: role)
+            : null);
+
+    if (modeController != null && modeController.canSwitchModes) {
+      final modeMeta = kPresentationModeMeta[modeController.mode]!;
+      final lang = languageController?.languageCode ?? 'vi';
+      entries.add(
+        _MoreEntry(
+          icon: Icons.workspaces_outlined,
+          title: lang == 'en' ? 'Workspace Mode' : 'Không gian làm việc',
+          subtitle: modeMeta.label(lang),
+          builder: (_) => PresentationModeScreen(
+            controller: modeController,
+            languageCode: lang,
+          ),
+        ),
+      );
+    }
 
     // Community (health social platform) — gated by the mobile social flag.
     if (kMobileSocialEnabled) {
@@ -109,6 +136,21 @@ class MoreScreenV3 extends StatelessWidget {
         builder: (_) => ConnectedHealthScreen(
           apiClient: apiClient,
           sessionStore: sessionStore,
+          languageController: languageController,
+        ),
+      ),
+    );
+
+    // Personal Health Record access
+    entries.add(
+      _MoreEntry(
+        icon: Icons.folder_shared_outlined,
+        title: copy[ConsumerTerm.navigationProfile],
+        subtitle: copy[ConsumerTerm.profileHubHealthDataDescription],
+        builder: (_) => PhrSurfaceV3(
+          apiClient: apiClient,
+          sessionStore: sessionStore,
+          resolver: resolver,
           languageController: languageController,
         ),
       ),
@@ -172,6 +214,7 @@ class MoreScreenV3 extends StatelessWidget {
           sessionStore: sessionStore,
           themeController: themeController,
           languageController: languageController,
+          presentationModeController: modeController,
         ),
       ),
     );

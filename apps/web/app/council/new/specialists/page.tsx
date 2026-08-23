@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import CouncilFlowStepper from "@/components/council/council-flow-stepper";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
+import { Icon } from "@/components/ui/icon";
 import PageShell from "@/components/ui/page-shell";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { safeUserFacingError } from "@/lib/user-facing-text";
@@ -153,36 +155,48 @@ export default function CouncilNewSpecialistsPage() {
     >
       <div className="space-y-5">
         <CouncilWorkspaceNav />
+        <CouncilFlowStepper currentStep="context" caseId={caseItem?.id} />
 
         <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-            {t(language, "council.step", { step: 2, id: caseItem?.id ?? "--" })}
+          <div className="flex items-center gap-2">
+            <span className="rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
+              {language === "vi" ? "Bước 3: Hội đồng chuyên khoa" : "Step 3: Specialist Panel"}
+            </span>
+          </div>
+          <h2 className="mt-2 text-xl font-bold text-[var(--text-primary)]">
+            {t(language, "council.specialists.heading")}
+          </h2>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            {language === "vi"
+              ? "Chọn các chuyên khoa tham gia hội chẩn đa chiều để đánh giá ca bệnh."
+              : "Select medical specialties to participate in the multi-specialty council."}
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{t(language, "council.specialists.heading")}</h2>
 
-          <label className="mt-4 block max-w-xs space-y-1">
-            <span className="text-sm font-medium">{t(language, "council.specialists.count")}</span>
+          <label className="mt-5 block max-w-xs space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+              {t(language, "council.specialists.count")}
+            </span>
             <input
               type="number"
               min={2}
               max={SPECIALIST_OPTIONS.length}
               value={draft.specialistCount}
               onChange={(event) => onSpecialistCountChange(event.target.value)}
-              className="min-h-[44px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm"
+              className="min-h-[44px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-primary)] focus:border-[color:var(--brand-600)] focus:outline-none"
             />
           </label>
 
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {SPECIALIST_OPTIONS.map((option) => {
               const checked = draft.selectedSpecialists.includes(option.id);
               const disableUnchecked = !checked && draft.selectedSpecialists.length >= draft.specialistCount;
               return (
                 <label
                   key={option.id}
-                  className={`flex min-h-[44px] items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                  className={`flex min-h-[48px] items-center gap-3 rounded-xl border px-4 py-3 text-sm font-semibold transition-colors ${
                     checked
-                      ? "border-[color:var(--brand-primary)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
-                      : "border-[color:var(--shell-border)] bg-[var(--surface-muted)]"
+                      ? "border-[color:var(--brand-600)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)] shadow-sm"
+                      : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-primary)] hover:border-[color:var(--shell-border-strong)]"
                   } ${disableUnchecked ? "opacity-60" : "cursor-pointer"}`}
                 >
                   <input
@@ -190,15 +204,15 @@ export default function CouncilNewSpecialistsPage() {
                     checked={checked}
                     onChange={() => onToggleSpecialist(option.id)}
                     disabled={disableUnchecked}
-                    className="h-4 w-4"
+                    className="h-4 w-4 rounded text-[var(--brand-600)] focus:ring-[var(--brand-600)]"
                   />
-                  {t(language, SPECIALIST_LABEL_KEYS[option.id] ?? "council.specialist.cardiology")}
+                  <span>{t(language, SPECIALIST_LABEL_KEYS[option.id] ?? "council.specialist.cardiology")}</span>
                 </label>
               );
             })}
           </div>
 
-          <p className="mt-3 text-xs text-[var(--text-muted)]">
+          <p className="mt-4 text-xs font-medium text-[var(--text-secondary)]">
             {t(language, "council.specialists.selected", {
               selected: draft.selectedSpecialists.length,
               total: draft.specialistCount,
@@ -206,22 +220,24 @@ export default function CouncilNewSpecialistsPage() {
           </p>
         </section>
 
-        {error ? <p className="text-sm text-[var(--status-danger-text)]">{error}</p> : null}
+        {error ? <p className="text-sm font-semibold text-[var(--status-danger-text)]">{error}</p> : null}
 
-        <div className="flex flex-wrap justify-between gap-2">
+        <div className="flex flex-wrap justify-between gap-3">
           <Link
             href={caseItem ? `/council/new/intake?caseId=${caseItem.id}` : "/council/new/intake"}
-            className="inline-flex min-h-[42px] items-center rounded-lg border border-[color:var(--shell-border)] px-4 text-sm font-semibold"
+            className="inline-flex min-h-[44px] items-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-5 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
           >
-            {t(language, "council.action.backStep", { step: 1 })}
+            {t(language, "council.action.backStep", { step: 2 })}
           </Link>
+
           <button
             type="button"
             onClick={() => void onSaveAndNext()}
-            disabled={isSaving || !caseItem}
-            className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
+            disabled={isSaving || !caseItem || draft.selectedSpecialists.length < 2}
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-6 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
           >
-            {isSaving ? t(language, "council.action.saving") : t(language, "council.action.nextStep", { step: 3 })}
+            <Icon name="arrow-right" size={16} />
+            {isSaving ? t(language, "council.action.saving") : t(language, "council.action.nextStep", { step: 4 })}
           </button>
         </div>
       </div>

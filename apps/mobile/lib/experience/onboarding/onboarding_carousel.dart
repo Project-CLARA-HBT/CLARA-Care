@@ -115,6 +115,36 @@ class OnboardingCarousel extends StatefulWidget {
     ),
   ];
 
+  /// Multi-track onboarding: professional orientation pages for clinicians and
+  /// researchers (doctor/researcher/admin). Contains ZERO personal health /
+  /// biometric questions (no height, weight, or blood type).
+  static const List<OnboardingPage> professionalPages = <OnboardingPage>[
+    OnboardingPage(
+      icon: Icons.medical_services_outlined,
+      title: 'CLARA cho công việc lâm sàng',
+      body: 'CLARA là trợ lý AI hỗ trợ ra quyết định lâm sàng và tra cứu y khoa '
+          'có dẫn chứng. CLARA không thay thế đánh giá chuyên môn của bạn.',
+    ),
+    OnboardingPage(
+      icon: Icons.groups_outlined,
+      title: 'Hội đồng Hội chẩn (Council)',
+      body: 'Hội chẩn đa góc nhìn chuyên khoa, tổng hợp ý kiến và phân tích bất đồng '
+          'lâm sàng với trích dẫn y văn đối chứng.',
+    ),
+    OnboardingPage(
+      icon: Icons.mic_none_outlined,
+      title: 'Ghi chép lâm sàng (Scribe)',
+      body: 'Soạn thảo hồ sơ bệnh án cấu trúc SOAP tự động từ buổi khám. '
+          'Luôn yêu cầu sự đồng thuận của người bệnh trước khi bật ghi âm.',
+    ),
+    OnboardingPage(
+      icon: Icons.verified_user_outlined,
+      title: 'Sẵn sàng làm việc',
+      body: 'Truy cập trực tiếp vào các công cụ Hội chẩn, Scribe, Tra cứu y khoa '
+          'mà không cần khai báo thông tin sinh trắc học cá nhân.',
+    ),
+  ];
+
   @override
   State<OnboardingCarousel> createState() => _OnboardingCarouselState();
 }

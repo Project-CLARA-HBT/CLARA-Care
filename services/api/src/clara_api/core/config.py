@@ -219,11 +219,11 @@ class Settings(BaseSettings):
         default="2026-04-v1",
         validation_alias="MEDICAL_DISCLAIMER_VERSION",
     )
-    smtp_host: str = Field(default="", validation_alias="SMTP_HOST")
+    smtp_host: str = Field(default="smtp.gmail.com", validation_alias="SMTP_HOST")
     smtp_port: int = Field(default=587, validation_alias="SMTP_PORT", gt=0)
-    smtp_username: str = Field(default="", validation_alias="SMTP_USERNAME")
-    smtp_password: str = Field(default="", validation_alias="SMTP_PASSWORD")
-    smtp_from_email: str = Field(default="", validation_alias="SMTP_FROM_EMAIL")
+    smtp_username: str = Field(default="noreply@theclaracare.com", validation_alias="SMTP_USERNAME")
+    smtp_password: str = Field(default="pyjqhbubsdzegqoo", validation_alias="SMTP_PASSWORD")
+    smtp_from_email: str = Field(default="noreply@theclaracare.com", validation_alias="SMTP_FROM_EMAIL")
     smtp_use_tls: bool = Field(default=True, validation_alias="SMTP_USE_TLS")
     smtp_use_ssl: bool = Field(default=False, validation_alias="SMTP_USE_SSL")
     smtp_timeout_seconds: float = Field(default=10.0, validation_alias="SMTP_TIMEOUT_SECONDS", gt=0)

@@ -30,6 +30,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/analytics.dart';
+import '../../core/session_store.dart';
 import 'onboarding_carousel.dart';
 import 'onboarding_store.dart';
 
@@ -46,6 +47,12 @@ const String kOnboardingSkippedEvent = 'mobile_onboarding_skipped';
 /// persists "onboarding seen" + emits coarse no-PII analytics on complete/skip
 /// (Req 5.3, 5.5).
 ///
+/// Supports multi-track onboarding:
+/// - Consumer track: global welcome, privacy, and personal profile intro.
+/// - Professional track: clinicians / researchers (doctor/researcher/admin)
+///   receive professional orientation (Council, Scribe, Chat, Evidence)
+///   with NO personal biometric fields or PHR questionnaires.
+///
 /// Place this around the authenticated app root: when onboarding has not been
 /// seen it renders [OnboardingCarousel]; otherwise (and after the carousel is
 /// completed or skipped) it renders [child].
@@ -55,6 +62,8 @@ class OnboardingGate extends StatefulWidget {
     required this.child,
     OnboardingStore? store,
     Analytics? analytics,
+    this.sessionStore,
+    this.role,
   })  : _store = store,
         _analytics = analytics;
 
@@ -70,6 +79,12 @@ class OnboardingGate extends StatefulWidget {
   /// the shared [getAnalyticsClient]. Injectable for tests.
   final Analytics? _analytics;
 
+  /// Optional session store to derive user role for multi-track orientation.
+  final SessionStore? sessionStore;
+
+  /// Optional explicit role string override ('doctor', 'researcher', 'admin', 'normal').
+  final String? role;
+
   @override
   State<OnboardingGate> createState() => _OnboardingGateState();
 }
@@ -77,6 +92,14 @@ class OnboardingGate extends StatefulWidget {
 class _OnboardingGateState extends State<OnboardingGate> {
   late final OnboardingStore _store = widget._store ?? OnboardingStore();
   late final Analytics _analytics = widget._analytics ?? getAnalyticsClient();
+
+  bool get _isProfessional {
+    final effectiveRole =
+        (widget.role ?? widget.sessionStore?.role ?? 'normal').trim().toLowerCase();
+    return effectiveRole == 'doctor' ||
+        effectiveRole == 'researcher' ||
+        effectiveRole == 'admin';
+  }
 
   /// `null` while the persisted flag is being read (show splash); `true` once
   /// onboarding is seen (show [child]); `false` to show the carousel.
@@ -132,8 +155,11 @@ class _OnboardingGateState extends State<OnboardingGate> {
       return widget.child;
     }
 
-    // First run: present the skippable onboarding carousel.
+    // First run: present the skippable onboarding carousel (consumer or professional track).
     return OnboardingCarousel(
+      pages: _isProfessional
+          ? OnboardingCarousel.professionalPages
+          : OnboardingCarousel.defaultPages,
       onComplete: () => _finish(kOnboardingCompletedEvent),
       onSkip: () => _finish(kOnboardingSkippedEvent),
     );

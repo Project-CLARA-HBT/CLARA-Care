@@ -79,7 +79,17 @@ enum ConsumerTerm {
   profileHubDataRightsDescription,
   profileHubSettingsTitle,
   profileHubSettingsDescription,
+  profileHubCategoryHealth,
+  profileHubCategorySharing,
+  profileHubCategoryPrivacy,
+  profileHubCategoryPreferences,
+  profileHubCategoryHelp,
+  profileHubPhrTitle,
+  profileHubPhrDescription,
+  profileHubHelpTitle,
+  profileHubHelpDescription,
   todayTitle,
+  todayStartJourney,
   todayStartHereTitle,
   todayStartHereDescription,
   todayAskHealthTitle,
@@ -797,6 +807,18 @@ class ConsumerTerminology {
     ConsumerTerm.profileHubSettingsTitle: 'Cài đặt',
     ConsumerTerm.profileHubSettingsDescription:
         'Giao diện, ngôn ngữ, tài khoản và quyền riêng tư',
+    ConsumerTerm.profileHubCategoryHealth: 'Sức khỏe',
+    ConsumerTerm.profileHubCategorySharing: 'Chia sẻ',
+    ConsumerTerm.profileHubCategoryPrivacy: 'Quyền riêng tư',
+    ConsumerTerm.profileHubCategoryPreferences: 'Cài đặt & Tùy chọn',
+    ConsumerTerm.profileHubCategoryHelp: 'Trợ giúp & Hướng dẫn',
+    ConsumerTerm.profileHubPhrTitle: 'Hồ sơ sức khỏe cá nhân (PHR)',
+    ConsumerTerm.profileHubPhrDescription:
+        'Xem và quản lý toàn diện thông tin sức khỏe',
+    ConsumerTerm.profileHubHelpTitle: 'Hướng dẫn & Trợ giúp',
+    ConsumerTerm.profileHubHelpDescription:
+        'Tìm hiểu cách sử dụng CLARA và câu hỏi thường gặp',
+    ConsumerTerm.todayStartJourney: 'Bắt đầu hành trình',
     ConsumerTerm.todayStartHereTitle: 'Bạn muốn làm gì hôm nay?',
     ConsumerTerm.todayStartHereDescription:
         'Chọn một việc. CLARA sẽ chỉ dùng thông tin bạn đã cho phép.',
@@ -1635,6 +1657,18 @@ class ConsumerTerminology {
     ConsumerTerm.profileHubSettingsTitle: 'Settings',
     ConsumerTerm.profileHubSettingsDescription:
         'Appearance, language, account, and privacy',
+    ConsumerTerm.profileHubCategoryHealth: 'Health',
+    ConsumerTerm.profileHubCategorySharing: 'Sharing',
+    ConsumerTerm.profileHubCategoryPrivacy: 'Privacy',
+    ConsumerTerm.profileHubCategoryPreferences: 'Preferences',
+    ConsumerTerm.profileHubCategoryHelp: 'Help & Support',
+    ConsumerTerm.profileHubPhrTitle: 'Personal Health Record (PHR)',
+    ConsumerTerm.profileHubPhrDescription:
+        'View and manage your comprehensive health record',
+    ConsumerTerm.profileHubHelpTitle: 'Help & Guide',
+    ConsumerTerm.profileHubHelpDescription:
+        'Learn how to use CLARA and view FAQs',
+    ConsumerTerm.todayStartJourney: 'Start health journey',
     ConsumerTerm.todayStartHereTitle: 'What would you like to do today?',
     ConsumerTerm.todayStartHereDescription:
         'Choose one task. CLARA only uses the information you have allowed.',

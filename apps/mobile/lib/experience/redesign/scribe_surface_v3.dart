@@ -75,13 +75,24 @@ bool _isScribeAuthorizedRoleV3(String? role) {
 }
 
 /// Maps a scribe session status to a color-independent status level so meaning
-/// is conveyed by text + icon, not color alone (Req 10.5).
+/// is conveyed by text + icon, not color alone (Req 10.5). Clearly distinguishes:
+/// Recording, Transcript ready, Draft, Reviewed, Signed, Exported, Amended, Error.
 A11yStatusLevel _statusLevel(String status) {
   switch (status.trim().toLowerCase()) {
-    case 'ready':
-    case 'finalized':
+    case 'signed':
+    case 'exported':
       return A11yStatusLevel.success;
+    case 'ready':
+    case 'transcript_ready':
+    case 'in_review':
+    case 'reviewed':
+    case 'finalized':
+    case 'recording':
+      return A11yStatusLevel.info;
+    case 'amended':
+      return A11yStatusLevel.warning;
     case 'error':
+    case 'failed':
       return A11yStatusLevel.danger;
     default:
       return A11yStatusLevel.info;
@@ -100,6 +111,27 @@ class _ScribeTranscriptCopy {
   }
 
   final bool _english;
+
+  List<String> get workflowSteps => _english
+      ? const [
+          'Consent',
+          'Capture',
+          'Transcript Review',
+          'SOAP Review',
+          'Draft Complete',
+          'Export/Sign',
+        ]
+      : const [
+          'Đồng thuận',
+          'Ghi âm',
+          'Kiểm tra bản ghi',
+          'Kiểm tra SOAP',
+          'Hoàn tất bản nháp',
+          'Ký & Xuất bản',
+        ];
+  String get workflowAria => _english
+      ? 'Clinical documentation workflow steps'
+      : 'Các bước quy trình ghi chép khám bệnh';
 
   String get consentRequired => _english
       ? 'Patient consent must be captured before transcript processing.'
@@ -182,14 +214,26 @@ class _ScribeSessionCopy {
   String statusLabel(String status) {
     if (!_english) return scribeStatusLabel(status);
     switch (status.trim().toLowerCase()) {
+      case 'recording':
+        return 'Recording';
+      case 'ready':
+      case 'transcript_ready':
+        return 'Transcript ready';
       case 'draft':
       case '':
         return 'Draft';
-      case 'ready':
-        return 'Ready';
+      case 'in_review':
+      case 'reviewed':
       case 'finalized':
-        return 'Finalized';
+        return 'Reviewed';
+      case 'signed':
+        return 'Signed';
+      case 'exported':
+        return 'Exported';
+      case 'amended':
+        return 'Amended';
       case 'error':
+      case 'failed':
         return 'Processing error';
       default:
         return status;
@@ -775,10 +819,31 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
     );
   }
 
+  int _computeCurrentStep(ScribeSessionView session, bool consentCaptured) {
+    final status = session.status.trim().toLowerCase();
+    if (status == 'signed' || status == 'exported' || status == 'amended') {
+      return 5;
+    }
+    if (status == 'finalized' || status == 'in_review' || status == 'reviewed' || status == 'completed') {
+      return 4;
+    }
+    if (session.hasSoap) {
+      return 3;
+    }
+    if (session.hasTranscript) {
+      return 2;
+    }
+    if (consentCaptured) {
+      return 1;
+    }
+    return 0;
+  }
+
   Widget _buildSessionDetail(BuildContext context, ScribeSessionView session) {
     final theme = Theme.of(context);
     final copy = _ScribeTranscriptCopy.forContext(context);
     final sessionCopy = _ScribeSessionCopy.forContext(context);
+    final currentStep = _computeCurrentStep(session, _consentCaptured);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         ClaraTokens.spaceMd,
@@ -794,6 +859,14 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
           label: sessionCopy.statusLabel(session.status),
           level: _statusLevel(session.status),
           semanticsPrefix: copy.sessionStatusPrefix,
+        ),
+        const SizedBox(height: ClaraTokens.spaceMd),
+
+        // Canonical 6-stage Scribe state model: Consent -> Capture -> Transcript Review -> SOAP Review -> Draft Complete -> Export/Sign
+        _ScribeWorkflowStepper(
+          currentStep: currentStep,
+          steps: copy.workflowSteps,
+          semanticLabel: copy.workflowAria,
         ),
         const SizedBox(height: ClaraTokens.spaceMd),
 
@@ -918,6 +991,115 @@ class _ScribePlaceholder extends StatelessWidget {
       icon: Icons.lock_outline,
       title: title,
       message: message,
+    );
+  }
+}
+
+/// Canonical 6-stage Scribe state model stepper widget (Req 1 / INV-8):
+/// Consent -> Capture -> Transcript Review -> SOAP Review -> Draft Complete -> Export/Sign
+class _ScribeWorkflowStepper extends StatelessWidget {
+  const _ScribeWorkflowStepper({
+    required this.currentStep,
+    required this.steps,
+    required this.semanticLabel,
+  });
+
+  final int currentStep;
+  final List<String> steps;
+  final String semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Semantics(
+      label: semanticLabel,
+      child: ClaraCard.static_(
+        padding: const EdgeInsets.symmetric(
+          horizontal: ClaraTokens.spaceSm,
+          vertical: ClaraTokens.spaceSm,
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: List.generate(steps.length, (index) {
+              final isCompleted = index < currentStep;
+              final isCurrent = index == currentStep;
+              final label = steps[index];
+
+              Color circleBg;
+              Color circleFg;
+              Color textColor;
+              FontWeight fontWeight;
+
+              if (isCompleted) {
+                circleBg = colorScheme.primaryContainer;
+                circleFg = colorScheme.onPrimaryContainer;
+                textColor = colorScheme.onSurface;
+                fontWeight = FontWeight.w500;
+              } else if (isCurrent) {
+                circleBg = colorScheme.primary;
+                circleFg = colorScheme.onPrimary;
+                textColor = colorScheme.primary;
+                fontWeight = FontWeight.bold;
+              } else {
+                circleBg = colorScheme.surfaceContainerHighest;
+                circleFg = colorScheme.onSurfaceVariant;
+                textColor = colorScheme.onSurfaceVariant;
+                fontWeight = FontWeight.normal;
+              }
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: circleBg,
+                        shape: BoxShape.circle,
+                        border: isCurrent
+                            ? Border.all(color: colorScheme.primary, width: 1.5)
+                            : null,
+                      ),
+                      alignment: Alignment.center,
+                      child: isCompleted
+                          ? Icon(Icons.check, size: 13, color: circleFg)
+                          : Text(
+                              '${index + 1}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: circleFg,
+                              ),
+                            ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: textColor,
+                        fontWeight: fontWeight,
+                      ),
+                    ),
+                    if (index < steps.length - 1) ...[
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 14,
+                        color: colorScheme.outlineVariant,
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+          ),
+        ),
+      ),
     );
   }
 }

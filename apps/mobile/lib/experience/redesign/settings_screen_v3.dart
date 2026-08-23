@@ -50,6 +50,7 @@ import '../../theme/glass/glass_surface.dart';
 import '../../theme/glass/glass_tokens.dart';
 import '../../theme/tokens.dart';
 import '../language_controller.dart';
+import '../presentation_mode.dart';
 import '../settings/language_toggle.dart';
 import '../theme_controller.dart';
 
@@ -61,6 +62,7 @@ class SettingsScreenV3 extends StatelessWidget {
     required this.sessionStore,
     this.themeController,
     this.languageController,
+    this.presentationModeController,
   });
 
   /// API client, used for a best-effort server-side logout on sign-out.
@@ -74,6 +76,9 @@ class SettingsScreenV3 extends StatelessWidget {
 
   /// App-wide language state. When `null` the Language section is hidden.
   final LanguageController? languageController;
+
+  /// Optional presentation mode controller for role-gated mode switching.
+  final PresentationModeController? presentationModeController;
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +110,7 @@ class SettingsScreenV3 extends StatelessWidget {
               apiClient: apiClient,
               sessionStore: sessionStore,
               copy: copy,
+              presentationModeController: presentationModeController,
             ),
             _PrivacySection(copy: copy),
             _TransparencySection(copy: copy, locale: copy.locale),
@@ -299,17 +305,19 @@ class _ThemeRadioTile extends StatelessWidget {
 
 // --- Tài khoản (Account) -----------------------------------------------------
 
-/// The Account section: signed-in identity + a confirmed sign-out.
+/// The Account section: signed-in identity + role-gated presentation mode switcher + sign-out.
 class _AccountSection extends StatelessWidget {
   const _AccountSection({
     required this.apiClient,
     required this.sessionStore,
     required this.copy,
+    this.presentationModeController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
   final ConsumerTerminology copy;
+  final PresentationModeController? presentationModeController;
 
   /// Best-effort server logout, then fully clear the session so the app root's
   /// session listener routes back to login (Requirement 4.4, 4.5).
@@ -347,13 +355,37 @@ class _AccountSection extends StatelessWidget {
     }
   }
 
+  void _openModePicker(BuildContext context, PresentationModeController controller) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(ClaraTokens.radiusLg)),
+      ),
+      builder: (_) => PresentationModeSelectorSheet(
+        controller: controller,
+        languageCode: copy.locale,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final listenables = <Listenable>[
+      sessionStore,
+      if (presentationModeController != null) presentationModeController!,
+    ];
+
     return ListenableBuilder(
-      listenable: sessionStore,
+      listenable: Listenable.merge(listenables),
       builder: (context, _) {
         final email = sessionStore.email;
         final role = sessionStore.role;
+        final modeController = presentationModeController;
+        final canSwitchMode = modeController != null && modeController.canSwitchModes;
+        final isEnglish = copy.locale == 'en';
+
         return _SettingsGroup(
           title: copy[ConsumerTerm.settingsAccountTitle],
           child: Column(
@@ -373,6 +405,15 @@ class _AccountSection extends StatelessWidget {
                 label: copy[ConsumerTerm.settingsRoleLabel],
                 value: _roleLabel(role, copy),
               ),
+              if (canSwitchMode) ...[
+                const SizedBox(height: ClaraTokens.spaceSm),
+                _IdentityRow(
+                  icon: Icons.workspaces_outlined,
+                  label: isEnglish ? 'Workspace Mode' : 'Không gian làm việc',
+                  value: kPresentationModeMeta[modeController.mode]!.label(copy.locale),
+                  onTap: () => _openModePicker(context, modeController),
+                ),
+              ],
               const SizedBox(height: ClaraTokens.spaceMd),
               ClaraButton.secondary(
                 label: copy[ConsumerTerm.settingsSignOut],
@@ -413,48 +454,66 @@ class _IdentityRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.onTap,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textScaler = A11y.resolveTextScaler(context);
+    final rowContent = Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
+        const SizedBox(width: ClaraTokens.spaceMd),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textScaler: textScaler,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: theme.textTheme.bodyLarge,
+                textScaler: textScaler,
+              ),
+            ],
+          ),
+        ),
+        if (onTap != null)
+          Icon(
+            Icons.chevron_right,
+            size: 20,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+      ],
+    );
+
     return Semantics(
       label: '$label: $value',
+      button: onTap != null,
       container: true,
-      child: ExcludeSemantics(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
-            const SizedBox(width: ClaraTokens.spaceMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    textScaler: textScaler,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    style: theme.textTheme.bodyLarge,
-                    textScaler: textScaler,
-                  ),
-                ],
+      child: onTap != null
+          ? InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(ClaraTokens.radiusSm),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: ExcludeSemantics(child: rowContent),
               ),
-            ),
-          ],
-        ),
-      ),
+            )
+          : ExcludeSemantics(child: rowContent),
     );
   }
 }

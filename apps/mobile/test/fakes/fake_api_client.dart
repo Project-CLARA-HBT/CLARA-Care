@@ -1039,4 +1039,85 @@ class FakeApiClient extends ApiClient {
     ));
     return <String, dynamic>{'reported': true};
   }
+
+  // --- Medication courses ----------------------------------------------------
+
+  @override
+  Future<Map<String, dynamic>> getMedicationCourses({
+    required String accessToken,
+  }) {
+    return _dispatch('getMedicationCourses', const {}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> createMedicationCourse({
+    required String accessToken,
+    required String medicationName,
+    String doseText = '',
+    String scheduleText = '',
+    String routeText = '',
+    String formText = '',
+    String? drugbankId,
+  }) {
+    return _dispatch(
+      'createMedicationCourse',
+      {
+        'medicationName': medicationName,
+        'doseText': doseText,
+        'scheduleText': scheduleText,
+        'routeText': routeText,
+        'formText': formText,
+        'drugbankId': drugbankId,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> correctMedicationCourse({
+    required String accessToken,
+    required String courseId,
+    required int version,
+    required String medicationName,
+    required String reason,
+    String doseText = '',
+    String scheduleText = '',
+    String routeText = '',
+    String formText = '',
+  }) {
+    return _dispatch(
+      'correctMedicationCourse',
+      {
+        'courseId': courseId,
+        'version': version,
+        'medicationName': medicationName,
+        'reason': reason,
+        'doseText': doseText,
+        'scheduleText': scheduleText,
+        'routeText': routeText,
+        'formText': formText,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> endMedicationCourse({
+    required String accessToken,
+    required String courseId,
+    required int version,
+    required String reason,
+    DateTime? endedAt,
+  }) {
+    return _dispatch(
+      'endMedicationCourse',
+      {
+        'courseId': courseId,
+        'version': version,
+        'reason': reason,
+        'endedAt': endedAt,
+      },
+      accessToken: accessToken,
+    );
+  }
 }

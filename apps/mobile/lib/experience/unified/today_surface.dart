@@ -806,7 +806,12 @@ class _TopActionBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: accentColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(ClaraTokens.radiusLg),
-        border: Border.all(color: accentColor.withValues(alpha: 0.35)),
+        border: const Border(
+          top: BorderSide(color: Color(0xFF2A3950), width: 2),
+          left: BorderSide(color: Color(0x33414751)),
+          right: BorderSide(color: Color(0x33414751)),
+          bottom: BorderSide(color: Color(0x33414751)),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

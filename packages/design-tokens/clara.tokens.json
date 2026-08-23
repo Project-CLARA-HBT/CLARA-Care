@@ -1,0 +1,262 @@
+{
+  "version": "4.0.0",
+  "hash": "clara-spatial-care-v4-canonical",
+  "color": {
+    "brand": {
+      "50": "#EFF7FF",
+      "100": "#DCEEFF",
+      "200": "#B9DCFF",
+      "300": "#86C4FF",
+      "400": "#4BA7FF",
+      "500": "#1A86F5",
+      "600": "#0B6FD8",
+      "700": "#095BB4",
+      "800": "#0B4A91",
+      "900": "#103F76",
+      "950": "#0B274D"
+    },
+    "azure": {
+      "50": "#EFF7FF",
+      "100": "#DCEEFF",
+      "200": "#B9DCFF",
+      "300": "#86C4FF",
+      "400": "#4BA7FF",
+      "500": "#1A86F5",
+      "600": "#0B6FD8",
+      "700": "#095BB4",
+      "800": "#0B4A91",
+      "900": "#103F76",
+      "950": "#0B274D"
+    },
+    "iris": {
+      "50": "#F5F3FF",
+      "100": "#EDE9FE",
+      "200": "#DDD6FE",
+      "300": "#C4B5FD",
+      "400": "#A78BFA",
+      "500": "#8B7CF6",
+      "600": "#7566E8",
+      "700": "#6354C9",
+      "800": "#5245A8",
+      "900": "#443B86"
+    },
+    "mint": {
+      "50": "#ECFDF8",
+      "100": "#D1FAEE",
+      "200": "#A7F3DF",
+      "300": "#6EE7CF",
+      "400": "#3AD2B6",
+      "500": "#14A88D",
+      "600": "#0F8A75",
+      "700": "#0F6F61",
+      "800": "#10594F",
+      "900": "#104A43"
+    },
+    "role": {
+      "personal": "#1A86F5",
+      "clinical": "#14A88D",
+      "research": "#7566E8",
+      "admin": "#475569"
+    },
+    "atmosphere": {
+      "personal": "rgba(26, 134, 245, 0.10)",
+      "clinical": "rgba(20, 168, 141, 0.10)",
+      "research": "rgba(139, 124, 246, 0.10)",
+      "admin": "rgba(71, 85, 105, 0.10)"
+    },
+    "status": {
+      "light": {
+        "successText": "#137A57",
+        "successBg": "#EAF8F2",
+        "successBorder": "#BCE9D7",
+        "warningText": "#8A5A00",
+        "warningBg": "#FFF7E2",
+        "warningBorder": "#F4D58D",
+        "dangerText": "#B42332",
+        "dangerBg": "#FFF0F1",
+        "dangerBorder": "#F4B9BF",
+        "infoText": "#095BB4",
+        "infoBg": "#EFF7FF",
+        "infoBorder": "#B9DCFF",
+        "unknownText": "#48566A",
+        "unknownBg": "#F3F6FA",
+        "unknownBorder": "#D5DDE7"
+      },
+      "dark": {
+        "successText": "#75E0B7",
+        "successBg": "#102D25",
+        "successBorder": "#245B49",
+        "warningText": "#FFD37A",
+        "warningBg": "#33260D",
+        "warningBorder": "#6D501B",
+        "dangerText": "#FF9CA7",
+        "dangerBg": "#35141A",
+        "dangerBorder": "#73303A",
+        "infoText": "#86C4FF",
+        "infoBg": "#0B274D",
+        "infoBorder": "#103F76",
+        "unknownText": "#C7D1DE",
+        "unknownBg": "#1B2735",
+        "unknownBorder": "#33455B"
+      }
+    },
+    "neutral": {
+      "light": {
+        "canvas": "#F6F8FB",
+        "canvasSubtle": "#F1F4F8",
+        "canvasSoft": "#F1F4F8",
+        "surface0": "#FFFFFF",
+        "surface": "#FFFFFF",
+        "surface1": "#FBFCFE",
+        "surfaceSoft": "#FBFCFE",
+        "surface2": "#F3F6FA",
+        "surfaceMuted": "#F3F6FA",
+        "surface3": "#EBF0F6",
+        "surfaceStrong": "#EBF0F6",
+        "borderSubtle": "#E3E8EF",
+        "borderDefault": "#D5DDE7",
+        "borderStrong": "#AEB9C8",
+        "textPrimary": "#162033",
+        "textSecondary": "#48566A",
+        "textTertiary": "#6D7A8E",
+        "textDisabled": "#9AA5B4"
+      },
+      "dark": {
+        "canvas": "#0B111A",
+        "canvasSubtle": "#0E1520",
+        "canvasSoft": "#0E1520",
+        "surface0": "#111A26",
+        "surface": "#111A26",
+        "surface1": "#15202D",
+        "surfaceSoft": "#15202D",
+        "surface2": "#1B2735",
+        "surfaceMuted": "#1B2735",
+        "surface3": "#223143",
+        "surfaceStrong": "#223143",
+        "borderSubtle": "#253447",
+        "borderDefault": "#33455B",
+        "borderStrong": "#566B83",
+        "textPrimary": "#F2F6FB",
+        "textSecondary": "#C7D1DE",
+        "textTertiary": "#93A2B6",
+        "textDisabled": "#68788D"
+      }
+    }
+  },
+  "atmosphere": {
+    "personal": "rgba(26, 134, 245, 0.10)",
+    "clinical": "rgba(20, 168, 141, 0.10)",
+    "research": "rgba(139, 124, 246, 0.10)",
+    "admin": "rgba(71, 85, 105, 0.10)",
+    "light": {
+      "personal": "rgba(26, 134, 245, 0.08)",
+      "clinical": "rgba(20, 168, 141, 0.08)",
+      "research": "rgba(139, 124, 246, 0.08)",
+      "admin": "rgba(71, 85, 105, 0.08)"
+    },
+    "dark": {
+      "personal": "rgba(26, 134, 245, 0.12)",
+      "clinical": "rgba(20, 168, 141, 0.12)",
+      "research": "rgba(139, 124, 246, 0.12)",
+      "admin": "rgba(71, 85, 105, 0.12)"
+    }
+  },
+  "focus": {
+    "ringWidth": 2,
+    "ringOffset": 2,
+    "light": {
+      "ringColor": "#0B6FD8",
+      "ringWidth": 2,
+      "ringOffset": 2
+    },
+    "dark": {
+      "ringColor": "#86C4FF",
+      "ringWidth": 2,
+      "ringOffset": 2
+    }
+  },
+  "glass": {
+    "light": {
+      "fill": "rgba(255, 255, 255, 0.70)",
+      "fillStrong": "rgba(255, 255, 255, 0.84)",
+      "stroke": "rgba(255, 255, 255, 0.74)",
+      "edge": "rgba(26, 134, 245, 0.12)",
+      "blurRegular": 20,
+      "blurStrong": 28
+    },
+    "dark": {
+      "fill": "rgba(17, 26, 38, 0.68)",
+      "fillStrong": "rgba(17, 26, 38, 0.84)",
+      "stroke": "#253447",
+      "edge": "rgba(134, 196, 255, 0.15)",
+      "blurRegular": 20,
+      "blurStrong": 30
+    }
+  },
+  "spacing": {
+    "0": 0,
+    "1": 4,
+    "2": 8,
+    "3": 12,
+    "4": 16,
+    "5": 20,
+    "6": 24,
+    "8": 32,
+    "10": 40,
+    "12": 48,
+    "16": 64,
+    "20": 80,
+    "24": 96
+  },
+  "radius": {
+    "xs": 8,
+    "sm": 12,
+    "md": 16,
+    "lg": 20,
+    "xl": 28,
+    "pill": 999
+  },
+  "elevation": {
+    "light": {
+      "shadow1": "0 1px 2px rgba(22, 32, 51, 0.04)",
+      "shadow2": "0 4px 20px rgba(0, 0, 0, 0.03)",
+      "shadow3": "0 16px 40px rgba(22, 32, 51, 0.08)"
+    },
+    "dark": {
+      "shadow1": "0 1px 2px rgba(0, 0, 0, 0.24)",
+      "shadow2": "0 6px 20px rgba(0, 0, 0, 0.35)",
+      "shadow3": "0 16px 40px rgba(0, 0, 0, 0.50)"
+    }
+  },
+  "motion": {
+    "duration": {
+      "instant": 80,
+      "fast": 140,
+      "standard": 220,
+      "emphasis": 320
+    },
+    "easing": {
+      "enter": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+      "exit": "cubic-bezier(0.4, 0, 1, 1)",
+      "standard": "cubic-bezier(0.2, 0, 0, 1)"
+    }
+  },
+  "typography": {
+    "fontFamily": "Be Vietnam Pro, Be Vietnam Pro Variable, Segoe UI Variable, Segoe UI, system-ui, -apple-system, sans-serif",
+    "scale": {
+      "displayXl": { "size": 52, "lineHeight": 60, "weight": 650, "letterSpacing": "-0.02em" },
+      "display": { "size": 44, "lineHeight": 52, "weight": 650, "letterSpacing": "-0.02em" },
+      "h1": { "size": 34, "lineHeight": 42, "weight": 650, "letterSpacing": "-0.02em" },
+      "h2": { "size": 28, "lineHeight": 36, "weight": 650, "letterSpacing": "-0.01em" },
+      "h3": { "size": 22, "lineHeight": 30, "weight": 620 },
+      "titleL": { "size": 20, "lineHeight": 28, "weight": 600 },
+      "title": { "size": 18, "lineHeight": 26, "weight": 600 },
+      "bodyL": { "size": 17, "lineHeight": 29, "weight": 430 },
+      "body": { "size": 16, "lineHeight": 26, "weight": 430 },
+      "bodyS": { "size": 14, "lineHeight": 22, "weight": 430 },
+      "label": { "size": 13, "lineHeight": 18, "weight": 600 },
+      "caption": { "size": 12, "lineHeight": 18, "weight": 500, "letterSpacing": "0.02em" },
+      "labelCaps": { "size": 12, "lineHeight": 16, "weight": 600, "letterSpacing": "0.05em" }
+    }
+  }
+}

@@ -75,7 +75,7 @@ export default function SidebarNav({
         ) : null}
       </div>
 
-      {workspace !== "personal" ? <div className="py-3">
+      {workspaces.length > 1 ? <div className="py-3">
         {collapsed ? (
           <button
             type="button"

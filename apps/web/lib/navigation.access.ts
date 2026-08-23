@@ -1,9 +1,16 @@
 /**
  * Route access policy for the client shell.
  *
- * This module deliberately does not import the menu configuration. A route can
- * be authorized without being present in primary navigation, and hiding a menu
- * item must never become an authorization decision. The API remains the
+ * This module deliberately does not import the menu configuration or workspace
+ * presentation layout. A route can be authorized without being present in
+ * primary navigation, and hiding a menu item must never become an authorization
+ * decision.
+ *
+ * SAFETY INVARIANT:
+ * Server RBAC authorization is locked and authoritative. Presentation mode or
+ * workspace switching (Personal, Clinical, Research, Administration) is
+ * strictly a client presentation/view layout concern and never alters
+ * role-based permissions or server authorization gates. The API remains the
  * authoritative RBAC boundary.
  */
 export type UserRole = "normal" | "researcher" | "doctor" | "admin";
@@ -25,8 +32,8 @@ export const PUBLIC_ROUTES = new Set([
 export const DEFAULT_POST_LOGIN_PATH = "/home";
 
 const AUTH_ENTRY_ROUTES = new Set(["/login", "/register"]);
-const AUTHENTICATED_UTILITY_ROUTES = new Set(["/welcome", "/role-select"]);
-const AUTHENTICATED_UTILITY_PREFIXES = ["/welcome/"];
+const AUTHENTICATED_UTILITY_ROUTES = new Set(["/welcome", "/role-select", "/onboarding"]);
+const AUTHENTICATED_UTILITY_PREFIXES = ["/welcome/", "/onboarding/"];
 
 const ROLE_HOME_PATHS: Record<UserRole, string> = {
   normal: "/home",
@@ -59,6 +66,7 @@ const ROUTE_ACCESS: Array<{ prefix: string; roles: UserRole[] }> = [
   { prefix: "/research", roles: ALL_ROLES },
   { prefix: "/evidence", roles: ALL_ROLES },
   { prefix: "/dashboard", roles: PROFESSIONAL_ROLES },
+  { prefix: "/clinical", roles: CLINICAL_ROLES },
   { prefix: "/council", roles: CLINICAL_ROLES },
   { prefix: "/scribe", roles: CLINICAL_ROLES },
   { prefix: "/admin", roles: ["admin"] },

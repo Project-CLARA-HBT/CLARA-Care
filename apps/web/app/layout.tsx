@@ -3,6 +3,8 @@ import AppShell from "@/components/app-shell";
 import { PreferenceProvider } from "@/components/shell/preference-provider";
 import { SessionBoundary } from "@/components/shell/session-boundary";
 import { ProfileBoundary } from "@/components/shell/profile-boundary";
+import { ShellModeProvider } from "@/components/shell/shell-mode-provider";
+import { CommandPaletteProvider } from "@/components/shell/command-palette-provider";
 import AnalyticsConsentBootstrap from "@/components/analytics/analytics-consent-bootstrap";
 import { getThemeInitScript } from "@/lib/theme";
 import type { Metadata } from "next";
@@ -58,7 +60,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <PreferenceProvider initialLanguage={language}>
           <SessionBoundary>
             <ProfileBoundary>
-              <AppShell>{children}</AppShell>
+              <ShellModeProvider>
+                <CommandPaletteProvider>
+                  <AppShell>{children}</AppShell>
+                </CommandPaletteProvider>
+              </ShellModeProvider>
             </ProfileBoundary>
           </SessionBoundary>
         </PreferenceProvider>

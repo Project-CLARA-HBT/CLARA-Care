@@ -7,7 +7,9 @@ import {
 import type { UILanguage } from "@/lib/ui-language";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 
-export type WorkspaceId = "personal" | "clinical" | "research" | "admin";
+export type PresentationMode = "personal" | "clinical" | "research" | "admin";
+
+export type WorkspaceId = PresentationMode;
 
 export type WorkspaceMeta = {
   id: WorkspaceId;
@@ -22,6 +24,21 @@ export type WorkspaceNavigation = {
   primary: NavigationItem[];
   secondary: NavigationItem[];
 };
+
+export const DEFAULT_WORKSPACE_BY_ROLE: Record<UserRole, WorkspaceId> = {
+  normal: "personal",
+  doctor: "clinical",
+  researcher: "research",
+  admin: "admin",
+};
+
+export function getDefaultWorkspace(role: UserRole = "normal"): WorkspaceId {
+  return DEFAULT_WORKSPACE_BY_ROLE[role] ?? "personal";
+}
+
+export function getDefaultPresentationMode(role: UserRole = "normal"): PresentationMode {
+  return getDefaultWorkspace(role);
+}
 
 const WORKSPACE_ROLES: Record<WorkspaceId, UserRole[]> = {
   personal: ["normal", "researcher", "doctor", "admin"],
@@ -185,10 +202,7 @@ export function getWorkspaceForPath(
   // independently enforced by navigation.access.ts.
   if (pathname === "/dashboard") {
     if (current && available.includes(current)) return current;
-    if (role === "researcher" && available.includes("research")) return "research";
-    if (role === "doctor" && available.includes("clinical")) return "clinical";
-    if (role === "admin" && available.includes("admin")) return "admin";
-    return available[0] ?? "personal";
+    return getDefaultWorkspace(role);
   }
   if (current && available.includes(current)) {
     const currentPaths = [...PRIMARY_HREFS[current], ...SECONDARY_HREFS[current]];

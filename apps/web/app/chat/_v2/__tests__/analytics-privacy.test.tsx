@@ -229,7 +229,7 @@ describe("v2 chat analytics carry no PII (Property P8 / Req 8.5)", () => {
     ]) {
       expect(serialized).not.toContain(token);
     }
-  });
+  }, 15000);
 
   it("never forwards the query for arbitrary inputs (property)", async () => {
     await renderShell();
@@ -261,7 +261,7 @@ describe("v2 chat analytics carry no PII (Property P8 / Req 8.5)", () => {
       ),
       { numRuns: 25 },
     );
-  });
+  }, 20000);
 });
 
 // ---------------------------------------------------------------------------

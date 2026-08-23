@@ -9,6 +9,7 @@ import 'experience/app_shell.dart';
 import 'experience/home_screen.dart';
 import 'experience/language_controller.dart';
 import 'experience/onboarding/onboarding_gate.dart';
+import 'experience/presentation_mode.dart';
 import 'experience/redesign/login_screen_v3.dart';
 import 'experience/redesign/redesign_root.dart';
 import 'experience/settings/language_toggle.dart';
@@ -30,6 +31,7 @@ class ClaraApp extends StatefulWidget {
     this.publicShareLinks,
     this.languageController,
     this.themeController,
+    this.presentationModeController,
   });
 
   final ApiClient apiClient;
@@ -51,6 +53,10 @@ class ClaraApp extends StatefulWidget {
   /// when `kMobileRedesignEnabled` is ON; `null` otherwise. Drives
   /// `MaterialApp.themeMode` (light-mode-first).
   final ThemeController? themeController;
+
+  /// App-wide presentation mode state for workspace switching (Personal,
+  /// Clinical, Research, Admin).
+  final PresentationModeController? presentationModeController;
 
   @override
   State<ClaraApp> createState() => _ClaraAppState();
@@ -258,6 +264,7 @@ class _ClaraAppState extends State<ClaraApp> {
         sessionStore: widget.sessionStore,
         themeController: widget.themeController,
         languageController: widget.languageController,
+        presentationModeController: widget.presentationModeController,
       );
     }
     // Experience_V3 redesign: the center-Chat adaptive shell root. Checked

@@ -69,19 +69,31 @@ bool isScribeAuthorizedRole(String? role) {
 String _str(Object? value) => value == null ? '' : value.toString();
 
 /// Vietnamese-first label for a session status (status conveyed by text, not
-/// color alone — Req 10.5).
+/// color alone — Req 10.5). Clearly distinguishes: Recording, Transcript ready,
+/// Draft, Reviewed, Signed, Exported, Amended, Error.
 String scribeStatusLabel(String status) {
   switch (status.trim().toLowerCase()) {
-    case 'draft':
-      return 'Nháp';
+    case 'recording':
+      return 'Đang ghi';
     case 'ready':
-      return 'Sẵn sàng';
-    case 'finalized':
-      return 'Đã hoàn tất';
-    case 'error':
-      return 'Lỗi xử lý';
+    case 'transcript_ready':
+      return 'Bản ghi sẵn sàng';
+    case 'draft':
     case '':
-      return 'Nháp';
+      return 'Bản nháp';
+    case 'in_review':
+    case 'reviewed':
+    case 'finalized':
+      return 'Đã duyệt';
+    case 'signed':
+      return 'Đã ký';
+    case 'exported':
+      return 'Đã xuất bản';
+    case 'amended':
+      return 'Bản sửa đổi';
+    case 'error':
+    case 'failed':
+      return 'Lỗi xử lý';
     default:
       return status;
   }
@@ -700,20 +712,49 @@ class _ScribeScreenState extends State<ScribeScreen> {
     );
   }
 
+  int _computeCurrentStep(ScribeSessionView session, bool consentCaptured) {
+    final status = session.status.trim().toLowerCase();
+    if (status == 'signed' || status == 'exported' || status == 'amended') {
+      return 5;
+    }
+    if (status == 'finalized' || status == 'in_review' || status == 'reviewed' || status == 'completed') {
+      return 4;
+    }
+    if (session.hasSoap) {
+      return 3;
+    }
+    if (session.hasTranscript) {
+      return 2;
+    }
+    if (consentCaptured) {
+      return 1;
+    }
+    return 0;
+  }
+
   Widget _buildSessionDetail(BuildContext context, ScribeSessionView session) {
     final theme = Theme.of(context);
     final canUploadAudio = widget.audioProvider != null;
+    final currentStep = _computeCurrentStep(session, _consentCaptured);
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
-        Text(session.title, style: theme.textTheme.titleLarge),
-        const SizedBox(height: 4),
-        // Status conveyed by text/semantics, not color alone (Req 10.5).
-        Semantics(
-          label: 'Trạng thái phiên: ${scribeStatusLabel(session.status)}',
-          child: Chip(label: Text('Trạng thái: ${scribeStatusLabel(session.status)}')),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(child: Text(session.title, style: theme.textTheme.titleLarge)),
+            const SizedBox(width: 8),
+            Semantics(
+              label: 'Trạng thái phiên: ${scribeStatusLabel(session.status)}',
+              child: Chip(label: Text('Trạng thái: ${scribeStatusLabel(session.status)}')),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
+
+        // Canonical 6-stage Scribe state model: Consent -> Capture -> Transcript Review -> SOAP Review -> Draft Complete -> Export/Sign
+        _ScribeWorkflowStepperCard(currentStep: currentStep),
+        const SizedBox(height: 8),
 
         // Consent-capture gate (Req 4.4).
         _ConsentGateCard(
@@ -722,19 +763,19 @@ class _ScribeScreenState extends State<ScribeScreen> {
           onCapture: _captureConsent,
           onRevoke: _revokeConsent,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
 
         if (_detailError != null) ...[
           Text(
             _detailError!,
             style: TextStyle(color: theme.colorScheme.error),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
         ],
 
         // Transcript (sanitized) — Req 4.2, 4.5.
         Text('Lời thoại', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -925,6 +966,119 @@ class _ConsentGateCard extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Canonical 6-stage Scribe state model:
+/// Consent -> Capture -> Transcript Review -> SOAP Review -> Draft Complete -> Export/Sign
+class _ScribeWorkflowStepperCard extends StatelessWidget {
+  const _ScribeWorkflowStepperCard({
+    required this.currentStep,
+  });
+
+  final int currentStep;
+
+  static const List<String> _steps = <String>[
+    'Đồng thuận',
+    'Ghi âm',
+    'Kiểm tra bản ghi',
+    'Kiểm tra SOAP',
+    'Hoàn tất bản nháp',
+    'Ký & Xuất bản',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Semantics(
+      label: 'Quy trình xử lý Scribe',
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(_steps.length, (index) {
+                final isCompleted = index < currentStep;
+                final isCurrent = index == currentStep;
+                final label = _steps[index];
+
+                Color circleBg;
+                Color circleFg;
+                Color textColor;
+                FontWeight fontWeight;
+
+                if (isCompleted) {
+                  circleBg = colorScheme.primaryContainer;
+                  circleFg = colorScheme.onPrimaryContainer;
+                  textColor = colorScheme.onSurface;
+                  fontWeight = FontWeight.w500;
+                } else if (isCurrent) {
+                  circleBg = colorScheme.primary;
+                  circleFg = colorScheme.onPrimary;
+                  textColor = colorScheme.primary;
+                  fontWeight = FontWeight.bold;
+                } else {
+                  circleBg = colorScheme.surfaceContainerHighest;
+                  circleFg = colorScheme.onSurfaceVariant;
+                  textColor = colorScheme.onSurfaceVariant;
+                  fontWeight = FontWeight.normal;
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: circleBg,
+                          shape: BoxShape.circle,
+                          border: isCurrent
+                              ? Border.all(color: colorScheme.primary, width: 1.5)
+                              : null,
+                        ),
+                        alignment: Alignment.center,
+                        child: isCompleted
+                            ? Icon(Icons.check, size: 13, color: circleFg)
+                            : Text(
+                                '${index + 1}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: circleFg,
+                                ),
+                              ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        label,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: textColor,
+                          fontWeight: fontWeight,
+                        ),
+                      ),
+                      if (index < _steps.length - 1) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.chevron_right,
+                          size: 14,
+                          color: colorScheme.outlineVariant,
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ),
         ),
       ),
     );

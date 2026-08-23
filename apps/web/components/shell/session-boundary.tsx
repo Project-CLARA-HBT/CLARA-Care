@@ -117,12 +117,17 @@ export function SessionBoundary({ children }: { children: ReactNode }) {
         const onboarding = await getPhrOnboarding();
         if (!active) return;
         const inWelcomeFlow =
-          pathname === "/welcome" || pathname.startsWith("/welcome/");
-        if (onboarding.needs_onboarding && !inWelcomeFlow) {
+          pathname === "/welcome" ||
+          pathname.startsWith("/welcome/") ||
+          pathname === "/onboarding" ||
+          pathname.startsWith("/onboarding/");
+        const isProfessional =
+          role === "doctor" || role === "researcher" || role === "admin";
+        if (!isProfessional && onboarding.needs_onboarding && !inWelcomeFlow) {
           router.replace("/welcome/start");
           return;
         }
-        if (!onboarding.needs_onboarding && inWelcomeFlow) {
+        if (!onboarding.needs_onboarding && inWelcomeFlow && pathname !== "/onboarding") {
           router.replace(getRoleHomePath(role));
         }
       } catch {

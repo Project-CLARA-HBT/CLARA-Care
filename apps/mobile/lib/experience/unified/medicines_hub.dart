@@ -23,10 +23,14 @@
 
 import 'package:flutter/material.dart';
 
+import '../../core/analytics.dart';
 import '../../core/api_client.dart';
+import '../../core/careguard_offline_cache.dart';
 import '../../core/consumer_terminology.dart';
+import '../../core/ddi_user_view.dart';
 import '../../core/feature_flags.dart';
 import '../../core/session_store.dart';
+import '../../screens/ddi_result_view.dart';
 import '../../theme/tokens.dart';
 import '../../theme/web_palette.dart';
 import '../../widgets/error_retry_view.dart';
@@ -162,7 +166,12 @@ class _MedicinesHubState extends State<MedicinesHub> {
               resolver: widget.resolver,
               languageController: widget.languageController,
             ),
-            _SafetyTab(copy: copy),
+            _SafetyTab(
+              apiClient: widget.apiClient,
+              sessionStore: widget.sessionStore,
+              copy: copy,
+              languageController: widget.languageController,
+            ),
           ],
         ),
       ),
@@ -770,13 +779,339 @@ class _AddCourseFormState extends State<_AddCourseForm> {
 }
 
 // =============================================================================
-// Tab 3 — "An toàn": honest pointer to the in-cabinet DDI check.
+// Tab 3 — "An toàn": DrugBank-backed interaction checking & DDI analysis.
 // =============================================================================
 
-class _SafetyTab extends StatelessWidget {
-  const _SafetyTab({required this.copy});
+class _SafetyTab extends StatefulWidget {
+  const _SafetyTab({
+    required this.apiClient,
+    required this.sessionStore,
+    required this.copy,
+    this.languageController,
+    CareguardOfflineCache? offlineCache,
+  }) : _offlineCache = offlineCache;
 
+  final ApiClient apiClient;
+  final SessionStore sessionStore;
   final ConsumerTerminology copy;
+  final LanguageController? languageController;
+  final CareguardOfflineCache? _offlineCache;
+
+  @override
+  State<_SafetyTab> createState() => _SafetyTabState();
+}
+
+class _SafetyTabState extends State<_SafetyTab> {
+  bool _loadingCabinet = true;
+  String? _cabinetError;
+  int _distinctCabinetCount = 0;
+
+  bool _checking = false;
+  String? _checkError;
+  DdiUserView? _ddiView;
+  DateTime? _ddiOfflineCachedAt;
+  List<CareguardMedicationClarification>? _ddiClarifications;
+  Map<int, CareguardClarificationCandidate> _selectedClarifications =
+      <int, CareguardClarificationCandidate>{};
+
+  final _freeTextMedicationsController = TextEditingController();
+  final _freeTextAllergiesController = TextEditingController();
+  bool _quickCheckExpanded = false;
+
+  late final CareguardOfflineCache _offlineCache;
+
+  @override
+  void initState() {
+    super.initState();
+    _offlineCache = widget._offlineCache ??
+        CareguardOfflineCache(storage: FlutterSecureSessionStorage());
+    _loadCabinetInfo();
+  }
+
+  @override
+  void dispose() {
+    _freeTextMedicationsController.dispose();
+    _freeTextAllergiesController.dispose();
+    super.dispose();
+  }
+
+  String? get _token {
+    final token = widget.sessionStore.accessToken;
+    if (token == null || token.isEmpty) return null;
+    return token;
+  }
+
+  String get _locale =>
+      widget.languageController?.languageCode.toLowerCase().startsWith('en') ==
+              true
+          ? 'en'
+          : 'vi';
+
+  Future<void> _loadCabinetInfo() async {
+    final token = _token;
+    if (token == null) {
+      setState(() {
+        _loadingCabinet = false;
+        _cabinetError = widget.copy[ConsumerTerm.medicinesLoginRequired];
+      });
+      return;
+    }
+
+    setState(() {
+      _loadingCabinet = true;
+      _cabinetError = null;
+    });
+
+    try {
+      final data =
+          await widget.apiClient.getCareguardCabinet(accessToken: token);
+      final rawItems = data['items'];
+      final distinctKeys = <String>{};
+      if (rawItems is List) {
+        for (final item in rawItems) {
+          if (item is Map) {
+            final normalized =
+                (item['normalized_name'] ?? '').toString().trim();
+            final name = (item['drug_name'] ?? '').toString().trim();
+            final key = normalized.isNotEmpty
+                ? normalized.toLowerCase()
+                : name.toLowerCase();
+            if (key.isNotEmpty) distinctKeys.add(key);
+          }
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _distinctCabinetCount = distinctKeys.length;
+        _loadingCabinet = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadingCabinet = false;
+        _cabinetError = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadingCabinet = false;
+        _cabinetError = widget.copy[ConsumerTerm.medicinesLoadFailed];
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> get _selectedResolutions =>
+      _ddiClarifications
+          ?.map((clarification) {
+            final candidate =
+                _selectedClarifications[clarification.cabinetItemId];
+            if (candidate == null) return null;
+            return <String, dynamic>{
+              'cabinet_item_id': clarification.cabinetItemId,
+              'input_alias': clarification.inputAlias,
+              'drugbank_id': candidate.drugbankId,
+              'drugbank_version': candidate.sourceVersion,
+            };
+          })
+          .whereType<Map<String, dynamic>>()
+          .toList(growable: false) ??
+      const <Map<String, dynamic>>[];
+
+  bool get _clarificationsComplete =>
+      _ddiClarifications != null &&
+      _ddiClarifications!.isNotEmpty &&
+      _ddiClarifications!.every(
+        (clarification) =>
+            clarification.candidates.isNotEmpty &&
+            _selectedClarifications.containsKey(clarification.cabinetItemId),
+      );
+
+  Future<void> _checkCabinetDdi() async {
+    final token = _token;
+    if (token == null) return;
+
+    if (_distinctCabinetCount < 2) {
+      setState(() {
+        _checkError = _locale == 'en'
+            ? 'At least 2 different medicines are needed in your cabinet to check interactions.'
+            : 'Cần ít nhất 2 thuốc khác nhau trong tủ để kiểm tra tương tác.';
+        _ddiView = null;
+        _ddiClarifications = null;
+      });
+      return;
+    }
+
+    if (_ddiClarifications != null && !_clarificationsComplete) {
+      setState(() {
+        _checkError = _locale == 'en'
+            ? 'Choose a DrugBank-backed medicine for each item before checking again.'
+            : 'Hãy chọn thuốc có nguồn DrugBank cho từng mục trước khi kiểm tra lại.';
+      });
+      return;
+    }
+
+    setState(() {
+      _checking = true;
+      _checkError = null;
+      _ddiView = null;
+      _ddiOfflineCachedAt = null;
+    });
+
+    getAnalyticsClient().capture(
+      AnalyticsEvent(
+        MobileAnalyticsEvents.careguardAnalyzed,
+        {'medicine_count': _distinctCabinetCount},
+      ),
+    );
+
+    try {
+      final response = await widget.apiClient.autoCheckCareguardCabinet(
+        accessToken: token,
+        allergies: const <String>[],
+        symptoms: const <String>[],
+        labs: const <String, dynamic>{},
+        locale: _locale,
+        resolutions: _selectedResolutions,
+      );
+      if (!mounted) return;
+      final clarifications = medicationClarificationsFromPayload(response);
+      if (clarifications != null) {
+        setState(() {
+          _ddiView = null;
+          _ddiOfflineCachedAt = null;
+          _ddiClarifications = clarifications;
+          _selectedClarifications = <int, CareguardClarificationCandidate>{};
+          _checkError = null;
+        });
+        return;
+      }
+      final view = DdiUserView.fromPayload(response);
+      await _offlineCache.save(view.toCacheJson());
+      if (!mounted) return;
+      setState(() {
+        _ddiView = view;
+        _ddiOfflineCachedAt = null;
+        _ddiClarifications = null;
+        _selectedClarifications = <int, CareguardClarificationCandidate>{};
+      });
+    } on ApiException catch (e) {
+      await _handleDdiFailure(e, e.message);
+    } catch (e) {
+      await _handleDdiFailure(
+        e,
+        _locale == 'en'
+            ? 'We could not check medicine interactions right now. Try again.'
+            : 'Không thể kiểm tra tương tác thuốc lúc này. Vui lòng thử lại.',
+      );
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  Future<void> _checkFreeTextDdi() async {
+    final token = _token;
+    if (token == null) return;
+
+    final rawMeds = _freeTextMedicationsController.text;
+    final medicines = rawMeds
+        .split(RegExp(r'[\n,]'))
+        .map((m) => m.trim())
+        .where((m) => m.isNotEmpty)
+        .toList();
+    final distinctMeds = medicines.map((m) => m.toLowerCase()).toSet();
+
+    if (distinctMeds.length < 2) {
+      setState(() {
+        _checkError = _locale == 'en'
+            ? 'Enter at least 2 different medicines to check interactions.'
+            : 'Cần nhập ít nhất 2 thuốc khác nhau để kiểm tra tương tác.';
+        _ddiView = null;
+        _ddiClarifications = null;
+      });
+      return;
+    }
+
+    final allergies = _freeTextAllergiesController.text
+        .split(RegExp(r'[\n,]'))
+        .map((a) => a.trim())
+        .where((a) => a.isNotEmpty)
+        .toList();
+
+    setState(() {
+      _checking = true;
+      _checkError = null;
+      _ddiView = null;
+      _ddiOfflineCachedAt = null;
+      _ddiClarifications = null;
+    });
+
+    getAnalyticsClient().capture(
+      AnalyticsEvent(
+        MobileAnalyticsEvents.careguardAnalyzed,
+        {'medicine_count': distinctMeds.length},
+      ),
+    );
+
+    try {
+      final response = await widget.apiClient.analyzeCareguard(
+        accessToken: token,
+        payload: {
+          'medications': medicines,
+          'allergies': allergies,
+          'symptoms': <String>[],
+          'labs': <String, dynamic>{},
+        },
+      );
+      if (!mounted) return;
+      if (medicationClarificationsFromPayload(response) != null) {
+        setState(() {
+          _ddiView = null;
+          _ddiOfflineCachedAt = null;
+          _checkError = ddiMedicationClarificationUnavailableMessage(context);
+        });
+        return;
+      }
+      final view = DdiUserView.fromPayload(response);
+      setState(() {
+        _ddiView = view;
+        _ddiOfflineCachedAt = null;
+        _ddiClarifications = null;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _checkError = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _checkError = _locale == 'en'
+            ? 'We could not check medicine interactions right now. Try again.'
+            : 'Không thể kiểm tra tương tác thuốc lúc này. Vui lòng thử lại.';
+      });
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  Future<void> _handleDdiFailure(Object error, String fallbackMessage) async {
+    if (isLikelyOfflineFailure(error)) {
+      final cached = await _offlineCache.read();
+      if (!mounted) return;
+      if (cached != null) {
+        setState(() {
+          _ddiView = DdiUserView.fromCacheJson(cached.view);
+          _ddiOfflineCachedAt = cached.cachedAt;
+          _checkError = null;
+        });
+        return;
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _ddiView = null;
+      _ddiOfflineCachedAt = null;
+      _checkError = fallbackMessage;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -784,90 +1119,319 @@ class _SafetyTab extends StatelessWidget {
     final scheme = theme.colorScheme;
     final status = theme.extension<ClaraStatusColors>();
 
-    return ListView(
-      padding: const EdgeInsets.all(ClaraTokens.spaceLg),
-      children: [
-        Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(ClaraTokens.spaceLg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.health_and_safety_outlined,
-                      color: scheme.primary,
-                    ),
-                    const SizedBox(width: ClaraTokens.spaceSm),
-                    Expanded(
-                      child: Text(
-                        copy[ConsumerTerm.medicinesSafetyTitle],
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
+    return RefreshIndicator(
+      onRefresh: _loadCabinetInfo,
+      child: ListView(
+        padding: const EdgeInsets.all(ClaraTokens.spaceLg),
+        children: [
+          // Header Card
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(ClaraTokens.spaceLg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.health_and_safety_outlined,
+                        color: scheme.primary,
+                      ),
+                      const SizedBox(width: ClaraTokens.spaceSm),
+                      Expanded(
+                        child: Text(
+                          widget.copy[ConsumerTerm.medicinesSafetyTitle],
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: ClaraTokens.spaceMd),
-                Text(
-                  copy[ConsumerTerm.medicinesSafetyDescription],
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
+                    ],
                   ),
-                ),
-                const SizedBox(height: ClaraTokens.spaceMd),
-                Builder(
-                  builder: (context) {
-                    final controller = DefaultTabController.maybeOf(context);
-                    if (controller == null) {
-                      return const SizedBox.shrink();
-                    }
-                    return OutlinedButton.icon(
-                      onPressed: () => controller.animateTo(1),
-                      icon: const Icon(Icons.inventory_2_outlined),
-                      label: Text(copy[ConsumerTerm.medicinesOpenCabinet]),
+                  const SizedBox(height: ClaraTokens.spaceMd),
+                  Text(
+                    widget.copy[ConsumerTerm.medicinesSafetyDescription],
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+
+          // Cabinet-driven DDI check section
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(ClaraTokens.spaceLg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.inventory_2_outlined, color: scheme.primary),
+                      const SizedBox(width: ClaraTokens.spaceSm),
+                      Expanded(
+                        child: Text(
+                          _locale == 'en'
+                              ? 'Check interactions from Cabinet'
+                              : 'Kiểm tra tương tác từ Tủ thuốc',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: ClaraTokens.spaceSm),
+                  if (_loadingCabinet)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: ClaraTokens.spaceSm),
+                      child: LinearProgressIndicator(),
+                    )
+                  else if (_cabinetError != null)
+                    Text(
+                      _cabinetError!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.error,
+                      ),
+                    )
+                  else ...[
+                    Text(
+                      _locale == 'en'
+                          ? 'Current medicines in cabinet: $_distinctCabinetCount.'
+                          : 'Số thuốc hiện có trong tủ: $_distinctCabinetCount thuốc.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: ClaraTokens.spaceMd),
+                    if (_distinctCabinetCount < 2) ...[
+                      Text(
+                        _locale == 'en'
+                            ? 'Add at least 2 different medicines to your cabinet to check interactions.'
+                            : 'Cần ít nhất 2 thuốc khác nhau trong tủ để kiểm tra tương tác.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: status?.warning ?? Colors.orange.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: ClaraTokens.spaceSm),
+                      Builder(
+                        builder: (context) {
+                          final controller =
+                              DefaultTabController.maybeOf(context);
+                          if (controller == null) {
+                            return const SizedBox.shrink();
+                          }
+                          return OutlinedButton.icon(
+                            onPressed: () => controller.animateTo(1),
+                            icon: const Icon(Icons.inventory_2_outlined),
+                            label: Text(
+                              widget.copy[ConsumerTerm.medicinesOpenCabinet],
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(kMinTouchTarget),
+                            ),
+                          );
+                        },
+                      ),
+                    ] else
+                      FilledButton.icon(
+                        onPressed: _checking ? null : _checkCabinetDdi,
+                        icon: _checking
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.medication_liquid),
+                        label: Text(
+                          _locale == 'en'
+                              ? 'Check interactions in cabinet'
+                              : 'Kiểm tra tương tác thuốc trong tủ',
+                        ),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(kMinTouchTarget),
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+
+          // Quick Free-text DDI check section
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(ClaraTokens.spaceLg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  InkWell(
+                    onTap: () => setState(() {
+                      _quickCheckExpanded = !_quickCheckExpanded;
+                    }),
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_note, color: scheme.primary),
+                        const SizedBox(width: ClaraTokens.spaceSm),
+                        Expanded(
+                          child: Text(
+                            _locale == 'en'
+                                ? 'Quick check (enter custom list)'
+                                : 'Kiểm tra nhanh (danh sách tự nhập)',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          _quickCheckExpanded
+                              ? Icons.expand_less
+                              : Icons.expand_more,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_quickCheckExpanded) ...[
+                    const SizedBox(height: ClaraTokens.spaceMd),
+                    TextField(
+                      controller: _freeTextMedicationsController,
+                      enabled: !_checking,
+                      minLines: 2,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        labelText: _locale == 'en'
+                            ? 'Medicines (one per line or comma-separated)'
+                            : 'Danh sách thuốc (mỗi dòng một thuốc)',
+                        hintText: _locale == 'en'
+                            ? 'Warfarin\nIbuprofen'
+                            : 'Warfarin\nIbuprofen',
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: ClaraTokens.spaceSm),
+                    TextField(
+                      controller: _freeTextAllergiesController,
+                      enabled: !_checking,
+                      minLines: 1,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: _locale == 'en'
+                            ? 'Allergies (optional)'
+                            : 'Dị ứng (không bắt buộc)',
+                        hintText: _locale == 'en'
+                            ? 'Penicillin, Aspirin'
+                            : 'Penicillin, Aspirin',
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: ClaraTokens.spaceMd),
+                    OutlinedButton.icon(
+                      onPressed: _checking ? null : _checkFreeTextDdi,
+                      icon: _checking
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.search),
+                      label: Text(
+                        _locale == 'en'
+                            ? 'Check custom list'
+                            : 'Kiểm tra danh sách đã nhập',
+                      ),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(kMinTouchTarget),
                       ),
-                    );
-                  },
-                ),
-              ],
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: ClaraTokens.spaceMd),
-        Card(
-          margin: EdgeInsets.zero,
-          color: status != null
-              ? status.warning.withValues(alpha: 0.12)
-              : scheme.surfaceContainerHighest,
-          child: Padding(
-            padding: const EdgeInsets.all(ClaraTokens.spaceLg),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  color: status?.warning ?? scheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: ClaraTokens.spaceSm),
-                Expanded(
-                  child: Text(
-                    copy[ConsumerTerm.medicinesSafetyNotice],
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurface,
-                    ),
+
+          // Error banner
+          if (_checkError != null) ...[
+            const SizedBox(height: ClaraTokens.spaceMd),
+            Card(
+              margin: EdgeInsets.zero,
+              color: scheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+                child: Text(
+                  _checkError!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onErrorContainer,
                   ),
                 ),
-              ],
+              ),
+            ),
+          ],
+
+          // Clarification View (DrugBank source candidate resolution)
+          if (_ddiClarifications != null) ...[
+            const SizedBox(height: ClaraTokens.spaceMd),
+            DdiMedicationClarificationView(
+              clarifications: _ddiClarifications!,
+              selected: _selectedClarifications,
+              loading: _checking,
+              onSelected: (clarification, candidate) => setState(() {
+                _selectedClarifications =
+                    Map<int, CareguardClarificationCandidate>.from(
+                  _selectedClarifications,
+                )..[clarification.cabinetItemId] = candidate;
+                _checkError = null;
+              }),
+              onResubmit: _checkCabinetDdi,
+            ),
+          ],
+
+          // Results View
+          if (_ddiView != null) ...[
+            const SizedBox(height: ClaraTokens.spaceMd),
+            DdiResultView(
+              view: _ddiView!,
+              offlineCachedAt: _ddiOfflineCachedAt,
+            ),
+          ],
+
+          // Safety Notice & Disclaimer
+          const SizedBox(height: ClaraTokens.spaceMd),
+          Card(
+            margin: EdgeInsets.zero,
+            color: status != null
+                ? status.warning.withValues(alpha: 0.12)
+                : scheme.surfaceContainerHighest,
+            child: Padding(
+              padding: const EdgeInsets.all(ClaraTokens.spaceLg),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: status?.warning ?? scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: ClaraTokens.spaceSm),
+                  Expanded(
+                    child: Text(
+                      widget.copy[ConsumerTerm.medicinesSafetyNotice],
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

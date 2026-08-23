@@ -142,5 +142,152 @@ void main() {
             reason: 'Scribe analytics must never carry clinical content.');
       }
     });
+
+    testWidgets(
+        'renders canonical 6-stage workflow stepper in session detail',
+        (tester) async {
+      final api = FakeApiClient()
+        ..stub('listScribeSessions', response: {
+          'items': [
+            {
+              'id': 10,
+              'title': 'Phiên kiểm tra quy trình',
+              'status': 'draft',
+              'transcript': 'Bệnh nhân than phiền đau đầu.',
+              'soap': {
+                'subjective': 'Bệnh nhân đau đầu 2 ngày.',
+                'assessment': 'Theo dõi đau đầu căng thẳng.',
+              },
+            }
+          ]
+        })
+        ..stub('getScribeSession', response: {
+          'id': 10,
+          'title': 'Phiên kiểm tra quy trình',
+          'status': 'draft',
+          'transcript': 'Bệnh nhân than phiền đau đầu.',
+          'soap': {
+            'subjective': 'Bệnh nhân đau đầu 2 ngày.',
+            'assessment': 'Theo dõi đau đầu căng thẳng.',
+          },
+        });
+      final store = await FakeSessionStore.authenticated(role: 'doctor');
+
+      await tester.pumpWidget(_host(ScribeSurfaceV3(
+        apiClient: api,
+        sessionStore: store,
+        resolver: _scribeOn(),
+      )));
+      await tester.pumpAndSettle();
+
+      // Open session
+      await tester.tap(find.text('Phiên kiểm tra quy trình'));
+      await tester.pumpAndSettle();
+
+      // Verify the 6-stage canonical workflow stepper is rendered
+      expect(find.text('Đồng thuận'), findsWidgets);
+      expect(find.text('Ghi âm'), findsWidgets);
+      expect(find.text('Kiểm tra bản ghi'), findsWidgets);
+      expect(find.text('Kiểm tra SOAP'), findsWidgets);
+      expect(find.text('Hoàn tất bản nháp'), findsWidgets);
+      expect(find.text('Ký & Xuất bản'), findsWidgets);
+    });
+
+    testWidgets(
+        'clearly distinguishes scribe states in session list and detail',
+        (tester) async {
+      final api = FakeApiClient()
+        ..stub('listScribeSessions', response: {
+          'items': [
+            {'id': 1, 'title': 'Session 1', 'status': 'recording'},
+            {'id': 2, 'title': 'Session 2', 'status': 'ready'},
+            {'id': 3, 'title': 'Session 3', 'status': 'draft'},
+            {'id': 4, 'title': 'Session 4', 'status': 'reviewed'},
+            {'id': 5, 'title': 'Session 5', 'status': 'signed'},
+            {'id': 6, 'title': 'Session 6', 'status': 'exported'},
+            {'id': 7, 'title': 'Session 7', 'status': 'amended'},
+          ]
+        });
+      final store = await FakeSessionStore.authenticated(role: 'doctor');
+
+      await tester.pumpWidget(_host(ScribeSurfaceV3(
+        apiClient: api,
+        sessionStore: store,
+        resolver: _scribeOn(),
+      )));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Đang ghi'), findsOneWidget);
+      expect(find.text('Bản ghi sẵn sàng'), findsOneWidget);
+      expect(find.text('Bản nháp'), findsOneWidget);
+      expect(find.text('Đã duyệt'), findsOneWidget);
+
+      // Scroll down to see the remaining session status badges
+      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Đã ký'), findsOneWidget);
+      expect(find.text('Đã xuất bản'), findsOneWidget);
+      expect(find.text('Bản sửa đổi'), findsOneWidget);
+    });
+
+    testWidgets(
+        'transcript and SOAP note reading surfaces are opaque without transparent glass',
+        (tester) async {
+      final api = FakeApiClient()
+        ..stub('listScribeSessions', response: {
+          'items': [
+            {
+              'id': 11,
+              'title': 'Phiên đọc lâm sàng',
+              'status': 'ready',
+              'transcript': 'Nội dung bản ghi thoại.',
+              'soap': {
+                'subjective': 'Bệnh nhân than phiền đau đầu.',
+                'objective': 'Huyết áp 120/80.',
+                'assessment': 'Đau đầu căng thẳng.',
+                'plan': 'Nghỉ ngơi và theo dõi.',
+              },
+            }
+          ]
+        })
+        ..stub('getScribeSession', response: {
+          'id': 11,
+          'title': 'Phiên đọc lâm sàng',
+          'status': 'ready',
+          'transcript': 'Nội dung bản ghi thoại.',
+          'soap': {
+            'subjective': 'Bệnh nhân than phiền đau đầu.',
+            'objective': 'Huyết áp 120/80.',
+            'assessment': 'Đau đầu căng thẳng.',
+            'plan': 'Nghỉ ngơi và theo dõi.',
+          },
+        });
+      final store = await FakeSessionStore.authenticated(role: 'doctor');
+
+      await tester.pumpWidget(_host(ScribeSurfaceV3(
+        apiClient: api,
+        sessionStore: store,
+        resolver: _scribeOn(),
+      )));
+      await tester.pumpAndSettle();
+
+      // Open session
+      await tester.tap(find.text('Phiên đọc lâm sàng'));
+      await tester.pumpAndSettle();
+
+      // Transcript and SOAP notes are rendered
+      expect(find.byKey(const Key('scribe-v3-transcript')), findsOneWidget);
+      expect(find.text('Nội dung bản ghi thoại.'), findsOneWidget);
+
+      // Scroll down to SOAP section
+      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Chủ quan'), findsWidgets);
+      expect(find.text('Bệnh nhân than phiền đau đầu.'), findsOneWidget);
+      expect(find.textContaining('Đánh giá'), findsWidgets);
+      expect(find.text('Đau đầu căng thẳng.'), findsOneWidget);
+    });
   });
 }

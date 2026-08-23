@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import secrets
 import time
 from collections import defaultdict, deque
@@ -53,6 +54,7 @@ from clara_api.schemas import (
     VerifyEmailRequest,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 _auth_action_attempts: dict[str, deque[float]] = defaultdict(deque)
 _auth_action_attempts_lock = Lock()
@@ -489,8 +491,9 @@ def register(
             )
             if should_expose_action_token_preview(settings):
                 verification_token_preview = verification_token
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
             db.rollback()
+            logger.warning("Failed to dispatch verification email during registration: %s", exc)
             email_delivery_status = "failed"
 
     return RegisterResponse(

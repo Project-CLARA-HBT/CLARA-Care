@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ClaraDesignTokens",
+  "type": "object",
+  "required": [
+    "version",
+    "color",
+    "typography",
+    "spacing",
+    "radius",
+    "elevation",
+    "motion",
+    "glass"
+  ],
+  "properties": {
+    "version": { "type": "string" },
+    "color": { "type": "object" },
+    "typography": { "type": "object" },
+    "spacing": { "type": "object" },
+    "radius": { "type": "object" },
+    "elevation": { "type": "object" },
+    "motion": { "type": "object" },
+    "glass": { "type": "object" }
+  }
+}

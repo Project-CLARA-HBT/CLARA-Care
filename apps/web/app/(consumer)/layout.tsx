@@ -1,10 +1,14 @@
 import type { ReactNode } from "react";
-import { ConsumerLayout } from "@/components/shell/consumer-layout";
+import { ShellLayoutContext } from "@/components/shell/shell-context";
 
 export default function ConsumerRouteLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  return <ConsumerLayout>{children}</ConsumerLayout>;
+  return (
+    <ShellLayoutContext.Provider value="consumer">
+      {children}
+    </ShellLayoutContext.Provider>
+  );
 }

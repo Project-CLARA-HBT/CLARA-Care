@@ -25,6 +25,7 @@ export type MessageLogProps = {
   isRunning?: boolean;
   role?: UserRole;
   onLaunchResearch?: (query: string) => void;
+  onSaveNote?: (answerText: string) => void;
 };
 
 function MessageLog({
@@ -33,6 +34,7 @@ function MessageLog({
   isRunning = false,
   role = "normal",
   onLaunchResearch,
+  onSaveNote,
 }: MessageLogProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -90,6 +92,7 @@ function MessageLog({
                 uiLanguage={uiLanguage}
                 role={role}
                 onLaunchResearch={onLaunchResearch}
+                onSaveNote={onSaveNote}
               />
             </div>
           );

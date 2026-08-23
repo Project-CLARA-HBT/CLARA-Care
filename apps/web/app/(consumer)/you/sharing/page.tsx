@@ -67,6 +67,16 @@ export default function YouSharingPage() {
   const isEn = uiLanguage === "en";
   const [activeProfileId, setActiveProfileId] = useState<string | null>(getActiveProfileId());
 
+  // Tab state: active | expired | revoked
+  const [activeTab, setActiveTab] = useState<"active" | "expired" | "revoked">("active");
+
+  // Selected grant for right detail drawer
+  const [selectedGrantId, setSelectedGrantId] = useState<string | null>("grant-1");
+
+  // Recipient preview modal state
+  const [recipientPreviewOpen, setRecipientPreviewOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
   // Wizard State
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4 | 5>(1);
@@ -209,14 +219,46 @@ export default function YouSharingPage() {
     }
   };
 
+  const grants = sharingData?.grants || [];
+  const activeGrants = grants.filter((g) => g.status === "active");
+  const expiredGrants = grants.filter((g) => g.status === "expired");
+  const revokedGrants = grants.filter((g) => g.status === "revoked");
+
+  const displayedGrants =
+    activeTab === "active"
+      ? activeGrants
+      : activeTab === "expired"
+        ? expiredGrants
+        : revokedGrants;
+
+  const currentSelectedGrant =
+    grants.find((g) => g.id === selectedGrantId) || grants[0] || null;
+
+  // Calculate days remaining helper
+  const getDaysRemaining = (expiresAt: string) => {
+    const exp = new Date(expiresAt).getTime();
+    const now = Date.now();
+    const diffDays = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  const handleCopyLink = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      const shareUrl = `${typeof window !== "undefined" ? window.location.origin : "https://clara.care"}/phr/shared/${currentSelectedGrant?.id || "tok-demo"}`;
+      navigator.clipboard.writeText(shareUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="you-sharing-page">
       <HealthPageHeader
-        title={isEn ? "Family & Caregiver Sharing" : "Chia sẻ Người thân & Người chăm sóc"}
+        title={isEn ? "Sharing & Privacy Grants" : "Chia sẻ & Quyền riêng tư"}
         subtitle={
           isEn
-            ? "Grant scoped, time-bound access to your health records, view detailed access history logs, or revoke instantly."
-            : "Cấp quyền chia sẻ có phạm vi và thời hạn cho người thân, theo dõi nhật ký ai đã truy cập gì và thu hồi tức thì."
+            ? "You decide who can access specific parts of your medical data with time-bounded grants and instant revocation."
+            : "Bạn quyết định ai có thể xem phần nào trong dữ liệu sức khỏe của mình với phân quyền có thời hạn."
         }
         backHref="/you"
         backLabel={isEn ? "Back to You" : "Quay lại Cá nhân"}
@@ -243,7 +285,7 @@ export default function YouSharingPage() {
 
       {createdTokenNotice ? (
         <div
-          className="rounded-[var(--radius-xl)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-4 text-xs text-[var(--status-ok-text)] space-y-2"
+          className="rounded-[var(--radius-2xl)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-4 text-xs text-[var(--status-ok-text)] space-y-2"
           data-testid="grant-created-notice"
         >
           <div className="flex items-center justify-between">
@@ -621,105 +663,416 @@ export default function YouSharingPage() {
         </div>
       ) : null}
 
-      {/* Main Content Layout */}
-      <div className="space-y-6">
-        {/* Active Grants List */}
-        <section
-          className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-4"
-          data-testid="active-grants-section"
+      {/* Recipient Preview Modal ("Xem như người nhận" Stitch Reference) */}
+      {recipientPreviewOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md overflow-y-auto"
+          data-testid="recipient-preview-modal"
+          role="dialog"
+          aria-modal="true"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[var(--text-brand)]">
-              <Icon name="contact" size="1.25rem" />
-              <h2 className="text-sm font-bold text-[var(--text-primary)]">
-                {isEn ? "Active Caregiver & Family Grants" : "Quyền chia sẻ đang có hiệu lực"}
-              </h2>
+          <div className="relative w-full max-w-3xl rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 md:p-8 shadow-2xl space-y-6 my-8">
+            <div className="flex items-center justify-between border-b border-[color:var(--shell-border)]/60 pb-4">
+              <div className="flex items-center gap-2 text-[var(--text-secondary)]">
+                <Icon name="share" size="1.1rem" className="text-[var(--text-brand)]" />
+                <span className="text-xs font-bold uppercase tracking-widest text-[var(--text-brand)]">
+                  CLARA-Care Shared Link
+                </span>
+                <span className="rounded-full bg-[var(--surface-muted)] px-2.5 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)] border border-[color:var(--shell-border)]">
+                  {isEn ? "Read-Only Mode" : "Bản đọc (Read-only)"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecipientPreviewOpen(false)}
+                className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+              >
+                <Icon name="close" size="1.25rem" />
+              </button>
             </div>
-            <Badge tone="brand">
-              {sharingData?.grants?.length ?? 0} {isEn ? "Active" : "Đang hoạt động"}
-            </Badge>
-          </div>
 
-          {isLoading ? (
-            <div className="h-32 animate-pulse bg-[var(--surface-muted)] rounded-xl" />
-          ) : sharingData?.grants && sharingData.grants.length > 0 ? (
-            <div className="space-y-3" data-testid="grants-list">
-              {sharingData.grants.map((grant) => (
-                <div
-                  key={grant.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 shadow-sm"
-                  data-testid={`grant-card-${grant.id}`}
-                >
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-bold text-[var(--text-primary)] truncate">
-                        {grant.grantee_name}
-                      </h4>
-                      <Badge tone={grant.status === "active" ? "ok" : "warn"}>
-                        {grant.grantee_relationship}
-                      </Badge>
-                    </div>
+            {/* Header Content */}
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-[var(--text-primary)]">
+                {isEn ? "Shared Conversation: Blood Pressure Medication" : "Nội dung được chia sẻ qua CLARA"}
+              </h3>
+              <p className="text-xs text-[var(--text-secondary)]">
+                {isEn ? "Trao đổi về thuốc huyết áp & hướng dẫn sử dụng an toàn" : "Trao đổi về thuốc huyết áp và hướng xử trí tác dụng phụ"}
+              </p>
+            </div>
 
-                    <p className="text-xs text-[var(--text-secondary)]">
-                      {isEn ? "Shared Categories:" : "Danh mục chia sẻ:"}{" "}
-                      <span className="font-semibold text-[var(--text-primary)]">
-                        {grant.categories
-                          .map((c) => (isEn ? CATEGORY_CONFIG[c]?.labelEn : CATEGORY_CONFIG[c]?.labelVi))
-                          .filter(Boolean)
-                          .join(", ")}
-                      </span>
-                    </p>
+            {/* Safety Banner */}
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3.5 flex items-start gap-3 text-xs text-[var(--text-primary)]">
+              <Icon name="warning" size="1.1rem" className="text-amber-500 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                {isEn
+                  ? "This content is a shared record of a medical consultation and does not replace in-person professional clinical evaluation."
+                  : "Nội dung này là bản chia sẻ của một cuộc trò chuyện và không thay thế đánh giá y tế trực tiếp của bác sĩ."}
+              </p>
+            </div>
 
-                    <p className="text-[11px] text-[var(--text-muted)]">
-                      {isEn ? "Expires at: " : "Hết hạn vào: "}
-                      {formatLocaleDate(uiLanguage, grant.expires_at, {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      type="button"
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setGrantToRevoke(grant)}
-                      data-testid={`revoke-grant-btn-${grant.id}`}
-                    >
-                      {isEn ? "Revoke Access" : "Thu hồi quyền"}
-                    </Button>
-                  </div>
+            {/* Simulated Conversation Box */}
+            <div className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--bg-elev-3)] p-5 space-y-4">
+              {/* User Query */}
+              <div className="flex flex-col items-end gap-1.5">
+                <span className="text-[10px] font-bold text-[var(--text-muted)]">
+                  {currentSelectedGrant?.grantee_name || "Người dùng"}
+                </span>
+                <div className="rounded-2xl rounded-tr-sm bg-[var(--surface-panel)] border border-[color:var(--shell-border)] p-3.5 text-xs text-[var(--text-primary)] max-w-lg">
+                  Tôi đang dùng Lisinopril 10mg nhưng dạo này hay bị ho khan. Có sao không?
                 </div>
-              ))}
+              </div>
+
+              {/* CLARA Response */}
+              <div className="flex flex-col items-start gap-1.5">
+                <div className="flex items-center gap-1.5 text-[var(--brand-600)]">
+                  <Icon name="clinical-notes" size="0.9rem" />
+                  <span className="text-[10px] font-bold">CLARA</span>
+                </div>
+                <div className="rounded-2xl rounded-tl-sm bg-[var(--surface-muted)] border border-[color:var(--brand-400)]/30 p-4 text-xs text-[var(--text-primary)] space-y-2 max-w-xl">
+                  <p className="leading-relaxed">
+                    Chào bạn, ho khan là một tác dụng phụ khá phổ biến của Lisinopril (nhóm ức chế men chuyển ACE inhibitors).
+                    <sup className="ml-1 inline-flex items-center justify-center rounded-full bg-[var(--brand-500)]/20 px-1.5 text-[10px] font-bold text-[var(--brand-600)]">1</sup>
+                  </p>
+                  <p className="leading-relaxed">
+                    Tình trạng này không nguy hiểm đến tính mạng nhưng có thể gây khó chịu. Bạn không nên tự ý ngưng thuốc đột ngột. Hãy trao đổi với bác sĩ điều trị để được hướng dẫn đổi sang nhóm thuốc chẹn thụ thể ARB nếu cần.
+                    <sup className="ml-1 inline-flex items-center justify-center rounded-full bg-[var(--brand-500)]/20 px-1.5 text-[10px] font-bold text-[var(--brand-600)]">2</sup>
+                  </p>
+                </div>
+              </div>
+
+              {/* Citations List */}
+              <div className="pt-3 border-t border-[color:var(--shell-border)]/60 text-xs text-[var(--text-secondary)] space-y-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] block mb-1">
+                  {isEn ? "References" : "Nguồn tham khảo"}
+                </span>
+                <p>1. Hướng dẫn chẩn đoán và điều trị tăng huyết áp, Bộ Y Tế (Cập nhật 2025).</p>
+                <p>2. VNHA/VSH Khuyến cáo quản lý bệnh tim mạch người lớn (2024).</p>
+              </div>
             </div>
-          ) : (
-            <EmptyState
-              title={isEn ? "No active sharing grants" : "Chưa có quyền chia sẻ nào"}
-              description={
-                isEn
-                  ? "Share your medical updates, prescriptions, and visit plans with your family or caregiver safely."
-                  : "Chia sẻ đơn thuốc, lịch khám và kế hoạch điều trị một cách an toàn với người thân."
-              }
-              actionLabel={isEn ? "Start Sharing Wizard" : "Bắt đầu chia sẻ"}
-              onAction={() => {
+
+            <div className="flex justify-end pt-2">
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => setRecipientPreviewOpen(false)}
+              >
+                {isEn ? "Close Preview" : "Đóng xem trước"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Main Sharing Layout */}
+      <div className="space-y-6">
+        {/* Status Filter Tabs */}
+        <div className="flex gap-4 border-b border-[color:var(--shell-border)]/60 pb-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("active")}
+            className={`pb-2 px-1 text-sm font-bold transition border-b-2 ${
+              activeTab === "active"
+                ? "border-[color:var(--brand-600)] text-[var(--brand-600)]"
+                : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            {isEn ? `Active Grants (${activeGrants.length})` : `Đang hoạt động (${activeGrants.length})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("expired")}
+            className={`pb-2 px-1 text-sm font-bold transition border-b-2 ${
+              activeTab === "expired"
+                ? "border-[color:var(--brand-600)] text-[var(--brand-600)]"
+                : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            {isEn ? `Expired (${expiredGrants.length})` : `Đã hết hạn (${expiredGrants.length})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("revoked")}
+            className={`pb-2 px-1 text-sm font-bold transition border-b-2 ${
+              activeTab === "revoked"
+                ? "border-[color:var(--brand-600)] text-[var(--brand-600)]"
+                : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            {isEn ? `Revoked (${revokedGrants.length})` : `Đã thu hồi (${revokedGrants.length})`}
+          </button>
+        </div>
+
+        {/* 2-Column Split: Grants List & Detail Drawer */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Grants List (Span 7) */}
+          <div className="space-y-4 lg:col-span-7" data-testid="active-grants-section">
+            {isLoading ? (
+              <div className="h-44 animate-pulse bg-[var(--surface-muted)] rounded-2xl" />
+            ) : displayedGrants.length > 0 ? (
+              <div className="space-y-3" data-testid="grants-list">
+                {displayedGrants.map((grant) => {
+                  const daysLeft = getDaysRemaining(grant.expires_at);
+                  const isSelected = selectedGrantId === grant.id;
+
+                  return (
+                    <div
+                      key={grant.id}
+                      onClick={() => setSelectedGrantId(grant.id)}
+                      className={`rounded-[var(--radius-2xl)] border p-5 shadow-sm transition cursor-pointer ${
+                        isSelected
+                          ? "border-[color:var(--brand-500)] bg-[var(--surface-panel)] ring-1 ring-[var(--brand-500)]/30"
+                          : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] hover:border-[color:var(--shell-border)]/80"
+                      }`}
+                      data-testid={`grant-card-${grant.id}`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-11 h-11 rounded-full bg-[var(--brand-50)] text-[var(--brand-700)] border border-[color:var(--brand-200)] flex items-center justify-center font-bold text-base shrink-0">
+                            {grant.grantee_name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-[var(--text-primary)]">
+                              {grant.grantee_name}
+                            </h4>
+                            <p className="text-xs text-[var(--text-secondary)]">
+                              {grant.grantee_relationship} · {isEn ? "Caregiver" : "Người chăm sóc"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold text-emerald-500">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            {isEn ? "Active" : "Đang hoạt động"}
+                          </span>
+
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setGrantToRevoke(grant);
+                            }}
+                            data-testid={`revoke-grant-btn-${grant.id}`}
+                            className="rounded-lg text-xs"
+                          >
+                            {isEn ? "Revoke" : "Thu hồi"}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Scoped Categories & Expiration Countdown */}
+                      <div className="mt-4 pt-3 border-t border-[color:var(--shell-border)]/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[11px] text-[var(--text-secondary)] mr-1">
+                            {isEn ? "Access:" : "Quyền:"}
+                          </span>
+                          {grant.categories.map((cat) => (
+                            <span
+                              key={cat}
+                              className="rounded-md bg-[var(--brand-50)]/40 border border-[color:var(--brand-300)]/40 px-2 py-0.5 text-[11px] font-medium text-[var(--brand-700)]"
+                            >
+                              {isEn ? CATEGORY_CONFIG[cat]?.labelEn : CATEGORY_CONFIG[cat]?.labelVi}
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* Expiration Countdown */}
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--text-secondary)] bg-[var(--surface-muted)] px-2.5 py-1 rounded-md">
+                          <Icon name="progress" size="0.8rem" className="text-[var(--text-brand)]" />
+                          <span>
+                            {isEn
+                              ? `${daysLeft} days remaining`
+                              : `Còn ${daysLeft} ngày (${formatLocaleDate(uiLanguage, grant.expires_at, { dateStyle: "medium" })})`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                title={isEn ? "No sharing grants in this tab" : "Không có quyền chia sẻ nào trong mục này"}
+                description={
+                  isEn
+                    ? "Share your medical updates, prescriptions, and visit plans with your family safely."
+                    : "Chia sẻ đơn thuốc, lịch khám và kế hoạch điều trị một cách an toàn với người thân."
+                }
+                actionLabel={isEn ? "Create New Grant" : "Tạo quyền chia sẻ mới"}
+                onAction={() => {
+                  setWizardStep(1);
+                  setWizardOpen(true);
+                }}
+              />
+            )}
+
+            {/* Dashed Add Action Button */}
+            <button
+              type="button"
+              onClick={() => {
                 setWizardStep(1);
                 setWizardOpen(true);
               }}
-            />
-          )}
-        </section>
+              className="w-full py-3.5 rounded-2xl border-2 border-dashed border-[color:var(--shell-border)] hover:border-[color:var(--brand-500)] hover:bg-[var(--brand-50)]/10 text-[var(--text-secondary)] hover:text-[var(--text-brand)] transition flex items-center justify-center gap-2 text-xs font-bold"
+            >
+              <Icon name="plus" size="1rem" />
+              <span>{isEn ? "Invite Family Member or Doctor" : "Mời người thân hoặc Bác sĩ"}</span>
+            </button>
+          </div>
 
-        {/* Access History Log */}
+          {/* Right Detail Drawer / Panel (Span 5) */}
+          <aside className="lg:col-span-5 space-y-5 lg:sticky lg:top-24">
+            <div className="rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-5">
+              <div className="flex items-center justify-between border-b border-[color:var(--shell-border)]/60 pb-3">
+                <div className="flex items-center gap-2 text-[var(--text-brand)]">
+                  <Icon name="user-card" size="1.2rem" />
+                  <h3 className="font-bold text-sm text-[var(--text-primary)]">
+                    {isEn ? "Grant Scope & Details" : "Chi tiết Quyền truy cập"}
+                  </h3>
+                </div>
+                {currentSelectedGrant ? (
+                  <Badge tone={currentSelectedGrant.status === "active" ? "ok" : "warn"}>
+                    {currentSelectedGrant.grantee_relationship}
+                  </Badge>
+                ) : null}
+              </div>
+
+              {currentSelectedGrant ? (
+                <div className="space-y-4 text-xs">
+                  {/* Shared Items Checklist */}
+                  <div className="space-y-2">
+                    <span className="font-bold uppercase tracking-wider text-[10px] text-[var(--text-secondary)] block">
+                      {isEn ? "Items Shared With Caregiver" : "Nội dung đang được chia sẻ"}
+                    </span>
+                    <div className="rounded-xl bg-[var(--surface-muted)] p-3 border border-[color:var(--shell-border)] space-y-2">
+                      {currentSelectedGrant.categories.map((c) => (
+                        <div key={c} className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
+                          <Icon name="check" size="0.85rem" className="text-[var(--status-ok-text)]" />
+                          <span>{isEn ? CATEGORY_CONFIG[c]?.labelEn : CATEGORY_CONFIG[c]?.labelVi}</span>
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-2 text-[var(--text-muted)] opacity-60">
+                        <span className="w-3.5 h-3.5 rounded border border-[color:var(--shell-border)] inline-block" />
+                        <span>{isEn ? "Restricted Health Notes (Private)" : "Ghi chú sức khỏe bảo mật"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Access Level */}
+                  <div className="space-y-1">
+                    <span className="font-bold uppercase tracking-wider text-[10px] text-[var(--text-secondary)] block">
+                      {isEn ? "Access Level" : "Quyền truy cập"}
+                    </span>
+                    <div className="rounded-xl bg-[var(--surface-muted)] p-3 border border-[color:var(--shell-border)] flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-[var(--text-primary)]">
+                        <Icon name="clinical-notes" size="1rem" className="text-[var(--text-brand)]" />
+                        <span>{isEn ? "Authenticated Read & Adherence Observations" : "Xem & Ghi nhận tuân thủ thuốc"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expiration */}
+                  <div className="space-y-1">
+                    <span className="font-bold uppercase tracking-wider text-[10px] text-[var(--text-secondary)] block">
+                      {isEn ? "Validity Window" : "Thời hạn hiệu lực"}
+                    </span>
+                    <div className="rounded-xl bg-[var(--surface-muted)] p-3 border border-[color:var(--shell-border)] flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-[var(--text-primary)]">
+                        <Icon name="calendar" size="1rem" className="text-[var(--text-secondary)]" />
+                        <span>
+                          {formatLocaleDate(uiLanguage, currentSelectedGrant.expires_at, {
+                            dateStyle: "medium",
+                          })}
+                        </span>
+                      </div>
+                      <span className="font-bold text-[var(--text-brand)]">
+                        {getDaysRemaining(currentSelectedGrant.expires_at)} {isEn ? "days left" : "ngày còn lại"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Activity Stats */}
+                  <div className="space-y-1">
+                    <span className="font-bold uppercase tracking-wider text-[10px] text-[var(--text-secondary)] block">
+                      {isEn ? "Activity & Logs" : "Hoạt động"}
+                    </span>
+                    <div className="rounded-xl bg-[var(--surface-muted)] p-3 border border-[color:var(--shell-border)] flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-sm text-[var(--text-primary)] block">3 lượt mở</span>
+                        <span className="text-[11px] text-[var(--text-secondary)]">Lần gần nhất: 10:58 hôm nay</span>
+                      </div>
+                      <Icon name="progress" size="1.4rem" className="text-[var(--text-brand)] opacity-60" />
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="pt-2 border-t border-[color:var(--shell-border)]/60 space-y-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyLink}
+                      className="w-full py-2.5 px-4 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] font-bold text-xs flex items-center justify-center gap-2 transition"
+                    >
+                      <Icon name="share" size="0.9rem" />
+                      <span>{copiedLink ? (isEn ? "Link Copied!" : "Đã sao chép liên kết!") : (isEn ? "Copy Sharing Link" : "Sao chép liên kết")}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRecipientPreviewOpen(true)}
+                      className="w-full py-2.5 px-4 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] font-bold text-xs flex items-center justify-center gap-2 transition"
+                    >
+                      <Icon name="clinical-notes" size="0.9rem" />
+                      <span>{isEn ? "Preview as Recipient" : "Xem như người nhận"}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setGrantToRevoke(currentSelectedGrant)}
+                      className="w-full py-2.5 px-4 rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] font-bold text-xs flex items-center justify-center gap-2 hover:opacity-80 transition"
+                    >
+                      <Icon name="trash" size="0.9rem" />
+                      <span>{isEn ? "Revoke Grant Immediately" : "Thu hồi liên kết"}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--text-muted)] italic">
+                  {isEn ? "Select a grant to inspect permissions." : "Chọn một quyền chia sẻ để xem chi tiết."}
+                </p>
+              )}
+            </div>
+
+            {/* Medical Standard Privacy Notice */}
+            <div className="rounded-[var(--radius-2xl)] bg-[var(--surface-panel)] border border-[color:var(--shell-border)] p-5 text-center space-y-2">
+              <div className="w-10 h-10 rounded-full bg-[var(--brand-50)] text-[var(--brand-700)] flex items-center justify-center mx-auto">
+                <Icon name="user-card" size="1.2rem" />
+              </div>
+              <h4 className="font-bold text-xs text-[var(--text-primary)]">
+                {isEn ? "Medical Standard Encryption" : "Bảo mật chuẩn y tế"}
+              </h4>
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                {isEn
+                  ? "All shared data is encrypted end-to-end. CLARA never sells or discloses health information to third parties."
+                  : "Dữ liệu của bạn được mã hóa đầu cuối. CLARA không chia sẻ thông tin với bên thứ ba vì mục đích quảng cáo."}
+              </p>
+            </div>
+          </aside>
+        </div>
+
+        {/* Access History & Audit Log Section */}
         <section
-          className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-4"
+          className="rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-4"
           data-testid="access-history-section"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-[var(--text-brand)]">
               <Icon name="progress" size="1.25rem" />
               <h2 className="text-sm font-bold text-[var(--text-primary)]">
-                {isEn ? "Access History & Audit Log" : "Nhật ký truy cập & Lịch sử kiểm toán"}
+                {isEn ? "Access History & Audit Log" : "Hoạt động gần đây & Lịch sử kiểm toán"}
               </h2>
             </div>
             <span className="text-xs text-[var(--text-muted)]">
@@ -753,7 +1106,7 @@ export default function YouSharingPage() {
                         {log.actor_relationship ? ` (${log.actor_relationship})` : ""}
                       </td>
                       <td className="py-2.5">
-                        <span className="rounded bg-[var(--surface-muted)] px-2 py-0.5 text-[11px]">
+                        <span className="rounded-md bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] font-medium">
                           {log.object_type}
                         </span>
                       </td>

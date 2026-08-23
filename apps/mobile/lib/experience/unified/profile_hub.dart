@@ -25,6 +25,7 @@ import '../../screens/council_case_screen.dart'
     show kCouncilMobileParityEnabled;
 import '../connected_health/connected_health_screen.dart';
 import '../language_controller.dart';
+import '../presentation_mode.dart';
 import 'family_surface.dart';
 import 'living_evidence_surface.dart';
 import 'visits_surface.dart';
@@ -61,6 +62,7 @@ class ProfileHub extends StatelessWidget {
     required this.phrBody,
     this.themeController,
     this.languageController,
+    this.presentationModeController,
   });
 
   final ApiClient apiClient;
@@ -73,6 +75,7 @@ class ProfileHub extends StatelessWidget {
 
   final ThemeController? themeController;
   final LanguageController? languageController;
+  final PresentationModeController? presentationModeController;
 
   bool get _canScribe =>
       resolver.scribeEnabled && (role == 'doctor' || role == 'admin');
@@ -211,6 +214,27 @@ class ProfileHub extends StatelessWidget {
       );
     }
 
+    final modeController = presentationModeController ??
+        (permittedModesForRole(role).length > 1
+            ? PresentationModeController(initialRole: role)
+            : null);
+
+    if (modeController != null && modeController.canSwitchModes) {
+      final modeMeta = kPresentationModeMeta[modeController.mode]!;
+      final lang = languageController?.languageCode ?? 'vi';
+      entries.add(
+        _ProfileEntry(
+          icon: Icons.workspaces_outlined,
+          title: lang == 'en' ? 'Workspace Mode' : 'Không gian làm việc',
+          subtitle: modeMeta.label(lang),
+          builder: (_) => PresentationModeScreen(
+            controller: modeController,
+            languageCode: lang,
+          ),
+        ),
+      );
+    }
+
     entries.add(
       _ProfileEntry(
         icon: Icons.settings_outlined,
@@ -221,6 +245,7 @@ class ProfileHub extends StatelessWidget {
           sessionStore: sessionStore,
           themeController: themeController,
           languageController: languageController,
+          presentationModeController: modeController,
         ),
       ),
     );

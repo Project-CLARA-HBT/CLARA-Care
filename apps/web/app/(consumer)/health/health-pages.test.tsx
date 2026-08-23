@@ -101,7 +101,7 @@ describe("Health Canonical Route Pages", () => {
     });
 
     expect(screen.getByText("Kết quả xét nghiệm & Chẩn đoán")).toBeInTheDocument();
-    expect(screen.getByText("Glucose máu")).toBeInTheDocument();
+    expect(await screen.findByText("Glucose máu")).toBeInTheDocument();
     expect(screen.getByText(/Tham chiếu: 4.1 - 5.9/i)).toBeInTheDocument();
   });
 

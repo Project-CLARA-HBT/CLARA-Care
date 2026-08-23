@@ -144,6 +144,26 @@ describe("SessionBoundary", () => {
     });
   });
 
+  it("does not block professional role (doctor) even when needs_onboarding is true", async () => {
+    mocks.pathname = "/council";
+    mocks.apiGet.mockResolvedValueOnce({ data: { role: "doctor" } });
+    mocks.getOnboarding.mockResolvedValueOnce({ needs_onboarding: true });
+
+    render(
+      <SessionBoundary>
+        <SessionConsumer />
+      </SessionBoundary>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("hydrated")).toHaveTextContent("true");
+      expect(screen.getByTestId("checked")).toHaveTextContent("true");
+    });
+
+    // Doctor should NOT be redirected to /welcome/start
+    expect(mocks.routerReplace).not.toHaveBeenCalledWith("/welcome/start");
+  });
+
   it("handles logout by setting loggingOut state and calling beginLogout", async () => {
     render(
       <SessionBoundary>

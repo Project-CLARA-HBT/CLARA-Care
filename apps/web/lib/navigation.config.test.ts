@@ -12,9 +12,13 @@ import {
 } from "@/lib/navigation.config";
 import {
   getAvailableWorkspaces,
+  getDefaultPresentationMode,
+  getDefaultWorkspace,
   getMobileWorkspaceNav,
   getWorkspaceForPath,
   getWorkspaceNavigation,
+  isWorkspaceAvailable,
+  type WorkspaceId,
 } from "@/lib/navigation.workspaces";
 
 describe("authenticated navigation defaults", () => {
@@ -102,8 +106,12 @@ describe("authenticated navigation defaults", () => {
   it("allows onboarding without turning it into permanent navigation", () => {
     expect(isAuthenticatedUtilityRoute("/welcome")).toBe(true);
     expect(isAuthenticatedUtilityRoute("/welcome/body")).toBe(true);
+    expect(isAuthenticatedUtilityRoute("/onboarding")).toBe(true);
     expect(
       getNavItemsByRole("normal").some((item) => item.href === "/welcome"),
+    ).toBe(false);
+    expect(
+      getNavItemsByRole("normal").some((item) => item.href === "/onboarding"),
     ).toBe(false);
   });
 
@@ -148,5 +156,92 @@ describe("authenticated navigation defaults", () => {
       "Knowledge control",
     );
     expect(getPageMeta("/unknown-route", "en").title).toBe("Workspace");
+  });
+
+  describe("4-mode presentation architecture", () => {
+    it("defines default presentation mode / workspace mappings for all roles", () => {
+      expect(getDefaultWorkspace("normal")).toBe("personal");
+      expect(getDefaultPresentationMode("normal")).toBe("personal");
+
+      expect(getDefaultWorkspace("doctor")).toBe("clinical");
+      expect(getDefaultPresentationMode("doctor")).toBe("clinical");
+
+      expect(getDefaultWorkspace("researcher")).toBe("research");
+      expect(getDefaultPresentationMode("researcher")).toBe("research");
+
+      expect(getDefaultWorkspace("admin")).toBe("admin");
+      expect(getDefaultPresentationMode("admin")).toBe("admin");
+    });
+
+    it("gates available workspaces by role and allows doctors, researchers, and admins to switch to Personal view", () => {
+      // Normal consumers only have personal mode
+      const normalWorkspaces = getAvailableWorkspaces("normal").map((w) => w.id);
+      expect(normalWorkspaces).toEqual(["personal"]);
+      expect(isWorkspaceAvailable("normal", "personal")).toBe(true);
+      expect(isWorkspaceAvailable("normal", "clinical")).toBe(false);
+      expect(isWorkspaceAvailable("normal", "research")).toBe(false);
+      expect(isWorkspaceAvailable("normal", "admin")).toBe(false);
+
+      // Doctors have Personal, Clinical, and Research
+      const doctorWorkspaces = getAvailableWorkspaces("doctor").map((w) => w.id);
+      expect(doctorWorkspaces).toEqual(["personal", "clinical", "research"]);
+      expect(isWorkspaceAvailable("doctor", "personal")).toBe(true);
+      expect(isWorkspaceAvailable("doctor", "clinical")).toBe(true);
+      expect(isWorkspaceAvailable("doctor", "research")).toBe(true);
+      expect(isWorkspaceAvailable("doctor", "admin")).toBe(false);
+
+      // Researchers have Personal and Research
+      const researcherWorkspaces = getAvailableWorkspaces("researcher").map((w) => w.id);
+      expect(researcherWorkspaces).toEqual(["personal", "research"]);
+      expect(isWorkspaceAvailable("researcher", "personal")).toBe(true);
+      expect(isWorkspaceAvailable("researcher", "clinical")).toBe(false);
+      expect(isWorkspaceAvailable("researcher", "research")).toBe(true);
+      expect(isWorkspaceAvailable("researcher", "admin")).toBe(false);
+
+      // Admins have Personal, Clinical, Research, and Admin
+      const adminWorkspaces = getAvailableWorkspaces("admin").map((w) => w.id);
+      expect(adminWorkspaces).toEqual(["personal", "clinical", "research", "admin"]);
+      expect(isWorkspaceAvailable("admin", "personal")).toBe(true);
+      expect(isWorkspaceAvailable("admin", "clinical")).toBe(true);
+      expect(isWorkspaceAvailable("admin", "research")).toBe(true);
+      expect(isWorkspaceAvailable("admin", "admin")).toBe(true);
+    });
+
+    it("ensures server RBAC authorization is locked and unaffected by presentation mode changes", () => {
+      // Admin routes remain locked to admin role regardless of mode
+      expect(isRouteAllowedForRole("/admin/overview", "admin")).toBe(true);
+      expect(isRouteAllowedForRole("/admin/overview", "doctor")).toBe(false);
+      expect(isRouteAllowedForRole("/admin/overview", "researcher")).toBe(false);
+      expect(isRouteAllowedForRole("/admin/overview", "normal")).toBe(false);
+
+      // Clinical routes remain locked to doctor and admin
+      expect(isRouteAllowedForRole("/council", "doctor")).toBe(true);
+      expect(isRouteAllowedForRole("/council", "admin")).toBe(true);
+      expect(isRouteAllowedForRole("/council", "researcher")).toBe(false);
+      expect(isRouteAllowedForRole("/council", "normal")).toBe(false);
+
+      expect(isRouteAllowedForRole("/scribe", "doctor")).toBe(true);
+      expect(isRouteAllowedForRole("/scribe", "admin")).toBe(true);
+      expect(isRouteAllowedForRole("/scribe", "researcher")).toBe(false);
+      expect(isRouteAllowedForRole("/scribe", "normal")).toBe(false);
+
+      // Professional dashboard remains locked to professional roles
+      expect(isRouteAllowedForRole("/dashboard", "doctor")).toBe(true);
+      expect(isRouteAllowedForRole("/dashboard", "researcher")).toBe(true);
+      expect(isRouteAllowedForRole("/dashboard", "admin")).toBe(true);
+      expect(isRouteAllowedForRole("/dashboard", "normal")).toBe(false);
+
+      // Switching workspace does not mutate server permissions
+      const doctorPersonalNav = getWorkspaceNavigation("doctor", "personal");
+      expect(doctorPersonalNav.workspace.id).toBe("personal");
+      // Even when viewing personal presentation, doctor route authorization is locked:
+      expect(isRouteAllowedForRole("/council", "doctor")).toBe(true);
+      expect(isRouteAllowedForRole("/admin", "doctor")).toBe(false);
+
+      const adminPersonalNav = getWorkspaceNavigation("admin", "personal");
+      expect(adminPersonalNav.workspace.id).toBe("personal");
+      expect(isRouteAllowedForRole("/admin/overview", "admin")).toBe(true);
+      expect(isRouteAllowedForRole("/council", "admin")).toBe(true);
+    });
   });
 });

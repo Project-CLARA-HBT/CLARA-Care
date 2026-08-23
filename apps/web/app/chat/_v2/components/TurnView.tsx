@@ -11,11 +11,11 @@ import FlowTimeline from "@/app/chat/_v2/components/FlowTimeline";
 import Icon from "@/components/ui/icon";
 
 /**
- * A single conversation turn (user query + CLARA answer) for the rebuilt chat.
+ * Clean editorial conversation feed turn with refined bubble typography.
+ * Aligned with Stitch template h_i_clara_active_conversation_refined.
  *
- * Composes `AnswerRenderer` and, for tier2 turns, `FlowTimeline`. Each turn is
- * wrapped in an error boundary so one malformed turn can never crash the whole
- * message log (design "Error Handling": render errors isolated per turn).
+ * User bubble (right-aligned, refined bubble typography with soft contrast).
+ * Assistant turn (left-aligned, AI avatar, status header, structured answer-first card).
  */
 
 type TurnErrorBoundaryProps = {
@@ -56,6 +56,7 @@ export type TurnViewProps = {
   uiLanguage: UILanguage;
   role?: UserRole;
   onLaunchResearch?: (query: string) => void;
+  onSaveNote?: (answerText: string) => void;
 };
 
 function TurnView({
@@ -63,76 +64,99 @@ function TurnView({
   uiLanguage,
   role = "normal",
   onLaunchResearch,
+  onSaveNote,
 }: TurnViewProps) {
   const tier2Result = turn.result.tier === "tier2" ? turn.result : null;
 
   return (
     <article
-      className="space-y-3"
+      className="space-y-4"
       aria-label={t(uiLanguage, "chat.turnView.aria")}
     >
+      {/* User Bubble */}
       {turn.query.trim() ? (
         <div className="flex justify-end">
-          <div className="max-w-[85%] rounded-2xl rounded-tr-sm border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-4 py-2.5 text-sm text-[var(--text-primary)]">
-            {turn.query}
+          <div className="max-w-[88%] sm:max-w-[80%] rounded-2xl rounded-tr-none border border-[color:var(--shell-border)]/70 bg-[var(--surface-brand-soft)] dark:bg-[#1c2430] px-5 py-3.5 text-sm sm:text-[15px] leading-relaxed text-[var(--text-primary)] shadow-xs">
+            <p className="whitespace-pre-wrap">{turn.query}</p>
           </div>
         </div>
       ) : null}
 
-      <div className="rounded-2xl rounded-tl-sm border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3">
-        <TurnErrorBoundary
-          fallbackLabel={t(uiLanguage, "chat.turnView.displayFailed")}
-        >
-          {tier2Result ? (
-            <div className="space-y-3">
+      {/* AI Assistant Turn */}
+      <div className="flex flex-col items-start w-full">
+        {/* Assistant Header Avatar & Label */}
+        <div className="flex items-center gap-2.5 mb-2.5 px-1">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand-600)] text-[var(--on-secondary-container)] shadow-xs">
+            <Icon name="clinical-notes" size={15} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold tracking-tight text-[var(--text-primary)]">
+              CLARA
+            </span>
+            <span className="rounded bg-[var(--surface-muted)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--text-brand)]">
+              {tier2Result ? "DeepBeta" : "Assistant"}
+            </span>
+          </div>
+        </div>
+
+        {/* Structured Response Container */}
+        <div className="w-full rounded-2xl border border-[color:var(--shell-border)]/80 dark:border-[#2A3950] bg-[var(--surface-panel)] dark:bg-[#111C29] p-5 sm:p-7 shadow-sm space-y-5">
+          <TurnErrorBoundary
+            fallbackLabel={t(uiLanguage, "chat.turnView.displayFailed")}
+          >
+            {tier2Result ? (
+              <div className="space-y-5">
+                <AnswerRenderer
+                  result={turn.result}
+                  uiLanguage={uiLanguage}
+                  role={role}
+                  onSaveNote={onSaveNote}
+                />
+                <details className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-2.5">
+                  <summary className="cursor-pointer text-xs sm:text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+                    {t(uiLanguage, "chat.turnView.explain")}
+                  </summary>
+                  <div className="mt-3">
+                    <FlowTimeline result={tier2Result} uiLanguage={uiLanguage} />
+                  </div>
+                </details>
+              </div>
+            ) : (
               <AnswerRenderer
                 result={turn.result}
                 uiLanguage={uiLanguage}
                 role={role}
+                onSaveNote={onSaveNote}
               />
-              <details className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
-                <summary className="cursor-pointer text-sm font-semibold text-[var(--text-secondary)]">
-                  {t(uiLanguage, "chat.turnView.explain")}
-                </summary>
-                <div className="mt-3">
-                  <FlowTimeline result={tier2Result} uiLanguage={uiLanguage} />
-                </div>
-              </details>
+            )}
+          </TurnErrorBoundary>
+
+          {onLaunchResearch && turn.query.trim() ? (
+            <div className="flex justify-end border-t border-[color:var(--shell-border)]/60 pt-3">
+              <button
+                type="button"
+                onClick={() => onLaunchResearch(turn.query)}
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-medium text-[var(--text-brand)] transition hover:border-[color:var(--brand-500)] hover:bg-[var(--surface-brand-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
+              >
+                <Icon name="clinical-notes" size={14} aria-hidden="true" />
+                <span>
+                  {t(
+                    uiLanguage,
+                    tier2Result
+                      ? "chat.turnView.refineEvidence"
+                      : "chat.turnView.investigate",
+                  )}
+                </span>
+              </button>
             </div>
-          ) : (
-            <AnswerRenderer
-              result={turn.result}
-              uiLanguage={uiLanguage}
-              role={role}
-            />
-          )}
-        </TurnErrorBoundary>
-        {onLaunchResearch && turn.query.trim() ? (
-          <div className="mt-3 flex justify-end border-t border-[color:var(--shell-border)] pt-2.5">
-            <button
-              type="button"
-              onClick={() => onLaunchResearch(turn.query)}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold text-[var(--text-brand)] transition hover:border-[color:var(--brand-500)] hover:bg-[var(--surface-brand-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
-            >
-              <Icon name="clinical-notes" size={16} aria-hidden="true" />
-              {t(
-                uiLanguage,
-                tier2Result
-                  ? "chat.turnView.refineEvidence"
-                  : "chat.turnView.investigate",
-              )}
-            </button>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </article>
   );
 }
 
 /**
- * Memoized so an unchanged turn never re-renders when the parent `MessageLog`
- * re-renders (new turns appended, streaming flag toggling). `turn` is a stable
- * reference held in the turns cache, so referential equality is the right
- * bailout signal here (Requirement 7.2, Property P9).
+ * Memoized turn view.
  */
 export default memo(TurnView);

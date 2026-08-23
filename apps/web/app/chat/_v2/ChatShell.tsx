@@ -442,6 +442,23 @@ export default function ChatShell() {
     [uiLanguage],
   );
 
+  const handleSaveNote = useCallback(
+    (answerText: string) => {
+      void workspace
+        .saveNote({
+          title: (
+            turns.turns[turns.turns.length - 1]?.query ??
+            t(uiLanguage, "chat.shell.defaultNoteTitle")
+          ).slice(0, 90),
+          contentMarkdown: answerText,
+          tags: ["answer", "auto"],
+          conversationId: asConversationId(activeConversationId),
+        })
+        .then(() => setNotice(t(uiLanguage, "chat.shell.notice.noteSaved")));
+    },
+    [activeConversationId, turns.turns, uiLanguage, workspace],
+  );
+
   // --- Command palette -------------------------------------------------------
   const commandActions = useMemo<CommandAction[]>(() => {
     const canExport = Boolean(asConversationId(activeConversationId));
@@ -841,6 +858,7 @@ export default function ChatShell() {
               isRunning={stream.isRunning}
               role={role}
               onLaunchResearch={launchResearch}
+              onSaveNote={handleSaveNote}
             />
           ) : (
             <ChatWelcome

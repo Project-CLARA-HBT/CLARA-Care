@@ -184,11 +184,44 @@ function buildLiveInsights(session: ScribeSession | null, transcript: string, co
 
 function scribeStatusLabel(status: string | undefined, copy: ScribeCopy): string {
   const normalized = (status ?? "").trim().toLowerCase();
-  if (normalized === "finalized" || normalized === "completed") return copy("scribe.status.finalized");
-  if (normalized === "ready") return copy("scribe.status.ready");
+  if (normalized === "recording") return copy("scribe.status.recording");
+  if (normalized === "ready" || normalized === "transcript_ready") return copy("scribe.status.transcriptReady");
+  if (normalized === "signed") return copy("scribe.status.signed");
+  if (normalized === "exported") return copy("scribe.status.exported");
+  if (normalized === "amended") return copy("scribe.status.amended");
+  if (normalized === "in_review" || normalized === "reviewed" || normalized === "finalized" || normalized === "completed") {
+    return copy("scribe.status.reviewed");
+  }
   if (normalized === "processing") return copy("scribe.status.processing");
   if (normalized === "error" || normalized === "failed") return copy("scribe.status.error");
   return copy("scribe.status.draft");
+}
+
+function scribeStatusBadgeClass(status: string | undefined): string {
+  const normalized = (status ?? "").trim().toLowerCase();
+  switch (normalized) {
+    case "recording":
+      return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]";
+    case "ready":
+    case "transcript_ready":
+      return "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)] text-[color:var(--text-brand)]";
+    case "signed":
+      return "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]";
+    case "exported":
+      return "border-[color:var(--brand-secondary)] bg-[var(--surface-brand-soft)] text-[var(--text-primary)]";
+    case "amended":
+      return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]";
+    case "in_review":
+    case "reviewed":
+    case "finalized":
+    case "completed":
+      return "border-[color:var(--brand-primary)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]";
+    case "error":
+    case "failed":
+      return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]";
+    default:
+      return "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
+  }
 }
 
 export default function ScribePage() {
@@ -857,39 +890,58 @@ export default function ScribePage() {
       variant="plain"
     >
       <section className="space-y-5">
-        <ol className="grid gap-2 sm:grid-cols-4" aria-label={copy("scribe.workflow.aria")}>
+        <ol className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" aria-label={copy("scribe.workflow.aria")}>
           {[
-            copy("scribe.workflow.capture"),
-            copy("scribe.workflow.transcript"),
-            copy("scribe.workflow.soap"),
-            copy("scribe.workflow.complete"),
-          ].map((label, index) => {
-            const currentStage =
-              selectedSession?.status === "finalized" || selectedSession?.status === "completed"
-                ? 3
-                : Object.values(selectedSoap).some((value) => Boolean(value?.trim()))
-                  ? 2
-                  : transcriptDraft.trim()
-                    ? 1
-                    : 0;
+            { key: "consent", label: copy("scribe.workflow.consent") },
+            { key: "capture", label: copy("scribe.workflow.capture") },
+            { key: "transcript", label: copy("scribe.workflow.transcript") },
+            { key: "soap", label: copy("scribe.workflow.soap") },
+            { key: "complete", label: copy("scribe.workflow.complete") },
+            { key: "exportSign", label: copy("scribe.workflow.exportSign") },
+          ].map((step, index) => {
+            const isSignedOrExported =
+              selectedSession?.status === "signed" ||
+              selectedSession?.status === "exported" ||
+              selectedSession?.status === "amended";
+            const isDraftComplete =
+              selectedSession?.status === "finalized" ||
+              selectedSession?.status === "completed" ||
+              selectedSession?.status === "in_review" ||
+              selectedSession?.status === "reviewed";
+            const hasSoap = Object.values(selectedSoap).some((value) => Boolean(value?.trim()));
+            const hasTranscript = Boolean(transcriptDraft.trim());
+            const hasConsent = recordingConsentCaptured;
+
+            const currentStage = isSignedOrExported
+              ? 5
+              : isDraftComplete
+                ? 4
+                : hasSoap
+                  ? 3
+                  : hasTranscript
+                    ? 2
+                    : hasConsent || isRecording
+                      ? 1
+                      : 0;
+
             const active = index === currentStage;
             const complete = index < currentStage;
             return (
               <li
-                key={label}
+                key={step.key}
                 aria-current={active ? "step" : undefined}
-                className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium ${
+                className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
                   active
-                    ? "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)] text-[color:var(--text-primary)]"
+                    ? "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)] text-[color:var(--text-primary)] ring-1 ring-[color:var(--brand-600)]"
                     : complete
                       ? "border-[color:var(--status-ok-border)] bg-[color:var(--status-ok-bg)] text-[color:var(--status-ok-text)]"
                       : "border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] text-[color:var(--text-muted)]"
                 }`}
               >
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-current text-xs">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-current text-xs font-semibold">
                   {complete ? "✓" : index + 1}
                 </span>
-                {label}
+                <span className="truncate">{step.label}</span>
               </li>
             );
           })}
@@ -1018,11 +1070,13 @@ export default function ScribePage() {
                         : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] hover:border-[color:var(--brand-600)] hover:bg-[color:var(--surface-muted)]"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <p className={`line-clamp-1 text-sm font-bold ${bodyTextClass}`}>
                         {item.title || copy("scribe.sessions.untitled", { id: item.id })}
                       </p>
-                      <span className={`text-[10px] font-bold uppercase ${mutedTextClass}`}>{scribeStatusLabel(item.status, copy)}</span>
+                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${scribeStatusBadgeClass(item.status)}`}>
+                        {scribeStatusLabel(item.status, copy)}
+                      </span>
                     </div>
                     <p className={`mt-1 line-clamp-2 text-xs ${secondaryTextClass}`}>
                       {item.transcript?.trim() || copy("scribe.transcript.empty")}
@@ -1224,7 +1278,7 @@ export default function ScribePage() {
                         {copy("scribe.review.sessionCode", { code: selectedSession ? `#${selectedSession.id}` : "--" })}
                       </p>
                     </div>
-                    <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-brand)]">
+                    <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${scribeStatusBadgeClass(selectedSession?.status)}`}>
                       {scribeStatusLabel(selectedSession?.status, copy)}
                     </span>
                   </div>

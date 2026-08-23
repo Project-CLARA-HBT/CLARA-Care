@@ -23,6 +23,22 @@ export {
   resolvePostLoginPath,
   sanitizeNextPath,
 };
+export type {
+  WorkspaceId,
+  PresentationMode,
+  WorkspaceMeta,
+  WorkspaceNavigation,
+} from "@/lib/navigation.workspaces";
+export {
+  DEFAULT_WORKSPACE_BY_ROLE,
+  getDefaultWorkspace,
+  getDefaultPresentationMode,
+  getAvailableWorkspaces,
+  isWorkspaceAvailable,
+  getWorkspaceNavigation,
+  getWorkspaceForPath,
+  getMobileWorkspaceNav,
+} from "@/lib/navigation.workspaces";
 export type NavGroupKey =
   | "care"
   | "medicines"

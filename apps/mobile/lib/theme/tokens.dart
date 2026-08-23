@@ -68,6 +68,9 @@ class ClaraTokens {
   /// 20 logical px — prominent cards / sheets.
   static const double radiusLg = 20.0;
 
+  /// Full pill / capsule radius.
+  static const double radiusPill = 9999.0;
+
   // --- Elevation levels (M3 tonal elevation, Requirement 2.2) ---------------
 
   /// Flat surface — no shadow (e.g., scaffold background, inline content).
