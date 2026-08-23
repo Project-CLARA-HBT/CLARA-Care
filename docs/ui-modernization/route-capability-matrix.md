@@ -58,6 +58,8 @@ This manifest is the pre-M2 reachability gate. Every `apps/web/app/**/page.tsx` 
 | `/council/details` | authenticated doctor/admin + owner/access | clinical | Expert detail/compatibility | council E2E |
 | `/council/research` | authenticated doctor/admin + owner/access | clinical/research | Result evidence detail | council E2E |
 | `/scribe` | authenticated doctor/admin | clinical | Primary Clinical | scribe E2E |
+| `/clinical` | authenticated doctor/admin | clinical | Primary Clinical | clinical E2E |
+| `/clinical/overview` | authenticated doctor/admin | clinical | More Clinical | clinical E2E |
 | `/dashboard` | authenticated researcher/doctor/admin (client may allow legacy; server authoritative) | clinical/admin/research context | Primary Clinical/Admin home by role | role E2E |
 | `/dashboard/control-tower` | authenticated admin | admin | More Admin | admin E2E |
 | `/dashboard/ecosystem` | authenticated admin | admin | More Admin | admin E2E |
@@ -79,6 +81,7 @@ This manifest is the pre-M2 reachability gate. Every `apps/web/app/**/page.tsx` 
 | `/huong-dan` | authenticated all | personal/support | More/support | support E2E |
 | `/welcome` | authenticated utility | — | Onboarding utility, not nav | onboarding E2E |
 | `/welcome/[step]` | authenticated utility | — | Onboarding step | onboarding E2E |
+| `/onboarding` | authenticated utility | — | Onboarding utility, not nav | onboarding E2E |
 | `/role-select` | authenticated utility/compatibility | — | Redirect utility, not nav | redirect E2E |
 | `/account/consent` | authenticated all + compliance | personal/support | More/profile | account E2E |
 | `/account/data` | authenticated all + compliance | personal/support | More/profile | account E2E |
