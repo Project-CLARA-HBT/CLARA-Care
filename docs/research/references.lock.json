@@ -7,13 +7,12 @@
   "references": {
     "agentictransaction2026": {
       "bibtex_key": "agentictransaction2026",
-      "title": "Agentic Transactions: Concurrency Control and ACID Guarantees for Multi-Agent Large Language Model Systems",
+      "title": "Agentic Transaction: Towards ACID-Compliant Agent Systems",
       "system_name": "Agentic Transaction",
       "authors": [
-        "Zhang, Y.",
-        "Chen, B.",
-        "Liu, X.",
-        "et al."
+        "Sun, X.",
+        "Wang, Y.",
+        "Li, J."
       ],
       "year": 2026,
       "arxiv_id": "2608.13900",
@@ -27,13 +26,12 @@
     },
     "atcc2026": {
       "bibtex_key": "atcc2026",
-      "title": "ATCC: Agentic Transaction Concurrency Control for Stateful Tool-Use Workflows",
+      "title": "ATCC: Adaptive Concurrency Control for Unforeseen Agentic Transactions",
       "system_name": "ATCC",
       "authors": [
-        "Tan, W.",
+        "Zhou, T.",
         "Zhao, S.",
-        "Wang, H.",
-        "et al."
+        "Wang, H."
       ],
       "year": 2026,
       "arxiv_id": "2603.13906",

@@ -23,6 +23,8 @@ from clara_api.glhs.canonical_json import (
     CANONICALIZATION_PROFILE_V1_LEGACY_PYTHON,
     CANONICALIZATION_PROFILE_V2,
     LEGACY_CANONICALIZATION_PROFILE,
+    MAX_SAFE_INTEGER,
+    MIN_SAFE_INTEGER,
     PROFILE_V1_CUSTOM,
     PROFILE_V1_LEGACY_PYTHON,
     PROFILE_V2_RFC8785,
@@ -343,7 +345,8 @@ def test_rfc8785_number_formatting() -> None:
     # Integers serialized as integers
     assert canonical_json_bytes(42) == b"42"
     assert canonical_json_bytes(-42) == b"-42"
-    assert canonical_json_bytes(100000000000000000000) == b"100000000000000000000"
+    assert canonical_json_bytes(MIN_SAFE_INTEGER) == b"-9007199254740991"
+    assert canonical_json_bytes(MAX_SAFE_INTEGER) == b"9007199254740991"
 
     # Floats with integral values serialize as integers (ECMAScript Number::toString)
     assert canonical_json_bytes(1.0) == b"1"
@@ -699,17 +702,73 @@ def test_property_canonical_parse_idempotence(val: object) -> None:
     assert c1 == c2
 
 
+def test_ijson_safe_integer_limits() -> None:
+    """Verify IEEE-754 / I-JSON (RFC 7493) safe integer range enforcement under RFC 8785 v2 profile."""
+    # Exact safe boundaries
+    assert canonical_json_bytes(MIN_SAFE_INTEGER) == b"-9007199254740991"
+    assert canonical_json_bytes(MAX_SAFE_INTEGER) == b"9007199254740991"
+    assert canonical_json_bytes(MIN_SAFE_INTEGER + 1) == b"-9007199254740990"
+    assert canonical_json_bytes(MAX_SAFE_INTEGER - 1) == b"9007199254740990"
+    assert canonical_json_bytes(0) == b"0"
+
+    # Out-of-range integer rejections under v2 RFC 8785 profile
+    with pytest.raises(ValueError, match="canonical_json_integer_out_of_ijson_range"):
+        canonical_json_bytes(MAX_SAFE_INTEGER + 1)
+    with pytest.raises(ValueError, match="canonical_json_integer_out_of_ijson_range"):
+        canonical_json_bytes(MIN_SAFE_INTEGER - 1)
+    with pytest.raises(ValueError, match="canonical_json_integer_out_of_ijson_range"):
+        canonical_json_bytes(100000000000000000000)
+    with pytest.raises(ValueError, match="canonical_json_integer_out_of_ijson_range"):
+        canonical_json_bytes(-100000000000000000000)
+
+    # Nested structures reject out-of-range integers
+    with pytest.raises(ValueError, match="canonical_json_integer_out_of_ijson_range"):
+        canonical_json_bytes({"big_int": MAX_SAFE_INTEGER + 1})
+    with pytest.raises(ValueError, match="canonical_json_integer_out_of_ijson_range"):
+        canonical_json_bytes([1, 2, MIN_SAFE_INTEGER - 1])
+
+    # Out-of-range integers remain accepted under legacy profiles
+    assert canonical_json_bytes(100000000000000000000, profile=PROFILE_V1_CUSTOM) == b"100000000000000000000"
+    assert canonical_json_bytes(100000000000000000000, profile=PROFILE_V1_LEGACY_PYTHON) == b"100000000000000000000"
+
+
 def test_exact_decimal_policy() -> None:
-    """Verify exact Decimal serialization policy."""
-    # Integral Decimal -> int
+    """Verify exact Decimal serialization and precision policy."""
+    # Safe integral Decimals within safe range
     assert canonical_json_bytes(Decimal("500")) == b"500"
     assert canonical_json_bytes(Decimal("-42")) == b"-42"
     assert canonical_json_bytes(Decimal("0")) == b"0"
-    assert canonical_json_bytes(Decimal("1e21")) == b"1000000000000000000000"
+    assert canonical_json_bytes(Decimal("-0.0")) == b"0"
+    assert canonical_json_bytes(Decimal("9007199254740991")) == b"9007199254740991"
+    assert canonical_json_bytes(Decimal("-9007199254740991")) == b"-9007199254740991"
 
-    # Fractional Decimal -> float
+    # Lossless fractional Decimals
     assert canonical_json_bytes(Decimal("1.5")) == b"1.5"
-    assert canonical_json_bytes(Decimal("1.234567890123456789")) == canonical_json_bytes(float(Decimal("1.234567890123456789")))
+    assert canonical_json_bytes(Decimal("-1.5")) == b"-1.5"
+    assert canonical_json_bytes(Decimal("0.1")) == b"0.1"
+    assert canonical_json_bytes(Decimal("0.125")) == b"0.125"
+    assert canonical_json_bytes(Decimal("0.000001")) == b"0.000001"
+
+    # Decimal outside safe range under v2 -> rejection
+    with pytest.raises(ValueError, match="canonical_json_unsafe_decimal_precision"):
+        canonical_json_bytes(Decimal("9007199254740992"))
+    with pytest.raises(ValueError, match="canonical_json_unsafe_decimal_precision"):
+        canonical_json_bytes(Decimal("-9007199254740992"))
+    with pytest.raises(ValueError, match="canonical_json_unsafe_decimal_precision"):
+        canonical_json_bytes(Decimal("1e21"))
+    with pytest.raises(ValueError, match="canonical_json_unsafe_decimal_precision"):
+        canonical_json_bytes(Decimal("100000000000000000000"))
+
+    # Decimal with unsafe precision (lossy truncation in float representation) -> rejection under v2
+    with pytest.raises(ValueError, match="canonical_json_unsafe_decimal_precision"):
+        canonical_json_bytes(Decimal("1.234567890123456789"))
+
+    # Legacy profile backward compatibility
+    assert canonical_json_bytes(Decimal("1e21"), profile=PROFILE_V1_CUSTOM) == b"1000000000000000000000"
+    assert (
+        canonical_json_bytes(Decimal("1.234567890123456789"), profile=PROFILE_V1_CUSTOM)
+        == canonical_json_bytes(float(Decimal("1.234567890123456789")), profile=PROFILE_V1_CUSTOM)
+    )
 
     # Non-finite Decimal -> rejection
     with pytest.raises(ValueError, match="non_finite_number"):

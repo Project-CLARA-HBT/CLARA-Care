@@ -741,13 +741,14 @@ def lock_entity_partitions(
     partitions: list[tuple[str, str]] | set[tuple[str, str]] | tuple[tuple[str, str], ...],
     policy_version: str = POLICY_VERSION,
     consent_version: str = "not_required",
+    read_only: bool = False,
 ) -> list[GlhsEntityVersionPartition]:
-    """Acquire SELECT ... FOR UPDATE row locks on entity partitions in canonical sorted order.
+    """Acquire SELECT ... FOR UPDATE (or FOR SHARE if read_only) row locks in canonical sorted order.
 
     1. Sort partition keys canonically (lexicographical total order).
     2. Check existing partitions.
     3. For any missing partition, acquire logical partition advisory lock and INSERT ... ON CONFLICT DO NOTHING.
-    4. Acquire SELECT ... FOR UPDATE row locks in a single batched query ordered by (domain, semantic_key).
+    4. Acquire row locks in a single batched query ordered by (domain, semantic_key).
     """
     sorted_keys = sorted(set(partitions), key=lambda item: (item[0], item[1]))
     if not sorted_keys:
@@ -792,7 +793,7 @@ def lock_entity_partitions(
             consent_version=consent_version,
         )
 
-    # Step 3: Acquire SELECT ... FOR UPDATE row locks in canonical lexicographical order
+    # Step 3: Acquire SELECT ... FOR UPDATE (or FOR SHARE) row locks in canonical lexicographical order
     if len(sorted_keys) == 1:
         d, k = sorted_keys[0]
         locked_rows = db.execute(
@@ -802,7 +803,7 @@ def lock_entity_partitions(
                 GlhsEntityVersionPartition.domain == d,
                 GlhsEntityVersionPartition.semantic_key == k,
             )
-            .with_for_update()
+            .with_for_update(read=read_only)
             .execution_options(populate_existing=True)
         ).scalars().all()
     else:
@@ -819,7 +820,7 @@ def lock_entity_partitions(
                 GlhsEntityVersionPartition.domain.asc(),
                 GlhsEntityVersionPartition.semantic_key.asc(),
             )
-            .with_for_update()
+            .with_for_update(read=read_only)
             .execution_options(populate_existing=True)
         ).scalars().all()
 

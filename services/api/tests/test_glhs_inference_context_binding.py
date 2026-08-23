@@ -708,13 +708,12 @@ def test_state_drift_rejected(db: Session) -> None:
         db, scope, commitment, evidence, snapshot, binding, at=at
     )
     reviewed = review_model_commitment_proposal(db, scope=scope, proposal=model)
-    # Advance state with an unrelated commitment transition.
-    other = _commitment(db, scope, label="state-advance")
+    # Advance partition state with a competing commitment transition on the same partition.
     other_snapshot = _snapshot(db, scope, evidence, at)
     other_proposal = propose_bound_commitment_transition(
         db,
         scope=scope,
-        commitment=other,
+        commitment=commitment,
         observed_evidence=(evidence,),
         proposed_transition="OPEN",
         origin="user",
@@ -724,7 +723,7 @@ def test_state_drift_rejected(db: Session) -> None:
         source_snapshot_digest=other_snapshot.manifest_digest,
     )
     _apply(
-        db, scope, other, other_proposal, evidence, at=at, key="gate-b-advance"
+        db, scope, commitment, other_proposal, evidence, at=at, key="gate-b-advance"
     )
     with pytest.raises(GlhsInvariantError, match="stale_commitment_proposal"):
         _apply(

@@ -8,6 +8,7 @@ Create Date: 2026-08-23 00:00:00
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "20260823_0060"
@@ -135,7 +136,13 @@ def _create_applied_transitions_table() -> None:
             "proposal_id",
             sa.Integer(),
             sa.ForeignKey("glhs_clinical_commitment_proposals.id", ondelete="RESTRICT"),
-            nullable=False,
+            nullable=True,
+        ),
+        sa.Column(
+            "assertion_id",
+            sa.Integer(),
+            sa.ForeignKey("glhs_assertions.id", ondelete="RESTRICT"),
+            nullable=True,
         ),
         sa.Column("operation_kind", sa.String(64), nullable=False),
         sa.Column("idempotency_key", sa.String(128), nullable=False),
@@ -183,10 +190,6 @@ def _create_applied_transitions_table() -> None:
             server_default=sa.func.now(),
         ),
         sa.UniqueConstraint(
-            "proposal_id",
-            name="uq_glhs_applied_trans_proposal_id",
-        ),
-        sa.UniqueConstraint(
             "tenant_id",
             "operation_kind",
             "idempotency_key",
@@ -220,6 +223,19 @@ def _create_applied_transitions_table() -> None:
         "ix_glhs_applied_transitions_proposal_id",
         "glhs_applied_transitions",
         ["proposal_id"],
+    )
+    op.create_index(
+        "uq_glhs_applied_trans_proposal",
+        "glhs_applied_transitions",
+        ["proposal_id"],
+        unique=True,
+        postgresql_where=sa.text("proposal_id IS NOT NULL"),
+        sqlite_where=sa.text("proposal_id IS NOT NULL"),
+    )
+    op.create_index(
+        "ix_glhs_applied_transitions_assertion_id",
+        "glhs_applied_transitions",
+        ["assertion_id"],
     )
     op.create_index(
         "ix_glhs_applied_transitions_idempotency_key",

@@ -25,6 +25,9 @@ from typing import TypeAlias
 JsonScalar: TypeAlias = None | bool | int | float | str
 JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 
+MIN_SAFE_INTEGER: int = -9007199254740991  # -(2**53 - 1)
+MAX_SAFE_INTEGER: int = 9007199254740991   # 2**53 - 1
+
 DIGEST_ALGORITHM = "sha-256"
 
 PROFILE_V1_LEGACY_PYTHON = "clara.canonical-json.v1-legacy-python"
@@ -186,6 +189,19 @@ def _json_default(obj: object, *, profile: str = PROFILE_V2_RFC8785) -> object:
     if isinstance(obj, Decimal):
         if not obj.is_finite():
             raise ValueError("canonical_json_non_finite_number")
+        if profile == PROFILE_V2_RFC8785:
+            if obj < Decimal(MIN_SAFE_INTEGER) or obj > Decimal(MAX_SAFE_INTEGER):
+                raise ValueError("canonical_json_unsafe_decimal_precision")
+            if obj == obj.to_integral_value():
+                return int(obj)
+            try:
+                f = float(obj)
+            except OverflowError:
+                raise ValueError("canonical_json_unsafe_decimal_precision") from None
+            jcs = _float_to_jcs(f, positive_exp_sign=True)
+            if Decimal(jcs) != obj:
+                raise ValueError("canonical_json_unsafe_decimal_precision")
+            return f
         if obj == obj.to_integral_value():
             return int(obj)
         return float(obj)
@@ -207,6 +223,9 @@ def _serialize(obj: object, *, profile: str = PROFILE_V2_RFC8785) -> str:
     if isinstance(obj, bool):
         return "true" if obj else "false"
     if isinstance(obj, int):
+        if profile == PROFILE_V2_RFC8785:
+            if obj < MIN_SAFE_INTEGER or obj > MAX_SAFE_INTEGER:
+                raise ValueError("canonical_json_integer_out_of_ijson_range")
         return str(obj)
     if isinstance(obj, float):
         positive_exp = profile == PROFILE_V2_RFC8785

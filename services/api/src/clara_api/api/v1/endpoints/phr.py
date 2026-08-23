@@ -1719,7 +1719,13 @@ def _dispatch_reminder_notification(
         return "disabled"
     if mode == "preview":
         return "preview"
-    return _send_via_smtp(settings, recipient=recipient, subject=subject, body=body)
+    return _send_via_smtp(
+        settings,
+        recipient=recipient,
+        subject=subject,
+        plain_body=body,
+        html_body=f"<pre>{body}</pre>",
+    )
 
 
 @router.get("/reminders")

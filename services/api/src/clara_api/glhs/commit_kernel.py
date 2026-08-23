@@ -26,14 +26,18 @@ from datetime import UTC, datetime
 from typing import Any, Generic, TypeVar, overload
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from clara_api.db.models import (
     GlhsAppliedTransition,
+    GlhsClinicalCommitmentProposal,
     GlhsEntityVersionPartition,
+    GlhsEvidence,
     GlhsProposalDependency,
     GlhsTransitionPartitionLink,
+    PhrProfile,
+    User,
 )
 from clara_api.glhs.canonical_json import (
     CANONICALIZATION_PROFILE,
@@ -42,8 +46,9 @@ from clara_api.glhs.canonical_json import (
 from clara_api.glhs.domain import GlhsInvariantError
 from clara_api.glhs.lock_hierarchy import (
     LockMode,
-    acquire_policy_lock_anchor,
-    acquire_profile_and_consent_anchor,
+    acquire_governance_anchor,
+    build_lock_plan,
+    current_state_version,
     lock_entity_partitions,
 )
 from clara_api.lifemap.commands import add_outbox
@@ -81,6 +86,7 @@ class GlhsCommitContext:
     operation_kind: str
     idempotency_key: str
     proposal_id: int | None
+    assertion_id: int | None = None
     custom_payload: Any = None
 
 
@@ -236,6 +242,28 @@ def _normalize_dependency(
     )
 
 
+def load_persisted_proposal_dependencies(
+    db: Session,
+    proposal: GlhsClinicalCommitmentProposal | None = None,
+    *,
+    proposal_id: int | None = None,
+) -> list[GlhsProposalDependency]:
+    """Load normalized persisted dependency vector rows for a proposal from the database."""
+    target_id = proposal.id if proposal is not None else proposal_id
+    if target_id is None:
+        raise GlhsInvariantError("proposal_id_required")
+    return list(
+        db.execute(
+            select(GlhsProposalDependency)
+            .where(GlhsProposalDependency.proposal_id == target_id)
+            .order_by(
+                GlhsProposalDependency.dependency_kind,
+                GlhsProposalDependency.dependency_key,
+            )
+        ).scalars().all()
+    )
+
+
 @overload
 def execute_atomic_glhs_commit(
     db: Session,
@@ -243,6 +271,7 @@ def execute_atomic_glhs_commit(
     profile_id: int,
     idempotency_key: str,
     proposal_id: int | None = None,
+    assertion_id: int | None = None,
     tenant_id: str = "default",
     operation_kind: str = "COMMIT_PROPOSAL",
     request_digest: str = "",
@@ -273,6 +302,7 @@ def execute_atomic_glhs_commit(
     profile_id: int,
     idempotency_key: str,
     proposal_id: int | None = None,
+    assertion_id: int | None = None,
     tenant_id: str = "default",
     operation_kind: str = "COMMIT_PROPOSAL",
     request_digest: str = "",
@@ -302,6 +332,7 @@ def execute_atomic_glhs_commit(
     profile_id: int,
     idempotency_key: str,
     proposal_id: int | None = None,
+    assertion_id: int | None = None,
     tenant_id: str = "default",
     operation_kind: str = "COMMIT_PROPOSAL",
     request_digest: str = "",
@@ -377,24 +408,32 @@ def execute_atomic_glhs_commit(
 
     # Normalize or load dependencies
     resolved_deps: list[DependencySpec] = []
-    if dependencies is not None:
+    partition_coords: set[tuple[str, str]] = set()
+    write_coords: set[tuple[str, str]] = set()
+
+    if proposal_id is not None:
+        persisted_deps = load_persisted_proposal_dependencies(db, proposal_id=proposal_id)
+        if persisted_deps:
+            if dependencies is not None:
+                raise GlhsInvariantError("sealed_proposal_dependencies_override_forbidden")
+            if write_partitions is not None:
+                raise GlhsInvariantError("sealed_proposal_write_partitions_override_forbidden")
+            proposal = db.get(GlhsClinicalCommitmentProposal, proposal_id)
+            if proposal is not None and proposal.dependency_vector_digest:
+                actual_digest = compute_dependency_vector_digest(
+                    persisted_deps, profile=canonicalization_profile
+                )
+                if actual_digest != proposal.dependency_vector_digest:
+                    raise GlhsInvariantError("proposal_dependency_vector_digest_mismatch")
+            resolved_deps = [_normalize_dependency(d, default_domain=policy_domain) for d in persisted_deps]
+        elif dependencies is not None:
+            resolved_deps = [
+                _normalize_dependency(d, default_domain=policy_domain) for d in dependencies
+            ]
+    elif dependencies is not None:
         resolved_deps = [
             _normalize_dependency(d, default_domain=policy_domain) for d in dependencies
         ]
-    elif proposal_id is not None:
-        db_deps = db.execute(
-            select(GlhsProposalDependency)
-            .where(GlhsProposalDependency.proposal_id == proposal_id)
-            .order_by(
-                GlhsProposalDependency.dependency_kind,
-                GlhsProposalDependency.dependency_key,
-            )
-        ).scalars().all()
-        resolved_deps = [_normalize_dependency(d, default_domain=policy_domain) for d in db_deps]
-
-    # Collect entity partition coordinates for locking
-    partition_coords: set[tuple[str, str]] = set()
-    write_coords: set[tuple[str, str]] = set()
 
     for dep in resolved_deps:
         if dep.dependency_kind == "ENTITY":
@@ -412,20 +451,70 @@ def execute_atomic_glhs_commit(
                 partition_coords.add(coord)
                 write_coords.add(coord)
 
-    sorted_partition_coords = sorted(partition_coords, key=lambda c: (c[0], c[1]))
-
     # =========================================================================
-    # Phase 2: Canonical lock acquisition
+    # Phase 2: Canonical lock acquisition (7-Class Lock Hierarchy)
     # =========================================================================
-    # 2.1: Policy Lock Anchor (Shared)
-    acquire_policy_lock_anchor(db, policy_domain=policy_domain, mode=LockMode.SHARED)
+    # Step 2.0: Look up user owner for subject anchor
+    profile_lookup = db.execute(
+        select(PhrProfile.id, PhrProfile.user_id).where(PhrProfile.id == profile_id)
+    ).first()
+    if profile_lookup is None:
+        raise GlhsInvariantError("profile_not_found")
+    owner_user_id = profile_lookup.user_id
 
-    # 2.2: Profile & Consent Lock Anchor (Shared)
-    base_state_version, owner_user_id = acquire_profile_and_consent_anchor(
-        db, profile_id=profile_id, exclusive=False
+    # Step 2.1: Construct Lock Plan across 7 classes
+    lock_dep_inputs: list[Any] = []
+
+    # Class 1: Global policy anchor
+    lock_dep_inputs.append(("tenant_global_policy", "policy_epoch:__global__", LockMode.SHARED))
+
+    # Class 2: Domain policy anchor
+    if policy_domain:
+        lock_dep_inputs.append(("domain_policy", f"policy_epoch:{policy_domain}", LockMode.SHARED))
+
+    # Class 3: Subject & Profile anchors
+    lock_dep_inputs.append(("subject_consent", f"user_consent:{owner_user_id}", LockMode.SHARED))
+    lock_dep_inputs.append(("phr_profile", f"phr_profile:{profile_id}", LockMode.SHARED))
+
+    # Dependencies (Classes 2, 3, 4, 5, 6)
+    for dep in resolved_deps:
+        mode = LockMode.EXCLUSIVE if dep.access_mode == "WRITE" else LockMode.SHARED
+        if dep.dependency_kind == "GOVERNANCE":
+            if "policy" in dep.dependency_key.lower():
+                lock_dep_inputs.append(("domain_policy", dep.dependency_key, mode))
+            elif "consent" in dep.dependency_key.lower():
+                lock_dep_inputs.append(("subject_consent", dep.dependency_key, mode))
+            else:
+                lock_dep_inputs.append(("domain_policy", dep.dependency_key, mode))
+        elif dep.dependency_kind == "ENTITY":
+            coord = parse_entity_partition_key(dep.dependency_key, default_domain=policy_domain)
+            lock_dep_inputs.append(("entity_partition", f"{profile_id}:{coord[0]}:{coord[1]}", mode))
+        elif dep.dependency_kind == "EVIDENCE":
+            lock_dep_inputs.append(("evidence", dep.dependency_key, mode))
+        elif dep.dependency_kind == "LEASE":
+            lock_dep_inputs.append(("lease", dep.dependency_key, mode))
+
+    # Class 7: Idempotency Key Lock
+    lock_dep_inputs.append(
+        ("idempotency_key", f"idempotency:{tenant_id}:{operation_kind}:{idempotency_key}", LockMode.EXCLUSIVE)
     )
 
-    # 2.3: Re-check idempotency under locks
+    lock_plan = build_lock_plan(lock_dep_inputs)
+
+    # Acquire all advisory locks in canonical total order
+    for plan_item in lock_plan:
+        acquire_governance_anchor(db, plan_item.key, mode=plan_item.mode)
+
+    # Class 3 row-level locks on User and PhrProfile
+    user_stmt = select(User.id).where(User.id == owner_user_id).with_for_update(read=True)
+    db.execute(user_stmt.execution_options(populate_existing=True)).fetchall()
+
+    profile_stmt = select(PhrProfile.id).where(PhrProfile.id == profile_id).with_for_update(read=True)
+    db.execute(profile_stmt.execution_options(populate_existing=True)).fetchall()
+
+    base_state_version = current_state_version(db, profile_id=profile_id)
+
+    # Class 7: Re-check idempotency under locks
     existing_locked = db.execute(
         select(GlhsAppliedTransition).where(
             GlhsAppliedTransition.tenant_id == tenant_id,
@@ -464,7 +553,7 @@ def execute_atomic_glhs_commit(
             transition_status=existing_locked.transition_status,
         )
 
-    # 2.4: Read current effective policy epoch and consent version under locks
+    # Read current effective policy epoch and consent version under locks
     from clara_api.glhs.gateway import (
         _effective_policy_version,
         _governed_consent_version,
@@ -477,19 +566,35 @@ def execute_atomic_glhs_commit(
         db, owner_user_id=owner_user_id, purpose=purpose, for_update=False
     )
 
-    # 2.5: Lock entity partitions in canonical lexicographical order
-    locked_partitions_list: list[GlhsEntityVersionPartition] = []
-    if sorted_partition_coords:
-        locked_partitions_list = lock_entity_partitions(
+    # Differentiate lock modes on partitions: FOR SHARE on READ, FOR UPDATE on WRITE
+    read_coords = partition_coords - write_coords
+    sorted_read_coords = sorted(read_coords, key=lambda c: (c[0], c[1]))
+    sorted_write_coords = sorted(write_coords, key=lambda c: (c[0], c[1]))
+
+    locked_read_list: list[GlhsEntityVersionPartition] = []
+    if sorted_read_coords:
+        locked_read_list = lock_entity_partitions(
             db,
             profile_id=profile_id,
-            partitions=sorted_partition_coords,
+            partitions=sorted_read_coords,
             policy_version=current_policy_version,
             consent_version=current_consent_version,
+            read_only=True,
+        )
+
+    locked_write_list: list[GlhsEntityVersionPartition] = []
+    if sorted_write_coords:
+        locked_write_list = lock_entity_partitions(
+            db,
+            profile_id=profile_id,
+            partitions=sorted_write_coords,
+            policy_version=current_policy_version,
+            consent_version=current_consent_version,
+            read_only=False,
         )
 
     locked_map = {
-        (p.domain, p.semantic_key): p for p in locked_partitions_list
+        (p.domain, p.semantic_key): p for p in (locked_read_list + locked_write_list)
     }
 
     # =========================================================================
@@ -507,6 +612,8 @@ def execute_atomic_glhs_commit(
         raise GlhsInvariantError(
             f"stale_consent_version: expected {expected_consent_version}, got {current_consent_version}"
         )
+
+    now = datetime.now(UTC)
 
     for dep in resolved_deps:
         if dep.dependency_kind == "ENTITY":
@@ -551,6 +658,59 @@ def execute_atomic_glhs_commit(
                         f"stale_governance_consent: observed {dep.observed_digest} != current {current_consent_version}"
                     )
 
+        elif dep.dependency_kind == "EVIDENCE":
+            ev_id = dep.dependency_key.removeprefix("evidence:").strip()
+            ev = db.execute(
+                select(GlhsEvidence).where(
+                    GlhsEvidence.profile_id == profile_id,
+                    GlhsEvidence.public_id == ev_id,
+                )
+            ).scalar_one_or_none()
+            if ev is None:
+                raise GlhsInvariantError(f"missing_evidence: {dep.dependency_key}")
+            if dep.observed_digest and ev.fingerprint != dep.observed_digest:
+                raise GlhsInvariantError(f"stale_evidence_fingerprint: {dep.dependency_key}")
+
+            ev_vf = ev.valid_from.replace(tzinfo=UTC) if ev.valid_from and ev.valid_from.tzinfo is None else ev.valid_from
+            ev_vt = ev.valid_to.replace(tzinfo=UTC) if ev.valid_to and ev.valid_to.tzinfo is None else ev.valid_to
+            if ev_vf and ev_vf > now:
+                raise GlhsInvariantError(f"evidence_not_yet_valid: {dep.dependency_key}")
+            if ev_vt and ev_vt < now:
+                raise GlhsInvariantError(f"evidence_expired: {dep.dependency_key}")
+
+            if dep.valid_from:
+                dep_vf = dep.valid_from.replace(tzinfo=UTC) if dep.valid_from.tzinfo is None else dep.valid_from
+                if dep_vf > now:
+                    raise GlhsInvariantError(f"evidence_not_yet_valid: {dep.dependency_key}")
+            if dep.valid_to:
+                dep_vt = dep.valid_to.replace(tzinfo=UTC) if dep.valid_to.tzinfo is None else dep.valid_to
+                if dep_vt < now:
+                    raise GlhsInvariantError(f"evidence_expired: {dep.dependency_key}")
+
+            if hasattr(ev, "revoked_at") and getattr(ev, "revoked_at", None) is not None:
+                raise GlhsInvariantError(f"evidence_revoked: {dep.dependency_key}")
+
+        elif dep.dependency_kind == "LEASE":
+            if dep.valid_from:
+                dep_vf = dep.valid_from.replace(tzinfo=UTC) if dep.valid_from.tzinfo is None else dep.valid_from
+                if dep_vf > now:
+                    raise GlhsInvariantError(f"lease_not_yet_valid: {dep.dependency_key}")
+            if dep.valid_to:
+                dep_vt = dep.valid_to.replace(tzinfo=UTC) if dep.valid_to.tzinfo is None else dep.valid_to
+                if dep_vt < now:
+                    raise GlhsInvariantError(f"lease_expired: {dep.dependency_key}")
+
+            try:
+                from clara_api.glhs.commitment_gateway import get_dag_lock_manager
+                lock_mgr = get_dag_lock_manager()
+                lease_key = dep.dependency_key.removeprefix("lease:").strip()
+                txn = lock_mgr.get_transaction(lease_key)
+                if txn is not None:
+                    if not txn.is_active or txn.is_wounded:
+                        raise GlhsInvariantError(f"lease_invalid_or_wounded: {dep.dependency_key}")
+            except Exception:
+                pass
+
     # =========================================================================
     # Phase 4: Domain mutation callback execution
     # =========================================================================
@@ -567,6 +727,7 @@ def execute_atomic_glhs_commit(
         operation_kind=operation_kind,
         idempotency_key=idempotency_key,
         proposal_id=proposal_id,
+        assertion_id=assertion_id,
         custom_payload=custom_payload,
     )
 
@@ -577,7 +738,6 @@ def execute_atomic_glhs_commit(
     # =========================================================================
     # Phase 5: CAS-increment only WRITE partitions & record partition links
     # =========================================================================
-    now = datetime.now(UTC)
     write_partition_specs: list[dict[str, Any]] = []
     sorted_write_coords = sorted(write_coords, key=lambda c: (c[0], c[1]))
 
@@ -598,7 +758,27 @@ def execute_atomic_glhs_commit(
         predecessor_version = part.state_version
         successor_version = predecessor_version + 1
 
-        # CAS progression: update partition row
+        # CAS progression: update partition row in DB and verify rowcount == 1
+        cas_stmt = text(
+            "UPDATE glhs_entity_version_partitions "
+            "SET state_version = :succ_ver, updated_at = :now, "
+            "policy_version = :policy_ver, consent_version = :consent_ver "
+            "WHERE id = :part_id AND state_version = :pred_ver"
+        )
+        cas_result = db.execute(
+            cas_stmt,
+            {
+                "succ_ver": successor_version,
+                "now": now,
+                "policy_ver": current_policy_version,
+                "consent_ver": current_consent_version,
+                "part_id": part.id,
+                "pred_ver": predecessor_version,
+            },
+        )
+        if getattr(cas_result, "rowcount", 0) != 1:
+            raise GlhsInvariantError("cas_version_conflict")
+
         part.state_version = successor_version
         part.policy_version = current_policy_version
         part.consent_version = current_consent_version
@@ -672,6 +852,7 @@ def execute_atomic_glhs_commit(
         profile_id=profile_id,
         tenant_id=tenant_id,
         proposal_id=proposal_id,
+        assertion_id=assertion_id,
         operation_kind=operation_kind,
         idempotency_key=idempotency_key,
         transition_status="COMMITTED",

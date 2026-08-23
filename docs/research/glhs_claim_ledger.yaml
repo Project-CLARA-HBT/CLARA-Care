@@ -1,6 +1,7 @@
 schema_version: "1.0.0"
 ledger_name: "GLHS Manuscript Claim Ledger"
 last_updated: "2026-08-22"
+publication_verdict: "NOT SUBMISSION READY (Remediation In Progress)"
 description: >
   Claim ledger for the GLHS (Governed Longitudinal Health State) research program and journal revisions.
   Enforces claim gating rules, required empirical/formal evidence, allowed wording, and forbidden phrasing.
@@ -9,7 +10,7 @@ description: >
 claims:
   - claim_id: "C-001"
     proposed_claim: "Exact model-visible disclosure is cryptographically bound to the proposal and commit"
-    current_status: "partial_implementation"
+    current_status: "partial"
     gate_passed: false
     publication_rule: "No headline claim until all adversarial tests pass"
     gating_rules:
@@ -41,7 +42,7 @@ claims:
 
   - claim_id: "C-002"
     proposed_claim: "Commit authorization is fresh with respect to all governing policy/consent scopes"
-    current_status: "paper_code_mismatch"
+    current_status: "withdrawn"
     gate_passed: false
     publication_rule: "Withdraw theorem until code and model agree"
     gating_rules:
@@ -71,7 +72,7 @@ claims:
 
   - claim_id: "C-003"
     proposed_claim: "All declared state dependencies are fresh at commit"
-    current_status: "not_implemented_in_schema"
+    current_status: "blocked"
     gate_passed: false
     publication_rule: "Stop-ship until normalized persisted dependency vector schema and production revalidation are fully implemented"
     gating_rules:
@@ -98,7 +99,7 @@ claims:
 
   - claim_id: "C-004"
     proposed_claim: "Disjoint-scope commits do not falsely conflict"
-    current_status: "blocked_by_global_lock"
+    current_status: "blocked"
     gate_passed: false
     publication_rule: "Stop-ship; do not claim disjoint concurrency until global lock/state gate is replaced with entity-partitioned locks"
     gating_rules:
@@ -125,7 +126,7 @@ claims:
 
   - claim_id: "C-005"
     proposed_claim: "Same-scope conflicting writes have at most one successful version successor"
-    current_status: "partially_tested"
+    current_status: "partial"
     gate_passed: false
     publication_rule: "May claim only after production-path PostgreSQL test"
     gating_rules:
@@ -152,7 +153,7 @@ claims:
 
   - claim_id: "C-006"
     proposed_claim: "Retry/idempotency yields exactly one durable transition"
-    current_status: "incomplete"
+    current_status: "partial"
     gate_passed: false
     publication_rule: "Required for systems claim; cannot claim full fault tolerance until crash matrix passes"
     gating_rules:
@@ -179,7 +180,7 @@ claims:
 
   - claim_id: "C-007"
     proposed_claim: "Audit reconstruction detects omission/tampering"
-    current_status: "digest_exists_signed_unsupported"
+    current_status: "partial"
     gate_passed: false
     publication_rule: "Do not say signed unless signature is implemented; use canonical Merkle digest or unforgeable Merkle digest"
     gating_rules:
@@ -208,7 +209,7 @@ claims:
 
   - claim_id: "C-008"
     proposed_claim: "GLHS reveals less context without clinically material utility loss"
-    current_status: "not_established"
+    current_status: "blocked"
     gate_passed: false
     publication_rule: "Required for least-disclosure novelty; withdraw utility claims until blinded review finishes"
     gating_rules:
@@ -237,7 +238,7 @@ claims:
 
   - claim_id: "C-009"
     proposed_claim: "GLHS outperforms scoped closest baselines on preregistered workloads"
-    current_status: "existing_peers_inconsistent"
+    current_status: "withdrawn"
     gate_passed: false
     publication_rule: "No superiority wording now; compare only on scoped benchmarks with faithful baseline adapters"
     gating_rules:
@@ -265,7 +266,7 @@ claims:
 
   - claim_id: "C-010"
     proposed_claim: "Formal model establishes specified safety/liveness for the implemented protocol"
-    current_status: "current_model_diverges"
+    current_status: "partial"
     gate_passed: false
     publication_rule: "Limit wording to bounded model findings until fixed; ensure formal model and production code refinement obligations match"
     gating_rules:

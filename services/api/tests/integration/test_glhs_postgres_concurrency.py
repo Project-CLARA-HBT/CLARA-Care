@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from threading import Barrier
 from uuid import uuid4
 
-from sqlalchemy import create_engine, func, select, text
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
@@ -26,7 +26,6 @@ from clara_api.db.base import Base
 from clara_api.db.models import (
     GlhsAssertion,
     GlhsEntityVersionPartition,
-    GlhsStateVersion,
     HealthSourceReference,
     PhrProfile,
     User,

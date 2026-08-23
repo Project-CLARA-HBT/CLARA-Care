@@ -13,6 +13,7 @@ Verifies the 6-phase atomic commit sequence:
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -25,7 +26,10 @@ from clara_api.db.models import (
     GlhsAppliedTransition,
     GlhsClinicalCommitment,
     GlhsClinicalCommitmentProposal,
+    GlhsEntityVersionPartition,
+    GlhsEvidence,
     GlhsProposalDependency,
+    HealthSourceReference,
     LifeMapOutboxEvent,
     PhrProfile,
     User,
@@ -38,7 +42,11 @@ from clara_api.glhs.commit_kernel import (
     parse_entity_partition_key,
 )
 from clara_api.glhs.domain import GlhsInvariantError
-from clara_api.glhs.lock_hierarchy import get_or_create_entity_partition
+from clara_api.glhs.lock_hierarchy import (
+    LockClass,
+    build_lock_plan,
+    get_or_create_entity_partition,
+)
 
 
 @pytest.fixture()
@@ -64,6 +72,7 @@ def _seed_proposal(
     profile_id: int,
     domain: str = "medications",
     semantic_key: str = "metformin",
+    dependency_vector_digest: str | None = None,
 ) -> tuple[GlhsClinicalCommitment, GlhsClinicalCommitmentProposal]:
     commitment = GlhsClinicalCommitment(
         profile_id=profile_id,
@@ -82,6 +91,7 @@ def _seed_proposal(
         purpose="self_care",
         origin="clinician",
         protocol_version="glhs.v2",
+        dependency_vector_digest=dependency_vector_digest,
     )
     db.add(proposal)
     db.flush()
@@ -439,6 +449,30 @@ def test_phase6_applied_transition_and_outbox_event(db: Session) -> None:
     assert outbox.payload_json["event_type"] == "glhs.commitment.transition.applied"
 
 
+def _seed_evidence(
+    db: Session,
+    profile_id: int,
+    fingerprint: str = "fp_abc123",
+    valid_from: datetime | None = None,
+    valid_to: datetime | None = None,
+) -> GlhsEvidence:
+    src = HealthSourceReference(profile_id=profile_id, source_kind="visit")
+    db.add(src)
+    db.flush()
+    now = datetime.now(UTC)
+    ev = GlhsEvidence(
+        profile_id=profile_id,
+        source_reference_id=src.id,
+        evidence_kind="lab",
+        fingerprint=fingerprint,
+        valid_from=valid_from or (now - timedelta(days=1)),
+        valid_to=valid_to or (now + timedelta(days=30)),
+    )
+    db.add(ev)
+    db.flush()
+    return ev
+
+
 def test_load_dependencies_from_proposal_in_db(db: Session) -> None:
     _, profile = _seed_profile(db)
     _, proposal = _seed_proposal(db, profile.id)
@@ -472,3 +506,304 @@ def test_load_dependencies_from_proposal_in_db(db: Session) -> None:
     assert result.transition_status == "COMMITTED"
     assert len(result.partition_links) == 1
     assert result.partition_links[0].successor_version == 2
+
+
+def test_sealed_proposal_disallows_caller_dependencies_override(db: Session) -> None:
+    _, profile = _seed_profile(db)
+    _, proposal = _seed_proposal(db, profile.id)
+
+    dep1 = GlhsProposalDependency(
+        proposal_id=proposal.id,
+        dependency_kind="ENTITY",
+        dependency_key="medications:losartan",
+        access_mode="WRITE",
+        observed_version=1,
+    )
+    db.add(dep1)
+    db.flush()
+
+    # Supplying dependencies when proposal_id is provided must raise GlhsInvariantError
+    with pytest.raises(
+        GlhsInvariantError, match="sealed_proposal_dependencies_override_forbidden"
+    ):
+        execute_atomic_glhs_commit(
+            db,
+            profile_id=profile.id,
+            proposal_id=proposal.id,
+            idempotency_key=f"idemp_{uuid4().hex}",
+            dependencies=[
+                DependencySpec(
+                    dependency_kind="ENTITY",
+                    dependency_key="medications:losartan",
+                    access_mode="WRITE",
+                    observed_version=1,
+                )
+            ],
+        )
+
+
+def test_sealed_proposal_disallows_caller_write_partitions_override(db: Session) -> None:
+    _, profile = _seed_profile(db)
+    _, proposal = _seed_proposal(db, profile.id)
+
+    dep1 = GlhsProposalDependency(
+        proposal_id=proposal.id,
+        dependency_kind="ENTITY",
+        dependency_key="medications:losartan",
+        access_mode="WRITE",
+        observed_version=1,
+    )
+    db.add(dep1)
+    db.flush()
+
+    # Supplying write_partitions when proposal_id is provided must raise GlhsInvariantError
+    with pytest.raises(
+        GlhsInvariantError, match="sealed_proposal_write_partitions_override_forbidden"
+    ):
+        execute_atomic_glhs_commit(
+            db,
+            profile_id=profile.id,
+            proposal_id=proposal.id,
+            idempotency_key=f"idemp_{uuid4().hex}",
+            write_partitions=[("medications", "losartan")],
+        )
+
+
+def test_sealed_proposal_dependency_vector_digest_mismatch_fails(db: Session) -> None:
+    _, profile = _seed_profile(db)
+    _, proposal = _seed_proposal(
+        db,
+        profile.id,
+        dependency_vector_digest="sha256_wrong_digest_" + "0" * 44,
+    )
+
+    dep1 = GlhsProposalDependency(
+        proposal_id=proposal.id,
+        dependency_kind="ENTITY",
+        dependency_key="medications:losartan",
+        access_mode="WRITE",
+        observed_version=1,
+    )
+    db.add(dep1)
+    db.flush()
+
+    with pytest.raises(
+        GlhsInvariantError, match="proposal_dependency_vector_digest_mismatch"
+    ):
+        execute_atomic_glhs_commit(
+            db,
+            profile_id=profile.id,
+            proposal_id=proposal.id,
+            idempotency_key=f"idemp_{uuid4().hex}",
+        )
+
+
+def test_phase3_evidence_dependency_validation(db: Session) -> None:
+    _, profile = _seed_profile(db)
+    ev = _seed_evidence(db, profile.id, fingerprint="fp_valid_999")
+
+    # 1. Valid evidence commit succeeds
+    result = execute_atomic_glhs_commit(
+        db,
+        profile_id=profile.id,
+        idempotency_key=f"idemp_{uuid4().hex}",
+        operation_kind="APPLY_TRANSITION",
+        dependencies=[
+            DependencySpec(
+                dependency_kind="EVIDENCE",
+                dependency_key=f"evidence:{ev.public_id}",
+                access_mode="READ",
+                observed_version=1,
+                observed_digest=ev.fingerprint,
+                valid_from=ev.valid_from,
+                valid_to=ev.valid_to,
+            )
+        ],
+    )
+    assert result.transition_status == "COMMITTED"
+
+    # 2. Missing evidence row
+    with pytest.raises(GlhsInvariantError, match="missing_evidence"):
+        execute_atomic_glhs_commit(
+            db,
+            profile_id=profile.id,
+            idempotency_key=f"idemp_{uuid4().hex}",
+            operation_kind="APPLY_TRANSITION",
+            dependencies=[
+                DependencySpec(
+                    dependency_kind="EVIDENCE",
+                    dependency_key="evidence:nonexistent-public-id",
+                    access_mode="READ",
+                )
+            ],
+        )
+
+    # 3. Fingerprint mismatch
+    with pytest.raises(GlhsInvariantError, match="stale_evidence_fingerprint"):
+        execute_atomic_glhs_commit(
+            db,
+            profile_id=profile.id,
+            idempotency_key=f"idemp_{uuid4().hex}",
+            operation_kind="APPLY_TRANSITION",
+            dependencies=[
+                DependencySpec(
+                    dependency_kind="EVIDENCE",
+                    dependency_key=f"evidence:{ev.public_id}",
+                    access_mode="READ",
+                    observed_digest="fp_wrong_tampered_fingerprint",
+                )
+            ],
+        )
+
+    # 4. Expired evidence
+    ev_expired = _seed_evidence(
+        db,
+        profile.id,
+        fingerprint="fp_expired",
+        valid_to=datetime.now(UTC) - timedelta(days=1),
+    )
+
+    with pytest.raises(GlhsInvariantError, match="evidence_expired"):
+        execute_atomic_glhs_commit(
+            db,
+            profile_id=profile.id,
+            idempotency_key=f"idemp_{uuid4().hex}",
+            operation_kind="APPLY_TRANSITION",
+            dependencies=[
+                DependencySpec(
+                    dependency_kind="EVIDENCE",
+                    dependency_key=f"evidence:{ev_expired.public_id}",
+                    access_mode="READ",
+                    observed_digest=ev_expired.fingerprint,
+                )
+            ],
+        )
+
+
+def test_phase3_lease_dependency_validation(db: Session) -> None:
+    _, profile = _seed_profile(db)
+
+    # Expired lease dependency
+    with pytest.raises(GlhsInvariantError, match="lease_expired"):
+        execute_atomic_glhs_commit(
+            db,
+            profile_id=profile.id,
+            idempotency_key=f"idemp_{uuid4().hex}",
+            operation_kind="APPLY_TRANSITION",
+            dependencies=[
+                DependencySpec(
+                    dependency_kind="LEASE",
+                    dependency_key="lease:agent_reasoning_123",
+                    access_mode="READ",
+                    valid_to=datetime.now(UTC) - timedelta(seconds=10),
+                )
+            ],
+        )
+
+
+def test_disjoint_partition_writes_no_global_version_conflict(db: Session) -> None:
+    """Disjoint partition writes must NEVER fail due to global base_state_version."""
+    _, profile = _seed_profile(db)
+
+    # Partition 1: medications:rx1
+    result1 = execute_atomic_glhs_commit(
+        db,
+        profile_id=profile.id,
+        idempotency_key=f"idemp_{uuid4().hex}",
+        operation_kind="APPLY_TRANSITION",
+        dependencies=[
+            DependencySpec(
+                dependency_kind="ENTITY",
+                dependency_key="medications:rx1",
+                access_mode="WRITE",
+                observed_version=1,
+            )
+        ],
+    )
+    assert result1.transition_status == "COMMITTED"
+
+    # Partition 2: allergies:penicillin (disjoint from medications:rx1)
+    # Even after partition 1 incremented, partition 2 is at version 1 and commits cleanly
+    result2 = execute_atomic_glhs_commit(
+        db,
+        profile_id=profile.id,
+        idempotency_key=f"idemp_{uuid4().hex}",
+        operation_kind="APPLY_TRANSITION",
+        dependencies=[
+            DependencySpec(
+                dependency_kind="ENTITY",
+                dependency_key="allergies:penicillin",
+                access_mode="WRITE",
+                observed_version=1,
+            )
+        ],
+    )
+    assert result2.transition_status == "COMMITTED"
+
+
+def test_phase5_database_cas_version_conflict(db: Session) -> None:
+    _, profile = _seed_profile(db)
+
+    # Seed partition at version 1
+    part = get_or_create_entity_partition(
+        db, profile_id=profile.id, domain="medications", semantic_key="metformin"
+    )
+    assert part.state_version == 1
+
+    # Simulate a concurrent writer that increments the partition row behind the scenes during callback
+    def malicious_mutation(ctx: GlhsCommitContext) -> None:
+        # Directly modify database partition version behind the kernel's back
+        db.execute(
+            GlhsEntityVersionPartition.__table__.update()
+            .where(GlhsEntityVersionPartition.id == part.id)
+            .values(state_version=99)
+        )
+        db.flush()
+
+    with pytest.raises(GlhsInvariantError, match="cas_version_conflict"):
+        execute_atomic_glhs_commit(
+            db,
+            profile_id=profile.id,
+            idempotency_key=f"idemp_{uuid4().hex}",
+            operation_kind="APPLY_TRANSITION",
+            dependencies=[
+                DependencySpec(
+                    dependency_kind="ENTITY",
+                    dependency_key="medications:metformin",
+                    access_mode="WRITE",
+                    observed_version=1,
+                )
+            ],
+            mutation_callback=malicious_mutation,
+        )
+
+
+def test_7_class_canonical_lock_plan_integration() -> None:
+    deps = [
+        DependencySpec(dependency_kind="LEASE", dependency_key="lease_01"),
+        DependencySpec(dependency_kind="EVIDENCE", dependency_key="evidence:ev_01"),
+        DependencySpec(dependency_kind="ENTITY", dependency_key="medications:warfarin", access_mode="WRITE"),
+        DependencySpec(dependency_kind="GOVERNANCE", dependency_key="policy:medications"),
+    ]
+    lock_items = [
+        ("tenant_global_policy", "policy_epoch:__global__", "SHARED"),
+        ("domain_policy", "policy_epoch:medications", "SHARED"),
+        ("subject_consent", "user_consent:10", "SHARED"),
+        ("idempotency_key", "idempotency:default:test:key1", "EXCLUSIVE"),
+    ]
+    for d in deps:
+        if d.dependency_kind == "ENTITY":
+            lock_items.append(("entity_partition", d.dependency_key, d.access_mode))
+        elif d.dependency_kind == "EVIDENCE":
+            lock_items.append(("evidence", d.dependency_key, d.access_mode))
+        elif d.dependency_kind == "LEASE":
+            lock_items.append(("lease", d.dependency_key, d.access_mode))
+        elif d.dependency_kind == "GOVERNANCE":
+            lock_items.append(("domain_policy", d.dependency_key, d.access_mode))
+
+    plan = build_lock_plan(lock_items)
+    classes = [item.lock_class for item in plan]
+    # Verify strict ascending LockClass order 1 through 7
+    assert classes == sorted(classes)
+    assert classes[0] == LockClass.TENANT_GLOBAL_POLICY
+    assert classes[-1] == LockClass.IDEMPOTENCY_KEY

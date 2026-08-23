@@ -1950,7 +1950,7 @@ def apply_commitment_transition(
         if existing.request_digest != request_digest:
             raise GlhsInvariantError("commitment_idempotency_reuse_mismatch")
         return cast(GlhsClinicalCommitmentTransition, existing)
-    # Re-read proposal from DB and reload dependencies
+    # Re-read proposal from DB and validate digest
     proposal = _reload_proposal(db, proposal_id=proposal.id)
     _validate_proposal_digest(proposal)
     if proposal.commitment_id != commitment.id:
@@ -1961,14 +1961,6 @@ def apply_commitment_transition(
         raise GlhsInvariantError("commitment_proposal_transition_mismatch")
     if not set(evidence_ids).issubset(set(proposal.observed_evidence_ids_json or ())):
         raise GlhsInvariantError("commitment_proposal_evidence_mismatch")
-
-    persisted_deps = load_persisted_proposal_dependencies(db, proposal=proposal)
-
-    target_partitions = adaptive_split_partition_coordinates(
-        commitment.domain,
-        commitment.semantic_key,
-        granular_attributes,
-    )
 
     root_proposal = _resolve_proposal_lineage_root(db, proposal=proposal)
     request_digest = _commitment_request_digest(
@@ -2045,7 +2037,7 @@ def apply_commitment_transition(
             scope=scope,
             proposal=proposal,
             evidence_ids=evidence_ids,
-            current_version=ctx.base_state_version,
+            current_version=proposal.base_state_version,
             consent_version=ctx.effective_consent_version,
             policy_version=effective_policy_ver,
             binding=root_binding,
@@ -2153,9 +2145,6 @@ def apply_commitment_transition(
             disclosure_digest=proposal.source_snapshot_digest or "",
             policy_domain=commitment.domain,
             purpose=scope.purpose,
-            dependencies=persisted_deps,
-            write_partitions=target_partitions,
-            expected_base_state_version=proposal.base_state_version,
             canonicalization_profile=CANONICALIZATION_PROFILE,
             mutation_callback=_mutation_callback,
             aggregate_type="glhs_clinical_commitment",
@@ -2164,7 +2153,11 @@ def apply_commitment_transition(
         )
     except GlhsInvariantError as exc:
         err_msg = str(exc)
-        if "stale_entity_partition" in err_msg or "stale_base_state_version" in err_msg:
+        if (
+            "stale_entity_partition" in err_msg
+            or "stale_base_state_version" in err_msg
+            or "cas_version_conflict" in err_msg
+        ):
             raise GlhsInvariantError("stale_commitment_proposal") from exc
         if "stale_governance_policy" in err_msg:
             raise GlhsInvariantError("commitment_proposal_policy_mismatch") from exc

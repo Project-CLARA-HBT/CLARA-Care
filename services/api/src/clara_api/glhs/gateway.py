@@ -1485,6 +1485,42 @@ def apply_transition(
                 observed_version=observed_version,
             )
         ]
+        if revalidate_governance:
+            resolved_dependencies.append(
+                DependencySpec(
+                    dependency_kind="GOVERNANCE",
+                    dependency_key=f"policy:{domain}",
+                    access_mode="READ",
+                    observed_version=1,
+                    observed_digest=assertion.policy_version,
+                )
+            )
+            resolved_dependencies.append(
+                DependencySpec(
+                    dependency_kind="GOVERNANCE",
+                    dependency_key=f"consent:{scope.purpose}",
+                    access_mode="READ",
+                    observed_version=1,
+                    observed_digest=assertion.consent_version,
+                )
+            )
+        assertion_ev_ids = _assertion_evidence_ids(db, assertion_id=assertion.id)
+        if assertion_ev_ids:
+            ev_rows = db.execute(
+                select(GlhsEvidence).where(GlhsEvidence.id.in_(assertion_ev_ids))
+            ).scalars().all()
+            for ev in ev_rows:
+                resolved_dependencies.append(
+                    DependencySpec(
+                        dependency_kind="EVIDENCE",
+                        dependency_key=f"evidence:{ev.public_id}",
+                        access_mode="READ",
+                        observed_version=1,
+                        observed_digest=ev.fingerprint,
+                        valid_from=ev.valid_from,
+                        valid_to=ev.valid_to,
+                    )
+                )
 
     def _mutation_callback(ctx: GlhsCommitContext) -> GlhsTransition:
         # A concurrent request may have committed this idempotency key while this
@@ -1743,6 +1779,7 @@ def apply_transition(
             profile_id=scope.profile.id,
             idempotency_key=idempotency_key,
             proposal_id=None,
+            assertion_id=assertion.id,
             operation_kind="APPLY_TRANSITION",
             request_digest=request_digest,
             disclosure_digest=assertion.source_snapshot_digest or "",
@@ -1759,7 +1796,11 @@ def apply_transition(
         )
     except GlhsInvariantError as exc:
         err_msg = str(exc)
-        if "stale_entity_partition" in err_msg or "stale_base_state_version" in err_msg:
+        if (
+            "stale_entity_partition" in err_msg
+            or "stale_base_state_version" in err_msg
+            or "cas_version_conflict" in err_msg
+        ):
             if action == "activate" and part.state_version != proposal_part_version:
                 raise GlhsInvariantError("stale_proposal_state_version") from exc
             raise GlhsInvariantError("stale_state_version") from exc

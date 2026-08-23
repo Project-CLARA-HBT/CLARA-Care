@@ -17,6 +17,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy import (
     event as sa_event,
@@ -2787,7 +2788,13 @@ class GlhsAppliedTransition(Base):
 
     __tablename__ = "glhs_applied_transitions"
     __table_args__ = (
-        UniqueConstraint("proposal_id", name="uq_glhs_applied_trans_proposal_id"),
+        Index(
+            "uq_glhs_applied_trans_proposal",
+            "proposal_id",
+            unique=True,
+            postgresql_where=text("proposal_id IS NOT NULL"),
+            sqlite_where=text("proposal_id IS NOT NULL"),
+        ),
         UniqueConstraint(
             "tenant_id",
             "operation_kind",
@@ -2820,7 +2827,11 @@ class GlhsAppliedTransition(Base):
     )
     proposal_id: Mapped[int | None] = mapped_column(
         ForeignKey("glhs_clinical_commitment_proposals.id", ondelete="RESTRICT"),
-        unique=True,
+        index=True,
+        nullable=True,
+    )
+    assertion_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_assertions.id", ondelete="RESTRICT"),
         index=True,
         nullable=True,
     )
@@ -2851,8 +2862,11 @@ class GlhsAppliedTransition(Base):
         DateTime(timezone=True), server_default=func.now(), index=True
     )
 
-    proposal: Mapped["GlhsClinicalCommitmentProposal"] = relationship(
+    proposal: Mapped["GlhsClinicalCommitmentProposal | None"] = relationship(
         "GlhsClinicalCommitmentProposal", back_populates="applied_transition"
+    )
+    assertion: Mapped["GlhsAssertion | None"] = relationship(
+        "GlhsAssertion"
     )
     partition_links: Mapped[list["GlhsTransitionPartitionLink"]] = relationship(
         "GlhsTransitionPartitionLink", back_populates="transition"
