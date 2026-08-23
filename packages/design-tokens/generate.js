@@ -271,6 +271,7 @@ ${linesDark.join('\n')}
 `;
 
 fs.writeFileSync(path.join(__dirname, '../../apps/web/styles/generated/tokens.css'), css);
+fs.writeFileSync(path.join(__dirname, '../../apps/web/styles/generated/clara.tokens.css'), css);
 
 // ==========================================
 // 2. Generate Flutter Dart tokens (clara_tokens.g.dart)
