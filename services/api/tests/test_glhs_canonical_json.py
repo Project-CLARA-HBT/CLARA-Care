@@ -293,7 +293,8 @@ def test_cross_process_determinism() -> None:
     local_fp = consistency_fingerprint(test_obj)
 
     code = (
-        "import sys, json; "
+        "import sys, json, os; "
+        "sys.path.insert(0, os.path.abspath('services/api/src')); "
         "from clara_api.glhs.canonical_json import consistency_fingerprint; "
         f"payload = {repr(test_obj)}; "
         "print(consistency_fingerprint(payload))"

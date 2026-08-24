@@ -84,5 +84,12 @@ describe("Design tokens contract and CSS custom properties", () => {
     expect(tokensCss).toContain("--color-feedback-danger-bg:");
     expect(tokensCss).toContain("--radius-pill:");
     expect(tokensCss).toContain("--touch-target-min:");
+    expect(tokensCss).toContain("--glass-bg-header:");
+    expect(tokensCss).toContain("--glass-bg-navbar:");
+    expect(tokensCss).toContain("--glass-bg-sheet:");
+    expect(tokensCss).toContain("--glass-bg-menu:");
+    expect(tokensCss).toContain("--glass-border-subtle:");
+    expect(tokensCss).toContain("--glass-blur-header:");
+    expect(tokensCss).toContain("--glass-blur-navbar:");
   });
 });

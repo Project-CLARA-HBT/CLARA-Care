@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/http-client";
-import { markAuthenticatedBrowserSession, setRole as setStoredRole } from "@/lib/auth-store";
+import { markAuthenticatedBrowserSession, setAuthoritativeServerRole } from "@/lib/auth-store";
 import Button from "@/components/ui/button";
 import AuthFormShell from "@/components/auth-form-shell";
 import { resolvePostLoginPath, type UserRole } from "@/lib/navigation.config";
@@ -41,7 +41,7 @@ function AuthCallbackContent() {
       if (tokenParam) {
         markAuthenticatedBrowserSession();
         if (roleParam) {
-          setStoredRole(roleParam);
+          setAuthoritativeServerRole(roleParam);
         }
         const targetPath = resolvePostLoginPath({
           nextPath: nextParam,
@@ -66,7 +66,7 @@ function AuthCallbackContent() {
           const nextRole = (response.data?.role as UserRole) ?? roleParam ?? "normal";
 
           markAuthenticatedBrowserSession();
-          setStoredRole(nextRole);
+          setAuthoritativeServerRole(nextRole);
           const targetPath = resolvePostLoginPath({
             nextPath: nextParam,
             role: nextRole,

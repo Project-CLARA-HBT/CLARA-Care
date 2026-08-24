@@ -16,6 +16,8 @@ const CSRF_COOKIE_NAME =
 const ACTIVE_PROFILE_STORAGE_KEY = "clara_active_profile_id";
 const PROFILE_CACHE_PREFIX = "clara_profile_cache:";
 
+let cachedServerRole: UserRole | null = null;
+
 function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
@@ -126,6 +128,7 @@ export function markAuthenticatedBrowserSession(): void {
 export function clearTokens(): void {
   if (!isBrowser()) return;
   purgeLegacySessionTokens();
+  cachedServerRole = null;
   tryRemoveStorageItem(window.localStorage, ROLE_KEY);
   tryRemoveStorageItem(window.localStorage, ADMIN_PREVIEW_STORAGE_KEY);
   setAdminPreviewCookie(null);
@@ -143,20 +146,28 @@ export function clearTokens(): void {
   setClientSessionCookie(false);
 }
 
-export function getRole(): UserRole {
-  if (!isBrowser()) return "normal";
-  const value = tryGetStorageItem(window.localStorage, ROLE_KEY);
-  if (value === "researcher" || value === "doctor" || value === "admin" || value === "normal") {
-    return value;
+/**
+ * Sets the authoritative server role in memory from the /auth/me session response or test injector.
+ * Purges legacy localStorage clara_role key to prevent client-side privilege confusion.
+ */
+export function setAuthoritativeServerRole(role: UserRole | null): void {
+  cachedServerRole = role;
+  if (isBrowser()) {
+    tryRemoveStorageItem(window.localStorage, ROLE_KEY);
+    if (role) {
+      window.dispatchEvent(
+        new CustomEvent(ROLE_CHANGE_EVENT, { detail: role }),
+      );
+    }
   }
-  return "normal";
 }
 
-export function setRole(role: UserRole): void {
-  if (!isBrowser()) return;
-  if (role === "researcher" || role === "doctor" || role === "admin" || role === "normal") {
-    trySetStorageItem(window.localStorage, ROLE_KEY, role);
-  }
+/**
+ * Returns the active user role, derived strictly in a read-only manner from the server session state.
+ * Client role mutation is strictly removed in production.
+ */
+export function getRole(): UserRole {
+  return cachedServerRole ?? "normal";
 }
 
 export function getCsrfToken(): string | null {

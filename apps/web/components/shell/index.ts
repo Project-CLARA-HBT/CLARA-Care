@@ -34,5 +34,8 @@ export { default as SessionBoundary } from "./session-boundary";
 export * from "./admin-preview-banner";
 export { default as AdminPreviewBanner } from "./admin-preview-banner";
 
+export * from "./chrome-surface";
+export { default as ChromeSurface } from "./chrome-surface";
+
 export { ShellLayoutContext, type ShellMode as ShellLayoutMode, useShellLayout } from "./shell-context";
 

@@ -103,4 +103,123 @@
   --focus-ring-color: #a4c9ff;
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
+
+  /* Semantic Glass Tokens */
+  --glass-bg-header: var(--surface-header, rgba(16, 20, 25, 0.88));
+  --glass-bg-navbar: rgba(16, 20, 25, 0.80);
+  --glass-bg-sheet: rgba(29, 32, 37, 0.92);
+  --glass-bg-menu: rgba(29, 32, 37, 0.90);
+  --glass-border-subtle: rgba(255, 255, 255, 0.08);
+  --glass-blur-header: 16px;
+  --glass-blur-navbar: 20px;
+}
+
+/* Chrome Surface styles and fallbacks */
+.chrome-surface {
+  position: relative;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Chrome Surface Blur levels */
+.chrome-surface[data-blur="none"] {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.chrome-surface[data-blur="subtle"] {
+  backdrop-filter: blur(var(--blur-sm, 8px));
+  -webkit-backdrop-filter: blur(var(--blur-sm, 8px));
+}
+
+.chrome-surface[data-blur="medium"] {
+  backdrop-filter: blur(var(--glass-blur-header, 16px));
+  -webkit-backdrop-filter: blur(var(--glass-blur-header, 16px));
+}
+
+.chrome-surface[data-blur="high"] {
+  backdrop-filter: blur(var(--glass-blur-navbar, 20px));
+  -webkit-backdrop-filter: blur(var(--glass-blur-navbar, 20px));
+}
+
+/* Chrome Surface Variants */
+.chrome-surface[data-variant="navbar"] {
+  background-color: var(--glass-bg-navbar);
+}
+
+.chrome-surface[data-variant="header"] {
+  background-color: var(--glass-bg-header);
+}
+
+.chrome-surface[data-variant="sheet"] {
+  background-color: var(--glass-bg-sheet);
+}
+
+.chrome-surface[data-variant="menu"] {
+  background-color: var(--glass-bg-menu);
+}
+
+.chrome-surface[data-variant="popover"] {
+  background-color: var(--glass-bg-menu);
+}
+
+.chrome-surface[data-variant="banner"] {
+  background-color: var(--glass-bg-header);
+}
+
+.chrome-surface[data-variant="opaque"] {
+  background-color: var(--surface-panel, #1d2025);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Chrome Surface Borders */
+.chrome-surface[data-border="none"] {
+  border: none;
+}
+
+.chrome-surface[data-border="subtle"] {
+  border: 1px solid var(--glass-border-subtle);
+}
+
+.chrome-surface[data-border="default"] {
+  border: 1px solid var(--shell-border, #414751);
+}
+
+.chrome-surface[data-border="strong"] {
+  border: 1px solid var(--shell-border-strong, #8b919d);
+}
+
+/* Chrome Surface Elevations */
+.chrome-surface[data-elevation="flat"] {
+  box-shadow: none;
+}
+
+.chrome-surface[data-elevation="raised"] {
+  box-shadow: var(--shadow-card, none);
+}
+
+.chrome-surface[data-elevation="floating"] {
+  box-shadow: var(--shadow-float, 0 8px 24px -12px rgba(0, 0, 0, 0.28));
+}
+
+.chrome-surface[data-elevation="overlay"] {
+  box-shadow: var(--shadow-overlay, 0 16px 36px -16px rgba(0, 0, 0, 0.42));
+}
+
+/* Fallback for users requesting reduced transparency (a11y) */
+@media (prefers-reduced-transparency: reduce) {
+  .chrome-surface {
+    background-color: var(--surface-panel, #1d2025) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* Fallback for browsers without backdrop-filter support */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .chrome-surface {
+    background-color: var(--surface-panel, #1d2025) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
 }

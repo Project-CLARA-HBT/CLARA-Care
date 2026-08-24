@@ -187,12 +187,63 @@ export default function PatientRoster() {
   }, [shell]);
 
   const [patients, setPatients] = useState<PatientRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<ClinicalDepartment>("all");
   const [selectedRisk, setSelectedRisk] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    async function loadRoster() {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await api.get<{ items: any[] }>("/clinical/workbench/patients");
+        if (!active) return;
+        if (res.data?.items && Array.isArray(res.data.items)) {
+          const mapped: PatientRecord[] = res.data.items.map((item: any) => ({
+            id: item.id || item.patient_id || `PT-${Math.random()}`,
+            mrn: item.mrn || `MRN-${item.patient_id?.slice(0, 8) || "0000"}`,
+            name: item.name || item.display_label || "Bệnh nhân",
+            age: item.age || 50,
+            gender: item.gender || "M",
+            roomBed: item.roomBed || "Phòng khám",
+            department: item.department || "internal",
+            departmentLabel: item.departmentLabel || { vi: "Nội tổng quát", en: "Internal Medicine" },
+            primaryDiagnosis: item.primaryDiagnosis || (item.attention?.reasons?.[0] ?? "Theo dõi sức khỏe"),
+            chiefComplaint: item.chiefComplaint || (item.attention?.reasons?.[0] ?? "Tái khám định kỳ"),
+            riskLevel: item.riskLevel || (item.attention?.level === "urgent" ? "critical" : "low"),
+            riskReason: item.riskReason || { vi: item.attention?.reasons?.[0] || "Ổn định", en: "Stable" },
+            consultationStatus: item.consultationStatus || "in_consultation",
+            attendingDoctor: item.attendingDoctor || "BS. Điều trị",
+            waitTimeMinutes: item.waitTimeMinutes || 15,
+            vitals: item.vitals || { bp: "120/80", hr: 75, spo2: 98, temp: 36.5, rr: 16, egfr: 90 },
+            allergies: item.allergies || [],
+            activeMedications: item.activeMedications || [],
+            ddiAlerts: item.ddiAlerts || [],
+            recentNotes: item.recentNotes || [],
+            admissionTime: item.admissionTime || item.generated_at || new Date().toISOString(),
+          }));
+          setPatients(mapped);
+        } else {
+          setPatients([]);
+        }
+      } catch (err: any) {
+        if (!active) return;
+        setError(safeUserFacingError(err, "Không thể tải danh sách bệnh nhân"));
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    loadRoster();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const selectedPatient = useMemo(
     () => patients.find((p) => p.id === selectedPatientId) ?? null,

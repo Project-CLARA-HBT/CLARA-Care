@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import api from "@/lib/http-client";
-import { markAuthenticatedBrowserSession, setRole as setStoredRole } from "@/lib/auth-store";
+import { markAuthenticatedBrowserSession, setAuthoritativeServerRole } from "@/lib/auth-store";
 import Button from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import AuthFormShell from "@/components/auth-form-shell";
@@ -45,7 +45,7 @@ export default function LoginPage() {
     const nextRole = serverRole ?? "normal";
 
     markAuthenticatedBrowserSession();
-    setStoredRole(nextRole);
+    setAuthoritativeServerRole(nextRole);
     const targetPath = resolvePostLoginPath({
       nextPath:
         typeof window !== "undefined"

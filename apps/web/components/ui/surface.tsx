@@ -176,4 +176,5 @@ export function EmptyState({
   );
 }
 
+export const Surface = SurfaceCard;
 export default SurfaceCard;

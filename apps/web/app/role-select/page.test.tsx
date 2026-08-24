@@ -24,8 +24,8 @@ describe("RoleSelectPage — Role & Workspace Selection Canvas", () => {
     vi.clearAllMocks();
     window.localStorage.clear();
     vi.spyOn(authStore, "getRole").mockReturnValue("admin");
-    vi.spyOn(authStore, "setRole").mockImplementation((role) => {
-      window.localStorage.setItem("clara_role", role);
+    vi.spyOn(authStore, "setAuthoritativeServerRole").mockImplementation((role) => {
+      window.localStorage.setItem("clara_role", role || "");
     });
   });
 
@@ -162,7 +162,7 @@ describe("RoleSelectPage — Role & Workspace Selection Canvas", () => {
     const selectButton = screen.getByTestId("select-role-clinical");
     fireEvent.click(selectButton);
 
-    expect(authStore.setRole).toHaveBeenCalledWith("doctor");
+    expect(authStore.setAuthoritativeServerRole).toHaveBeenCalledWith("doctor");
     expect(window.localStorage.getItem("clara_role")).toBe("doctor");
     expect(window.localStorage.getItem("clara_active_workspace:doctor")).toBe("clinical");
     expect(window.localStorage.getItem("clara_active_workspace")).toBe("clinical");
@@ -213,7 +213,7 @@ describe("RoleSelectPage — Role & Workspace Selection Canvas", () => {
     const councilBtn = screen.getByTestId("capability-btn-council");
     fireEvent.click(councilBtn);
 
-    expect(authStore.setRole).toHaveBeenCalledWith("doctor");
+    expect(authStore.setAuthoritativeServerRole).toHaveBeenCalledWith("doctor");
     expect(mockPush).toHaveBeenCalledWith("/council");
   });
 
@@ -268,19 +268,19 @@ describe("RoleSelectPage — Role & Workspace Selection Canvas", () => {
     // Click "System health" on Admin card
     const systemHealthBtn = screen.getByTestId("capability-btn-system-health");
     fireEvent.click(systemHealthBtn);
-    expect(authStore.setRole).toHaveBeenCalledWith("admin");
+    expect(authStore.setAuthoritativeServerRole).toHaveBeenCalledWith("admin");
     expect(mockPush).toHaveBeenCalledWith("/admin/system");
 
     // Click "Evidence synthesis" on Research card
     const evidenceBtn = screen.getByTestId("capability-btn-evidence-synthesis");
     fireEvent.click(evidenceBtn);
-    expect(authStore.setRole).toHaveBeenCalledWith("researcher");
+    expect(authStore.setAuthoritativeServerRole).toHaveBeenCalledWith("researcher");
     expect(mockPush).toHaveBeenCalledWith("/evidence");
 
     // Click "Next-action Today canvas" on Personal card
     const todayBtn = screen.getByTestId("capability-btn-today-canvas");
     fireEvent.click(todayBtn);
-    expect(authStore.setRole).toHaveBeenCalledWith("normal");
+    expect(authStore.setAuthoritativeServerRole).toHaveBeenCalledWith("normal");
     expect(mockPush).toHaveBeenCalledWith("/today");
   });
 

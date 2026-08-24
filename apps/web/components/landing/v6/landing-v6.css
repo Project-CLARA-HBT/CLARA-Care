@@ -1,0 +1,186 @@
+/* CLARA Care Landing Page v6 — Scoped Immersive Spatial Editorial Styles */
+
+.clara-landing-v6 {
+  --landing-canvas: #F8FAFD;
+  --landing-canvas-soft: #F1F5F9;
+  --landing-surface: #FFFFFF;
+  --landing-surface-hover: #F8FAFC;
+  --landing-surface-active: #F1F5F9;
+
+  --landing-azure-soft: #EFF7FF;
+  --landing-azure-subtle: rgba(11, 111, 216, 0.08);
+  --landing-mint-soft: #ECFDF8;
+  --landing-mint-subtle: rgba(20, 168, 141, 0.08);
+  --landing-iris-soft: #F5F3FF;
+  --landing-iris-subtle: rgba(139, 124, 246, 0.08);
+
+  --landing-text: #162033;
+  --landing-text-secondary: #48566A;
+  --landing-text-muted: #6D7A8E;
+
+  --landing-border: #E3E8EF;
+  --landing-border-strong: #D5DDE7;
+  --landing-border-subtle: #EDF2F7;
+
+  --landing-azure: #0B6FD8;
+  --landing-azure-bright: #1A86F5;
+  --landing-azure-dark: #0855A8;
+  --landing-mint: #14A88D;
+  --landing-mint-dark: #0E856F;
+  --landing-iris: #8B7CF6;
+  --landing-iris-dark: #6D5BD0;
+
+  --motion-instant: 80ms;
+  --motion-fast: 140ms;
+  --motion-standard: 220ms;
+  --motion-emphasis: 360ms;
+  --motion-scene: 520ms;
+
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
+
+  background-color: var(--landing-canvas);
+  color: var(--landing-text);
+  font-family: var(--font-be-vietnam-pro, system-ui, -apple-system, sans-serif);
+  position: relative;
+  overflow-x: clip;
+  width: 100%;
+}
+
+/* Material Class: Editorial Canvas */
+.clara-editorial-canvas {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+/* Material Class: Product Surface */
+.clara-product-surface {
+  background-color: var(--landing-surface);
+  border: 1px solid var(--landing-border);
+  border-radius: 1.5rem;
+  box-shadow: 0 20px 40px -15px rgba(22, 32, 51, 0.06), 0 0 1px 1px rgba(22, 32, 51, 0.02);
+  transition: border-color var(--motion-fast) var(--ease-standard),
+              box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.clara-product-surface:hover {
+  border-color: var(--landing-border-strong);
+}
+
+/* Material Class: Floating Chrome (Liquid Glass for chrome ONLY) */
+.clara-floating-chrome {
+  background-color: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(227, 232, 239, 0.85);
+  box-shadow: 0 12px 32px -8px rgba(22, 32, 51, 0.08), 0 0 1px rgba(22, 32, 51, 0.04);
+}
+
+/* Spatial 3D Perspective Stage */
+.clara-spatial-stage {
+  perspective: 1400px;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Ambient Lighting Fields (3-7% subtle light-first fields) */
+.clara-ambient-azure {
+  background: radial-gradient(circle 500px at 50% 40%, rgba(11, 111, 216, 0.06), transparent 70%);
+}
+
+.clara-ambient-mint {
+  background: radial-gradient(circle 500px at 50% 40%, rgba(20, 168, 141, 0.06), transparent 70%);
+}
+
+.clara-ambient-iris {
+  background: radial-gradient(circle 500px at 50% 40%, rgba(139, 124, 246, 0.06), transparent 70%);
+}
+
+/* Grid Break Container for Signature Scenes */
+.clara-grid-break {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  max-width: 100vw;
+}
+
+/* Constellation SVG line pulse */
+@keyframes clara-line-glow {
+  0%, 100% {
+    stroke-opacity: 0.35;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-opacity: 0.85;
+    stroke-dashoffset: -12;
+  }
+}
+
+.clara-constellation-line {
+  stroke-dasharray: 6 6;
+  animation: clara-line-glow 4s ease-in-out infinite;
+}
+
+/* Simple Scribe Waveform Bars */
+@keyframes clara-wave-bar {
+  0%, 100% {
+    height: 6px;
+  }
+  50% {
+    height: 24px;
+  }
+}
+
+.clara-wave-1 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.1s; }
+.clara-wave-2 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.3s; }
+.clara-wave-3 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.2s; }
+.clara-wave-4 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.5s; }
+.clara-wave-5 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.4s; }
+.clara-wave-6 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.25s; }
+.clara-wave-7 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.45s; }
+.clara-wave-8 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.15s; }
+
+/* Focus ring for accessibility */
+.clara-focus-ring:focus-visible {
+  outline: 2px solid var(--landing-azure);
+  outline-offset: 2px;
+}
+
+/* Reduced Motion Overrides */
+@media (prefers-reduced-motion: reduce) {
+  .clara-landing-v6 *,
+  .clara-landing-v6 *::before,
+  .clara-landing-v6 *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .clara-spatial-stage {
+    perspective: none !important;
+    transform: none !important;
+  }
+
+  .clara-constellation-line {
+    animation: none !important;
+    stroke-dasharray: none !important;
+    stroke-opacity: 0.6 !important;
+  }
+
+  .clara-wave-1,
+  .clara-wave-2,
+  .clara-wave-3,
+  .clara-wave-4,
+  .clara-wave-5,
+  .clara-wave-6,
+  .clara-wave-7,
+  .clara-wave-8 {
+    animation: none !important;
+    height: 14px !important;
+  }
+}

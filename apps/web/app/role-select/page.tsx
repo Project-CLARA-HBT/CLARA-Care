@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Icon, { type IconName } from "@/components/ui/icon";
 import { SurfaceCard } from "@/components/ui/surface";
-import { getRole, setRole as setStoredRole, type UserRole } from "@/lib/auth-store";
+import { getRole, setAuthoritativeServerRole, type UserRole } from "@/lib/auth-store";
 import { t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 
@@ -325,7 +325,7 @@ export default function RoleSelectPage() {
   // Persistence handler
   const persistSelection = useCallback(
     (targetRole: UserRole, targetPreview: "clinical" | "research" | "personal" | null, workspaceId: WorkspaceCardId) => {
-      setStoredRole(targetRole);
+      setAuthoritativeServerRole(targetRole);
       try {
         window.localStorage.setItem(`clara_active_workspace:${targetRole}`, workspaceId);
         window.localStorage.setItem("clara_active_workspace", workspaceId);

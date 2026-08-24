@@ -15,7 +15,7 @@ import { useShellMode } from "@/components/shell/shell-mode-provider";
 import {
   clearTokens,
   getRole,
-  setRole as setStoredRole,
+  setAuthoritativeServerRole,
 } from "@/lib/auth-store";
 import api from "@/lib/http-client";
 import {
@@ -84,7 +84,7 @@ export default function AppShell({ children }: Props) {
             serverRole === "doctor" ||
             serverRole === "admin")
         ) {
-          setStoredRole(serverRole);
+          setAuthoritativeServerRole(serverRole);
           setLocalRole(serverRole);
         } else if (active) {
           setLocalRole(getRole());

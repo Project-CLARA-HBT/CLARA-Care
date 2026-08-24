@@ -15,7 +15,7 @@ import {
 import {
   clearTokens,
   getRole,
-  setRole as setStoredRole,
+  setAuthoritativeServerRole,
   getStoredAdminPreviewMode,
   setStoredAdminPreviewMode,
   ADMIN_PREVIEW_COOKIE_NAME,
@@ -152,7 +152,7 @@ export function SessionBoundary({
     const validRole = normalizeRole(nextRole);
     if (!validRole) return;
     setRoleState(validRole);
-    setStoredRole(validRole);
+    setAuthoritativeServerRole(validRole);
     if (typeof window !== "undefined") {
       try {
         window.localStorage.setItem(ROLE_KEY, validRole);
@@ -231,7 +231,7 @@ export function SessionBoundary({
         });
         const serverRole = normalizeRole(response.data?.role);
         if (active && serverRole) {
-          setStoredRole(serverRole);
+          setAuthoritativeServerRole(serverRole);
           setRoleState(serverRole);
         } else if (active) {
           setRoleState(getRole());

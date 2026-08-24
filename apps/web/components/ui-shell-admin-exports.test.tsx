@@ -96,6 +96,8 @@ import ToggleDefault, { Toggle } from "@/components/ui/toggle";
 import * as ShellIndex from "@/components/shell";
 import * as AdminPreviewBannerMod from "@/components/shell/admin-preview-banner";
 import AdminPreviewBannerDefault, { AdminPreviewBanner } from "@/components/shell/admin-preview-banner";
+import * as ChromeSurfaceMod from "@/components/shell/chrome-surface";
+import ChromeSurfaceDefault, { ChromeSurface, Surface as ShellSurface } from "@/components/shell/chrome-surface";
 import * as ClaraOrbMod from "@/components/shell/clara-orb";
 import ClaraOrbDefault, { ClaraOrb } from "@/components/shell/clara-orb";
 import * as CommandPaletteMod from "@/components/shell/command-palette";
@@ -457,6 +459,15 @@ describe("UI, Shell, and Admin Component Exports Audit (React Error #130 Guard)"
       expect(CommandPaletteMod.default).toBeDefined();
     });
 
+    it("exports ChromeSurface", () => {
+      expect(ChromeSurface).toBeDefined();
+      expect(ChromeSurfaceDefault).toBeDefined();
+      expect(ShellSurface).toBeDefined();
+      expect(ChromeSurfaceMod.ChromeSurface).toBeDefined();
+      expect(ChromeSurfaceMod.Surface).toBeDefined();
+      expect(ChromeSurfaceMod.default).toBeDefined();
+    });
+
     it("exports CommandPaletteProvider", () => {
       expect(CommandPaletteProvider).toBeDefined();
       expect(CommandPaletteProviderDefault).toBeDefined();
@@ -528,6 +539,8 @@ describe("UI, Shell, and Admin Component Exports Audit (React Error #130 Guard)"
 
     it("barrel shell/index.ts exports all shell components without undefined", () => {
       expect(ShellIndex.AdminPreviewBanner).toBeDefined();
+      expect(ShellIndex.ChromeSurface).toBeDefined();
+      expect(ShellIndex.Surface).toBeDefined();
       expect(ShellIndex.ClaraOrb).toBeDefined();
       expect(ShellIndex.CommandPalette).toBeDefined();
       expect(ShellIndex.CommandPaletteProvider).toBeDefined();
