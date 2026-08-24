@@ -106,6 +106,7 @@ const LEGACY_ICON_NAMES: Record<string, IconName> = {
   spa: "body",
   symptoms: "body",
   stethoscope: "clinical-notes",
+  task_alt: "check",
   upload: "upload",
   upload_file: "upload",
   verified_user: "check",

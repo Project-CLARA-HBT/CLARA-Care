@@ -160,7 +160,7 @@ export type UseControlTowerConfigResult = {
   flowToggleKeys: FlowToggleKey[];
 };
 
-export default function useControlTowerConfig(): UseControlTowerConfigResult {
+export function useControlTowerConfig(): UseControlTowerConfigResult {
   const uiLanguage = useUILanguage();
   const [config, setConfig] = useState<ControlTowerConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -327,3 +327,5 @@ export default function useControlTowerConfig(): UseControlTowerConfigResult {
     flowToggleKeys: [...FLOW_TOGGLES]
   };
 }
+
+export default useControlTowerConfig;

@@ -264,7 +264,7 @@ export default function JourneyCreationWizardPage() {
                     </span>
                     {isSelected && (
                       <span className="text-[var(--brand-500)]">
-                        <Icon name="check" size="sm" />
+                        <Icon name="check" size={14} />
                       </span>
                     )}
                   </div>

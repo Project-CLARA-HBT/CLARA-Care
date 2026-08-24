@@ -17,12 +17,12 @@ describe("authentication middleware", () => {
 
   it("redirects legacy routes to canonical targets in next param when unauthenticated", () => {
     const response = middleware(
-      new NextRequest("https://clara.test/today?view=calendar"),
+      new NextRequest("https://clara.test/ask?view=calendar"),
     );
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
-      "https://clara.test/login?next=%2Fhome%3Fview%3Dcalendar",
+      "https://clara.test/login?next=%2Fchat%3Fview%3Dcalendar",
     );
   });
 
@@ -60,15 +60,17 @@ describe("authentication middleware", () => {
 
   describe("legacy route compatibility redirects when authenticated", () => {
     const testCases: Array<[string, string]> = [
-      ["/today", "/home"],
-      ["/chat", "/ask"],
-      ["/lifemap", "/health/timeline"],
-      ["/phr", "/health"],
-      ["/medicines", "/health/medications"],
-      ["/visits", "/care/visits"],
-      ["/family", "/you/sharing"],
-      ["/account/consent", "/you/privacy"],
-      ["/account/data", "/you/privacy"],
+      ["/ask", "/chat"],
+      ["/health/medications", "/medicines"],
+      ["/care/visits", "/visits"],
+      ["/health/timeline", "/lifemap"],
+      ["/health", "/phr"],
+      ["/selfmed", "/medicines"],
+      ["/careguard", "/medicines"],
+      ["/admin/rag-sources", "/admin/knowledge-sources"],
+      ["/admin/source-hub", "/admin/knowledge-sources"],
+      ["/lifemap/visit-prep", "/care/prepare"],
+      ["/role-select", "/dashboard"],
     ];
 
     for (const [legacyPath, canonicalPath] of testCases) {
@@ -90,15 +92,17 @@ describe("authentication middleware", () => {
 
     it("verifies all expected legacy routes are in the redirect dictionary", () => {
       expect(LEGACY_ROUTE_REDIRECTS).toEqual({
-        "/today": "/home",
-        "/chat": "/ask",
-        "/lifemap": "/health/timeline",
-        "/phr": "/health",
-        "/medicines": "/health/medications",
-        "/visits": "/care/visits",
-        "/family": "/you/sharing",
-        "/account/consent": "/you/privacy",
-        "/account/data": "/you/privacy",
+        "/ask": "/chat",
+        "/health/medications": "/medicines",
+        "/care/visits": "/visits",
+        "/health/timeline": "/lifemap",
+        "/health": "/phr",
+        "/selfmed": "/medicines",
+        "/careguard": "/medicines",
+        "/admin/rag-sources": "/admin/knowledge-sources",
+        "/admin/source-hub": "/admin/knowledge-sources",
+        "/lifemap/visit-prep": "/care/prepare",
+        "/role-select": "/dashboard",
       });
     });
   });

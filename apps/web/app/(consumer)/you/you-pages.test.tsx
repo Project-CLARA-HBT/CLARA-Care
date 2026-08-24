@@ -86,7 +86,7 @@ describe("You & Privacy Route Pages", () => {
       render(<ConsumerYouPage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId("you-overview-page")).toBeInTheDocument();
+        expect(screen.getByTestId("profile-summary-card")).toBeInTheDocument();
       });
 
       expect(screen.getByText("Cá nhân & Quyền riêng tư")).toBeInTheDocument();

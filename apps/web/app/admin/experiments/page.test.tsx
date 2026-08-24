@@ -88,6 +88,7 @@ describe("AdminExperimentsPage (Spec v5 Section 6.67)", () => {
 
     await waitFor(() => {
       expect(mockListExperiments).toHaveBeenCalled();
+      expect(screen.getByText("rag_graphrag_pipeline")).toBeInTheDocument();
     });
 
     const workbenchContainer = document.querySelector(

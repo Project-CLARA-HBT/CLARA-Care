@@ -107,6 +107,20 @@ export const ADMIN_TOOLS: AdminToolItem[] = [
     keywords: ["ecosystem", "he sinh thai", "doi tac", "partners", "trust score", "canh bao", "federation", "plt-03"],
     isPrimaryTab: false,
   },
+  {
+    id: "system",
+    title: "Giám sát Hệ thống & Sức khỏe Dịch vụ",
+    description: "Giám sát thời gian thực 6 dịch vụ, percentiles độ trễ và cấu hình môi trường",
+    hint: "Sức khỏe 6 dịch vụ và cấu hình môi trường",
+    category: "platform",
+    href: "/admin/system",
+    code: "PLT-04",
+    icon: "settings",
+    badge: "Telemetry",
+    badgeTone: "info",
+    keywords: ["system", "telemetry", "health", "services", "giam sat", "he thong", "api", "ml", "database", "redis", "ocr", "asr", "plt-04"],
+    isPrimaryTab: false,
+  },
 
   // 2. Knowledge
   {
@@ -223,6 +237,20 @@ export const ADMIN_TOOLS: AdminToolItem[] = [
     keywords: ["clinical analytics", "lam sang", "fides", "ddi", "safety", "an toan", "kiem chung", "a06"],
     isPrimaryTab: false,
   },
+  {
+    id: "experiments",
+    title: "Thử nghiệm & Cờ tính năng (Feature Flags)",
+    description: "Quản lý cờ tính năng runtime, tỷ lệ rollout canary (0-100%) và ngắt khẩn cấp",
+    hint: "Rollout canary và công tắc ngắt khẩn cấp",
+    category: "ai_systems",
+    href: "/admin/experiments",
+    code: "AI-05",
+    icon: "scan",
+    badge: "Flags",
+    badgeTone: "primary",
+    keywords: ["experiments", "feature flags", "co tinh nang", "thu nghiem", "rollout", "canary", "kill switch", "ai-05"],
+    isPrimaryTab: false,
+  },
 
   // 4. Governance
   {
@@ -293,6 +321,20 @@ export const ADMIN_TOOLS: AdminToolItem[] = [
     badge: "Users",
     badgeTone: "primary",
     keywords: ["users", "nguoi dung", "tai khoan", "phan quyen", "roles", "lock", "sessions", "gov-05", "admin/users"],
+    isPrimaryTab: false,
+  },
+  {
+    id: "feedback",
+    title: "Hàng đợi Xử lý Phản hồi Lâm sàng",
+    description: "Tiếp nhận và giải quyết phản hồi từ bác sĩ, chuyên gia và người dùng lâm sàng",
+    hint: "Phản hồi lâm sàng và giải quyết sai sót",
+    category: "governance",
+    href: "/admin/feedback",
+    code: "GOV-06",
+    icon: "clinical-notes",
+    badge: "Triage",
+    badgeTone: "warning",
+    keywords: ["feedback", "triage", "phan hoi", "lam sang", "bac si", "sai sot", "gov-06", "admin/feedback"],
     isPrimaryTab: false,
   },
 ];

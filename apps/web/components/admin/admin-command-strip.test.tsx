@@ -11,14 +11,15 @@ import {
 } from "./admin-tools-registry";
 
 describe("AdminToolsRegistry", () => {
-  it("contains all 16 admin modules across 4 categories", () => {
-    expect(ADMIN_TOOLS.length).toBe(16);
+  it("contains all 19 admin modules across 4 categories", () => {
+    expect(ADMIN_TOOLS.length).toBe(19);
 
     const platformTools = getAdminToolsByCategory("platform");
     expect(platformTools.map((t) => t.id)).toEqual([
       "overview",
       "control-tower",
       "ecosystem",
+      "system",
     ]);
 
     const knowledgeTools = getAdminToolsByCategory("knowledge");
@@ -35,6 +36,7 @@ describe("AdminToolsRegistry", () => {
       "analytics",
       "rag-eval",
       "clinical-analytics",
+      "experiments",
     ]);
 
     const govTools = getAdminToolsByCategory("governance");
@@ -44,6 +46,7 @@ describe("AdminToolsRegistry", () => {
       "community-moderation",
       "security",
       "users",
+      "feedback",
     ]);
   });
 
@@ -241,7 +244,7 @@ describe("AdminCommandStrip", () => {
       const dialog = screen.getByRole("dialog");
 
       // Click "Quản trị" category pill
-      const govPill = within(dialog).getByRole("tab", { name: /Quản trị 5/i });
+      const govPill = within(dialog).getByRole("tab", { name: /Quản trị 6/i });
       fireEvent.click(govPill);
 
       // Governance tools should be visible
@@ -250,6 +253,7 @@ describe("AdminCommandStrip", () => {
       expect(within(dialog).getByText("Kiểm duyệt cộng đồng")).toBeInTheDocument();
       expect(within(dialog).getByText("Bảo mật & Khóa API")).toBeInTheDocument();
       expect(within(dialog).getByText("Quản trị người dùng (User Administration)")).toBeInTheDocument();
+      expect(within(dialog).getByText("Hàng đợi Xử lý Phản hồi Lâm sàng")).toBeInTheDocument();
 
       // Other category tools should not be visible
       expect(within(dialog).queryByText("Tháp Điều phối (Control Tower)")).not.toBeInTheDocument();

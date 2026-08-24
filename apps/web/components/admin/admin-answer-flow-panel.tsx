@@ -21,7 +21,7 @@ function toNumber(value: string): number {
 const DEFAULT_SELECTED_NODE: FlowNodeId = "role_router";
 const NODE_IDS = Object.keys(FLOW_NODE_INFOS) as FlowNodeId[];
 
-export default function AdminAnswerFlowPanel() {
+export function AdminAnswerFlowPanel() {
   const [selectedNode, setSelectedNode] = useState<FlowNodeId>(DEFAULT_SELECTED_NODE);
   const [debugLowContextScore, setDebugLowContextScore] = useState(0.3);
 
@@ -310,3 +310,5 @@ export default function AdminAnswerFlowPanel() {
     </div>
   );
 }
+
+export default AdminAnswerFlowPanel;

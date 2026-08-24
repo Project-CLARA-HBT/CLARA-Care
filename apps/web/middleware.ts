@@ -28,15 +28,17 @@ const PUBLIC_PATHS = new Set([
 ]);
 
 export const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
-  "/today": "/home",
-  "/chat": "/ask",
-  "/lifemap": "/health/timeline",
-  "/phr": "/health",
-  "/medicines": "/health/medications",
-  "/visits": "/care/visits",
-  "/family": "/you/sharing",
-  "/account/consent": "/you/privacy",
-  "/account/data": "/you/privacy",
+  "/ask": "/chat",
+  "/health/medications": "/medicines",
+  "/care/visits": "/visits",
+  "/health/timeline": "/lifemap",
+  "/health": "/phr",
+  "/selfmed": "/medicines",
+  "/careguard": "/medicines",
+  "/admin/rag-sources": "/admin/knowledge-sources",
+  "/admin/source-hub": "/admin/knowledge-sources",
+  "/lifemap/visit-prep": "/care/prepare",
+  "/role-select": "/dashboard",
 };
 
 function isPublicPath(pathname: string): boolean {

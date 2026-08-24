@@ -121,3 +121,5 @@ export function usePreferences(): PreferenceContextValue {
   }
   return context;
 }
+
+export default PreferenceProvider;

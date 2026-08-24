@@ -64,3 +64,5 @@ export function MedicalTerm({
     </details>
   );
 }
+
+export default MedicalTerm;

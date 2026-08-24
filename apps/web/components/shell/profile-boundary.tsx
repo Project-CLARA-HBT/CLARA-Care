@@ -176,3 +176,4 @@ export function useProfileBoundary(): ProfileContextBoundaryValue {
 }
 
 export { useProfileBoundary as useProfileContext };
+export default ProfileBoundary;

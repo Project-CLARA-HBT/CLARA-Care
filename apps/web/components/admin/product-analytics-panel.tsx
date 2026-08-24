@@ -45,7 +45,7 @@ function buildState(
   return { kind: "populated", data };
 }
 
-export default function ProductAnalyticsPanel() {
+export function ProductAnalyticsPanel() {
   const [range, setRange] = useState<Required<AnalyticsRange>>(() => defaultAnalyticsRange());
   const [data, setData] = useState<ProductAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -225,3 +225,5 @@ function ProductAnalyticsContent({ analytics }: { analytics: ProductAnalytics })
     </div>
   );
 }
+
+export default ProductAnalyticsPanel;

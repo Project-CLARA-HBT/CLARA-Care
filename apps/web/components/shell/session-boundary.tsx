@@ -216,3 +216,5 @@ export function useSession(): SessionContextValue {
   }
   return context;
 }
+
+export default SessionBoundary;

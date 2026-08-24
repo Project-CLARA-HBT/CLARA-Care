@@ -63,7 +63,7 @@ function getOutcomeChip(outcome: string): { tone: StatusTone; label: string } {
   return { tone: "info", label: outcome || "Ghi nhận" };
 }
 
-export default function AdminOverviewPanel() {
+export function AdminOverviewPanel() {
   const { config, error: configError, isLoading: isConfigLoading, reload: reloadConfig } =
     useControlTowerConfig();
 
@@ -677,3 +677,5 @@ export default function AdminOverviewPanel() {
     </div>
   );
 }
+
+export default AdminOverviewPanel;

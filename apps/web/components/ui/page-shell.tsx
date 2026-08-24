@@ -1,4 +1,4 @@
-export default function PageShell({
+export function PageShell({
   title,
   description,
   subtitle,
@@ -46,3 +46,5 @@ export default function PageShell({
     </section>
   );
 }
+
+export default PageShell;

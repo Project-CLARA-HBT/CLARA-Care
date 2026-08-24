@@ -117,3 +117,5 @@ export function useCommandPaletteContext(): CommandPaletteContextValue {
   }
   return context;
 }
+
+export default CommandPaletteProvider;

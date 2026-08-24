@@ -429,3 +429,5 @@ export function useShellMode(): ShellModeContextValue {
   }
   return context;
 }
+
+export default ShellModeProvider;

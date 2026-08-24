@@ -47,7 +47,7 @@ function normalizeStatus(value: string): "ok" | "warn" | "error" | "pending" {
   return "pending";
 }
 
-export default function AdminFlowRuntimePanel() {
+export function AdminFlowRuntimePanel() {
   const uiLanguage = useUILanguage();
   const [items, setItems] = useState<SystemFlowEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -295,3 +295,5 @@ export default function AdminFlowRuntimePanel() {
     </section>
   );
 }
+
+export default AdminFlowRuntimePanel;

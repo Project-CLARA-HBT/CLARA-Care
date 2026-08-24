@@ -683,7 +683,7 @@ export default function JourneyTimelinePage() {
 
                       {item.truth_state === "disputed" && (
                         <div className="mt-3 p-2.5 rounded-lg bg-[var(--status-warn-bg,rgba(250,189,52,0.1))] text-xs text-[var(--status-warn-text)] flex items-center gap-2">
-                          <Icon name="warning" size="sm" />
+                          <Icon name="warning" size={14} />
                           <span>{copy("lifemap.timeline.item.disputedNotice")}</span>
                         </div>
                       )}

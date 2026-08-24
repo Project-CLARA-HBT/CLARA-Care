@@ -18,7 +18,7 @@ type AdminShellProps = {
   children: ReactNode;
 };
 
-export default function AdminShell({
+export function AdminShell({
   activeTab,
   title,
   description,
@@ -37,3 +37,5 @@ export default function AdminShell({
     </div>
   );
 }
+
+export default AdminShell;

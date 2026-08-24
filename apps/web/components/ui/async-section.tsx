@@ -218,7 +218,7 @@ function DefaultError({
  *
  * Requirement 5.2.
  */
-export default function AsyncSection<T>({
+export function AsyncSection<T>({
   state,
   children,
   renderLoading,
@@ -258,3 +258,5 @@ export default function AsyncSection<T>({
     }
   }
 }
+
+export default AsyncSection;

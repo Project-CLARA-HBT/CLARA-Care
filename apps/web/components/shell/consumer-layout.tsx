@@ -503,3 +503,5 @@ export function ConsumerLayout({ children }: { children: ReactNode }) {
     </ShellLayoutContext.Provider>
   );
 }
+
+export default ConsumerLayout;

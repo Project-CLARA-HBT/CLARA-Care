@@ -105,7 +105,7 @@ function runStatusClass(status: SimulatedRun["status"]): string {
   return "bg-[var(--surface-danger-soft)] text-[var(--text-danger)]";
 }
 
-export default function AdminFlowDebugger({
+export function AdminFlowDebugger({
   ragFlow,
   lowContextThreshold
 }: AdminFlowDebuggerProps) {
@@ -385,3 +385,5 @@ export default function AdminFlowDebugger({
     </section>
   );
 }
+
+export default AdminFlowDebugger;

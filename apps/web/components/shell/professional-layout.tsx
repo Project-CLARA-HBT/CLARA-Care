@@ -566,3 +566,5 @@ export function ProfessionalLayout({ children }: { children: ReactNode }) {
     </ShellLayoutContext.Provider>
   );
 }
+
+export default ProfessionalLayout;

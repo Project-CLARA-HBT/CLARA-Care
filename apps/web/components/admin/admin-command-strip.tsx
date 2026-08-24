@@ -14,7 +14,7 @@ export interface AdminCommandStripProps {
   className?: string;
 }
 
-export default function AdminCommandStrip({
+export function AdminCommandStrip({
   activeTab,
   className = "",
 }: AdminCommandStripProps) {
@@ -146,3 +146,5 @@ export default function AdminCommandStrip({
     </>
   );
 }
+
+export default AdminCommandStrip;

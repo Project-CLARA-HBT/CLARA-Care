@@ -986,7 +986,7 @@ function resolveNodeStatus(node: FlowNodeDef, ragFlow?: ControlTowerRagFlow | nu
   return ragFlow?.[node.toggleKey] ? "on" : "off";
 }
 
-export default function AdminFlowVisualizer({
+export function AdminFlowVisualizer({
   ragFlow,
   onToggle,
   onSelectNode,
@@ -1316,3 +1316,5 @@ export default function AdminFlowVisualizer({
     </section>
   );
 }
+
+export default AdminFlowVisualizer;

@@ -42,7 +42,7 @@ const BADGE_TONE_STYLES: Record<
     "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-muted)]",
 };
 
-export default function AdminAppLauncherModal({
+export function AdminAppLauncherModal({
   isOpen,
   onClose,
   activeTab,
@@ -454,3 +454,5 @@ export default function AdminAppLauncherModal({
     </div>
   );
 }
+
+export default AdminAppLauncherModal;

@@ -132,3 +132,5 @@ export function TabPanel({
     </div>
   );
 }
+
+export default Tabs;

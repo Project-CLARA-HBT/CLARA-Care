@@ -21,7 +21,7 @@ export interface AdminRagSourcesPanelProps {
   onSelectSource?: (source: ControlTowerRagSource) => void;
 }
 
-export default function AdminRagSourcesPanel({
+export function AdminRagSourcesPanel({
   className = "",
   onSelectSource,
 }: AdminRagSourcesPanelProps) {
@@ -562,3 +562,5 @@ export default function AdminRagSourcesPanel({
     </div>
   );
 }
+
+export default AdminRagSourcesPanel;

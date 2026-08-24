@@ -175,3 +175,5 @@ export function EmptyState({
     </div>
   );
 }
+
+export default SurfaceCard;

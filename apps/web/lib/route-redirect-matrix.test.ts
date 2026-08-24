@@ -10,15 +10,17 @@ import {
 describe("Route Capability and Redirect Matrix", () => {
   describe("Legacy route redirect mappings", () => {
     const requiredRedirects: Array<[string, string]> = [
-      ["/today", "/home"],
-      ["/chat", "/ask"],
-      ["/lifemap", "/health/timeline"],
-      ["/phr", "/health"],
-      ["/medicines", "/health/medications"],
-      ["/visits", "/care/visits"],
-      ["/family", "/you/sharing"],
-      ["/account/consent", "/you/privacy"],
-      ["/account/data", "/you/privacy"],
+      ["/ask", "/chat"],
+      ["/health/medications", "/medicines"],
+      ["/care/visits", "/visits"],
+      ["/health/timeline", "/lifemap"],
+      ["/health", "/phr"],
+      ["/selfmed", "/medicines"],
+      ["/careguard", "/medicines"],
+      ["/admin/rag-sources", "/admin/knowledge-sources"],
+      ["/admin/source-hub", "/admin/knowledge-sources"],
+      ["/lifemap/visit-prep", "/care/prepare"],
+      ["/role-select", "/dashboard"],
     ];
 
     for (const [legacyRoute, canonicalRoute] of requiredRedirects) {

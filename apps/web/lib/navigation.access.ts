@@ -126,6 +126,11 @@ export function resolvePostLoginPath(options: {
 }
 
 export function isRouteAllowedForRole(pathname: string, role: UserRole): boolean {
+  // Invariant: Admin role has full implicit access to all features across the platform
+  if (role === "admin") {
+    return true;
+  }
+
   if (pathname === "/community" || pathname.startsWith("/community/")) {
     return isFlagOn(process.env.NEXT_PUBLIC_SOCIAL_PLATFORM_ENABLED);
   }
@@ -136,7 +141,7 @@ export function isRouteAllowedForRole(pathname: string, role: UserRole): boolean
     return isFlagOn(process.env.NEXT_PUBLIC_COMPLIANCE_DSAR_ENABLED);
   }
   if (pathname === "/admin/dsar" || pathname.startsWith("/admin/dsar/")) {
-    return role === "admin" && isFlagOn(process.env.NEXT_PUBLIC_COMPLIANCE_DSAR_ENABLED);
+    return isFlagOn(process.env.NEXT_PUBLIC_COMPLIANCE_DSAR_ENABLED);
   }
 
   return ROUTE_ACCESS.some(

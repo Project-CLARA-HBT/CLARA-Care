@@ -30,7 +30,7 @@ const FIELD_CLASS = [
   "focus-visible:ring-offset-[color:var(--surface-muted)]"
 ].join(" ");
 
-export default function AnalyticsDateRange({
+export function AnalyticsDateRange({
   value,
   onChange,
   onApply,
@@ -102,3 +102,5 @@ export default function AnalyticsDateRange({
     </form>
   );
 }
+
+export default AnalyticsDateRange;

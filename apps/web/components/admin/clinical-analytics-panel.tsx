@@ -51,7 +51,7 @@ function buildState(
   return { kind: "populated", data };
 }
 
-export default function ClinicalAnalyticsPanel() {
+export function ClinicalAnalyticsPanel() {
   const [range, setRange] = useState<Required<AnalyticsRange>>(() => defaultAnalyticsRange());
   const [data, setData] = useState<ClinicalAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -251,3 +251,5 @@ function ClinicalAnalyticsContent({
     </div>
   );
 }
+
+export default ClinicalAnalyticsPanel;

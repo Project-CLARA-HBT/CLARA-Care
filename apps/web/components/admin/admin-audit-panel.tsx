@@ -49,7 +49,7 @@ function formatMeta(meta: Record<string, unknown>): string {
   }
 }
 
-export default function AdminAuditPanel() {
+export function AdminAuditPanel() {
   const [records, setRecords] = useState<AdminAuditRecord[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -165,3 +165,5 @@ function AdminAuditTable({ rows }: { rows: AdminAuditRecord[] }) {
     </PanelCard>
   );
 }
+
+export default AdminAuditPanel;

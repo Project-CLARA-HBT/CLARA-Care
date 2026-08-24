@@ -199,7 +199,7 @@ function computeFlowHealth(flow: FlowFlags): number {
   return clamp(requiredOn * 11 + optionalOn * 6);
 }
 
-export default function AdminObservabilityPanel() {
+export function AdminObservabilityPanel() {
   const uiLanguage = useUILanguage();
   const [state, setState] = useState<ObservabilityState>(INITIAL_STATE);
   const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
@@ -853,3 +853,5 @@ export default function AdminObservabilityPanel() {
     </div>
   );
 }
+
+export default AdminObservabilityPanel;

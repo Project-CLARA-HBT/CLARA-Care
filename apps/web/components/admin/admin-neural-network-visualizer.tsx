@@ -85,7 +85,7 @@ function edgePath(from: NeuralNode, to: NeuralNode): string {
   return `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`;
 }
 
-export default function AdminNeuralNetworkVisualizer({
+export function AdminNeuralNetworkVisualizer({
   ragFlow,
 }: AdminNeuralNetworkVisualizerProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -245,3 +245,5 @@ export default function AdminNeuralNetworkVisualizer({
     </section>
   );
 }
+
+export default AdminNeuralNetworkVisualizer;
