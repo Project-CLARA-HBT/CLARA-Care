@@ -174,13 +174,13 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
   // On public/auth/share routes: suppresses ContextHeader/GlobalCommandBar and WorkspaceDock, mounts clean unauthenticated container
   if (isPublicOrUtility) {
     return (
-      <main
-        id="main-content"
+      <div
+        id="public-shell-root"
         className="min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]"
       >
         {children}
         <CommandPalette role={effectiveRole} />
-      </main>
+      </div>
     );
   }
 

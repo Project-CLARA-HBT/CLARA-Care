@@ -738,7 +738,7 @@ function YouOverviewContent() {
               className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 text-sm font-semibold text-[var(--status-danger-text)] transition hover:bg-[var(--status-danger-bg)]/80 disabled:cursor-not-allowed disabled:opacity-70"
               data-testid="you-sign-out-btn"
             >
-              <Icon name="arrow-right" size={18} />
+              <Icon name="arrow-right" size="1.15rem" />
               <span>
                 {isLoggingOut
                   ? isEn
