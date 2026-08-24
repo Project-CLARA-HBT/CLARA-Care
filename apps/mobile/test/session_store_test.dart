@@ -205,6 +205,79 @@ void main() {
       expect(storage.isEmpty, isTrue);
     });
 
+    test('clear() purges careguard and lifemap offline caches (both generic and scoped)', () async {
+      final storage = InMemorySessionSecureStorage();
+      final accessToken = buildJwt(
+        exp: _epochSecondsFromNow(const Duration(days: 30)),
+        extraClaims: {'sub': 'user-123'},
+      );
+      final store = PersistentSessionStore(storage: storage);
+      await store.setSession(
+        email: 'doctor@example.com',
+        accessToken: accessToken,
+        refreshToken: 'refresh-token',
+        role: 'doctor',
+      );
+
+      // Seed offline cache keys
+      await storage.write(PersistentSessionStore.careguardOfflineCacheKey, 'careguard-data');
+      await storage.write(PersistentSessionStore.lifeMapReadCacheKey, 'lifemap-data');
+      await storage.write(PersistentSessionStore.careguardScopedKey('user-123'), 'careguard-user-data');
+      await storage.write(PersistentSessionStore.lifeMapScopedKey('user-123'), 'lifemap-user-data');
+      await storage.write(PersistentSessionStore.careguardScopedKey('doctor@example.com'), 'careguard-email-data');
+
+      await store.clear();
+
+      expect(storage.snapshot.containsKey(PersistentSessionStore.careguardOfflineCacheKey), isFalse);
+      expect(storage.snapshot.containsKey(PersistentSessionStore.lifeMapReadCacheKey), isFalse);
+      expect(storage.snapshot.containsKey(PersistentSessionStore.careguardScopedKey('user-123')), isFalse);
+      expect(storage.snapshot.containsKey(PersistentSessionStore.lifeMapScopedKey('user-123')), isFalse);
+      expect(storage.snapshot.containsKey(PersistentSessionStore.careguardScopedKey('doctor@example.com')), isFalse);
+    });
+
+    test('setSession() purges previous user offline caches before setting new credentials', () async {
+      final storage = InMemorySessionSecureStorage();
+      final user1Token = buildJwt(
+        exp: _epochSecondsFromNow(const Duration(days: 30)),
+        extraClaims: {'sub': 'user-1'},
+      );
+      final store = PersistentSessionStore(storage: storage);
+      await store.setSession(
+        email: 'user1@example.com',
+        accessToken: user1Token,
+        refreshToken: 'refresh-1',
+        role: 'normal',
+      );
+
+      // Seed offline cache keys for user 1
+      await storage.write(PersistentSessionStore.careguardOfflineCacheKey, 'cg-user1');
+      await storage.write(PersistentSessionStore.lifeMapReadCacheKey, 'lm-user1');
+      await storage.write(PersistentSessionStore.careguardScopedKey('user-1'), 'cg-scoped-user1');
+      await storage.write(PersistentSessionStore.lifeMapScopedKey('user-1'), 'lm-scoped-user1');
+
+      // User 2 logs in
+      final user2Token = buildJwt(
+        exp: _epochSecondsFromNow(const Duration(days: 30)),
+        extraClaims: {'sub': 'user-2'},
+      );
+      await store.setSession(
+        email: 'user2@example.com',
+        accessToken: user2Token,
+        refreshToken: 'refresh-2',
+        role: 'doctor',
+      );
+
+      // User 1's caches must be deleted
+      expect(storage.snapshot.containsKey(PersistentSessionStore.careguardScopedKey('user-1')), isFalse);
+      expect(storage.snapshot.containsKey(PersistentSessionStore.lifeMapScopedKey('user-1')), isFalse);
+      expect(storage.snapshot.containsKey(PersistentSessionStore.careguardOfflineCacheKey), isFalse);
+      expect(storage.snapshot.containsKey(PersistentSessionStore.lifeMapReadCacheKey), isFalse);
+
+      // User 2's session credentials are stored
+      expect(store.email, 'user2@example.com');
+      expect(store.role, 'doctor');
+    });
+
     test('example: hydrate with empty storage stays unauthenticated', () async {
       final storage = InMemorySessionSecureStorage();
       final store = PersistentSessionStore(storage: storage);

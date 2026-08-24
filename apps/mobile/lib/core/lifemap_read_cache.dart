@@ -31,17 +31,26 @@ class CachedLifeMapToday {
 class LifeMapReadCache {
   LifeMapReadCache({
     SessionSecureStorage? storage,
+    this.userId,
     bool enabled = kLifeMapOfflineReadCacheEnabled,
   })  : _storage = storage ?? FlutterSecureSessionStorage(),
         _enabled = enabled;
 
+  static const String baseStorageKey = 'clara.lifemap.today.read_projection';
   static const String storageKey = 'clara.lifemap.today.read_projection';
   static const int _version = 1;
   static const int _maxItems = 100;
 
+  static String scopedStorageKey(String? userId) =>
+      userId != null && userId.isNotEmpty
+          ? 'clara.lifemap.today.$userId.read_projection'
+          : storageKey;
+
   final SessionSecureStorage _storage;
+  final String? userId;
   final bool _enabled;
 
+  String get effectiveStorageKey => scopedStorageKey(userId);
   bool get enabled => _enabled;
 
   static Map<String, dynamic> project(Map<String, dynamic> input) {
@@ -77,7 +86,7 @@ class LifeMapReadCache {
     if (!_enabled) return false;
     final cachedAt = (now ?? DateTime.now()).toUtc();
     await _storage.write(
-      storageKey,
+      effectiveStorageKey,
       jsonEncode(<String, dynamic>{
         'version': _version,
         'cached_at': cachedAt.toIso8601String(),
@@ -88,9 +97,9 @@ class LifeMapReadCache {
     return true;
   }
 
-  Future<CachedLifeMapToday?> read() async {
+  Future<CachedLifeMapToday?> read({DateTime? now}) async {
     if (!_enabled) return null;
-    final raw = await _storage.read(storageKey);
+    final raw = await _storage.read(effectiveStorageKey);
     if (raw == null || raw.isEmpty) return null;
     try {
       final decoded = jsonDecode(raw);
@@ -101,15 +110,24 @@ class LifeMapReadCache {
           DateTime.tryParse(decoded['valid_until']?.toString() ?? '');
       final data = decoded['data'];
       if (cachedAt == null || validUntil == null || data is! Map) return null;
-      return CachedLifeMapToday(
+      final cached = CachedLifeMapToday(
         cachedAt: cachedAt.toUtc(),
         validUntil: validUntil.toUtc(),
         data: project(data.cast<String, dynamic>()),
       );
+      if (cached.isStaleAt(now ?? DateTime.now())) {
+        return null;
+      }
+      return cached;
     } catch (_) {
       return null;
     }
   }
 
-  Future<void> clear() => _storage.delete(storageKey);
+  Future<void> clear() async {
+    await _storage.delete(effectiveStorageKey);
+    if (effectiveStorageKey != storageKey) {
+      await _storage.delete(storageKey);
+    }
+  }
 }

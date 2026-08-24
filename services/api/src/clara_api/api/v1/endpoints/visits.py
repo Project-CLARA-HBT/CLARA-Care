@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+import hashlib
+import json
+from datetime import UTC, datetime
 from typing import Any, NoReturn, cast
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -89,6 +91,27 @@ class VisitShareRequest(BaseModel):
 class VisitConsentRequest(BaseModel):
     purpose: str
     policy_version: str = Field(min_length=1, max_length=64)
+
+
+class ScribeConsentPatchRequest(BaseModel):
+    granted: bool | None = Field(
+        default=None,
+        description="Whether scribe consent is granted (True) or revoked (False)",
+    )
+    status: str | None = Field(
+        default=None,
+        pattern="^(granted|revoked)$",
+        description="Consent status ('granted' or 'revoked')",
+    )
+    policy_version: str = Field(
+        default="visit-scribe-v1", min_length=1, max_length=64
+    )
+    purpose: str = Field(default="scribe_recording", max_length=64)
+    reason: str = Field(default="", max_length=255)
+
+
+class VisitVerifyRequest(BaseModel):
+    notes: str | None = Field(default=None, max_length=1000)
 
 
 class IntakeAnswerRequest(BaseModel):
@@ -932,6 +955,104 @@ def revoke_scribe_consent_endpoint(
     except DomainNotFoundError as error:
         db.rollback()
         _raise(error)
+
+
+@router.patch("/{visit_id}/scribe-consent")
+def update_scribe_consent_endpoint(
+    visit_id: str,
+    payload: ScribeConsentPatchRequest | None = None,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict[str, Any]:
+    user, _ = _scope(db, token)
+    req = payload or ScribeConsentPatchRequest()
+    try:
+        resolved_visit_id = _resolve_visit_id(db, user.id, visit_id)
+        is_revoking = req.granted is False or req.status == "revoked"
+        if is_revoking:
+            revoked_count = revoke_visit_consent(
+                db,
+                owner=user,
+                visit_id=resolved_visit_id,
+                purpose=req.purpose,
+                reason=req.reason or "user_revoked",
+            )
+            db.commit()
+            return {
+                "id": visit_id,
+                "status": "revoked",
+                "purpose": req.purpose,
+                "revoked": True,
+                "revoked_count": revoked_count,
+                "updated_at": datetime.now(tz=UTC).isoformat(),
+            }
+        else:
+            consent = grant_visit_consent(
+                db,
+                owner=user,
+                visit_id=resolved_visit_id,
+                purpose=req.purpose,
+                policy_version=req.policy_version,
+            )
+            db.commit()
+            return {
+                "id": consent.public_id,
+                "visit_id": visit_id,
+                "status": "granted",
+                "purpose": consent.purpose,
+                "policy_version": consent.policy_version,
+                "granted_at": consent.granted_at,
+            }
+    except (DomainNotFoundError, DomainValidationError) as error:
+        db.rollback()
+        _raise(error)
+
+
+@router.post("/{visit_id}/verify")
+def verify_visit_endpoint(
+    visit_id: str,
+    payload: VisitVerifyRequest | None = None,
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(require_roles("doctor", "admin")),
+) -> dict[str, Any]:
+    user = current_user(db, token)
+    visit = db.execute(
+        select(LifeMapVisit).where(_public_selector(LifeMapVisit, visit_id))
+    ).scalar_one_or_none()
+    if visit is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit not found")
+
+    visit.status = "verified"
+    verified_at = datetime.now(tz=UTC)
+    signature_payload = {
+        "visit_id": visit.public_id,
+        "profile_id": visit.profile_id,
+        "title": visit.title,
+        "status": "verified",
+        "verified_by_user_id": user.id,
+        "verified_by_email": user.email,
+        "verified_by_role": user.role,
+        "verified_at": verified_at.isoformat(),
+        "notes": payload.notes if payload else None,
+    }
+    signature_digest = hashlib.sha256(
+        json.dumps(signature_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+    db.commit()
+    db.refresh(visit)
+
+    return {
+        "id": visit.public_id,
+        "title": visit.title,
+        "goal": visit.goal,
+        "visit_type": visit.visit_type,
+        "scheduled_at": visit.scheduled_at,
+        "status": visit.status,
+        "signature_digest": signature_digest,
+        "verified_by": user.id,
+        "verified_at": verified_at.isoformat(),
+    }
 
 
 @pack_router.get("/shared/{share_token}")

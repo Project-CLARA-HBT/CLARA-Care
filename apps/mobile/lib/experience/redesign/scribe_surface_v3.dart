@@ -467,13 +467,12 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
     }
   }
 
-  /// Switches to the detail view for [view]. Consent always resets to absent on
-  /// open, so processing is blocked until the clinician captures it in-session
-  /// (fail-closed, INV-2).
+  /// Switches to the detail view for [view]. Consent initializes from
+  /// the session's active consent status (INV-2).
   void _openSessionView(ScribeSessionView view) {
     setState(() {
       _active = view;
-      _consentCaptured = false;
+      _consentCaptured = view.hasActiveConsent;
       _appendController.clear();
       _detailError = null;
     });

@@ -403,5 +403,49 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('opening an existing session with has_active_consent initializes consent as granted',
+        (tester) async {
+      final api = FakeApiClient()
+        ..stub('listScribeSessions', response: {
+          'items': [
+            {
+              'id': 30,
+              'title': 'Phiên đã có đồng ý',
+              'status': 'recording',
+              'transcript': 'Khám ban đầu',
+              'has_active_consent': true,
+              'consent_id': 88,
+              'soap': {},
+            }
+          ]
+        })
+        ..stub('getScribeSession', response: {
+          'id': 30,
+          'title': 'Phiên đã có đồng ý',
+          'status': 'recording',
+          'transcript': 'Khám ban đầu',
+          'has_active_consent': true,
+          'consent_id': 88,
+          'soap': {},
+        });
+      final store = await FakeSessionStore.authenticated(role: 'doctor');
+
+      await tester.pumpWidget(_host(ScribeSurfaceV3(
+        apiClient: api,
+        sessionStore: store,
+        resolver: _scribeOn(),
+      )));
+      await tester.pumpAndSettle();
+
+      // Open session
+      await tester.tap(find.text('Phiên đã có đồng ý'));
+      await tester.pumpAndSettle();
+
+      // Consent is initialized as active from session.hasActiveConsent
+      expect(find.text('Đã thu thập sự đồng ý của bệnh nhân.'), findsOneWidget);
+      expect(find.text('Thu hồi sự đồng ý'), findsOneWidget);
+      expect(find.text('Thu thập sự đồng ý'), findsNothing);
+    });
   });
 }

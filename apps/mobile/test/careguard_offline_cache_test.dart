@@ -85,7 +85,7 @@ void main() {
 
       expect(await cache.save(_sampleView(), now: now), isTrue);
 
-      final cached = await cache.read();
+      final cached = await cache.read(now: now);
       expect(cached, isNotNull);
       expect(cached!.cachedAt.toUtc(), equals(now));
       expect(cached.view['riskLevel'], 'high');
@@ -94,6 +94,44 @@ void main() {
         (cached.view['alerts'] as List).first['message'],
         'Phối hợp này có thể làm tăng nguy cơ chảy máu.',
       );
+    });
+
+    test('stale/expired cache returns null', () async {
+      final storage = InMemorySessionSecureStorage();
+      final cache = CareguardOfflineCache(
+        storage: storage,
+        enabled: true,
+        validity: const Duration(hours: 24),
+      );
+      final now = DateTime.utc(2026, 1, 1, 12, 0, 0);
+
+      await cache.save(_sampleView(), now: now);
+
+      // Within validity: returns data
+      expect(await cache.read(now: now.add(const Duration(hours: 23))), isNotNull);
+      // Beyond validity: returns null
+      expect(await cache.read(now: now.add(const Duration(hours: 25))), isNull);
+    });
+
+    test('scopes storage key with userId', () async {
+      final storage = InMemorySessionSecureStorage();
+      final cache1 = CareguardOfflineCache(
+        storage: storage,
+        userId: 'doctor-42',
+        enabled: true,
+      );
+      final cache2 = CareguardOfflineCache(
+        storage: storage,
+        userId: 'doctor-99',
+        enabled: true,
+      );
+
+      final now = DateTime.utc(2026, 1, 1, 12, 0, 0);
+      await cache1.save(_sampleView(), now: now);
+
+      expect(storage.snapshot.containsKey('clara.careguard.ddi.doctor-42.last_known_view'), isTrue);
+      expect(await cache1.read(now: now), isNotNull);
+      expect(await cache2.read(now: now), isNull);
     });
 
     test('cache miss returns null (never fabricates all-clear, Req 6.4)',

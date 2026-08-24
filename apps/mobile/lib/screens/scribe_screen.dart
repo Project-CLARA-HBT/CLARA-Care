@@ -119,6 +119,8 @@ class ScribeSessionView {
     required this.status,
     required this.transcript,
     required this.soapSections,
+    this.consentId,
+    this.hasActiveConsent = false,
   });
 
   final int id;
@@ -130,6 +132,12 @@ class ScribeSessionView {
 
   /// Ordered (label, sanitized-text) SOAP sections with non-empty content.
   final List<MapEntry<String, String>> soapSections;
+
+  /// Backend patient-consent record ID, if captured.
+  final int? consentId;
+
+  /// Whether active patient consent exists for this session.
+  final bool hasActiveConsent;
 
   bool get hasTranscript => transcript.isNotEmpty;
   bool get hasSoap => soapSections.isNotEmpty;
@@ -150,12 +158,29 @@ class ScribeSessionView {
         }
       }
     }
+    final meta = json['metadata'] is Map ? (json['metadata'] as Map) : null;
+    final consentIdRaw = json['consent_id'] ??
+        json['consentId'] ??
+        meta?['consent_id'] ??
+        meta?['consentId'];
+    final int? consentId = consentIdRaw is num
+        ? consentIdRaw.toInt()
+        : (consentIdRaw is String ? int.tryParse(consentIdRaw) : null);
+
+    final bool hasActiveConsent = json['has_active_consent'] == true ||
+        json['hasActiveConsent'] == true ||
+        meta?['has_active_consent'] == true ||
+        meta?['hasActiveConsent'] == true ||
+        (consentId != null && consentId > 0);
+
     return ScribeSessionView(
       id: (json['id'] is num) ? (json['id'] as num).toInt() : 0,
       title: _str(json['title']).isEmpty ? 'Phiên không tên' : _str(json['title']),
       status: _str(json['status']),
       transcript: stripTelemetryLabels(_str(json['transcript'])),
       soapSections: sections,
+      consentId: consentId,
+      hasActiveConsent: hasActiveConsent,
     );
   }
 }
@@ -382,13 +407,12 @@ class _ScribeScreenState extends State<ScribeScreen> {
     }
   }
 
-  /// Switches to the detail view for [view]. Consent always resets to absent on
-  /// open, so processing is blocked until the clinician captures it in-session
-  /// (fail-closed, Req 4.4).
+  /// Switches to the detail view for [view]. Consent initializes from
+  /// the session's active consent status (Req 4.4).
   void _openSessionView(ScribeSessionView view) {
     setState(() {
       _active = view;
-      _consentCaptured = false;
+      _consentCaptured = view.hasActiveConsent;
       _appendController.clear();
       _detailError = null;
     });

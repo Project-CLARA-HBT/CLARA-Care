@@ -824,7 +824,10 @@ class _SafetyTabState extends State<_SafetyTab> {
   void initState() {
     super.initState();
     _offlineCache = widget._offlineCache ??
-        CareguardOfflineCache(storage: FlutterSecureSessionStorage());
+        CareguardOfflineCache(
+          storage: FlutterSecureSessionStorage(),
+          userId: widget.sessionStore.userId ?? widget.sessionStore.email,
+        );
     _loadCabinetInfo();
   }
 

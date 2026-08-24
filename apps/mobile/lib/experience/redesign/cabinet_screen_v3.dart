@@ -396,7 +396,10 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
       _connectivity = _ownedConnectivity!;
     }
     _offlineCache = widget._offlineCache ??
-        CareguardOfflineCache(storage: FlutterSecureSessionStorage());
+        CareguardOfflineCache(
+          storage: FlutterSecureSessionStorage(),
+          userId: widget.sessionStore.userId ?? widget.sessionStore.email,
+        );
 
     if (_cabinetEnabled) {
       // Coarse, no-PII screen-view event (INV-3). The self-med and CareGuard

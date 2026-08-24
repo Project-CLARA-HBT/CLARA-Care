@@ -153,22 +153,29 @@ class CareguardOfflineCache {
 
   /// Persist the last successfully retrieved DDI projection. No-op when the
   /// flag is off. Returns `true` only when a value was written.
-  Future<bool> save(Map<String, dynamic> view, {DateTime? now}) async {
+  Future<bool> save(
+    Map<String, dynamic> view, {
+    DateTime? now,
+    Duration? customValidity,
+  }) async {
     if (!_enabled) return false;
+    final cachedAt = (now ?? DateTime.now()).toUtc();
+    final validUntil = cachedAt.add(customValidity ?? validity);
     final payload = <String, dynamic>{
       'version': _version,
-      'cachedAt': (now ?? DateTime.now().toUtc()).toIso8601String(),
+      'cachedAt': cachedAt.toIso8601String(),
+      'validUntil': validUntil.toIso8601String(),
       'view': projectForCache(view),
     };
-    await _storage.write(storageKey, jsonEncode(payload));
+    await _storage.write(effectiveStorageKey, jsonEncode(payload));
     return true;
   }
 
   /// Read the last-known projection, or `null` when the flag is off, no cache
-  /// exists, or the stored value is missing/invalid. Never fabricates a result.
-  Future<CachedDdiProjection?> read() async {
+  /// exists, or the stored value is missing/invalid or expired. Never fabricates a result.
+  Future<CachedDdiProjection?> read({DateTime? now}) async {
     if (!_enabled) return null;
-    final raw = await _storage.read(storageKey);
+    final raw = await _storage.read(effectiveStorageKey);
     if (raw == null || raw.isEmpty) return null;
     try {
       final decoded = jsonDecode(raw);
@@ -179,10 +186,19 @@ class CareguardOfflineCache {
       if (cachedAtRaw is! String || viewRaw is! Map) return null;
       final cachedAt = DateTime.tryParse(cachedAtRaw);
       if (cachedAt == null) return null;
-      return CachedDdiProjection(
+      final validUntilRaw = decoded['validUntil'];
+      final validUntil = validUntilRaw is String
+          ? DateTime.tryParse(validUntilRaw)
+          : null;
+      final cached = CachedDdiProjection(
         cachedAt: cachedAt,
+        validUntil: validUntil,
         view: projectForCache(viewRaw.cast<String, dynamic>()),
       );
+      if (cached.isStaleAt(now ?? DateTime.now())) {
+        return null;
+      }
+      return cached;
     } catch (_) {
       return null;
     }
@@ -190,6 +206,9 @@ class CareguardOfflineCache {
 
   /// Remove any cached last-known DDI projection.
   Future<void> clear() async {
-    await _storage.delete(storageKey);
+    await _storage.delete(effectiveStorageKey);
+    if (effectiveStorageKey != storageKey) {
+      await _storage.delete(storageKey);
+    }
   }
 }

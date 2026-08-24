@@ -200,6 +200,61 @@ void main() {
   });
 
   testWidgets(
+      'session with active consent initializes consent state as captured',
+      (tester) async {
+    final mock = MockClient((request) async {
+      final path = request.url.path;
+      final method = request.method;
+      if (path.endsWith('/scribe/sessions') && method == 'GET') {
+        return _json({
+          'items': [
+            {
+              'id': 10,
+              'title': 'Ca khám Có Đồng Ý',
+              'status': 'draft',
+              'transcript': 'Đã đồng ý trước',
+              'has_active_consent': true,
+              'consent_id': 42,
+            },
+          ],
+          'total': 1,
+        });
+      }
+      if (path.endsWith('/scribe/sessions/10') && method == 'GET') {
+        return _json({
+          'id': 10,
+          'title': 'Ca khám Có Đồng Ý',
+          'status': 'draft',
+          'transcript': 'Đã đồng ý trước',
+          'has_active_consent': true,
+          'consent_id': 42,
+        });
+      }
+      return _json({'detail': 'unexpected'}, 404);
+    });
+
+    final apiClient = ApiClient(baseUrl: 'https://api.test', httpClient: mock);
+    final session = await buildSession();
+
+    await tester.pumpWidget(MaterialApp(
+      home: ScribeScreen(
+        apiClient: apiClient,
+        sessionStore: session,
+        featureFlags: _resolver(enabled: true),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Open the session.
+    await tester.tap(find.text('Ca khám Có Đồng Ý'));
+    await tester.pumpAndSettle();
+
+    // Consent is already captured: gate is marked captured and shows revoke button
+    expect(find.byKey(const Key('scribe-consent-gate')), findsOneWidget);
+    expect(find.text('Thu hồi sự đồng ý'), findsOneWidget);
+  });
+
+  testWidgets(
       'clinical transcript + SOAP are sanitized and absent from analytics',
       (tester) async {
     final transport = RecordingAnalyticsTransport();

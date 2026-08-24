@@ -59,10 +59,34 @@ void main() {
     expect(raw, isNot(contains('must-drop')));
     expect(raw, isNot(contains('medications')));
     expect(raw, isNot(contains('safety_status')));
-    final cached = await cache.read();
+    final cached = await cache.read(now: now);
     expect(cached, isNotNull);
     expect(cached!.isStaleAt(now.add(const Duration(minutes: 14))), isFalse);
     expect(cached.isStaleAt(now.add(const Duration(minutes: 15))), isTrue);
+
+    // Stale/expired cache returns null on read
+    expect(await cache.read(now: now.add(const Duration(minutes: 16))), isNull);
+  });
+
+  test('scopes storage key with userId', () async {
+    final storage = MemoryStorage();
+    final cache1 = LifeMapReadCache(
+      storage: storage,
+      userId: 'user-alpha',
+      enabled: true,
+    );
+    final cache2 = LifeMapReadCache(
+      storage: storage,
+      userId: 'user-beta',
+      enabled: true,
+    );
+
+    final now = DateTime.utc(2026, 8, 24, 10);
+    await cache1.save(<String, dynamic>{'generated_at': now.toIso8601String()}, now: now);
+
+    expect(storage.values.containsKey('clara.lifemap.today.user-alpha.read_projection'), isTrue);
+    expect(await cache1.read(now: now), isNotNull);
+    expect(await cache2.read(now: now), isNull);
   });
 
   test('logout removes the account-scoped health read cache', () async {

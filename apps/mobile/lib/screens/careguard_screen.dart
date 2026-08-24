@@ -53,6 +53,7 @@ class _CareguardScreenState extends State<CareguardScreen> {
     super.initState();
     _offlineCache = CareguardOfflineCache(
       storage: widget.offlineStorage ?? FlutterSecureSessionStorage(),
+      userId: widget.sessionStore.userId ?? widget.sessionStore.email,
       enabled: widget.offlineFallbackEnabled,
     );
     getAnalyticsClient()

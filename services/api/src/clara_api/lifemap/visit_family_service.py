@@ -62,7 +62,7 @@ class DomainValidationError(ValueError):
     """A caller attempted an invalid state transition or unsafe scope."""
 
 
-VISIT_STATUSES = {"planning", "ready", "in_progress", "awaiting_review", "completed", "cancelled"}
+VISIT_STATUSES = {"planning", "ready", "in_progress", "awaiting_review", "completed", "cancelled", "verified"}
 VISIT_CONSENT_PURPOSES = {"scribe_recording"}
 FAMILY_OBJECT_ACTIONS = {
     "lifemap": {"view"},

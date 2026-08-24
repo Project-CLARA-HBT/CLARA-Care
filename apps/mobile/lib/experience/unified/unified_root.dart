@@ -78,7 +78,9 @@ class UnifiedRoot extends StatefulWidget {
 }
 
 class _UnifiedRootState extends State<UnifiedRoot> {
-  late final LifeMapReadCache _lifeMapReadCache = LifeMapReadCache();
+  late final LifeMapReadCache _lifeMapReadCache = LifeMapReadCache(
+    userId: widget.sessionStore.userId ?? widget.sessionStore.email,
+  );
   late final PresentationModeController _modeController;
   bool _loading = true;
   Map<String, dynamic>? _summary;

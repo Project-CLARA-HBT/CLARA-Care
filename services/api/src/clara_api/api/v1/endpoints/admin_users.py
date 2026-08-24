@@ -10,8 +10,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from clara_api.core.rbac import require_roles
-from clara_api.db.models import AdminAuditRecord, User
+from clara_api.db.models import User
 from clara_api.db.session import get_db
+from clara_api.observability.admin_audit import AdminAuditRecord
 
 router = APIRouter()
 

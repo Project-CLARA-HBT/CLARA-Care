@@ -130,8 +130,13 @@ class _SettingsSurfaceState extends State<SettingsSurface> {
       
       final storage = widget.secureStorage;
       if (storage != null) {
+        final userId = widget.sessionStore.userId ?? widget.sessionStore.email;
         await storage.delete(LifeMapReadCache.storageKey);
         await storage.delete(CareguardOfflineCache.storageKey);
+        if (userId != null && userId.isNotEmpty) {
+          await storage.delete(LifeMapReadCache.scopedStorageKey(userId));
+          await storage.delete(CareguardOfflineCache.scopedStorageKey(userId));
+        }
       }
 
       widget.onCachePurged?.call();
