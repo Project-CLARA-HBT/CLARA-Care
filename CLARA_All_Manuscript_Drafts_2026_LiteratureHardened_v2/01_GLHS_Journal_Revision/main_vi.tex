@@ -1,0 +1,473 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{fontspec}
+\setmainfont{DejaVu Serif}
+\usepackage[margin=0.8in]{geometry}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xurl}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows.meta,positioning,shadows,calc,backgrounds,fit}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage[hidelinks,colorlinks=true,linkcolor=MidnightBlue,citecolor=RoyalBlue,urlcolor=NavyBlue]{hyperref}
+
+\definecolor{TealColor}{RGB}{15,118,110}
+\definecolor{AzureColor}{RGB}{11,111,216}
+\definecolor{MintColor}{RGB}{20,168,141}
+
+\IfFileExists{rs_doi.tex}{\input{rs_doi.tex}}{\newcommand{\ResearchSquareDOI}{}}
+\newcommand{\rsnote}{%
+  \ifdefempty{\ResearchSquareDOI}{}{
+  \par\smallskip\noindent\textbf{Hồ sơ bản thảo liên quan.} Bản thảo y tin học đồng hành có sẵn trên Research Square tại \href{https://doi.org/\ResearchSquareDOI}{doi:\ResearchSquareDOI}.\par\smallskip}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.52em}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.18em,topsep=0.18em}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=0.18em,topsep=0.18em}
+\renewcommand{\arraystretch}{1.18}
+\captionsetup{font=small,labelfont=bf}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}{\small\bfseries}{\thesubsubsection}{0.4em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{gray}{GLHS: Giao thức Quản trị và Nhân Kiểm soát Đồng thời}}
+\fancyhead[R]{\small\textcolor{gray}{Bản thảo Tạp chí / Hội nghị Y Tin học}}
+\fancyfoot[C]{\small Bản thảo GLHS tiếng Việt -- Trang \thepage\ / \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\title{\LARGE\textbf{GLHS: Giao thức Quản trị Có Kiểm Chứng Hình Thức và Nhân Kiểm Soát Đồng Thời từ Công Bố đến Bền Vững cho AI Y Tế Dài Hạn}}
+\author{\textbf{Nguyễn Ngọc Thiện}\thanks{Tác giả liên hệ: \texttt{kakangocthien109@gmail.com}} \quad\and\quad \textbf{Trịnh Minh Quang}\\[0.35em]
+\small Trường THPT Hai Bà Trưng, Huế, Việt Nam}
+\date{Tháng 8 năm 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Các hệ thống trí tuệ nhân tạo (AI) y tế dài hạn có trạng thái vận hành trên Bệnh án Điện tử (EHR) đối mặt với một thách thức cốt lõi về tính nhất quán dữ liệu mà cơ chế RAG (Retrieval-Augmented Generation) thông thường không thể giải quyết: trong khoảng thời gian suy luận phi tức thời giữa thời điểm đọc dữ liệu lâm sàng và thời điểm tạo đề xuất ghi bền vững, các khẳng định lâm sàng nền tảng, trạng thái đồng thuận động của bệnh nhân, kỷ nguyên chính sách của cơ sở y tế hoặc tính hợp lệ theo thời gian có thể bị biến động hoặc bị thu hồi. Các khung bộ nhớ tác tử hiện nay chỉ kiểm tra thẩm quyền token hoặc độ tươi mới trạng thái một cách đơn lẻ, hoàn toàn mất liên kết mật mã giữa bản công bố y tế cụ thể mà mô hình đã tiếp nhận và đột biến dữ liệu sinh ra.
+
+Chúng tôi đề xuất giao thức \textbf{Governed Longitudinal Health State (GLHS)}, thiết lập một hợp đồng toàn vẹn khép kín từ lúc công bố dữ liệu đến khi commit bền vững cho các tác tử y tế dài hạn. GLHS giới thiệu \textbf{Bản chụp trạng thái sức khỏe theo tác vụ (THSS)}, được tuần tự hóa chuẩn mực qua RFC 8785 Canonical JSON cùng mã băm Merkle phân tách miền, và thực thi tính bền vững thông qua nhân commit \textbf{Chuyển trạng thái có quản trị (GST)} 6 pha. Quá trình kiểm soát tương tranh được điều phối bởi cây phân cấp khóa 7 tầng và cơ chế giải tỏa bế tắc động Wound-Wait DAG, bảo đảm kiểm soát đồng thời lạc quan (OCC) phân vùng thực thể không bế tắc cùng cơ chế phát hành nhật ký kiểm toán outbox bất biến.
+
+Chúng tôi cung cấp chứng minh toán học hình thức và thực nghiệm đối kháng toàn diện:
+\begin{enumerate}[label=(\roman*)]
+  \item \textbf{Kiểm chứng hình thức:} Mô hình hóa bằng TLA+ và kiểm chứng cạn kiệt qua TLC model checker trên $148.111.792$ trạng thái sinh ra ($26.153.860$ trạng thái phân biệt, độ sâu 59) với 0 bế tắc và 0 vi phạm bất biến về độ ổn định phụ thuộc đọc nhân quả, tính tươi mới quản trị đơn điệu và tính bất biến phòng ngừa bóng ma.
+  \item \textbf{Thực nghiệm cách ly nhân quả (Ablation Study):} Trên môi trường PostgreSQL 16 cách ly ($N=640$ lượt chạy trên 8 vector tấn công đối kháng), cơ chế ràng buộc chính xác của GLHS đạt tỷ lệ ngăn chặn 100\% ($256/256$) các thao tác commit đối kháng không hợp lệ trong khi bảo toàn 100\% các thao tác hợp lệ ($64/64$), vượt trội hoàn toàn so với quản trị thông thường không ràng buộc ($p = 1{,}73 \times 10^{-77}$, kiểm định McNemar; chênh lệch nguy cơ tuyệt đối $1{,}00$, 95\% CI $[1{,}00; 1{,}00]$).
+  \item \textbf{Mở rộng đồng thời tải cao:} Dưới tải đa luồng ghi (1 đến 32 tác tử đồng thời), cơ chế phân vùng thực thể triệt tiêu hoàn toàn tỷ lệ từ chối nhầm từ $93{,}75\%$ xuống $0{,}0\%$, duy trì thông lượng $399{,}1\text{ ops/s}$ kiểm tra kiểm toán và $30{,}0\text{ ops/s}$ giao dịch chuyển trạng thái toàn phần.
+  \item \textbf{Độ chính xác ngữ cảnh lâm sàng:} Trên $1.152$ cell điều kiện mô hình hóa trên đoàn hệ tổng hợp, Strict THSS đạt độ chính xác toàn trục $98{,}44\%$ (Claude 4.6 Sonnet) và $100\%$ (Gemini 3.6 Flash) với 0 lỗi cú pháp hay dị dạng.
+\end{enumerate}
+GLHS cung cấp một kiến trúc phần mềm tin cậy, fail-closed, kết nối suy luận AI với cơ sở dữ liệu y tế bền vững và có thể kiểm toán minh bạch.
+\end{abstract}
+
+\rsnote
+
+\textbf{Từ khóa:} AI Y tế Dài hạn, Bộ nhớ Tác tử Giao dịch, Kiểm soát Đồng thời Bitemporal, Hợp đồng Công bố đến Commit, Kiểm chứng Hình thức, TLA+, Kiểm soát Tương tranh Lạc quan, Quản trị Y tế.
+
+\section{Giới thiệu và Động lực Nghiên cứu}
+Mô hình Ngôn ngữ Lớn (LLM) và các hệ thống tác tử tự chủ đang ngày càng được ứng dụng sâu rộng trong các quy trình lâm sàng dài hạn, từ tự động hóa bệnh án (Clinical Scribe), chẩn đoán phân biệt đến giám sát tương tác thuốc (DDI) và hội đồng hội chẩn đa chuyên khoa~\cite{zhao2026,vitaltrace,dualstream,vista}. Khác với các hệ thống hỏi đáp tức thời, tác tử y tế dài hạn mang tính \emph{có trạng thái (stateful)}: chúng tiêu thụ các quỹ đạo sức khỏe lịch sử kéo dài nhiều tháng, nhiều năm và đề xuất các đột biến bền vững vào bệnh án điện tử, phác đồ điều trị và kế hoạch chăm sóc.
+
+Tuy nhiên, trong môi trường y tế thực tế, dữ liệu lâm sàng luôn biến động theo hai trục thời gian (bitemporal)~\cite{gabrieli1992,kouramajian1994,kumar1998}. Một dữ liệu lâm sàng có thể có hiệu lực tại thời điểm hợp lệ $t_v$ nhưng chỉ được ghi nhận hoặc đính chính tại thời điểm tri thức hệ thống $t_k$. Đồng thời, bệnh nhân có thể thay đổi hoặc thu hồi quyền chia sẻ dữ liệu theo các quy định GDPR/HIPAA~\cite{fhirconsent}, các hướng dẫn điều trị của bệnh viện có thể chuyển sang kỷ nguyên chính sách mới~\cite{statefulgov}, và các bác sĩ hoặc dịch vụ nền khác có thể đồng thời cập nhật dấu hiệu sinh tồn hay kết quả xét nghiệm~\cite{temporaryauth}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.1cm and 1.3cm,
+    box/.style={rectangle, draw=RoyalBlue!80, fill=RoyalBlue!5, thick, rounded corners=4pt, text width=3.8cm, minimum height=1.05cm, align=center, font=\small},
+    decision/.style={diamond, draw=BrickRed!80, fill=BrickRed!5, thick, text width=2.3cm, minimum height=1.05cm, align=center, font=\footnotesize, aspect=1.8},
+    actor/.style={ellipse, draw=ForestGreen!80, fill=ForestGreen!5, thick, minimum height=0.85cm, align=center, font=\small},
+    line/.style={-Latex, thick, draw=NavyBlue},
+    dashline/.style={-Latex, thick, dashed, draw=BrickRed}
+]
+    \node[actor] (agent) {\textbf{Tác tử AI Lâm sàng}};
+    \node[box, right=of agent] (thss) {\textbf{Ảnh chụp theo tác vụ (THSS)}\\\scriptsize$\langle u, a, r, \phi, \tau, \mathbf{v}_s, v_{\pi}, v_c, d_H, E_H \rangle$};
+    \node[box, below=of thss] (prop) {\textbf{Đề xuất Ràng buộc Ảnh chụp}\\\scriptsize$P = \langle id_H, d_H, \Delta, \mathbf{v}_s, v_{\pi}, v_c, \rho \rangle$};
+    \node[decision, below=of prop] (gst) {\textbf{Tái Thẩm định Nhân GST}};
+    \node[box, right=1.4cm of gst, draw=ForestGreen!80, fill=ForestGreen!5] (commit) {\textbf{Ghi Bền vững EHR}\\Tăng phiên bản CAS + Outbox Audit};
+    \node[box, left=1.4cm of gst, draw=BrickRed!80, fill=BrickRed!5] (abort) {\textbf{Hủy Bỏ An Toàn (Abort)}\\Rollback + Kiểm toán từ chối};
+
+    \draw[line] (agent) -- node[above, font=\footnotesize] {Đọc} (thss);
+    \draw[line] (thss) -- node[right, font=\footnotesize] {Ngữ cảnh} (prop);
+    \draw[line] (prop) -- node[right, font=\footnotesize] {Gửi ghi} (gst);
+    \draw[line] (gst) -- node[above, font=\footnotesize] {Hợp lệ} (commit);
+    \draw[dashline] (gst) -- node[above, font=\footnotesize] {Lệch / Hết hạn} (abort);
+    \draw[line, bend right=38] (agent.south) to node[below, font=\footnotesize] {Tạo đề xuất} (prop.west);
+\end{tikzpicture}
+\caption{\textbf{Vòng đời Quản trị từ Công bố đến Bền vững trong GLHS.} Quá trình suy luận của AI vận hành trên Bản chụp trạng thái sức khỏe theo tác vụ (THSS) được niêm phong mật mã. Đề xuất mang theo tọa độ nguồn gốc ($id_H, d_H, \mathbf{v}_s, v_{\pi}, v_c$), được nhân Chuyển trạng thái có quản trị (GST) 6 pha tái thẩm định nguyên tử dưới khóa phân cấp trước khi commit.}
+\label{fig:lifecycle}
+\end{figure}
+
+Thực tế này dẫn đến \textbf{Bài toán Bất nhất quán giữa Công bố và Bền vững (Disclosed-to-Durability Consistency Problem)}: tác tử AI đọc một ảnh chụp bệnh án hợp lệ tại thời điểm $t_{\text{read}}$, thực hiện suy luận đa bước kéo dài, và gửi đề xuất cập nhật tại thời điểm $t_{\text{write}}$. Trong khoảng trễ $[t_{\text{read}}, t_{\text{write}}]$, nếu bất kỳ khẳng định lâm sàng nền tảng nào thay đổi, hoặc bệnh nhân thu hồi sự đồng thuận, hoặc chính sách viện thay đổi, việc chấp thuận ghi sẽ tạo ra sự sai lệch lâm sàng nghiêm trọng hoặc vi phạm đạo đức y tế.
+
+Các hệ thống cơ sở dữ liệu truyền thống áp dụng Kiểm soát Đồng thời Lạc quan (OCC) hoặc Khóa hai pha (2PL) dựa trên phiên bản hàng đơn lẻ~\cite{kumar1998,statefulgov}. Tuy nhiên, các hệ thống này bộc lộ ba điểm nghẽn nghiêm trọng:
+\begin{enumerate}[leftmargin=1.8em]
+  \item \textbf{Kiểm tra thẩm quyền mù ngữ cảnh:} API chỉ kiểm tra phiên bản của bản ghi đích có khớp không, hoàn toàn bỏ qua việc \emph{bằng chứng và bối cảnh} làm căn cứ suy luận của AI có còn hợp lệ hay không.
+  \item \textbf{Nghẽn từ chối nhầm do khóa toàn cục:} Khóa toàn bộ hồ sơ bệnh nhân gây ra tỷ lệ từ chối nhầm (false-stale abort) vượt quá $90\%$ khi có nhiều luồng ghi đồng thời trên các phân vùng độc lập (ví dụ: điều dưỡng cập nhật dị ứng trong khi bác sĩ tim mạch cập nhật điện tâm đồ).
+  \item \textbf{Lỗ hổng TOCTOU trong quản trị:} Ủy quyền chỉ được kiểm tra tại thời điểm đọc, tạo kẽ hở cho các thay đổi đồng thuận hoặc vai trò bị bỏ lọt tại thời điểm ghi.
+\end{enumerate}
+
+Để giải quyết triệt để các vấn đề trên, chúng tôi giới thiệu **GLHS** (Governed Longitudinal Health State), kiến trúc quản trị từ công bố đến commit có kiểm chứng hình thức đầu tiên cho AI y tế (Hình~\ref{fig:lifecycle}).
+
+\subsection{Đóng góp Cốt lõi}
+\begin{itemize}
+  \item \textbf{Giao thức Ràng buộc Đồng phiên bản:} Hình thức hóa hợp đồng THSS và GST, ràng buộc bitemporal, mục đích, vai trò, tác vụ, đồng thuận, chính sách và mã băm Merkle RFC 8785 Canonical JSON vào đề xuất.
+  \item \textbf{Phân vùng Thực thể Tinh gọn \& Khóa Wound-Wait:} Thiết kế vector phiên bản phân vùng thực thể cùng cây phân cấp khóa 7 tầng và cơ chế giải tỏa bế tắc Wound-Wait DAG, triệt tiêu hiện tượng từ chối nhầm ($0{,}0\%$) trên các phân vùng rời rạc.
+  \item \textbf{Đặc tả Hình thức \& Kiểm chứng TLA+:} Mô hình hóa toàn diện trên TLA+ và kiểm chứng cạn kiệt $148{,}1\text{ triệu}$ trạng thái qua TLC, chứng minh toán học tính phi bế tắc và loại bỏ hoàn toàn các lỗi stale write, revoked consent và policy drift.
+  \item \textbf{Thực nghiệm Cách ly Nhân quả Toàn diện:} Chứng minh trên PostgreSQL 16 ($N=640$ lượt chạy) rằng GLHS ngăn chặn 100\% các cuộc tấn công đối kháng ($p = 1{,}73 \times 10^{-77}$) và mở rộng tải lên 32 luồng ghi với thông lượng $>300\text{ tx/s}$.
+\end{itemize}
+
+\section{Hệ thống Liên quan và So sánh Tổng thể}
+Bảng~\ref{tab:landscape} so sánh đối chiếu kiến trúc và tính năng an toàn của GLHS với các tiêu chuẩn và công trình tiên tiến nhất hiện nay.
+
+\begin{table*}[t]
+\centering
+\scriptsize
+\caption{\textbf{So sánh Tổng thể Kiến trúc Hệ thống.} Khả năng quản trị và an toàn của GLHS so với các chuẩn y tế, khung bộ nhớ tác tử và cơ chế quản trị trạng thái.}
+\label{tab:landscape}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm} >{\centering\arraybackslash}p{1.6cm} >{\centering\arraybackslash}p{1.4cm} >{\centering\arraybackslash}p{1.4cm} >{\centering\arraybackslash}p{1.4cm} >{\centering\arraybackslash}p{1.4cm} >{\centering\arraybackslash}p{1.5cm} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Khung hệ thống} & \textbf{Miền ứng dụng} & \textbf{Bitemporal} & \textbf{Ràng buộc} & \textbf{Thứ tự Khóa} & \textbf{Khử Bế tắc} & \textbf{Cổng Kỷ nguyên} & \textbf{Kiểm chứng Hình thức}\\
+\midrule
+FHIR / openEHR~\cite{fhirprov,openehr} & Chuẩn EHR & Một phần & Không & Mặc định & Không & ACL Tĩnh & Không\\
+MemTX / MemTxn~\cite{memtx,memtxn} & Bộ nhớ Tác tử & Đơn thời gian & Bằng chứng & 2PL Toàn cục & Timeout & Không & Không\\
+Cordon~\cite{cordon} & Runtime Công cụ & Ngữ nghĩa & Vết công cụ & Pre-commit & Safe Abort & Không & Machine Checked\\
+TOKI~\cite{toki} & Bộ nhớ Tác tử & Đại số Toán & Không & Chưa rõ & Không & Không & Không\\
+CommitGuard~\cite{temporaryauth} & LLM Chung & Đồng hồ thực & Token & Khóa đơn lẻ & Không & Expiry & Không\\
+Provenact~\cite{statefulgov} & Đa tác tử & Lịch sử trạng thái & Trạng thái chính sách & OCC Toàn cục & Abort/Retry & Kỷ nguyên CS & Verified Logic\\
+GateMem~\cite{gatemem} & Đa tác tử & Mặt nạ phạm vi & Mặt nạ bộ nhớ & Phân mảnh & Lock Free & Multi-Tenant & Không\\
+\midrule
+\textbf{GLHS (Công trình này)} & \textbf{AI Y tế Lâm sàng} & \textbf{$(t_v, t_k)$} & \textbf{Exact THSS} & \textbf{7 Tầng Chuẩn} & \textbf{Wound-Wait} & \textbf{Đồng phiên bản} & \textbf{TLC (148M trạng thái)}\\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\section{Kiến trúc Hệ thống và Hợp đồng Hình thức}
+
+\subsection{Mô hình Trạng thái Quản trị Hai Chiều Thời gian}
+Trạng thái sức khỏe dài hạn của bệnh nhân $u \in \mathcal{U}$ được định nghĩa là một phép chiếu hai chiều theo thời gian hiệu lực $t_v$ và thời gian tri thức hệ thống $t_k$:
+\begin{equation}
+S_u(t_v, t_k) = \operatorname{GovernedView}_u(t_v, t_k) = \bigoplus_{e \in \mathcal{E}_u, \, \operatorname{valid}(e) \le t_v, \, \operatorname{known}(e) \le t_k} \alpha(e),
+\label{eq:state_bitemporal_vi}
+\end{equation}
+trong đó $\mathcal{E}_u$ là chuỗi sự kiện append-only bất biến, $\alpha(e)$ là hàm biến đổi khẳng định, và $\bigoplus$ là toán tử hợp nhất trạng thái bảo toàn xung đột.
+
+\subsection{Bản chụp Trạng thái Sức khỏe theo Tác vụ (THSS)}
+Khi tác tử AI khởi tạo suy luận thay mặt người dùng $a$ với vai trò $r$ cho mục đích $\phi$ và tác vụ $\tau$, GLHS biên dịch một bản chụp bất biến:
+\begin{equation}
+H = \langle u, a, r, \phi, \tau, \mathbf{v}_s, v_{\pi}, v_c, t_v, t_k, id_H, d_H, E_H \rangle,
+\label{eq:thss_definition_vi}
+\end{equation}
+với $\mathbf{v}_s \in \mathbb{N}^m$ là vector phiên bản phân vùng thực thể; $v_{\pi}$ là kỷ nguyên chính sách; $v_c$ là phiên bản đồng thuận; $id_H$ là định danh duy nhất; $E_H$ là dữ liệu công bố tối thiểu; và $d_H$ là mã băm gốc Merkle tuần tự hóa qua RFC 8785:
+\begin{equation}
+d_H = \operatorname{SHA-256}\Big(\operatorname{JCS}\big(\operatorname{Manifest}(H)\big) \;\parallel\; \operatorname{MerkleTree}\big(\{ \operatorname{JCS}(e) \mid e \in E_H \}\big)\Big).
+\label{eq:digest_merkle_vi}
+\end{equation}
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+    scale=0.92, every node/.style={transform shape},
+    node distance=0.8cm and 1.1cm,
+    lockbox/.style={rectangle, draw=#1!80, fill=#1!8, thick, rounded corners=3pt, minimum width=2.3cm, minimum height=0.9cm, align=center, font=\footnotesize\bfseries},
+    arrow/.style={-Latex, thick, draw=NavyBlue}
+]
+    \node[lockbox=Purple] (l1) {Tầng 1: Chính sách Toàn cục\\$\operatorname{Lock}_{\text{SH}}(\pi_{\text{global}})$};
+    \node[lockbox=Purple, right=of l1] (l2) {Tầng 2: Chính sách Miền\\$\operatorname{Lock}_{\text{SH}}(\pi_{\text{domain}})$};
+    \node[lockbox=Blue, right=of l2] (l3) {Tầng 3: Đồng thuận Bệnh nhân\\$\operatorname{Lock}_{\text{SH}}(c_u) \land \operatorname{Lock}_{\text{EX}}(S_u)$};
+    \node[lockbox=TealColor, below=1.1cm of l1] (l4) {Tầng 4: Neo Bằng chứng\\$\operatorname{Lock}_{\text{SH}}(e_1) \dots \operatorname{Lock}_{\text{SH}}(e_k)$};
+    \node[lockbox=ForestGreen, right=of l4] (l5) {Tầng 5: Khe Phân vùng\\$\operatorname{Lock}_{\text{EX}}(u, \text{slot}_1) \prec_{\text{lex}} \dots$};
+    \node[lockbox=Orange, right=of l5] (l6) {Tầng 6: Tiền chiếm Lease\\$\text{Wound-Wait}(\text{Lease}_a)$};
+    \node[lockbox=BrickRed, below=1.1cm of l5] (l7) {Tầng 7: Khóa Idempotency\\$\operatorname{Lock}_{\text{EX}}(\text{idem\_key})$};
+
+    \draw[arrow] (l1) -- node[above, font=\tiny] {$\prec$} (l2);
+    \draw[arrow] (l2) -- node[above, font=\tiny] {$\prec$} (l3);
+    \draw[arrow] (l3.south) -- ++(0,-0.25) -| (l4.north);
+    \draw[arrow] (l4) -- node[above, font=\tiny] {$\prec$} (l5);
+    \draw[arrow] (l5) -- node[above, font=\tiny] {$\prec$} (l6);
+    \draw[arrow] (l6.south) -- ++(0,-0.25) -| (l7.north);
+\end{tikzpicture}
+\caption{\textbf{Cây Phân cấp Khóa 7 Tầng Chuẩn.} Thứ tự toàn phần nghiêm ngặt $\text{Tầng 1} \prec \text{Tầng 2} \prec \dots \prec \text{Tầng 7}$ triệt tiêu hoàn toàn bế tắc chu trình trong các giao dịch lâm sàng đa thực thể.}
+\label{fig:locks_vi}
+\end{figure*}
+
+\subsection{Hợp đồng Commit và Nhân Chuyển trạng thái GST 6 Pha}
+Đề xuất của mô hình $P = \langle u, a, r, \phi, \tau, \mathbf{v}_s, v_{\pi}, v_c, id_H, d_H, \Delta, \rho \rangle$ chỉ được ghi bền vững khi thỏa mãn trọn vẹn vị từ commit:
+\begin{equation}
+\operatorname{Commit}(P) \iff \operatorname{Bound}(P, H) \land \operatorname{StateFresh}(\mathbf{v}_s) \land \operatorname{GovFresh}(v_{\pi}, v_c) \land \operatorname{ValidTTL}(H) \land \operatorname{Predicates}(\Delta).
+\label{eq:commit_predicate_vi}
+\end{equation}
+Nhân GST thực thi nguyên tử trên PostgreSQL qua 6 pha: (1) Replay Idempotency, (2) Chiếm khóa phân cấp 7 tầng, (3) Tái thẩm định trạng thái và quyền hạn dưới khóa, (4) Đột biến khẳng định lâm sàng, (5) Tăng phiên bản CAS trên phân vùng ghi, và (6) Phát hành bản ghi kiểm toán outbox bất biến.
+
+\section{Kiểm chứng Hình thức và Nghĩa vụ Chứng minh}
+GLHS hình thức hóa 12 nghĩa vụ chứng minh an toàn (PO-01 đến PO-12), bao gồm: không commit phụ thuộc lỗi thời (PO-01), không commit khi đồng thuận bị thu hồi (PO-02), không commit khi trôi dạt kỷ nguyên chính sách (PO-03), không liên kết chéo bệnh nhân (PO-04), không tẩy trắng nguồn gốc (PO-05), tính nguyên tử giữa commit và kiểm toán (PO-06), tính duy nhất một lần (PO-07), khử bế tắc hoàn toàn (PO-08), không can thiệp giữa các phân vùng độc lập (PO-09), tính toán vẹn phụ thuộc bảo thủ (PO-10), hết hạn xác định (PO-11), và tính bất biến mã băm đa nền tảng (PO-12).
+
+Toàn bộ giao thức đã được kiểm chứng hình thức cạn kiệt qua TLC model checker trên $148{,}1\text{ triệu}$ trạng thái, đạt $100\%$ an toàn không bế tắc và không vi phạm bất biến.
+
+\begin{figure*}[t]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\textwidth,
+    height=5.0cm,
+    xlabel={\small Số luồng ghi đồng thời ($N$)},
+    ylabel={\small Tỷ lệ từ chối nhầm False-Stale (\%)},
+    xmin=1, xmax=32,
+    ymin=0, ymax=100,
+    xtick={1, 2, 4, 8, 16, 32},
+    ytick={0, 20, 40, 60, 80, 100},
+    legend pos=north west,
+    legend style={font=\tiny, fill=white, fill opacity=0.9},
+    grid=both,
+    grid style={line width=.1pt, draw=gray!20},
+    major grid style={line width=.2pt,draw=gray!50},
+    thick
+]
+\addplot[color=BrickRed, mark=square*, mark size=2pt, line width=1.2pt] coordinates {
+    (1,0.0) (2,50.0) (4,75.0) (8,87.5) (16,93.75) (32,96.88)
+};
+\addlegendentry{Khóa Toàn cục Hồ sơ (Cơ sở)}
+
+\addplot[color=ForestGreen, mark=triangle*, mark size=2.5pt, line width=1.4pt] coordinates {
+    (1,0.0) (2,0.0) (4,0.0) (8,0.0) (16,0.0) (32,0.0)
+};
+\addlegendentry{GLHS Phân vùng Thực thể (Đề xuất)}
+\end{axis}
+\end{tikzpicture}
+\caption{\textbf{Tỷ lệ Từ chối Nhầm theo Mức Đồng thời.} Khóa toàn cục bị từ chối nhầm $>90\%$; GLHS phân vùng triệt tiêu hoàn toàn xuống $0{,}0\%$.}
+\label{fig:abort_rate_vi}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\textwidth,
+    height=5.0cm,
+    xlabel={\small Số luồng ghi đồng thời ($N$)},
+    ylabel={\small Thông lượng hiệu dụng (giao dịch/s)},
+    xmin=1, xmax=32,
+    ymin=0, ymax=350,
+    xtick={1, 2, 4, 8, 16, 32},
+    ytick={0, 50, 100, 150, 200, 250, 300, 350},
+    legend pos=north west,
+    legend style={font=\tiny, fill=white, fill opacity=0.9},
+    grid=both,
+    grid style={line width=.1pt, draw=gray!20},
+    major grid style={line width=.2pt,draw=gray!50},
+    thick
+]
+\addplot[color=BrickRed, mark=square*, mark size=2pt, line width=1.2pt] coordinates {
+    (1,32.4) (2,33.1) (4,31.8) (8,30.5) (16,28.2) (32,24.1)
+};
+\addlegendentry{Khóa Toàn cục Hồ sơ}
+
+\addplot[color=ForestGreen, mark=triangle*, mark size=2.5pt, line width=1.4pt] coordinates {
+    (1,32.4) (2,62.8) (4,118.5) (8,212.0) (16,289.4) (32,318.2)
+};
+\addlegendentry{GLHS Phân vùng Thực thể}
+\end{axis}
+\end{tikzpicture}
+\caption{\textbf{Khả năng Mở rộng Thông lượng.} GLHS mở rộng tuyến tính theo số luồng ghi, vượt qua nút thắt cổ chai đơn luồng.}
+\label{fig:throughput_vi}
+\end{subfigure}
+\caption{\textbf{Thực nghiệm Tương tranh và Mở rộng Thông lượng trên PostgreSQL 16.} So sánh hiệu năng giữa khóa toàn cục và GLHS phân vùng thực thể trên 1 đến 32 luồng ghi đồng thời.}
+\label{fig:concurrency_plots_vi}
+\end{figure*}
+
+\section{Kết quả Thực nghiệm}
+
+\subsection{Thực nghiệm Cách ly Nhân quả Ràng buộc Chính xác (\texorpdfstring{$N=640$}{N=640} Lượt chạy)}
+Thực nghiệm đánh giá đối chiếu giữa Nhánh A (Quản trị đầy đủ nhưng không ràng buộc ảnh chụp) và Nhánh B (GLHS ràng buộc ảnh chụp chính xác) trên 256 kịch bản tấn công đối kháng và 64 kịch bản đối chứng hợp lệ.
+
+\begin{table}[t]
+\centering
+\scriptsize
+\caption{\textbf{Kết quả Thực nghiệm Cách ly Ràng buộc Chính xác (\texorpdfstring{$N=640$}{N=640} lượt chạy trên 8 nhóm tấn công).} Nhánh A chấp thuận 100\% tấn công; GLHS Nhánh B chặn đứng 100\% ($p = 1{,}73 \times 10^{-77}$).}
+\label{tab:ablation_results_vi}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\centering\arraybackslash}p{1.4cm} >{\centering\arraybackslash}p{2.1cm} >{\centering\arraybackslash}p{2.1cm} >{\centering\arraybackslash}p{2.2cm} >{\centering\arraybackslash}p{2.0cm}}
+\toprule
+\textbf{Nhóm Tấn công Đối kháng} & \textbf{Số kịch bản} & \textbf{Nhánh A (Không Ràng buộc)} & \textbf{Nhánh B (GLHS)} & \textbf{Chênh lệch Nguy cơ (95\% CI)} & \textbf{Kiểm định McNemar $p$}\\
+\midrule
+1. Sai lệch mã băm Manifest & 32 & 32/32 (100\%) & 0/32 (0\%) & 1,00 [1,00; 1,00] & $4{,}66 \times 10^{-10}$\\
+2. Giả mạo mã băm Snapshot & 32 & 32/32 (100\%) & 0/32 (0\%) & 1,00 [1,00; 1,00] & $4{,}66 \times 10^{-10}$\\
+3. Chèn bằng chứng chưa công bố & 32 & 32/32 (100\%) & 0/32 (0\%) & 1,00 [1,00; 1,00] & $4{,}66 \times 10^{-10}$\\
+4. Thay thế tập bằng chứng & 32 & 32/32 (100\%) & 0/32 (0\%) & 1,00 [1,00; 1,00] & $4{,}66 \times 10^{-10}$\\
+5. Tái phát ảnh chụp hết hạn & 32 & 32/32 (100\%) & 0/32 (0\%) & 1,00 [1,00; 1,00] & $4{,}66 \times 10^{-10}$\\
+6. Trôi dạt phạm vi hồ sơ cấm & 32 & 32/32 (100\%) & 0/32 (0\%) & 1,00 [1,00; 1,00] & $4{,}66 \times 10^{-10}$\\
+7. Ràng buộc chéo bệnh nhân & 32 & 32/32 (100\%) & 0/32 (0\%) & 1,00 [1,00; 1,00] & $4{,}66 \times 10^{-10}$\\
+8. Tráo đổi mục đích / vai trò & 32 & 32/32 (100\%) & 0/32 (0\%) & 1,00 [1,00; 1,00] & $4{,}66 \times 10^{-10}$\\
+\midrule
+\textbf{Tổng Đối kháng (Chính)} & \textbf{256} & \textbf{256/256 (100\%)} & \textbf{0/256 (0\%)} & \textbf{1,00 [1,00; 1,00]} & $\mathbf{1{,}73 \times 10^{-77}}$\\
+\textbf{Đối chứng Hợp lệ (Bảo toàn)} & \textbf{64} & \textbf{64/64 (100\%)} & \textbf{64/64 (100\%)} & \textbf{0,00 [0,00; 0,00]} & $\text{n.s. (hòa tuyệt đối)}$\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Bảng~\ref{tab:ablation_results_vi} chứng minh GLHS ngăn chặn thành công $100\%$ các hành vi gian lận bối cảnh và trôi dạt ủy quyền ($p = 1{,}73 \times 10^{-77}$).
+
+\subsection{Hiệu năng Vi mô và Độ trễ Phân phối}
+Bảng~\ref{tab:perf_detailed_vi} và Hình~\ref{fig:latency_bar_vi} tổng hợp chi tiết các phân vị độ trễ của các thao tác nhân trên PostgreSQL 16.14.
+
+\begin{table}[H]
+\centering
+\small
+\caption{\textbf{Đo lường Hiệu năng Vi mô Nhân Quản trị PostgreSQL 16.} Thực hiện trên PostgreSQL 16.14 với commit đồng bộ, độ sâu lịch sử 50, và 30 lần lặp lại.}
+\label{tab:perf_detailed_vi}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Thao tác Nhân} & \textbf{p50 (ms)} & \textbf{p95 (ms)} & \textbf{p99 (ms)} & \textbf{Thông lượng (ops/s)}\\
+\midrule
+Xác minh Bản ghi Kiểm toán & 2,12 & 5,50 & 7,18 & 399,15\\
+Tái dựng Trạng thái Bitemporal & 7,30 & 12,30 & 14,85 & 129,69\\
+Xác minh Quyết định Quản trị & 10,54 & 17,01 & 21,40 & 95,35\\
+Giao dịch Nguyên tử GST Toàn phần & 30,97 & 54,69 & 63,20 & 29,95\\
+Biên dịch Ảnh chụp THSS & 61,81 & 68,89 & 74,12 & 16,94\\
+Hủy bỏ Xung đột + Tái dựng & 52,99 & 74,34 & 82,50 & 18,30\\
+Hiệu chỉnh Nhập sai + Replay & 69,31 & 87,31 & 96,40 & 13,82\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.88\textwidth,
+    height=5.4cm,
+    xbar,
+    bar width=10pt,
+    xlabel={\small Độ trễ (ms) [p50 / p95 / p99]},
+    symbolic y coords={
+        {Enter-in-Error},
+        {THSS Compile},
+        {Invalidate Rebuild},
+        {GST Transition},
+        {Decision Reconst},
+        {State Reconst},
+        {Audit Lookup}
+    },
+    ytick=data,
+    nodes near coords,
+    nodes near coords align={horizontal},
+    every node near coord/.append style={font=\tiny},
+    xmin=0, xmax=115,
+    legend pos=south east,
+    legend style={font=\tiny},
+    grid=both,
+    grid style={line width=.1pt, draw=gray!20},
+    major grid style={line width=.2pt,draw=gray!50}
+]
+\addplot[fill=RoyalBlue!70, draw=RoyalBlue] coordinates {
+    (2.12,{Audit Lookup})
+    (7.30,{State Reconst})
+    (10.54,{Decision Reconst})
+    (30.97,{GST Transition})
+    (52.99,{Invalidate Rebuild})
+    (61.81,{THSS Compile})
+    (69.31,{Enter-in-Error})
+};
+\addlegendentry{p50}
+
+\addplot[fill=BrickRed!70, draw=BrickRed] coordinates {
+    (5.50,{Audit Lookup})
+    (12.30,{State Reconst})
+    (17.01,{Decision Reconst})
+    (54.69,{GST Transition})
+    (74.34,{Invalidate Rebuild})
+    (68.89,{THSS Compile})
+    (87.31,{Enter-in-Error})
+};
+\addlegendentry{p95}
+
+\addplot[fill=ForestGreen!70, draw=ForestGreen] coordinates {
+    (7.18,{Audit Lookup})
+    (14.85,{State Reconst})
+    (21.40,{Decision Reconst})
+    (63.20,{GST Transition})
+    (82.50,{Invalidate Rebuild})
+    (74.12,{THSS Compile})
+    (96.40,{Enter-in-Error})
+};
+\addlegendentry{p99}
+\end{axis}
+\end{tikzpicture}
+\caption{\textbf{Phân phối Độ trễ Các Thao tác Cốt lõi của GLHS.} Đo lường phân vị p50, p95, p99 trên 7 thao tác giao dịch và replay trong động cơ PostgreSQL 16.}
+\label{fig:latency_bar_vi}
+\end{figure}
+
+\subsection{Độ chính xác Suy luận Ngữ cảnh Đa Mô hình}
+Bảng~\ref{tab:model_utility_vi} tổng hợp kết quả đối chuẩn độ chính xác suy luận lâm sàng giữa Strict THSS và các phương pháp cơ sở trên Claude 4.6 Sonnet và Gemini 3.6 Flash.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{\textbf{Kết quả Đối chuẩn Độ chính xác Suy luận Lâm sàng của Strict THSS.} Hiệu chỉnh đa giả thuyết Holm chứng minh độ vượt trội vững chắc so với các phương pháp cơ sở.}
+\label{tab:model_utility_vi}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.6cm} >{\centering\arraybackslash}p{1.6cm} >{\centering\arraybackslash}p{2.6cm} >{\centering\arraybackslash}p{2.0cm} >{\centering\arraybackslash}X}
+\toprule
+\textbf{Mô hình Đánh giá} & \textbf{Phương pháp Cơ sở} & \textbf{Hiệu quả Tăng} & \textbf{95\% Bootstrap CI} & \textbf{Giá trị Holm $p$} & \textbf{Cặp Bất đồng}\\
+\midrule
+Claude 4.6 Sonnet & Naive RAG & \textbf{+32,81\%} & [+21,88\%; +43,75\%] & $p = 9{,}54 \times 10^{-6}$ & 21\\
+Claude 4.6 Sonnet & Last-Write-Wins & \textbf{+25,00\%} & [+15,63\%; +35,94\%] & $p = 2{,}75 \times 10^{-4}$ & 16\\
+Claude 4.6 Sonnet & Full History & \textbf{+18,75\%} & [+7,81\%; +29,69\%] & $p = 1{,}10 \times 10^{-2}$ & 14\\
+Claude 4.6 Sonnet & Long Context & \textbf{+14,06\%} & [+6,25\%; +23,44\%] & $p = 1{,}95 \times 10^{-2}$ & 9\\
+Claude 4.6 Sonnet & BTSA (Zhao et al.) & +4,69\% & [0,00\%; +10,94\%] & n.s. & 3\\
+\midrule
+Gemini 3.6 Flash & Naive RAG & \textbf{+25,00\%} & [+14,06\%; +35,94\%] & $p = 2{,}75 \times 10^{-4}$ & 16\\
+Gemini 3.6 Flash & Last-Write-Wins & \textbf{+25,00\%} & [+15,63\%; +37,50\%] & $p = 2{,}75 \times 10^{-4}$ & 16\\
+Gemini 3.6 Flash & BTSA (Zhao et al.) & 0,00\% & [0,00\%; 0,00\%] & hòa tuyệt đối & 0\\
+Gemini 3.6 Flash & Full History & 0,00\% & [0,00\%; 0,00\%] & hòa tuyệt đối & 0\\
+Gemini 3.6 Flash & Long Context & 0,00\% & [0,00\%; 0,00\%] & hòa tuyệt đối & 0\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Strict THSS đạt độ chính xác $98{,}44\%$ với Claude 4.6 Sonnet và $100{,}0\%$ với Gemini 3.6 Flash, khẳng định tính ưu việt của bối cảnh tối thiểu hóa theo tác vụ.
+
+\section{Kết luận}
+Bài báo đã trình bày GLHS, một giao thức quản trị và nhân kiểm soát tương tranh có kiểm chứng hình thức từ công bố đến bền vững cho AI y tế dài hạn. Bằng cách tích hợp ảnh chụp Merkle RFC 8785 với nhân commit GST 6 pha, cây phân cấp khóa 7 tầng và cơ chế giải tỏa bế tắc Wound-Wait DAG, GLHS bắc cầu nối vững chắc giữa suy luận AI và tính toàn vẹn của Bệnh án Điện tử. Kiểm chứng hình thức TLA+ trên 148 triệu trạng thái và thực nghiệm PostgreSQL 16 chứng minh khả năng ngăn chặn 100\% commit không hợp lệ ($p = 1{,}73 \times 10^{-77}$), mở rộng thông lượng tải cao ($>300\text{ tx/s}$) và đạt độ chính xác lập luận lâm sàng gần như tuyệt đối.
+
+\section*{Tuyên bố và Cam kết Đạo đức}
+\textbf{Xung đột lợi ích.} Các tác giả tuyên bố không có xung đột lợi ích tài chính hoặc phi tài chính.
+
+\textbf{Kinh phí.} Nghiên cứu không nhận bất kỳ nguồn tài trợ kinh phí ngoài nào.
+
+\textbf{Tính sẵn sàng của Mã nguồn và Dữ liệu.} Toàn bộ mã nguồn, chứng minh TLA+, bộ kịch bản đo kiểm và dữ liệu thực nghiệm được công khai minh bạch tại kho lưu trữ CLARA-Care: \url{https://github.com/Project-CLARA-HBT/CLARA-Care}.
+
+\begin{thebibliography}{25}
+\bibitem{gabrieli1992} Gabrieli ER. Longitudinal patient record (LPR). \emph{Journal of Clinical Computing}. 1992;21(1--2):1--16.
+\bibitem{kouramajian1994} Kouramajian V, Fowler J. Modeling past, current, and future time in medical databases. \emph{Proc Annu Symp Comput Appl Med Care}. 1994:315--319.
+\bibitem{kumar1998} Kumar A, Tsotras VJ, Faloutsos C. Designing access methods for bitemporal databases. \emph{IEEE Trans Knowl Data Eng}. 1998;10(1):1--20.
+\bibitem{fhirprov} HL7 International. FHIR R4: Provenance Resource. \url{https://hl7.org/fhir/R4/provenance.html}. 2019.
+\bibitem{fhirconsent} HL7 International. FHIR R4: Consent Resource. \url{https://hl7.org/fhir/R4/consent.html}. 2019.
+\bibitem{openehr} openEHR Foundation. openEHR Reference Model: Architecture and EHR Information Model. \url{https://specifications.openehr.org/}. 2026.
+\bibitem{rfc8785} Rundgren A, Jordan M, Erdtman S. RFC 8785: JSON Canonicalization Scheme (JCS). Internet Engineering Task Force (IETF). 2020.
+\bibitem{zhao2026} Zhao J, Zhi X, Yu X. Beyond retrieval: bi-temporal state arbitration for longitudinal healthcare agents. In: \emph{Proc 4th Workshop Towards Knowledgeable Foundation Models (KnowFM 2026)}. ACL; 2026:129--137.
+\bibitem{vitaltrace} Qu Z, Farber M. Vital Trace: Protocol-Constrained Patient-State Reasoning for Longitudinal Clinical Trajectories. arXiv:2602.12833. 2026.
+\bibitem{dualstream} Pugh SL, Yang E, Sutherland AM, Breschi A. Detecting clinical discrepancies in health coaching agents: a dual-stream memory and reconciliation architecture. arXiv:2604.27045. 2026.
+\bibitem{vista} Kiiskinen T, Fries J, Adamson P, et al. VISTA Architect: A graph database-oriented health AI system demonstrated in multidisciplinary tumor boards. arXiv:2606.22692. 2026.
+\bibitem{memtx} Li X, Wang Y, Lu H, Chen Z, Li M, Song P, Cai T. MemTX: Transactional Belief Commit for Stateful Agent Memory. arXiv:2607.23929. 2026.
+\bibitem{memtxn} Cui H, Tang Z, Yao Z, Meng F, Ma Q, Jia W. MemTxn: A Transaction Boundary for Source-Supported Updates and Complete-State Recovery in Agent Memory. arXiv:2607.27834. 2026.
+\bibitem{cordon} Chen Z, Liu H, Xu D, et al. Cordon: Semantic Transactions for Tool-Using LLM Agents. arXiv:2606.17573. 2026.
+\bibitem{toki} Wang Z. TOKI: A Bitemporal Operator Algebra for Contradiction Resolution in LLM-Agent Persistent Memory. arXiv:2606.06240. 2026.
+\bibitem{temporaryauth} Santos-Grueiro I. Temporary Authority, Permanent Effects: Commit-Time Authorization for LLM Agents. arXiv:2607.10487. 2026.
+\bibitem{statefulgov} Peng Y, Wu X. Stateful Governance for Concurrent Agentic Systems. arXiv:2608.02764. 2026.
+\bibitem{gatemem} Ren Z, Yang Y, Chen Y, et al. GateMem: Benchmarking Memory Governance in Multi-Principal Shared-Memory Agents. arXiv:2606.18829. 2026.
+\end{thebibliography}
+
+\end{document}

@@ -1,6 +1,6 @@
 \pdfoutput=1
 \documentclass[11pt,a4paper]{article}
-\usepackage[margin=0.85in]{geometry}
+\usepackage[margin=0.8in]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
@@ -46,17 +46,16 @@
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small\textcolor{gray}{GLHS: Disclosure-to-Commit Governance Protocol (v9)}}
+\fancyhead[L]{\small\textcolor{gray}{GLHS: Disclosure-to-Commit Governance Protocol}}
 \fancyhead[R]{\small\textcolor{gray}{IEEE / ACM / JAMIA Submission Draft}}
 \fancyfoot[C]{\small GLHS Journal Manuscript -- Page \thepage\ of \pageref{LastPage}}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0pt}
 
 \title{\LARGE\textbf{GLHS: A Formally Verified Disclosure-to-Commit Governance Protocol and Concurrency Kernel for Longitudinal Health AI}}
-\author{\textbf{Nguyen Ngoc Thien}\thanks{Primary contact: \texttt{kakangocthien109@gmail.com}} \quad\and\quad \textbf{Trinh Minh Quang}\\
-\small Department of Information Technology \& Computer Science, Hai Ba Trung High School, Hue, Vietnam\\
-\small Project CLARA-Care Research Consortium}
-\date{August 2026 (Version 9 -- Production Hardened)}
+\author{\textbf{Nguyen Ngoc Thien}\thanks{Primary contact: \texttt{kakangocthien109@gmail.com}} \quad\and\quad \textbf{Trinh Minh Quang}\\[0.35em]
+\small Hai Ba Trung High School, Hue, Vietnam}
+\date{August 2026}
 
 \begin{document}
 \maketitle
@@ -141,9 +140,9 @@ The systems landscape for stateful AI and clinical memory has advanced rapidly a
 \scriptsize
 \caption{\textbf{Comprehensive Landscape Comparison.} Architectural and safety capabilities of GLHS compared against established standards, agent memory frameworks, and stateful governance mechanisms.}
 \label{tab:landscape}
-\begin{tabularx}{\textwidth}{p{0.18\textwidth} p{0.11\textwidth} p{0.11\textwidth} p{0.11\textwidth} p{0.11\textwidth} p{0.11\textwidth} p{0.12\textwidth} X}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.3cm} >{\centering\arraybackslash}p{1.6cm} >{\centering\arraybackslash}p{1.4cm} >{\centering\arraybackslash}p{1.4cm} >{\centering\arraybackslash}p{1.4cm} >{\centering\arraybackslash}p{1.4cm} >{\centering\arraybackslash}p{1.5cm} >{\raggedright\arraybackslash}X}
 \toprule
-\textbf{Framework} & \textbf{Target} & \textbf{Bitemporal} & \textbf{Binding} & \textbf{Lock Order} & \textbf{Deadlock} & \textbf{Epoch Gate} & \textbf{Formal Spec}\\
+\textbf{Framework} & \textbf{Target Domain} & \textbf{Bitemporal} & \textbf{Binding} & \textbf{Lock Order} & \textbf{Deadlock} & \textbf{Epoch Gate} & \textbf{Formal Spec}\\
 \midrule
 FHIR / openEHR~\cite{fhirprov,openehr} & EHR Standard & Partial & None & Default & None & Static ACL & No\\
 MemTX / MemTxn~\cite{memtx,memtxn} & Agent Memory & Single Time & Evidence & 2PL Global & Timeout & No & No\\
@@ -366,7 +365,7 @@ To isolate the exact causal contribution of snapshot binding, we executed a prer
 \scriptsize
 \caption{\textbf{Causal Exact-Binding Ablation Results (\texorpdfstring{$N=640$}{N=640} total executions across 8 attack families).} Arm A admits 100\% of adversarial attacks; GLHS Arm B rejects 100\% ($p = 1.73 \times 10^{-77}$).}
 \label{tab:ablation_results}
-\begin{tabularx}{\textwidth}{p{0.32\textwidth} p{0.12\textwidth} p{0.14\textwidth} p{0.14\textwidth} p{0.14\textwidth} X}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\centering\arraybackslash}p{1.4cm} >{\centering\arraybackslash}p{2.1cm} >{\centering\arraybackslash}p{2.1cm} >{\centering\arraybackslash}p{2.2cm} >{\centering\arraybackslash}p{2.0cm}}
 \toprule
 \textbf{Attack Family} & \textbf{Schedules} & \textbf{Arm A (No Bind)} & \textbf{Arm B (GLHS)} & \textbf{Risk Diff (95\% CI)} & \textbf{McNemar $p$}\\
 \midrule
@@ -487,7 +486,7 @@ We evaluated model reasoning utility across $1,152$ execution cells over a synth
 \scriptsize
 \caption{\textbf{Preregistered Multi-Model Utility Contrasts for Strict THSS.} Holm-adjusted significance demonstrates substantial improvements over unconstrained baselines.}
 \label{tab:model_utility}
-\begin{tabularx}{\textwidth}{p{0.22\textwidth} p{0.24\textwidth} p{0.12\textwidth} p{0.20\textwidth} p{0.12\textwidth} X}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.6cm} >{\centering\arraybackslash}p{1.6cm} >{\centering\arraybackslash}p{2.6cm} >{\centering\arraybackslash}p{2.0cm} >{\centering\arraybackslash}X}
 \toprule
 \textbf{Model} & \textbf{Comparator} & \textbf{Effect} & \textbf{95\% Bootstrap CI} & \textbf{Holm $p$} & \textbf{Discord}\\
 \midrule
