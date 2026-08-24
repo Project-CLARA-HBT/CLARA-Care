@@ -108,6 +108,7 @@ export function CouncilScene() {
           <CouncilDemo
             activeStage={activeStage}
             onStageChange={setActiveStage}
+            showDecisionField={false}
           />
         </SpatialStage>
       </div>

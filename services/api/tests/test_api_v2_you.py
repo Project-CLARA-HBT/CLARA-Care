@@ -496,3 +496,101 @@ def test_sync_connected_health_observation_endpoint() -> None:
         assert obs_count == 1
     finally:
         db.close()
+
+
+def test_get_you_overview_success() -> None:
+    """GET /api/v2/you/overview returns aggregated demographics, emergency, and sharing info."""
+    db = SessionLocal()
+    try:
+        user = _create_user(db, label="you-overview")
+        profile = _create_profile(db, user, full_name="Lê Thị Overview")
+        headers = _auth_headers(user, profile)
+
+        resp = client.get("/api/v2/you/overview", headers=headers)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["data"] is not None
+        data = body["data"]
+
+        assert data["profile"]["display_name"] == "Lê Thị Overview"
+        assert data["profile"]["blood_type"] == "O+"
+        assert data["demographics"]["full_name"] == "Lê Thị Overview"
+        assert data["emergency_card"]["blood_type"] == "O+"
+        assert "family_sharing" in data
+        assert "privacy_ai" in data
+        assert "integrations" in data
+        assert "professional_mode" in data
+    finally:
+        db.close()
+
+
+def test_update_you_profile_patch() -> None:
+    """PATCH /api/v2/you/profile updates demographics and emergency fields."""
+    db = SessionLocal()
+    try:
+        user = _create_user(db, label="you-patch")
+        profile = _create_profile(db, user, full_name="Trần Văn Cũ")
+        headers = _auth_headers(user, profile)
+
+        resp = client.patch(
+            "/api/v2/you/profile",
+            json={
+                "full_name": "Trần Văn Mới",
+                "blood_type": "AB+",
+                "phone": "0987654321",
+                "emergency_contact": {
+                    "name": "Người Thân Mới",
+                    "phone": "0911223344",
+                    "relationship": "Parent",
+                },
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["full_name"] == "Trần Văn Mới"
+        assert data["blood_type"] == "AB+"
+        assert data["phone"] == "0987654321"
+        assert data["emergency_contact"]["name"] == "Người Thân Mới"
+    finally:
+        db.close()
+
+
+def test_emergency_card_and_settings() -> None:
+    """GET/PUT emergency card, GET AI transparency, notifications, and security settings."""
+    db = SessionLocal()
+    try:
+        user = _create_user(db, label="you-settings-all")
+        profile = _create_profile(db, user, full_name="Hoàng Kim Card")
+        headers = _auth_headers(user, profile)
+
+        # 1. Emergency card
+        card_resp = client.get("/api/v2/you/emergency-card", headers=headers)
+        assert card_resp.status_code == 200
+        card_data = card_resp.json()["data"]
+        assert card_data["blood_type"] == "O+"
+
+        put_card = client.put(
+            "/api/v2/you/emergency-card",
+            json={"blood_type": "B-"},
+            headers=headers,
+        )
+        assert put_card.status_code == 200
+        assert put_card.json()["data"]["blood_type"] == "B-"
+
+        # 2. AI transparency
+        ai_resp = client.get("/api/v2/you/privacy/ai-transparency", headers=headers)
+        assert ai_resp.status_code == 200
+        assert ai_resp.json()["data"]["cot_zero_disclosure"]["operates_without_cot"] is True
+
+        # 3. Notifications
+        notif_resp = client.get("/api/v2/you/notifications", headers=headers)
+        assert notif_resp.status_code == 200
+        assert notif_resp.json()["data"]["channels"]["push"] is True
+
+        # 4. Security settings
+        sec_resp = client.get("/api/v2/you/settings/security", headers=headers)
+        assert sec_resp.status_code == 200
+        assert len(sec_resp.json()["data"]["active_sessions"]) >= 1
+    finally:
+        db.close()

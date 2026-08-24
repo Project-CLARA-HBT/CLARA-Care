@@ -7,6 +7,7 @@
   --v7-surface: #ffffff;
   --v7-surface-hover: #f8fafc;
   --v7-surface-active: #f1f5f9;
+  --v7-surface-glass: rgba(255, 255, 255, 0.82);
 
   --v7-text: #162033;
   --v7-text-secondary: #48566a;
@@ -15,30 +16,40 @@
   --v7-border: #e3e8ef;
   --v7-border-strong: #d5dde7;
   --v7-border-subtle: #edf2f7;
+  --v7-border-glass: rgba(227, 232, 239, 0.85);
 
   --v7-azure: #0b6fd8;
   --v7-azure-bright: #1a86f5;
   --v7-azure-soft: #eff7ff;
   --v7-azure-subtle: rgba(11, 111, 216, 0.08);
+  --v7-azure-glow: rgba(11, 111, 216, 0.25);
 
   --v7-mint: #14a88d;
+  --v7-mint-bright: #2dd4bf;
   --v7-mint-soft: #ecfdf8;
   --v7-mint-subtle: rgba(20, 168, 141, 0.08);
+  --v7-mint-glow: rgba(20, 168, 141, 0.25);
 
   --v7-iris: #8b7cf6;
+  --v7-iris-bright: #a78bfa;
   --v7-iris-soft: #f5f3ff;
   --v7-iris-subtle: rgba(139, 124, 246, 0.08);
+  --v7-iris-glow: rgba(139, 124, 246, 0.25);
 
-  /* Motion Tokens */
-  --v7-motion-fast: 120ms;
-  --v7-motion-standard: 200ms;
-  --v7-motion-emphasis: 340ms;
-  --v7-motion-scene: 500ms;
-  --v7-motion-long: 720ms;
+  /* Motion Timing Tokens */
+  --v7-motion-fast: 140ms;
+  --v7-motion-standard: 240ms;
+  --v7-motion-emphasis: 360ms;
+  --v7-motion-smooth: 480ms;
+  --v7-motion-scene: 640ms;
+  --v7-motion-long: 850ms;
 
-  --v7-ease-standard: cubic-bezier(.2, .8, .2, 1);
-  --v7-ease-emphasis: cubic-bezier(.16, 1, .3, 1);
-  --v7-ease-inout: cubic-bezier(.65, 0, .35, 1);
+  /* Precision Easing Curves (Awwwards-grade luxury curves) */
+  --v7-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --v7-ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
+  --v7-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --v7-ease-gentle: cubic-bezier(0.4, 0, 0.2, 1);
+  --v7-ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   background-color: var(--v7-canvas);
   color: var(--v7-text);
@@ -48,35 +59,78 @@
   width: 100%;
 }
 
-/* Material Class: Editorial Canvas */
+/* ========================================================================= */
+/* 1. ENHANCED MATERIAL CLASSES                                              */
+/* ========================================================================= */
+
+/* Material Class: Editorial Canvas (Zero decoration baseline for typography) */
 .clara-editorial-canvas {
   background: transparent;
   border: none;
   box-shadow: none;
 }
 
-/* Material Class: Product Surface */
+/* Material Class: Product Surface (Awwwards elevation, border transition, hover lift) */
 .clara-product-surface {
   background-color: var(--v7-surface);
   border: 1px solid var(--v7-border);
   border-radius: 1.5rem;
-  box-shadow: 0 20px 40px -15px rgba(22, 32, 51, 0.06), 0 0 1px 1px rgba(22, 32, 51, 0.02);
-  transition: border-color var(--v7-motion-fast) var(--v7-ease-standard),
-              box-shadow var(--v7-motion-fast) var(--v7-ease-standard);
+  box-shadow: 0 25px 50px -18px rgba(11, 111, 216, 0.08), 0 0 1px 1px rgba(22, 32, 51, 0.03);
+  transition: transform var(--v7-motion-emphasis) var(--v7-ease-emphasis),
+              box-shadow var(--v7-motion-emphasis) var(--v7-ease-emphasis),
+              border-color var(--v7-motion-standard) var(--v7-ease-standard),
+              background-color var(--v7-motion-standard) var(--v7-ease-standard);
+  will-change: transform, box-shadow;
 }
 
 .clara-product-surface:hover {
-  border-color: var(--v7-border-strong);
+  transform: translate3d(0, -4px, 0);
+  border-color: rgba(11, 111, 216, 0.25);
+  box-shadow: 0 32px 64px -16px rgba(11, 111, 216, 0.14),
+              0 0 0 1px rgba(11, 111, 216, 0.08),
+              0 0 24px 0 rgba(11, 111, 216, 0.04);
 }
 
-/* Material Class: Floating Chrome (Liquid Glass for chrome ONLY) */
+/* Material Class: Floating Chrome (Ultra-refined Liquid Glass for navigation & floating bars) */
 .clara-floating-chrome {
   background-color: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(227, 232, 239, 0.85);
-  box-shadow: 0 12px 32px -8px rgba(22, 32, 51, 0.08), 0 0 1px rgba(22, 32, 51, 0.04);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9),
+              0 16px 36px -8px rgba(22, 32, 51, 0.08),
+              0 0 1px 1px rgba(22, 32, 51, 0.04);
+  transition: transform var(--v7-motion-standard) var(--v7-ease-emphasis),
+              box-shadow var(--v7-motion-standard) var(--v7-ease-emphasis),
+              border-color var(--v7-motion-fast) var(--v7-ease-standard);
 }
+
+.clara-floating-chrome:hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 1),
+              0 20px 44px -8px rgba(11, 111, 216, 0.12),
+              0 0 1px 1px rgba(11, 111, 216, 0.1);
+}
+
+/* Material Class: Interactive Card Hover/Active Scale Feedback */
+.clara-card-interactive {
+  cursor: pointer;
+  transition: transform var(--v7-motion-standard) var(--v7-ease-emphasis),
+              box-shadow var(--v7-motion-standard) var(--v7-ease-emphasis),
+              border-color var(--v7-motion-fast) var(--v7-ease-standard);
+}
+
+.clara-card-interactive:hover {
+  transform: translate3d(0, -2px, 0);
+}
+
+.clara-card-interactive:active,
+.clara-interactive-scale:active {
+  transform: scale(0.98);
+}
+
+/* ========================================================================= */
+/* 2. SPATIAL STAGE & AMBIENT LIGHTING FIELDS                                */
+/* ========================================================================= */
 
 /* Spatial 3D Perspective Stage */
 .clara-spatial-stage {
@@ -85,23 +139,23 @@
   will-change: transform;
 }
 
-/* Ambient Lighting Fields (Subtle light-first fields) */
+/* Ambient Lighting Fields (Multi-stop subtle light fields) */
 .clara-ambient-azure {
-  background: radial-gradient(circle 500px at 50% 40%, rgba(11, 111, 216, 0.06), transparent 70%);
+  background: radial-gradient(circle 600px at 50% 40%, rgba(11, 111, 216, 0.08), transparent 70%);
 }
 
 .clara-ambient-mint {
-  background: radial-gradient(circle 500px at 50% 40%, rgba(20, 168, 141, 0.06), transparent 70%);
+  background: radial-gradient(circle 600px at 50% 40%, rgba(20, 168, 141, 0.08), transparent 70%);
 }
 
 .clara-ambient-iris {
-  background: radial-gradient(circle 500px at 50% 40%, rgba(139, 124, 246, 0.06), transparent 70%);
+  background: radial-gradient(circle 600px at 50% 40%, rgba(139, 124, 246, 0.08), transparent 70%);
 }
 
 .clara-ambient-multi {
-  background: radial-gradient(circle 600px at 25% 35%, rgba(11, 111, 216, 0.06), transparent 65%),
-              radial-gradient(circle 550px at 75% 65%, rgba(20, 168, 141, 0.06), transparent 65%),
-              radial-gradient(circle 500px at 50% 85%, rgba(139, 124, 246, 0.04), transparent 60%);
+  background: radial-gradient(circle 700px at 20% 30%, rgba(11, 111, 216, 0.08), transparent 65%),
+              radial-gradient(circle 650px at 80% 65%, rgba(20, 168, 141, 0.07), transparent 65%),
+              radial-gradient(circle 550px at 50% 85%, rgba(139, 124, 246, 0.06), transparent 60%);
 }
 
 /* Grid Break Container for Signature Scenes */
@@ -115,78 +169,131 @@
   max-width: 100vw;
 }
 
-/* Artwork Animations: Orb Subtle Glow */
-@keyframes clara-orb-glow {
+/* ========================================================================= */
+/* 3. RICH KEYFRAMES & SIGNATURE ANIMATIONS                                  */
+/* ========================================================================= */
+
+/* 1. Clara Orb Float: Smooth 6s vertical breathing float with scale & luxury glow */
+@keyframes clara-orb-float {
   0%, 100% {
-    opacity: 0.85;
-    transform: scale(1);
-    filter: drop-shadow(0 0 16px rgba(11, 111, 216, 0.25));
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: drop-shadow(0 0 16px rgba(11, 111, 216, 0.22));
   }
   50% {
-    opacity: 1;
-    transform: scale(1.03);
-    filter: drop-shadow(0 0 24px rgba(11, 111, 216, 0.4));
+    transform: translate3d(0, -10px, 0) scale(1.035);
+    filter: drop-shadow(0 0 28px rgba(26, 134, 245, 0.38)) drop-shadow(0 0 48px rgba(11, 111, 216, 0.18));
   }
 }
 
+.clara-orb-float,
 .clara-orb-glow {
-  animation: clara-orb-glow 5s var(--v7-ease-inout) infinite;
+  animation: clara-orb-float 6s var(--v7-ease-inout) infinite;
+  will-change: transform, filter;
 }
 
-/* Artwork Animations: Ribbon Path Pulse */
+/* 2. Ribbon Flow: Traveling gradient dash stream with glowing light head */
+@keyframes clara-ribbon-flow {
+  0% {
+    stroke-dashoffset: 0;
+    stroke-opacity: 0.45;
+    filter: drop-shadow(0 0 2px rgba(11, 111, 216, 0.3));
+  }
+  50% {
+    stroke-opacity: 0.95;
+    filter: drop-shadow(0 0 8px rgba(26, 134, 245, 0.65)) drop-shadow(0 0 16px rgba(11, 111, 216, 0.25));
+  }
+  100% {
+    stroke-dashoffset: -128;
+    stroke-opacity: 0.45;
+    filter: drop-shadow(0 0 2px rgba(11, 111, 216, 0.3));
+  }
+}
+
 @keyframes clara-ribbon-pulse {
   0%, 100% {
-    stroke-opacity: 0.4;
+    stroke-opacity: 0.45;
     stroke-dashoffset: 0;
   }
   50% {
-    stroke-opacity: 0.9;
+    stroke-opacity: 0.95;
     stroke-dashoffset: -20;
   }
 }
 
-.clara-ribbon-path {
-  stroke-dasharray: 8 8;
-  animation: clara-ribbon-pulse 5s ease-in-out infinite;
+.clara-ribbon-flow {
+  animation: clara-ribbon-flow 5s linear infinite;
+  will-change: stroke-dashoffset, filter;
 }
 
-/* Artwork Animations: Constellation Dashed Connectors */
+.clara-ribbon-path {
+  stroke-dasharray: 8 8;
+  animation: clara-ribbon-flow 5s linear infinite;
+  will-change: stroke-dashoffset, filter;
+}
+
+/* 3. Constellation Pulse: Smooth connector glow pulse */
 @keyframes clara-constellation-pulse {
   0%, 100% {
     stroke-opacity: 0.35;
     stroke-dashoffset: 0;
+    filter: drop-shadow(0 0 0px transparent);
   }
   50% {
-    stroke-opacity: 0.85;
-    stroke-dashoffset: -12;
+    stroke-opacity: 0.9;
+    stroke-dashoffset: -16;
+    filter: drop-shadow(0 0 6px rgba(11, 111, 216, 0.5));
   }
+}
+
+.clara-constellation-pulse {
+  animation: clara-constellation-pulse 4s var(--v7-ease-inout) infinite;
+  will-change: stroke-dashoffset, stroke-opacity, filter;
 }
 
 .clara-constellation-line {
   stroke-dasharray: 6 6;
-  animation: clara-constellation-pulse 4s ease-in-out infinite;
+  animation: clara-constellation-pulse 4s var(--v7-ease-inout) infinite;
+  will-change: stroke-dashoffset, stroke-opacity, filter;
 }
 
-/* Artwork Animations: Scribe Wave Bars */
-@keyframes clara-wave-bar {
-  0%, 100% {
-    height: 6px;
+/* 4. Beacon Sonar: Concentric sonar pulse wave expanding outward and fading smoothly */
+@keyframes clara-beacon-sonar {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.9;
+    filter: drop-shadow(0 0 2px rgba(11, 111, 216, 0.4));
   }
   50% {
-    height: 24px;
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.85);
+    opacity: 0;
+    filter: drop-shadow(0 0 14px rgba(11, 111, 216, 0));
   }
 }
 
-.clara-wave-1 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.1s; }
-.clara-wave-2 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.3s; }
-.clara-wave-3 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.2s; }
-.clara-wave-4 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.5s; }
-.clara-wave-5 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.4s; }
-.clara-wave-6 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.25s; }
-.clara-wave-7 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.45s; }
-.clara-wave-8 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.15s; }
+.clara-beacon-sonar {
+  transform-origin: center;
+  animation: clara-beacon-sonar 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
 
-/* Artwork Animations: Scenario Path Flow */
+/* 5. Gate Stream & Path Flow: Smooth linear particle flow through gate */
+@keyframes clara-gate-stream {
+  0% {
+    stroke-dashoffset: 0;
+    filter: drop-shadow(0 0 2px rgba(20, 168, 141, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px rgba(20, 168, 141, 0.7));
+  }
+  100% {
+    stroke-dashoffset: -96;
+    filter: drop-shadow(0 0 2px rgba(20, 168, 141, 0.3));
+  }
+}
+
 @keyframes clara-path-flow {
   0% {
     stroke-dashoffset: 0;
@@ -196,13 +303,122 @@
   }
 }
 
-/* Focus Ring Utility */
+.clara-gate-stream {
+  animation: clara-gate-stream 6s linear infinite;
+  will-change: stroke-dashoffset, filter;
+}
+
+.clara-path-flow {
+  animation: clara-path-flow 24s linear infinite;
+  will-change: stroke-dashoffset;
+}
+
+/* 6. Wave Equalizer: Natural multi-frequency bar wave animations (10 bars with natural varying heights and phase delays) */
+@keyframes clara-wave-bar {
+  0%, 100% {
+    height: 8px;
+    transform: scaleY(0.7);
+  }
+  50% {
+    height: 32px;
+    transform: scaleY(1.15);
+  }
+}
+
+@keyframes clara-wave-bar-1 { 0%, 100% { height: 8px; transform: scaleY(0.7); } 50% { height: 28px; transform: scaleY(1.15); } }
+@keyframes clara-wave-bar-2 { 0%, 100% { height: 14px; transform: scaleY(0.75); } 50% { height: 42px; transform: scaleY(1.2); } }
+@keyframes clara-wave-bar-3 { 0%, 100% { height: 18px; transform: scaleY(0.8); } 50% { height: 50px; transform: scaleY(1.25); } }
+@keyframes clara-wave-bar-4 { 0%, 100% { height: 10px; transform: scaleY(0.7); } 50% { height: 32px; transform: scaleY(1.15); } }
+@keyframes clara-wave-bar-5 { 0%, 100% { height: 22px; transform: scaleY(0.85); } 50% { height: 56px; transform: scaleY(1.3); } }
+@keyframes clara-wave-bar-6 { 0%, 100% { height: 16px; transform: scaleY(0.75); } 50% { height: 44px; transform: scaleY(1.2); } }
+@keyframes clara-wave-bar-7 { 0%, 100% { height: 24px; transform: scaleY(0.85); } 50% { height: 58px; transform: scaleY(1.3); } }
+@keyframes clara-wave-bar-8 { 0%, 100% { height: 12px; transform: scaleY(0.7); } 50% { height: 36px; transform: scaleY(1.15); } }
+@keyframes clara-wave-bar-9 { 0%, 100% { height: 20px; transform: scaleY(0.8); } 50% { height: 48px; transform: scaleY(1.25); } }
+@keyframes clara-wave-bar-10 { 0%, 100% { height: 8px; transform: scaleY(0.7); } 50% { height: 26px; transform: scaleY(1.1); } }
+
+.clara-wave-equalizer {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.clara-wave-1 { animation: clara-wave-bar-1 1.25s var(--v7-ease-inout) infinite 0.1s; transform-origin: bottom center; will-change: height, transform; }
+.clara-wave-2 { animation: clara-wave-bar-2 1.4s var(--v7-ease-inout) infinite 0.28s; transform-origin: bottom center; will-change: height, transform; }
+.clara-wave-3 { animation: clara-wave-bar-3 1.35s var(--v7-ease-inout) infinite 0.18s; transform-origin: bottom center; will-change: height, transform; }
+.clara-wave-4 { animation: clara-wave-bar-4 1.5s var(--v7-ease-inout) infinite 0.42s; transform-origin: bottom center; will-change: height, transform; }
+.clara-wave-5 { animation: clara-wave-bar-5 1.3s var(--v7-ease-inout) infinite 0.12s; transform-origin: bottom center; will-change: height, transform; }
+.clara-wave-6 { animation: clara-wave-bar-6 1.45s var(--v7-ease-inout) infinite 0.32s; transform-origin: bottom center; will-change: height, transform; }
+.clara-wave-7 { animation: clara-wave-bar-7 1.38s var(--v7-ease-inout) infinite 0.22s; transform-origin: bottom center; will-change: height, transform; }
+.clara-wave-8 { animation: clara-wave-bar-8 1.48s var(--v7-ease-inout) infinite 0.46s; transform-origin: bottom center; will-change: height, transform; }
+.clara-wave-9 { animation: clara-wave-bar-9 1.32s var(--v7-ease-inout) infinite 0.16s; transform-origin: bottom center; will-change: height, transform; }
+.clara-wave-10 { animation: clara-wave-bar-10 1.52s var(--v7-ease-inout) infinite 0.38s; transform-origin: bottom center; will-change: height, transform; }
+
+/* 7. Aura Breathe: Ambient atmospheric aura slow breathe (Azure, Mint, Iris) */
+@keyframes clara-aura-breathe {
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(1) translate3d(0, 0, 0);
+    filter: blur(48px);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.08) translate3d(0, -6px, 0);
+    filter: blur(64px);
+  }
+}
+
+.clara-aura-breathe {
+  animation: clara-aura-breathe 8s var(--v7-ease-inout) infinite;
+  will-change: transform, opacity, filter;
+}
+
+/* 8. Reveal Fade Up: Smooth staggered entrance with translate3d(0, 20px, 0) -> translate3d(0, 0, 0) */
+@keyframes clara-reveal-fadeup {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.clara-reveal-fadeup {
+  animation: clara-reveal-fadeup var(--v7-motion-scene) var(--v7-ease-emphasis) forwards;
+  will-change: transform, opacity;
+}
+
+/* ========================================================================= */
+/* 4. UTILITIES & FOCUS RINGS                                                */
+/* ========================================================================= */
+
+/* Focus Ring Utility with Subtle Glow */
 .clara-focus-ring:focus-visible {
   outline: 2px solid var(--v7-azure);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(11, 111, 216, 0.18);
 }
 
-/* Reduced Motion Overrides: Complete Neutralization of Continuous Animations */
+/* Active Pill / Indicator */
+.clara-active-pill {
+  position: relative;
+}
+
+.clara-active-pill::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgba(11, 111, 216, 0.25) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ========================================================================= */
+/* 5. COMPLETE ACCESSIBILITY & REDUCED MOTION OVERRIDES                      */
+/* ========================================================================= */
+
 @media (prefers-reduced-motion: reduce) {
   .clara-landing-v7,
   .clara-landing-v7 *,
@@ -219,21 +435,43 @@
     transform: none !important;
   }
 
-  .clara-orb-glow {
-    animation: none !important;
+  .clara-product-surface:hover,
+  .clara-floating-chrome:hover,
+  .clara-card-interactive:hover {
     transform: none !important;
   }
 
+  .clara-orb-float,
+  .clara-orb-glow {
+    animation: none !important;
+    transform: none !important;
+    filter: drop-shadow(0 0 16px rgba(11, 111, 216, 0.25)) !important;
+  }
+
+  .clara-ribbon-flow,
   .clara-ribbon-path {
     animation: none !important;
     stroke-dasharray: none !important;
-    stroke-opacity: 0.7 !important;
+    stroke-opacity: 0.75 !important;
   }
 
-  .clara-constellation-line {
+  .clara-constellation-line,
+  .clara-constellation-pulse {
     animation: none !important;
     stroke-dasharray: none !important;
-    stroke-opacity: 0.6 !important;
+    stroke-opacity: 0.65 !important;
+  }
+
+  .clara-beacon-sonar {
+    animation: none !important;
+    transform: none !important;
+    opacity: 0.8 !important;
+  }
+
+  .clara-gate-stream,
+  .clara-path-flow {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
   }
 
   .clara-wave-1,
@@ -243,8 +481,23 @@
   .clara-wave-5,
   .clara-wave-6,
   .clara-wave-7,
-  .clara-wave-8 {
+  .clara-wave-8,
+  .clara-wave-9,
+  .clara-wave-10 {
     animation: none !important;
-    height: 14px !important;
+    transform: none !important;
+    height: 16px !important;
+  }
+
+  .clara-aura-breathe {
+    animation: none !important;
+    transform: none !important;
+    opacity: 0.7 !important;
+  }
+
+  .clara-reveal-fadeup {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

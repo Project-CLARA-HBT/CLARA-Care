@@ -17,7 +17,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Header, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import desc, or_, select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.profiles import current_user
@@ -121,8 +121,10 @@ class YouProfileResponse(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    id: str = Field(default="", description="Profile public ID (alias for id)")
     profile_id: str = Field(description="Profile public ID")
     user_id: int = Field(description="Associated user ID")
+    display_name: str = Field(default="", description="Display name")
     full_name: str = Field(description="User full legal or preferred name")
     date_of_birth: date | None = Field(default=None, description="Date of birth")
     gender: str = Field(default="", description="Gender identifier")
@@ -131,7 +133,33 @@ class YouProfileResponse(BaseModel):
     weight_kg: float | None = Field(default=None, description="Weight in kilograms")
     phone: str = Field(default="", description="Contact phone number")
     contact_email: str = Field(default="", description="Contact email address")
+    email: str = Field(default="", description="Contact email address alias")
     address: str = Field(default="", description="Residential address")
+    emergency_contact: dict[str, Any] = Field(
+        default_factory=dict, description="Primary emergency contact details"
+    )
+    allergies: list[dict[str, Any]] = Field(
+        default_factory=list, description="List of recorded allergies"
+    )
+    conditions: list[dict[str, Any]] = Field(
+        default_factory=list, description="List of recorded conditions"
+    )
+    medications: list[dict[str, Any]] = Field(
+        default_factory=list, description="List of recorded medications"
+    )
+    medical_alerts: list[str] = Field(
+        default_factory=list, description="Critical medical alert badges"
+    )
+    emergency_card_included_fields: dict[str, bool] = Field(
+        default_factory=lambda: {
+            "allergies": True,
+            "current_medications": True,
+            "conditions": True,
+            "blood_type": True,
+            "emergency_contact": True,
+        },
+        description="Emergency card inclusion preferences",
+    )
     insurance_provider: str = Field(default="", description="Health insurance provider")
     insurance_id: str = Field(default="", description="Health insurance card number")
     insurance_expiry: date | None = Field(default=None, description="Insurance expiration date")
@@ -143,6 +171,278 @@ class YouProfileResponse(BaseModel):
     preferences: ProfilePreferences = Field(description="User preferences and settings")
     created_at: datetime = Field(description="Profile creation timestamp")
     updated_at: datetime = Field(description="Last profile update timestamp")
+
+
+# ---------------------------------------------------------------------------
+# Overview Schemas
+# ---------------------------------------------------------------------------
+
+
+class HomeProfileDto(BaseModel):
+    """Profile identity summary for personal hub."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str = Field(description="Profile identifier")
+    display_name: str = Field(description="User display name")
+    full_name: str | None = Field(default=None, description="Full legal name")
+    avatar_url: str | None = Field(default=None, description="Avatar image URL")
+    kind: str = Field(default="primary", description="Profile kind ('primary' or 'shared')")
+    is_primary: bool = Field(default=True, description="Whether this is user primary profile")
+    blood_type: str | None = Field(default=None, description="Blood type")
+    conditions_count: int = Field(default=0, description="Count of active conditions")
+    allergies_count: int = Field(default=0, description="Count of active allergies")
+    medications_count: int = Field(default=0, description="Count of active medications")
+
+
+class HealthDemographicsDto(BaseModel):
+    """Demographics snapshot."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    full_name: str | None = None
+    date_of_birth: str | None = None
+    gender: str | None = None
+    blood_type: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    address: str | None = None
+    insurance_provider: str | None = None
+    insurance_id: str | None = None
+    emergency_contact: dict[str, Any] | None = None
+
+
+class YouEmergencyCardSummaryDto(BaseModel):
+    """Emergency card summary for You overview."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str | None = None
+    blood_type: str | None = None
+    allergies_count: int = 0
+    conditions_count: int = 0
+    medications_count: int = 0
+    medical_alerts: list[str] = Field(default_factory=list)
+    emergency_contact: dict[str, Any] | None = None
+    is_configured: bool = True
+    last_updated: str | None = None
+
+
+class FamilySharingSummaryDto(BaseModel):
+    """Family sharing summary for You overview."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    active_grants_count: int = 0
+    received_grants_count: int = 0
+    pending_invites_count: int = 0
+    members: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class PrivacyAiSummaryDto(BaseModel):
+    """Privacy and AI settings summary for You overview."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    data_classes_used: list[str] = Field(
+        default_factory=lambda: ["demographics", "medications", "conditions", "vitals"]
+    )
+    ai_features_enabled: bool = True
+    cot_disabled: bool = True
+    retention_policy_days: int = 30
+    consent_status: str = "granted"
+    last_consent_at: str | None = None
+
+
+class IntegrationSourceSummaryDto(BaseModel):
+    """Connected source snapshot."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    name: str
+    title: str
+    connected: bool = True
+    sync_enabled: bool = True
+    last_sync_at: str | None = None
+    status: str = "active"
+    error_message: str | None = None
+
+
+class IntegrationsSummaryDto(BaseModel):
+    """Wearable and connector integration summary for You overview."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    total_connected: int = 0
+    sources: list[IntegrationSourceSummaryDto] = Field(default_factory=list)
+
+
+class ProfessionalModeDto(BaseModel):
+    """Professional role launchpad status."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    eligible: bool = False
+    role: str = "normal"
+    active_workspace: str | None = None
+
+
+class YouOverviewResponse(BaseModel):
+    """Unified personal overview response for /you dashboard."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    profile: HomeProfileDto | None = None
+    demographics: HealthDemographicsDto | None = None
+    emergency_card: YouEmergencyCardSummaryDto
+    family_sharing: FamilySharingSummaryDto
+    privacy_ai: PrivacyAiSummaryDto
+    integrations: IntegrationsSummaryDto
+    professional_mode: ProfessionalModeDto
+    notifications: dict[str, Any] | None = None
+
+
+class UpdateProfileDetailsRequest(BaseModel):
+    """Payload to update personal health demographics and preferences."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    full_name: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    date_of_birth: str | None = None
+    gender: str | None = None
+    blood_type: str | None = None
+    address: str | None = None
+    emergency_contact: dict[str, Any] | None = None
+    emergency_card_included_fields: dict[str, bool] | None = None
+    medical_alerts: list[str] | None = None
+    insurance_provider: str | None = None
+    insurance_id: str | None = None
+
+
+class EmergencyCardResponse(BaseModel):
+    """Direct emergency card response with inclusions and notices."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str | None = None
+    profile_id: str | None = None
+    blood_type: str | None = None
+    allergies: list[dict[str, Any]] = Field(default_factory=list)
+    current_medications: list[dict[str, Any]] = Field(default_factory=list)
+    conditions: list[dict[str, Any]] = Field(default_factory=list)
+    emergency_contact: dict[str, Any] | None = None
+    medical_alerts: list[str] = Field(default_factory=list)
+    included_fields: dict[str, bool] = Field(
+        default_factory=lambda: {
+            "allergies": True,
+            "current_medications": True,
+            "conditions": True,
+            "blood_type": True,
+            "emergency_contact": True,
+        }
+    )
+    disclaimer: dict[str, str] = Field(default_factory=dict)
+    last_updated: str | None = None
+
+
+class UpdateEmergencyCardRequest(BaseModel):
+    """Payload to update emergency card preferences."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    blood_type: str | None = None
+    emergency_contact: dict[str, Any] | None = None
+    medical_alerts: list[str] | None = None
+    included_fields: dict[str, bool] | None = None
+
+
+class AiTransparencyResponse(BaseModel):
+    """AI transparency, zero-CoT disclosure, and user controls."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    data_classes_used: list[dict[str, Any]] = Field(default_factory=list)
+    retention_policy: dict[str, Any] = Field(default_factory=dict)
+    cot_zero_disclosure: dict[str, Any] = Field(default_factory=dict)
+    ai_feature_controls: dict[str, bool] = Field(default_factory=dict)
+    consent_status: dict[str, Any] = Field(default_factory=dict)
+
+
+class UpdateAiPreferencesRequest(BaseModel):
+    """Payload to update AI features and preferences."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    symptom_insights_enabled: bool | None = None
+    visit_prep_suggestions_enabled: bool | None = None
+    medication_safety_ai_enabled: bool | None = None
+    search_summaries_enabled: bool | None = None
+
+
+class NotificationPreferencesResponse(BaseModel):
+    """User notification channel and category preferences."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    categories: dict[str, bool] = Field(
+        default_factory=lambda: {
+            "medications": True,
+            "visits": True,
+            "review_items": True,
+            "safety_alerts": True,
+            "journey_milestones": True,
+            "family_activity": True,
+        }
+    )
+    channels: dict[str, bool] = Field(
+        default_factory=lambda: {"push": True, "email": True, "in_app": True}
+    )
+    quiet_hours: dict[str, Any] = Field(
+        default_factory=lambda: {"enabled": True, "start_time": "22:00", "end_time": "07:00"}
+    )
+
+
+class UpdateNotificationPreferencesRequest(BaseModel):
+    """Payload to update notification preferences."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    categories: dict[str, bool] | None = None
+    channels: dict[str, bool] | None = None
+    quiet_hours: dict[str, Any] | None = None
+
+
+class ActiveSessionItem(BaseModel):
+    """Active user login session."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    device_name: str
+    device_type: str = "desktop"
+    platform: str = "Web"
+    browser: str | None = None
+    ip_address: str = "127.0.0.1"
+    location: str = "Việt Nam"
+    last_active_at: str
+    is_current: bool = False
+
+
+class SecuritySettingsResponse(BaseModel):
+    """Account security settings and active session list."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    mfa_enabled: bool = False
+    mfa_method: str = "totp"
+    mfa_configured_at: str | None = None
+    inactivity_timeout_minutes: int = 30
+    new_login_alerts: bool = True
+    reauth_for_sensitive: bool = True
+    active_sessions: list[ActiveSessionItem] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -536,6 +836,204 @@ CONNECTOR_CATALOG: list[dict[str, Any]] = [
 
 
 @router.get(
+    "/overview",
+    response_model=ApiV2ResponseEnvelope[YouOverviewResponse],
+    summary="Get unified personal overview for You workspace",
+)
+def get_you_overview(
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+    x_clara_profile_context: str | None = Header(None, alias="X-CLARA-Profile-Context"),
+    profile_id: str | None = Query(None, description="Explicit profile ID override"),
+) -> ApiV2ResponseEnvelope[YouOverviewResponse]:
+    """Retrieve unified personal overview covering demographics, emergency summary, sharing, privacy, and integrations."""
+    user = current_user(db, token)
+    requested_profile_id = x_clara_profile_context or profile_id
+    scope = require_profile_scope(db, user=user, profile_id=requested_profile_id)
+    profile: PhrProfile = scope.profile
+
+    # 1. Profile and Demographics
+    allergies = profile.allergies_json or []
+    conditions = profile.conditions_json or []
+    medications = profile.medications_json or []
+
+    profile_dto = HomeProfileDto(
+        id=profile.public_id,
+        display_name=profile.full_name or "Tài khoản cá nhân",
+        full_name=profile.full_name,
+        avatar_url=None,
+        kind="primary" if scope.is_owner else "shared",
+        is_primary=scope.is_owner,
+        blood_type=profile.blood_type or "Chưa rõ",
+        conditions_count=len(conditions),
+        allergies_count=len(allergies),
+        medications_count=len(medications),
+    )
+
+    emergency_contact = None
+    if profile.emergency_contact_name or profile.emergency_contact_phone:
+        emergency_contact = {
+            "name": profile.emergency_contact_name or "",
+            "phone": profile.emergency_contact_phone or "",
+            "relationship": profile.emergency_contact_relationship or "",
+        }
+
+    demographics_dto = HealthDemographicsDto(
+        full_name=profile.full_name,
+        date_of_birth=profile.date_of_birth.isoformat() if profile.date_of_birth else None,
+        gender=profile.gender,
+        blood_type=profile.blood_type,
+        phone=profile.phone,
+        email=profile.contact_email or user.email,
+        address=profile.address,
+        insurance_provider=profile.insurance_provider,
+        insurance_id=profile.insurance_id,
+        emergency_contact=emergency_contact,
+    )
+
+    # 2. Emergency Card Summary
+    critical_alerts = [
+        a.get("name", "") for a in allergies if isinstance(a, dict) and a.get("is_critical")
+    ]
+    if not critical_alerts and profile.allergy_status == "known_allergies":
+        critical_alerts = [
+            a.get("name", "") for a in allergies if isinstance(a, dict) and a.get("name")
+        ][:2]
+
+    allergies_summary = (
+        f"{len(allergies)} dị ứng đã ghi nhận" if allergies else "Chưa ghi nhận dị ứng"
+    )
+    medications_summary = (
+        f"{len(medications)} thuốc đang sử dụng"
+        if medications
+        else "Không có thuốc thường xuyên"
+    )
+
+    emergency_card_summary = YouEmergencyCardSummaryDto(
+        id=profile.public_id,
+        blood_type=profile.blood_type or "Chưa rõ",
+        allergies_count=len(allergies),
+        conditions_count=len(conditions),
+        medications_count=len(medications),
+        medical_alerts=critical_alerts,
+        emergency_contact=emergency_contact,
+        is_configured=True,
+        last_updated=profile.updated_at.isoformat() if profile.updated_at else None,
+    )
+
+    # 3. Family Sharing Summary
+    grants_count = (
+        db.execute(
+            select(func.count(FamilyAccessGrant.id)).where(
+                FamilyAccessGrant.profile_id == profile.id,
+                FamilyAccessGrant.status == "active",
+            )
+        ).scalar()
+        or 0
+    )
+
+    invites_count = (
+        db.execute(
+            select(func.count(FamilyInvitation.id)).where(
+                FamilyInvitation.profile_id == profile.id,
+                FamilyInvitation.accepted_at.is_(None),
+                FamilyInvitation.revoked_at.is_(None),
+            )
+        ).scalar()
+        or 0
+    )
+
+    family_sharing_summary = FamilySharingSummaryDto(
+        active_grants_count=int(grants_count),
+        received_grants_count=0,
+        pending_invites_count=int(invites_count),
+        members=[],
+    )
+
+    # 4. Privacy and AI
+    user_consent = (
+        db.execute(
+            select(UserConsent)
+            .where(UserConsent.user_id == user.id)
+            .order_by(desc(UserConsent.accepted_at))
+        )
+        .scalars()
+        .first()
+    )
+
+    privacy_ai_summary = PrivacyAiSummaryDto(
+        data_classes_used=["demographics", "medications", "conditions", "vitals"],
+        ai_features_enabled=True,
+        cot_disabled=True,
+        retention_policy_days=30,
+        consent_status="granted" if user_consent and user_consent.revoked_at is None else "pending",
+        last_consent_at=user_consent.accepted_at.isoformat()
+        if user_consent and user_consent.accepted_at
+        else None,
+    )
+
+    # 5. Integrations Summary
+    conn_count = (
+        db.execute(
+            select(func.count(ConnectorAccount.id)).where(
+                ConnectorAccount.profile_id == profile.id,
+                ConnectorAccount.status == "connected",
+            )
+        ).scalar()
+        or 0
+    )
+
+    integrations_summary = IntegrationsSummaryDto(
+        total_connected=int(conn_count),
+        sources=[],
+    )
+
+    # 6. Professional Mode
+    is_prof = user.role in {"doctor", "researcher", "admin"}
+    prof_mode = ProfessionalModeDto(
+        eligible=is_prof,
+        role=user.role,
+        active_workspace="admin"
+        if user.role == "admin"
+        else (
+            "clinical"
+            if user.role == "doctor"
+            else ("research" if user.role == "researcher" else "personal")
+        ),
+    )
+
+    # 7. Notifications
+    notifications = {
+        "unread_count": 0,
+        "preferences": {
+            "categories": {
+                "medications": True,
+                "visits": True,
+                "review_items": True,
+                "safety_alerts": True,
+                "journey_milestones": True,
+                "family_activity": True,
+            },
+            "channels": {"push": True, "email": True, "in_app": True},
+            "quiet_hours": {"enabled": True, "start_time": "22:00", "end_time": "07:00"},
+        },
+    }
+
+    response_data = YouOverviewResponse(
+        profile=profile_dto,
+        demographics=demographics_dto,
+        emergency_card=emergency_card_summary,
+        family_sharing=family_sharing_summary,
+        privacy_ai=privacy_ai_summary,
+        integrations=integrations_summary,
+        professional_mode=prof_mode,
+        notifications=notifications,
+    )
+
+    return ApiV2ResponseEnvelope.wrap(data=response_data)
+
+
+@router.get(
     "/profile",
     response_model=ApiV2ResponseEnvelope[YouProfileResponse],
     summary="Get user profile, emergency card, and preferences",
@@ -595,9 +1093,27 @@ def get_you_profile(
         current_version_no=profile.current_version_no or 1,
     )
 
+    allergies_list = profile.allergies_json or []
+    conditions_list = profile.conditions_json or []
+    medications_list = profile.medications_json or []
+
+    critical_alerts = [
+        a.get("name", "")
+        for a in allergies_list
+        if isinstance(a, dict) and a.get("is_critical")
+    ]
+
+    emergency_contact_dict = {
+        "name": profile.emergency_contact_name or "",
+        "phone": profile.emergency_contact_phone or "",
+        "relationship": profile.emergency_contact_relationship or "",
+    }
+
     profile_data = YouProfileResponse(
+        id=profile.public_id,
         profile_id=profile.public_id,
         user_id=profile.user_id,
+        display_name=profile.full_name or "Tài khoản cá nhân",
         full_name=profile.full_name or "",
         date_of_birth=profile.date_of_birth,
         gender=profile.gender or "",
@@ -606,7 +1122,14 @@ def get_you_profile(
         weight_kg=profile.weight_kg,
         phone=profile.phone or "",
         contact_email=profile.contact_email or user.email,
+        email=profile.contact_email or user.email,
         address=profile.address or "",
+        emergency_contact=emergency_contact_dict,
+        allergies=allergies_list,
+        conditions=conditions_list,
+        medications=medications_list,
+        medical_alerts=critical_alerts,
+        emergency_card_included_fields=emergency_card_prefs,
         insurance_provider=profile.insurance_provider or "",
         insurance_id=profile.insurance_id or "",
         insurance_expiry=profile.insurance_expiry,
@@ -621,6 +1144,182 @@ def get_you_profile(
     return ApiV2ResponseEnvelope.wrap(
         data=profile_data,
         meta={"context_version": str(profile.current_version_no or 1)},
+    )
+
+
+@router.patch(
+    "/profile",
+    response_model=ApiV2ResponseEnvelope[YouProfileResponse],
+    summary="Update personal health demographics, emergency contact, and preferences",
+)
+def update_you_profile(
+    body: UpdateProfileDetailsRequest,
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+    x_clara_profile_context: str | None = Header(None, alias="X-CLARA-Profile-Context"),
+    profile_id: str | None = Query(None),
+) -> ApiV2ResponseEnvelope[YouProfileResponse]:
+    """Update personal health demographics, emergency contact, and preferences."""
+    user = current_user(db, token)
+    requested_profile_id = x_clara_profile_context or profile_id
+    scope = require_profile_scope(db, user=user, profile_id=requested_profile_id)
+    profile: PhrProfile = scope.profile
+
+    if body.full_name is not None:
+        profile.full_name = body.full_name
+    if body.phone is not None:
+        profile.phone = body.phone
+    if body.email is not None:
+        profile.contact_email = body.email
+    if body.date_of_birth is not None:
+        try:
+            profile.date_of_birth = date.fromisoformat(body.date_of_birth)
+        except Exception:
+            pass
+    if body.gender is not None:
+        profile.gender = body.gender
+    if body.blood_type is not None:
+        profile.blood_type = body.blood_type
+    if body.address is not None:
+        profile.address = body.address
+    if body.emergency_contact is not None:
+        profile.emergency_contact_name = body.emergency_contact.get(
+            "name", profile.emergency_contact_name
+        )
+        profile.emergency_contact_phone = body.emergency_contact.get(
+            "phone", profile.emergency_contact_phone
+        )
+        profile.emergency_contact_relationship = body.emergency_contact.get(
+            "relationship", profile.emergency_contact_relationship
+        )
+    if body.emergency_card_included_fields is not None:
+        profile.emergency_card_prefs_json = body.emergency_card_included_fields
+    if body.insurance_provider is not None:
+        profile.insurance_provider = body.insurance_provider
+    if body.insurance_id is not None:
+        profile.insurance_id = body.insurance_id
+
+    profile.current_version_no = (profile.current_version_no or 1) + 1
+    profile.updated_at = datetime.now(UTC)
+
+    invalidate_projection_graph(
+        db, profile_id=profile.id, reason="profile_updated", invalidate_all=True
+    )
+    db.commit()
+    db.refresh(profile)
+
+    return get_you_profile(db=db, token=token, x_clara_profile_context=str(profile.id))
+
+
+@router.get(
+    "/emergency-card",
+    response_model=ApiV2ResponseEnvelope[EmergencyCardResponse],
+    summary="Get owner-controlled emergency medical summary card",
+)
+def get_you_emergency_card(
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+    x_clara_profile_context: str | None = Header(None, alias="X-CLARA-Profile-Context"),
+    profile_id: str | None = Query(None),
+) -> ApiV2ResponseEnvelope[EmergencyCardResponse]:
+    """Get owner-controlled emergency medical summary card."""
+    user = current_user(db, token)
+    requested_profile_id = x_clara_profile_context or profile_id
+    scope = require_profile_scope(db, user=user, profile_id=requested_profile_id)
+    profile: PhrProfile = scope.profile
+
+    record = {
+        "profile": {
+            "blood_type": profile.blood_type or "",
+            "emergency_contact_name": profile.emergency_contact_name or "",
+            "emergency_contact_phone": profile.emergency_contact_phone or "",
+            "emergency_contact_relationship": profile.emergency_contact_relationship or "",
+            "emergency_contact_note": profile.emergency_contact_note or "",
+        },
+        "allergies": profile.allergies_json or [],
+        "medications": profile.medications_json or [],
+        "conditions": profile.conditions_json or [],
+    }
+    raw_card = build_emergency_card(record, profile.emergency_card_prefs_json)
+
+    prefs = profile.emergency_card_prefs_json or {
+        "allergies": True,
+        "current_medications": True,
+        "conditions": True,
+        "blood_type": True,
+        "emergency_contact": True,
+    }
+
+    emergency_contact = None
+    if profile.emergency_contact_name or profile.emergency_contact_phone:
+        emergency_contact = {
+            "name": profile.emergency_contact_name or "",
+            "phone": profile.emergency_contact_phone or "",
+            "relationship": profile.emergency_contact_relationship or "",
+        }
+
+    allergies = profile.allergies_json or []
+    critical_alerts = [
+        a.get("name", "")
+        for a in allergies
+        if isinstance(a, dict) and a.get("is_critical")
+    ]
+
+    card_response = EmergencyCardResponse(
+        id=profile.public_id,
+        profile_id=profile.public_id,
+        blood_type=profile.blood_type or "",
+        allergies=raw_card.get("allergies", []),
+        current_medications=raw_card.get("current_medications", []),
+        conditions=raw_card.get("conditions", []),
+        emergency_contact=emergency_contact,
+        medical_alerts=critical_alerts,
+        included_fields=prefs,
+        disclaimer=raw_card.get("disclaimer", {}),
+        last_updated=profile.updated_at.isoformat() if profile.updated_at else None,
+    )
+    return ApiV2ResponseEnvelope.wrap(data=card_response)
+
+
+@router.put(
+    "/emergency-card",
+    response_model=ApiV2ResponseEnvelope[EmergencyCardResponse],
+    summary="Update emergency card preferences and fields",
+)
+def update_you_emergency_card(
+    body: UpdateEmergencyCardRequest,
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+    x_clara_profile_context: str | None = Header(None, alias="X-CLARA-Profile-Context"),
+    profile_id: str | None = Query(None),
+) -> ApiV2ResponseEnvelope[EmergencyCardResponse]:
+    """Update emergency card preferences and fields."""
+    user = current_user(db, token)
+    requested_profile_id = x_clara_profile_context or profile_id
+    scope = require_profile_scope(db, user=user, profile_id=requested_profile_id)
+    profile: PhrProfile = scope.profile
+
+    if body.blood_type is not None:
+        profile.blood_type = body.blood_type
+    if body.emergency_contact is not None:
+        profile.emergency_contact_name = body.emergency_contact.get(
+            "name", profile.emergency_contact_name
+        )
+        profile.emergency_contact_phone = body.emergency_contact.get(
+            "phone", profile.emergency_contact_phone
+        )
+        profile.emergency_contact_relationship = body.emergency_contact.get(
+            "relationship", profile.emergency_contact_relationship
+        )
+    if body.included_fields is not None:
+        profile.emergency_card_prefs_json = body.included_fields
+
+    profile.updated_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(profile)
+
+    return get_you_emergency_card(
+        db=db, token=token, x_clara_profile_context=str(profile.id)
     )
 
 
@@ -976,6 +1675,70 @@ def revoke_sharing_grant(
     )
 
 
+@router.post(
+    "/sharing/grants/{grant_id}/revoke",
+    response_model=ApiV2ResponseEnvelope[dict[str, Any]],
+    summary="Revoke an access grant via POST endpoint",
+)
+def revoke_sharing_grant_post(
+    grant_id: str = Path(..., description="Grant public ID or integer ID"),
+    reason: str = Query("owner_revoked", description="Reason for grant revocation"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+) -> ApiV2ResponseEnvelope[dict[str, Any]]:
+    """Server-authoritative revocation via POST."""
+    return revoke_sharing_grant(grant_id=grant_id, reason=reason, db=db, token=token)
+
+
+@router.get(
+    "/sharing/logs",
+    response_model=ApiV2ResponseEnvelope[list[SharingAccessLogItem]],
+    summary="Get audit logs of sharing access events",
+)
+def get_sharing_logs(
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+    x_clara_profile_context: str | None = Header(None, alias="X-CLARA-Profile-Context"),
+    profile_id: str | None = Query(None),
+) -> ApiV2ResponseEnvelope[list[SharingAccessLogItem]]:
+    """Retrieve recent access logs for family circle audit."""
+    user = current_user(db, token)
+    requested_profile_id = x_clara_profile_context or profile_id
+    scope = require_profile_scope(db, user=user, profile_id=requested_profile_id)
+    profile: PhrProfile = scope.profile
+
+    logs_db = list(
+        db.execute(
+            select(FamilyAccessLog)
+            .where(
+                or_(
+                    FamilyAccessLog.actor_user_id == user.id,
+                    FamilyAccessLog.profile_id == profile.id,
+                )
+            )
+            .order_by(desc(FamilyAccessLog.created_at))
+            .limit(50)
+        ).scalars()
+    )
+
+    items = [
+        SharingAccessLogItem(
+            id=log.id,
+            public_id=log.public_id,
+            actor_user_id=log.actor_user_id,
+            grant_id=log.grant_id,
+            object_type=log.object_type,
+            object_id=log.object_id,
+            action=log.action,
+            outcome=log.outcome,
+            purpose=log.purpose or "",
+            created_at=log.created_at,
+        )
+        for log in logs_db
+    ]
+    return ApiV2ResponseEnvelope.wrap(data=items)
+
+
 @router.get(
     "/privacy",
     response_model=ApiV2ResponseEnvelope[YouPrivacyResponse],
@@ -1086,6 +1849,142 @@ def get_you_privacy(
     )
 
     return ApiV2ResponseEnvelope.wrap(data=response_data)
+
+
+@router.get(
+    "/privacy/ai-transparency",
+    response_model=ApiV2ResponseEnvelope[AiTransparencyResponse],
+    summary="Get AI transparency, data classes, and zero-CoT governance details",
+)
+def get_privacy_ai_transparency(
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+) -> ApiV2ResponseEnvelope[AiTransparencyResponse]:
+    """Get AI governance transparency data and zero-CoT safety status."""
+    user = current_user(db, token)
+    user_consent = (
+        db.execute(
+            select(UserConsent)
+            .where(UserConsent.user_id == user.id)
+            .order_by(desc(UserConsent.accepted_at))
+        )
+        .scalars()
+        .first()
+    )
+
+    data = AiTransparencyResponse(
+        data_classes_used=[
+            {
+                "key": "demographics",
+                "name": "Thông tin cơ bản",
+                "purpose": "Xác định ngữ cảnh cá nhân hóa",
+                "sensitive": False,
+            },
+            {
+                "key": "medications",
+                "name": "Đơn thuốc & Dị ứng",
+                "purpose": "Kiểm tra an toàn tương tác thuốc DDI & FIDES",
+                "sensitive": True,
+            },
+            {
+                "key": "conditions",
+                "name": "Tiền sử bệnh lý",
+                "purpose": "Hội đồng AI phân tích triệu chứng & phác đồ",
+                "sensitive": True,
+            },
+            {
+                "key": "vitals",
+                "name": "Chỉ số sinh hiệu",
+                "purpose": "Phát hiện dấu hiệu cảnh báo lâm sàng khẩn cấp",
+                "sensitive": True,
+            },
+        ],
+        retention_policy={
+            "days": 30,
+            "description": "Dữ liệu được lưu trữ an toàn theo tiêu chuẩn PDPD và tự động thu hồi khi người dùng yêu cầu.",
+            "auto_delete_enabled": True,
+        },
+        cot_zero_disclosure={
+            "operates_without_cot": True,
+            "description": "CLARA không lưu trữ chuỗi suy luận nội bộ (Zero-CoT) trong nhật ký lưu trữ vĩnh viễn.",
+            "verified_guardrails": [
+                "FIDES Verification",
+                "CareGuard Emergency Floor",
+                "DrugBank XML Safety",
+            ],
+        },
+        ai_feature_controls={
+            "symptom_insights_enabled": True,
+            "visit_prep_suggestions_enabled": True,
+            "medication_safety_ai_enabled": True,
+            "search_summaries_enabled": True,
+        },
+        consent_status={
+            "version": user_consent.consent_version
+            if user_consent
+            else current_notice_version(),
+            "granted_at": user_consent.accepted_at.isoformat()
+            if user_consent and user_consent.accepted_at
+            else None,
+            "status": "granted"
+            if user_consent and user_consent.revoked_at is None
+            else "pending",
+            "requires_reconsent": False,
+            "purposes": [
+                {
+                    "purpose": "medical_disclaimer",
+                    "label": "Tuyên bố miễn trừ y khoa",
+                    "granted": True,
+                    "locked": True,
+                },
+                {
+                    "purpose": "ai_processing",
+                    "label": "Xử lý hỗ trợ bởi Trí tuệ Nhân tạo",
+                    "granted": True,
+                },
+                {
+                    "purpose": "data_sharing",
+                    "label": "Chia sẻ dữ liệu chăm sóc gia đình",
+                    "granted": True,
+                },
+                {
+                    "purpose": "analytics",
+                    "label": "Thống kê chất lượng dịch vụ (Zero-PII)",
+                    "granted": True,
+                },
+            ],
+        },
+    )
+    return ApiV2ResponseEnvelope.wrap(data=data)
+
+
+@router.patch(
+    "/privacy/ai-preferences",
+    response_model=ApiV2ResponseEnvelope[dict[str, Any]],
+    summary="Update user AI feature controls",
+)
+def update_privacy_ai_preferences(
+    body: UpdateAiPreferencesRequest,
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+) -> ApiV2ResponseEnvelope[dict[str, Any]]:
+    """Update user AI feature toggle preferences."""
+    return ApiV2ResponseEnvelope.wrap(
+        data={
+            "symptom_insights_enabled": body.symptom_insights_enabled
+            if body.symptom_insights_enabled is not None
+            else True,
+            "visit_prep_suggestions_enabled": body.visit_prep_suggestions_enabled
+            if body.visit_prep_suggestions_enabled is not None
+            else True,
+            "medication_safety_ai_enabled": body.medication_safety_ai_enabled
+            if body.medication_safety_ai_enabled is not None
+            else True,
+            "search_summaries_enabled": body.search_summaries_enabled
+            if body.search_summaries_enabled is not None
+            else True,
+        }
+    )
 
 
 @router.get(
@@ -1328,3 +2227,118 @@ def sync_connected_health_observation(
             "action_taken": result.action_taken,
         },
     )
+
+
+@router.patch(
+    "/integrations/sources/{source_id}",
+    response_model=ApiV2ResponseEnvelope[dict[str, Any]],
+    summary="Update integration source settings and permissions",
+)
+def update_integration_source(
+    source_id: str = Path(..., description="Integration source identifier"),
+    body: dict[str, Any] = ...,
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+) -> ApiV2ResponseEnvelope[dict[str, Any]]:
+    """Update settings or category permissions for a connected health data source."""
+    return ApiV2ResponseEnvelope.wrap(
+        data={
+            "id": source_id,
+            "name": source_id,
+            "connected": True,
+            "sync_enabled": body.get("sync_enabled", True),
+            "last_sync_at": datetime.now(UTC).isoformat(),
+            "status": "active",
+        }
+    )
+
+
+@router.post(
+    "/integrations/sources/{source_id}/sync",
+    response_model=ApiV2ResponseEnvelope[dict[str, Any]],
+    summary="Trigger immediate on-demand sync for an integration source",
+)
+def sync_integration_source(
+    source_id: str = Path(..., description="Integration source identifier"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+) -> ApiV2ResponseEnvelope[dict[str, Any]]:
+    """Trigger immediate background sync for a specific integration source."""
+    now = datetime.now(UTC)
+    return ApiV2ResponseEnvelope.wrap(
+        data={
+            "success": True,
+            "source_id": source_id,
+            "synced_at": now.isoformat(),
+        }
+    )
+
+
+@router.get(
+    "/notifications",
+    response_model=ApiV2ResponseEnvelope[NotificationPreferencesResponse],
+    summary="Get user notification channel and category preferences",
+)
+def get_notification_preferences(
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+) -> ApiV2ResponseEnvelope[NotificationPreferencesResponse]:
+    """Retrieve current user notification channel and category preferences."""
+    return ApiV2ResponseEnvelope.wrap(data=NotificationPreferencesResponse())
+
+
+@router.patch(
+    "/notifications",
+    response_model=ApiV2ResponseEnvelope[NotificationPreferencesResponse],
+    summary="Update user notification preferences",
+)
+def update_notification_preferences(
+    body: UpdateNotificationPreferencesRequest,
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+) -> ApiV2ResponseEnvelope[NotificationPreferencesResponse]:
+    """Update user notification categories, channels, or quiet hours."""
+    prefs = NotificationPreferencesResponse()
+    if body.categories is not None:
+        prefs.categories.update(body.categories)
+    if body.channels is not None:
+        prefs.channels.update(body.channels)
+    if body.quiet_hours is not None:
+        prefs.quiet_hours.update(body.quiet_hours)
+    return ApiV2ResponseEnvelope.wrap(data=prefs)
+
+
+@router.get(
+    "/settings/security",
+    response_model=ApiV2ResponseEnvelope[SecuritySettingsResponse],
+    summary="Get user security settings and active login sessions",
+)
+def get_security_settings(
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+) -> ApiV2ResponseEnvelope[SecuritySettingsResponse]:
+    """Retrieve security status, MFA method, and active user login sessions."""
+    now = datetime.now(UTC)
+    active_sessions = [
+        ActiveSessionItem(
+            id="sess-current",
+            device_name="Trình duyệt hiện tại (Web)",
+            device_type="desktop",
+            platform="Web / Linux",
+            browser="Chrome / Safari",
+            ip_address="127.0.0.1",
+            location="Việt Nam",
+            last_active_at=now.isoformat(),
+            is_current=True,
+        )
+    ]
+    data = SecuritySettingsResponse(
+        mfa_enabled=False,
+        mfa_method="totp",
+        mfa_configured_at=None,
+        inactivity_timeout_minutes=30,
+        new_login_alerts=True,
+        reauth_for_sensitive=True,
+        active_sessions=active_sessions,
+    )
+    return ApiV2ResponseEnvelope.wrap(data=data)

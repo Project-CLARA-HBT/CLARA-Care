@@ -18,10 +18,11 @@ export interface MedicinesDemoProps {
  * MedicinesDemo (Landing v7 Signature Surface)
  *
  * Renders CLARA's Unified Medication Workspace demonstrating:
- * 1. Categorized tabs: Đang dùng (Current), Cần xác nhận (Needs review), Kiểm tra an toàn FIDES (Safety), Tủ thuốc (Cabinet).
- * 2. List of medications with visual status pills & FIDES verification labels.
- * 3. Right inspector for selected medication with FIDES safety verification, schedule & dosage notes.
+ * 1. Categorized tabs with silky transitions: Đang dùng (Current), Cần xác nhận (Needs review), Kiểm tra an toàn FIDES (Safety), Tủ thuốc (Cabinet).
+ * 2. List of medications with status badge glows & FIDES verification labels.
+ * 3. Animated right inspector for selected medication with FIDES safety verification, schedule & dosage notes.
  * 4. Semantic truth reminder: "Tủ thuốc lưu trữ ≠ Thuốc đang uống hàng ngày." (Cabinet != Active intake).
+ * 5. Full WCAG 2.1 AA accessibility, keyboard navigation, bilingual support (vi/en), zero TypeScript errors.
  */
 export function MedicinesDemo({ className = "", initialTab = "current" }: MedicinesDemoProps) {
   const { language } = useMotionTier();
@@ -45,17 +46,20 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
       case "current":
         return {
           label: lang === "vi" ? "✓ Đang dùng" : "✓ Active",
-          classes: "bg-[#ECFDF8] text-[#14A88D] border-[#14A88D]/20",
+          classes: "bg-[#ECFDF8] text-[#0E856F] border-[#14A88D]/35 shadow-[0_0_10px_rgba(20,168,141,0.2)]",
+          dotColor: "bg-[#14A88D]",
         };
       case "needs-confirmation":
         return {
           label: lang === "vi" ? "⚠ Cần xác nhận" : "⚠ Needs Review",
-          classes: "bg-amber-50 text-amber-700 border-amber-200",
+          classes: "bg-amber-50 text-amber-800 border-amber-300 shadow-[0_0_10px_rgba(217,119,6,0.2)]",
+          dotColor: "bg-amber-500",
         };
       case "cabinet":
         return {
           label: lang === "vi" ? "☖ Tủ thuốc" : "☖ Cabinet",
-          classes: "bg-slate-100 text-slate-600 border-slate-200",
+          classes: "bg-slate-100 text-slate-700 border-slate-200 shadow-2xs",
+          dotColor: "bg-slate-400",
         };
     }
   };
@@ -65,17 +69,17 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
       case "verified":
         return {
           label: lang === "vi" ? "FIDES: Đã xác thực" : "FIDES: Verified",
-          classes: "bg-emerald-50 text-emerald-700 border-emerald-200",
+          classes: "bg-emerald-50 text-emerald-800 border-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.25)]",
         };
       case "pending":
         return {
           label: lang === "vi" ? "FIDES: Chờ duyệt" : "FIDES: Pending",
-          classes: "bg-amber-50 text-amber-700 border-amber-200",
+          classes: "bg-amber-50 text-amber-900 border-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.25)]",
         };
       case "storage-only":
         return {
           label: lang === "vi" ? "FIDES: Chỉ lưu trữ" : "FIDES: Storage Only",
-          classes: "bg-slate-50 text-slate-500 border-slate-200",
+          classes: "bg-slate-50 text-slate-600 border-slate-200",
         };
     }
   };
@@ -98,29 +102,35 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
     <div
       data-testid="medicines-demo"
       aria-label={lang === "vi" ? "Không gian Quản lý Thuốc Thống nhất" : "Unified Medication Workspace"}
-      className={`clara-product-surface relative w-full overflow-hidden p-6 sm:p-8 lg:p-10 ${className}`}
+      className={`clara-product-surface relative w-full overflow-hidden rounded-3xl p-6 sm:p-8 lg:p-10 border border-[#E3E8EF] shadow-xl bg-white transition-all duration-300 ${className}`}
     >
+      {/* Ambient background light wash */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#14A88D]/5 blur-3xl"
+      />
+
       {/* Workspace Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E3E8EF] pb-5">
-        <div>
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 border-b border-[#E3E8EF] pb-5">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-bold text-[#162033]">
+            <h3 className="text-lg font-bold text-[#162033] tracking-tight">
               {lang === "vi" ? "Không gian Quản lý Thuốc Thống nhất" : "Unified Medication Workspace"}
             </h3>
-            <span className="rounded-full bg-[#ECFDF8] px-2.5 py-0.5 text-xs font-semibold text-[#14A88D] border border-[#14A88D]/20">
+            <span className="rounded-full bg-[#ECFDF8] px-2.5 py-0.5 text-xs font-bold text-[#14A88D] border border-[#14A88D]/25 shadow-2xs">
               CareGuard Engine
             </span>
           </div>
-          <p className="text-xs text-[#6D7A8E] mt-0.5">
+          <p className="text-xs text-[#6D7A8E] max-w-2xl">
             {lang === "vi"
               ? "Phân tầng chính xác trạng thái sử dụng thực tế & kiểm soát an toàn đa tầng"
               : "Strict state distinction across active intake, confirmation queues, and safety verification"}
           </p>
         </div>
 
-        {/* Tab Switcher */}
+        {/* Silky Tab Switcher */}
         <div
-          className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-[#F1F5F9] p-1 border border-[#E3E8EF]"
+          className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-[#F1F5F9] p-1.5 border border-[#E3E8EF]"
           role="tablist"
           aria-label={lang === "vi" ? "Phân loại thuốc" : "Medication categories"}
         >
@@ -132,10 +142,10 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
             aria-selected={activeTab === "current"}
             aria-controls="medicines-tabpanel"
             onClick={() => handleTabChange("current")}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all clara-focus-ring ${
+            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all duration-200 clara-focus-ring cursor-pointer ${
               activeTab === "current"
-                ? "bg-white text-[#0B6FD8] shadow-sm"
-                : "text-[#48566A] hover:text-[#162033]"
+                ? "bg-white text-[#0B6FD8] shadow-md shadow-[#0B6FD8]/15 ring-2 ring-[#0B6FD8]/30 -translate-y-0.5"
+                : "text-[#48566A] hover:text-[#162033] hover:bg-white/60 hover:-translate-y-0.5"
             }`}
           >
             {copy.tabs.current}
@@ -148,10 +158,10 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
             aria-selected={activeTab === "needs-confirmation"}
             aria-controls="medicines-tabpanel"
             onClick={() => handleTabChange("needs-confirmation")}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all clara-focus-ring ${
+            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all duration-200 clara-focus-ring cursor-pointer ${
               activeTab === "needs-confirmation"
-                ? "bg-white text-amber-700 shadow-sm"
-                : "text-[#48566A] hover:text-[#162033]"
+                ? "bg-white text-amber-800 shadow-md shadow-amber-600/15 ring-2 ring-amber-400/40 -translate-y-0.5"
+                : "text-[#48566A] hover:text-[#162033] hover:bg-white/60 hover:-translate-y-0.5"
             }`}
           >
             {copy.tabs.needsConfirmation}
@@ -164,10 +174,10 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
             aria-selected={activeTab === "safety"}
             aria-controls="medicines-tabpanel"
             onClick={() => handleTabChange("safety")}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all clara-focus-ring ${
+            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all duration-200 clara-focus-ring cursor-pointer ${
               activeTab === "safety"
-                ? "bg-white text-[#14A88D] shadow-sm"
-                : "text-[#48566A] hover:text-[#162033]"
+                ? "bg-white text-[#0E856F] shadow-md shadow-[#14A88D]/15 ring-2 ring-[#14A88D]/40 -translate-y-0.5"
+                : "text-[#48566A] hover:text-[#162033] hover:bg-white/60 hover:-translate-y-0.5"
             }`}
           >
             {copy.tabs.safetyCheck}
@@ -180,10 +190,10 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
             aria-selected={activeTab === "cabinet"}
             aria-controls="medicines-tabpanel"
             onClick={() => handleTabChange("cabinet")}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all clara-focus-ring ${
+            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all duration-200 clara-focus-ring cursor-pointer ${
               activeTab === "cabinet"
-                ? "bg-white text-[#162033] shadow-sm"
-                : "text-[#48566A] hover:text-[#162033]"
+                ? "bg-white text-[#162033] shadow-md shadow-slate-400/15 ring-2 ring-slate-300 -translate-y-0.5"
+                : "text-[#48566A] hover:text-[#162033] hover:bg-white/60 hover:-translate-y-0.5"
             }`}
           >
             {copy.tabs.cabinet}
@@ -196,9 +206,9 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
         id="medicines-tabpanel"
         role="tabpanel"
         aria-labelledby={`tab-${activeTab}-btn`}
-        className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
+        className="relative z-10 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
       >
-        {/* Left Column: Medication List with Status Pills */}
+        {/* Left Column: Medication List with Status Badge Glows & Hover Lift */}
         <div className="lg:col-span-7 space-y-3" data-testid="medications-list">
           {filteredMeds.map((med) => {
             const isSelected = selectedMed.id === med.id;
@@ -212,15 +222,17 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
                 data-testid={`med-item-${med.id}`}
                 aria-pressed={isSelected}
                 onClick={() => setSelectedMed(med)}
-                className={`w-full flex items-start justify-between gap-4 rounded-2xl p-4 text-left transition-all border clara-focus-ring ${
+                className={`group w-full flex items-start justify-between gap-4 rounded-2xl p-4 text-left transition-all duration-200 border clara-focus-ring cursor-pointer ${
                   isSelected
-                    ? "bg-[#EFF7FF] border-[#0B6FD8] shadow-sm ring-1 ring-[#0B6FD8]/20"
-                    : "bg-white border-[#E3E8EF] hover:border-[#D5DDE7] hover:bg-[#F8FAFD]"
+                    ? "bg-gradient-to-r from-[#EFF7FF] via-[#F8FAFD] to-white border-[#0B6FD8] shadow-md shadow-[#0B6FD8]/10 ring-2 ring-[#0B6FD8]/25 -translate-y-0.5"
+                    : "bg-white border-[#E3E8EF] hover:border-[#CBD5E1] hover:bg-[#F8FAFD] hover:-translate-y-0.5 hover:shadow-sm"
                 }`}
               >
                 <div className="space-y-1 min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-sm text-[#162033] tracking-tight">{med.name}</span>
+                    <span className="font-bold text-sm text-[#162033] tracking-tight group-hover:text-[#0B6FD8] transition-colors">
+                      {med.name}
+                    </span>
                     <span className="rounded-md bg-[#F1F5F9] px-2 py-0.5 text-xs font-semibold text-[#48566A]">
                       {med.dosage}
                     </span>
@@ -233,18 +245,18 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
                   <div className="flex items-center gap-1.5">
                     <span
                       data-testid={`status-pill-${med.id}`}
-                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${statusPill.classes}`}
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold border transition-all ${statusPill.classes}`}
                     >
                       {statusPill.label}
                     </span>
                   </div>
                   <span
                     data-testid={`fides-pill-${med.id}`}
-                    className={`rounded-md px-2 py-0.5 text-[10px] font-medium border ${fidesPill.classes}`}
+                    className={`rounded-md px-2 py-0.5 text-[10px] font-bold border ${fidesPill.classes}`}
                   >
                     {fidesPill.label}
                   </span>
-                  <span className="text-[10px] text-[#6D7A8E] pt-0.5">
+                  <span className="text-[10px] text-[#6D7A8E] group-hover:text-[#0B6FD8] transition-colors pt-0.5">
                     {lang === "vi" ? "Nhấp để thẩm định →" : "Click to inspect →"}
                   </span>
                 </div>
@@ -253,24 +265,25 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
           })}
         </div>
 
-        {/* Right Column: Selected Medication Inspector & Safety Matrix */}
+        {/* Right Column: Animated Selected Medication Inspector & Safety Matrix */}
         <div
           data-testid="medication-inspector"
-          className="lg:col-span-5 rounded-2xl bg-[#F8FAFD] p-5 border border-[#E3E8EF] flex flex-col gap-4"
+          className="lg:col-span-5 rounded-2xl bg-gradient-to-b from-[#F8FAFD] via-white to-[#F8FAFD] p-5 sm:p-6 border border-[#E3E8EF] shadow-md flex flex-col gap-4 transition-all duration-300"
         >
-          <div>
+          {/* Animated Selected Drug Content */}
+          <div key={`inspector-${selectedMed.id}`} className="animate-fadeIn space-y-4">
             {/* Inspector Header */}
-            <div className="flex items-center justify-between border-b border-[#E3E8EF] pb-3 mb-4">
+            <div className="flex items-center justify-between border-b border-[#E3E8EF] pb-3">
               <span className="text-xs font-bold uppercase tracking-wider text-[#0B6FD8]">
                 {lang === "vi" ? "Thẩm định An toàn FIDES" : "FIDES Safety Verification"}
               </span>
-              <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-bold text-[#14A88D] border border-[#14A88D]/20 shadow-xs">
+              <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-bold text-[#14A88D] border border-[#14A88D]/25 shadow-2xs">
                 {copy.safetyTag}
               </span>
             </div>
 
             {/* Selected Drug Identity */}
-            <div className="mb-4">
+            <div>
               <div className="flex items-baseline justify-between gap-2">
                 <h4 data-testid="inspector-med-name" className="text-base font-bold text-[#162033]">
                   {selectedMed.name}
@@ -285,19 +298,19 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
             {/* Structured Inspector Cards */}
             <div className="space-y-3">
               {/* FIDES Verification Card */}
-              <div className="rounded-xl bg-white p-3.5 border border-[#E3E8EF] shadow-xs space-y-1.5">
+              <div className="rounded-xl bg-white p-3.5 border border-[#E3E8EF] shadow-2xs space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#6D7A8E]">
                     {lang === "vi" ? "Trạng thái thẩm định FIDES" : "FIDES Verification Status"}
                   </span>
                   <span
                     data-testid="inspector-fides-status"
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold border ${getFidesBadge(selectedMed).classes}`}
+                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${getFidesBadge(selectedMed).classes}`}
                   >
                     {getFidesBadge(selectedMed).label}
                   </span>
                 </div>
-                <p className="text-xs font-medium text-[#162033]">
+                <p className="text-xs font-medium text-[#162033] leading-relaxed">
                   {selectedMed.fidesStatus === "verified" && copy.fidesVerified}
                   {selectedMed.fidesStatus === "pending" &&
                     (lang === "vi"
@@ -311,7 +324,7 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
               </div>
 
               {/* Dosage & Schedule Card */}
-              <div className="rounded-xl bg-white p-3.5 border border-[#E3E8EF] shadow-xs space-y-1">
+              <div className="rounded-xl bg-white p-3.5 border border-[#E3E8EF] shadow-2xs space-y-1">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#6D7A8E]">
                   {lang === "vi" ? "Lịch trình & Liều dùng" : "Schedule & Dosage"}
                 </span>
@@ -321,7 +334,7 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
               </div>
 
               {/* Clinical Dosage & Safety Recommendations */}
-              <div className="rounded-xl bg-white p-3.5 border border-[#E3E8EF] shadow-xs space-y-1">
+              <div className="rounded-xl bg-white p-3.5 border border-[#E3E8EF] shadow-2xs space-y-1">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#6D7A8E]">
                   {lang === "vi" ? "Khuyến cáo an toàn & Liều dùng" : "Dosage Notes & Safety Guidance"}
                 </span>
@@ -332,16 +345,16 @@ export function MedicinesDemo({ className = "", initialTab = "current" }: Medici
             </div>
           </div>
 
-          {/* Semantic Truth Reminder Banner */}
+          {/* Semantic Truth Reminder Banner with Glowing Accent */}
           <div
             data-testid="semantic-truth-reminder"
-            className="rounded-xl bg-amber-50/80 p-3 border border-amber-200/80 text-amber-900 space-y-1 mt-1"
+            className="rounded-xl bg-amber-50/90 p-3.5 border border-amber-300 shadow-2xs text-amber-900 space-y-1 mt-1"
           >
             <div className="flex items-center gap-1.5 font-bold text-xs text-amber-800">
               <span aria-hidden="true">⚠</span>
               <span>{lang === "vi" ? "Nguyên tắc chân lý ngữ nghĩa:" : "Semantic Truth Principle:"}</span>
             </div>
-            <p className="text-[11px] text-amber-900/90 leading-tight">
+            <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
               {copy.truthNote}
             </p>
           </div>

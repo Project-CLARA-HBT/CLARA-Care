@@ -108,10 +108,11 @@ export function getCategoryBadgeClass(
  * TemporalRibbon Artwork Component
  *
  * Renders LifeMap's longitudinal curved temporal ribbon connecting historical events to Today.
- * Features:
- * - Desktop: 4-stage longitudinal curved timeline with SVG spline connectors, flowing gradient ribbon,
- *   and TodayBeacon anchor.
- * - Mobile: Vertical temporal ribbon with continuous flowing spline and responsive node anchors.
+ * Upgraded Features:
+ * - Longitudinal curved timeline spline with dynamic multi-stop gradient progress fill.
+ * - Milestone nodes with luminous hover halos and step numbers (1, 2, 3, Today).
+ * - Traveling light trail connecting past milestones to TodayBeacon.
+ * - Responsive vertical ribbon track on mobile with continuous spline and node anchors.
  * - Interactive node selection with keyboard navigation & high-contrast accessibility.
  * - Graceful reduced-motion degradation.
  */
@@ -155,10 +156,17 @@ export function TemporalRibbon({
   const nodeX = [125, 375, 625, 875];
   const nodeY = [60, 42, 70, 48];
 
+  // SVG Unique IDs for Gradients and Filters
   const ribbonGradId = `ribbon-gradient-${uid}`;
   const ribbonAuraId = `ribbon-aura-${uid}`;
+  const ribbonProgressGradId = `ribbon-progress-grad-${uid}`;
   const dropGradId = `drop-gradient-${uid}`;
   const beaconGlowId = `beacon-glow-${uid}`;
+  const lightTrailGradId = `light-trail-grad-${uid}`;
+  const nodeHaloGradId = `node-halo-grad-${uid}`;
+
+  // Spline Path definition (Longitudinal curved Bezier spanning all 4 milestone coordinates)
+  const splinePathD = "M 60 62 C 180 26, 250 42, 375 42 C 500 42, 500 70, 625 70 C 750 70, 750 48, 940 48";
 
   return (
     <section
@@ -173,11 +181,11 @@ export function TemporalRibbon({
       {/* Ambient background glow fields */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-[#0B6FD8]/5 blur-3xl"
+        className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-[#0B6FD8]/8 blur-3xl"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-20 -bottom-20 h-72 w-72 rounded-full bg-[#14A88D]/5 blur-3xl"
+        className="pointer-events-none absolute -right-20 -bottom-20 h-72 w-72 rounded-full bg-[#14A88D]/8 blur-3xl"
       />
 
       {/* Ribbon Header Strip */}
@@ -234,83 +242,117 @@ export function TemporalRibbon({
             preserveAspectRatio="none"
           >
             <defs>
-              {/* Primary Ribbon Gradient */}
+              {/* Primary Ribbon Multi-Stop Gradient */}
               <linearGradient id={ribbonGradId} x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#94A3B8" stopOpacity="0.3" />
-                <stop offset="35%" stopColor="#0B6FD8" stopOpacity="0.6" />
-                <stop offset="70%" stopColor="#14A88D" stopOpacity="0.8" />
+                <stop offset="0%" stopColor="#94A3B8" stopOpacity="0.4" />
+                <stop offset="30%" stopColor="#0B6FD8" stopOpacity="0.75" />
+                <stop offset="65%" stopColor="#14A88D" stopOpacity="0.85" />
                 <stop offset="100%" stopColor="#1A86F5" stopOpacity="1" />
               </linearGradient>
 
-              {/* Glowing Aura Gradient for Ribbon Base */}
+              {/* Dynamic Progress Fill Multi-Stop Gradient */}
+              <linearGradient id={ribbonProgressGradId} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#64748B" />
+                <stop offset="35%" stopColor="#0B6FD8" />
+                <stop offset="70%" stopColor="#14A88D" />
+                <stop offset="100%" stopColor="#1A86F5" />
+              </linearGradient>
+
+              {/* Glowing Aura Gradient for Ribbon Base Wave */}
               <linearGradient id={ribbonAuraId} x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#CBD5E1" stopOpacity="0.1" />
-                <stop offset="50%" stopColor="#0B6FD8" stopOpacity="0.18" />
-                <stop offset="100%" stopColor="#1A86F5" stopOpacity="0.3" />
+                <stop offset="0%" stopColor="#CBD5E1" stopOpacity="0.12" />
+                <stop offset="45%" stopColor="#0B6FD8" stopOpacity="0.22" />
+                <stop offset="100%" stopColor="#1A86F5" stopOpacity="0.35" />
+              </linearGradient>
+
+              {/* Traveling Light Trail Gradient connecting past milestones to Today */}
+              <linearGradient id={lightTrailGradId} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.2" />
+                <stop offset="50%" stopColor="#38BDF8" stopOpacity="0.85" />
+                <stop offset="90%" stopColor="#FFFFFF" stopOpacity="1" />
+                <stop offset="100%" stopColor="#1A86F5" stopOpacity="0.9" />
               </linearGradient>
 
               {/* Connector Drop Gradient */}
               <linearGradient id={dropGradId} x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#0B6FD8" stopOpacity="0.8" />
-                <stop offset="100%" stopColor="#0B6FD8" stopOpacity="0.1" />
+                <stop offset="0%" stopColor="#0B6FD8" stopOpacity="0.9" />
+                <stop offset="60%" stopColor="#0B6FD8" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#0B6FD8" stopOpacity="0.05" />
               </linearGradient>
+
+              {/* Milestone Node Luminous Hover Halo Gradient */}
+              <radialGradient id={nodeHaloGradId} cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#1A86F5" stopOpacity="0.5" />
+                <stop offset="50%" stopColor="#0B6FD8" stopOpacity="0.25" />
+                <stop offset="100%" stopColor="#0B6FD8" stopOpacity="0" />
+              </radialGradient>
 
               {/* Beacon Glow Radial */}
               <radialGradient id={beaconGlowId} cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#1A86F5" stopOpacity="0.45" />
-                <stop offset="50%" stopColor="#0B6FD8" stopOpacity="0.2" />
+                <stop offset="0%" stopColor="#1A86F5" stopOpacity="0.55" />
+                <stop offset="50%" stopColor="#0B6FD8" stopOpacity="0.25" />
                 <stop offset="100%" stopColor="#0B6FD8" stopOpacity="0" />
               </radialGradient>
             </defs>
 
-            {/* Background Ribbon Aura Wave (Fluid thick translucent band) */}
+            {/* 1. Background Ribbon Aura Wave (Fluid thick translucent band) */}
             <path
-              d="M 60 62 C 200 28, 250 42, 375 42 C 500 42, 500 70, 625 70 C 750 70, 750 48, 940 48"
+              d={splinePathD}
               stroke={`url(#${ribbonAuraId})`}
-              strokeWidth="20"
+              strokeWidth="24"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
 
-            {/* Baseline Ribbon Track */}
+            {/* 2. Baseline Ribbon Spine Track */}
             <path
-              d="M 60 62 C 200 28, 250 42, 375 42 C 500 42, 500 70, 625 70 C 750 70, 750 48, 940 48"
+              d={splinePathD}
               stroke="#E3E8EF"
               strokeWidth="4"
               strokeLinecap="round"
             />
 
-            {/* Active Colored Longitudinal Curved Spine */}
+            {/* 3. Multi-stop Active Colored Longitudinal Spine */}
             <path
-              d="M 60 62 C 200 28, 250 42, 375 42 C 500 42, 500 70, 625 70 C 750 70, 750 48, 940 48"
+              d={splinePathD}
               stroke={`url(#${ribbonGradId})`}
               strokeWidth="3.5"
               strokeLinecap="round"
             />
 
-            {/* Pulsing Animated Trace Dash Line */}
-            <path
-              d="M 60 62 C 200 28, 250 42, 375 42 C 500 42, 500 70, 625 70 C 750 70, 750 48, 940 48"
-              stroke="#FFFFFF"
-              strokeWidth="1.75"
-              strokeDasharray="6 8"
-              className="clara-ribbon-path motion-reduce:stroke-dasharray-none"
-            />
-
-            {/* Dynamic Progress Fill Trace */}
+            {/* 4. Dynamic Gradient Progress Fill Track */}
             {effectiveProgress > 0 && (
               <path
-                d="M 60 62 C 200 28, 250 42, 375 42 C 500 42, 500 70, 625 70 C 750 70, 750 48, 940 48"
-                stroke="#1A86F5"
-                strokeWidth="4"
+                d={splinePathD}
+                stroke={`url(#${ribbonProgressGradId})`}
+                strokeWidth="4.5"
                 strokeLinecap="round"
+                pathLength="1000"
                 strokeDasharray="1000"
                 strokeDashoffset={1000 * (1 - effectiveProgress)}
-                style={{ transition: "stroke-dashoffset 400ms ease-out" }}
+                style={{ transition: "stroke-dashoffset 400ms cubic-bezier(0.16, 1, 0.3, 1)" }}
               />
             )}
 
-            {/* Spine Drop Connectors & Nodes for Each Stage */}
+            {/* 5. Traveling Light Trail: High-tech pulsating dashed trail connecting past to Today */}
+            <path
+              d={splinePathD}
+              stroke={`url(#${lightTrailGradId})`}
+              strokeWidth="2.25"
+              strokeDasharray="8 14"
+              className="clara-ribbon-path motion-reduce:stroke-dasharray-none"
+            />
+
+            {/* 6. Secondary traveling particle stream */}
+            <path
+              d={splinePathD}
+              stroke="#FFFFFF"
+              strokeWidth="1.25"
+              strokeDasharray="4 20"
+              className="clara-constellation-line motion-reduce:stroke-dasharray-none opacity-80"
+            />
+
+            {/* 7. Spine Drop Connectors & Milestone Nodes for Each Stage */}
             {events.slice(0, 4).map((evt, idx) => {
               const cx = nodeX[idx] ?? 125 + idx * 250;
               const cy = nodeY[idx] ?? 50;
@@ -326,7 +368,7 @@ export function TemporalRibbon({
                     x2={cx}
                     y2={110}
                     stroke={isSelected ? `url(#${dropGradId})` : "#E3E8EF"}
-                    strokeWidth={isSelected ? "2" : "1.5"}
+                    strokeWidth={isSelected ? "2.5" : "1.5"}
                     strokeDasharray={isSelected ? "none" : "3 3"}
                   />
 
@@ -334,52 +376,75 @@ export function TemporalRibbon({
                   {isToday ? (
                     /* Today Beacon Anchor SVG Representation */
                     <g transform={`translate(${cx}, ${cy})`}>
+                      {/* Luminous Outer Halo */}
                       <circle
-                        r="28"
+                        r="30"
                         fill={`url(#${beaconGlowId})`}
                         className="animate-ping motion-reduce:animate-none opacity-40"
                       />
+                      {/* Calibrated Constellation Orbit Ring */}
                       <circle
-                        r="18"
+                        r="19"
                         fill="none"
                         stroke="#1A86F5"
                         strokeWidth="1.5"
                         strokeDasharray="4 3"
                         className="clara-constellation-line motion-reduce:stroke-dasharray-none"
                       />
-                      <circle r="12" fill="#0B6FD8" className="shadow-lg" />
-                      <circle r="5" fill="#FFFFFF" />
-                      {/* Beacon Precision Crosshairs */}
-                      <line x1="-16" y1="0" x2="-12" y2="0" stroke="#0B6FD8" strokeWidth="2" />
-                      <line x1="12" y1="0" x2="16" y2="0" stroke="#0B6FD8" strokeWidth="2" />
-                      <line x1="0" y1="-16" x2="0" y2="-12" stroke="#0B6FD8" strokeWidth="2" />
-                      <line x1="0" y1="12" x2="0" y2="16" stroke="#0B6FD8" strokeWidth="2" />
+                      {/* Luminous Beacon Sphere */}
+                      <circle r="12.5" fill="#0B6FD8" stroke="#FFFFFF" strokeWidth="2" className="shadow-lg" />
+                      <circle r="4" fill="#FFFFFF" />
+                      {/* Precision Crosshairs */}
+                      <line x1="-17" y1="0" x2="-13" y2="0" stroke="#0B6FD8" strokeWidth="2" strokeLinecap="round" />
+                      <line x1="13" y1="0" x2="17" y2="0" stroke="#0B6FD8" strokeWidth="2" strokeLinecap="round" />
+                      <line x1="0" y1="-17" x2="0" y2="-13" stroke="#0B6FD8" strokeWidth="2" strokeLinecap="round" />
+                      <line x1="0" y1="13" x2="0" y2="17" stroke="#0B6FD8" strokeWidth="2" strokeLinecap="round" />
                     </g>
                   ) : (
-                    /* Historical / Recent Milestone Node */
+                    /* Historical / Recent Milestone Node with Hover Halo & Step Number */
                     <g transform={`translate(${cx}, ${cy})`}>
+                      {/* Luminous Hover & Selection Halo */}
                       {isSelected && (
                         <circle
-                          r="14"
-                          fill="none"
-                          stroke="#0B6FD8"
-                          strokeWidth="2"
-                          strokeOpacity="0.4"
+                          r="18"
+                          fill={`url(#${nodeHaloGradId})`}
+                          className="animate-pulse motion-reduce:animate-none"
                         />
                       )}
+                      {/* Outer Focus/Hover Ring */}
                       <circle
-                        r={isSelected ? 9 : 7}
+                        r={isSelected ? "13" : "10"}
+                        fill="none"
+                        stroke={isSelected ? "#0B6FD8" : "#E2E8F0"}
+                        strokeWidth={isSelected ? "2" : "1.5"}
+                        strokeOpacity={isSelected ? "0.9" : "0.5"}
+                      />
+                      {/* Solid Milestone Core Disc with Step Indicator */}
+                      <circle
+                        r={isSelected ? 10 : 8}
                         fill={
                           isSelected
                             ? "#0B6FD8"
                             : evt.emphasis === "recent"
                             ? "#14A88D"
-                            : "#94A3B8"
+                            : "#64748B"
                         }
                         stroke="#FFFFFF"
-                        strokeWidth="2.5"
+                        strokeWidth="2"
                       />
-                      <circle r="3" fill="#FFFFFF" />
+                      {/* Step Number in Milestone Node */}
+                      <text
+                        x="0"
+                        y="0"
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fill="#FFFFFF"
+                        fontSize={isSelected ? "9" : "8"}
+                        fontWeight="bold"
+                        fontFamily="sans-serif"
+                      >
+                        {idx + 1}
+                      </text>
                     </g>
                   )}
                 </g>
@@ -425,11 +490,11 @@ export function TemporalRibbon({
                 className={`group relative flex flex-col rounded-2xl p-4 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B6FD8] ${
                   isToday
                     ? isSelected
-                      ? "border-2 border-[#0B6FD8] bg-gradient-to-b from-white via-[#EFF7FF]/70 to-[#EFF7FF] shadow-lg -translate-y-1.5"
-                      : "border border-[#0B6FD8]/40 bg-gradient-to-b from-white to-[#EFF7FF]/40 shadow-sm hover:border-[#0B6FD8] hover:-translate-y-0.5"
+                      ? "border-2 border-[#0B6FD8] bg-gradient-to-b from-white via-[#EFF7FF]/75 to-[#EFF7FF] shadow-lg -translate-y-1.5 ring-4 ring-[#0B6FD8]/15"
+                      : "border border-[#0B6FD8]/40 bg-gradient-to-b from-white to-[#EFF7FF]/40 shadow-sm hover:border-[#0B6FD8] hover:-translate-y-0.5 hover:shadow-md"
                     : isSelected
-                    ? "border-2 border-[#0B6FD8] bg-white shadow-md -translate-y-1"
-                    : "border border-[#E3E8EF] bg-[#F8FAFD] hover:border-[#CBD5E1] hover:bg-white hover:-translate-y-0.5"
+                    ? "border-2 border-[#0B6FD8] bg-white shadow-md -translate-y-1 ring-4 ring-[#0B6FD8]/10"
+                    : "border border-[#E3E8EF] bg-[#F8FAFD] hover:border-[#0B6FD8]/40 hover:bg-white hover:-translate-y-0.5 hover:shadow-sm"
                 }`}
               >
                 {/* TodayBeacon Anchor Badge */}
@@ -446,16 +511,16 @@ export function TemporalRibbon({
                   </div>
                 )}
 
-                {/* Card Top Meta */}
+                {/* Card Top Meta: Step Number with Luminous Ring + Period */}
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
                         isToday
-                          ? "bg-[#0B6FD8] text-white ring-2 ring-[#EFF7FF]"
+                          ? "bg-[#0B6FD8] text-white ring-2 ring-[#EFF7FF] shadow-xs"
                           : isSelected
-                          ? "bg-[#162033] text-white"
-                          : "bg-[#E3E8EF] text-[#6D7A8E] group-hover:bg-[#CBD5E1]"
+                          ? "bg-[#162033] text-white ring-2 ring-[#0B6FD8]/30 shadow-xs"
+                          : "bg-[#E3E8EF] text-[#6D7A8E] group-hover:bg-[#CBD5E1] group-hover:text-[#162033]"
                       }`}
                     >
                       {idx + 1}
@@ -533,16 +598,22 @@ export function TemporalRibbon({
       </div>
 
       {/* ========================================================================= */}
-      {/* MOBILE VIEW: Vertical Temporal Ribbon                                     */}
+      {/* MOBILE VIEW: Responsive Vertical Ribbon Track                             */}
       {/* ========================================================================= */}
       <div className="relative block md:hidden" data-testid="mobile-timeline-view">
-        {/* Continuous Vertical Ribbon Track */}
+        {/* Continuous Vertical Ribbon Track Container */}
         <div
           className="relative pl-7 space-y-4"
           role="tablist"
           aria-label="Danh sách mốc thời gian di động"
         >
-          {/* Vertical Curved / Longitudinal Track Line */}
+          {/* Ambient Outer Glow Rail */}
+          <div
+            aria-hidden="true"
+            className="absolute left-2.5 top-4 bottom-8 w-2 rounded-full bg-gradient-to-b from-[#94A3B8]/20 via-[#0B6FD8]/25 to-[#1A86F5]/30 blur-xs"
+          />
+
+          {/* Continuous Vertical Ribbon Track Rail */}
           <div
             aria-hidden="true"
             className="absolute left-3 top-4 bottom-8 w-1 rounded-full bg-gradient-to-b from-[#94A3B8] via-[#0B6FD8] to-[#1A86F5]"
@@ -555,7 +626,7 @@ export function TemporalRibbon({
 
             return (
               <div key={`mobile-node-${evt.period}-${idx}`} className="relative">
-                {/* Node Anchor on Vertical Ribbon */}
+                {/* Node Anchor on Vertical Ribbon Track */}
                 <div
                   aria-hidden="true"
                   className="absolute -left-7 top-4 flex -translate-x-1/2 items-center justify-center"
@@ -569,15 +640,15 @@ export function TemporalRibbon({
                     />
                   ) : (
                     <div
-                      className={`flex h-6 w-6 items-center justify-center rounded-full border-2 border-white transition-transform ${
+                      className={`relative flex h-6 w-6 items-center justify-center rounded-full border-2 border-white transition-transform ${
                         isSelected
-                          ? "bg-[#162033] ring-2 ring-[#0B6FD8]/40"
+                          ? "bg-[#0B6FD8] text-white ring-4 ring-[#0B6FD8]/20 shadow-md scale-110"
                           : evt.emphasis === "recent"
-                          ? "bg-[#14A88D]"
-                          : "bg-[#94A3B8]"
+                          ? "bg-[#14A88D] text-white ring-2 ring-[#14A88D]/20"
+                          : "bg-[#64748B] text-white"
                       }`}
                     >
-                      <span className="h-2 w-2 rounded-full bg-white" />
+                      <span className="text-[10px] font-bold">{idx + 1}</span>
                     </div>
                   )}
                 </div>
@@ -594,10 +665,10 @@ export function TemporalRibbon({
                   className={`w-full rounded-2xl p-4 text-left transition-all ${
                     isToday
                       ? isSelected
-                        ? "border-2 border-[#0B6FD8] bg-gradient-to-br from-white via-[#EFF7FF]/70 to-[#EFF7FF] shadow-md"
+                        ? "border-2 border-[#0B6FD8] bg-gradient-to-br from-white via-[#EFF7FF]/75 to-[#EFF7FF] shadow-md ring-2 ring-[#0B6FD8]/15"
                         : "border border-[#0B6FD8]/40 bg-[#EFF7FF]/30 shadow-sm"
                       : isSelected
-                      ? "border-2 border-[#0B6FD8] bg-white shadow-md"
+                      ? "border-2 border-[#0B6FD8] bg-white shadow-md ring-2 ring-[#0B6FD8]/10"
                       : "border border-[#E3E8EF] bg-[#F8FAFD] hover:bg-white"
                   }`}
                 >

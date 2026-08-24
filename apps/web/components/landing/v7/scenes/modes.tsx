@@ -6,6 +6,9 @@ import { LANDING_COPY_V7 } from "../landing-copy-v7";
 import { LandingScene } from "../primitives/landing-scene";
 import { SceneHeader } from "../primitives/scene-header";
 import { StickyScene } from "../primitives/sticky-scene";
+import { AmbientField } from "../primitives/ambient-field";
+import { RevealGroup } from "../primitives/reveal-group";
+import { Reveal } from "../primitives/reveal";
 import { AdaptiveShellDemo, type AdaptiveModeId } from "../demo/adaptive-shell-demo";
 import { ClaraOrb } from "../artwork/clara-orb";
 import { EvidenceRibbon } from "../artwork/evidence-ribbon";
@@ -25,7 +28,8 @@ function getModeFromProgress(progress: number): AdaptiveModeId {
  *   1. Personal Mode (Azure): Daily adherence, longitudinal LifeMap, medication tracking.
  *   2. Clinical Mode (Mint): Multidisciplinary Council triage, Ambient Scribe, SOAP drafting.
  *   3. Research Mode (Iris): Living evidence synthesis, RCT trial matrices, guideline citations.
- * - Dynamic ClaraOrb anchor and spatial theme morphing.
+ * - Dynamic ClaraOrb anchor and atmospheric color transitions.
+ * - Locked shell geometry ensuring zero layout shifts across mode switches.
  * - Scroll-coordinated sticky progression with manual tab override support.
  */
 export function ModesScene() {
@@ -61,8 +65,14 @@ export function ModesScene() {
       id="adaptive-modes"
       scale="signature"
       tone="canvas"
-      className="relative overflow-hidden pt-20 pb-20 md:pt-28 md:pb-28"
+      className="relative overflow-hidden pt-20 pb-20 md:pt-28 md:pb-28 transition-colors duration-700"
     >
+      {/* Dynamic Atmospheric Ambient Background */}
+      <AmbientField
+        tone={interactiveMode === "personal" ? "azure" : interactiveMode === "clinical" ? "mint" : "iris"}
+        className="transition-opacity duration-700"
+      />
+
       {/* Background Top Transition Ribbon (Handoff from PHR) */}
       <div
         aria-hidden="true"
@@ -73,15 +83,19 @@ export function ModesScene() {
 
       {/* Scene Editorial Header */}
       <div className="relative z-10 max-w-4xl mx-auto mb-8 md:mb-12 px-2 sm:px-4">
-        <SceneHeader
-          eyebrow={copy.eyebrow}
-          badge={peakBadge}
-          title={copy.title}
-          description={copy.description}
-          align="center"
-          tone="iris"
-          className="mb-0"
-        />
+        <RevealGroup staggerMs={80}>
+          <Reveal delayMs={0} direction="up">
+            <SceneHeader
+              eyebrow={copy.eyebrow}
+              badge={peakBadge}
+              title={copy.title}
+              description={copy.description}
+              align="center"
+              tone={interactiveMode === "personal" ? "azure" : interactiveMode === "clinical" ? "mint" : "iris"}
+              className="mb-0"
+            />
+          </Reveal>
+        </RevealGroup>
       </div>
 
       {/* Sticky Spatial Canvas (Spatial Peak 4) */}
@@ -101,33 +115,57 @@ export function ModesScene() {
 
           return (
             <div className="w-full max-w-5xl mx-auto px-2 sm:px-4 relative">
-              {/* Product Surface */}
+              {/* Soft Atmospheric Radiant Halo */}
+              <div
+                aria-hidden="true"
+                className={`absolute -inset-4 rounded-3xl blur-2xl opacity-50 transition-all duration-700 pointer-events-none ${
+                  orbTone === "azure"
+                    ? "bg-gradient-to-r from-[#0B6FD8]/15 via-[#38BDF8]/10 to-[#0B6FD8]/15"
+                    : orbTone === "mint"
+                    ? "bg-gradient-to-r from-[#14A88D]/15 via-[#2DD4BF]/10 to-[#14A88D]/15"
+                    : "bg-gradient-to-r from-[#8B7CF6]/15 via-[#C084FC]/10 to-[#8B7CF6]/15"
+                }`}
+              />
+
+              {/* Product Surface with Locked Shell Geometry */}
               <AdaptiveShellDemo
                 currentMode={activeMode}
                 onModeChange={(mode) => handleModeChange(mode, progress)}
               />
 
-              {/* Ambient Floating Artwork Anchor (ClaraOrb) */}
-              <div className="absolute -top-6 -right-3 hidden xl:block pointer-events-none opacity-80">
-                <ClaraOrb size="md" tone={orbTone} pulse={true} />
+              {/* Dynamic ClaraOrb Artwork Anchor with Atmospheric Pulsing Aura */}
+              <div className="absolute -top-6 -right-3 hidden xl:block pointer-events-none transition-all duration-500">
+                <div className="relative flex items-center justify-center">
+                  <div
+                    aria-hidden="true"
+                    className={`absolute -inset-3 rounded-full blur-md opacity-60 transition-colors duration-500 ${
+                      orbTone === "azure"
+                        ? "bg-[#0B6FD8]/25"
+                        : orbTone === "mint"
+                        ? "bg-[#14A88D]/25"
+                        : "bg-[#8B7CF6]/25"
+                    }`}
+                  />
+                  <ClaraOrb size="md" tone={orbTone} pulse={!isReducedMotion} />
+                </div>
               </div>
 
-              {/* Floating Contextual Metadata 1 */}
+              {/* Floating Contextual Metadata 1 with 3D hover response */}
               <FloatingMetadata
                 label={metaLabel1}
                 value={metaValue1}
                 tag={metaTag1}
                 tone={orbTone}
-                className="absolute -top-3 -left-3 hidden lg:inline-flex"
+                className="absolute -top-3 -left-3 hidden lg:inline-flex transform-gpu transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-xl cursor-default"
               />
 
-              {/* Floating Contextual Metadata 2 */}
+              {/* Floating Contextual Metadata 2 with 3D hover response */}
               <FloatingMetadata
                 label={metaLabel2}
                 value={metaValue2}
                 tag={metaTag2}
                 tone={orbTone}
-                className="absolute -bottom-3 -right-3 hidden lg:inline-flex"
+                className="absolute -bottom-3 -right-3 hidden lg:inline-flex transform-gpu transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-xl cursor-default"
               />
             </div>
           );
