@@ -25,9 +25,9 @@ android {
     val defaultKeystore = file("clara-release.jks")
     val releaseStoreFile = providers.gradleProperty("CLARA_RELEASE_STORE_FILE").orNull
         ?: if (defaultKeystore.exists()) defaultKeystore.absolutePath else null
-    val releaseStorePassword = providers.gradleProperty("CLARA_RELEASE_STORE_PASSWORD").orNull ?: "claracare2026"
+    val releaseStorePassword = providers.gradleProperty("CLARA_RELEASE_STORE_PASSWORD").orNull ?: ""
     val releaseKeyAlias = providers.gradleProperty("CLARA_RELEASE_KEY_ALIAS").orNull ?: "claracare"
-    val releaseKeyPassword = providers.gradleProperty("CLARA_RELEASE_KEY_PASSWORD").orNull ?: "claracare2026"
+    val releaseKeyPassword = providers.gradleProperty("CLARA_RELEASE_KEY_PASSWORD").orNull ?: ""
 
     signingConfigs {
         create("release") {

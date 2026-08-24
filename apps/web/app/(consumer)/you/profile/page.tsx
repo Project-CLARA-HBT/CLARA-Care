@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/shared/inline-error";
+import { EmptyState } from "@/components/shared/empty-state";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { getActiveProfileId } from "@/lib/profile-context";
 import { useQuery } from "@/lib/query/use-query";
@@ -62,51 +63,7 @@ export default function YouProfilePage() {
     refetch,
   } = useQuery<ProfileDetailsDto>({
     queryKey: queryKeys.profile(activeProfileId).you.profile(),
-    queryFn: async () => {
-      try {
-        return await v2Client.getProfileDetails(activeProfileId);
-      } catch {
-        return {
-          id: activeProfileId ?? "p-default",
-          display_name: "Nguyễn Văn A",
-          full_name: "Nguyễn Văn A",
-          phone: "0912345678",
-          email: "nguyen.vana@example.com",
-          date_of_birth: "1985-05-15",
-          gender: "male",
-          blood_type: "O+",
-          address: "Quận 1, TP. Hồ Chí Minh",
-          emergency_contact: {
-            name: "Nguyễn Thị B",
-            phone: "0901234567",
-            relationship: "Vợ",
-          },
-          allergies: [
-            { id: "a-1", name: "Penicillin", severity: "severe", reaction: "Khó thở, sốc phản vệ", is_critical: true },
-            { id: "a-2", name: "Aspirin", severity: "moderate", reaction: "Mày đay", is_critical: false },
-          ],
-          conditions: [
-            { id: "c-1", name: "Tăng huyết áp vô căn", status: "active", is_critical: true },
-            { id: "c-2", name: "Đái tháo đường Type 2", status: "active", is_critical: false },
-          ],
-          medications: [
-            { id: "m-1", name: "Amlodipine 5mg", dose: "1 viên/ngày (sáng)", is_critical: false },
-            { id: "m-2", name: "Metformin 500mg", dose: "1 viên x 2 lần/ngày", is_critical: false },
-          ],
-          medical_alerts: [
-            "Dị ứng nghiêm trọng Penicillin (nguy cơ sốc phản vệ)",
-            "Đang dùng thuốc hạ áp hàng ngày",
-          ],
-          emergency_card_included_fields: {
-            allergies: true,
-            current_medications: true,
-            conditions: true,
-            blood_type: true,
-            emergency_contact: true,
-          },
-        };
-      }
-    },
+    queryFn: () => v2Client.getProfileDetails(activeProfileId),
     onSuccess: (data) => {
       if (data) {
         setFullName(data.full_name || data.display_name || "");
@@ -211,7 +168,7 @@ export default function YouProfilePage() {
         }}
       />
 
-      {error ? (
+      {error && profileData ? (
         <InlineError
           message={isEn ? "Unable to load profile details" : "Không thể tải thông tin cá nhân"}
           onRetry={() => void refetch()}
@@ -243,6 +200,17 @@ export default function YouProfilePage() {
           <div className="h-64 rounded-[var(--radius-xl)] bg-[var(--surface-panel)] border border-[color:var(--shell-border)]" />
           <div className="h-64 rounded-[var(--radius-xl)] bg-[var(--surface-panel)] border border-[color:var(--shell-border)]" />
         </div>
+      ) : error ? (
+        <EmptyState
+          title={isEn ? "Unable to load profile" : "Không thể tải thông tin cá nhân"}
+          description={
+            isEn
+              ? "We could not load your profile details from server. Please check your connection and try again."
+              : "Không thể tải thông tin hồ sơ của bạn từ máy chủ. Vui lòng kiểm tra kết nối và thử lại."
+          }
+          actionLabel={isEn ? "Retry" : "Thử lại"}
+          onAction={() => void refetch()}
+        />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column: Form Editors (Span 7) */}
@@ -713,7 +681,7 @@ export default function YouProfilePage() {
       <EmergencyQrModal
         open={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
-        patientName={fullName || profileData?.display_name || "Nguyễn Văn A"}
+        patientName={fullName || profileData?.display_name || (isEn ? "Personal Profile" : "Hồ sơ cá nhân")}
         bloodType={bloodType}
         emergencyContact={{
           name: emergencyContactName,

@@ -29,14 +29,110 @@ vi.mock("@/lib/auth-store", () => ({
 }));
 
 import AdminUsersPage from "@/app/admin/users/page";
-import { SEED_ADMIN_USERS } from "@/lib/admin-users";
+import type { AdminUser } from "@/lib/admin-users";
+
+const TEST_ADMIN_USERS: AdminUser[] = [
+  {
+    id: "usr_adm_8810",
+    email: "admin.system@clara-care.vn",
+    fullName: "ThS. Nguyễn Hoàng Long",
+    role: "admin",
+    status: "active",
+    activeSessionsCount: 2,
+    twoFactorEnabled: true,
+    failedLoginAttempts: 0,
+    departmentOrOrg: "Trung tâm Điều hành Hệ thống & Bảo mật CLARA",
+    phoneMasked: "+84 ••• ••• 019",
+    lastActiveAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    createdAt: "2026-01-10T08:00:00Z",
+    auditHistory: [],
+  },
+  {
+    id: "usr_doc_4421",
+    email: "bs.tranminhduc@bvbachmai.vn",
+    fullName: "BS.CKII Trần Minh Đức",
+    role: "doctor",
+    status: "active",
+    activeSessionsCount: 3,
+    twoFactorEnabled: true,
+    failedLoginAttempts: 0,
+    departmentOrOrg: "Khoa Hồi sức Tích cực (ICU) - Bệnh viện Bạch Mai",
+    phoneMasked: "+84 ••• ••• 358",
+    lastActiveAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
+    createdAt: "2026-02-14T09:30:00Z",
+    auditHistory: [],
+  },
+  {
+    id: "usr_doc_5590",
+    email: "bs.lethithanh@bvchoray.vn",
+    fullName: "TS.BS Lê Thị Thanh Hương",
+    role: "doctor",
+    status: "active",
+    activeSessionsCount: 1,
+    twoFactorEnabled: true,
+    failedLoginAttempts: 0,
+    departmentOrOrg: "Khoa Dược Lâm sàng & Chống độc - Bệnh viện Chợ Rẫy",
+    phoneMasked: "+84 ••• ••• 712",
+    lastActiveAt: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
+    createdAt: "2026-03-01T14:20:00Z",
+    auditHistory: [],
+  },
+  {
+    id: "usr_res_2104",
+    email: "research.vuhoang@hmu.edu.vn",
+    fullName: "PGS.TS Vũ Hoàng Quân",
+    role: "researcher",
+    status: "active",
+    activeSessionsCount: 2,
+    twoFactorEnabled: true,
+    failedLoginAttempts: 0,
+    departmentOrOrg: "Viện Nghiên cứu Dược lý & Di truyền - ĐH Y Hà Nội",
+    phoneMasked: "+84 ••• ••• 491",
+    lastActiveAt: new Date(Date.now() - 360 * 60 * 1000).toISOString(),
+    createdAt: "2026-02-28T11:00:00Z",
+    auditHistory: [],
+  },
+  {
+    id: "usr_usr_9012",
+    email: "phamvanan.hanoi@gmail.com",
+    fullName: "Phạm Văn An",
+    role: "normal",
+    status: "active",
+    activeSessionsCount: 1,
+    twoFactorEnabled: false,
+    failedLoginAttempts: 0,
+    departmentOrOrg: "Người dùng cá nhân (PHR)",
+    phoneMasked: "+84 ••• ••• 925",
+    lastActiveAt: new Date(Date.now() - 1800 * 60 * 1000).toISOString(),
+    createdAt: "2026-04-12T16:45:00Z",
+    auditHistory: [],
+  },
+  {
+    id: "usr_usr_9381",
+    email: "nguyenthimai.danang@gmail.com",
+    fullName: "Nguyễn Thị Mai",
+    role: "normal",
+    status: "locked",
+    activeSessionsCount: 0,
+    twoFactorEnabled: false,
+    failedLoginAttempts: 5,
+    departmentOrOrg: "Người dùng cá nhân",
+    phoneMasked: "+84 ••• ••• 634",
+    lockReason: "Phát hiện 5 lần nhập sai mật khẩu liên tiếp.",
+    lockedAt: "2026-08-22T10:14:00Z",
+    lockedBy: "Hệ thống Tự động (SecOps Guard)",
+    lastActiveAt: "2026-08-22T10:14:00Z",
+    createdAt: "2026-05-19T07:12:00Z",
+    auditHistory: [],
+  },
+];
 
 beforeEach(() => {
   window.localStorage.setItem("clara_ui_language", "en");
   roleState.role = "admin";
-  mockListAdminUsers.mockResolvedValue([...SEED_ADMIN_USERS]);
+  mockListAdminUsers.mockResolvedValue([...TEST_ADMIN_USERS]);
   mockUpdateUserRole.mockImplementation(async (userId, newRole, reason) => {
-    const user = SEED_ADMIN_USERS.find((u) => u.id === userId) || SEED_ADMIN_USERS[0];
+    const user = TEST_ADMIN_USERS.find((u) => u.id === userId) || TEST_ADMIN_USERS[0];
     return {
       success: true,
       user: {
@@ -58,7 +154,7 @@ beforeEach(() => {
     };
   });
   mockLockUserAccount.mockImplementation(async (userId, reason) => {
-    const user = SEED_ADMIN_USERS.find((u) => u.id === userId) || SEED_ADMIN_USERS[0];
+    const user = TEST_ADMIN_USERS.find((u) => u.id === userId) || TEST_ADMIN_USERS[0];
     return {
       success: true,
       user: {
@@ -84,7 +180,7 @@ beforeEach(() => {
     };
   });
   mockUnlockUserAccount.mockImplementation(async (userId) => {
-    const user = SEED_ADMIN_USERS.find((u) => u.id === userId) || SEED_ADMIN_USERS[0];
+    const user = TEST_ADMIN_USERS.find((u) => u.id === userId) || TEST_ADMIN_USERS[0];
     return {
       success: true,
       user: {
@@ -108,7 +204,7 @@ beforeEach(() => {
     };
   });
   mockRevokeUserSessions.mockImplementation(async (userId) => {
-    const user = SEED_ADMIN_USERS.find((u) => u.id === userId) || SEED_ADMIN_USERS[0];
+    const user = TEST_ADMIN_USERS.find((u) => u.id === userId) || TEST_ADMIN_USERS[0];
     const count = user.activeSessionsCount;
     return {
       success: true,

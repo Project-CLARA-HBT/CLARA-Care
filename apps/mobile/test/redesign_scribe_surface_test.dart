@@ -289,5 +289,119 @@ void main() {
       expect(find.textContaining('Đánh giá'), findsWidgets);
       expect(find.text('Đau đầu căng thẳng.'), findsOneWidget);
     });
+
+    testWidgets(
+        'per-session consent gate blocks processing until captured and re-blocks on revocation (INV-2)',
+        (tester) async {
+      final api = FakeApiClient()
+        ..stub('listScribeSessions', response: {
+          'items': [
+            {
+              'id': 20,
+              'title': 'Phiên kiểm tra consent',
+              'status': 'recording',
+              'transcript': 'Khám ban đầu',
+              'soap': {},
+            }
+          ]
+        })
+        ..stub('getScribeSession', response: {
+          'id': 20,
+          'title': 'Phiên kiểm tra consent',
+          'status': 'recording',
+          'transcript': 'Khám ban đầu',
+          'soap': {},
+        })
+        ..stub('captureScribeConsent', response: {'status': 'consented'})
+        ..stub('revokeScribeConsent', response: {'status': 'revoked'})
+        ..stub('regenerateScribeSession', response: {
+          'id': 20,
+          'title': 'Phiên kiểm tra consent',
+          'status': 'ready',
+          'transcript': 'Khám ban đầu\nBệnh nhân hết đau đầu',
+          'soap': {
+            'subjective': 'Bệnh nhân hết đau đầu.',
+          },
+        });
+      final store = await FakeSessionStore.authenticated(role: 'doctor');
+
+      await tester.pumpWidget(_host(ScribeSurfaceV3(
+        apiClient: api,
+        sessionStore: store,
+        resolver: _scribeOn(),
+      )));
+      await tester.pumpAndSettle();
+
+      // Open session
+      await tester.tap(find.text('Phiên kiểm tra consent'));
+      await tester.pumpAndSettle();
+
+      // Consent is absent initially on open (fail-closed, INV-2)
+      expect(
+        find.text('Chưa có sự đồng ý — việc xử lý lời thoại đang bị chặn.'),
+        findsOneWidget,
+      );
+      expect(find.text('Thu thập sự đồng ý'), findsOneWidget);
+
+      // Attempting to append transcript before consent shows warning snackbar
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'Bệnh nhân hết đau đầu',
+      );
+      await tester.tap(find.text('Thêm & tạo ghi chú'));
+      await tester.pumpAndSettle();
+
+      expect(api.wasCalled('regenerateScribeSession'), isFalse);
+      expect(
+        find.text('Cần thu thập sự đồng ý của bệnh nhân trước khi xử lý lời thoại.'),
+        findsOneWidget,
+      );
+
+      // Capture consent
+      await tester.tap(find.text('Thu thập sự đồng ý'));
+      await tester.pumpAndSettle();
+
+      expect(api.wasCalled('captureScribeConsent'), isTrue);
+      expect(find.text('Đã thu thập sự đồng ý của bệnh nhân.'), findsOneWidget);
+      expect(find.text('Thu hồi sự đồng ý'), findsOneWidget);
+
+      // Dismiss any active SnackBar before tapping
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      // Now appending transcript proceeds
+      await tester.ensureVisible(find.text('Thêm & tạo ghi chú'));
+      await tester.tap(find.text('Thêm & tạo ghi chú'));
+      await tester.pumpAndSettle();
+
+      expect(api.wasCalled('regenerateScribeSession'), isTrue);
+      expect(find.textContaining('Bệnh nhân hết đau đầu'), findsWidgets);
+
+      // Revoke consent
+      await tester.ensureVisible(find.text('Thu hồi sự đồng ý'));
+      await tester.tap(find.text('Thu hồi sự đồng ý'));
+      await tester.pumpAndSettle();
+
+      expect(api.wasCalled('revokeScribeConsent'), isTrue);
+      expect(
+        find.text('Chưa có sự đồng ý — việc xử lý lời thoại đang bị chặn.'),
+        findsOneWidget,
+      );
+
+      // Subsequent processing is re-blocked
+      await tester.ensureVisible(find.byType(TextFormField).first);
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'Nội dung mới',
+      );
+      await tester.ensureVisible(find.text('Thêm & tạo ghi chú'));
+      await tester.tap(find.text('Thêm & tạo ghi chú'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Cần thu thập sự đồng ý của bệnh nhân trước khi xử lý lời thoại.'),
+        findsOneWidget,
+      );
+    });
   });
 }

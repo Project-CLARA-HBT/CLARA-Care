@@ -53,13 +53,20 @@ class PersistentSessionStore extends ChangeNotifier {
   static const String accessTokenKey = 'clara.session.access_token';
   static const String refreshTokenKey = 'clara.session.refresh_token';
   static const String roleKey = 'clara.session.role';
-  // Account-scoped health read cache. Keep in sync with
-  // LifeMapReadCache.storageKey without importing the cache back into this
-  // storage abstraction.
+
+  // Offline cache storage keys (kept in sync with CareguardOfflineCache and LifeMapReadCache).
+  static const String careguardOfflineCacheKey =
+      'clara.careguard.ddi.last_known_view';
   static const String lifeMapReadCacheKey =
       'clara.lifemap.today.read_projection';
   static const String lifeMapCaptureSessionKey =
       'clara.lifemap.capture.active_session';
+
+  static String careguardScopedKey(String userId) =>
+      'clara.careguard.ddi.$userId.last_known_view';
+
+  static String lifeMapScopedKey(String userId) =>
+      'clara.lifemap.today.$userId.read_projection';
 
   final SessionSecureStorage _storage;
 
@@ -72,6 +79,7 @@ class PersistentSessionStore extends ChangeNotifier {
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
   String? get role => _role;
+  String? get userId => tokenSubject(_accessToken);
 
   Future<String?> readLifeMapCaptureSessionId() =>
       _storage.read(lifeMapCaptureSessionKey);
@@ -135,8 +143,9 @@ class PersistentSessionStore extends ChangeNotifier {
     required String refreshToken,
     required String role,
   }) async {
-    if (_email != null && _email != email) {
-      await _storage.delete(lifeMapReadCacheKey);
+    // Purge previous user's offline caches before storing new session tokens.
+    if (_email != null || _accessToken != null) {
+      await _purgeOfflineCaches(email: _email, token: _accessToken);
     }
     _email = email;
     _accessToken = accessToken;
@@ -154,6 +163,8 @@ class PersistentSessionStore extends ChangeNotifier {
 
   /// Removes all stored credentials from memory and secure storage (10.5).
   Future<void> clear() async {
+    final prevEmail = _email;
+    final prevToken = _accessToken;
     _resetInMemory();
     notifyListeners();
 
@@ -161,8 +172,24 @@ class PersistentSessionStore extends ChangeNotifier {
     await _storage.delete(accessTokenKey);
     await _storage.delete(refreshTokenKey);
     await _storage.delete(roleKey);
+    await _purgeOfflineCaches(email: prevEmail, token: prevToken);
+  }
+
+  Future<void> _purgeOfflineCaches({String? email, String? token}) async {
+    await _storage.delete(careguardOfflineCacheKey);
     await _storage.delete(lifeMapReadCacheKey);
     await _storage.delete(lifeMapCaptureSessionKey);
+
+    final sub = tokenSubject(token ?? _accessToken);
+    if (sub != null && sub.isNotEmpty) {
+      await _storage.delete(careguardScopedKey(sub));
+      await _storage.delete(lifeMapScopedKey(sub));
+    }
+    final userEmail = email ?? _email;
+    if (userEmail != null && userEmail.isNotEmpty) {
+      await _storage.delete(careguardScopedKey(userEmail));
+      await _storage.delete(lifeMapScopedKey(userEmail));
+    }
   }
 
   void _resetInMemory() {
@@ -170,6 +197,32 @@ class PersistentSessionStore extends ChangeNotifier {
     _accessToken = null;
     _refreshToken = null;
     _role = null;
+  }
+
+  /// Parses the `sub` (user identifier) claim from a JWT [token], returning
+  /// `null` when the token is absent or cannot be parsed.
+  static String? tokenSubject(String? token) {
+    if (token == null || token.isEmpty) {
+      return null;
+    }
+
+    final parts = token.split('.');
+    if (parts.length != 3) {
+      return null;
+    }
+
+    try {
+      final payloadJson =
+          utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final decoded = jsonDecode(payloadJson);
+      if (decoded is! Map<String, dynamic>) {
+        return null;
+      }
+      final sub = decoded['sub'] ?? decoded['user_id'] ?? decoded['id'];
+      return sub?.toString();
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Pure, testable expiry check for a JWT access token.

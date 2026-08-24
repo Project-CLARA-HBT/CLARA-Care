@@ -1469,13 +1469,7 @@ def apply_transition(
                 observed_version = proposal_part_version
         else:
             proposal_part_version = part.state_version
-            if (
-                expected_state_version + 1 != part.state_version
-                and expected_state_version != part.state_version
-            ):
-                observed_version = expected_state_version + 1000
-            else:
-                observed_version = part.state_version
+            observed_version = part.state_version
 
         resolved_dependencies = [
             DependencySpec(

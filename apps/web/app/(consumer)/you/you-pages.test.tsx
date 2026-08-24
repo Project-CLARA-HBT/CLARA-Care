@@ -7,7 +7,72 @@ import YouPrivacyPage from "./privacy/page";
 import YouIntegrationsPage from "./integrations/page";
 import YouNotificationsPage from "./notifications/page";
 import YouSettingsPage from "./settings/page";
+import { EmergencyQrModal } from "@/components/consumer/emergency-qr-modal";
 import { v2Client } from "@/lib/api/v2-client";
+import api from "@/lib/http-client";
+
+vi.mock("@/lib/http-client", () => {
+  const get = vi.fn().mockImplementation((url: string) => {
+    if (String(url).includes("/emergency-card/eligibility")) {
+      return Promise.resolve({
+        data: {
+          eligible: true,
+          reasons: [],
+          required_fields: [],
+          consent_version: "v2.1",
+          subject_binding: "usr-1:p-1",
+          generated_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
+        },
+      });
+    }
+    if (String(url).includes("/emergency-card")) {
+      return Promise.resolve({
+        data: {
+          emergency_card: {
+            blood_type: "O+",
+            allergies: [],
+            conditions: [],
+          },
+        },
+      });
+    }
+    return Promise.resolve({ data: {} });
+  });
+
+  const post = vi.fn().mockImplementation((url: string) => {
+    if (String(url).includes("/emergency-card")) {
+      return Promise.resolve({
+        data: {
+          success: true,
+          token: "test-signed-token-xyz",
+          qr_payload: "https://theclaracare.com/share/emergency?token=test-signed-token-xyz",
+          expires_at: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
+          scope: "emergency_card",
+        },
+      });
+    }
+    return Promise.resolve({ data: {} });
+  });
+
+  const clientMock = {
+    get,
+    post,
+    patch: vi.fn().mockResolvedValue({ data: {} }),
+    put: vi.fn().mockResolvedValue({ data: {} }),
+    delete: vi.fn().mockResolvedValue({ data: {} }),
+    interceptors: {
+      request: { use: vi.fn(), eject: vi.fn() },
+      response: { use: vi.fn(), eject: vi.fn() },
+    },
+    defaults: { baseURL: "http://localhost:8100/api/v1" },
+  };
+
+  return {
+    default: clientMock,
+    api: clientMock,
+  };
+});
 
 const mockRouter = {
   push: vi.fn(),
@@ -44,6 +109,19 @@ vi.mock("@/components/shell/profile-boundary", () => ({
 afterEach(cleanup);
 beforeEach(() => {
   vi.clearAllMocks();
+  if (typeof window !== "undefined") {
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    if (typeof URL.createObjectURL === "function") {
+      vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock-url");
+    } else {
+      (URL as any).createObjectURL = vi.fn(() => "blob:mock-url");
+    }
+    if (typeof URL.revokeObjectURL === "function") {
+      vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    } else {
+      (URL as any).revokeObjectURL = vi.fn();
+    }
+  }
 });
 
 const mockYouOverview = {
@@ -148,6 +226,20 @@ describe("You & Privacy Route Pages", () => {
       });
       expect(screen.getByText("Mã QR Cấp Cứu Y Tế")).toBeInTheDocument();
     });
+
+    it("displays honest error state with retry button on query failure without fake fallback data", async () => {
+      vi.spyOn(v2Client, "getYouOverview").mockRejectedValueOnce(new Error("Network Error"));
+
+      render(<ConsumerYouPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Không thể tải tổng quan cá nhân")).toBeInTheDocument();
+      });
+
+      expect(screen.getByRole("button", { name: "Thử lại" })).toBeInTheDocument();
+      expect(screen.queryByTestId("profile-summary-card")).not.toBeInTheDocument();
+      expect(screen.queryByText("Dị ứng nghiêm trọng Penicillin")).not.toBeInTheDocument();
+    });
   });
 
   describe("You Profile & Emergency Card Page (/you/profile)", () => {
@@ -201,6 +293,20 @@ describe("You & Privacy Route Pages", () => {
       await waitFor(() => {
         expect(screen.getByTestId("profile-save-success")).toBeInTheDocument();
       });
+    });
+
+    it("displays honest empty/error state when getProfileDetails fails without mock fallback data", async () => {
+      vi.spyOn(v2Client, "getProfileDetails").mockRejectedValueOnce(new Error("Profile load failed"));
+
+      render(<YouProfilePage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Không thể tải thông tin cá nhân")).toBeInTheDocument();
+      });
+
+      expect(screen.getByRole("button", { name: "Thử lại" })).toBeInTheDocument();
+      expect(screen.queryByTestId("demographics-editor-section")).not.toBeInTheDocument();
+      expect(screen.queryByText("Dị ứng nghiêm trọng Penicillin (nguy cơ sốc phản vệ)")).not.toBeInTheDocument();
     });
   });
 
@@ -346,6 +452,35 @@ describe("You & Privacy Route Pages", () => {
       // Export Data
       fireEvent.click(screen.getByTestId("export-health-data-btn"));
       expect(screen.getByText("Đã tải tệp xuất dữ liệu thành công.")).toBeInTheDocument();
+    });
+
+    it("displays honest unavailable state when consent data is absent", async () => {
+      vi.spyOn(v2Client, "getAiTransparency").mockResolvedValueOnce({
+        data_classes_used: [],
+        retention_policy: { days: 90, description: "90 days", auto_delete_enabled: true },
+        cot_zero_disclosure: {
+          operates_without_cot: false,
+          description: "",
+          verified_guardrails: [],
+        },
+        ai_feature_controls: {
+          symptom_insights_enabled: true,
+          visit_prep_suggestions_enabled: false,
+          medication_safety_ai_enabled: true,
+          search_summaries_enabled: false,
+        },
+        consent_status: null as any,
+      } as any);
+
+      render(<YouPrivacyPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("you-privacy-page")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Chưa có thông tin")).toBeInTheDocument();
+      expect(screen.getByText("Chưa có bản ghi mục đích đồng thuận từ máy chủ.")).toBeInTheDocument();
+      expect(screen.getByText("Chưa có dữ liệu nhóm.")).toBeInTheDocument();
     });
   });
 
@@ -703,6 +838,85 @@ describe("You & Privacy Route Pages", () => {
         expect(screen.queryByTestId("session-card-sess-tablet-1")).not.toBeInTheDocument();
       });
       expect(screen.getByTestId("session-card-sess-current")).toBeInTheDocument();
+    });
+  });
+
+  describe("Emergency QR Modal Component (EmergencyQrModal)", () => {
+    it("renders ineligible state when profile data is missing without rendering QR code", async () => {
+      vi.spyOn(api, "get").mockResolvedValueOnce({
+        data: {
+          eligible: false,
+          reasons: ["MISSING_FULL_NAME", "MISSING_EMERGENCY_CONTACT"],
+          required_fields: ["full_name", "emergency_contact_phone"],
+        },
+      });
+
+      render(
+        <EmergencyQrModal
+          open={true}
+          onClose={vi.fn()}
+          patientName=""
+          bloodType="unknown"
+          emergencyContact={null}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("emergency-qr-ineligible")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Hồ sơ chưa đủ điều kiện tạo Mã QR Cấp cứu")).toBeInTheDocument();
+      expect(screen.getByText(/Họ và tên/)).toBeInTheDocument();
+      expect(screen.getByText(/Số điện thoại liên hệ khẩn cấp/)).toBeInTheDocument();
+      expect(screen.queryByTestId("emergency-qr-svg")).not.toBeInTheDocument();
+      expect(screen.getByTestId("complete-profile-btn")).toBeInTheDocument();
+    });
+
+    it("renders QR code with signed token payload when eligible", async () => {
+      vi.spyOn(api, "get").mockResolvedValueOnce({
+        data: {
+          eligible: true,
+          reasons: [],
+          required_fields: [],
+          consent_version: "v2.1",
+        },
+      });
+
+      vi.spyOn(api, "post").mockResolvedValueOnce({
+        data: {
+          success: true,
+          token: "signed-token-abc-999",
+          qr_payload: "https://theclaracare.com/share/emergency?token=signed-token-abc-999",
+          expires_at: "2026-09-24T00:00:00Z",
+          scope: "emergency_card",
+        },
+      });
+
+      render(
+        <EmergencyQrModal
+          open={true}
+          onClose={vi.fn()}
+          patientName="Trần Văn C"
+          bloodType="A+"
+          emergencyContact={{
+            name: "Trần Thị D",
+            phone: "0987654321",
+            relationship: "Mẹ",
+          }}
+          medicalAlerts={["Dị ứng Paracetamol"]}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("emergency-qr-eligible")).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId("emergency-qr-svg")).toBeInTheDocument();
+      expect(screen.getByText("Đã ký số")).toBeInTheDocument();
+      expect(screen.getByText("A+")).toBeInTheDocument();
+      expect(screen.getByText("Dị ứng Paracetamol")).toBeInTheDocument();
+      expect(screen.getByText(/Trần Thị D/)).toBeInTheDocument();
+      expect(screen.getByText("0987654321")).toBeInTheDocument();
     });
   });
 });

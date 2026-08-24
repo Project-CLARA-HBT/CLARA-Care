@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -90,8 +89,8 @@ def list_experiments(
             target_rules_json=e.target_rules_json,
             safety_owner=e.safety_owner,
             resource_version=e.resource_version,
-            created_at=e.created_at or datetime.now(timezone.utc),
-            updated_at=e.updated_at or datetime.now(timezone.utc),
+            created_at=e.created_at or datetime.now(UTC),
+            updated_at=e.updated_at or datetime.now(UTC),
         )
         for e in experiments
     ]
@@ -145,8 +144,8 @@ def create_experiment(
         target_rules_json=experiment.target_rules_json,
         safety_owner=experiment.safety_owner,
         resource_version=experiment.resource_version,
-        created_at=experiment.created_at or datetime.now(timezone.utc),
-        updated_at=experiment.updated_at or datetime.now(timezone.utc),
+        created_at=experiment.created_at or datetime.now(UTC),
+        updated_at=experiment.updated_at or datetime.now(UTC),
     )
 
 
@@ -206,8 +205,8 @@ def update_experiment_rollout(
         target_rules_json=experiment.target_rules_json,
         safety_owner=experiment.safety_owner,
         resource_version=experiment.resource_version,
-        created_at=experiment.created_at or datetime.now(timezone.utc),
-        updated_at=experiment.updated_at or datetime.now(timezone.utc),
+        created_at=experiment.created_at or datetime.now(UTC),
+        updated_at=experiment.updated_at or datetime.now(UTC),
     )
 
 
@@ -253,8 +252,8 @@ def kill_experiment(
         target_rules_json=experiment.target_rules_json,
         safety_owner=experiment.safety_owner,
         resource_version=experiment.resource_version,
-        created_at=experiment.created_at or datetime.now(timezone.utc),
-        updated_at=experiment.updated_at or datetime.now(timezone.utc),
+        created_at=experiment.created_at or datetime.now(UTC),
+        updated_at=experiment.updated_at or datetime.now(UTC),
     )
 
 
@@ -279,7 +278,7 @@ def get_experiment_audit_history(
             previous_state_json=a.previous_state_json,
             new_state_json=a.new_state_json,
             reason_code=a.reason_code,
-            created_at=a.created_at or datetime.now(timezone.utc),
+            created_at=a.created_at or datetime.now(UTC),
         )
         for a in audits
     ]

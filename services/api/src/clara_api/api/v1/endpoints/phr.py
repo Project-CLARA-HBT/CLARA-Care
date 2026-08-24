@@ -1383,6 +1383,119 @@ def get_phr_emergency_card(
     return {"emergency_card": build_emergency_card(record, prefs)}
 
 
+@router.get("/emergency-card/eligibility")
+def get_emergency_card_eligibility(
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+    settings: Settings = SETTINGS_DEP,
+) -> dict[str, Any]:
+    user = _get_user_by_token(db, token)
+    profile = db.execute(
+        select(PhrProfile).where(PhrProfile.user_id == user.id)
+    ).scalar_one_or_none()
+
+    reasons: list[str] = []
+    required_fields: list[str] = []
+
+    if profile is None:
+        return {
+            "eligible": False,
+            "reasons": ["MISSING_PHR_PROFILE"],
+            "required_fields": ["full_name", "date_of_birth", "emergency_contact"],
+            "consent_version": settings.medical_disclaimer_version,
+            "subject_binding": "",
+            "generated_at": datetime.now(UTC).isoformat(),
+            "expires_at": None,
+        }
+
+    if not (profile.full_name or "").strip():
+        reasons.append("MISSING_FULL_NAME")
+        required_fields.append("full_name")
+    if not (profile.emergency_contact_phone or "").strip():
+        reasons.append("MISSING_EMERGENCY_CONTACT")
+        required_fields.append("emergency_contact_phone")
+
+    eligible = len(reasons) == 0
+    now = datetime.now(UTC)
+    expires_at = (now + timedelta(days=30)).isoformat()
+
+    return {
+        "eligible": eligible,
+        "reasons": reasons,
+        "required_fields": required_fields,
+        "consent_version": settings.medical_disclaimer_version,
+        "subject_binding": f"usr-{user.id}:{profile.public_id}",
+        "generated_at": now.isoformat(),
+        "expires_at": expires_at,
+    }
+
+
+@router.post("/emergency-card")
+def issue_signed_emergency_card(
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+    settings: Settings = SETTINGS_DEP,
+) -> dict[str, Any]:
+    user = _get_user_by_token(db, token)
+    profile = db.execute(
+        select(PhrProfile).where(PhrProfile.user_id == user.id)
+    ).scalar_one_or_none()
+
+    if profile is None:
+        raise HTTPException(status_code=400, detail="MISSING_PHR_PROFILE")
+
+    # Generate a cryptographic share token for emergency card
+    from secrets import token_urlsafe
+    raw_token = token_urlsafe(32)
+    token_hash = sha256(raw_token.encode("utf-8")).hexdigest()
+    expires_at = datetime.now(UTC) + timedelta(days=30)
+
+    share = PhrShare(
+        profile_id=profile.id,
+        token_hash=token_hash,
+        scope="emergency_card",
+        is_active=True,
+        expires_at=expires_at,
+    )
+    db.add(share)
+    db.commit()
+
+    return {
+        "success": True,
+        "token": raw_token,
+        "qr_payload": f"https://theclaracare.com/share/emergency?token={raw_token}",
+        "expires_at": expires_at.isoformat(),
+        "scope": "emergency_card",
+    }
+
+
+@router.post("/emergency-card/revoke")
+def revoke_emergency_card_tokens(
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict[str, Any]:
+    user = _get_user_by_token(db, token)
+    profile = db.execute(
+        select(PhrProfile).where(PhrProfile.user_id == user.id)
+    ).scalar_one_or_none()
+
+    if profile is not None:
+        db.execute(
+            update(PhrShare)
+            .where(PhrShare.profile_id == profile.id, PhrShare.scope == "emergency_card")
+            .values(is_active=False)
+        )
+        audit_svc.record_access(
+            db,
+            profile_id=profile.id,
+            accessor_user_id=user.id,
+            scope="emergency_card_revoked",
+        )
+        db.commit()
+
+    return {"success": True, "revoked_at": datetime.now(UTC).isoformat()}
+
+
 def _aware(value: datetime) -> datetime:
     """Ensure a datetime is timezone-aware (SQLite may return naive)."""
 

@@ -33,13 +33,23 @@ const String careguardOfflineLabel = 'offline / không phải thời gian thực
 
 /// A cached last-known DDI projection plus the time it was captured.
 class CachedDdiProjection {
-  const CachedDdiProjection({required this.cachedAt, required this.view});
+  const CachedDdiProjection({
+    required this.cachedAt,
+    required this.view,
+    this.validUntil,
+  });
 
   final DateTime cachedAt;
+  final DateTime? validUntil;
 
   /// The sanitized four-field End_User projection
   /// (`riskLevel`, `alerts`, `recommendations`, `sources`).
   final Map<String, dynamic> view;
+
+  bool isStaleAt(DateTime now) {
+    if (validUntil == null) return false;
+    return !now.toUtc().isBefore(validUntil!.toUtc());
+  }
 }
 
 /// Heuristic: did this failure look like the device could not reach the API
@@ -61,16 +71,27 @@ bool isLikelyOfflineFailure(Object error) {
 class CareguardOfflineCache {
   CareguardOfflineCache({
     required SessionSecureStorage storage,
+    this.userId,
     bool enabled = kCareguardOfflineFallbackEnabled,
+    this.validity = const Duration(hours: 24),
   })  : _storage = storage,
         _enabled = enabled;
 
+  static const String baseStorageKey = 'clara.careguard.ddi.last_known_view';
   static const String storageKey = 'clara.careguard.ddi.last_known_view';
   static const int _version = 1;
 
-  final SessionSecureStorage _storage;
-  final bool _enabled;
+  static String scopedStorageKey(String? userId) =>
+      userId != null && userId.isNotEmpty
+          ? 'clara.careguard.ddi.$userId.last_known_view'
+          : storageKey;
 
+  final SessionSecureStorage _storage;
+  final String? userId;
+  final bool _enabled;
+  final Duration validity;
+
+  String get effectiveStorageKey => scopedStorageKey(userId);
   bool get enabled => _enabled;
 
   /// Re-project an arbitrary view map down to exactly the four user-facing

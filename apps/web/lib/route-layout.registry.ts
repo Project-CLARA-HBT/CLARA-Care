@@ -12,7 +12,7 @@ const CLINICAL_ROLES: UserRole[] = ["doctor", "admin"];
 const ADMIN_ROLES: UserRole[] = ["admin"];
 
 export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
-  // 1-13: Public Surfaces
+  // 1-15: Public Surfaces & Share Readers
   {
     routeId: "public-landing",
     path: "/",
@@ -66,6 +66,15 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     canonicalExperience: "public",
     shellMode: "PUBLIC_AUTH",
     layoutArchetype: "Verification Status",
+  },
+  {
+    routeId: "public-auth-callback",
+    path: "/auth/callback",
+    access: "public",
+    roles: ALL_ROLES,
+    canonicalExperience: "public",
+    shellMode: "PUBLIC_AUTH",
+    layoutArchetype: "Auth Callback",
   },
   {
     routeId: "public-legal",
@@ -122,6 +131,15 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     layoutArchetype: "Shared Content Reader",
   },
   {
+    routeId: "public-chat-share-token",
+    path: "/chat/share/[token]",
+    access: "public",
+    roles: ALL_ROLES,
+    canonicalExperience: "public",
+    shellMode: "PUBLIC_SHARE",
+    layoutArchetype: "Shared Conversation Reader",
+  },
+  {
     routeId: "public-phr-shared-token",
     path: "/phr/shared/[token]",
     access: "public",
@@ -131,7 +149,25 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     layoutArchetype: "Bounded Record Reader",
   },
 
-  // 14-35: Personal Experience & Primary Health Modules
+  // 16-61: Personal Experience & Primary Health Modules
+  {
+    routeId: "personal-home",
+    path: "/home",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "EXPLORE",
+    layoutArchetype: "Consumer Home Canvas",
+  },
+  {
+    routeId: "personal-ask",
+    path: "/ask",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "READ_COMPOSE",
+    layoutArchetype: "AI Consultation Workspace",
+  },
   {
     routeId: "personal-today",
     path: "/today",
@@ -178,6 +214,15 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     layoutArchetype: "Journey Stepper",
   },
   {
+    routeId: "personal-lifemap-timeline",
+    path: "/lifemap/timeline",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "EXPLORE",
+    layoutArchetype: "Journey Timeline",
+  },
+  {
     routeId: "personal-lifemap-visit-prep",
     path: "/lifemap/visit-prep",
     access: "personal",
@@ -204,6 +249,15 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     canonicalExperience: "personal",
     shellMode: "FOCUS",
     layoutArchetype: "Visit Prep Wizard",
+  },
+  {
+    routeId: "personal-visits-detail",
+    path: "/visits/[visitId]",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Visit Detail Reader",
   },
   {
     routeId: "personal-family",
@@ -260,6 +314,15 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     layoutArchetype: "Medicines Safety Workspace",
   },
   {
+    routeId: "personal-medicines-detail",
+    path: "/medicines/[id]",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Medication Detail",
+  },
+  {
     routeId: "personal-medicines-add",
     path: "/medicines/add",
     access: "personal",
@@ -267,6 +330,15 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     canonicalExperience: "personal",
     shellMode: "FOCUS",
     layoutArchetype: "Medication Wizard",
+  },
+  {
+    routeId: "personal-medicines-cabinet",
+    path: "/medicines/cabinet",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "EXPLORE",
+    layoutArchetype: "Medicine Cabinet",
   },
   {
     routeId: "personal-medicines-cabinet-add",
@@ -327,6 +399,15 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     layoutArchetype: "Editorial AI Workspace",
   },
   {
+    routeId: "chat-session-detail",
+    path: "/chat/[chatId]",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "READ_COMPOSE",
+    layoutArchetype: "Conversation Canvas",
+  },
+  {
     routeId: "chat-shares",
     path: "/chat/shares",
     access: "personal",
@@ -335,8 +416,161 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     shellMode: "EXPLORE",
     layoutArchetype: "Shared Conversations Library",
   },
+  {
+    routeId: "personal-care",
+    path: "/care",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "EXPLORE",
+    layoutArchetype: "Care Navigation Hub",
+  },
+  {
+    routeId: "personal-care-check-symptoms",
+    path: "/care/check-symptoms",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Symptom Triage Wizard",
+  },
+  {
+    routeId: "personal-care-prepare",
+    path: "/care/prepare",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Visit Preparation Wizard",
+  },
+  {
+    routeId: "personal-care-visits",
+    path: "/care/visits",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "EXPLORE",
+    layoutArchetype: "Visit History Timeline",
+  },
+  {
+    routeId: "personal-health",
+    path: "/health",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "EXPLORE",
+    layoutArchetype: "Health Record Overview",
+  },
+  {
+    routeId: "personal-health-documents",
+    path: "/health/documents",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Health Documents Vault",
+  },
+  {
+    routeId: "personal-health-measurements",
+    path: "/health/measurements",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Vitals & Measurements Tracker",
+  },
+  {
+    routeId: "personal-health-medications",
+    path: "/health/medications",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "EXPLORE",
+    layoutArchetype: "Medications Management",
+  },
+  {
+    routeId: "personal-health-results",
+    path: "/health/results",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Diagnostic Results Ledger",
+  },
+  {
+    routeId: "personal-health-timeline",
+    path: "/health/timeline",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "EXPLORE",
+    layoutArchetype: "Health Event Timeline",
+  },
+  {
+    routeId: "personal-you",
+    path: "/you",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "EXPLORE",
+    layoutArchetype: "Account & Profile Hub",
+  },
+  {
+    routeId: "personal-you-integrations",
+    path: "/you/integrations",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Connected Devices & Integrations",
+  },
+  {
+    routeId: "personal-you-notifications",
+    path: "/you/notifications",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Notification Center",
+  },
+  {
+    routeId: "personal-you-privacy",
+    path: "/you/privacy",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Privacy & Consent Center",
+  },
+  {
+    routeId: "personal-you-profile",
+    path: "/you/profile",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Personal Profile Editor",
+  },
+  {
+    routeId: "personal-you-settings",
+    path: "/you/settings",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Account Settings & Preferences",
+  },
+  {
+    routeId: "personal-you-sharing",
+    path: "/you/sharing",
+    access: "personal",
+    roles: ALL_ROLES,
+    canonicalExperience: "personal",
+    shellMode: "FOCUS",
+    layoutArchetype: "Data Sharing Permissions",
+  },
 
-  // 36-42: Research Experience & Evidence Synthesis
+  // 62-68: Research Experience & Evidence Synthesis
   {
     routeId: "research-evidence",
     path: "/evidence",
@@ -406,7 +640,34 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     layoutArchetype: "Source Workbench",
   },
 
-  // 43-54: Clinical Experience (Council & Scribe)
+  // 69-83: Clinical Experience (Overview, Patients, Council & Scribe)
+  {
+    routeId: "clinical-root",
+    path: "/clinical",
+    access: "clinical",
+    roles: CLINICAL_ROLES,
+    canonicalExperience: "clinical",
+    shellMode: "EXPLORE",
+    layoutArchetype: "Clinical Operations Hub",
+  },
+  {
+    routeId: "clinical-overview",
+    path: "/clinical/overview",
+    access: "clinical",
+    roles: CLINICAL_ROLES,
+    canonicalExperience: "clinical",
+    shellMode: "EXPLORE",
+    layoutArchetype: "Clinical Operations Overview",
+  },
+  {
+    routeId: "clinical-patients",
+    path: "/clinical/patients",
+    access: "clinical",
+    roles: CLINICAL_ROLES,
+    canonicalExperience: "clinical",
+    shellMode: "DENSE",
+    layoutArchetype: "Patient Roster Ledger",
+  },
   {
     routeId: "clinical-council",
     path: "/council",
@@ -516,7 +777,7 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     layoutArchetype: "Scribe State Machine",
   },
 
-  // 55: Professional Landing / Role Adapter
+  // 84: Professional Landing / Role Adapter
   {
     routeId: "professional-dashboard",
     path: "/dashboard",
@@ -527,7 +788,7 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     layoutArchetype: "Role-Adaptive Home",
   },
 
-  // 56-71: Administration & System Cockpit
+  // 85-105: Administration & System Cockpit
   {
     routeId: "admin-control-tower",
     path: "/dashboard/control-tower",
@@ -593,6 +854,24 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     layoutArchetype: "Observability Cockpit",
   },
   {
+    routeId: "admin-experiments",
+    path: "/admin/experiments",
+    access: "admin",
+    roles: ADMIN_ROLES,
+    canonicalExperience: "admin",
+    shellMode: "ADMIN_COMMAND",
+    layoutArchetype: "Experiments Console",
+  },
+  {
+    routeId: "admin-feedback",
+    path: "/admin/feedback",
+    access: "admin",
+    roles: ADMIN_ROLES,
+    canonicalExperience: "admin",
+    shellMode: "ADMIN_COMMAND",
+    layoutArchetype: "User Feedback Console",
+  },
+  {
     routeId: "admin-analytics",
     path: "/admin/analytics",
     access: "admin",
@@ -629,6 +908,15 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     layoutArchetype: "DSAR Workbench",
   },
   {
+    routeId: "admin-audit",
+    path: "/admin/audit",
+    access: "admin",
+    roles: ADMIN_ROLES,
+    canonicalExperience: "admin",
+    shellMode: "ADMIN_COMMAND",
+    layoutArchetype: "System Audit Ledger",
+  },
+  {
     routeId: "admin-audit-log",
     path: "/admin/audit-log",
     access: "admin",
@@ -636,6 +924,24 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     canonicalExperience: "admin",
     shellMode: "ADMIN_COMMAND",
     layoutArchetype: "Audit Ledger",
+  },
+  {
+    routeId: "admin-system",
+    path: "/admin/system",
+    access: "admin",
+    roles: ADMIN_ROLES,
+    canonicalExperience: "admin",
+    shellMode: "ADMIN_COMMAND",
+    layoutArchetype: "System Health Console",
+  },
+  {
+    routeId: "admin-users",
+    path: "/admin/users",
+    access: "admin",
+    roles: ADMIN_ROLES,
+    canonicalExperience: "admin",
+    shellMode: "ADMIN_COMMAND",
+    layoutArchetype: "User Directory Ledger",
   },
   {
     routeId: "admin-rag-eval",
@@ -676,7 +982,7 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     targetPath: "/admin/knowledge-sources",
   },
 
-  // 72-73: Community & Support
+  // 106-107: Community & Support
   {
     routeId: "personal-community",
     path: "/community",
@@ -696,7 +1002,7 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     layoutArchetype: "Help Library",
   },
 
-  // 74-76: Onboarding & Role Selection Utility
+  // 108-111: Onboarding & Role Selection Utility
   {
     routeId: "utility-welcome",
     path: "/welcome",
@@ -716,6 +1022,15 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     layoutArchetype: "Role-Aware Onboarding",
   },
   {
+    routeId: "utility-onboarding",
+    path: "/onboarding",
+    access: "utility",
+    roles: ALL_ROLES,
+    canonicalExperience: "utility",
+    shellMode: "UTILITY_FOCUS",
+    layoutArchetype: "Onboarding Wizard",
+  },
+  {
     routeId: "utility-role-select-alias",
     path: "/role-select",
     access: "utility",
@@ -726,7 +1041,7 @@ export const ROUTE_LAYOUT_REGISTRY: RouteLayoutContract[] = [
     targetPath: "/home",
   },
 
-  // 77-79: Account Privacy & Data Rights
+  // 112-114: Account Privacy & Data Rights
   {
     routeId: "account-consent",
     path: "/account/consent",

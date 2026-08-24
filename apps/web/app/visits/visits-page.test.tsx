@@ -313,23 +313,93 @@ describe("NewVisitPage — Visit Preparation Wizard Archetype (Spec v5 Section 6
   });
 });
 
+const mockVisitDetail: visitFamilyModule.Visit = {
+  id: "visit-123",
+  title: "Tái khám Tim mạch & Tăng huyết áp định kỳ",
+  goal: "Đánh giá hiệu quả thuốc hạ áp, theo dõi triệu chứng đau ngực và kiểm tra kết quả xét nghiệm sinh hóa máu.",
+  visit_type: "Khám chuyên khoa Tim mạch",
+  scheduled_at: "2026-08-24T09:00:00.000Z",
+  status: "completed",
+  doctor_name: "BSCKII. Nguyễn Văn An",
+  specialty: "Tim mạch can thiệp",
+  facility_name: "Bệnh viện Đại học Y Dược TP.HCM",
+  location: "Phòng khám 204 - Khu B",
+  prep_status: "completed",
+  clinician_notes:
+    "Bệnh nhân hợp tác tốt, huyết áp kiểm soát ổn định (130/80 mmHg). Hướng dẫn giảm muối và duy trì tập thể dục 30 phút mỗi ngày.",
+  soap_note: {
+    subjective:
+      "Bệnh nhân 58 tuổi, tái khám tăng huyết áp. Khai có cảm giác hồi hộp thoáng qua khi leo cầu thang 3 tầng tuần trước, không đau ngực dữ dội, không khó thở về đêm. Tuân thủ uống Amlodipine đều đặn mỗi sáng.",
+    objective:
+      "Sinh hiệu: HA: 130/80 mmHg, Mạch: 74 lần/phút, SpO2: 98%, BMI: 23.4. Khám tim: T1, T2 đều rõ, không âm thổi bệnh lý. Khám phổi: Âm phế bào êm dịu 2 phế trường, không rale. Điện tâm đồ (ECG): Nhịp xoang đều, trục trung gian, không thiếu máu cục bộ cấp.",
+    assessment:
+      "1. Tăng huyết áp vô căn độ 1 (ICD-10: I10) - Kiểm soát tốt.\n2. Rối loạn lipid máu hỗn hợp (ICD-10: E78.2) - Đang điều trị Statin.\n3. Cơn hồi hộp nhẹ khi gắng sức - Nghi do thể lực chưa thích nghi, loại trừ hội chứng vành cấp.",
+    plan:
+      "1. Tiếp tục duy trì Amlodipine 5mg: 1 viên uống sáng sau ăn.\n2. Bổ sung Atorvastatin 10mg: 1 viên uống tối trước khi ngủ.\n3. Kê toa 30 ngày và hẹn tái khám định kỳ sau 4 tuần.\n4. Làm xét nghiệm Lipid máu, Men gan (AST/ALT), Creatinine trước lần khám sau 2 ngày.\n5. Dặn dò bệnh nhân đến cấp cứu ngay nếu đau thắt ngực lan ra cánh tay trái hoặc khó thở.",
+    icd10_codes: [
+      { code: "I10", label: "Tăng huyết áp vô căn (nguyên phát)" },
+      { code: "E78.2", label: "Rối loạn lipid máu hỗn hợp" },
+    ],
+    clinician_name: "BSCKII. Nguyễn Văn An (Mã CCHN: 014829/HCM-CCHN)",
+    signed_at: "2026-08-24T09:30:00.000Z",
+  },
+  prescriptions: [
+    {
+      id: "rx-1",
+      name: "Amlodipine Besylate 5mg",
+      dosage: "1 viên/ngày (Sáng)",
+      instruction: "Uống sau bữa ăn sáng lúc 7:00",
+      reconciliation_status: "continued",
+    },
+    {
+      id: "rx-2",
+      name: "Atorvastatin 10mg",
+      dosage: "1 viên/ngày (Tối)",
+      instruction: "Uống trước khi đi ngủ",
+      reconciliation_status: "new",
+    },
+  ],
+  lab_orders: [
+    {
+      id: "lab-1",
+      title: "Bộ mỡ máu toàn phần (Lipid Panel)",
+      status: "completed",
+      result_summary: "Cholesterol: 4.8 mmol/L",
+    },
+  ],
+  documents: [
+    {
+      id: "doc-1",
+      title: "Toa thuốc điện tử #RX-202608-019",
+      document_kind: "prescription",
+      media_type: "application/pdf",
+      status: "verified",
+      content_digest: "sha256-abc",
+      metadata: {},
+      text_content: "Amlodipine 5mg",
+      provenance: {},
+      withdrawn_at: null,
+      deleted_at: null,
+    },
+  ],
+  follow_up_tasks: [
+    {
+      id: "task-1",
+      title: "Đo và ghi nhận huyết áp tại nhà 2 lần/ngày (Sáng 7h, Tối 19h)",
+      due_date: new Date(Date.now() + 86400000 * 7).toISOString(),
+      completed: false,
+      priority: "high",
+    },
+  ],
+  questions: [
+    "Huyết áp buổi sáng ổn định thì có thể ngưng thuốc được không?",
+  ],
+};
+
 describe("VisitDetailPage — Visit Detail Reader Archetype (Spec v5 Section 5 & 6.21)", () => {
   it("renders verified visit timeline entry, doctor SOAP notes, prescribed medications with reconciliation, attachments, and follow-up tasks", async () => {
-    vi.spyOn(visitFamilyModule, "listVisitDocuments").mockResolvedValue([
-      {
-        id: "doc-1",
-        title: "Toa thuốc điện tử #RX-202608-019",
-        document_kind: "prescription",
-        media_type: "application/pdf",
-        status: "verified",
-        content_digest: "sha256-abc",
-        metadata: {},
-        text_content: "Amlodipine 5mg",
-        provenance: {},
-        withdrawn_at: null,
-        deleted_at: null,
-      },
-    ]);
+    vi.spyOn(visitFamilyModule, "getVisit").mockResolvedValue(mockVisitDetail);
+    vi.spyOn(visitFamilyModule, "listVisitDocuments").mockResolvedValue(mockVisitDetail.documents!);
 
     const VisitDetailPageModule = await import("./[visitId]/page");
     const VisitDetailPage = VisitDetailPageModule.default;
@@ -382,7 +452,82 @@ describe("VisitDetailPage — Visit Detail Reader Archetype (Spec v5 Section 5 &
     expect(screen.getByTestId("follow-up-tasks-section")).toBeInTheDocument();
   });
 
+  it("fails closed and renders error alert on 500 server error without fake data", async () => {
+    vi.spyOn(visitFamilyModule, "getVisit").mockRejectedValue(new Error("500 Internal Server Error: Database connection failed"));
+
+    const VisitDetailPageModule = await import("./[visitId]/page");
+    const VisitDetailPage = VisitDetailPageModule.default;
+
+    render(<VisitDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("visit-detail-content")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("doctor-soap-notes-section")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Hồ sơ khám đã xác thực/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/BSCKII. Nguyễn Văn An/i)).not.toBeInTheDocument();
+  });
+
+  it("fails closed on request timeout", async () => {
+    vi.spyOn(visitFamilyModule, "getVisit").mockRejectedValue(new Error("Yêu cầu xử lý quá thời gian chờ. Vui lòng thử lại."));
+
+    const VisitDetailPageModule = await import("./[visitId]/page");
+    const VisitDetailPage = VisitDetailPageModule.default;
+
+    render(<VisitDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/quá thời gian chờ/i)).toBeInTheDocument();
+    expect(screen.queryByTestId("visit-detail-content")).not.toBeInTheDocument();
+  });
+
+  it("does not render verified badges when document is unverified", async () => {
+    const unverifiedVisit: visitFamilyModule.Visit = {
+      ...mockVisitDetail,
+      status: "scheduled",
+      documents: [
+        {
+          id: "doc-draft-1",
+          title: "Bản nháp kết quả khám",
+          document_kind: "draft",
+          media_type: "text/plain",
+          status: "pending",
+          content_digest: "sha256-draft",
+          metadata: {},
+          text_content: null,
+          provenance: {},
+          withdrawn_at: null,
+          deleted_at: null,
+        },
+      ],
+    };
+
+    vi.spyOn(visitFamilyModule, "getVisit").mockResolvedValue(unverifiedVisit);
+    vi.spyOn(visitFamilyModule, "listVisitDocuments").mockResolvedValue(unverifiedVisit.documents!);
+
+    const VisitDetailPageModule = await import("./[visitId]/page");
+    const VisitDetailPage = VisitDetailPageModule.default;
+
+    render(<VisitDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("visit-detail-content")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Hồ sơ khám đã xác thực/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Verified$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Đã xác thực$/i)).not.toBeInTheDocument();
+  });
+
   it("toggles follow-up task completion state interactively", async () => {
+    vi.spyOn(visitFamilyModule, "getVisit").mockResolvedValue(mockVisitDetail);
+    vi.spyOn(visitFamilyModule, "listVisitDocuments").mockResolvedValue(mockVisitDetail.documents!);
+
     const VisitDetailPageModule = await import("./[visitId]/page");
     const VisitDetailPage = VisitDetailPageModule.default;
 
@@ -406,7 +551,123 @@ describe("VisitDetailPage — Visit Detail Reader Archetype (Spec v5 Section 5 &
     });
   });
 
+  it("commits document creation on 2xx and fails closed on 500 error", async () => {
+    vi.spyOn(visitFamilyModule, "getVisit").mockResolvedValue(mockVisitDetail);
+    vi.spyOn(visitFamilyModule, "listVisitDocuments").mockResolvedValue(mockVisitDetail.documents!);
+
+    const createDocSpy = vi.spyOn(visitFamilyModule, "createVisitDocument").mockResolvedValue({
+      id: "doc-created-200",
+      title: "Phiếu điện tim gắng sức mới",
+      document_kind: "lab_report",
+      media_type: "text/plain",
+      status: "verified",
+      content_digest: "sha256-new",
+      metadata: {},
+      text_content: "Nhịp xoang bình thường",
+      provenance: {},
+      withdrawn_at: null,
+      deleted_at: null,
+    });
+
+    const VisitDetailPageModule = await import("./[visitId]/page");
+    const VisitDetailPage = VisitDetailPageModule.default;
+
+    render(<VisitDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("add-attachment-btn")).toBeInTheDocument();
+    });
+
+    // Open Add Document modal
+    fireEvent.click(screen.getByTestId("add-attachment-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Tên để bạn dễ nhận ra/i)).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/Tên để bạn dễ nhận ra/i), {
+      target: { value: "Phiếu điện tim gắng sức mới" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Lưu mục đã chọn/i }));
+
+    await waitFor(() => {
+      expect(createDocSpy).toHaveBeenCalledWith("visit-123", expect.objectContaining({
+        title: "Phiếu điện tim gắng sức mới",
+      }));
+      expect(screen.getByText("Phiếu điện tim gắng sức mới")).toBeInTheDocument();
+    });
+  });
+
+  it("does not mutate document list when createVisitDocument returns 500 error", async () => {
+    vi.spyOn(visitFamilyModule, "getVisit").mockResolvedValue(mockVisitDetail);
+    vi.spyOn(visitFamilyModule, "listVisitDocuments").mockResolvedValue(mockVisitDetail.documents!);
+
+    vi.spyOn(visitFamilyModule, "createVisitDocument").mockRejectedValue(
+      new Error("500 Internal Server Error: Upload failed"),
+    );
+
+    const VisitDetailPageModule = await import("./[visitId]/page");
+    const VisitDetailPage = VisitDetailPageModule.default;
+
+    render(<VisitDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("add-attachment-btn")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("add-attachment-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Tên để bạn dễ nhận ra/i)).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/Tên để bạn dễ nhận ra/i), {
+      target: { value: "Tài liệu bị lỗi 500" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Lưu mục đã chọn/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+
+    // Verify document was NOT added into the list (no false-success fallback)
+    expect(screen.queryByText("Tài liệu bị lỗi 500")).not.toBeInTheDocument();
+  });
+
+  it("does not mutate document list when deleteVisitDocument returns 500 error", async () => {
+    vi.spyOn(visitFamilyModule, "getVisit").mockResolvedValue(mockVisitDetail);
+    vi.spyOn(visitFamilyModule, "listVisitDocuments").mockResolvedValue(mockVisitDetail.documents!);
+
+    vi.spyOn(visitFamilyModule, "deleteVisitDocument").mockRejectedValue(
+      new Error("500 Internal Server Error: Deletion forbidden"),
+    );
+
+    const VisitDetailPageModule = await import("./[visitId]/page");
+    const VisitDetailPage = VisitDetailPageModule.default;
+
+    render(<VisitDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("document-item-doc-1")).toBeInTheDocument();
+    });
+
+    const removeBtn = screen.getByRole("button", { name: /Gỡ bỏ/i });
+    fireEvent.click(removeBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+
+    // Document remains in list because deletion failed closed
+    expect(screen.getByTestId("document-item-doc-1")).toBeInTheDocument();
+  });
+
   it("opens share modal and allows copying visit share URL", async () => {
+    vi.spyOn(visitFamilyModule, "getVisit").mockResolvedValue(mockVisitDetail);
+    vi.spyOn(visitFamilyModule, "listVisitDocuments").mockResolvedValue(mockVisitDetail.documents!);
+
     const VisitDetailPageModule = await import("./[visitId]/page");
     const VisitDetailPage = VisitDetailPageModule.default;
 

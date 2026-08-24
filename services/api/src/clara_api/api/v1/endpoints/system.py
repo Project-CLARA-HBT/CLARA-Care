@@ -3,6 +3,7 @@ from typing import Any, cast
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,7 @@ from clara_api.db.models import (
     CouncilCase,
     MedicineCabinet,
     MedicineItem,
+    PrivacyAuditReceipt,
     ScribeSession,
     SessionModel,
     User,
@@ -1232,3 +1234,271 @@ def get_clinical_analytics(
     return AnalyticsAggregator().clinical_metrics(
         db, flow_events, metrics, start=start, end=end
     )
+
+
+# ---------------------------------------------------------------------------
+# Platform Analytics & Privacy Audit Receipts (Requirements 10.8)
+# ---------------------------------------------------------------------------
+
+
+class MetricPoint(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
+    metricId: str = Field(..., alias="metricId")
+    value: float | None = None
+    unit: str = ""
+    numerator: float | None = None
+    denominator: float | None = None
+    sampleSize: int = Field(default=0, alias="sampleSize")
+    windowStart: str = Field(..., alias="windowStart")
+    windowEnd: str = Field(..., alias="windowEnd")
+    generatedAt: str = Field(..., alias="generatedAt")
+    source: str = "system"
+    freshnessState: str = Field(default="fresh", alias="freshnessState")
+
+
+class PrivacyAuditReceiptOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
+    auditId: str = Field(..., alias="auditId")
+    scannerVersion: str = Field(..., alias="scannerVersion")
+    scopeDigest: str = Field(..., alias="scopeDigest")
+    result: str = Field(default="incomplete")
+    findingCount: int = Field(default=0, alias="findingCount")
+    executedAt: str = Field(..., alias="executedAt")
+    artifactDigest: str = Field(..., alias="artifactDigest")
+
+
+def _compute_platform_analytics(
+    db: Session,
+    window: str = "24h",
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> list[MetricPoint]:
+    now = datetime.now(tz=UTC)
+    now_iso = now.isoformat()
+
+    if date_from is not None and date_to is not None:
+        start_dt = datetime.combine(date_from, datetime.min.time(), tzinfo=UTC)
+        end_dt = datetime.combine(date_to, datetime.max.time(), tzinfo=UTC)
+    elif window == "7d":
+        start_dt = now - timedelta(days=7)
+        end_dt = now
+    elif window == "30d":
+        start_dt = now - timedelta(days=30)
+        end_dt = now
+    elif window == "1h":
+        start_dt = now - timedelta(hours=1)
+        end_dt = now
+    else:
+        start_dt = now - timedelta(hours=24)
+        end_dt = now
+
+    start_iso = start_dt.isoformat()
+    end_iso = end_dt.isoformat()
+
+    user_count = (
+        db.scalar(
+            select(func.count(User.id)).where(
+                User.created_at >= start_dt, User.created_at <= end_dt
+            )
+        )
+        or 0
+    )
+    active_user_count = (
+        db.scalar(
+            select(func.count(User.id)).where(
+                User.last_login_at >= start_dt, User.last_login_at <= end_dt
+            )
+        )
+        or 0
+    )
+    query_count = (
+        db.scalar(
+            select(func.count(QueryModel.id)).where(
+                QueryModel.created_at >= start_dt, QueryModel.created_at <= end_dt
+            )
+        )
+        or 0
+    )
+    council_count = (
+        db.scalar(
+            select(func.count(CouncilCase.id)).where(
+                CouncilCase.created_at >= start_dt, CouncilCase.created_at <= end_dt
+            )
+        )
+        or 0
+    )
+    scribe_count = (
+        db.scalar(
+            select(func.count(ScribeSession.id)).where(
+                ScribeSession.created_at >= start_dt, ScribeSession.created_at <= end_dt
+            )
+        )
+        or 0
+    )
+
+    metrics_snapshot = get_api_metrics_store().snapshot()
+    requests_total = max(_to_int(metrics_snapshot.get("requests_total"), 0), 0)
+    avg_latency_ms = max(_to_float(metrics_snapshot.get("avg_latency_ms"), 0.0), 0.0)
+    by_status_raw = metrics_snapshot.get("by_status")
+    by_status = by_status_raw if isinstance(by_status_raw, dict) else {}
+    error_total, _ = _status_code_counters(by_status)
+
+    error_rate = (error_total / requests_total * 100.0) if requests_total > 0 else 0.0
+
+    return [
+        MetricPoint(
+            metricId="active_users",
+            value=float(active_user_count),
+            unit="count",
+            sampleSize=active_user_count,
+            windowStart=start_iso,
+            windowEnd=end_iso,
+            generatedAt=now_iso,
+            source="identity",
+            freshnessState="fresh",
+        ),
+        MetricPoint(
+            metricId="new_users",
+            value=float(user_count),
+            unit="count",
+            sampleSize=user_count,
+            windowStart=start_iso,
+            windowEnd=end_iso,
+            generatedAt=now_iso,
+            source="identity",
+            freshnessState="fresh",
+        ),
+        MetricPoint(
+            metricId="queries_total",
+            value=float(query_count),
+            unit="count",
+            sampleSize=query_count,
+            windowStart=start_iso,
+            windowEnd=end_iso,
+            generatedAt=now_iso,
+            source="chat",
+            freshnessState="fresh",
+        ),
+        MetricPoint(
+            metricId="council_cases",
+            value=float(council_count),
+            unit="count",
+            sampleSize=council_count,
+            windowStart=start_iso,
+            windowEnd=end_iso,
+            generatedAt=now_iso,
+            source="council",
+            freshnessState="fresh",
+        ),
+        MetricPoint(
+            metricId="scribe_sessions",
+            value=float(scribe_count),
+            unit="count",
+            sampleSize=scribe_count,
+            windowStart=start_iso,
+            windowEnd=end_iso,
+            generatedAt=now_iso,
+            source="scribe",
+            freshnessState="fresh",
+        ),
+        MetricPoint(
+            metricId="api_requests_total",
+            value=float(requests_total),
+            unit="count",
+            sampleSize=requests_total,
+            windowStart=start_iso,
+            windowEnd=end_iso,
+            generatedAt=now_iso,
+            source="api_metrics",
+            freshnessState="fresh",
+        ),
+        MetricPoint(
+            metricId="api_error_rate_pct",
+            value=round(error_rate, 2),
+            unit="percentage",
+            numerator=float(error_total),
+            denominator=float(requests_total),
+            sampleSize=requests_total,
+            windowStart=start_iso,
+            windowEnd=end_iso,
+            generatedAt=now_iso,
+            source="api_metrics",
+            freshnessState="fresh",
+        ),
+        MetricPoint(
+            metricId="api_avg_latency_ms",
+            value=round(avg_latency_ms, 2) if requests_total > 0 else 0.0,
+            unit="ms",
+            sampleSize=requests_total,
+            windowStart=start_iso,
+            windowEnd=end_iso,
+            generatedAt=now_iso,
+            source="api_metrics",
+            freshnessState="fresh",
+        ),
+    ]
+
+
+def _query_privacy_receipts(db: Session) -> list[PrivacyAuditReceiptOut]:
+    receipts = db.scalars(
+        select(PrivacyAuditReceipt).order_by(PrivacyAuditReceipt.id.desc())
+    ).all()
+    if not receipts:
+        return []
+    return [
+        PrivacyAuditReceiptOut(
+            auditId=r.audit_id,
+            scannerVersion=r.scanner_version,
+            scopeDigest=r.scope_digest,
+            result=r.result or "incomplete",
+            findingCount=r.finding_count or 0,
+            executedAt=_datetime_to_iso(r.executed_at) or _utc_now_iso(),
+            artifactDigest=r.artifact_digest or "",
+        )
+        for r in receipts
+    ]
+
+
+admin_router = APIRouter()
+
+
+@admin_router.get("/analytics/platform", response_model=list[MetricPoint])
+def get_admin_platform_analytics(
+    window: str = Query(default="24h"),
+    date_from: date | None = Query(default=None, alias="from"),
+    date_to: date | None = Query(default=None, alias="to"),
+    _token: TokenPayload = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+) -> list[MetricPoint]:
+    """Admin platform analytics with honest empty metric reporting."""
+    return _compute_platform_analytics(db, window=window, date_from=date_from, date_to=date_to)
+
+
+@admin_router.get("/privacy-receipts", response_model=list[PrivacyAuditReceiptOut])
+def get_admin_privacy_receipts(
+    _token: TokenPayload = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+) -> list[PrivacyAuditReceiptOut]:
+    """Admin privacy audit receipts directly from authoritative receipts table."""
+    return _query_privacy_receipts(db)
+
+
+@router.get("/analytics/platform", response_model=list[MetricPoint])
+def get_system_platform_analytics(
+    window: str = Query(default="24h"),
+    date_from: date | None = Query(default=None, alias="from"),
+    date_to: date | None = Query(default=None, alias="to"),
+    _token: TokenPayload = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+) -> list[MetricPoint]:
+    return _compute_platform_analytics(db, window=window, date_from=date_from, date_to=date_to)
+
+
+@router.get("/privacy-receipts", response_model=list[PrivacyAuditReceiptOut])
+def get_system_privacy_receipts(
+    _token: TokenPayload = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+) -> list[PrivacyAuditReceiptOut]:
+    return _query_privacy_receipts(db)

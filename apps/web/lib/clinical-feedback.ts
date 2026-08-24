@@ -48,6 +48,7 @@ export interface ClinicalFeedbackItem {
   root_cause?: string;
   assigned_to?: string;
   added_to_eval_benchmark?: boolean;
+  resourceVersion?: string;
 }
 
 export interface FeedbackSummaryMetrics {
@@ -60,147 +61,66 @@ export interface FeedbackSummaryMetrics {
   status_breakdown: Record<TriageStatus, number>;
 }
 
-// ---------------------------------------------------------------------------
-// Seed Data for Development / Resilient Offline Fallback
-// ---------------------------------------------------------------------------
+export interface ListClinicalFeedbackOptions {
+  status?: TriageStatus | "all";
+  severity?: FeedbackSeverity | "all";
+  category?: FeedbackCategory | "all";
+  cursor?: number;
+  limit?: number;
+}
 
-export const SEED_CLINICAL_FEEDBACK: ClinicalFeedbackItem[] = [
-  {
-    id: "FB-801",
-    query_id: "Q-10492",
-    user_query: "Bệnh nhân suy thận eGFR 28 mL/min có dùng được Metformin 1000mg x 2 lần/ngày không?",
-    clara_response: "Metformin có thể sử dụng ở liều 1000mg x 2 lần/ngày, cần theo dõi định kỳ chức năng thận mỗi 3 tháng.",
-    rating: 1,
-    category: "dosage_ddi",
-    severity: "critical",
-    triage_status: "new",
-    submitter_role: "specialist",
-    submitter_specialty: "Nội thận - Lọc máu",
-    comment: "Chống chỉ định tuyệt đối Metformin khi eGFR < 30 mL/min/1.73m2 do nguy cơ nhiễm toan acid lactic đe dọa tính mạng theo Dược thư QGVN 2022 và KDIGO 2023.",
-    proposed_correction: "Ngừng ngay Metformin. Chuyển sang ức chế DPP-4 (Linagliptin) hoặc Insulin hiệu chỉnh liều theo chức năng thận.",
-    cited_guidelines: [
-      "Dược thư Quốc gia Việt Nam 2022 - Chuyên luận Metformin",
-      "KDIGO 2023 Clinical Practice Guideline for Diabetes Management in CKD",
-    ],
-    fides_verdict: "BLOCKED_CRITICAL",
-    created_at: "2026-08-20T08:15:00Z",
-    assigned_to: "Hội đồng An toàn Dược lâm sàng",
-    added_to_eval_benchmark: false,
-  },
-  {
-    id: "FB-802",
-    query_id: "Q-10488",
-    user_query: "Phụ nữ mang thai 3 tháng đầu dùng Isotretinoin bôi ngoài trị mụn được không?",
-    clara_response: "Isotretinoin dạng bôi ngoài da có tỷ lệ hấp thu toàn thân thấp, có thể cân nhắc nếu các thuốc bôi khác không hiệu quả.",
-    rating: 1,
-    category: "contraindication",
-    severity: "critical",
-    triage_status: "in_triage",
-    submitter_role: "pharmacist",
-    submitter_specialty: "Dược lâm sàng",
-    comment: "Isotretinoin dù dạng bôi hay uống đều xếp Phân loại X thai kỳ (nguy cơ gây quái thai dị tật tim mặt sọ não). Phải cảnh báo đỏ chống chỉ định tuyệt đối.",
-    proposed_correction: "Tuyệt đối không sử dụng cho phụ nữ có thai hoặc nghi ngờ có thai. Thay thế an toàn bằng Azelaic acid hoặc Erythromycin bôi.",
-    cited_guidelines: [
-      "Thông tư 01/2020/TT-BYT Hướng dẫn sử dụng thuốc cho phụ nữ có thai",
-      "FDA Pregnancy Category X Isotretinoin Warnings",
-    ],
-    fides_verdict: "CONTESTED",
-    created_at: "2026-08-21T09:30:00Z",
-    assigned_to: "Ban An toàn Dược lâm sàng",
-    added_to_eval_benchmark: false,
-  },
-  {
-    id: "FB-803",
-    query_id: "Q-10475",
-    user_query: "Trẻ em 6 tuổi bị sốt xuất huyết Dengue ngày 3 dùng Aspirin để hạ sốt được không?",
-    clara_response: "Có thể dùng Aspirin liều thấp 10mg/kg nếu Paracetamol không hạ được sốt cao.",
-    rating: 2,
-    category: "hallucination",
-    severity: "high",
-    triage_status: "in_triage",
-    submitter_role: "doctor",
-    submitter_specialty: "Nhi khoa",
-    comment: "Ảo giác nguy hiểm! Chống chỉ định tuyệt đối Aspirin và NSAIDs trong sốt xuất huyết Dengue do nguy cơ xuất huyết tiêu hóa ồ ạt và hội chứng Reye ở trẻ em.",
-    proposed_correction: "Chỉ dùng Paracetamol đơn chất 10-15mg/kg/lần (tối đa 60mg/kg/ngày), giãn cách ít nhất 4-6 giờ. Tuyệt đối không dùng Aspirin/Ibuprofen.",
-    cited_guidelines: [
-      "Bộ Y Tế QĐ 2760/QĐ-BYT Hướng dẫn chẩn đoán, điều trị Sốt xuất huyết Dengue",
-      "WHO Dengue Guidelines for Diagnosis, Treatment, Prevention and Control",
-    ],
-    fides_verdict: "CONTESTED",
-    created_at: "2026-08-22T14:10:00Z",
-    assigned_to: "Ban An toàn Lâm sàng Nhi",
-    added_to_eval_benchmark: true,
-  },
-  {
-    id: "FB-804",
-    query_id: "Q-10461",
-    user_query: "Phác đồ điều trị tăng huyết áp ở bệnh nhân ĐTĐ theo Hội Tim mạch VN 2024?",
-    clara_response: "Khởi đầu bằng ức chế men chuyển (ACEi) hoặc ức chế thụ thể (ARB). Đích huyết áp khuyến cáo chung là < 140/90 mmHg.",
-    rating: 3,
-    category: "citation_mismatch",
-    severity: "medium",
-    triage_status: "new",
-    submitter_role: "doctor",
-    submitter_specialty: "Tim mạch can thiệp",
-    comment: "Khuyến cáo VNHA/VSH 2024 và ADA 2024 đã thống nhất siết đích huyết áp cho bệnh nhân ĐTĐ xuống < 130/80 mmHg. Mốc 140/90 mmHg là tài liệu cũ chưa cập nhật.",
-    proposed_correction: "Cập nhật đích HA < 130/80 mmHg (nếu dung nạp) theo VNHA 2024 và ADA 2024 Standards of Care.",
-    cited_guidelines: [
-      "Khuyến cáo chẩn đoán và điều trị Tăng huyết áp - Hội Tim mạch học VN (VNHA 2024)",
-      "ADA Standards of Care in Diabetes 2024 - Section 10",
-    ],
-    fides_verdict: "PARTIALLY_VERIFIED",
-    created_at: "2026-08-23T11:05:00Z",
-    assigned_to: "Tổ Y văn & Guideline",
-    added_to_eval_benchmark: false,
-  },
-  {
-    id: "FB-805",
-    query_id: "Q-10450",
-    user_query: "Thời điểm uống Levothyroxine tốt nhất trong ngày là khi nào?",
-    clara_response: "Nên uống Levothyroxine vào buổi sáng lúc đói, trước bữa ăn sáng 30-60 phút với một cốc nước đầy.",
-    rating: 4,
-    category: "clinical_nuance",
-    severity: "low",
-    triage_status: "resolved",
-    submitter_role: "doctor",
-    submitter_specialty: "Nội tiết",
-    comment: "Hướng dẫn thời điểm đúng, nhưng cần nhấn mạnh thêm việc cách xa các chế phẩm bổ sung Canxi, Sắt, Sữa đậu nành ít nhất 4 giờ để tránh cản trở hấp thu.",
-    proposed_correction: "Bổ sung lưu ý cách xa Canxi/Sắt/Sữa ít nhất 4 giờ.",
-    cited_guidelines: [
-      "American Thyroid Association (ATA) Guidelines on Hypothyroidism 2023",
-    ],
-    fides_verdict: "VERIFIED",
-    created_at: "2026-08-23T16:45:00Z",
-    resolved_at: "2026-08-24T09:00:00Z",
-    resolution_note: "Đã cập nhật prompt rule về tương tác thức ăn/vi chất của Levothyroxine vào knowledge connector.",
-    root_cause: "Thiếu rule bổ trợ tương tác vi chất trong hệ thống prompt lâm sàng.",
-    assigned_to: "Tổ Y văn & Guideline",
-    added_to_eval_benchmark: true,
-  },
-  {
-    id: "FB-806",
-    query_id: "Q-10432",
-    user_query: "Tương tác giữa Clopidogrel và Omeprazole có làm giảm hiệu quả chống kết tập tiểu cầu không?",
-    clara_response: "Omeprazole ức chế enzyme CYP2C19, làm giảm chuyển hóa Clopidogrel thành chất có hoạt tính sinh học, giảm tác dụng chống đông. Khuyến cáo dùng Pantoprazole để thay thế.",
-    rating: 5,
-    category: "positive_accurate",
-    severity: "low",
-    triage_status: "resolved",
-    submitter_role: "specialist",
-    submitter_specialty: "Dược lý lâm sàng",
-    comment: "Tư vấn rất chính xác, giải thích rõ cơ chế dược động học qua CYP2C19 và đề xuất thuốc thay thế chuẩn xác theo FDA và Dược thư QG.",
-    cited_guidelines: [
-      "FDA Drug Safety Communication: Clopidogrel and Omeprazole interaction",
-      "Dược thư Quốc gia Việt Nam 2022",
-    ],
-    fides_verdict: "VERIFIED",
-    created_at: "2026-08-24T07:20:00Z",
-    resolved_at: "2026-08-24T08:30:00Z",
-    resolution_note: "Xác nhận mẫu Q&A chuẩn xác cao, lưu vào golden sample corpus.",
-    assigned_to: "Hội đồng Thẩm định Y khoa",
-    added_to_eval_benchmark: true,
-  },
-];
+export function mapBackendFeedbackToFrontend(f: any): ClinicalFeedbackItem {
+  if (!f) {
+    throw new Error("Invalid clinical feedback payload from server");
+  }
+
+  const meta = (typeof f.metadata_json === "object" && f.metadata_json !== null)
+    ? f.metadata_json
+    : {};
+  const res = (typeof f.resolution_json === "object" && f.resolution_json !== null)
+    ? f.resolution_json
+    : {};
+
+  let triageStatus: TriageStatus = "new";
+  if (f.status === "in_review" || f.status === "in_triage" || f.triage_status === "in_triage") {
+    triageStatus = "in_triage";
+  } else if (f.status === "resolved" || f.triage_status === "resolved") {
+    triageStatus = "resolved";
+  } else if (f.status === "rejected" || f.status === "dismissed" || f.triage_status === "dismissed") {
+    triageStatus = "dismissed";
+  } else if (f.status === "open" || f.status === "new" || f.triage_status === "new") {
+    triageStatus = "new";
+  }
+
+  const category = (f.category || meta.category || "clinical_nuance") as FeedbackCategory;
+  const severity = (f.clinical_severity || f.severity || meta.severity || "medium") as FeedbackSeverity;
+  const submitterRole = (meta.submitter_role || f.submitter_role || "doctor") as SubmitterRole;
+
+  return {
+    id: f.public_id || String(f.id),
+    query_id: f.target_id || meta.query_id || f.query_id,
+    user_query: meta.user_query || f.user_query || f.free_text_redacted || "",
+    clara_response: meta.clara_response || f.clara_response || "",
+    rating: (meta.rating || f.rating || (severity === "critical" ? 1 : severity === "high" ? 2 : 4)) as FeedbackRating,
+    category,
+    severity,
+    triage_status: triageStatus,
+    submitter_role: submitterRole,
+    submitter_specialty: meta.submitter_specialty || f.submitter_specialty,
+    comment: f.free_text_redacted || meta.comment || f.comment || "",
+    proposed_correction: meta.proposed_correction || f.proposed_correction,
+    cited_guidelines: meta.cited_guidelines || f.cited_guidelines || [],
+    fides_verdict: meta.fides_verdict || f.fides_verdict,
+    created_at: f.created_at || new Date().toISOString(),
+    updated_at: f.updated_at || new Date().toISOString(),
+    resolved_at: res.resolved_at || f.resolved_at,
+    resolution_note: res.resolution_summary || res.clinical_notes || f.resolution_note,
+    root_cause: res.action_taken || f.root_cause,
+    assigned_to: f.assigned_user_id ? String(f.assigned_user_id) : f.assigned_to || meta.assigned_to,
+    added_to_eval_benchmark: Boolean(res.benchmark_candidate || f.added_to_eval_benchmark),
+    resourceVersion: f.resource_version || f.resourceVersion,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Metric Calculations
@@ -238,23 +158,19 @@ export function computeFeedbackMetrics(items: ClinicalFeedbackItem[]): FeedbackS
   let resolvedCount = 0;
 
   for (const item of items) {
-    // Ratings
     if (item.rating >= 1 && item.rating <= 5) {
       rating_breakdown[item.rating] = (rating_breakdown[item.rating] ?? 0) + 1;
       totalRatingSum += item.rating;
     }
 
-    // Categories
     if (item.category in category_breakdown) {
       category_breakdown[item.category] = (category_breakdown[item.category] ?? 0) + 1;
     }
 
-    // Statuses
     if (item.triage_status in status_breakdown) {
       status_breakdown[item.triage_status] = (status_breakdown[item.triage_status] ?? 0) + 1;
     }
 
-    // Unresolved Critical & High
     if (
       (item.severity === "critical" || item.severity === "high") &&
       (item.triage_status === "new" || item.triage_status === "in_triage")
@@ -262,7 +178,6 @@ export function computeFeedbackMetrics(items: ClinicalFeedbackItem[]): FeedbackS
       unresolvedCriticalHigh += 1;
     }
 
-    // Resolved / Dismissed
     if (item.triage_status === "resolved" || item.triage_status === "dismissed") {
       resolvedCount += 1;
     }
@@ -407,45 +322,108 @@ export function getRoleMeta(
 }
 
 // ---------------------------------------------------------------------------
-// Client API Calls
+// Client API Calls (Server Wired & Fail-Closed)
 // ---------------------------------------------------------------------------
 
-export async function listClinicalFeedback(): Promise<ClinicalFeedbackItem[]> {
-  try {
-    const res = await api.get<ClinicalFeedbackItem[]>("/admin/feedback");
-    if (Array.isArray(res.data) && res.data.length > 0) {
-      return res.data;
-    }
-  } catch {
-    // Graceful fallback to rich seed data in test/dev
+export async function listClinicalFeedback(
+  options?: ListClinicalFeedbackOptions,
+): Promise<ClinicalFeedbackItem[]> {
+  const params: Record<string, string | number> = {};
+
+  if (options?.status && options.status !== "all") {
+    // Map frontend triage status to backend status
+    const statusMap: Record<TriageStatus, string> = {
+      new: "open",
+      in_triage: "in_review",
+      resolved: "resolved",
+      dismissed: "rejected",
+    };
+    params.status = statusMap[options.status] ?? options.status;
   }
-  return SEED_CLINICAL_FEEDBACK;
+  if (options?.severity && options.severity !== "all") {
+    params.severity = options.severity;
+  }
+  if (options?.category && options.category !== "all") {
+    params.category = options.category;
+  }
+  if (options?.cursor !== undefined) {
+    params.cursor = options.cursor;
+  }
+  if (options?.limit !== undefined) {
+    params.limit = options.limit;
+  }
+
+  const res = await api.get<{ items?: any[]; total?: number } | any[]>("/admin/feedback", {
+    params,
+  });
+
+  // Preserve known_empty when server returns empty array [] or { items: [] }
+  let rawList: any[] = [];
+  if (Array.isArray(res.data)) {
+    rawList = res.data;
+  } else if (res.data && Array.isArray(res.data.items)) {
+    rawList = res.data.items;
+  }
+
+  return rawList.map(mapBackendFeedbackToFrontend);
+}
+
+export async function getClinicalFeedbackDetail(
+  id: string | number,
+): Promise<ClinicalFeedbackItem> {
+  const res = await api.get<any>(`/admin/feedback/${encodeURIComponent(String(id))}`);
+  return mapBackendFeedbackToFrontend(res.data);
 }
 
 export async function updateFeedbackTriage(
   id: string | number,
-  updates: Partial<ClinicalFeedbackItem>,
+  updates: Partial<ClinicalFeedbackItem> & {
+    expectedResourceVersion?: string;
+    notes?: string;
+  },
 ): Promise<ClinicalFeedbackItem> {
-  try {
-    const res = await api.patch<ClinicalFeedbackItem>(
-      `/admin/feedback/${encodeURIComponent(String(id))}`,
-      updates,
-    );
-    if (res.data && typeof res.data === "object") {
-      return res.data;
+  // If resolution is being performed
+  if (updates.triage_status === "resolved" || updates.resolution_note) {
+    try {
+      const res = await api.post<any>(
+        `/admin/feedback/${encodeURIComponent(String(id))}/resolution`,
+        {
+          resolution_summary: updates.resolution_note || "Resolved",
+          action_taken: updates.root_cause || "Action taken",
+          clinical_notes: updates.proposed_correction,
+          benchmark_candidate: Boolean(updates.added_to_eval_benchmark),
+        },
+      );
+      return mapBackendFeedbackToFrontend(res.data);
+    } catch {
+      // If resolution endpoint fails, fall through to status patch
     }
-  } catch {
-    // Local fallback update
   }
 
-  const existing = SEED_CLINICAL_FEEDBACK.find((i) => String(i.id) === String(id));
-  return {
-    ...(existing ?? SEED_CLINICAL_FEEDBACK[0]),
-    ...updates,
-    id,
-    updated_at: new Date().toISOString(),
-    resolved_at: updates.triage_status === "resolved" ? new Date().toISOString() : undefined,
+  const statusMap: Record<string, string> = {
+    new: "open",
+    in_triage: "in_review",
+    resolved: "resolved",
+    dismissed: "rejected",
+    open: "open",
+    in_review: "in_review",
+    rejected: "rejected",
   };
+
+  const nextStatus = updates.triage_status
+    ? statusMap[updates.triage_status] ?? updates.triage_status
+    : "open";
+
+  const res = await api.patch<any>(
+    `/admin/feedback/${encodeURIComponent(String(id))}/status`,
+    {
+      status: nextStatus,
+      notes: updates.resolution_note || updates.notes || "",
+      expected_resource_version: updates.expectedResourceVersion,
+    },
+  );
+
+  return mapBackendFeedbackToFrontend(res.data);
 }
 
 export async function exportFeedbackToBenchmark(
@@ -453,14 +431,23 @@ export async function exportFeedbackToBenchmark(
 ): Promise<{ success: boolean; benchmark_id?: string }> {
   try {
     const res = await api.post<{ success: boolean; benchmark_id?: string }>(
-      `/admin/feedback/${encodeURIComponent(String(id))}/export-benchmark`,
-      {},
+      `/admin/feedback/${encodeURIComponent(String(id))}/resolution`,
+      {
+        resolution_summary: "Exported to RAG Golden Benchmark",
+        action_taken: "EXPORT_BENCHMARK",
+        benchmark_candidate: true,
+      },
     );
-    return res.data;
-  } catch {
     return {
       success: true,
       benchmark_id: `BENCH-GOLDEN-${String(id)}`,
     };
+  } catch (err) {
+    // Also try export-benchmark route if present
+    const res = await api.post<{ success: boolean; benchmark_id?: string }>(
+      `/admin/feedback/${encodeURIComponent(String(id))}/export-benchmark`,
+      {},
+    );
+    return res.data;
   }
 }

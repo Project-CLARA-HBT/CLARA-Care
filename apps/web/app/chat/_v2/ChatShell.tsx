@@ -135,6 +135,24 @@ export default function ChatShell({ initialChatId }: ChatShellProps = {}) {
   const prefersReducedMotion = usePrefersReducedMotion();
   useFocusTrap(isAppMenuOpen, appToolsMenuRef);
 
+  // Managed timer tracker to guarantee clean teardown on unmount
+  const timersRef = useRef<number[]>([]);
+  const safeTimeout = useCallback((callback: () => void, ms: number) => {
+    const id = window.setTimeout(() => {
+      timersRef.current = timersRef.current.filter((timerId) => timerId !== id);
+      callback();
+    }, ms);
+    timersRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach((id) => window.clearTimeout(id));
+      timersRef.current = [];
+    };
+  }, []);
+
   // Focus management for the composer (Requirement 5.1, 5.4). The composer is a
   // self-contained presentational component, so the shell focuses it by its
   // stable input id rather than threading a ref through the component tree.
@@ -146,9 +164,9 @@ export default function ChatShell({ initialChatId }: ChatShellProps = {}) {
   const chooseStarterPrompt = useCallback(
     (prompt: string) => {
       setQuery(prompt);
-      window.setTimeout(focusComposer, 0);
+      safeTimeout(focusComposer, 0);
     },
-    [focusComposer],
+    [focusComposer, safeTimeout],
   );
 
   const launchResearch = useCallback(
@@ -156,9 +174,9 @@ export default function ChatShell({ initialChatId }: ChatShellProps = {}) {
       setMode("deep_beta");
       setQuery(sourceQuery);
       setNotice(t(uiLanguage, "chat.shell.notice.researchReady"));
-      window.setTimeout(focusComposer, 0);
+      safeTimeout(focusComposer, 0);
     },
-    [focusComposer, uiLanguage],
+    [focusComposer, safeTimeout, uiLanguage],
   );
 
   // Focus the sidebar conversation-search field (command-palette parity action
@@ -166,11 +184,11 @@ export default function ChatShell({ initialChatId }: ChatShellProps = {}) {
   // field is visible before focus lands (Requirement 5.1, 6.4).
   const focusSearch = useCallback(() => {
     setIsMobileSidebarOpen(true);
-    window.setTimeout(() => {
+    safeTimeout(() => {
       const el = document.getElementById(SEARCH_INPUT_ID);
       if (el instanceof HTMLInputElement) el.focus();
     }, 10);
-  }, []);
+  }, [safeTimeout]);
 
   const appNavItems = useMemo(
     () => getNavItemsByRole(role, uiLanguage),
@@ -325,8 +343,8 @@ export default function ChatShell({ initialChatId }: ChatShellProps = {}) {
     setQuery("");
     setError("");
     setIsMobileSidebarOpen(false);
-    window.setTimeout(() => focusComposer(), 10);
-  }, [turns, focusComposer]);
+    safeTimeout(() => focusComposer(), 10);
+  }, [turns, focusComposer, safeTimeout]);
 
   // Stable handlers for opening advanced surfaces, so memoized children
   // (ConversationSidebar) don't re-render on every shell state change and the

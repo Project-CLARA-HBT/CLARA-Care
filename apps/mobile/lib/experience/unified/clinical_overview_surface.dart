@@ -27,10 +27,12 @@ import '../../theme/components/clara_chip.dart';
 import '../../theme/components/section_header.dart';
 import '../../theme/glass/glass_tokens.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/error_retry_view.dart';
 import '../language_controller.dart';
 import '../redesign/chat_surface_v3.dart';
 import '../redesign/council_surface_v3.dart';
 import '../redesign/scribe_surface_v3.dart';
+import '../states/empty_state.dart';
 import '../states/skeleton.dart';
 import 'living_evidence_surface.dart';
 
@@ -67,6 +69,9 @@ class _ClinicalOverviewSurfaceState extends State<ClinicalOverviewSurface> {
   List<Map<String, dynamic>> _activeCases = [];
   List<Map<String, dynamic>> _recentTranscripts = [];
   List<Map<String, dynamic>> _patientQueue = [];
+  String? _patientQueueError;
+  Map<String, dynamic>? _systemSummary;
+  Map<String, dynamic>? _drugBankStatus;
 
   @override
   void initState() {
@@ -85,8 +90,24 @@ class _ClinicalOverviewSurfaceState extends State<ClinicalOverviewSurface> {
       return;
     }
 
+    Map<String, dynamic>? summaryData = widget.summary;
+    if (summaryData == null) {
+      try {
+        summaryData =
+            await widget.apiClient.getMobileSummary(accessToken: token);
+      } catch (_) {}
+    }
+
+    Map<String, dynamic>? drugbankData;
+    try {
+      drugbankData =
+          await widget.apiClient.getDrugBankStatus(accessToken: token);
+    } catch (_) {}
+
     List<Map<String, dynamic>> cases = [];
     List<Map<String, dynamic>> transcripts = [];
+    List<Map<String, dynamic>> queue = [];
+    String? queueError;
 
     try {
       final casesRes = await widget.apiClient.listCouncilCases(
@@ -118,36 +139,34 @@ class _ClinicalOverviewSurfaceState extends State<ClinicalOverviewSurface> {
       transcripts = [];
     }
 
-    // Default structured patient queue entries
-    final queue = <Map<String, dynamic>>[
-      {
-        'id': 'pt-101',
-        'name': 'Nguyễn Văn An (58 tuổi)',
-        'time': '08:30',
-        'reason': 'Tái khám Đau ngực từng cơn / Theo dõi Tăng huyết áp',
-        'status': 'waiting',
-      },
-      {
-        'id': 'pt-102',
-        'name': 'Trần Thị Mai (45 tuổi)',
-        'time': '09:15',
-        'reason': 'Khám đường huyết không ổn định / Nghi ĐTĐ type 2',
-        'status': 'in_progress',
-      },
-      {
-        'id': 'pt-103',
-        'name': 'Lê Hoàng Long (62 tuổi)',
-        'time': '10:00',
-        'reason': 'Rà soát suy thận mạn độ 3b / Chỉnh liều thuốc hạ áp',
-        'status': 'upcoming',
-      },
-    ];
+    try {
+      final rosterRes = await widget.apiClient.getClinicalPatientRoster(
+        accessToken: token,
+        limit: 10,
+      );
+      final rawPatients = rosterRes['items'] ?? rosterRes['patients'];
+      if (rawPatients is List) {
+        queue = rawPatients
+            .whereType<Map<String, dynamic>>()
+            .toList();
+      }
+    } catch (e) {
+      queue = [];
+      queueError = e is ApiException
+          ? e.message
+          : (_isEnglish
+              ? 'Could not load patient roster. Check network connection.'
+              : 'Không thể tải hàng đợi bệnh nhân. Vui lòng kiểm tra kết nối.');
+    }
 
     if (!mounted) return;
     setState(() {
+      _systemSummary = summaryData;
+      _drugBankStatus = drugbankData;
       _activeCases = cases;
       _recentTranscripts = transcripts;
       _patientQueue = queue;
+      _patientQueueError = queueError;
       _loading = false;
     });
   }
@@ -217,6 +236,64 @@ class _ClinicalOverviewSurfaceState extends State<ClinicalOverviewSurface> {
       GlassTokens.radiusCard * GlassTokens.squircleFactor,
     );
 
+    final drugbank = _drugBankStatus;
+    final drugState = drugbank?['state']?.toString().toLowerCase();
+    final drugVersion = drugbank?['version']?.toString() ?? '';
+    final isDrugVerified = (drugbank?['integrity_verified'] == true || drugState == 'ready') &&
+        drugState != 'disabled' &&
+        drugState != 'unavailable';
+    final isDrugDisabled = drugState == 'disabled';
+
+    final String drugLabel;
+    if (drugbank == null && widget.summary == null) {
+      drugLabel = isEn ? 'DrugBank: Checking...' : 'DrugBank: Đang kiểm tra...';
+    } else if (isDrugVerified) {
+      drugLabel = drugVersion.isNotEmpty
+          ? 'DrugBank v$drugVersion Verified'
+          : 'DrugBank Verified';
+    } else if (isDrugDisabled) {
+      drugLabel = isEn ? 'DrugBank: Disabled' : 'DrugBank: Đã tắt';
+    } else {
+      drugLabel = isEn ? 'DrugBank: Unavailable' : 'DrugBank: Không khả dụng';
+    }
+
+    final Color drugBg = isDrugVerified
+        ? const Color(0xFF10B981).withValues(alpha: 0.25)
+        : (isDrugDisabled
+            ? Colors.white.withValues(alpha: 0.15)
+            : const Color(0xFFF59E0B).withValues(alpha: 0.25));
+    final Color drugBorder = isDrugVerified
+        ? const Color(0xFF34D399).withValues(alpha: 0.4)
+        : (isDrugDisabled
+            ? Colors.white.withValues(alpha: 0.25)
+            : const Color(0xFFFBBF24).withValues(alpha: 0.4));
+    final Color drugTextColor = isDrugVerified
+        ? const Color(0xFFD1FAE5)
+        : (isDrugDisabled ? Colors.white70 : const Color(0xFFFEF3C7));
+    final IconData drugIcon =
+        isDrugVerified ? Icons.verified_outlined : (isDrugDisabled ? Icons.shield_outlined : Icons.warning_amber_outlined);
+
+    final summary = _systemSummary ?? widget.summary;
+    final apiHealth = summary?['api_health'] is Map
+        ? summary!['api_health'] as Map
+        : null;
+    final apiStatus = apiHealth?['status']?.toString().toLowerCase() ??
+        (summary != null ? 'ok' : 'unknown');
+    final isOperational = apiStatus == 'ok' || apiStatus == 'operational';
+    final isDegraded = apiStatus == 'degraded';
+
+    final String systemLabel = isOperational
+        ? (isEn ? 'System: Operational' : 'Hệ thống: Bình thường')
+        : (isDegraded
+            ? (isEn ? 'System: Degraded' : 'Hệ thống: Gián đoạn')
+            : (isEn ? 'System: Checking...' : 'Hệ thống: Đang kiểm tra'));
+    final Color systemColor = isOperational
+        ? const Color(0xFF34D399)
+        : (isDegraded ? const Color(0xFFFBBF24) : Colors.white70);
+    final IconData systemIcon = isOperational
+        ? Icons.check_circle_outline
+        : (isDegraded ? Icons.warning_amber_outlined : Icons.help_outline);
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: radius,
@@ -282,21 +359,19 @@ class _ClinicalOverviewSurfaceState extends State<ClinicalOverviewSurface> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.25),
+                  color: drugBg,
                   borderRadius: BorderRadius.circular(GlassTokens.radiusPill),
-                  border: Border.all(
-                      color: const Color(0xFF34D399).withValues(alpha: 0.4)),
+                  border: Border.all(color: drugBorder),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.verified_outlined,
-                        size: 13, color: Color(0xFF6EE7B7)),
+                    Icon(drugIcon, size: 13, color: drugTextColor),
                     const SizedBox(width: 4),
                     Text(
-                      'DrugBank v5.1.10 Verified',
+                      drugLabel,
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFD1FAE5),
+                        color: drugTextColor,
                         fontWeight: FontWeight.w600,
                         fontSize: 10,
                       ),
@@ -331,9 +406,9 @@ class _ClinicalOverviewSurfaceState extends State<ClinicalOverviewSurface> {
             runSpacing: ClaraTokens.spaceSm,
             children: [
               _buildLiveStatusPill(
-                icon: Icons.check_circle_outline,
-                label: isEn ? 'System: Operational' : 'Hệ thống: Bình thường',
-                color: const Color(0xFF34D399),
+                icon: systemIcon,
+                label: systemLabel,
+                color: systemColor,
               ),
               _buildLiveStatusPill(
                 icon: Icons.shield_outlined,
@@ -390,10 +465,62 @@ class _ClinicalOverviewSurfaceState extends State<ClinicalOverviewSurface> {
           ),
         ),
         const SizedBox(height: ClaraTokens.spaceSm),
-        ..._patientQueue.map((item) => Padding(
+        if (_patientQueueError != null)
+          ClaraCard.static_(
+            child: ErrorRetryView(
+              message: _patientQueueError!,
+              onRetry: _loadClinicalData,
+            ),
+          )
+        else if (_patientQueue.isEmpty)
+          ClaraEmptyState(
+            icon: Icons.people_outline,
+            title: isEn ? 'No patients in queue' : 'Hàng đợi trống',
+            message: isEn
+                ? 'No active patient consultations scheduled for today.'
+                : 'Hiện tại chưa có bệnh nhân nào trong hàng đợi khám.',
+          )
+        else
+          ..._patientQueue.map((item) {
+            final patientName = (item['display_label'] ??
+                    item['name'] ??
+                    item['patient_id'] ??
+                    (isEn ? 'Patient' : 'Bệnh nhân'))
+                .toString();
+
+            String time = (item['time'] ?? item['schedule'] ?? '').toString();
+            if (time.isEmpty && item['generated_at'] != null) {
+              final parsed = DateTime.tryParse(item['generated_at'].toString());
+              if (parsed != null) {
+                time =
+                    '${parsed.hour.toString().padLeft(2, '0')}:${parsed.minute.toString().padLeft(2, '0')}';
+              }
+            }
+            if (time.isEmpty) {
+              time = isEn ? 'Today' : 'Hôm nay';
+            }
+
+            String reason = '';
+            if (item['attention'] is Map) {
+              final att = item['attention'] as Map;
+              final reasons = att['reasons'];
+              if (reasons is List && reasons.isNotEmpty) {
+                reason = reasons.join(', ');
+              } else if (att['level'] != null) {
+                reason = att['level'].toString();
+              }
+            }
+            if (reason.isEmpty) {
+              reason = (item['reason'] ?? item['notes'] ?? '').toString();
+            }
+            if (reason.isEmpty) {
+              reason = isEn ? 'General consultation' : 'Khám và tư vấn chung';
+            }
+
+            return Padding(
               padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
               child: ClaraCard.static_(
-                semanticLabel: 'Bệnh nhân ${item['name']}',
+                semanticLabel: 'Bệnh nhân $patientName',
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -420,7 +547,7 @@ class _ClinicalOverviewSurfaceState extends State<ClinicalOverviewSurface> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  item['name'] as String,
+                                  patientName,
                                   style: theme.textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -438,7 +565,7 @@ class _ClinicalOverviewSurfaceState extends State<ClinicalOverviewSurface> {
                                       BorderRadius.circular(GlassTokens.radiusPill),
                                 ),
                                 child: Text(
-                                  item['time'] as String,
+                                  time,
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: theme.colorScheme.primary,
@@ -449,7 +576,7 @@ class _ClinicalOverviewSurfaceState extends State<ClinicalOverviewSurface> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            item['reason'] as String,
+                            reason,
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -490,7 +617,8 @@ class _ClinicalOverviewSurfaceState extends State<ClinicalOverviewSurface> {
                   ],
                 ),
               ),
-            )),
+            );
+          }),
       ],
     );
   }

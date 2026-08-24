@@ -8,9 +8,12 @@ import { StatusChip, type StatusTone } from "@/components/ui/status-chip";
 import { Badge } from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import Inspector, { InspectorSection } from "@/components/ui/inspector";
+import { InlineError } from "@/components/ui/surface";
 import { useShellMode } from "@/components/shell/shell-mode-provider";
+import api from "@/lib/http-client";
 import { formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 export type PatientRiskTier = "critical" | "high" | "moderate" | "low";
 export type ConsultationStatus =
@@ -80,230 +83,6 @@ export interface PatientRecord {
   recentNotes: PatientNote[];
   admissionTime: string;
 }
-
-export const INITIAL_PATIENT_QUEUE: PatientRecord[] = [
-  {
-    id: "PT-9401",
-    mrn: "MRN-2026-09401",
-    name: "Nguyễn Văn Hùng",
-    age: 64,
-    gender: "M",
-    roomBed: "Phòng Cấp cứu - Giường 02",
-    department: "emergency",
-    departmentLabel: { vi: "Cấp cứu", en: "Emergency" },
-    primaryDiagnosis: "Hội chứng vành cấp / Nhồi máu cơ tim NSTEMI",
-    chiefComplaint: "Đau thắt ngực kiểu đè nặng sau xương ức lan vai trái kèm vã mồ hôi 2 giờ",
-    riskLevel: "critical",
-    riskReason: {
-      vi: "Nguy cơ biến cố mạch vành cấp tính, SpO2 93%, Troponin T tăng cao",
-      en: "Acute coronary syndrome risk, SpO2 93%, elevated Troponin T",
-    },
-    consultationStatus: "in_consultation",
-    attendingDoctor: "BS.CKII Trần Quốc Tuấn",
-    waitTimeMinutes: 5,
-    vitals: { bp: "165/100", hr: 104, spo2: 93, temp: 37.0, rr: 24, egfr: 52 },
-    allergies: ["Aspirin (co thắt phế quản)"],
-    activeMedications: [
-      { name: "Clopidogrel", dose: "75mg", frequency: "1v/ngày" },
-      { name: "Atorvastatin", dose: "40mg", frequency: "1v tối" },
-    ],
-    ddiAlerts: [
-      {
-        severity: "critical",
-        textVi: "Chống chỉ định Aspirin do tiền sử dị ứng co thắt phế quản nặng.",
-        textEn: "Aspirin contraindicated due to history of severe bronchospasm.",
-      },
-    ],
-    recentNotes: [
-      {
-        date: "2026-08-24 08:30",
-        author: "BS.CKII Trần Quốc Tuấn",
-        summary: "Bệnh nhân vào viện vì đau ngực cấp giờ thứ 2, ECG ST chênh xuống V4-V6. Đang chuyển hội chẩn can thiệp.",
-      },
-    ],
-    admissionTime: "08:15",
-  },
-  {
-    id: "PT-9402",
-    mrn: "MRN-2026-09402",
-    name: "Trần Thị Mai Lan",
-    age: 58,
-    gender: "F",
-    roomBed: "Phòng 405 - Giường 03",
-    department: "endocrinology",
-    departmentLabel: { vi: "Nội tiết", en: "Endocrinology" },
-    primaryDiagnosis: "Đái tháo đường Type 2 kháng trị / Suy thận mạn G3a",
-    chiefComplaint: "Mệt mỏi nhiều, khát nước, đường huyết dao động 14-18 mmol/L",
-    riskLevel: "high",
-    riskReason: {
-      vi: "eGFR giảm 38 mL/min, cần hiệu chỉnh liều Metformin và rà soát DDI",
-      en: "eGFR decreased to 38 mL/min, requires Metformin dose adjustment and DDI review",
-    },
-    consultationStatus: "council_review",
-    attendingDoctor: "ThS.BS Lê Hoàng Anh",
-    waitTimeMinutes: 20,
-    vitals: { bp: "145/90", hr: 82, spo2: 97, temp: 36.8, rr: 18, egfr: 38 },
-    allergies: ["Sulfonamides"],
-    activeMedications: [
-      { name: "Metformin", dose: "1000mg", frequency: "2v/ngày" },
-      { name: "Gliclazide MR", dose: "60mg", frequency: "1v sáng" },
-      { name: "Enalapril", dose: "10mg", frequency: "1v sáng" },
-    ],
-    ddiAlerts: [
-      {
-        severity: "warning",
-        textVi: "Metformin liều cao (2000mg) trên bệnh nhân eGFR 38 mL/min - Cần giảm liều tối đa 1000mg/ngày.",
-        textEn: "High-dose Metformin on eGFR 38 mL/min - Reduce max dose to 1000mg/day.",
-      },
-    ],
-    recentNotes: [
-      {
-        date: "2026-08-24 08:00",
-        author: "ThS.BS Lê Hoàng Anh",
-        summary: "Bệnh nhân có biến chứng thận do ĐTĐ, kích hoạt Hội đồng chuyên khoa AI để phối hợp SGLT2i + Insulin.",
-      },
-    ],
-    admissionTime: "07:45",
-  },
-  {
-    id: "PT-9403",
-    mrn: "MRN-2026-09403",
-    name: "Phạm Minh Đức",
-    age: 71,
-    gender: "M",
-    roomBed: "Phòng 308 - Giường 01",
-    department: "pulmonology",
-    departmentLabel: { vi: "Hô hấp", en: "Pulmonology" },
-    primaryDiagnosis: "Đợt cấp COPD nhóm E / Suy hô hấp độ 1",
-    chiefComplaint: "Khó thở tăng dần, ho đờm đục nhiều, thở khò khè",
-    riskLevel: "high",
-    riskReason: {
-      vi: "SpO2 91% khí phòng, tiền sử thở máy, nguy cơ suy hô hấp tăng CO2",
-      en: "SpO2 91% room air, prior mechanical ventilation, hypercapnic failure risk",
-    },
-    consultationStatus: "triage_pending",
-    attendingDoctor: "BS.CKI Vũ Đình Trọng",
-    waitTimeMinutes: 35,
-    vitals: { bp: "135/85", hr: 98, spo2: 91, temp: 37.8, rr: 26, egfr: 65 },
-    allergies: [],
-    activeMedications: [
-      { name: "Tiotropium Respimat", dose: "2.5mcg", frequency: "2 nhát sáng" },
-      { name: "Seretide Evohaler", dose: "25/250", frequency: "2 nhát x 2" },
-    ],
-    ddiAlerts: [],
-    recentNotes: [
-      {
-        date: "2026-08-24 07:30",
-        author: "BS.CKI Vũ Đình Trọng",
-        summary: "Thở oxy gọng kính 2L/phút, khí dung Berodual + Pulmicort, đang chờ kết quả khí máu động mạch.",
-      },
-    ],
-    admissionTime: "07:15",
-  },
-  {
-    id: "PT-9404",
-    mrn: "MRN-2026-09404",
-    name: "Lê Thanh Hương",
-    age: 45,
-    gender: "F",
-    roomBed: "Phòng Khám 12 - Ngoại trú",
-    department: "cardiology",
-    departmentLabel: { vi: "Tim mạch", en: "Cardiology" },
-    primaryDiagnosis: "Tăng huyết áp nguyên phát độ 2 / Rối loạn lipid máu",
-    chiefComplaint: "Đau đầu âm ỉ vùng chẩm gáy vào buổi sáng, chóng mặt nhẹ",
-    riskLevel: "moderate",
-    riskReason: {
-      vi: "Huyết áp chưa kiểm soát mục tiêu, cần tối ưu hóa phối hợp thuốc đôi",
-      en: "Blood pressure above target, optimize dual antihypertensive regimen",
-    },
-    consultationStatus: "awaiting_labs",
-    attendingDoctor: "BS. Nguyễn Thùy Linh",
-    waitTimeMinutes: 45,
-    vitals: { bp: "155/95", hr: 76, spo2: 98, temp: 36.6, rr: 16, egfr: 88 },
-    allergies: ["Penicillin"],
-    activeMedications: [
-      { name: "Amlodipine", dose: "5mg", frequency: "1v sáng" },
-    ],
-    ddiAlerts: [],
-    recentNotes: [
-      {
-        date: "2026-08-24 07:10",
-        author: "BS. Nguyễn Thùy Linh",
-        summary: "Chỉ định siêu âm tim Doppler và bilan lipid máu. Đang chờ kết quả xét nghiệm sinh hóa.",
-      },
-    ],
-    admissionTime: "06:50",
-  },
-  {
-    id: "PT-9405",
-    mrn: "MRN-2026-09405",
-    name: "Vũ Hoàng Nam",
-    age: 32,
-    gender: "M",
-    roomBed: "Phòng Khám 08 - Ngoại trú",
-    department: "internal",
-    departmentLabel: { vi: "Nội tổng quát", en: "Internal Medicine" },
-    primaryDiagnosis: "Viêm dạ dày trào ngược GERD độ B / Viêm họng mạn",
-    chiefComplaint: "Nóng rát sau xương ức, ợ chua sau ăn, nuốt vướng 1 tuần",
-    riskLevel: "low",
-    riskReason: {
-      vi: "Sinh hiệu ổn định, không có dấu hiệu báo động (Red Flags)",
-      en: "Stable vitals, zero alarm symptoms or red flags present",
-    },
-    consultationStatus: "ready_review",
-    attendingDoctor: "BS. Phạm Quang Hải",
-    waitTimeMinutes: 15,
-    vitals: { bp: "120/75", hr: 70, spo2: 99, temp: 36.5, rr: 16, egfr: 102 },
-    allergies: [],
-    activeMedications: [
-      { name: "Esomeprazole", dose: "40mg", frequency: "1v trước ăn sáng" },
-    ],
-    ddiAlerts: [],
-    recentNotes: [
-      {
-        date: "2026-08-24 08:15",
-        author: "BS. Phạm Quang Hải",
-        summary: "Đã hoàn thành nội soi thực quản dạ dày tuần trước, chỉ định phác đồ PPI liều chuẩn 8 tuần.",
-      },
-    ],
-    admissionTime: "08:00",
-  },
-  {
-    id: "PT-9406",
-    mrn: "MRN-2026-09406",
-    name: "Đặng Thu Thảo",
-    age: 52,
-    gender: "F",
-    roomBed: "Phòng 204 - Giường 02",
-    department: "nephrology",
-    departmentLabel: { vi: "Thận học", en: "Nephrology" },
-    primaryDiagnosis: "Hội chứng thận hư tái phát / Tăng lipid máu thứ phát",
-    chiefComplaint: "Phù 2 chi dưới mức độ vừa, tăng 3kg trong 1 tuần, tiểu bọt nhiều",
-    riskLevel: "moderate",
-    riskReason: {
-      vi: "Protein niệu 24h tăng cao, Albumin máu giảm, cần kiểm tra đông máu",
-      en: "Elevated 24h proteinuria, hypoalbuminemia, evaluate thrombosis risk",
-    },
-    consultationStatus: "in_consultation",
-    attendingDoctor: "TS.BS Bùi Đình Thi",
-    waitTimeMinutes: 10,
-    vitals: { bp: "130/80", hr: 74, spo2: 98, temp: 36.7, rr: 18, egfr: 72 },
-    allergies: [],
-    activeMedications: [
-      { name: "Prednisolone", dose: "5mg", frequency: "8v sáng" },
-      { name: "Furosemide", dose: "40mg", frequency: "1v sáng" },
-    ],
-    ddiAlerts: [],
-    recentNotes: [
-      {
-        date: "2026-08-24 08:20",
-        author: "TS.BS Bùi Đình Thi",
-        summary: "Đánh giá đáp ứng corticoid, bổ sung canxi và PPI bảo vệ niêm mạc dạ dày.",
-      },
-    ],
-    admissionTime: "08:10",
-  },
-];
 
 export function getRiskChip(
   risk: PatientRiskTier,
@@ -407,7 +186,7 @@ export default function PatientRoster() {
     shell.setMode("dense");
   }, [shell]);
 
-  const [patients, setPatients] = useState<PatientRecord[]>(INITIAL_PATIENT_QUEUE);
+  const [patients, setPatients] = useState<PatientRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<ClinicalDepartment>("all");
   const [selectedRisk, setSelectedRisk] = useState<string>("all");

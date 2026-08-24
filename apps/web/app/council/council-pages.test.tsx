@@ -6,6 +6,11 @@ import CouncilNewIntakePage from "./new/intake/page";
 import CouncilNewSpecialistsPage from "./new/specialists/page";
 import CouncilNewReviewPage from "./new/review/page";
 import CouncilResultPage from "./result/page";
+import CouncilAnalyzePage from "./analyze/page";
+import CouncilCitationsPage from "./citations/page";
+import CouncilDeepdivePage from "./deepdive/page";
+import CouncilDetailsPage from "./details/page";
+import CouncilResearchPage from "./research/page";
 import {
   createCouncilCase,
   getActiveCouncilCaseId,
@@ -275,6 +280,86 @@ describe("Council Workflows (/council, /council/new/*, /council/result)", () => 
       await waitFor(() => {
         expect(screen.getByRole("button", { name: /Xác nhận/i })).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("7. /council/analyze Signal Analysis Detail", () => {
+    it("renders signal analysis with key signals and risk drivers", async () => {
+      vi.mocked(getActiveCouncilCaseId).mockReturnValue(201);
+      vi.mocked(getCouncilCase).mockResolvedValue(mockCaseAnalyzed as any);
+
+      render(<CouncilAnalyzePage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Bối cảnh quyết định hội chẩn")).toBeInTheDocument();
+      });
+
+      expect(trackCouncilViewed).toHaveBeenCalledWith({ view: "analyze" });
+      expect(screen.getByText("Phân tích tín hiệu")).toBeInTheDocument();
+    });
+  });
+
+  describe("8. /council/citations Citation Details", () => {
+    it("renders citation focus view with literature links", async () => {
+      vi.mocked(getActiveCouncilCaseId).mockReturnValue(201);
+      vi.mocked(getCouncilCase).mockResolvedValue(mockCaseAnalyzed as any);
+
+      render(<CouncilCitationsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Bối cảnh quyết định hội chẩn")).toBeInTheDocument();
+      });
+
+      expect(trackCouncilViewed).toHaveBeenCalledWith({ view: "citations" });
+      expect(screen.getByText("Tra cứu trích dẫn")).toBeInTheDocument();
+    });
+  });
+
+  describe("9. /council/deepdive Expert Deep Dive", () => {
+    it("renders deepdive breakdown sections", async () => {
+      vi.mocked(getActiveCouncilCaseId).mockReturnValue(201);
+      vi.mocked(getCouncilCase).mockResolvedValue(mockCaseAnalyzed as any);
+
+      render(<CouncilDeepdivePage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Bối cảnh quyết định hội chẩn")).toBeInTheDocument();
+      });
+
+      expect(trackCouncilViewed).toHaveBeenCalledWith({ view: "deepdive" });
+      expect(screen.getByText("Đào sâu ca bệnh")).toBeInTheDocument();
+    });
+  });
+
+  describe("10. /council/details Technical Specialist Logs", () => {
+    it("renders specialist detailed deliberation logs", async () => {
+      vi.mocked(getActiveCouncilCaseId).mockReturnValue(201);
+      vi.mocked(getCouncilCase).mockResolvedValue(mockCaseAnalyzed as any);
+
+      render(<CouncilDetailsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Bối cảnh quyết định hội chẩn")).toBeInTheDocument();
+      });
+
+      expect(trackCouncilViewed).toHaveBeenCalledWith({ view: "details" });
+      expect(screen.getByText("Chi tiết chuyên khoa")).toBeInTheDocument();
+    });
+  });
+
+  describe("11. /council/research Evidence Synthesis", () => {
+    it("renders research synthesis and highlights", async () => {
+      vi.mocked(getActiveCouncilCaseId).mockReturnValue(201);
+      vi.mocked(getCouncilCase).mockResolvedValue(mockCaseAnalyzed as any);
+
+      render(<CouncilResearchPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Bối cảnh quyết định hội chẩn")).toBeInTheDocument();
+      });
+
+      expect(trackCouncilViewed).toHaveBeenCalledWith({ view: "research" });
+      expect(screen.getByText("Tổng hợp nghiên cứu")).toBeInTheDocument();
     });
   });
 });

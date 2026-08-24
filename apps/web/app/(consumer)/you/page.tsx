@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { ListRow } from "@/components/ui/list-row";
 import { InlineError } from "@/components/shared/inline-error";
+import { EmptyState } from "@/components/shared/empty-state";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { getActiveProfileId } from "@/lib/profile-context";
 import { useProfileContext } from "@/components/shell/profile-boundary";
@@ -81,79 +82,13 @@ function YouOverviewContent() {
     refetch,
   } = useQuery<YouOverviewDto>({
     queryKey: queryKeys.profile(activeProfileId).you.overview(),
-    queryFn: async () => {
-      try {
-        return await v2Client.getYouOverview(activeProfileId);
-      } catch {
-        // Fallback default structure if backend endpoint returns mock/empty
-        return {
-          profile: activeProfile,
-          demographics: {
-            full_name: activeProfile?.display_name ?? "Nguyễn Văn A",
-            blood_type: "O+",
-          },
-          emergency_card: {
-            blood_type: "O+",
-            allergies_count: 1,
-            conditions_count: 2,
-            medications_count: 2,
-            medical_alerts: ["Dị ứng nghiêm trọng Penicillin"],
-            emergency_contact: {
-              name: "Nguyễn Thị B",
-              phone: "0901234567",
-              relationship: "Vợ",
-            },
-            is_configured: true,
-          },
-          family_sharing: {
-            active_grants_count: 1,
-            received_grants_count: 0,
-            pending_invites_count: 0,
-            members: [
-              {
-                id: "m-1",
-                name: "Nguyễn Thị B",
-                relationship: "Vợ / Người chăm sóc",
-                role: "caregiver",
-                status: "active",
-              },
-            ],
-          },
-          privacy_ai: {
-            data_classes_used: ["medications", "conditions", "allergies", "visits"],
-            ai_features_enabled: true,
-            cot_disabled: true,
-            retention_policy_days: 90,
-            consent_status: "granted",
-          },
-          integrations: {
-            total_connected: 1,
-            sources: [
-              {
-                id: "src-1",
-                name: "health_connect",
-                title: "Google Health Connect",
-                connected: true,
-                sync_enabled: true,
-                last_sync_at: "2026-08-20T08:00:00Z",
-                status: "active",
-              },
-            ],
-          },
-          professional_mode: {
-            eligible: isProfessionalRole,
-            role: role ?? "patient",
-            active_workspace: isProfessionalRole ? "clinical" : "personal",
-          },
-        };
-      }
-    },
+    queryFn: () => v2Client.getYouOverview(activeProfileId),
   });
 
   const displayName =
     overview?.demographics?.full_name ||
     activeProfile?.display_name ||
-    (isEn ? "Personal Account" : "Nguyễn Văn A");
+    (isEn ? "Personal Account" : "Tài khoản cá nhân");
 
   // Get initials for avatar
   const initials =
@@ -162,12 +97,13 @@ function YouOverviewContent() {
       .filter(Boolean)
       .slice(-2)
       .map((w) => w[0].toUpperCase())
-      .join("") || "NV";
+      .join("") || (isEn ? "PA" : "CN");
 
-  const bloodType = overview?.demographics?.blood_type || "O+";
-  const medicalAlerts = overview?.emergency_card?.medical_alerts || [
-    "Dị ứng nghiêm trọng Penicillin",
-  ];
+  const bloodType =
+    overview?.demographics?.blood_type ||
+    overview?.emergency_card?.blood_type ||
+    (isEn ? "Unknown" : "Chưa rõ");
+  const medicalAlerts = overview?.emergency_card?.medical_alerts || [];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6" data-testid="you-overview-page">
@@ -196,7 +132,7 @@ function YouOverviewContent() {
         }
       />
 
-      {error ? (
+      {error && overview ? (
         <InlineError
           message={isEn ? "Unable to load personal overview" : "Không thể tải tổng quan cá nhân"}
           onRetry={() => void refetch()}
@@ -205,6 +141,17 @@ function YouOverviewContent() {
 
       {isLoading ? (
         <YouOverviewSkeleton />
+      ) : error ? (
+        <EmptyState
+          title={isEn ? "Unable to load overview" : "Không thể tải tổng quan cá nhân"}
+          description={
+            isEn
+              ? "We could not load your personal account data. Please check your network connection and retry."
+              : "Không thể tải dữ liệu hồ sơ cá nhân. Vui lòng kiểm tra kết nối mạng và thử lại."
+          }
+          actionLabel={isEn ? "Retry" : "Thử lại"}
+          onAction={() => void refetch()}
+        />
       ) : (
         <div className="space-y-6">
           {/* 1. Identity & Profile card (Spec v5 Section 6.74 Layout Item 1) */}
@@ -260,12 +207,12 @@ function YouOverviewContent() {
                     </span>
                     <span className="w-1 h-1 rounded-full bg-[color:var(--shell-border)]" />
                     <span>
-                      {overview?.emergency_card?.allergies_count ?? 1}{" "}
+                      {overview?.emergency_card?.allergies_count ?? 0}{" "}
                       {isEn ? "critical allergy" : "dị ứng quan trọng"}
                     </span>
                     <span className="w-1 h-1 rounded-full bg-[color:var(--shell-border)]" />
                     <span>
-                      {overview?.emergency_card?.conditions_count ?? 2}{" "}
+                      {overview?.emergency_card?.conditions_count ?? 0}{" "}
                       {isEn ? "active conditions" : "bệnh lý đang theo dõi"}
                     </span>
                   </div>
@@ -394,7 +341,7 @@ function YouOverviewContent() {
                 }
                 meta={
                   <span className="text-xs text-[var(--text-secondary)]">
-                    {overview?.emergency_card?.conditions_count ?? 2}{" "}
+                    {overview?.emergency_card?.conditions_count ?? 0}{" "}
                     {isEn ? "conditions" : "bệnh lý"}
                   </span>
                 }

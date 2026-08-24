@@ -114,6 +114,23 @@ void main() {
       expect(find.textContaining('1. Cảnh báo khẩn'), findsOneWidget);
       expect(find.textContaining('2. Khuyến nghị lâm sàng'), findsOneWidget);
       expect(find.textContaining('3. Đồng thuận đa chuyên khoa'), findsOneWidget);
+      expect(find.textContaining('4. Độ không chắc chắn'), findsOneWidget);
+      expect(find.textContaining('5. Y văn & Bằng chứng'), findsOneWidget);
+      expect(find.textContaining('6. Quyết định lâm sàng'), findsOneWidget);
+      expect(find.textContaining('7. Giám sát kỹ thuật'), findsOneWidget);
+
+      // Verify clinician oversight actions
+      expect(find.text('Chuyển giao'), findsOneWidget);
+      expect(find.text('Tạm dừng ca'), findsOneWidget);
+      expect(find.text('Ghi đè ý kiến'), findsOneWidget);
+
+      // Test pausing the case updates recommendation status
+      await tester.tap(find.text('Tạm dừng ca'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Quy trình hội chẩn đang tạm dừng'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('case creation transmits only a no-PII has_transcript flag',

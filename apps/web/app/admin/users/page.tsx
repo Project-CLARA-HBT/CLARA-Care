@@ -422,10 +422,13 @@ export default function AdminUsersPage() {
         try {
           const res = await revokeUserSessions(selectedUser.id);
           if (res.success) {
-            setUsers((prev) =>
-              prev.map((u) => (u.id === selectedUser.id ? res.user : u)),
-            );
-            setSelectedUser(res.user);
+            if (res.user) {
+              const updatedUser = res.user;
+              setUsers((prev) =>
+                prev.map((u) => (u.id === selectedUser.id ? updatedUser : u)),
+              );
+              setSelectedUser(updatedUser);
+            }
             setToastMessage({
               type: "success",
               text:

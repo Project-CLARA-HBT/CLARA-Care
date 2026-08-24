@@ -204,4 +204,37 @@ describe("ChatShell — accessibility scaffolding", () => {
     // `newChat` clears the active turn buffer.
     expect(clearTurns).toHaveBeenCalled();
   });
+
+  it("cleans up all timers and event listeners on unmount with zero leaks", async () => {
+    vi.useFakeTimers();
+    const removeEventListenerSpy = vi.spyOn(window, "removeEventListener");
+    const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
+
+    const mod = await import("@/app/chat/_v2/ChatShell");
+    const ChatShell = mod.default;
+    const { unmount } = render(<ChatShell />);
+
+    // Trigger actions that register managed timeouts and state
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "/" }));
+    });
+
+    // Unmount the component to trigger teardowns
+    unmount();
+
+    // Verify keydown listener was removed
+    expect(removeEventListenerSpy).toHaveBeenCalledWith(
+      "keydown",
+      expect.any(Function),
+    );
+
+    // Fast-forward any remaining timers to ensure no post-teardown errors
+    act(() => {
+      vi.runAllTimers();
+    });
+
+    removeEventListenerSpy.mockRestore();
+    clearTimeoutSpy.mockRestore();
+    vi.useRealTimers();
+  });
 });

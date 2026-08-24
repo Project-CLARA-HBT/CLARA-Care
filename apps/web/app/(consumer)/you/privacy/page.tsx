@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { HealthPageHeader } from "@/components/consumer/health-page-header";
 import { Badge } from "@/components/ui/badge";
@@ -54,86 +54,7 @@ export default function YouPrivacyPage() {
     refetch,
   } = useQuery<AiTransparencyDto>({
     queryKey: queryKeys.profile(activeProfileId).you.privacy.aiTransparency(),
-    queryFn: async () => {
-      try {
-        return await v2Client.getAiTransparency(activeProfileId);
-      } catch {
-        return {
-          data_classes_used: [
-            {
-              key: "medications",
-              name: isEn ? "Medication Cabinet & Prescriptions" : "Đơn thuốc & Tủ thuốc",
-              purpose: isEn
-                ? "DDI drug-drug interaction safety checks and schedule reminders"
-                : "Kiểm tra an toàn tương tác thuốc (DDI) và nhắc lịch dùng thuốc",
-              sensitive: true,
-            },
-            {
-              key: "allergies",
-              name: isEn ? "Allergies & Sensitivities" : "Dị ứng & Tiền sử mẫn cảm",
-              purpose: isEn
-                ? "Hard clinical guardrails against contraindicated substances"
-                : "Hàng rào an toàn cứng cảnh báo chất chống chỉ định",
-              sensitive: true,
-            },
-            {
-              key: "conditions",
-              name: isEn ? "Chronic Conditions & Diagnoses" : "Bệnh lý nền & Chẩn đoán",
-              purpose: isEn
-                ? "Contextualizing health guidance and visit question preparation"
-                : "Định hướng thông tin sức khỏe và soạn câu hỏi đi khám",
-              sensitive: true,
-            },
-            {
-              key: "measurements",
-              name: isEn ? "Vitals & Physiological Metrics" : "Sinh hiệu & Chỉ số đo lường",
-              purpose: isEn
-                ? "Longitudinal trend tracking and outlier detection"
-                : "Theo dõi xu hướng sức khỏe dài hạn và nhận diện biến động bất thường",
-              sensitive: false,
-            },
-          ],
-          retention_policy: {
-            days: 90,
-            description: isEn
-              ? "All conversation sessions and temporary prompt buffers are automatically expired after 90 days."
-              : "Toàn bộ phiên hội thoại và bộ đệm truy vấn tạm thời được tự động xóa sau 90 ngày.",
-            auto_delete_enabled: true,
-          },
-          cot_zero_disclosure: {
-            operates_without_cot: true,
-            description: isEn
-              ? "CLARA operates strictly without storing or exposing internal reasoning traces (Chain-of-Thought). Only final synthesized clinical answers vetted by safety guardrails are recorded."
-              : "CLARA vận hành nghiêm ngặt không lưu trữ hoặc để lộ chuỗi suy luận nội bộ (Zero-CoT). Chỉ câu trả lời tổng hợp sau khi vượt qua kiểm duyệt an toàn mới được lưu.",
-            verified_guardrails: [
-              "FIDES Deterministic Drug Interaction Engine",
-              "CareGuard Emergency Fast-Path Escalation",
-              "Legal Prescribing & Dosing Hard-Guard",
-              "No-PII Telemetry Sanitization Filter",
-              "PDPD Vietnamese Privacy Compliance",
-            ],
-          },
-          ai_feature_controls: {
-            symptom_insights_enabled: true,
-            visit_prep_suggestions_enabled: true,
-            medication_safety_ai_enabled: true,
-            search_summaries_enabled: true,
-          },
-          consent_status: {
-            version: "v2.1",
-            granted_at: "2026-08-01T08:00:00Z",
-            status: "granted",
-            requires_reconsent: false,
-            purposes: [
-              { purpose: "core_service", label: isEn ? "Core Health Records (Lawful basis)" : "Hồ sơ sức khỏe cơ bản (Cơ sở bắt buộc)", granted: true, locked: true },
-              { purpose: "ai_transparency", label: isEn ? "AI Decision Support & Safety Analysis" : "Hỗ trợ quyết định & Phân tích an toàn AI", granted: true },
-              { purpose: "personalization", label: isEn ? "Longitudinal Context Personalization" : "Cá nhân hóa theo diễn tiến sức khỏe", granted: true },
-              { purpose: "sharing", label: isEn ? "Family & Caregiver Data Sharing" : "Chia sẻ dữ liệu người thân & Người chăm sóc", granted: true },
-            ],
-          },
-        };
-      }
-    },
+    queryFn: () => v2Client.getAiTransparency(activeProfileId),
     onSuccess: (data) => {
       if (data?.ai_feature_controls) {
         setSymptomInsights(data.ai_feature_controls.symptom_insights_enabled);
@@ -236,16 +157,22 @@ export default function YouPrivacyPage() {
               </h2>
             </div>
           </div>
-          <Badge tone="ok">
-            {isEn ? "Zero-CoT Verified" : "Bảo vệ Không lưu CoT"}
-          </Badge>
+          {aiData?.cot_zero_disclosure?.operates_without_cot ? (
+            <Badge tone="ok">
+              {isEn ? "Zero-CoT Verified" : "Bảo vệ Không lưu CoT"}
+            </Badge>
+          ) : (
+            <Badge tone="neutral">
+              {isEn ? "Status Unavailable" : "Chưa xác định"}
+            </Badge>
+          )}
         </div>
 
         <p className="relative z-10 text-xs text-[var(--text-secondary)] leading-relaxed max-w-3xl">
           {aiData?.cot_zero_disclosure?.description ||
             (isEn
-              ? "CLARA is designed safety-first: raw chain-of-thought traces and internal tokens are discarded. Responses pass through deterministic medical guardrails before any display."
-              : "CLARA được thiết kế đặt an toàn lên hàng đầu: chuỗi suy luận nội bộ (CoT) bị loại bỏ ngay lập tức. Câu trả lời phải vượt qua các rào chắn kiểm duyệt y tế trước khi hiển thị.")}
+              ? "Zero-CoT verification details are currently unavailable from the server."
+              : "Chi tiết xác minh Zero-CoT hiện chưa thể tải từ máy chủ.")}
         </p>
 
         <div className="relative z-10 pt-2 border-t border-[color:var(--shell-border)]/60">
@@ -253,15 +180,21 @@ export default function YouPrivacyPage() {
             {isEn ? "Verified Active Safety Guardrails:" : "Hàng rào an toàn & Kiểm duyệt đã xác minh:"}
           </p>
           <div className="flex flex-wrap gap-2">
-            {aiData?.cot_zero_disclosure?.verified_guardrails?.map((guardrail, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-1 text-xs font-semibold text-[var(--status-ok-text)]"
-              >
-                <Icon name="check" size="0.75rem" />
-                <span>{guardrail}</span>
+            {aiData?.cot_zero_disclosure?.verified_guardrails && aiData.cot_zero_disclosure.verified_guardrails.length > 0 ? (
+              aiData.cot_zero_disclosure.verified_guardrails.map((guardrail, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-1 text-xs font-semibold text-[var(--status-ok-text)]"
+                >
+                  <Icon name="check" size="0.75rem" />
+                  <span>{guardrail}</span>
+                </span>
+              ))
+            ) : (
+              <span className="text-xs text-[var(--text-muted)] italic">
+                {isEn ? "Guardrail verification data unavailable" : "Chưa có thông tin xác minh hàng rào an toàn"}
               </span>
-            ))}
+            )}
           </div>
         </div>
       </section>
@@ -419,7 +352,7 @@ export default function YouPrivacyPage() {
                 </h3>
               </div>
               <Badge tone="neutral">
-                {aiData?.data_classes_used?.length ?? 4} {isEn ? "Categories" : "Danh mục"}
+                {aiData?.data_classes_used?.length ?? 0} {isEn ? "Categories" : "Danh mục"}
               </Badge>
             </div>
             <p className="text-xs text-[var(--text-secondary)]">
@@ -429,26 +362,32 @@ export default function YouPrivacyPage() {
             </p>
 
             <div className="space-y-2.5" data-testid="data-classes-list">
-              {aiData?.data_classes_used?.map((item) => (
-                <div
-                  key={item.key}
-                  className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3.5 space-y-1"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[var(--text-primary)]">
-                      {item.name}
-                    </span>
-                    {item.sensitive ? (
-                      <Badge tone="warn">{isEn ? "Clinical Sensitive" : "Dữ liệu nhạy cảm"}</Badge>
-                    ) : (
-                      <Badge tone="neutral">{isEn ? "Standard" : "Thông thường"}</Badge>
-                    )}
+              {aiData?.data_classes_used && aiData.data_classes_used.length > 0 ? (
+                aiData.data_classes_used.map((item) => (
+                  <div
+                    key={item.key}
+                    className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3.5 space-y-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[var(--text-primary)]">
+                        {item.name}
+                      </span>
+                      {item.sensitive ? (
+                        <Badge tone="warn">{isEn ? "Clinical Sensitive" : "Dữ liệu nhạy cảm"}</Badge>
+                      ) : (
+                        <Badge tone="neutral">{isEn ? "Standard" : "Thông thường"}</Badge>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                      {item.purpose}
+                    </p>
                   </div>
-                  <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                    {item.purpose}
-                  </p>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-xs text-[var(--text-muted)] italic py-1">
+                  {isEn ? "No data classes recorded." : "Chưa có dữ liệu nhóm."}
+                </p>
+              )}
             </div>
           </section>
 
@@ -700,16 +639,22 @@ export default function YouPrivacyPage() {
               <h3 className="text-sm font-bold text-[var(--text-primary)]">
                 {isEn ? "Medical Consent" : "Đồng thuận Y tế & Quyền Pháp lý"}
               </h3>
-              <Badge tone="ok">
-                {aiData?.consent_status?.version ?? "v2.1"} ·{" "}
-                {aiData?.consent_status?.status === "granted"
-                  ? isEn
-                    ? "Active"
-                    : "Đã đồng thuận"
-                  : isEn
-                    ? "Pending"
-                    : "Chờ xác nhận"}
-              </Badge>
+              {aiData?.consent_status ? (
+                <Badge tone={aiData.consent_status.status === "granted" ? "ok" : "neutral"}>
+                  {aiData.consent_status.version} ·{" "}
+                  {aiData.consent_status.status === "granted"
+                    ? isEn
+                      ? "Active"
+                      : "Đã đồng thuận"
+                    : isEn
+                      ? "Pending"
+                      : "Chờ xác nhận"}
+                </Badge>
+              ) : (
+                <Badge tone="neutral">
+                  {isEn ? "Unavailable" : "Chưa có thông tin"}
+                </Badge>
+              )}
             </div>
 
             <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
@@ -719,27 +664,33 @@ export default function YouPrivacyPage() {
             </p>
 
             <div className="space-y-1.5">
-              {aiData?.consent_status?.purposes?.map((p) => (
-                <div
-                  key={p.purpose}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--surface-muted)] text-xs"
-                >
-                  <span className="font-semibold text-[var(--text-primary)] text-[11px]">{p.label}</span>
-                  <Badge tone={p.granted ? "ok" : "neutral"}>
-                    {p.locked
-                      ? isEn
-                        ? "Mandatory"
-                        : "Bắt buộc"
-                      : p.granted
+              {aiData?.consent_status?.purposes && aiData.consent_status.purposes.length > 0 ? (
+                aiData.consent_status.purposes.map((p) => (
+                  <div
+                    key={p.purpose}
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--surface-muted)] text-xs"
+                  >
+                    <span className="font-semibold text-[var(--text-primary)] text-[11px]">{p.label}</span>
+                    <Badge tone={p.granted ? "ok" : "neutral"}>
+                      {p.locked
                         ? isEn
-                          ? "Granted"
-                          : "Đã cấp"
-                        : isEn
-                          ? "Withdrawn"
-                          : "Đã rút"}
-                  </Badge>
-                </div>
-              ))}
+                          ? "Mandatory"
+                          : "Bắt buộc"
+                        : p.granted
+                          ? isEn
+                            ? "Granted"
+                            : "Đã cấp"
+                          : isEn
+                            ? "Withdrawn"
+                            : "Đã rút"}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-[var(--text-muted)] italic py-1">
+                  {isEn ? "No consent purpose records found on server." : "Chưa có bản ghi mục đích đồng thuận từ máy chủ."}
+                </p>
+              )}
             </div>
 
             <div className="pt-2">

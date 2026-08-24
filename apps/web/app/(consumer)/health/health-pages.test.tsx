@@ -21,6 +21,37 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+vi.mock("@/lib/medication-courses", () => ({
+  getMedicationCourses: vi.fn().mockResolvedValue([]),
+  createMedicationCourse: vi.fn().mockResolvedValue({ id: "course-1" }),
+  correctMedicationCourse: vi.fn().mockResolvedValue({ id: "course-1" }),
+  endMedicationCourse: vi.fn().mockResolvedValue({ id: "course-1" }),
+  checkDrugBankDdi: vi.fn().mockResolvedValue({
+    conclusion_available: true,
+    required_source: "drugbank",
+    source_version: "5.1",
+    courses: [],
+    ddi_alerts: [],
+    recommendation: "",
+  }),
+}));
+
+vi.mock("@/lib/selfmed", () => ({
+  getCabinet: vi.fn().mockResolvedValue({
+    cabinet_id: 1,
+    label: "Tủ thuốc gia đình",
+    items: [],
+  }),
+  addCabinetItem: vi.fn().mockResolvedValue({}),
+  updateCabinetItem: vi.fn().mockResolvedValue({}),
+  deleteCabinetItem: vi.fn().mockResolvedValue(undefined),
+  runCabinetAutoDdi: vi.fn().mockResolvedValue({}),
+  scanReceiptText: vi.fn().mockResolvedValue([]),
+  scanReceiptFile: vi.fn().mockResolvedValue([]),
+  importDetections: vi.fn().mockResolvedValue(0),
+  isLowConfidenceDetection: vi.fn().mockReturnValue(false),
+}));
+
 afterEach(cleanup);
 beforeEach(() => {
   vi.clearAllMocks();
@@ -89,6 +120,10 @@ describe("Health Canonical Route Pages", () => {
     expect(screen.getByRole("tab", { name: /Đơn thuốc & Phác đồ/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Tủ thuốc gia đình/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /An toàn & Tương tác/i })).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText("Chưa có thuốc nào")).toBeInTheDocument();
+    });
   });
 
   it("renders /health/results (Results & Trend Charts Page)", async () => {

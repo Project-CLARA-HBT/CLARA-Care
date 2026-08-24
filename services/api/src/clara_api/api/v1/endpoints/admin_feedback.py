@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -105,8 +105,8 @@ def list_clinical_feedback(
                 metadata_json=f.metadata_json,
                 resolution_json=f.resolution_json,
                 resource_version=f.resource_version,
-                created_at=f.created_at or datetime.now(timezone.utc),
-                updated_at=f.updated_at or datetime.now(timezone.utc),
+                created_at=f.created_at or datetime.now(UTC),
+                updated_at=f.updated_at or datetime.now(UTC),
             )
             for f in feedback_items
         ],
@@ -139,8 +139,8 @@ def get_clinical_feedback_detail(
         metadata_json=item.metadata_json,
         resolution_json=item.resolution_json,
         resource_version=item.resource_version,
-        created_at=item.created_at or datetime.now(timezone.utc),
-        updated_at=item.updated_at or datetime.now(timezone.utc),
+        created_at=item.created_at or datetime.now(UTC),
+        updated_at=item.updated_at or datetime.now(UTC),
     )
 
 
@@ -192,8 +192,8 @@ def update_feedback_status(
         metadata_json=item.metadata_json,
         resolution_json=item.resolution_json,
         resource_version=item.resource_version,
-        created_at=item.created_at or datetime.now(timezone.utc),
-        updated_at=item.updated_at or datetime.now(timezone.utc),
+        created_at=item.created_at or datetime.now(UTC),
+        updated_at=item.updated_at or datetime.now(UTC),
     )
 
 
@@ -243,8 +243,8 @@ def assign_feedback(
         metadata_json=item.metadata_json,
         resolution_json=item.resolution_json,
         resource_version=item.resource_version,
-        created_at=item.created_at or datetime.now(timezone.utc),
-        updated_at=item.updated_at or datetime.now(timezone.utc),
+        created_at=item.created_at or datetime.now(UTC),
+        updated_at=item.updated_at or datetime.now(UTC),
     )
 
 
@@ -267,7 +267,7 @@ def resolve_feedback(
         "clinical_notes": payload.clinical_notes,
         "benchmark_candidate": payload.benchmark_candidate,
         "resolved_by": current_user.id,
-        "resolved_at": datetime.now(timezone.utc).isoformat(),
+        "resolved_at": datetime.now(UTC).isoformat(),
     }
     item.resource_version = _advance_version(item.resource_version)
 
@@ -297,6 +297,6 @@ def resolve_feedback(
         metadata_json=item.metadata_json,
         resolution_json=item.resolution_json,
         resource_version=item.resource_version,
-        created_at=item.created_at or datetime.now(timezone.utc),
-        updated_at=item.updated_at or datetime.now(timezone.utc),
+        created_at=item.created_at or datetime.now(UTC),
+        updated_at=item.updated_at or datetime.now(UTC),
     )

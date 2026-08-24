@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HomeView } from "./home-view";
@@ -13,6 +14,31 @@ const mockRouter = {
 
 vi.mock("next/navigation", () => ({
   useRouter: () => mockRouter,
+}));
+
+vi.mock("next/link", () => ({
+  default: ({
+    children,
+    href,
+    onClick,
+    ...props
+  }: {
+    children?: ReactNode;
+    href: string;
+    onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+    [key: string]: unknown;
+  }) => (
+    <a
+      href={href}
+      onClick={(e) => {
+        e.preventDefault();
+        onClick?.(e);
+      }}
+      {...props}
+    >
+      {children}
+    </a>
+  ),
 }));
 
 afterEach(cleanup);

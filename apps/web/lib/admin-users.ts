@@ -43,6 +43,7 @@ export interface AdminUser {
   lastActiveAt: string;
   createdAt: string;
   auditHistory: UserAuditEntry[];
+  resourceVersion?: string;
 }
 
 export interface UserStats {
@@ -157,487 +158,150 @@ export function getStatusMeta(status: AdminUserStatus): StatusMeta {
   return STATUS_METADATA[status] ?? STATUS_METADATA.active;
 }
 
-// ---------------------------------------------------------------------------
-// Seed Data for Development / Offline Resilient Registry
-// ---------------------------------------------------------------------------
+export function mapBackendUserToAdminUser(user: any): AdminUser {
+  if (!user) {
+    throw new Error("Invalid user payload from server");
+  }
 
-export const SEED_ADMIN_USERS: AdminUser[] = [
-  {
-    id: "usr_adm_8810",
-    email: "admin.system@clara-care.vn",
-    fullName: "ThS. Nguyễn Hoàng Long",
-    role: "admin",
-    status: "active",
-    activeSessionsCount: 2,
-    twoFactorEnabled: true,
-    failedLoginAttempts: 0,
-    departmentOrOrg: "Trung tâm Điều hành Hệ thống & Bảo mật CLARA",
-    phoneMasked: "+84 ••• ••• 019",
-    lastActiveAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    createdAt: "2026-01-10T08:00:00Z",
-    auditHistory: [
-      {
-        id: "aud_01",
-        action: "created",
-        actionLabelVi: "Khởi tạo tài khoản hệ thống",
-        actionLabelEn: "System account initialized",
-        actor: "SYSTEM_BOOTSTRAP",
-        timestamp: "2026-01-10T08:00:00Z",
-        details: "Tài khoản Quản trị viên cấp cao ban đầu.",
-      },
-      {
-        id: "aud_02",
-        action: "mfa_toggled",
-        actionLabelVi: "Kích hoạt xác thực 2 lớp (2FA)",
-        actionLabelEn: "Enabled 2-factor authentication",
-        actor: "usr_adm_8810",
-        timestamp: "2026-01-10T08:15:00Z",
-      },
-    ],
-  },
-  {
-    id: "usr_doc_4421",
-    email: "bs.tranminhduc@bvbachmai.vn",
-    fullName: "BS.CKII Trần Minh Đức",
-    role: "doctor",
-    status: "active",
-    activeSessionsCount: 3,
-    twoFactorEnabled: true,
-    failedLoginAttempts: 0,
-    departmentOrOrg: "Khoa Hồi sức Tích cực (ICU) - Bệnh viện Bạch Mai",
-    phoneMasked: "+84 ••• ••• 358",
-    lastActiveAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-    createdAt: "2026-02-14T09:30:00Z",
-    auditHistory: [
-      {
-        id: "aud_03",
-        action: "created",
-        actionLabelVi: "Đăng ký thành viên y tế",
-        actionLabelEn: "Registered clinician member",
-        actor: "usr_doc_4421",
-        timestamp: "2026-02-14T09:30:00Z",
-      },
-      {
-        id: "aud_04",
-        action: "role_updated",
-        actionLabelVi: "Cấp chứng thực Bác sĩ lâm sàng",
-        actionLabelEn: "Granted Doctor credentials",
-        actor: "usr_adm_8810",
-        timestamp: "2026-02-15T10:00:00Z",
-        details: "Xác thực chứng chỉ hành nghề khám chữa bệnh số 004821/BYT-CCHN.",
-      },
-    ],
-  },
-  {
-    id: "usr_doc_5590",
-    email: "bs.lethithanh@bvchoray.vn",
-    fullName: "TS.BS Lê Thị Thanh Hương",
-    role: "doctor",
-    status: "active",
-    activeSessionsCount: 1,
-    twoFactorEnabled: true,
-    failedLoginAttempts: 0,
-    departmentOrOrg: "Khoa Dược Lâm sàng & Chống độc - Bệnh viện Chợ Rẫy",
-    phoneMasked: "+84 ••• ••• 712",
-    lastActiveAt: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
-    createdAt: "2026-03-01T14:20:00Z",
-    auditHistory: [
-      {
-        id: "aud_05",
-        action: "created",
-        actionLabelVi: "Đăng ký thành viên",
-        actionLabelEn: "Registered account",
-        actor: "usr_doc_5590",
-        timestamp: "2026-03-01T14:20:00Z",
-      },
-      {
-        id: "aud_06",
-        action: "role_updated",
-        actionLabelVi: "Cấp quyền Bác sĩ Dược lâm sàng",
-        actionLabelEn: "Assigned Doctor role",
-        actor: "usr_adm_8810",
-        timestamp: "2026-03-02T08:30:00Z",
-      },
-    ],
-  },
-  {
-    id: "usr_res_2104",
-    email: "research.vuhoang@hmu.edu.vn",
-    fullName: "PGS.TS Vũ Hoàng Quân",
-    role: "researcher",
-    status: "active",
-    activeSessionsCount: 2,
-    twoFactorEnabled: true,
-    failedLoginAttempts: 0,
-    departmentOrOrg: "Viện Nghiên cứu Dược lý & Di truyền - ĐH Y Hà Nội",
-    phoneMasked: "+84 ••• ••• 491",
-    lastActiveAt: new Date(Date.now() - 360 * 60 * 1000).toISOString(),
-    createdAt: "2026-02-28T11:00:00Z",
-    auditHistory: [
-      {
-        id: "aud_07",
-        action: "created",
-        actionLabelVi: "Khởi tạo tài khoản nghiên cứu",
-        actionLabelEn: "Created researcher profile",
-        actor: "usr_res_2104",
-        timestamp: "2026-02-28T11:00:00Z",
-      },
-      {
-        id: "aud_08",
-        action: "role_updated",
-        actionLabelVi: "Phân quyền Nhà nghiên cứu Y khoa",
-        actionLabelEn: "Granted Researcher role",
-        actor: "usr_adm_8810",
-        timestamp: "2026-03-01T09:00:00Z",
-      },
-    ],
-  },
-  {
-    id: "usr_usr_9012",
-    email: "phamvanan.hanoi@gmail.com",
-    fullName: "Phạm Văn An",
-    role: "normal",
-    status: "active",
-    activeSessionsCount: 1,
-    twoFactorEnabled: false,
-    failedLoginAttempts: 0,
-    departmentOrOrg: "Người dùng cá nhân (PHR)",
-    phoneMasked: "+84 ••• ••• 925",
-    lastActiveAt: new Date(Date.now() - 1800 * 60 * 1000).toISOString(),
-    createdAt: "2026-04-12T16:45:00Z",
-    auditHistory: [
-      {
-        id: "aud_09",
-        action: "created",
-        actionLabelVi: "Đăng ký tài khoản người dùng",
-        actionLabelEn: "End-user registration",
-        actor: "usr_usr_9012",
-        timestamp: "2026-04-12T16:45:00Z",
-      },
-    ],
-  },
-  {
-    id: "usr_usr_9381",
-    email: "nguyenthimai.danang@gmail.com",
-    fullName: "Nguyễn Thị Mai",
-    role: "normal",
-    status: "locked",
-    activeSessionsCount: 0,
-    twoFactorEnabled: false,
-    failedLoginAttempts: 5,
-    departmentOrOrg: "Người dùng cá nhân",
-    phoneMasked: "+84 ••• ••• 634",
-    lockReason: "Phát hiện 5 lần nhập sai mật khẩu liên tiếp và bất thường địa chỉ IP đăng nhập.",
-    lockedAt: "2026-08-22T10:14:00Z",
-    lockedBy: "Hệ thống Tự động (SecOps Guard)",
-    lastActiveAt: "2026-08-22T10:14:00Z",
-    createdAt: "2026-05-19T07:12:00Z",
-    auditHistory: [
-      {
-        id: "aud_10",
-        action: "created",
-        actionLabelVi: "Đăng ký tài khoản",
-        actionLabelEn: "User registered",
-        actor: "usr_usr_9381",
-        timestamp: "2026-05-19T07:12:00Z",
-      },
-      {
-        id: "aud_11",
-        action: "account_locked",
-        actionLabelVi: "Khóa bảo vệ tài khoản tự động",
-        actionLabelEn: "Automated account lock protection",
-        actor: "SecOps Guard",
-        timestamp: "2026-08-22T10:14:00Z",
-        details: "Vượt ngưỡng failed logins (5 lần). Tất cả phiên đã bị thu hồi.",
-      },
-    ],
-  },
-  {
-    id: "usr_res_7749",
-    email: "nguyenngocthach@pasteur.org.vn",
-    fullName: "ThS. Nguyễn Ngọc Thạch",
-    role: "researcher",
-    status: "suspended",
-    activeSessionsCount: 0,
-    twoFactorEnabled: true,
-    failedLoginAttempts: 1,
-    departmentOrOrg: "Viện Pasteur TP.HCM",
-    phoneMasked: "+84 ••• ••• 830",
-    lockReason: "Hết hạn chứng nhận GCP (Good Clinical Practice) định kỳ hàng năm.",
-    lockedAt: "2026-08-15T09:00:00Z",
-    lockedBy: "usr_adm_8810",
-    lastActiveAt: "2026-08-14T17:30:00Z",
-    createdAt: "2026-03-20T10:00:00Z",
-    auditHistory: [
-      {
-        id: "aud_12",
-        action: "created",
-        actionLabelVi: "Khởi tạo hồ sơ nghiên cứu",
-        actionLabelEn: "Researcher account registered",
-        actor: "usr_res_7749",
-        timestamp: "2026-03-20T10:00:00Z",
-      },
-      {
-        id: "aud_13",
-        action: "account_locked",
-        actionLabelVi: "Tạm đình chỉ quyền nghiên cứu",
-        actionLabelEn: "Suspended researcher privileges",
-        actor: "usr_adm_8810",
-        timestamp: "2026-08-15T09:00:00Z",
-        details: "Chờ bổ sung gia hạn chứng nhận GCP năm 2026.",
-      },
-    ],
-  },
-  {
-    id: "usr_usr_3319",
-    email: "doanducmanh@outlook.com",
-    fullName: "Đoàn Đức Mạnh",
-    role: "normal",
-    status: "pending_verification",
-    activeSessionsCount: 0,
-    twoFactorEnabled: false,
-    failedLoginAttempts: 0,
-    departmentOrOrg: "Người dùng mới đăng ký",
-    phoneMasked: "+84 ••• ••• 117",
-    lastActiveAt: "2026-08-24T02:00:00Z",
-    createdAt: "2026-08-24T02:00:00Z",
-    auditHistory: [
-      {
-        id: "aud_14",
-        action: "created",
-        actionLabelVi: "Đăng ký tài khoản qua web",
-        actionLabelEn: "Web registration submitted",
-        actor: "usr_usr_3319",
-        timestamp: "2026-08-24T02:00:00Z",
-        details: "Đang chờ nhấp liên kết xác nhận email.",
-      },
-    ],
-  },
-];
+  const role = (user.role ?? "normal") as UserRole;
+  const status = (user.status ?? "active") as AdminUserStatus;
 
-let inMemoryUsersCache: AdminUser[] = [...SEED_ADMIN_USERS];
-
-export function resetUsersCacheForTesting(): void {
-  inMemoryUsersCache = [...SEED_ADMIN_USERS];
+  return {
+    id: String(user.id),
+    email: user.email ?? "",
+    fullName: user.full_name ?? user.fullName ?? "",
+    role,
+    status,
+    activeSessionsCount: user.active_sessions_count ?? user.activeSessionsCount ?? (status === "active" ? 1 : 0),
+    twoFactorEnabled: Boolean(user.two_factor_enabled ?? user.twoFactorEnabled ?? user.is_email_verified),
+    failedLoginAttempts: user.failed_login_attempts ?? user.failedLoginAttempts ?? 0,
+    departmentOrOrg: user.department_or_org ?? user.departmentOrOrg,
+    phoneMasked: user.phone_masked ?? user.phoneMasked,
+    lockReason: user.lock_reason ?? user.lockReason,
+    lockedAt: user.locked_at ?? user.lockedAt,
+    lockedBy: user.locked_by ?? user.lockedBy,
+    lastActiveAt: user.last_login_at ?? user.lastActiveAt ?? user.created_at ?? user.createdAt ?? new Date().toISOString(),
+    createdAt: user.created_at ?? user.createdAt ?? new Date().toISOString(),
+    auditHistory: Array.isArray(user.audit_history ?? user.auditHistory) ? (user.audit_history ?? user.auditHistory) : [],
+    resourceVersion: user.resource_version ?? user.resourceVersion,
+  };
 }
 
 // ---------------------------------------------------------------------------
-// Client API Functions
+// Client API Functions (Server Wired & Fail-Closed)
 // ---------------------------------------------------------------------------
 
-export async function listAdminUsers(options?: {
+export interface ListAdminUsersOptions {
   query?: string;
   role?: UserRole | "all";
   status?: AdminUserStatus | "all";
-}): Promise<AdminUser[]> {
-  try {
-    const res = await api.get<{ users: AdminUser[] }>("/admin/users");
-    if (res.data?.users && Array.isArray(res.data.users)) {
-      inMemoryUsersCache = [...res.data.users];
-    }
-  } catch {
-    // Graceful offline/fallback: use in-memory store
-  }
+  cursor?: number;
+  limit?: number;
+}
 
-  let result = [...inMemoryUsersCache];
-
-  if (options?.role && options.role !== "all") {
-    result = result.filter((u) => u.role === options.role);
-  }
-
-  if (options?.status && options.status !== "all") {
-    result = result.filter((u) => u.status === options.status);
-  }
+export async function listAdminUsers(options?: ListAdminUsersOptions): Promise<AdminUser[]> {
+  const params: Record<string, string | number> = {};
 
   if (options?.query && options.query.trim()) {
-    const q = options.query.trim().toLowerCase();
-    result = result.filter(
-      (u) =>
-        u.fullName.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        u.id.toLowerCase().includes(q) ||
-        (u.departmentOrOrg && u.departmentOrOrg.toLowerCase().includes(q)),
-    );
+    params.query = options.query.trim();
+  }
+  if (options?.role && options.role !== "all") {
+    params.role = options.role;
+  }
+  if (options?.status && options.status !== "all") {
+    params.status = options.status;
+  }
+  if (options?.cursor !== undefined) {
+    params.cursor = options.cursor;
+  }
+  if (options?.limit !== undefined) {
+    params.limit = options.limit;
   }
 
-  return result;
+  const res = await api.get<{ items?: any[]; users?: any[]; total?: number } | any[]>("/admin/users", {
+    params,
+  });
+
+  let rawList: any[] = [];
+  if (Array.isArray(res.data)) {
+    rawList = res.data;
+  } else if (res.data && Array.isArray(res.data.items)) {
+    rawList = res.data.items;
+  } else if (res.data && Array.isArray(res.data.users)) {
+    rawList = res.data.users;
+  }
+
+  return rawList.map(mapBackendUserToAdminUser);
+}
+
+export async function getAdminUser(userId: string | number): Promise<AdminUser> {
+  const res = await api.get<any>(`/admin/users/${encodeURIComponent(String(userId))}`);
+  return mapBackendUserToAdminUser(res.data);
 }
 
 export async function updateUserRole(
-  userId: string,
+  userId: string | number,
   newRole: UserRole,
   reason?: string,
   actor: string = "Admin Operator",
+  expectedResourceVersion?: string,
 ): Promise<{ success: boolean; user: AdminUser }> {
-  const index = inMemoryUsersCache.findIndex((u) => u.id === userId);
-  if (index === -1) {
-    throw new Error(`User with ID ${userId} not found`);
-  }
-
-  const prevUser = inMemoryUsersCache[index];
-  const oldRoleLabel = prevUser.role.toUpperCase();
-  const newRoleLabel = newRole.toUpperCase();
-
-  const auditEntry: UserAuditEntry = {
-    id: `aud_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-    action: "role_updated",
-    actionLabelVi: `Thay đổi phân quyền vai trò: ${oldRoleLabel} → ${newRoleLabel}`,
-    actionLabelEn: `Role assignment modified: ${oldRoleLabel} → ${newRoleLabel}`,
-    actor,
-    timestamp: new Date().toISOString(),
-    details: reason || `Cập nhật vai trò từ ${oldRoleLabel} sang ${newRoleLabel}.`,
-  };
-
-  const updatedUser: AdminUser = {
-    ...prevUser,
+  const res = await api.patch<any>(`/admin/users/${encodeURIComponent(String(userId))}/role`, {
     role: newRole,
-    auditHistory: [auditEntry, ...prevUser.auditHistory],
-  };
+    reason_code: reason || "ADMIN_ROLE_CHANGE",
+    expected_resource_version: expectedResourceVersion,
+  });
 
-  inMemoryUsersCache[index] = updatedUser;
-
-  try {
-    await api.patch(`/admin/users/${encodeURIComponent(userId)}/role`, {
-      role: newRole,
-      reason,
-    });
-  } catch {
-    // Keep optimistic in-memory update
-  }
-
-  return { success: true, user: updatedUser };
+  const rawUser = res.data?.user || res.data;
+  const user = mapBackendUserToAdminUser(rawUser);
+  return { success: true, user };
 }
 
 export async function lockUserAccount(
-  userId: string,
+  userId: string | number,
   reason: string,
   lockedBy: string = "Admin Operator",
+  expectedResourceVersion?: string,
 ): Promise<{ success: boolean; user: AdminUser }> {
-  const index = inMemoryUsersCache.findIndex((u) => u.id === userId);
-  if (index === -1) {
-    throw new Error(`User with ID ${userId} not found`);
-  }
+  const res = await api.post<any>(`/admin/users/${encodeURIComponent(String(userId))}/lock`, {
+    reason,
+    expected_resource_version: expectedResourceVersion,
+  });
 
-  const prevUser = inMemoryUsersCache[index];
-  const now = new Date().toISOString();
-
-  const auditEntry: UserAuditEntry = {
-    id: `aud_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-    action: "account_locked",
-    actionLabelVi: "Khóa tài khoản và thu hồi phiên làm việc",
-    actionLabelEn: "Account locked and sessions revoked",
-    actor: lockedBy,
-    timestamp: now,
-    details: reason,
-  };
-
-  const updatedUser: AdminUser = {
-    ...prevUser,
-    status: "locked",
-    activeSessionsCount: 0,
-    lockReason: reason,
-    lockedAt: now,
-    lockedBy,
-    auditHistory: [auditEntry, ...prevUser.auditHistory],
-  };
-
-  inMemoryUsersCache[index] = updatedUser;
-
-  try {
-    await api.post(`/admin/users/${encodeURIComponent(userId)}/lock`, {
-      reason,
-      locked_by: lockedBy,
-    });
-  } catch {
-    // Keep optimistic in-memory update
-  }
-
-  return { success: true, user: updatedUser };
+  const rawUser = res.data?.user || res.data;
+  const user = mapBackendUserToAdminUser(rawUser);
+  return { success: true, user };
 }
 
 export async function unlockUserAccount(
-  userId: string,
+  userId: string | number,
   unlockedBy: string = "Admin Operator",
+  expectedResourceVersion?: string,
 ): Promise<{ success: boolean; user: AdminUser }> {
-  const index = inMemoryUsersCache.findIndex((u) => u.id === userId);
-  if (index === -1) {
-    throw new Error(`User with ID ${userId} not found`);
-  }
+  const res = await api.post<any>(`/admin/users/${encodeURIComponent(String(userId))}/unlock`, {
+    reason: "ADMIN_UNLOCK",
+    expected_resource_version: expectedResourceVersion,
+  });
 
-  const prevUser = inMemoryUsersCache[index];
-  const now = new Date().toISOString();
-
-  const auditEntry: UserAuditEntry = {
-    id: `aud_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-    action: "account_unlocked",
-    actionLabelVi: "Mở khóa tài khoản người dùng",
-    actionLabelEn: "Account unlocked and restored",
-    actor: unlockedBy,
-    timestamp: now,
-    details: "Mở khóa tài khoản, cho phép người dùng đăng nhập lại bình thường.",
-  };
-
-  const updatedUser: AdminUser = {
-    ...prevUser,
-    status: "active",
-    failedLoginAttempts: 0,
-    lockReason: undefined,
-    lockedAt: undefined,
-    lockedBy: undefined,
-    auditHistory: [auditEntry, ...prevUser.auditHistory],
-  };
-
-  inMemoryUsersCache[index] = updatedUser;
-
-  try {
-    await api.post(`/admin/users/${encodeURIComponent(userId)}/unlock`, {
-      unlocked_by: unlockedBy,
-    });
-  } catch {
-    // Keep optimistic in-memory update
-  }
-
-  return { success: true, user: updatedUser };
+  const rawUser = res.data?.user || res.data;
+  const user = mapBackendUserToAdminUser(rawUser);
+  return { success: true, user };
 }
 
 export async function revokeUserSessions(
-  userId: string,
+  userId: string | number,
   actor: string = "Admin Operator",
-): Promise<{ success: boolean; revokedCount: number; user: AdminUser }> {
-  const index = inMemoryUsersCache.findIndex((u) => u.id === userId);
-  if (index === -1) {
-    throw new Error(`User with ID ${userId} not found`);
-  }
+): Promise<{ success: boolean; revokedCount: number; user?: AdminUser }> {
+  const res = await api.post<any>(`/admin/users/${encodeURIComponent(String(userId))}/sessions/revoke`);
 
-  const prevUser = inMemoryUsersCache[index];
-  const revokedCount = prevUser.activeSessionsCount;
-  const now = new Date().toISOString();
-
-  const auditEntry: UserAuditEntry = {
-    id: `aud_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-    action: "sessions_revoked",
-    actionLabelVi: `Thu hồi tất cả ${revokedCount} phiên đăng nhập đang hoạt động`,
-    actionLabelEn: `Revoked all ${revokedCount} active login sessions`,
-    actor,
-    timestamp: now,
-    details: "Thu hồi bắt buộc tất cả token phiên đang kết nối trên toàn bộ thiết bị.",
+  const revokedCount =
+    res.data?.revoked_sessions_count ?? res.data?.revokedSessionsCount ?? 1;
+  const rawUser = res.data?.user;
+  return {
+    success: true,
+    revokedCount,
+    user: rawUser ? mapBackendUserToAdminUser(rawUser) : undefined,
   };
-
-  const updatedUser: AdminUser = {
-    ...prevUser,
-    activeSessionsCount: 0,
-    auditHistory: [auditEntry, ...prevUser.auditHistory],
-  };
-
-  inMemoryUsersCache[index] = updatedUser;
-
-  try {
-    await api.post(`/admin/users/${encodeURIComponent(userId)}/revoke-sessions`);
-  } catch {
-    // Keep optimistic in-memory update
-  }
-
-  return { success: true, revokedCount, user: updatedUser };
 }
 
 export function computeUserStats(users: AdminUser[]): UserStats {

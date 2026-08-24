@@ -94,6 +94,19 @@ const dummyConsentStatus = {
   accepted_at: null,
 };
 
+async function renderOnboardingPage() {
+  const rendered = render(<OnboardingPage />);
+  await waitFor(async () => {
+    expect(mocks.getConsentStatus).toHaveBeenCalled();
+    expect(mocks.getPhrOnboarding).toHaveBeenCalled();
+    await Promise.all([
+      mocks.getConsentStatus.mock.results[0]?.value,
+      mocks.getPhrOnboarding.mock.results[0]?.value,
+    ]);
+  });
+  return rendered;
+}
+
 describe("OnboardingPage — Multi-Track Decoupled Onboarding", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -109,7 +122,7 @@ describe("OnboardingPage — Multi-Track Decoupled Onboarding", () => {
   });
 
   it("renders the 4 multi-track navigation tabs", async () => {
-    render(<OnboardingPage />);
+    await renderOnboardingPage();
 
     expect(screen.getByRole("tab", { name: /1\. Khởi động chung/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /2\. Hồ sơ sức khỏe/i })).toBeInTheDocument();
@@ -119,15 +132,10 @@ describe("OnboardingPage — Multi-Track Decoupled Onboarding", () => {
 
   describe("Track 1: Global First Run", () => {
     it("renders medical disclaimer, privacy policy links, and versioned consent button", async () => {
-      render(<OnboardingPage />);
+      await renderOnboardingPage();
 
       // Switch to Global track
       fireEvent.click(screen.getByRole("tab", { name: /1\. Khởi động chung/i }));
-
-      // Wait for consent status to load
-      await waitFor(() => {
-        expect(mocks.getConsentStatus).toHaveBeenCalled();
-      });
 
       // Medical disclaimer is visible
       expect(screen.getByText(/Tuyên bố miễn trừ trách nhiệm y khoa/i)).toBeInTheDocument();
@@ -149,13 +157,14 @@ describe("OnboardingPage — Multi-Track Decoupled Onboarding", () => {
           consent_version: "2026.1",
           accepted: true,
         });
+        expect(mocks.getConsentStatus).toHaveBeenCalledTimes(2);
       });
     });
   });
 
   describe("Track 2: Personal Health Setup", () => {
     it("renders optional PHR biometric inputs and supports saving or skipping", async () => {
-      render(<OnboardingPage />);
+      await renderOnboardingPage();
 
       // Switch to Personal Health track
       fireEvent.click(screen.getByRole("tab", { name: /2\. Hồ sơ sức khỏe/i }));
@@ -198,7 +207,7 @@ describe("OnboardingPage — Multi-Track Decoupled Onboarding", () => {
     });
 
     it("allows skipping personal health profile setup immediately", async () => {
-      render(<OnboardingPage />);
+      await renderOnboardingPage();
 
       fireEvent.click(screen.getByRole("tab", { name: /2\. Hồ sơ sức khỏe/i }));
 
@@ -215,7 +224,7 @@ describe("OnboardingPage — Multi-Track Decoupled Onboarding", () => {
   describe("Track 3: Professional Orientation (Crucial Rule: Doctors not blocked by PHR)", () => {
     it("defaults to Professional Orientation for clinician/doctor role and contains zero PHR biometric fields", async () => {
       mocks.setTestRole("doctor");
-      render(<OnboardingPage />);
+      await renderOnboardingPage();
 
       // Should default to professional track for doctor
       expect(screen.getByTestId("track-professional")).toBeInTheDocument();
@@ -250,7 +259,7 @@ describe("OnboardingPage — Multi-Track Decoupled Onboarding", () => {
 
   describe("Track 4: Tool-Specific Consent", () => {
     it("renders contextual consent architecture info for Scribe, CareGuard, and Family sharing", async () => {
-      render(<OnboardingPage />);
+      await renderOnboardingPage();
 
       // Switch to Tool Consent track
       fireEvent.click(screen.getByRole("tab", { name: /4\. Đồng thuận công cụ/i }));

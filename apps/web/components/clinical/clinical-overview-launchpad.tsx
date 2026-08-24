@@ -163,15 +163,55 @@ export default function ClinicalOverviewLaunchpad({
   const ready = !loading && !error;
   const cabinetCount = dashboard?.cabinet.itemTotal ?? null;
   const expiringCount = dashboard?.cabinet.expiringSoonTotal ?? null;
-  const needsAttention = ready && (alerts.length > 0 || (expiringCount ?? 0) > 0);
+
+  const isMlReachable = dashboard?.runtime.mlReachable === true;
+  const isApiOk = dashboard?.runtime.apiStatus === "ok";
+  const isMlOk =
+    isMlReachable ||
+    dashboard?.runtime.mlStatus === "ok" ||
+    dashboard?.runtime.mlStatus === "reachable";
+  const isOffline =
+    error ||
+    (!loading &&
+      (dashboard === null ||
+        dashboard.runtime.mlReachable === false ||
+        dashboard.runtime.apiStatus === "down" ||
+        dashboard.runtime.apiStatus === "error" ||
+        dashboard.runtime.mlStatus === "unreachable" ||
+        dashboard.runtime.mlStatus === "error" ||
+        dashboard.runtime.mlStatus === "down"));
+  const isRuleVerificationEnabled = Boolean(dashboard?.sources.flowFlags.ruleVerification);
+  const isDegraded =
+    ready &&
+    !isOffline &&
+    Boolean(
+      dashboard &&
+        (dashboard.runtime.apiStatus === "degraded" ||
+          dashboard.runtime.mlStatus === "degraded" ||
+          !isRuleVerificationEnabled),
+    );
+  const isVerified =
+    ready &&
+    !isOffline &&
+    !isDegraded &&
+    Boolean(dashboard) &&
+    isApiOk &&
+    isMlOk &&
+    isRuleVerificationEnabled;
+
+  const needsAttention = ready && (alerts.length > 0 || (expiringCount ?? 0) > 0 || isDegraded);
 
   const statusText = loading
     ? copy("Đang cập nhật", "Updating")
-    : error
+    : error || !dashboard
       ? copy("Chưa xác định", "Unknown")
-      : needsAttention
-        ? copy("Có mục cần xem lại", "Items need review")
-        : copy("Hoạt động bình thường", "Operational");
+      : isOffline
+        ? copy("Ngoại tuyến", "Offline")
+        : isDegraded || !isVerified
+          ? copy("Chưa xác thực", "Unverified")
+          : needsAttention
+            ? copy("Có mục cần xem lại", "Items need review")
+            : copy("Hoạt động bình thường", "Operational");
 
   const activeCaseHref = activeCase
     ? activeCase.status === "completed" || activeCase.status === "ready"
@@ -202,10 +242,27 @@ export default function ClinicalOverviewLaunchpad({
                 <Icon name="clinical-notes" size={14} />
                 {copy("KHÔNG GIAN LÂM SÀNG • COMMAND CENTER", "CLINICAL WORKSPACE • COMMAND CENTER")}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">
-                <Icon name="check" size={13} className="text-[var(--text-brand)]" />
-                {copy("DrugBank v5.1.10 Verified", "DrugBank v5.1.10 Verified")}
-              </span>
+              {loading ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-muted)]">
+                  <Icon name="progress" size={13} className="text-[var(--text-muted)]" />
+                  {copy("DrugBank: Đang kiểm tra…", "DrugBank: Checking…")}
+                </span>
+              ) : isOffline ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--status-warn-text)]">
+                  <Icon name="warning" size={13} />
+                  {copy("DrugBank v5.1.10 Ngoại tuyến", "DrugBank v5.1.10 Offline")}
+                </span>
+              ) : !isVerified ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--status-warn-text)]">
+                  <Icon name="warning" size={13} />
+                  {copy("DrugBank v5.1.10 Chưa xác thực", "DrugBank v5.1.10 Unverified")}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">
+                  <Icon name="check" size={13} className="text-[var(--text-brand)]" />
+                  {copy("DrugBank v5.1.10 Verified", "DrugBank v5.1.10 Verified")}
+                </span>
+              )}
             </div>
 
             <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)] sm:text-4xl">
@@ -221,9 +278,9 @@ export default function ClinicalOverviewLaunchpad({
               <span className="inline-flex min-h-8 items-center gap-2 rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3.5 py-1 text-xs font-bold text-[var(--text-primary)]">
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${
-                    loading || error
+                    loading || error || isOffline
                       ? "bg-[var(--text-muted)]"
-                      : needsAttention
+                      : isDegraded || !isVerified || needsAttention
                         ? "bg-[var(--status-warn-text)] animate-pulse"
                         : "bg-[var(--success-500)]"
                   }`}

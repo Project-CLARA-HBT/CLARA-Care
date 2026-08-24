@@ -1429,6 +1429,31 @@ class ApiClient {
     );
   }
 
+  /// Returns the doctor/admin clinical patient roster.
+  /// `GET /api/v1/clinical-workbench/patients`.
+  Future<Map<String, dynamic>> getClinicalPatientRoster({
+    required String accessToken,
+    int limit = 50,
+    int cursor = 0,
+    bool assignedToMe = true,
+  }) {
+    return _get(
+      '/api/v1/clinical-workbench/patients?limit=$limit&cursor=$cursor&assigned_to_me=$assignedToMe',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Returns the DrugBank licensed artifact and index readiness.
+  /// `GET /api/v1/careguard/drugbank/status`.
+  Future<Map<String, dynamic>> getDrugBankStatus({
+    required String accessToken,
+  }) {
+    return _get(
+      '/api/v1/careguard/drugbank/status',
+      accessToken: accessToken,
+    );
+  }
+
   /// Server-authoritative state vocabulary, capability and offline policy.
   Future<Map<String, dynamic>> getLifeMapClientContract({
     required String accessToken,

@@ -460,6 +460,31 @@ class FakeApiClient extends ApiClient {
     return _dispatch('getMobileSummary', const {}, accessToken: accessToken);
   }
 
+  @override
+  Future<Map<String, dynamic>> getClinicalPatientRoster({
+    required String accessToken,
+    int limit = 50,
+    int cursor = 0,
+    bool assignedToMe = true,
+  }) {
+    return _dispatch(
+      'getClinicalPatientRoster',
+      {'limit': limit, 'cursor': cursor, 'assignedToMe': assignedToMe},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> getDrugBankStatus({
+    required String accessToken,
+  }) {
+    return _dispatch(
+      'getDrugBankStatus',
+      const {},
+      accessToken: accessToken,
+    );
+  }
+
   // --- PHR -------------------------------------------------------------------
 
   @override

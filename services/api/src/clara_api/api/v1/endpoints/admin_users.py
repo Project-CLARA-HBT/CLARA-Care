@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -10,7 +10,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from clara_api.core.rbac import require_roles
-from clara_api.core.session_security import session_security
 from clara_api.db.models import AdminAuditRecord, User
 from clara_api.db.session import get_db
 
@@ -117,7 +116,7 @@ def list_admin_users(
                 is_email_verified=bool(u.is_email_verified),
                 resource_version=u.resource_version or "1",
                 last_login_at=u.last_login_at,
-                created_at=u.created_at or datetime.now(timezone.utc),
+                created_at=u.created_at or datetime.now(UTC),
             )
             for u in users
         ],
@@ -145,7 +144,7 @@ def get_admin_user(
         is_email_verified=bool(user.is_email_verified),
         resource_version=user.resource_version or "1",
         last_login_at=user.last_login_at,
-        created_at=user.created_at or datetime.now(timezone.utc),
+        created_at=user.created_at or datetime.now(UTC),
     )
 
 
@@ -191,7 +190,7 @@ def update_user_role(
     db.commit()
     db.refresh(user)
 
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
     return MutationReceipt(
         success=True,
         resource_version=user.resource_version,
@@ -207,7 +206,7 @@ def update_user_role(
             is_email_verified=bool(user.is_email_verified),
             resource_version=user.resource_version,
             last_login_at=user.last_login_at,
-            created_at=user.created_at or datetime.now(timezone.utc),
+            created_at=user.created_at or datetime.now(UTC),
         ),
     )
 
@@ -247,7 +246,7 @@ def lock_user_account(
     db.commit()
     db.refresh(user)
 
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
     return MutationReceipt(
         success=True,
         resource_version=user.resource_version,
@@ -263,7 +262,7 @@ def lock_user_account(
             is_email_verified=bool(user.is_email_verified),
             resource_version=user.resource_version,
             last_login_at=user.last_login_at,
-            created_at=user.created_at or datetime.now(timezone.utc),
+            created_at=user.created_at or datetime.now(UTC),
         ),
     )
 
@@ -301,7 +300,7 @@ def unlock_user_account(
     db.commit()
     db.refresh(user)
 
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
     return MutationReceipt(
         success=True,
         resource_version=user.resource_version,
@@ -317,7 +316,7 @@ def unlock_user_account(
             is_email_verified=bool(user.is_email_verified),
             resource_version=user.resource_version,
             last_login_at=user.last_login_at,
-            created_at=user.created_at or datetime.now(timezone.utc),
+            created_at=user.created_at or datetime.now(UTC),
         ),
     )
 
@@ -346,5 +345,5 @@ def revoke_user_sessions(
         "success": True,
         "revoked_sessions_count": 1,
         "user_id": user.id,
-        "revoked_at": datetime.now(timezone.utc).isoformat(),
+        "revoked_at": datetime.now(UTC).isoformat(),
     }

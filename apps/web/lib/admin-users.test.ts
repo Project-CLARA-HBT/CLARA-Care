@@ -1,46 +1,110 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("@/lib/http-client", () => ({
-  default: {
-    get: vi.fn().mockRejectedValue(new Error("Offline fallback")),
-    post: vi.fn().mockRejectedValue(new Error("Offline fallback")),
-    patch: vi.fn().mockRejectedValue(new Error("Offline fallback")),
-    delete: vi.fn().mockRejectedValue(new Error("Offline fallback")),
-  },
-}));
-
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import api from "@/lib/http-client";
 import {
   computeUserStats,
+  getAdminUser,
   getRoleMeta,
   getStatusMeta,
   listAdminUsers,
   lockUserAccount,
-  resetUsersCacheForTesting,
   revokeUserSessions,
   unlockUserAccount,
   updateUserRole,
-  SEED_ADMIN_USERS,
+  type AdminUser,
 } from "./admin-users";
 
-describe("admin-users domain and utility functions", () => {
-  beforeEach(() => {
-    resetUsersCacheForTesting();
-  });
+vi.mock("@/lib/http-client", () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
 
-  afterEach(() => {
-    resetUsersCacheForTesting();
+const mockApi = api as unknown as {
+  get: ReturnType<typeof vi.fn>;
+  post: ReturnType<typeof vi.fn>;
+  patch: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
+};
+
+const sampleUsers: AdminUser[] = [
+  {
+    id: "1",
+    email: "admin@clara-care.vn",
+    fullName: "ThS. Nguyen Long",
+    role: "admin",
+    status: "active",
+    activeSessionsCount: 2,
+    twoFactorEnabled: true,
+    failedLoginAttempts: 0,
+    departmentOrOrg: "Security Ops",
+    phoneMasked: "+84 ••• 019",
+    lastActiveAt: "2026-08-24T00:00:00Z",
+    createdAt: "2026-01-10T08:00:00Z",
+    auditHistory: [],
+  },
+  {
+    id: "2",
+    email: "bs.duc@bvbachmai.vn",
+    fullName: "BS.CKII Tran Duc",
+    role: "doctor",
+    status: "active",
+    activeSessionsCount: 1,
+    twoFactorEnabled: true,
+    failedLoginAttempts: 0,
+    departmentOrOrg: "ICU Bach Mai",
+    phoneMasked: "+84 ••• 358",
+    lastActiveAt: "2026-08-24T00:00:00Z",
+    createdAt: "2026-02-14T09:30:00Z",
+    auditHistory: [],
+  },
+  {
+    id: "3",
+    email: "mai.nguyen@gmail.com",
+    fullName: "Nguyen Thi Mai",
+    role: "normal",
+    status: "locked",
+    activeSessionsCount: 0,
+    twoFactorEnabled: false,
+    failedLoginAttempts: 5,
+    lockReason: "Excessive failed logins",
+    lastActiveAt: "2026-08-22T10:14:00Z",
+    createdAt: "2026-05-19T07:12:00Z",
+    auditHistory: [],
+  },
+  {
+    id: "4",
+    email: "research.quan@hmu.edu.vn",
+    fullName: "PGS.TS Vu Quan",
+    role: "researcher",
+    status: "suspended",
+    activeSessionsCount: 0,
+    twoFactorEnabled: true,
+    failedLoginAttempts: 0,
+    lastActiveAt: "2026-08-20T00:00:00Z",
+    createdAt: "2026-02-28T11:00:00Z",
+    auditHistory: [],
+  },
+];
+
+describe("admin-users domain and client (Spec v5 Section 6.61)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   describe("computeUserStats", () => {
-    it("computes accurate user and session breakdown from seed users", () => {
-      const stats = computeUserStats(SEED_ADMIN_USERS);
-      expect(stats.totalUsers).toBe(SEED_ADMIN_USERS.length);
-      expect(stats.activeUsers).toBeGreaterThan(0);
-      expect(stats.adminCount).toBeGreaterThanOrEqual(1);
-      expect(stats.doctorCount).toBeGreaterThanOrEqual(1);
-      expect(stats.researcherCount).toBeGreaterThanOrEqual(1);
-      expect(stats.normalCount).toBeGreaterThanOrEqual(1);
-      expect(stats.totalActiveSessions).toBeGreaterThanOrEqual(0);
+    it("computes accurate user and session breakdown from sample users", () => {
+      const stats = computeUserStats(sampleUsers);
+      expect(stats.totalUsers).toBe(4);
+      expect(stats.activeUsers).toBe(2);
+      expect(stats.lockedUsers).toBe(2); // 1 locked + 1 suspended
+      expect(stats.adminCount).toBe(1);
+      expect(stats.doctorCount).toBe(1);
+      expect(stats.researcherCount).toBe(1);
+      expect(stats.normalCount).toBe(1);
+      expect(stats.totalActiveSessions).toBe(3);
     });
 
     it("handles empty user array safely", () => {
@@ -59,91 +123,221 @@ describe("admin-users domain and utility functions", () => {
   });
 
   describe("listAdminUsers", () => {
-    it("returns all users when no filter is applied", async () => {
-      const users = await listAdminUsers();
-      expect(users.length).toBe(SEED_ADMIN_USERS.length);
+    it("fetches and maps users from /admin/users endpoint", async () => {
+      mockApi.get.mockResolvedValueOnce({
+        data: {
+          items: [
+            {
+              id: 101,
+              email: "bs.duc@bvbachmai.vn",
+              role: "doctor",
+              full_name: "BS. Tran Duc",
+              status: "active",
+              is_email_verified: true,
+              resource_version: "2",
+              created_at: "2026-02-14T09:30:00Z",
+            },
+          ],
+          total: 1,
+          next_cursor: null,
+        },
+      });
+
+      const users = await listAdminUsers({ role: "doctor", query: "duc" });
+      expect(mockApi.get).toHaveBeenCalledWith("/admin/users", {
+        params: { role: "doctor", query: "duc" },
+      });
+      expect(users.length).toBe(1);
+      expect(users[0].id).toBe("101");
+      expect(users[0].role).toBe("doctor");
+      expect(users[0].fullName).toBe("BS. Tran Duc");
+      expect(users[0].twoFactorEnabled).toBe(true);
     });
 
-    it("filters users by role", async () => {
-      const doctors = await listAdminUsers({ role: "doctor" });
-      expect(doctors.length).toBeGreaterThan(0);
-      expect(doctors.every((u) => u.role === "doctor")).toBe(true);
+    it("fails closed on 403 Forbidden", async () => {
+      mockApi.get.mockRejectedValueOnce(new Error("403 Forbidden: Insufficient permissions"));
+
+      await expect(listAdminUsers()).rejects.toThrow(/403 Forbidden/i);
     });
 
-    it("filters users by status", async () => {
-      const locked = await listAdminUsers({ status: "locked" });
-      expect(locked.length).toBeGreaterThan(0);
-      expect(locked.every((u) => u.status === "locked")).toBe(true);
+    it("fails closed on 500 Internal Server Error", async () => {
+      mockApi.get.mockRejectedValueOnce(new Error("500 Internal Server Error"));
+
+      await expect(listAdminUsers()).rejects.toThrow(/500/);
+    });
+  });
+
+  describe("getAdminUser", () => {
+    it("fetches single user details from server", async () => {
+      mockApi.get.mockResolvedValueOnce({
+        data: {
+          id: 42,
+          email: "user@test.vn",
+          role: "normal",
+          full_name: "Test User",
+          status: "active",
+          resource_version: "1",
+        },
+      });
+
+      const user = await getAdminUser(42);
+      expect(mockApi.get).toHaveBeenCalledWith("/admin/users/42");
+      expect(user.id).toBe("42");
+      expect(user.fullName).toBe("Test User");
     });
 
-    it("filters users by query text matching name or email", async () => {
-      const matches = await listAdminUsers({ query: "bachmai" });
-      expect(matches.length).toBeGreaterThan(0);
-      expect(matches[0].email).toContain("bachmai");
+    it("fails closed when user is not found (404)", async () => {
+      mockApi.get.mockRejectedValueOnce(new Error("USER_NOT_FOUND"));
+
+      await expect(getAdminUser(999)).rejects.toThrow(/USER_NOT_FOUND/);
     });
   });
 
   describe("updateUserRole", () => {
-    it("updates role and appends audit event", async () => {
-      const user = SEED_ADMIN_USERS.find((u) => u.role === "normal")!;
-      const result = await updateUserRole(
-        user.id,
-        "doctor",
-        "Assigned clinical doctor credentials",
-        "Chief Admin",
-      );
+    it("updates role and returns receipt user on HTTP 200", async () => {
+      mockApi.patch.mockResolvedValueOnce({
+        data: {
+          success: true,
+          resource_version: "2",
+          user: {
+            id: 1,
+            email: "user@clara.vn",
+            role: "doctor",
+            full_name: "BS. Test",
+            status: "active",
+            resource_version: "2",
+          },
+        },
+      });
 
-      expect(result.success).toBe(true);
-      expect(result.user.role).toBe("doctor");
-      expect(result.user.auditHistory[0].action).toBe("role_updated");
-      expect(result.user.auditHistory[0].actor).toBe("Chief Admin");
+      const res = await updateUserRole("1", "doctor", "Granted Doctor License", "Admin Leader", "1");
+      expect(mockApi.patch).toHaveBeenCalledWith("/admin/users/1/role", {
+        role: "doctor",
+        reason_code: "Granted Doctor License",
+        expected_resource_version: "1",
+      });
+      expect(res.success).toBe(true);
+      expect(res.user.role).toBe("doctor");
     });
 
-    it("throws error for non-existent user", async () => {
+    it("fails closed on 409 Conflict (LAST_ACTIVE_ADMIN_INVARIANT)", async () => {
+      mockApi.patch.mockRejectedValueOnce(
+        new Error("LAST_ACTIVE_ADMIN_INVARIANT: Cannot demote or lock the last active administrator."),
+      );
+
       await expect(
-        updateUserRole("usr_non_existent", "admin"),
-      ).rejects.toThrow(/not found/i);
+        updateUserRole("1", "normal", "Demoting admin"),
+      ).rejects.toThrow(/LAST_ACTIVE_ADMIN_INVARIANT/);
+    });
+
+    it("fails closed on 409 Conflict (RESOURCE_VERSION_CONFLICT)", async () => {
+      mockApi.patch.mockRejectedValueOnce(
+        new Error("RESOURCE_VERSION_CONFLICT: Expected 1, found 2"),
+      );
+
+      await expect(
+        updateUserRole("1", "doctor", "Update role", "Admin", "1"),
+      ).rejects.toThrow(/RESOURCE_VERSION_CONFLICT/);
+    });
+
+    it("fails closed on 403 Forbidden", async () => {
+      mockApi.patch.mockRejectedValueOnce(new Error("403 Forbidden"));
+
+      await expect(
+        updateUserRole("1", "doctor"),
+      ).rejects.toThrow(/403 Forbidden/);
     });
   });
 
   describe("lockUserAccount and unlockUserAccount", () => {
-    it("locks user account, records reason, and revokes sessions", async () => {
-      const user = SEED_ADMIN_USERS.find((u) => u.status === "active" && u.activeSessionsCount > 0)!;
-      const result = await lockUserAccount(
-        user.id,
-        "Security audit alert",
-        "SecOps",
-      );
+    it("locks user account via POST /admin/users/:id/lock", async () => {
+      mockApi.post.mockResolvedValueOnce({
+        data: {
+          success: true,
+          resource_version: "3",
+          user: {
+            id: 2,
+            email: "user@test.vn",
+            role: "normal",
+            full_name: "Test User",
+            status: "locked",
+            resource_version: "3",
+          },
+        },
+      });
 
-      expect(result.success).toBe(true);
-      expect(result.user.status).toBe("locked");
-      expect(result.user.activeSessionsCount).toBe(0);
-      expect(result.user.lockReason).toBe("Security audit alert");
-      expect(result.user.lockedBy).toBe("SecOps");
+      const res = await lockUserAccount("2", "Security Compromise Investigation", "SecOps");
+      expect(mockApi.post).toHaveBeenCalledWith("/admin/users/2/lock", {
+        reason: "Security Compromise Investigation",
+        expected_resource_version: undefined,
+      });
+      expect(res.success).toBe(true);
+      expect(res.user.status).toBe("locked");
     });
 
-    it("unlocks locked user account and clears lock fields", async () => {
-      const user = SEED_ADMIN_USERS.find((u) => u.status === "locked")!;
-      const result = await unlockUserAccount(user.id, "SecOps Lead");
+    it("fails closed when trying to lock last active admin (409 Conflict)", async () => {
+      mockApi.post.mockRejectedValueOnce(
+        new Error("LAST_ACTIVE_ADMIN_INVARIANT: Cannot demote or lock the last active administrator."),
+      );
 
-      expect(result.success).toBe(true);
-      expect(result.user.status).toBe("active");
-      expect(result.user.lockReason).toBeUndefined();
-      expect(result.user.lockedAt).toBeUndefined();
-      expect(result.user.auditHistory[0].action).toBe("account_unlocked");
+      await expect(
+        lockUserAccount("1", "Emergency lockdown"),
+      ).rejects.toThrow(/LAST_ACTIVE_ADMIN_INVARIANT/);
+    });
+
+    it("unlocks user account via POST /admin/users/:id/unlock", async () => {
+      mockApi.post.mockResolvedValueOnce({
+        data: {
+          success: true,
+          resource_version: "4",
+          user: {
+            id: 3,
+            email: "mai.nguyen@gmail.com",
+            role: "normal",
+            full_name: "Nguyen Thi Mai",
+            status: "active",
+            resource_version: "4",
+          },
+        },
+      });
+
+      const res = await unlockUserAccount("3", "SecOps Lead");
+      expect(mockApi.post).toHaveBeenCalledWith("/admin/users/3/unlock", {
+        reason: "ADMIN_UNLOCK",
+        expected_resource_version: undefined,
+      });
+      expect(res.success).toBe(true);
+      expect(res.user.status).toBe("active");
+    });
+
+    it("fails closed on 500 error during unlock", async () => {
+      mockApi.post.mockRejectedValueOnce(new Error("500 Internal Server Error"));
+
+      await expect(unlockUserAccount("3")).rejects.toThrow(/500/);
     });
   });
 
   describe("revokeUserSessions", () => {
-    it("revokes all active sessions for a user", async () => {
-      const user = SEED_ADMIN_USERS.find((u) => u.activeSessionsCount > 0)!;
-      const initialCount = user.activeSessionsCount;
-      const result = await revokeUserSessions(user.id, "Admin Console");
+    it("revokes all active sessions via POST /admin/users/:id/sessions/revoke", async () => {
+      mockApi.post.mockResolvedValueOnce({
+        data: {
+          success: true,
+          revoked_sessions_count: 3,
+          user_id: 2,
+          revoked_at: "2026-08-24T10:00:00Z",
+        },
+      });
 
-      expect(result.success).toBe(true);
-      expect(result.revokedCount).toBe(initialCount);
-      expect(result.user.activeSessionsCount).toBe(0);
-      expect(result.user.auditHistory[0].action).toBe("sessions_revoked");
+      const res = await revokeUserSessions("2", "Admin Operator");
+      expect(mockApi.post).toHaveBeenCalledWith("/admin/users/2/sessions/revoke");
+      expect(res.success).toBe(true);
+      expect(res.revokedCount).toBe(3);
+    });
+
+    it("fails closed on 500 Server Error during session revocation", async () => {
+      mockApi.post.mockRejectedValueOnce(new Error("Failed to revoke Redis session tokens"));
+
+      await expect(revokeUserSessions("2")).rejects.toThrow(/Redis session tokens/);
     });
   });
 

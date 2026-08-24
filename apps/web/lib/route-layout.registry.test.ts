@@ -1,3 +1,5 @@
+import { readdirSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import {
@@ -59,22 +61,60 @@ const VALID_SHELL_MODES: ShellMode[] = [
 
 const VALID_ROLES: UserRole[] = ["normal", "researcher", "doctor", "admin"];
 
+function scanAppPageRoutes(dir: string, baseDir: string = dir): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const routes: string[] = [];
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      routes.push(...scanAppPageRoutes(fullPath, baseDir));
+    } else if (entry.name === "page.tsx") {
+      const rel = relative(baseDir, fullPath).replaceAll("\\", "/");
+      const dirName = rel.endsWith("/page.tsx")
+        ? rel.slice(0, -"/page.tsx".length)
+        : rel === "page.tsx"
+          ? ""
+          : rel;
+      const segments = dirName
+        ? dirName.split("/").filter((s) => !/^\(.*\)$/.test(s))
+        : [];
+      routes.push("/" + segments.join("/"));
+    }
+  }
+  return routes.sort();
+}
+
 describe("RouteLayoutRegistry", () => {
-  describe("Structural integrity & contract compliance", () => {
-    it("registers exactly 79 routes", () => {
-      expect(ROUTE_LAYOUT_REGISTRY).toHaveLength(79);
+  const appDirectory = resolve(__dirname, "../app");
+  const filesystemRoutes = scanAppPageRoutes(appDirectory);
+  const filesystemRouteSet = new Set(filesystemRoutes);
+
+  describe("Dynamic filesystem coverage & structural integrity", () => {
+    it("achieves 100% dynamic filesystem route coverage without missing or extra routes", () => {
+      expect(filesystemRoutes.length).toBeGreaterThan(0);
+      expect(ROUTE_LAYOUT_REGISTRY).toHaveLength(filesystemRoutes.length);
+
+      const missingFromRegistry = filesystemRoutes.filter(
+        (route) => !ROUTE_LAYOUT_BY_PATH[route],
+      );
+      expect(missingFromRegistry).toEqual([]);
+
+      const extraInRegistry = ROUTE_LAYOUT_REGISTRY.map((r) => r.path).filter(
+        (path) => !filesystemRouteSet.has(path),
+      );
+      expect(extraInRegistry).toEqual([]);
     });
 
-    it("has unique routeIds across all 79 routes", () => {
+    it("has unique routeIds across all registered routes", () => {
       const routeIds = ROUTE_LAYOUT_REGISTRY.map((r) => r.routeId);
       const uniqueRouteIds = new Set(routeIds);
-      expect(uniqueRouteIds.size).toBe(79);
+      expect(uniqueRouteIds.size).toBe(ROUTE_LAYOUT_REGISTRY.length);
     });
 
-    it("has unique paths across all 79 routes", () => {
+    it("has unique paths across all registered routes", () => {
       const paths = ROUTE_LAYOUT_REGISTRY.map((r) => r.path);
       const uniquePaths = new Set(paths);
-      expect(uniquePaths.size).toBe(79);
+      expect(uniquePaths.size).toBe(ROUTE_LAYOUT_REGISTRY.length);
     });
 
     it("ensures every route conforms strictly to RouteLayoutContract", () => {
@@ -106,8 +146,8 @@ describe("RouteLayoutRegistry", () => {
     });
 
     it("ensures indexed lookups match registry entries", () => {
-      expect(Object.keys(ROUTE_LAYOUT_BY_PATH)).toHaveLength(79);
-      expect(Object.keys(ROUTE_LAYOUT_BY_ID)).toHaveLength(79);
+      expect(Object.keys(ROUTE_LAYOUT_BY_PATH)).toHaveLength(ROUTE_LAYOUT_REGISTRY.length);
+      expect(Object.keys(ROUTE_LAYOUT_BY_ID)).toHaveLength(ROUTE_LAYOUT_REGISTRY.length);
 
       for (const route of ROUTE_LAYOUT_REGISTRY) {
         expect(ROUTE_LAYOUT_BY_PATH[route.path]).toBe(route);
@@ -116,7 +156,7 @@ describe("RouteLayoutRegistry", () => {
     });
   });
 
-  describe("Section 5 79-route matrix exact specification mapping", () => {
+  describe("Spec v5 Section 5 conformance mapping", () => {
     const EXPECTED_SPEC_ROUTES: Array<{
       num: number;
       path: string;
@@ -204,11 +244,10 @@ describe("RouteLayoutRegistry", () => {
       { num: 79, path: "/account/data/delete/[step]", shellMode: "UTILITY_FOCUS", layoutArchetype: "Deletion Confirmation" },
     ];
 
-    it("matches all 79 route specifications in exact order", () => {
-      for (let i = 0; i < EXPECTED_SPEC_ROUTES.length; i++) {
-        const spec = EXPECTED_SPEC_ROUTES[i];
-        const registered = ROUTE_LAYOUT_REGISTRY[i];
-
+    it("verifies all 79 Spec v5 Section 5 routes conform to specification", () => {
+      for (const spec of EXPECTED_SPEC_ROUTES) {
+        const registered = ROUTE_LAYOUT_BY_PATH[spec.path];
+        expect(registered).toBeDefined();
         expect(registered.path).toBe(spec.path);
         expect(registered.shellMode).toBe(spec.shellMode);
         expect(registered.layoutArchetype).toBe(spec.layoutArchetype);
@@ -240,17 +279,24 @@ describe("RouteLayoutRegistry", () => {
     it("matches static routes accurately", () => {
       expect(matchRouteLayout("/")?.routeId).toBe("public-landing");
       expect(matchRouteLayout("/today")?.routeId).toBe("personal-today");
+      expect(matchRouteLayout("/home")?.routeId).toBe("personal-home");
+      expect(matchRouteLayout("/ask")?.routeId).toBe("personal-ask");
+      expect(matchRouteLayout("/care")?.routeId).toBe("personal-care");
       expect(matchRouteLayout("/admin/overview")?.routeId).toBe("admin-overview");
     });
 
     it("matches dynamic parameterized routes accurately", () => {
       expect(matchRouteLayout("/share/token-xyz-123")?.routeId).toBe("public-share-token");
+      expect(matchRouteLayout("/chat/share/token-share-456")?.routeId).toBe("public-chat-share-token");
       expect(matchRouteLayout("/phr/shared/token-phr-456")?.routeId).toBe("public-phr-shared-token");
       expect(matchRouteLayout("/today/tasks/task-99")?.routeId).toBe("personal-today-task-detail");
       expect(matchRouteLayout("/lifemap/new/draft-123/goal")?.routeId).toBe("personal-lifemap-stepper");
       expect(matchRouteLayout("/phr/medications")?.routeId).toBe("personal-phr-section");
       expect(matchRouteLayout("/welcome/step-profile")?.routeId).toBe("utility-welcome-step");
       expect(matchRouteLayout("/account/data/delete/confirm")?.routeId).toBe("account-data-delete-step");
+      expect(matchRouteLayout("/visits/visit-789")?.routeId).toBe("personal-visits-detail");
+      expect(matchRouteLayout("/medicines/med-abc")?.routeId).toBe("personal-medicines-detail");
+      expect(matchRouteLayout("/chat/session-def")?.routeId).toBe("chat-session-detail");
 
       expect(matchRouteLayout("/unknown/deep/nested/path/not/found")).toBeUndefined();
     });
@@ -282,11 +328,13 @@ describe("RouteLayoutRegistry", () => {
         publicRoutes.length +
         utilityRoutes.length;
 
-      expect(totalGrouped).toBe(79);
-      expect(publicRoutes).toHaveLength(13);
-      expect(clinicalRoutes).toHaveLength(13); // 43-55
-      expect(researchRoutes).toHaveLength(7);  // 36-42
-      expect(adminRoutes).toHaveLength(16);    // 56-71
+      expect(totalGrouped).toBe(ROUTE_LAYOUT_REGISTRY.length);
+      expect(publicRoutes).toHaveLength(15);
+      expect(personalRoutes).toHaveLength(49);
+      expect(clinicalRoutes).toHaveLength(16);
+      expect(researchRoutes).toHaveLength(7);
+      expect(adminRoutes).toHaveLength(21);
+      expect(utilityRoutes).toHaveLength(6);
     });
 
     it("filters routes by shell mode", () => {
@@ -305,15 +353,27 @@ describe("RouteLayoutRegistry", () => {
 
     it("filters routes by access category", () => {
       const publicAccess = getRoutesByAccess("public");
-      expect(publicAccess).toHaveLength(13);
+      expect(publicAccess).toHaveLength(15);
+
+      const personalAccess = getRoutesByAccess("personal");
+      expect(personalAccess).toHaveLength(49);
+
+      const clinicalAccess = getRoutesByAccess("clinical");
+      expect(clinicalAccess).toHaveLength(16);
+
+      const researchAccess = getRoutesByAccess("research");
+      expect(researchAccess).toHaveLength(7);
 
       const adminAccess = getRoutesByAccess("admin");
-      expect(adminAccess).toHaveLength(16);
+      expect(adminAccess).toHaveLength(21);
+
+      const utilityAccess = getRoutesByAccess("utility");
+      expect(utilityAccess).toHaveLength(6);
     });
 
     it("filters routes by user role correctly", () => {
       const adminRoutes = getRoutesForRole("admin");
-      expect(adminRoutes).toHaveLength(79); // Admin has access to all routes
+      expect(adminRoutes).toHaveLength(ROUTE_LAYOUT_REGISTRY.length); // Admin has access to all routes
 
       const normalRoutes = getRoutesForRole("normal");
       const adminOnlyPaths = getRoutesByAccess("admin").map((r) => r.path);

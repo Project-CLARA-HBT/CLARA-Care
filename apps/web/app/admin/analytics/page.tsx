@@ -69,8 +69,8 @@ type InspectableEntity =
   | { type: "compliance" };
 
 export default function AdminAnalyticsDashboardPage() {
-  const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
-  const [role, setRole] = useState<UserRole | null>(null);
+  const [uiLanguage, setUiLanguage] = useState<UILanguage>(() => getStoredUILanguage());
+  const [role, setRole] = useState<UserRole | null>(() => getRole());
   const [range, setRange] = useState<Required<AnalyticsRange>>(() => defaultAnalyticsRange(30));
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
   const [data, setData] = useState<PlatformAnalytics | null>(null);

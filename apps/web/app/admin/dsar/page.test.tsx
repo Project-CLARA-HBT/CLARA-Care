@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 /**
  * Feature: regulatory-compliance, Requirement 3.6 / Property P7 (RBAC on the
@@ -141,7 +141,7 @@ describe("AdminDsarQueuePage RBAC (Property P7)", () => {
 
     // Click inspect button
     const inspectBtn = screen.getByRole("button", { name: /inspect/i });
-    inspectBtn.click();
+    fireEvent.click(inspectBtn);
 
     // Drawer opens with details
     await waitFor(() => {

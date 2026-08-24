@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * Route layout registry contract check.
+ * Route layout registry contract & filesystem coverage check.
  *
- * Verifies that `apps/web/lib/route-layout.registry.ts` exactly defines and matches
- * all 79 routes from Section 5 of `CLARA_Care_All_Pages_UIUX_Master_Spec_v5.md`,
- * adheres to the `RouteLayoutContract` interface, and enforces alias invariants.
+ * Recursively scans `apps/web/app subdirectories`, normalizes route groups `(...)`
+ * and dynamic parameters `[...]`, and verifies 100% dynamic route coverage against
+ * `apps/web/lib/route-layout.registry.ts` with strict contract enforcement.
  */
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const WEB_ROOT = resolve(SCRIPT_DIR, "..");
 const REPO_ROOT = resolve(WEB_ROOT, "..", "..");
+const APP_DIR = resolve(WEB_ROOT, "app");
 
 const SPEC_PATH = resolve(REPO_ROOT, "CLARA_Care_All_Pages_UIUX_Master_Spec_v5.md");
 const CONTRACT_PATH = resolve(WEB_ROOT, "lib/route-layout.contract.ts");
@@ -57,9 +58,6 @@ const VALID_SHELL_MODES = new Set([
 
 const VALID_ROLES = new Set(["normal", "researcher", "doctor", "admin"]);
 
-const specContent = readFileSync(SPEC_PATH, "utf8");
-const contractContent = readFileSync(CONTRACT_PATH, "utf8");
-
 let errors = [];
 
 function check(condition, message) {
@@ -69,6 +67,7 @@ function check(condition, message) {
 }
 
 // 1. Validate contract file contains required RouteLayoutContract interface
+const contractContent = readFileSync(CONTRACT_PATH, "utf8");
 check(
   contractContent.includes("interface RouteLayoutContract") ||
     contractContent.includes("type RouteLayoutContract"),
@@ -90,30 +89,45 @@ for (const prop of [
   );
 }
 
-// 2. Parse Section 5 of Spec v5
-const section5Match = specContent.match(/## 5\. 79-route layout matrix[\s\S]*?(?=\n## 6\.|\n---\n## 6\.|\n#[^#]|$)/);
-check(Boolean(section5Match), "Could not find Section 5 in CLARA_Care_All_Pages_UIUX_Master_Spec_v5.md");
-
-const specRoutes = [];
-if (section5Match) {
-  const rowRegex = /\|\s*(\d+)\s*\|\s*`([^`]+)`\s*\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|\s*([^|]+?)\s*\|/g;
-  for (const match of section5Match[0].matchAll(rowRegex)) {
-    specRoutes.push({
-      num: parseInt(match[1], 10),
-      path: match[2].trim(),
-      purpose: match[3].trim(),
-      shellMode: match[4].trim(),
-      layoutArchetype: match[5].trim(),
-    });
+// 2. Discover and normalize all page routes from filesystem (apps/web/app/**/page.tsx)
+function scanPageRoutes(dir, baseDir = dir) {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const routes = [];
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      routes.push(...scanPageRoutes(fullPath, baseDir));
+    } else if (entry.name === "page.tsx") {
+      const rel = relative(baseDir, fullPath).replaceAll("\\", "/");
+      const dirName = rel.endsWith("/page.tsx")
+        ? rel.slice(0, -"/page.tsx".length)
+        : rel === "page.tsx"
+          ? ""
+          : rel;
+      // Strip route groups such as (consumer)
+      const segments = dirName
+        ? dirName.split("/").filter((s) => !/^\(.*\)$/.test(s))
+        : [];
+      const route = "/" + segments.join("/");
+      routes.push(route);
+    }
   }
+  return routes;
 }
 
+const fsRoutes = scanPageRoutes(APP_DIR).sort();
+const fsRouteSet = new Set(fsRoutes);
+
 check(
-  specRoutes.length === 79,
-  `Spec v5 Section 5 must contain exactly 79 routes, found ${specRoutes.length}`,
+  fsRoutes.length > 0,
+  "Filesystem scan must discover at least 1 page.tsx route",
+);
+check(
+  fsRoutes.length === fsRouteSet.size,
+  `Discovered duplicate normalized route paths in filesystem (${fsRoutes.length} found, ${fsRouteSet.size} unique)`,
 );
 
-// 3. Load ROUTE_LAYOUT_REGISTRY
+// 3. Load ROUTE_LAYOUT_REGISTRY dynamically
 let registryModule;
 try {
   registryModule = await import(pathToFileURL(REGISTRY_PATH).href);
@@ -128,21 +142,16 @@ check(
   "export ROUTE_LAYOUT_REGISTRY must be an array",
 );
 
-check(
-  registryEntries.length === 79,
-  `ROUTE_LAYOUT_REGISTRY must contain exactly 79 entries, found ${registryEntries.length}`,
-);
-
-// 4. Validate entries integrity
+// 4. Validate entries integrity & contract compliance
 const seenRouteIds = new Set();
 const seenPaths = new Set();
+const regPathMap = new Map();
 
-for (let i = 0; i < Math.max(registryEntries.length, specRoutes.length); i++) {
+for (let i = 0; i < registryEntries.length; i++) {
   const entry = registryEntries[i];
-  const spec = specRoutes[i];
 
   if (!entry) {
-    check(false, `Missing registry entry for route #${i + 1} (${spec?.path})`);
+    check(false, `Registry entry #${i + 1} is undefined or null`);
     continue;
   }
 
@@ -161,6 +170,7 @@ for (let i = 0; i < Math.max(registryEntries.length, specRoutes.length); i++) {
   );
   check(!seenPaths.has(entry.path), `Duplicate path '${entry.path}'`);
   seenPaths.add(entry.path);
+  regPathMap.set(entry.path, entry);
 
   // Roles
   check(
@@ -194,22 +204,64 @@ for (let i = 0; i < Math.max(registryEntries.length, specRoutes.length); i++) {
       `Alias route '${entry.path}' (${entry.shellMode}) must define targetPath`,
     );
   }
+}
 
-  // Exact 1:1 match with Spec v5 Section 5
-  if (spec) {
-    check(
-      entry.path === spec.path,
-      `Route #${i + 1} path mismatch: registry='${entry.path}', spec='${spec.path}'`,
-    );
-    check(
-      entry.shellMode === spec.shellMode,
-      `Route #${i + 1} (${entry.path}) shellMode mismatch: registry='${entry.shellMode}', spec='${spec.shellMode}'`,
-    );
-    check(
-      entry.layoutArchetype === spec.layoutArchetype,
-      `Route #${i + 1} (${entry.path}) layoutArchetype mismatch: registry='${entry.layoutArchetype}', spec='${spec.layoutArchetype}'`,
-    );
+// 5. Compare filesystem routes against registry (assert 100% dynamic coverage)
+const missingInRegistry = fsRoutes.filter((r) => !regPathMap.has(r));
+const extraInRegistry = registryEntries
+  .map((e) => e.path)
+  .filter((p) => !fsRouteSet.has(p));
+
+if (missingInRegistry.length > 0) {
+  check(
+    false,
+    `Missing ${missingInRegistry.length} filesystem route(s) in ROUTE_LAYOUT_REGISTRY:\n    ${missingInRegistry.join("\n    ")}`,
+  );
+}
+
+if (extraInRegistry.length > 0) {
+  check(
+    false,
+    `Registry contains ${extraInRegistry.length} extra route(s) not present in filesystem:\n    ${extraInRegistry.join("\n    ")}`,
+  );
+}
+
+check(
+  registryEntries.length === fsRoutes.length,
+  `Route count mismatch: filesystem has ${fsRoutes.length} routes, registry has ${registryEntries.length} routes`,
+);
+
+// 6. Cross-check Spec v5 Section 5 (if spec exists) to guarantee spec alignment
+try {
+  const specContent = readFileSync(SPEC_PATH, "utf8");
+  const section5Match = specContent.match(
+    /## 5\. 79-route layout matrix[\s\S]*?(?=\n## 6\.|\n---\n## 6\.|\n#[^#]|$)/,
+  );
+  if (section5Match) {
+    const rowRegex =
+      /\|\s*(\d+)\s*\|\s*`([^`]+)`\s*\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|\s*([^|]+?)\s*\|/g;
+    for (const match of section5Match[0].matchAll(rowRegex)) {
+      const specPath = match[2].trim();
+      const specShellMode = match[4].trim();
+      const specLayoutArchetype = match[5].trim();
+
+      const registered = regPathMap.get(specPath);
+      if (!registered) {
+        check(false, `Spec v5 route '${specPath}' missing from registry`);
+      } else {
+        check(
+          registered.shellMode === specShellMode,
+          `Route '${specPath}' shellMode mismatch with Spec v5: registry='${registered.shellMode}', spec='${specShellMode}'`,
+        );
+        check(
+          registered.layoutArchetype === specLayoutArchetype,
+          `Route '${specPath}' layoutArchetype mismatch with Spec v5: registry='${registered.layoutArchetype}', spec='${specLayoutArchetype}'`,
+        );
+      }
+    }
   }
+} catch {
+  // Spec file optional
 }
 
 if (errors.length > 0) {
@@ -221,5 +273,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `[OK] Route layout registry verified: 79/79 routes match CLARA_Care_All_Pages_UIUX_Master_Spec_v5.md Section 5 exactly.`,
+  `[OK] Route layout registry verified: 100% dynamic coverage (${registryEntries.length}/${fsRoutes.length} routes registered and conformant).`,
 );

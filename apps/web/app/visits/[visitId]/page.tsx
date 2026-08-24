@@ -28,152 +28,6 @@ import {
   type VisitPrescription,
 } from "@/lib/visit-family";
 
-const FALLBACK_VISIT_DETAILS: Record<string, Partial<Visit>> = {
-  default: {
-    id: "visit-sample",
-    title: "Tái khám Tim mạch & Tăng huyết áp định kỳ",
-    goal: "Đánh giá hiệu quả thuốc hạ áp, theo dõi triệu chứng đau ngực và kiểm tra kết quả xét nghiệm sinh hóa máu.",
-    visit_type: "Khám chuyên khoa Tim mạch",
-    scheduled_at: new Date().toISOString(),
-    status: "completed",
-    doctor_name: "BSCKII. Nguyễn Văn An",
-    specialty: "Tim mạch can thiệp",
-    facility_name: "Bệnh viện Đại học Y Dược TP.HCM",
-    location: "Phòng khám 204 - Khu B",
-    prep_status: "completed",
-    clinician_notes:
-      "Bệnh nhân hợp tác tốt, huyết áp kiểm soát ổn định (130/80 mmHg). Hướng dẫn giảm muối và duy trì tập thể dục 30 phút mỗi ngày.",
-    soap_note: {
-      subjective:
-        "Bệnh nhân 58 tuổi, tái khám tăng huyết áp. Khai có cảm giác hồi hộp thoáng qua khi leo cầu thang 3 tầng tuần trước, không đau ngực dữ dội, không khó thở về đêm. Tuân thủ uống Amlodipine đều đặn mỗi sáng.",
-      objective:
-        "Sinh hiệu: HA: 130/80 mmHg, Mạch: 74 lần/phút, SpO2: 98%, BMI: 23.4. Khám tim: T1, T2 đều rõ, không âm thổi bệnh lý. Khám phổi: Âm phế bào êm dịu 2 phế trường, không rale. Điện tâm đồ (ECG): Nhịp xoang đều, trục trung gian, không thiếu máu cục bộ cấp.",
-      assessment:
-        "1. Tăng huyết áp vô căn độ 1 (ICD-10: I10) - Kiểm soát tốt.\n2. Rối loạn lipid máu hỗn hợp (ICD-10: E78.2) - Đang điều trị Statin.\n3. Cơn hồi hộp nhẹ khi gắng sức - Nghi do thể lực chưa thích nghi, loại trừ hội chứng vành cấp.",
-      plan:
-        "1. Tiếp tục duy trì Amlodipine 5mg: 1 viên uống sáng sau ăn.\n2. Bổ sung Atorvastatin 10mg: 1 viên uống tối trước khi ngủ.\n3. Kê toa 30 ngày và hẹn tái khám định kỳ sau 4 tuần.\n4. Làm xét nghiệm Lipid máu, Men gan (AST/ALT), Creatinine trước lần khám sau 2 ngày.\n5. Dặn dò bệnh nhân đến cấp cứu ngay nếu đau thắt ngực lan ra cánh tay trái hoặc khó thở.",
-      icd10_codes: [
-        { code: "I10", label: "Tăng huyết áp vô căn (nguyên phát)" },
-        { code: "E78.2", label: "Rối loạn lipid máu hỗn hợp" },
-      ],
-      clinician_name: "BSCKII. Nguyễn Văn An (Mã CCHN: 014829/HCM-CCHN)",
-      signed_at: new Date().toISOString(),
-    },
-    prescriptions: [
-      {
-        id: "rx-1",
-        name: "Amlodipine Besylate 5mg",
-        dosage: "1 viên/ngày (Sáng)",
-        instruction: "Uống sau bữa ăn sáng lúc 7:00",
-        reconciliation_status: "continued",
-      },
-      {
-        id: "rx-2",
-        name: "Atorvastatin 10mg",
-        dosage: "1 viên/ngày (Tối)",
-        instruction: "Uống trước khi đi ngủ",
-        reconciliation_status: "new",
-      },
-      {
-        id: "rx-3",
-        name: "Metformin 500mg",
-        dosage: "1 viên x 2 lần/ngày",
-        instruction: "Uống sau ăn sáng và tối",
-        reconciliation_status: "adjusted",
-      },
-      {
-        id: "rx-4",
-        name: "Paracetamol 500mg",
-        dosage: "1 viên khi đau",
-        instruction: "Đã ngưng do triệu chứng đau đầu đã hết",
-        reconciliation_status: "discontinued",
-      },
-    ],
-    lab_orders: [
-      {
-        id: "lab-1",
-        title: "Bộ mỡ máu toàn phần (Lipid Panel)",
-        status: "completed",
-        result_summary: "Cholesterol: 4.8 mmol/L | LDL-C: 2.6 mmol/L (Mục tiêu đạt)",
-      },
-      {
-        id: "lab-2",
-        title: "Đo chức năng thận & Điện giải đồ (Creatinine, eGFR, Na+, K+, Cl-)",
-        status: "completed",
-        result_summary: "eGFR: 88 mL/min/1.73m² (Bình thường)",
-      },
-      {
-        id: "lab-3",
-        title: "Điện tâm đồ gắng sức / Siêu âm Doppler tim màu",
-        status: "completed",
-        result_summary: "Chức năng tâm thu thất trái EF 62%, không rối loạn vận động vùng",
-      },
-    ],
-    documents: [
-      {
-        id: "doc-1",
-        title: "Toa thuốc điện tử & Hướng dẫn điều trị số #RX-202608-019",
-        document_kind: "prescription",
-        media_type: "application/pdf",
-        status: "verified",
-        content_digest: "sha256-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        metadata: { provider: "BV Đại học Y Dược", signature: "verified" },
-        text_content: "Đơn thuốc điều trị ngoại trú: Amlodipine 5mg, Atorvastatin 10mg. Bác sĩ An ký duyệt.",
-        provenance: { source: "ehr_integration" },
-        withdrawn_at: null,
-        deleted_at: null,
-      },
-      {
-        id: "doc-2",
-        title: "Phiếu kết quả xét nghiệm sinh hóa huyết học",
-        document_kind: "lab_report",
-        media_type: "application/pdf",
-        status: "verified",
-        content_digest: "sha256-4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a",
-        metadata: { lab_id: "LAB-9921" },
-        text_content: "Glucose đói: 5.6 mmol/L, HbA1c: 6.2%, AST: 24 U/L, ALT: 28 U/L.",
-        provenance: { source: "hospital_lab" },
-        withdrawn_at: null,
-        deleted_at: null,
-      },
-    ],
-    follow_up_tasks: [
-      {
-        id: "task-1",
-        title: "Đo và ghi nhận huyết áp tại nhà 2 lần/ngày (Sáng 7h, Tối 19h)",
-        due_date: new Date(Date.now() + 86400000 * 7).toISOString(),
-        completed: false,
-        priority: "high",
-      },
-      {
-        id: "task-2",
-        title: "Uống thuốc Atorvastatin 10mg vào buổi tối trước khi đi ngủ",
-        due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
-        completed: true,
-        priority: "routine",
-      },
-      {
-        id: "task-3",
-        title: "Xét nghiệm máu kiểm tra men gan & mỡ máu trước ngày tái khám 2 ngày",
-        due_date: new Date(Date.now() + 86400000 * 26).toISOString(),
-        completed: false,
-        priority: "high",
-      },
-      {
-        id: "task-4",
-        title: "Tái khám Tim mạch định kỳ lần sau (Phòng khám 204)",
-        due_date: new Date(Date.now() + 86400000 * 28).toISOString(),
-        completed: false,
-        priority: "routine",
-      },
-    ],
-    questions: [
-      "Huyết áp buổi sáng ổn định thì có thể ngưng thuốc được không? -> Bác sĩ giải thích: Tăng huyết áp mạn tính cần uống thuốc duy trì đều đặn để phòng ngừa đột quỵ, không tự ý ngưng.",
-      "Triệu chứng hồi hộp khi leo cầu thang có nguy hiểm không? -> Bác sĩ kết luận: Do phản xạ thể lực gắng sức, ECG bình thường, cần tập thể dục nhẹ nhàng đều đặn.",
-    ],
-  },
-};
-
 function getReconciliationTone(status?: string): "ok" | "brand" | "warn" | "danger" | "neutral" {
   switch (status) {
     case "new":
@@ -245,57 +99,32 @@ function VisitDetailReaderStream() {
     setLoading(true);
     setError("");
     try {
-      let loadedVisit: Visit | null = null;
-      try {
-        loadedVisit = await getVisit(visitId);
-      } catch {
-        // Fallback gracefully for mock/preview data
-      }
-
-      const defaultData = FALLBACK_VISIT_DETAILS[visitId] || FALLBACK_VISIT_DETAILS.default;
-
-      const mergedVisit: Visit = {
-        id: loadedVisit?.id || visitId,
-        title: loadedVisit?.title || defaultData.title || (isEn ? "Clinical Consultation Visit" : "Buổi khám lâm sàng"),
-        goal: loadedVisit?.goal || defaultData.goal || "",
-        visit_type: loadedVisit?.visit_type || defaultData.visit_type || "Khám chuyên khoa",
-        scheduled_at: loadedVisit?.scheduled_at || defaultData.scheduled_at || new Date().toISOString(),
-        status: loadedVisit?.status || defaultData.status || "completed",
-        doctor_name: loadedVisit?.doctor_name || defaultData.doctor_name,
-        specialty: loadedVisit?.specialty || defaultData.specialty,
-        facility_name: loadedVisit?.facility_name || defaultData.facility_name,
-        location: loadedVisit?.location || defaultData.location,
-        prep_status: loadedVisit?.prep_status || defaultData.prep_status || "completed",
-        clinician_notes: loadedVisit?.clinician_notes || defaultData.clinician_notes,
-        soap_note: loadedVisit?.soap_note || defaultData.soap_note,
-        prescriptions: loadedVisit?.prescriptions || defaultData.prescriptions || [],
-        lab_orders: loadedVisit?.lab_orders || defaultData.lab_orders || [],
-        questions: loadedVisit?.questions || defaultData.questions || [],
-      };
-
-      setVisit(mergedVisit);
-      setTasks(defaultData.follow_up_tasks || []);
+      const loadedVisit = await getVisit(visitId);
+      setVisit(loadedVisit);
+      setTasks(loadedVisit.follow_up_tasks || []);
 
       let loadedDocs: VisitDocument[] = [];
       try {
-        loadedDocs = await listVisitDocuments(mergedVisit.id);
+        loadedDocs = await listVisitDocuments(loadedVisit.id);
       } catch {
-        // Fallback
+        loadedDocs = [];
       }
 
       const combined = [
-        ...(loadedVisit?.documents || []),
+        ...(loadedVisit.documents || []),
         ...loadedDocs,
-        ...(defaultData.documents || []),
       ];
       const unique = Array.from(new Map(combined.map((d) => [d.id, d])).values());
       setDocuments(unique);
     } catch (cause) {
+      setVisit(null);
+      setDocuments([]);
+      setTasks([]);
       setError(safeUserFacingError(cause, copy("visits.loadError")));
     } finally {
       setLoading(false);
     }
-  }, [copy, isEn, visitId]);
+  }, [copy, visitId]);
 
   useEffect(() => {
     void load();
@@ -312,9 +141,8 @@ function VisitDetailReaderStream() {
         await grantVisitScribeConsent(visit.id);
         setScribeConsented(true);
       }
-    } catch {
-      // Toggle local state for preview resilience
-      setScribeConsented((prev) => !prev);
+    } catch (cause) {
+      setError(safeUserFacingError(cause, copy("visits.scribeConsentError")));
     } finally {
       setSavingConsent(false);
     }
@@ -341,25 +169,8 @@ function VisitDetailReaderStream() {
       setNewDocTitle("");
       setNewDocContent("");
       setAddDocModalOpen(false);
-    } catch {
-      // Local fallback append
-      const fallbackDoc: VisitDocument = {
-        id: `doc-${Date.now()}`,
-        title: newDocTitle.trim(),
-        document_kind: "user_upload",
-        media_type: "text/plain",
-        status: "verified",
-        content_digest: `sha256-${Date.now()}`,
-        metadata: {},
-        text_content: newDocContent.trim(),
-        provenance: { source: "manual_entry" },
-        withdrawn_at: null,
-        deleted_at: null,
-      };
-      setDocuments((prev) => [fallbackDoc, ...prev]);
-      setNewDocTitle("");
-      setNewDocContent("");
-      setAddDocModalOpen(false);
+    } catch (cause) {
+      setError(safeUserFacingError(cause, copy("visits.documentSaveError")));
     } finally {
       setAddingDoc(false);
     }
@@ -369,10 +180,10 @@ function VisitDetailReaderStream() {
     if (!visit) return;
     try {
       await deleteVisitDocument(visit.id, docId, "owner_requested");
-    } catch {
-      // Optimistic removal
+      setDocuments((prev) => prev.filter((d) => d.id !== docId));
+    } catch (cause) {
+      setError(safeUserFacingError(cause, copy("visits.documentSaveError")));
     }
-    setDocuments((prev) => prev.filter((d) => d.id !== docId));
   };
 
   const copyShareLink = async () => {
@@ -408,12 +219,14 @@ function VisitDetailReaderStream() {
           <Icon name="arrow-left" size="0.9rem" />
           <span>{copy("visitDetail.backToVisits")}</span>
         </Link>
-        <div className="flex items-center gap-2">
-          <Badge tone="ok">
-            <Icon name="check" size="0.75rem" className="mr-1" />
-            {copy("visitDetail.verifiedEntry")}
-          </Badge>
-        </div>
+        {documents.some((d) => d.status === "verified") ? (
+          <div className="flex items-center gap-2">
+            <Badge tone="ok">
+              <Icon name="check" size="0.75rem" className="mr-1" />
+              {copy("visitDetail.verifiedEntry")}
+            </Badge>
+          </div>
+        ) : null}
       </nav>
 
       {/* Error alert */}
@@ -800,7 +613,15 @@ function VisitDetailReaderStream() {
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <Icon name="clinical-notes" size="1rem" className="text-[var(--text-brand)] shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-[var(--text-primary)] truncate">{doc.title}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-[var(--text-primary)] truncate">{doc.title}</p>
+                            {doc.status === "verified" ? (
+                              <Badge tone="ok" className="shrink-0 text-[10px] py-0 px-1.5">
+                                <Icon name="check" size="0.65rem" className="mr-0.5" />
+                                {isEn ? "Verified" : "Đã xác thực"}
+                              </Badge>
+                            ) : null}
+                          </div>
                           <p className="text-[11px] text-[var(--text-muted)]">{doc.media_type}</p>
                         </div>
                       </div>

@@ -51,6 +51,7 @@ export interface FeatureFlagExperiment {
   isSafetyInvariant?: boolean; // Under ANA-005: locked, cannot be disabled
   variants?: ExperimentVariant[];
   metrics?: ExperimentMetrics;
+  resourceVersion?: string;
   createdAt: string;
   updatedAt: string;
   updatedBy: string;
@@ -64,6 +65,20 @@ export interface ExperimentStats {
   safetyInvariants: number;
 }
 
+export interface CreateExperimentPayload {
+  key: string;
+  name: string;
+  nameVi?: string;
+  description?: string;
+  descriptionVi?: string;
+  category?: ExperimentCategory;
+  rolloutPercentage?: number;
+  targetRoles?: UserRole[];
+  targetCohorts?: string[];
+  safetyOwner?: string;
+  isSafetyInvariant?: boolean;
+}
+
 export const AVAILABLE_COHORTS = [
   { id: "beta_testers", labelVi: "Nhóm Beta Testers", labelEn: "Beta Testers" },
   { id: "internal_clinicians", labelVi: "Bác sĩ Nội bộ CLARA", labelEn: "Internal Clinicians" },
@@ -73,342 +88,162 @@ export const AVAILABLE_COHORTS = [
   { id: "canary_nodes", labelVi: "Hạ tầng Node Thử nghiệm", labelEn: "Canary Nodes" },
 ];
 
-export const DEFAULT_EXPERIMENTS: FeatureFlagExperiment[] = [
-  {
-    id: "exp-graphrag",
-    key: "rag_graphrag_pipeline",
-    name: "GraphRAG Multi-Hop Knowledge Retrieval",
-    nameVi: "Truy xuất Đồ thị Tri thức Đa bước GraphRAG",
-    description: "Multi-hop knowledge graph expansion for complex clinical inquiries across medical literature.",
-    descriptionVi: "Mở rộng đồ thị tri thức đa bước cho các câu hỏi lâm sàng phức tạp dựa trên y văn.",
-    category: "ai_systems",
-    status: "gradual_rollout",
-    rolloutPercentage: 35,
-    targetRoles: ["admin", "doctor", "researcher"],
-    targetCohorts: ["beta_testers", "vietnam_hospitals"],
-    matchMode: "any",
-    killSwitchActive: false,
-    variants: [
-      { id: "treatment-a", name: "Multi-Hop Triplet Graph", weight: 35, description: "Full entity relation extraction" },
-      { id: "control", name: "Standard Dense Vector", weight: 65, description: "Standard dense embedding retrieval" },
-    ],
-    metrics: {
-      totalEvaluations: 14250,
-      treatmentImpressions: 4980,
-      controlImpressions: 9270,
-      errorRate: 0.008,
-      latencyP95Ms: 412,
-    },
-    createdAt: "2026-03-01T08:00:00Z",
-    updatedAt: "2026-04-10T14:30:00Z",
-    updatedBy: "lead-engineer@clara.vn",
-  },
-  {
-    id: "exp-nli-v2",
-    key: "nli_deep_verifier_v2",
-    name: "NLI Deep Claim Verification v2",
-    nameVi: "Kiểm chứng Luận điểm NLI Chuyên sâu v2",
-    description: "Secondary NLI cross-encoder model scoring fine-grained claim-evidence contradiction.",
-    descriptionVi: "Mô hình NLI cross-encoder tầng 2 chấm điểm mâu thuẫn giữa luận điểm và bằng chứng.",
-    category: "ai_systems",
-    status: "active",
-    rolloutPercentage: 100,
-    targetRoles: ["admin", "doctor", "researcher", "normal"],
-    targetCohorts: ["general_users"],
-    matchMode: "any",
-    killSwitchActive: false,
-    metrics: {
-      totalEvaluations: 48920,
-      treatmentImpressions: 48920,
-      controlImpressions: 0,
-      errorRate: 0.002,
-      latencyP95Ms: 185,
-    },
-    createdAt: "2026-02-15T09:00:00Z",
-    updatedAt: "2026-04-05T11:20:00Z",
-    updatedBy: "ai-safety@clara.vn",
-  },
-  {
-    id: "exp-scribe-filter",
-    key: "scribe_ambient_noise_filter",
-    name: "Scribe Ambient Clinical Noise Filter",
-    nameVi: "Bộ lọc Tiếng ồn Môi trường Lâm sàng Scribe",
-    description: "Neural acoustic noise suppression for hospital ambient recording environments.",
-    descriptionVi: "Khử nhiễu âm học thần kinh cho môi trường ghi âm hội chẩn tại bệnh viện.",
-    category: "clinical",
-    status: "gradual_rollout",
-    rolloutPercentage: 50,
-    targetRoles: ["doctor", "admin"],
-    targetCohorts: ["internal_clinicians", "vietnam_hospitals"],
-    matchMode: "all",
-    killSwitchActive: false,
-    variants: [
-      { id: "treatment", name: "Spectral Gate + RNN", weight: 50, description: "Real-time acoustic gating" },
-      { id: "control", name: "Raw Audio Pass", weight: 50, description: "Direct Whisper ASR input" },
-    ],
-    metrics: {
-      totalEvaluations: 3840,
-      treatmentImpressions: 1920,
-      controlImpressions: 1920,
-      errorRate: 0.012,
-      latencyP95Ms: 290,
-    },
-    createdAt: "2026-03-20T10:00:00Z",
-    updatedAt: "2026-04-12T16:45:00Z",
-    updatedBy: "scribe-team@clara.vn",
-  },
-  {
-    id: "exp-council-consensus",
-    key: "council_multi_agent_consensus",
-    name: "Council Multi-Agent Consensus Protocol",
-    nameVi: "Giao thức Đồng thuận Hội đồng Đa Chuyên gia",
-    description: "Parallel multi-specialist debate loop for high-complexity diagnostic synthesis.",
-    descriptionVi: "Vòng tranh biện song song giữa nhiều chuyên gia cho ca bệnh phức tạp.",
-    category: "clinical",
-    status: "paused",
-    rolloutPercentage: 10,
-    targetRoles: ["doctor", "admin"],
-    targetCohorts: ["internal_clinicians"],
-    matchMode: "all",
-    killSwitchActive: false,
-    metrics: {
-      totalEvaluations: 820,
-      treatmentImpressions: 82,
-      controlImpressions: 738,
-      errorRate: 0.024,
-      latencyP95Ms: 1450,
-    },
-    createdAt: "2026-03-10T12:00:00Z",
-    updatedAt: "2026-04-08T09:15:00Z",
-    updatedBy: "council-lead@clara.vn",
-  },
-  {
-    id: "exp-lifemap-reminders",
-    key: "lifemap_predictive_adherence",
-    name: "LifeMap Predictive Adherence Engine",
-    nameVi: "Động cơ Dự đoán Tuân thủ Liệu trình LifeMap",
-    description: "Adaptive notification scheduler predicting medication refill and dosage adherence.",
-    descriptionVi: "Bộ lập lịch nhắc nhở thích ứng dự đoán thời điểm uống thuốc và mua thêm thuốc.",
-    category: "consumer",
-    status: "gradual_rollout",
-    rolloutPercentage: 25,
-    targetRoles: ["normal", "admin"],
-    targetCohorts: ["beta_testers", "mobile_canary"],
-    matchMode: "any",
-    killSwitchActive: false,
-    metrics: {
-      totalEvaluations: 8900,
-      treatmentImpressions: 2225,
-      controlImpressions: 6675,
-      errorRate: 0.005,
-      latencyP95Ms: 85,
-    },
-    createdAt: "2026-03-25T14:00:00Z",
-    updatedAt: "2026-04-14T10:00:00Z",
-    updatedBy: "phr-platform@clara.vn",
-  },
-  {
-    id: "exp-ocr-normalization",
-    key: "phr_smart_ocr_normalization",
-    name: "PHR Smart Drug Label OCR Normalization",
-    nameVi: "Chuẩn hóa Nhãn thuốc OCR Thông minh PHR",
-    description: "Vietnamese pharmacist shorthand extraction and dosage frequency parser.",
-    descriptionVi: "Trích xuất chữ viết tắt toa thuốc tiếng Việt và phân tích tần suất liều dùng.",
-    category: "consumer",
-    status: "active",
-    rolloutPercentage: 80,
-    targetRoles: ["normal", "doctor", "admin"],
-    targetCohorts: ["general_users"],
-    matchMode: "any",
-    killSwitchActive: false,
-    metrics: {
-      totalEvaluations: 16400,
-      treatmentImpressions: 13120,
-      controlImpressions: 3280,
-      errorRate: 0.015,
-      latencyP95Ms: 560,
-    },
-    createdAt: "2026-02-28T11:00:00Z",
-    updatedAt: "2026-04-11T13:20:00Z",
-    updatedBy: "vision-team@clara.vn",
-  },
-  {
-    id: "exp-db-pool",
-    key: "platform_dynamic_connection_pool",
-    name: "Platform Dynamic Async DB Pool",
-    nameVi: "Bộ gom Kết nối Cơ sở Dữ liệu Động",
-    description: "Adaptive connection burst allocation for PostgreSQL during peak clinical hours.",
-    descriptionVi: "Phân bổ kết nối PostgreSQL linh hoạt theo tải giờ cao điểm lâm sàng.",
-    category: "platform",
-    status: "inactive",
-    rolloutPercentage: 0,
-    targetRoles: ["admin"],
-    targetCohorts: ["canary_nodes"],
-    matchMode: "all",
-    killSwitchActive: false,
-    createdAt: "2026-04-01T09:00:00Z",
-    updatedAt: "2026-04-01T09:00:00Z",
-    updatedBy: "infra@clara.vn",
-  },
-  {
-    id: "exp-fides-gate",
-    key: "fides_critical_ddi_blocking",
-    name: "FIDES Critical Drug-DDI Blocking (Safety Invariant)",
-    nameVi: "Khóa Chặn Tương tác Thuốc Nguy hiểm FIDES (Bất biến An toàn)",
-    description: "Regression-locked invariant blocking critical contraindicated drug-drug interactions (ANA-005).",
-    descriptionVi: "Bất biến khóa hồi quy tự động chặn các tương tác thuốc chống chỉ định nghiêm trọng (ANA-005).",
-    category: "safety_invariant",
-    status: "active",
-    rolloutPercentage: 100,
-    targetRoles: ["admin", "doctor", "researcher", "normal"],
-    targetCohorts: ["general_users"],
-    matchMode: "any",
-    killSwitchActive: false,
-    isSafetyInvariant: true,
-    metrics: {
-      totalEvaluations: 65400,
-      treatmentImpressions: 65400,
-      controlImpressions: 0,
-      errorRate: 0.000,
-      latencyP95Ms: 45,
-    },
-    createdAt: "2026-01-01T00:00:00Z",
-    updatedAt: "2026-01-01T00:00:00Z",
-    updatedBy: "safety-board@clara.vn",
-  },
-  {
-    id: "exp-emergency-115",
-    key: "emergency_115_fast_path",
-    name: "Emergency 115 Fast-Path Triage (Safety Invariant)",
-    nameVi: "Điều hướng Cấp cứu 115 Tức thì (Bất biến An toàn)",
-    description: "Deterministic bypass directly presenting 115 escalation for acute medical symptoms (ANA-005).",
-    descriptionVi: "Nhánh điều hướng tất định chuyển thẳng số cấp cứu 115 khi phát hiện triệu chứng nguy kịch.",
-    category: "safety_invariant",
-    status: "active",
-    rolloutPercentage: 100,
-    targetRoles: ["admin", "doctor", "researcher", "normal"],
-    targetCohorts: ["general_users"],
-    matchMode: "any",
-    killSwitchActive: false,
-    isSafetyInvariant: true,
-    metrics: {
-      totalEvaluations: 24300,
-      treatmentImpressions: 24300,
-      controlImpressions: 0,
-      errorRate: 0.000,
-      latencyP95Ms: 12,
-    },
-    createdAt: "2026-01-01T00:00:00Z",
-    updatedAt: "2026-01-01T00:00:00Z",
-    updatedBy: "safety-board@clara.vn",
-  },
-];
-
-let inMemoryExperiments: FeatureFlagExperiment[] = JSON.parse(JSON.stringify(DEFAULT_EXPERIMENTS));
-
-export async function listExperiments(): Promise<FeatureFlagExperiment[]> {
-  try {
-    const response = await api.get<FeatureFlagExperiment[]>("/admin/experiments");
-    if (response.data && Array.isArray(response.data)) {
-      inMemoryExperiments = response.data;
-      return response.data;
-    }
-  } catch {
-    // Fall back to in-memory store for offline/isolated runtime
+export function mapBackendExperimentToFrontend(e: any): FeatureFlagExperiment {
+  if (!e) {
+    throw new Error("Invalid experiment payload from server");
   }
-  return [...inMemoryExperiments];
+
+  const rules = (typeof e.target_rules_json === "object" && e.target_rules_json !== null)
+    ? e.target_rules_json
+    : {};
+
+  const rolloutPercentage = typeof e.rollout_basis_points === "number"
+    ? Math.round(e.rollout_basis_points / 100)
+    : (e.rolloutPercentage ?? 0);
+
+  const isSafetyInvariant = Boolean(
+    e.isSafetyInvariant ??
+      rules.is_safety_invariant ??
+      rules.isSafetyInvariant ??
+      (
+        (typeof e.key === "string" && (e.key === "fides_critical_ddi_blocking" || e.key === "emergency_115_fast_path")) ||
+        rules.category === "safety_invariant" ||
+        e.category === "safety_invariant"
+      )
+  );
+
+  let status: ExperimentStatus = "inactive";
+  if (e.status === "killed") {
+    status = "killed";
+  } else if (e.status === "running") {
+    status = rolloutPercentage === 100 ? "active" : "gradual_rollout";
+  } else if (e.status === "paused" || e.status === "draft") {
+    status = rolloutPercentage > 0 ? "gradual_rollout" : "inactive";
+  } else if (e.status === "active" || e.status === "gradual_rollout" || e.status === "inactive") {
+    status = e.status;
+  } else {
+    status = rolloutPercentage === 100 ? "active" : rolloutPercentage > 0 ? "gradual_rollout" : "inactive";
+  }
+
+  return {
+    id: String(e.id ?? e.key),
+    key: e.key,
+    name: e.name || e.key,
+    nameVi: rules.name_vi || rules.nameVi || e.nameVi || e.name || e.key,
+    description: e.description || "",
+    descriptionVi: rules.description_vi || rules.descriptionVi || e.descriptionVi || e.description || "",
+    category: (rules.category || e.category || (isSafetyInvariant ? "safety_invariant" : "ai_systems")) as ExperimentCategory,
+    status,
+    rolloutPercentage,
+    targetRoles: rules.target_roles || rules.targetRoles || e.targetRoles || ["normal", "doctor", "researcher", "admin"],
+    targetCohorts: rules.target_cohorts || rules.targetCohorts || e.targetCohorts || ["general_users"],
+    matchMode: rules.match_mode || rules.matchMode || e.matchMode || "any",
+    killSwitchActive: e.status === "killed" || Boolean(e.killSwitchActive),
+    killSwitchReason: rules.kill_switch_reason || e.killSwitchReason,
+    killSwitchedAt: rules.kill_switched_at || e.killSwitchedAt,
+    killSwitchedBy: rules.kill_switched_by || e.killSwitchedBy,
+    isSafetyInvariant,
+    variants: rules.variants || e.variants,
+    metrics: rules.metrics || e.metrics,
+    resourceVersion: e.resource_version || e.resourceVersion,
+    createdAt: e.created_at || e.createdAt || new Date().toISOString(),
+    updatedAt: e.updated_at || e.updatedAt || new Date().toISOString(),
+    updatedBy: e.safety_owner || e.updatedBy || "clara-safety",
+  };
+}
+
+export async function listExperiments(statusFilter?: string): Promise<FeatureFlagExperiment[]> {
+  const params: Record<string, string> = {};
+  if (statusFilter && statusFilter !== "all") {
+    params.status = statusFilter;
+  }
+
+  const response = await api.get<any[]>("/admin/experiments", { params });
+  const rawList = Array.isArray(response.data) ? response.data : [];
+  return rawList.map(mapBackendExperimentToFrontend);
+}
+
+export async function createExperiment(
+  payload: CreateExperimentPayload,
+): Promise<FeatureFlagExperiment> {
+  const rolloutBasisPoints = Math.round((payload.rolloutPercentage ?? 0) * 100);
+
+  const response = await api.post<any>("/admin/experiments", {
+    key: payload.key,
+    name: payload.name,
+    description: payload.description || "",
+    rollout_basis_points: rolloutBasisPoints,
+    safety_owner: payload.safetyOwner || "clara-safety",
+    target_rules_json: {
+      name_vi: payload.nameVi,
+      description_vi: payload.descriptionVi,
+      category: payload.category,
+      target_roles: payload.targetRoles,
+      target_cohorts: payload.targetCohorts,
+      is_safety_invariant: payload.isSafetyInvariant,
+    },
+  });
+
+  return mapBackendExperimentToFrontend(response.data);
 }
 
 export async function updateExperiment(
-  id: string,
-  updates: Partial<FeatureFlagExperiment>
+  id: string | number,
+  updates: Partial<FeatureFlagExperiment> & {
+    expectedResourceVersion?: string;
+    reasonCode?: string;
+  },
 ): Promise<FeatureFlagExperiment> {
-  const index = inMemoryExperiments.findIndex((e) => e.id === id);
-  if (index === -1) {
-    throw new Error(`Experiment ${id} not found`);
-  }
-
-  const existing = inMemoryExperiments[index];
-  if (existing.isSafetyInvariant && (updates.rolloutPercentage !== undefined && updates.rolloutPercentage < 100)) {
+  if (updates.isSafetyInvariant && (updates.rolloutPercentage !== undefined && updates.rolloutPercentage < 100)) {
     throw new Error("Safety invariant flags cannot have rollout reduced below 100% (ANA-005).");
   }
-  if (existing.isSafetyInvariant && updates.killSwitchActive === true) {
+  if (updates.isSafetyInvariant && updates.killSwitchActive === true) {
     throw new Error("Safety invariants cannot be kill-switched (ANA-005).");
   }
 
-  const updated: FeatureFlagExperiment = {
-    ...existing,
-    ...updates,
-    updatedAt: new Date().toISOString(),
-  };
+  const rolloutBasisPoints =
+    updates.rolloutPercentage !== undefined
+      ? Math.round(updates.rolloutPercentage * 100)
+      : undefined;
 
-  // Adjust status according to rollout percentage & kill switch
-  if (updated.killSwitchActive) {
-    updated.status = "killed";
-  } else if (updated.rolloutPercentage === 0) {
-    updated.status = "inactive";
-  } else if (updated.rolloutPercentage === 100) {
-    updated.status = "active";
-  } else {
-    updated.status = "gradual_rollout";
-  }
+  const response = await api.patch<any>(
+    `/admin/experiments/${encodeURIComponent(String(id))}/rollout`,
+    {
+      rollout_basis_points: rolloutBasisPoints ?? 0,
+      expected_resource_version: updates.expectedResourceVersion,
+      reason_code: updates.reasonCode || "ADMIN_ROLLOUT_CHANGE",
+    },
+  );
 
-  inMemoryExperiments[index] = updated;
-
-  try {
-    const response = await api.put<FeatureFlagExperiment>(`/admin/experiments/${encodeURIComponent(id)}`, updated);
-    if (response.data) {
-      inMemoryExperiments[index] = response.data;
-      return response.data;
-    }
-  } catch {
-    // Fall back to local memory store
-  }
-
-  return updated;
+  return mapBackendExperimentToFrontend(response.data);
 }
 
 export async function overrideKillSwitch(
-  id: string,
+  id: string | number,
   kill: boolean,
-  reason?: string
+  reason?: string,
+  expectedResourceVersion?: string,
 ): Promise<FeatureFlagExperiment> {
-  const index = inMemoryExperiments.findIndex((e) => e.id === id);
-  if (index === -1) {
-    throw new Error(`Experiment ${id} not found`);
-  }
-
-  const existing = inMemoryExperiments[index];
-  if (existing.isSafetyInvariant) {
-    throw new Error("Cannot override kill switch on locked safety invariant (ANA-005).");
-  }
-
-  const updated: FeatureFlagExperiment = {
-    ...existing,
-    killSwitchActive: kill,
-    killSwitchReason: kill ? reason || "Manual Admin Emergency Kill" : undefined,
-    killSwitchedAt: kill ? new Date().toISOString() : undefined,
-    killSwitchedBy: kill ? "admin@clara.vn" : undefined,
-    status: kill ? "killed" : existing.rolloutPercentage === 100 ? "active" : existing.rolloutPercentage > 0 ? "gradual_rollout" : "inactive",
-    updatedAt: new Date().toISOString(),
-  };
-
-  inMemoryExperiments[index] = updated;
-
-  try {
-    const response = await api.post<FeatureFlagExperiment>(
-      `/admin/experiments/${encodeURIComponent(id)}/kill`,
-      { kill, reason }
+  if (kill) {
+    const response = await api.post<any>(
+      `/admin/experiments/${encodeURIComponent(String(id))}/kill`,
+      {
+        reason: reason || "EMERGENCY_KILL_SWITCH",
+        expected_resource_version: expectedResourceVersion,
+      },
     );
-    if (response.data) {
-      inMemoryExperiments[index] = response.data;
-      return response.data;
-    }
-  } catch {
-    // Fall back to local memory store
+    return mapBackendExperimentToFrontend(response.data);
   }
 
-  return updated;
+  const response = await api.patch<any>(
+    `/admin/experiments/${encodeURIComponent(String(id))}/rollout`,
+    {
+      rollout_basis_points: 0,
+      expected_resource_version: expectedResourceVersion,
+      reason_code: reason || "RESTORE_FROM_KILL_SWITCH",
+    },
+  );
+  return mapBackendExperimentToFrontend(response.data);
 }
 
 export function calculateExperimentStats(experiments: FeatureFlagExperiment[]): ExperimentStats {
@@ -421,9 +256,9 @@ export function calculateExperimentStats(experiments: FeatureFlagExperiment[]): 
     if (exp.isSafetyInvariant) {
       safetyInvariants++;
     }
-    if (exp.killSwitchActive) {
+    if (exp.killSwitchActive || exp.status === "killed") {
       killSwitched++;
-    } else if (exp.rolloutPercentage === 100) {
+    } else if (exp.rolloutPercentage === 100 || exp.status === "active") {
       fullyEnabled++;
     } else if (exp.rolloutPercentage > 0) {
       activeRollouts++;
@@ -437,8 +272,4 @@ export function calculateExperimentStats(experiments: FeatureFlagExperiment[]): 
     killSwitched,
     safetyInvariants,
   };
-}
-
-export function resetInMemoryExperiments(): void {
-  inMemoryExperiments = JSON.parse(JSON.stringify(DEFAULT_EXPERIMENTS));
 }
