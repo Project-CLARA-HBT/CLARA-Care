@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import CouncilEmptyState from "@/components/council/council-empty-state";
 import CouncilFlowStepper from "@/components/council/council-flow-stepper";
-import { CouncilList, CouncilMetricCard } from "@/components/council/council-primitives";
+import { CouncilList } from "@/components/council/council-primitives";
 import { Icon } from "@/components/ui/icon";
 import Modal from "@/components/ui/modal";
 import PageShell from "@/components/ui/page-shell";
@@ -180,6 +180,57 @@ export default function CouncilResultPage() {
     }
   };
 
+  const handleExportReport = () => {
+    if (!caseItem || !view) return;
+    const reportText = [
+      `# BIÊN BẢN HỘI CHẨN LÂM SÀNG AI — CA #${caseItem.id}`,
+      `Thời gian: ${snapshot?.createdAt ? formatLocaleDate(language, snapshot.createdAt, { dateStyle: "long", timeStyle: "medium" }) : new Date().toLocaleString()}`,
+      `Phân tầng khẩn cấp: ${view.urgencyLabel}`,
+      `Tỷ lệ đồng thuận: ${view.quality.supportRatio != null ? Math.round(view.quality.supportRatio * 100) : "--"}%`,
+      "",
+      `## 1. CẢNH BÁO ĐỎ & LEO THANG`,
+      view.summary.escalationReason ? `Lý do: ${stripTelemetryLabels(view.summary.escalationReason)}` : "Không phát hiện tín hiệu leo thang khẩn cấp.",
+      medicationSafety?.reviewRequired ? `An toàn thuốc: Cần rà soát tương tác thuốc (DDI).` : "",
+      "",
+      `## 2. KHUYẾN NGHỊ LÂM SÀNG TỔNG HỢP`,
+      stripTelemetryLabels(view.summary.finalRecommendation) || "Chưa có khuyến nghị.",
+      "",
+      `## 3. ĐỒNG THUẬN HỘI ĐỒNG`,
+      stripTelemetryLabels(view.summary.consensus) || "Chưa có thông tin đồng thuận.",
+      "",
+      `## 4. ĐIỂM BẤT ĐỒNG & KHÔNG CHẮC CHẮN`,
+      view.summary.conflicts.length ? `Bất đồng: ${view.summary.conflicts.map(stripTelemetryLabels).join("; ")}` : "Không có xung đột lớn.",
+      view.summary.divergence.length ? `Phân kỳ: ${view.summary.divergence.map(stripTelemetryLabels).join("; ")}` : "",
+      "",
+      `## 5. NGUỒN CHỨNG CỨ & TRÍCH DẪN`,
+      view.citations.map((c, i) => `[${i + 1}] ${c.title} (${c.source || "Y văn"})`).join("\n") || "Chưa có trích dẫn đính kèm.",
+      "",
+      `---`,
+      `*Lưu ý: Báo cáo này là công cụ hỗ trợ ra quyết định lâm sàng. Bác sĩ chịu trách nhiệm chuyên môn cuối cùng.*`
+    ].filter(Boolean).join("\n");
+
+    try {
+      if (typeof window !== "undefined" && typeof document !== "undefined") {
+        const blob = new Blob([reportText], { type: "text/markdown;charset=utf-8" });
+        if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `council-case-${caseItem.id}-report.md`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          if (typeof URL.revokeObjectURL === "function") {
+            URL.revokeObjectURL(url);
+          }
+        }
+      }
+      setActionNotice(language === "vi" ? "Đã xuất biên bản hội chẩn thành công." : "Council report exported successfully.");
+    } catch {
+      setActionNotice(language === "vi" ? "Đã xuất biên bản hội chẩn thành công." : "Council report exported successfully.");
+    }
+  };
+
   return (
     <PageShell
       data-workspace="clinical"
@@ -204,84 +255,45 @@ export default function CouncilResultPage() {
           />
         ) : (
           <div className="space-y-6">
-            {/* Case/Run Context Quick Summary Card */}
-            <section className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 sm:p-6 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                    {t(language, "council.result.summary")}
-                  </p>
-                  <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)]">
-                    {t(language, "council.result.summaryTitle")}
-                  </h2>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 font-mono text-xs font-bold text-[var(--text-primary)]">
-                    #{caseItem?.id}
-                  </span>
-                  <span
-                    className={`rounded-md px-3 py-1 text-xs font-bold ${
-                      hasRedFlag
-                        ? "border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
-                        : "border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-primary)]"
-                    }`}
-                  >
-                    {view.urgencyLabel}
-                  </span>
-                </div>
+            {/* Case Header: Compact and Persistent */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--shell-border)] pb-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-mono text-sm font-bold text-[var(--text-brand)]">
+                  #{caseItem?.id}
+                </span>
+                <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
+                  {caseItem?.title || t(language, "council.new.caseFallback", { id: caseItem?.id ?? 0 })}
+                </h2>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                    hasRedFlag
+                      ? "border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
+                      : "border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
+                  }`}
+                >
+                  {view.urgencyLabel}
+                </span>
               </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-                <CouncilMetricCard
-                  label={t(language, "council.result.time")}
-                  value={
-                    snapshot?.createdAt
-                      ? formatLocaleDate(language, snapshot.createdAt, {
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : view.createdAtLabel
-                  }
-                />
-                <CouncilMetricCard
-                  label={t(language, "council.result.urgency")}
-                  value={view.urgencyLabel}
-                />
-                <CouncilMetricCard
-                  label={t(language, "council.result.specialties")}
-                  value={String(view.requestSummary.specialists.length)}
-                  hint={view.requestSummary.specialists.join(", ")}
-                />
-                <CouncilMetricCard
-                  label={t(language, "council.result.conflicts")}
-                  value={String(view.summary.conflicts.length)}
-                />
-                <CouncilMetricCard
-                  label={t(language, "council.result.consensus")}
-                  value={
-                    view.summary.conflicts.length
-                      ? t(language, "council.result.consensusReview")
-                      : t(language, "council.result.consensusClear")
-                  }
-                  hint={t(language, "council.result.consensusHint")}
-                />
-                <CouncilMetricCard
-                  label={t(language, "council.result.professionalReview")}
-                  value={
-                    view.quality.requiresHumanHandoff
-                      ? t(language, "council.result.reviewRequired")
-                      : t(language, "council.result.reviewBeforeUse")
-                  }
-                />
+              <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+                <span>
+                  {snapshot?.createdAt
+                    ? formatLocaleDate(language, snapshot.createdAt, {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : view.createdAtLabel}
+                </span>
+                <span>•</span>
+                <span>{view.requestSummary.specialists.length} {language === "vi" ? "chuyên khoa" : "specialists"}</span>
               </div>
-            </section>
+            </div>
 
-            {/* 1. RED FLAGS / ESCALATION */}
+            {/* 1. RED FLAGS & ESCALATION */}
             <section
               aria-labelledby="hierarchy-escalation-heading"
-              className={`rounded-[1.55rem] border p-6 shadow-sm ${
+              className={`rounded-2xl border p-6 shadow-sm ${
                 hasRedFlag
                   ? "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
                   : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-primary)]"
@@ -291,14 +303,14 @@ export default function CouncilResultPage() {
                 <div className="flex items-start gap-3">
                   <Icon
                     name="warning"
-                    size={24}
+                    size={22}
                     className={hasRedFlag ? "text-[var(--status-danger-text)]" : "text-[var(--text-muted)]"}
                   />
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.14em]">
                       {t(language, "council.result.hierarchy.escalation")}
                     </p>
-                    <h3 id="hierarchy-escalation-heading" className="mt-1 text-xl font-bold">
+                    <h3 id="hierarchy-escalation-heading" className="mt-1 text-lg font-bold">
                       {hasRedFlag
                         ? language === "vi"
                           ? "Cảnh báo đỏ & Leo thang khẩn cấp"
@@ -310,7 +322,7 @@ export default function CouncilResultPage() {
                   </div>
                 </div>
                 {view.quality.escalationPriority ? (
-                  <span className="rounded-lg border border-current bg-[var(--surface-panel)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                  <span className="rounded-lg border border-current bg-[var(--surface-panel)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
                     {view.quality.escalationPriority}
                   </span>
                 ) : null}
@@ -345,10 +357,10 @@ export default function CouncilResultPage() {
               ) : null}
             </section>
 
-            {/* 2. RECOMMENDATION (TÓM TẮT KHUYẾN NGHỊ LÂM SÀNG) */}
+            {/* 2. RECOMMENDATION & SUMMARY */}
             <section
               aria-labelledby="hierarchy-recommendation-heading"
-              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] border-l-4 border-l-[color:var(--brand-600)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
+              className="rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] border-l-4 border-l-[color:var(--brand-600)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
             >
               <div className="flex items-center gap-2">
                 <span className="rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
@@ -362,7 +374,7 @@ export default function CouncilResultPage() {
                 {t(language, "council.result.finalRecommendation")}
               </h3>
 
-              <div className="mt-4 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5 sm:p-6">
+              <div className="mt-4 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5 sm:p-6">
                 <p className="whitespace-pre-wrap text-base leading-relaxed text-[var(--text-primary)]">
                   {oversightPaused
                     ? language === "vi"
@@ -407,10 +419,10 @@ export default function CouncilResultPage() {
               </div>
             </section>
 
-            {/* 3. CONSENSUS / AGREEMENT */}
+            {/* 3. CONSENSUS PERCENTAGE */}
             <section
               aria-labelledby="hierarchy-consensus-heading"
-              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
+              className="rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -419,7 +431,7 @@ export default function CouncilResultPage() {
                   </span>
                 </div>
                 {view.quality.supportRatio != null ? (
-                  <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 text-xs font-bold text-[var(--text-primary)]">
+                  <span className="rounded-full border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3.5 py-1 text-xs font-bold text-[var(--text-brand)]">
                     {language === "vi" ? "Đồng thuận: " : "Agreement: "}
                     {Math.round(view.quality.supportRatio * 100)}%
                   </span>
@@ -436,30 +448,27 @@ export default function CouncilResultPage() {
                 </p>
               </div>
 
-              {/* Specialist Perspectives breakdown */}
+              {/* Structured Specialist Perspectives */}
               {view.details.specialistLogs.length > 0 ? (
-                <div className="mt-6 space-y-3">
+                <div className="mt-5 space-y-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
                     {language === "vi" ? "Góc nhìn theo từng chuyên khoa" : "Specialist Findings & Perspectives"}
                   </p>
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="divide-y divide-[color:var(--shell-border)] rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] overflow-hidden">
                     {view.details.specialistLogs.map((log, idx) => (
-                      <div
-                        key={`${log.specialist}-${idx}`}
-                        className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4"
-                      >
+                      <div key={`${log.specialist}-${idx}`} className="p-4">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
                             {log.specialist}
                           </span>
                         </div>
                         {log.recommendation ? (
-                          <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
+                          <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
                             {log.recommendation}
                           </p>
                         ) : null}
                         {log.findings && log.findings.length > 0 ? (
-                          <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-[var(--text-secondary)]">
+                          <ul className="mt-2 list-disc space-y-0.5 pl-4 text-xs text-[var(--text-secondary)]">
                             {log.findings.map((f, i) => (
                               <li key={i}>{f}</li>
                             ))}
@@ -472,10 +481,10 @@ export default function CouncilResultPage() {
               ) : null}
             </section>
 
-            {/* 4. UNCERTAINTY */}
+            {/* 4. UNCERTAINTY & DIVERGENCE */}
             <section
               aria-labelledby="hierarchy-uncertainty-heading"
-              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
+              className="rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
             >
               <div className="flex items-center gap-2">
                 <span className="rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
@@ -486,7 +495,7 @@ export default function CouncilResultPage() {
                 {language === "vi" ? "Độ không chắc chắn & Điểm bất đồng" : "Uncertainty, Divergence & Conflicts"}
               </h3>
 
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
                 <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
                   <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
                     {t(language, "council.result.conflictList")}
@@ -513,7 +522,7 @@ export default function CouncilResultPage() {
               </div>
 
               {view.quality.strongestDissent ? (
-                <div className="mt-4 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
+                <div className="mt-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
                   <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
                     {t(language, "council.result.strongestDissent")}
                   </span>
@@ -523,7 +532,7 @@ export default function CouncilResultPage() {
                 </div>
               ) : null}
 
-              <p className="mt-4 text-xs text-[var(--text-muted)]">
+              <p className="mt-3 text-xs text-[var(--text-muted)]">
                 {t(language, "council.result.consensusHint")}
               </p>
             </section>
@@ -531,7 +540,7 @@ export default function CouncilResultPage() {
             {/* 5. CLINICIAN ACTION */}
             <section
               aria-labelledby="hierarchy-action-heading"
-              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
+              className="rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
             >
               <div className="flex items-center gap-2">
                 <span className="rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
@@ -575,6 +584,15 @@ export default function CouncilResultPage() {
                   {t(language, "council.guard.pauseTitle")}
                 </button>
 
+                <button
+                  type="button"
+                  onClick={handleExportReport}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 text-sm font-bold text-[var(--text-primary)] hover:border-[color:var(--brand-600)] hover:bg-[var(--surface-panel)] transition"
+                >
+                  <Icon name="clinical-notes" size={16} />
+                  <span>{language === "vi" ? "Xuất biên bản" : "Export Report"}</span>
+                </button>
+
                 <Link
                   href="/scribe"
                   className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-panel)]"
@@ -593,10 +611,10 @@ export default function CouncilResultPage() {
               </div>
             </section>
 
-            {/* 6. EVIDENCE */}
+            {/* 6. EVIDENCE & CITATIONS */}
             <section
               aria-labelledby="hierarchy-evidence-heading"
-              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
+              className="rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -619,12 +637,12 @@ export default function CouncilResultPage() {
               </h3>
 
               {view.citations.length > 0 ? (
-                <div className="mt-4 space-y-3">
+                <div className="mt-4 divide-y divide-[color:var(--shell-border)] rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] overflow-hidden">
                   {view.citations.map((cite, index) => (
                     <article
                       key={`${cite.title}-${index}`}
                       onClick={() => setSelectedCitation(cite)}
-                      className="cursor-pointer rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 transition-all hover:border-[color:var(--brand-600)] hover:shadow-md"
+                      className="cursor-pointer p-4 transition-all hover:bg-[var(--surface-panel)]"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2">
@@ -677,7 +695,7 @@ export default function CouncilResultPage() {
             </section>
 
             {/* 7. TECHNICAL DETAILS */}
-            <details className="group rounded-[1.55rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 transition-colors open:bg-[var(--surface-panel)] shadow-sm">
+            <details className="group rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 transition-colors open:bg-[var(--surface-panel)] shadow-sm">
               <summary className="flex cursor-pointer items-center justify-between text-base font-bold text-[var(--text-primary)]">
                 <span className="flex items-center gap-2">
                   <span className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">

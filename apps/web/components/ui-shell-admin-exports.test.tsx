@@ -94,6 +94,8 @@ import ToggleDefault, { Toggle } from "@/components/ui/toggle";
 
 // Test components/shell exports
 import * as ShellIndex from "@/components/shell";
+import * as PreviewContextStripMod from "@/components/shell/preview-context-strip";
+import PreviewContextStripDefault, { PreviewContextStrip } from "@/components/shell/preview-context-strip";
 import * as AdminPreviewBannerMod from "@/components/shell/admin-preview-banner";
 import AdminPreviewBannerDefault, { AdminPreviewBanner } from "@/components/shell/admin-preview-banner";
 import * as ChromeSurfaceMod from "@/components/shell/chrome-surface";
@@ -109,6 +111,8 @@ import CommandPaletteProviderDefault, {
 } from "@/components/shell/command-palette-provider";
 import * as ConsumerLayoutMod from "@/components/shell/consumer-layout";
 import ConsumerLayoutDefault, { ConsumerLayout } from "@/components/shell/consumer-layout";
+import * as WorkspaceDockMod from "@/components/shell/workspace-dock";
+import WorkspaceDockDefault, { WorkspaceDock } from "@/components/shell/workspace-dock";
 import * as FloatingPrimaryDockMod from "@/components/shell/floating-primary-dock";
 import FloatingPrimaryDockDefault, { FloatingPrimaryDock } from "@/components/shell/floating-primary-dock";
 import * as GlobalContextBarMod from "@/components/shell/global-context-bar";
@@ -445,6 +449,13 @@ describe("UI, Shell, and Admin Component Exports Audit (React Error #130 Guard)"
       expect(AdminPreviewBannerMod.default).toBeDefined();
     });
 
+    it("exports PreviewContextStrip", () => {
+      expect(PreviewContextStrip).toBeDefined();
+      expect(PreviewContextStripDefault).toBeDefined();
+      expect(PreviewContextStripMod.PreviewContextStrip).toBeDefined();
+      expect(PreviewContextStripMod.default).toBeDefined();
+    });
+
     it("exports ClaraOrb", () => {
       expect(ClaraOrb).toBeDefined();
       expect(ClaraOrbDefault).toBeDefined();
@@ -481,6 +492,13 @@ describe("UI, Shell, and Admin Component Exports Audit (React Error #130 Guard)"
       expect(ConsumerLayoutDefault).toBeDefined();
       expect(ConsumerLayoutMod.ConsumerLayout).toBeDefined();
       expect(ConsumerLayoutMod.default).toBeDefined();
+    });
+
+    it("exports WorkspaceDock", () => {
+      expect(WorkspaceDock).toBeDefined();
+      expect(WorkspaceDockDefault).toBeDefined();
+      expect(WorkspaceDockMod.WorkspaceDock).toBeDefined();
+      expect(WorkspaceDockMod.default).toBeDefined();
     });
 
     it("exports FloatingPrimaryDock", () => {
@@ -539,12 +557,14 @@ describe("UI, Shell, and Admin Component Exports Audit (React Error #130 Guard)"
 
     it("barrel shell/index.ts exports all shell components without undefined", () => {
       expect(ShellIndex.AdminPreviewBanner).toBeDefined();
+      expect(ShellIndex.PreviewContextStrip).toBeDefined();
       expect(ShellIndex.ChromeSurface).toBeDefined();
       expect(ShellIndex.Surface).toBeDefined();
       expect(ShellIndex.ClaraOrb).toBeDefined();
       expect(ShellIndex.CommandPalette).toBeDefined();
       expect(ShellIndex.CommandPaletteProvider).toBeDefined();
       expect(ShellIndex.ConsumerLayout).toBeDefined();
+      expect(ShellIndex.WorkspaceDock).toBeDefined();
       expect(ShellIndex.FloatingPrimaryDock).toBeDefined();
       expect(ShellIndex.GlobalContextBar).toBeDefined();
       expect(ShellIndex.PreferenceProvider).toBeDefined();

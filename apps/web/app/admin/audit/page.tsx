@@ -35,10 +35,10 @@ import { formatLocaleDate } from "@/lib/i18n/catalog";
 import { sanitizeUpstreamError } from "@/lib/user-facing-text";
 
 /**
- * Security Audit Log Explorer (Spec v5 Section 6.62 / Requirement 9.4).
+ * Security Audit Log Explorer (Spec v8 Section 12.6 / Spec v5 Section 6.62 / Requirement 9.4).
  *
  * Shell: ADMIN_COMMAND / DENSE
- * Archetype: Security Audit Log Explorer
+ * Archetype: Security Audit Log Explorer / System Audit Ledger
  *
  * Dense, immutable, append-only security audit trail explorer providing:
  * 1. High-level Summary KPI Strip (Total Events, Success Rate, High-Risk Events, Unique Actors, Zero-PII status).

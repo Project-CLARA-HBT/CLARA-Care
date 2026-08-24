@@ -6,7 +6,8 @@ import { HubLayout } from "@/components/page/hub-layout";
 import Button from "@/components/ui/button";
 import Icon, { type IconName } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
-import { LocalRail, type LocalRailItem } from "@/components/ui/local-rail";
+import ContextRail, { type ContextRailItem } from "@/components/shell/context-rail";
+import LocalRail, { type LocalRailItem } from "@/components/ui/local-rail";
 import { useShellMode } from "@/components/shell/shell-mode-provider";
 import {
   DEFAULT_PHR_CAPABILITIES,
@@ -298,36 +299,44 @@ export default function PhrPage() {
   const mobileNext =
     mobileSections.find((item) => !item.complete) ?? mobileSections[0];
 
-  const railItems: LocalRailItem[] = [
+  const railItems: ContextRailItem[] = [
     {
       key: "overview",
+      id: "overview",
       label: "Tổng quan",
       icon: "dashboard",
       href: "/phr",
     },
     {
       key: "identity",
+      id: "identity",
       label: copy("phr.hub.identity.title"),
       icon: "user-card",
       href: "/phr/identity",
       badge: Boolean(record.full_name && record.date_of_birth) ? "✓" : undefined,
+      badgeVariant: "brand",
     },
     {
       key: "body",
+      id: "body",
       label: copy("phr.hub.body.title"),
       icon: "body",
       href: "/phr/body",
       badge: record.height_cm && record.weight_kg ? "✓" : undefined,
+      badgeVariant: "brand",
     },
     {
       key: "contact",
+      id: "contact",
       label: copy("phr.hub.contact.title"),
       icon: "contact",
       href: "/phr/contact",
       badge: record.phone ? "✓" : undefined,
+      badgeVariant: "brand",
     },
     {
       key: "allergies",
+      id: "allergies",
       label: text.allergies,
       icon: "warning",
       href: "/phr/allergies",
@@ -337,17 +346,21 @@ export default function PhrPage() {
           : record.allergy_status === "none_known"
             ? "0"
             : undefined,
+      badgeVariant: record.allergies.length > 0 ? "warning" : "neutral",
     },
     {
       key: "conditions",
+      id: "conditions",
       label: text.conditions,
       icon: "clinical-notes",
       href: "/phr/conditions",
       badge:
         record.conditions.length > 0 ? record.conditions.length : undefined,
+      badgeVariant: record.conditions.length > 0 ? "brand" : "neutral",
     },
     {
       key: "medications",
+      id: "medications",
       label: text.medications,
       icon: "medication",
       href: "/phr/medications",
@@ -355,11 +368,13 @@ export default function PhrPage() {
         record.medications.filter((m) => m.is_current).length > 0
           ? record.medications.filter((m) => m.is_current).length
           : undefined,
+      badgeVariant: "brand",
     },
     ...(capabilities.ocr_import
       ? [
           {
             key: "ocr",
+            id: "ocr",
             label: copy("phr.hub.ocr.title"),
             icon: "scan",
             href: "/phr/ocr",
@@ -540,7 +555,7 @@ export default function PhrPage() {
 
         {/* Top Record Summary Canvas */}
         <section
-          className="chrome-panel rounded-[var(--radius-xl)] p-5 sm:p-6"
+          className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 sm:p-6 shadow-sm"
           aria-label={copy("phr.hub.progress.label")}
         >
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -608,7 +623,7 @@ export default function PhrPage() {
           </div>
 
           {/* USCDI Completeness Meter Summary Indicator */}
-          <div className="mt-4 rounded-xl border border-[color:var(--shell-border)]/60 bg-[var(--surface-muted)]/60 p-3.5">
+          <div className="mt-4 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
@@ -661,16 +676,19 @@ export default function PhrPage() {
           </div>
         </section>
 
-        {/* Workbench Layout: LocalRail side navigation + Canvas */}
+        {/* Workbench Layout: ContextRail side navigation + Canvas */}
         <div className="flex gap-6 items-start">
           <aside className="shrink-0 sticky top-20 hidden lg:block">
-            <LocalRail
+            <ContextRail
               items={railItems}
               activeKey="overview"
+              activeId="overview"
               collapsed={railCollapsed}
               onToggleCollapse={() => setRailCollapsed((prev) => !prev)}
               density="compact"
+              width="260px"
               ariaLabel="Thanh điều hướng hồ sơ sức khỏe"
+              title="Hồ sơ sức khỏe"
             />
           </aside>
 
@@ -701,7 +719,7 @@ export default function PhrPage() {
 
               {/* Sidebar disclaimer & consent */}
               <aside className="space-y-4">
-                <section className="chrome-panel rounded-[var(--radius-xl)] p-5">
+                <section className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
                   <Icon
                     name="warning"
                     className="text-[var(--text-brand)]"

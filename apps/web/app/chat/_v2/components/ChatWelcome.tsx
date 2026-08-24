@@ -150,94 +150,45 @@ export default function ChatWelcome({
       ? normalWelcomeContent(uiLanguage)
       : specialistWelcomeContent(experience, uiLanguage);
 
-  const contextualStarters = [
-    {
-      id: "meds",
-      icon: "medication" as const,
-      label: t(uiLanguage, "chat.welcome.chip.medicines"),
-      prompt: t(uiLanguage, "chat.welcome.normal.medicine.prompt"),
-    },
-    {
-      id: "labs",
-      icon: "scan" as const,
-      label: t(uiLanguage, "chat.welcome.chip.labs"),
-      prompt: t(uiLanguage, "chat.welcome.normal.lab.prompt"),
-    },
-    {
-      id: "symptoms",
-      icon: "body" as const,
-      label: t(uiLanguage, "chat.welcome.chip.symptoms"),
-      prompt: t(uiLanguage, "chat.welcome.normal.symptoms.prompt"),
-    },
-    {
-      id: "visitPrep",
-      icon: "clinical-notes" as const,
-      label: t(uiLanguage, "chat.welcome.chip.visitPrep"),
-      prompt: t(uiLanguage, "chat.welcome.normal.safety.prompt"),
-    },
-  ];
-
   return (
-    <div className="clara-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-8 sm:py-12">
-      <section className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center text-center">
-        {/* Glowing Hero Icon */}
-        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[color:var(--card-top-border)] bg-[var(--brand-600)]/15 text-[var(--text-brand)] shadow-[0_0_35px_rgba(164,201,255,0.15)]">
-          <Icon name="clinical-notes" size={32} />
+    <div className="clara-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-6 sm:py-12">
+      {/* Centered reading column (760-900px) */}
+      <section
+        data-testid="chat-welcome"
+        className="mx-auto flex w-full max-w-[860px] flex-col items-center justify-center text-center my-auto"
+      >
+        {/* Subtle Icon Glow */}
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-brand)] shadow-xs">
+          <Icon name="clinical-notes" size={24} />
         </div>
 
         <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-brand)]">
           {content.eyebrow}
         </p>
-        <h2 className="mt-2.5 max-w-2xl text-[clamp(1.75rem,3.5vw,2.5rem)] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
+        <h2 className="mt-2 text-2xl sm:text-3xl font-bold leading-tight tracking-tight text-[var(--text-primary)]">
           {content.title}
         </h2>
-        <p className="mt-3 max-w-xl text-sm sm:text-base leading-relaxed text-[var(--text-secondary)]">
+        <p className="mt-2.5 max-w-lg text-xs sm:text-sm leading-relaxed text-[var(--text-secondary)]">
           {content.description}
         </p>
 
-        {/* Evidence Promise Badge Line */}
-        <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)]">
-          <Icon name="check" size={14} className="text-[var(--text-brand)]" />
+        {/* Evidence Promise Line */}
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+          <Icon name="check" size={13} className="text-[var(--text-brand)]" />
           <span>{t(uiLanguage, "chat.welcome.promise")}</span>
         </div>
 
-        {/* Contextual Quick Chips */}
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          {contextualStarters.map((starter) => (
-            <button
-              key={starter.id}
-              type="button"
-              onClick={() => onChoosePrompt(starter.prompt)}
-              className="inline-flex items-center gap-2 rounded-full border border-[color:var(--shell-border)]/70 bg-[var(--surface-panel)] px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] shadow-xs transition hover:border-[color:var(--brand-500)]/50 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] active:scale-95"
-            >
-              <Icon name={starter.icon} size={15} className="text-[var(--text-brand)]" />
-              <span>{starter.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Starter Prompts 2x2 Grid */}
-        <div className="mt-8 grid w-full gap-3 sm:grid-cols-2 text-left">
-          {content.prompts.map((item) => (
+        {/* 3–4 Starter Chips (Spec v8 §7.2: Calm starter chips, no 4 large shortcut cards) */}
+        <div className="mt-6 flex flex-wrap justify-center gap-2 max-w-2xl">
+          {content.prompts.slice(0, 4).map((item) => (
             <button
               key={item.label}
               type="button"
               onClick={() => onChoosePrompt(item.prompt)}
-              className="group flex min-h-[64px] items-center justify-between gap-3.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-left shadow-xs transition hover:-translate-y-0.5 hover:border-[color:var(--brand-500)]/50 hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)] motion-reduce:transform-none"
+              className="inline-flex items-center gap-2 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] shadow-xs transition hover:border-[color:var(--brand-500)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] active:scale-95"
             >
-              <div className="flex items-center gap-3.5 min-w-0">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--shell-border)]/60 bg-[var(--surface-muted)] text-[var(--text-brand)] transition-colors group-hover:bg-[var(--surface-brand-soft)]">
-                  <Icon name={item.icon as any} size={18} />
-                </span>
-                <span className="truncate text-xs sm:text-[13px] font-semibold text-[var(--text-primary)]">
-                  {item.label}
-                </span>
-              </div>
-              <Icon
-                name="arrow-right"
-                size={16}
-                className="shrink-0 text-[var(--text-muted)] transition group-hover:translate-x-1 group-hover:text-[var(--text-brand)]"
-              />
+              <Icon name={item.icon as any} size={14} className="text-[var(--text-brand)] shrink-0" />
+              <span>{item.label}</span>
             </button>
           ))}
         </div>

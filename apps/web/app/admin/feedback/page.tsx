@@ -40,9 +40,10 @@ import {
   type UILanguage,
 } from "@/lib/ui-language";
 import { formatLocaleDate } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 /**
- * Clinical Feedback Triage Queue (Spec v5 Section 6.71).
+ * Clinical Feedback Triage Queue (Spec v8 Section 12.8 / Spec v8 Admin Sibling Contracts).
  *
  * Shell: ADMIN_COMMAND / DENSE
  * Archetype: Clinical Feedback Triage Queue
@@ -105,11 +106,14 @@ export default function ClinicalFeedbackTriagePage() {
           setSelectedItem(refreshed);
         }
       }
-    } catch {
+    } catch (err) {
       setError(
-        uiLanguage === "vi"
-          ? "Không thể tải luồng phản hồi lâm sàng. Vui lòng thử lại."
-          : "Failed to load clinical feedback stream. Please retry.",
+        safeUserFacingError(
+          err,
+          uiLanguage === "vi"
+            ? "Không thể tải luồng phản hồi lâm sàng. Vui lòng thử lại."
+            : "Failed to load clinical feedback stream. Please retry."
+        ),
       );
     } finally {
       setLoading(false);
@@ -170,11 +174,14 @@ export default function ClinicalFeedbackTriagePage() {
       if (overrideStatus === "resolved") {
         setDrawerOpen(false);
       }
-    } catch {
+    } catch (err) {
       setError(
-        uiLanguage === "vi"
-          ? "Lỗi khi lưu thông tin xử lý. Vui lòng thử lại."
-          : "Error saving triage resolution. Please retry.",
+        safeUserFacingError(
+          err,
+          uiLanguage === "vi"
+            ? "Lỗi khi lưu thông tin xử lý. Vui lòng thử lại."
+            : "Error saving triage resolution. Please retry."
+        ),
       );
     } finally {
       setIsSaving(false);
@@ -203,11 +210,14 @@ export default function ClinicalFeedbackTriagePage() {
         setToastMessage(msg);
         setTimeout(() => setToastMessage(null), 4500);
       }
-    } catch {
+    } catch (err) {
       setError(
-        uiLanguage === "vi"
-          ? "Không thể xuất sang RAG Benchmark."
-          : "Failed to export to RAG Benchmark.",
+        safeUserFacingError(
+          err,
+          uiLanguage === "vi"
+            ? "Không thể xuất sang RAG Benchmark."
+            : "Failed to export to RAG Benchmark."
+        ),
       );
     } finally {
       setIsExporting(false);

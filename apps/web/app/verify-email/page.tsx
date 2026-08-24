@@ -74,6 +74,7 @@ export default function VerifyEmailPage() {
       backHref="/login"
       backLabel={t(language, "auth.verify.goToLogin")}
       maxWidth="md"
+      archetype="Verification Status"
     >
       <form className="space-y-4" onSubmit={onSubmit}>
         <Textarea

@@ -18,6 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:clara_mobile/core/analytics.dart';
 import 'package:clara_mobile/core/feature_flags.dart';
 import 'package:clara_mobile/experience/redesign/scribe_surface_v3.dart';
+import 'package:clara_mobile/screens/scribe_screen.dart' show ScribeAudioClip;
 
 import 'fakes/fakes.dart';
 
@@ -446,6 +447,106 @@ void main() {
       expect(find.text('Đã thu thập sự đồng ý của bệnh nhân.'), findsOneWidget);
       expect(find.text('Thu hồi sự đồng ý'), findsOneWidget);
       expect(find.text('Thu thập sự đồng ý'), findsNothing);
+    });
+
+    testWidgets(
+        'immersive audio capture is consent-gated and triggers transcribeScribeAudio',
+        (tester) async {
+      final transport = RecordingAnalyticsTransport();
+      final analytics = Analytics(transport: transport)
+        ..init(
+          const AnalyticsConfig(provider: 'test', apiKey: 'k'),
+          consentGranted: true,
+        );
+      final api = FakeApiClient()
+        ..stub('listScribeSessions', response: {
+          'items': [
+            {
+              'id': 40,
+              'title': 'Phiên ghi âm trực tiếp',
+              'status': 'recording',
+              'transcript': 'Lời thoại cũ',
+              'soap': {},
+            }
+          ]
+        })
+        ..stub('getScribeSession', response: {
+          'id': 40,
+          'title': 'Phiên ghi âm trực tiếp',
+          'status': 'recording',
+          'transcript': 'Lời thoại cũ',
+          'soap': {},
+        })
+        ..stub('captureScribeConsent', response: {'status': 'consented'})
+        ..stub('transcribeScribeAudio', response: {
+          'id': 40,
+          'title': 'Phiên ghi âm trực tiếp',
+          'status': 'ready',
+          'transcript': 'Lời thoại cũ\nLời thoại từ ghi âm mới',
+          'soap': {
+            'subjective': 'Lời thoại từ ghi âm mới',
+          },
+        });
+      final store = await FakeSessionStore.authenticated(role: 'doctor');
+
+      var audioProviderCalled = false;
+      Future<ScribeAudioClip?> fakeAudioProvider() async {
+        audioProviderCalled = true;
+        return const ScribeAudioClip(
+          bytes: [1, 2, 3, 4],
+          filename: 'audio.wav',
+        );
+      }
+
+      await tester.pumpWidget(_host(ScribeSurfaceV3(
+        apiClient: api,
+        sessionStore: store,
+        resolver: _scribeOn(),
+        audioProvider: fakeAudioProvider,
+        analytics: analytics,
+      )));
+      await tester.pumpAndSettle();
+
+      // Open session
+      await tester.tap(find.text('Phiên ghi âm trực tiếp'));
+      await tester.pumpAndSettle();
+
+      // Verify immersive audio capture card is rendered
+      expect(find.byKey(const Key('scribe-v3-audio-capture-card')), findsOneWidget);
+      expect(find.text('Ghi âm lời thoại trực tiếp'), findsOneWidget);
+      expect(find.text('Cần đồng thuận trước khi ghi âm'), findsOneWidget);
+
+      // Attempt audio capture BEFORE consent -> blocked
+      await tester.tap(find.byKey(const Key('scribe-upload-audio')));
+      await tester.pumpAndSettle();
+
+      expect(audioProviderCalled, isFalse);
+      expect(api.wasCalled('transcribeScribeAudio'), isFalse);
+      expect(
+        find.text('Cần thu thập sự đồng ý của bệnh nhân trước khi xử lý lời thoại.'),
+        findsOneWidget,
+      );
+
+      // Dismiss snackbar
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      // Capture consent
+      await tester.tap(find.text('Thu thập sự đồng ý'));
+      await tester.pumpAndSettle();
+
+      expect(api.wasCalled('captureScribeConsent'), isTrue);
+      expect(find.text('Sẵn sàng thu âm'), findsOneWidget);
+
+      // Now audio capture proceeds
+      await tester.ensureVisible(find.byKey(const Key('scribe-upload-audio')));
+      await tester.tap(find.byKey(const Key('scribe-upload-audio')));
+      await tester.pumpAndSettle();
+
+      expect(audioProviderCalled, isTrue);
+      expect(api.wasCalled('transcribeScribeAudio'), isTrue);
+      expect(transport.capturedNames, contains('mobile_scribe_audio_processed'));
+      expect(find.textContaining('Lời thoại từ ghi âm mới'), findsWidgets);
     });
   });
 }

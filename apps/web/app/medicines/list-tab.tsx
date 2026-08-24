@@ -211,6 +211,7 @@ export default function MedicinesListTab() {
             {/* ================================================================= */}
             <EditorialSection
               id="active-taking-domain"
+              data-testid="domain-taking"
               eyebrow={t(language, "medicines.list.active")}
               title={t(language, "medicines.workspace.activeTaking.title")}
               description={t(language, "medicines.workspace.activeTaking.desc")}
@@ -350,6 +351,7 @@ export default function MedicinesListTab() {
             {/* ================================================================= */}
             <EditorialSection
               id="unresolved-proposals-domain"
+              data-testid="domain-unresolved"
               eyebrow={t(language, "medicines.cabinet.normalization.review")}
               title={t(language, "medicines.workspace.unresolved.title")}
               description={t(language, "medicines.workspace.unresolved.desc")}
@@ -429,7 +431,7 @@ export default function MedicinesListTab() {
             {/* ================================================================= */}
             {/* DOMAIN 3: Drug Interaction Safety ActionObject                    */}
             {/* ================================================================= */}
-            <div id="ddi-safety-domain" className="space-y-2">
+            <div id="ddi-safety-domain" data-testid="domain-safety-action" className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
                 {t(language, "medicines.safety.module")}
               </p>
@@ -468,6 +470,7 @@ export default function MedicinesListTab() {
             {/* ================================================================= */}
             <EditorialSection
               id="cabinet-stored-domain"
+              data-testid="domain-cabinet-stored"
               eyebrow={t(language, "medicines.cabinet.defaultLabel")}
               title={t(language, "medicines.workspace.cabinet.title")}
               description={t(language, "medicines.workspace.cabinet.desc")}

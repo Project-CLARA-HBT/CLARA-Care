@@ -233,6 +233,8 @@ export function GlobalContextBar({
       ].join(" ")}
       role="banner"
       aria-label="Thanh ngữ cảnh toàn cục"
+      data-testid="context-header"
+      data-command-bar="true"
     >
       {/* Left: Brand Mark & Workspace / Mode Switcher */}
       <div className="flex min-w-0 items-center gap-3">
@@ -726,5 +728,8 @@ export function GlobalContextBar({
     </header>
   );
 }
+
+export const GlobalCommandBar = GlobalContextBar;
+export type GlobalCommandBarProps = GlobalContextBarProps;
 
 export default GlobalContextBar;

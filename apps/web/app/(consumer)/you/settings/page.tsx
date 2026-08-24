@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { SettingsLayout } from "@/components/page/settings-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,15 @@ import {
   type SecuritySettingsDto,
 } from "@/lib/api/v2-client";
 
+/**
+ * YouSettingsPage
+ * Spec v8 Section 7.15 (Settings & Security):
+ * - Theme mode (Light/Dark/System)
+ * - Language (VI default, EN)
+ * - 2FA / TOTP setup with recovery codes
+ * - Session management & revocation (single and bulk other sessions)
+ * - Auto-lock timer and security policies
+ */
 export default function YouSettingsPage() {
   const uiLanguage = useUILanguage();
   const isEn = uiLanguage === "en";
@@ -921,7 +929,9 @@ export default function YouSettingsPage() {
                     variant="secondary"
                     size="sm"
                     onClick={() => {
-                      navigator.clipboard.writeText(backupCodes.join("\n"));
+                      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+                        void navigator.clipboard.writeText(backupCodes.join("\n")).catch(() => {});
+                      }
                       setCopiedBackupCodes(true);
                       setTimeout(() => setCopiedBackupCodes(false), 3000);
                     }}

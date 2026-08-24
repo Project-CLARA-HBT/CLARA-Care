@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -19,16 +19,12 @@ import MedicalAnswerCanvas from "@/app/chat/_v2/components/MedicalAnswerCanvas";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { sanitizeAssistantAnswer } from "@/lib/user-facing-text";
 import Icon from "@/components/ui/icon";
+import type { SourceInspectionItem } from "@/components/shell/inspector-drawer";
 
 /**
- * Modernized answer renderer for CLARA Chat with Answer-First Structure:
- * Aligned with Stitch template h_i_clara_active_conversation_refined.
- *
- * 1. Warning alert box: Safety Caveat / Degraded notice / Release boundary
- * 2. Structured answer: Short answer & Markdown clinical content
- * 3. Next Action steps: Management recommendations & Actions
- * 4. Citations tags: Evidence & Verified Badges (Guideline, Alert, Pharmacopeia tags)
- * 5. Evidence synthesis: Evidence ledger & Integrity diagnostics
+ * Modernized answer renderer for CLARA Chat with Spec v8 §7.2 5-part Hierarchy:
+ * 1. Direct answer -> 2. What matters -> 3. Next action -> 4. Uncertainty -> 5. Sources.
+ * Sources open InspectorDrawer on wide desktop and support inline disclosure.
  */
 
 export type AnswerRendererProps = {
@@ -36,6 +32,8 @@ export type AnswerRendererProps = {
   uiLanguage: UILanguage;
   role?: UserRole;
   onSaveNote?: (answerText: string) => void;
+  onInspectSource?: (source: SourceInspectionItem) => void;
+  onInspectAllSources?: (sources: SourceInspectionItem[]) => void;
 };
 
 const RELEASE_REASON_KEYS: Record<
@@ -105,6 +103,8 @@ function AnswerRenderer({
   uiLanguage,
   role = "normal",
   onSaveNote,
+  onInspectSource,
+  onInspectAllSources,
 }: AnswerRendererProps) {
   const copy = (
     key: UITranslationKey,
@@ -127,67 +127,37 @@ function AnswerRenderer({
   const clinicalAnswer =
     result.tier === "tier1" ? result.clinicalAnswer : undefined;
 
+  const inspectionSources = useMemo<SourceInspectionItem[]>(() => {
+    const rawRegistry = result.tier === "tier2" ? (result.citationRegistry ?? []) : [];
+    const rawCitations = result.tier === "tier2" ? (result.citations ?? []) : [];
+    if (rawRegistry.length > 0) {
+      return rawRegistry.map((entry, i) => ({
+        id: entry.citationId,
+        title: entry.title || entry.studyId || `Citation ${i + 1}`,
+        source: entry.sourceType || "Medical Guideline / Reference",
+        url: entry.url,
+        trustTier: entry.sourceType?.toLowerCase().includes("guideline")
+          ? "T3_CLINICAL_GUIDELINE"
+          : "T2_PEER_REVIEWED",
+      }));
+    }
+    return rawCitations.map((citation, i) => ({
+      id: (citation as any).sourceId || `src-${i}`,
+      title: citation.title || citation.source || `Citation ${i + 1}`,
+      source: citation.source || "Reference",
+      url: citation.url,
+      trustTier: "T2_PEER_REVIEWED",
+    }));
+  }, [result]);
+
+  const hasSources = inspectionSources.length > 0;
+
   return (
-    <div className="space-y-6">
-      {/* 1. WARNING ALERT BOX SECTION */}
-      {degraded ? (
-        <div className="flex items-center gap-2">
-          <Badge tone="warn">
-            {copy("chat.answerRenderer.degraded")}
-          </Badge>
-        </div>
-      ) : null}
-
-      {evidenceRelease && !evidenceRelease.passed ? (
-        <section
-          className="rounded-xl border-l-4 border-l-[color:var(--status-warn-border)] border border-[color:var(--status-warn-border)]/40 bg-[var(--status-warn-bg)]/20 p-4 sm:p-5 text-[var(--status-warn-text)]"
-          role="status"
-          aria-label={copy("chat.answerRenderer.releaseBoundary.aria")}
-        >
-          <div className="flex items-center gap-2">
-            <Icon name="warning" size={18} className="text-[var(--status-warn-text)] shrink-0" />
-            <p className="text-sm font-semibold text-[var(--text-primary)]">
-              {copy("chat.answerRenderer.releaseBoundary.title")}
-            </p>
-          </div>
-          <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-[var(--text-secondary)]">
-            {copy("chat.answerRenderer.releaseBoundary.description")}
-          </p>
-          {evidenceRelease.reasons.length ? (
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5">
-              {evidenceRelease.reasons.map((reason) => (
-                <li key={reason}>{copy(RELEASE_REASON_KEYS[reason])}</li>
-              ))}
-            </ul>
-          ) : null}
-          <div className="mt-3.5">
-            <Link
-              href="/visits/new"
-              className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--surface-panel)] px-3 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[color:var(--shell-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
-            >
-              <Icon name="calendar" size={14} className="text-[var(--text-brand)]" />
-              <span>{copy("chat.answerRenderer.releaseBoundary.prepareVisit")}</span>
-            </Link>
-          </div>
-        </section>
-      ) : null}
-
-      {presentation?.mode === "professional" ? (
-        <section
-          className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-2.5"
-          aria-label={copy("chat.answerRenderer.presentation.professionalAria")}
-        >
-          <p className="text-xs font-semibold text-[var(--text-primary)]">
-            {copy("chat.answerRenderer.presentation.professionalTitle")}
-          </p>
-          <p className="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">
-            {copy("chat.answerRenderer.presentation.professionalDescription")}
-          </p>
-        </section>
-      ) : null}
-
-      {/* 2. STRUCTURED ANSWER SECTION */}
-      <section className="space-y-3">
+    <div className="space-y-6" data-answer-hierarchy="v8">
+      {/* ========================================================================= */}
+      {/* 1. DIRECT ANSWER (Spec v8 §7.2: Direct answer is FIRST in the hierarchy)  */}
+      {/* ========================================================================= */}
+      <section className="space-y-3" aria-label={copy("chat.answerRenderer.section.answer")}>
         <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-brand)]">
           <Icon name="clinical-notes" size={15} />
           <span>{copy("chat.answerRenderer.section.answer")}</span>
@@ -203,44 +173,112 @@ function AnswerRenderer({
         </div>
       </section>
 
-      {/* 3. NEXT ACTION STEPS & SAFETY CARDS SECTION */}
-      {result.tier === "tier2" && result.verificationStatus ? (
-        <section
-          className="rounded-2xl border border-[color:var(--shell-border)]/80 bg-[var(--surface-muted)]/50 p-4 sm:p-5 shadow-xs space-y-3"
-          aria-label={uiLanguage === "vi" ? "Thẻ an toàn DrugBank & FIDES" : "DrugBank & FIDES Safety Card"}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)]/50 pb-2.5">
+      {/* ========================================================================= */}
+      {/* 2. WHAT MATTERS (Spec v8 §7.2: Key verification, safety cards, alerts)     */}
+      {/* ========================================================================= */}
+      {(degraded ||
+        (evidenceRelease && !evidenceRelease.passed) ||
+        presentation?.mode === "professional" ||
+        (result.tier === "tier2" && result.verificationStatus)) && (
+        <section className="space-y-3" aria-label={uiLanguage === "vi" ? "Thông tin trọng yếu" : "What Matters"}>
+          {degraded ? (
             <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
-                <Icon name="medication" size={15} />
+              <Badge tone="warn">
+                {copy("chat.answerRenderer.degraded")}
+              </Badge>
+            </div>
+          ) : null}
+
+          {evidenceRelease && !evidenceRelease.passed ? (
+            <div
+              className="rounded-xl border-l-4 border-l-[color:var(--status-warn-border)] border border-[color:var(--status-warn-border)]/40 bg-[var(--status-warn-bg)]/20 p-4 sm:p-5 text-[var(--status-warn-text)]"
+              role="status"
+              aria-label={copy("chat.answerRenderer.releaseBoundary.aria")}
+            >
+              <div className="flex items-center gap-2">
+                <Icon name="warning" size={18} className="text-[var(--status-warn-text)] shrink-0" />
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  {copy("chat.answerRenderer.releaseBoundary.title")}
+                </p>
               </div>
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
-                  {uiLanguage === "vi" ? "Kiểm tra Dược lý & An toàn FIDES" : "FIDES Clinical Safety & Pharmacology"}
-                </h4>
+              <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-[var(--text-secondary)]">
+                {copy("chat.answerRenderer.releaseBoundary.description")}
+              </p>
+              {evidenceRelease.reasons.length ? (
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5">
+                  {evidenceRelease.reasons.map((reason) => (
+                    <li key={reason}>{copy(RELEASE_REASON_KEYS[reason])}</li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="mt-3.5">
+                <Link
+                  href="/visits/new"
+                  className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--surface-panel)] px-3 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[color:var(--shell-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
+                >
+                  <Icon name="calendar" size={14} className="text-[var(--text-brand)]" />
+                  <span>{copy("chat.answerRenderer.releaseBoundary.prepareVisit")}</span>
+                </Link>
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--brand-500)]/60 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--text-brand)]">
-                <Icon name="check" size={11} />
-                {result.verificationStatus.verdict ?? (uiLanguage === "vi" ? "ĐÃ KIỂM CHỨNG" : "VERIFIED")}
-              </span>
-              {result.policyAction ? (
-                <Badge tone={result.policyAction === "allow" ? "ok" : "warn"}>
-                  {result.policyAction.toUpperCase()}
-                </Badge>
+          ) : null}
+
+          {presentation?.mode === "professional" ? (
+            <div
+              className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-2.5"
+              aria-label={copy("chat.answerRenderer.presentation.professionalAria")}
+            >
+              <p className="text-xs font-semibold text-[var(--text-primary)]">
+                {copy("chat.answerRenderer.presentation.professionalTitle")}
+              </p>
+              <p className="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">
+                {copy("chat.answerRenderer.presentation.professionalDescription")}
+              </p>
+            </div>
+          ) : null}
+
+          {result.tier === "tier2" && result.verificationStatus ? (
+            <div
+              className="rounded-2xl border border-[color:var(--shell-border)]/80 bg-[var(--surface-muted)]/50 p-4 sm:p-5 shadow-xs space-y-3"
+              aria-label={uiLanguage === "vi" ? "Thẻ an toàn DrugBank & FIDES" : "DrugBank & FIDES Safety Card"}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)]/50 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+                    <Icon name="medication" size={15} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                      {uiLanguage === "vi" ? "Kiểm tra Dược lý & An toàn FIDES" : "FIDES Clinical Safety & Pharmacology"}
+                    </h4>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--brand-500)]/60 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--text-brand)]">
+                    <Icon name="check" size={11} />
+                    {result.verificationStatus.verdict ?? (uiLanguage === "vi" ? "ĐÃ KIỂM CHỨNG" : "VERIFIED")}
+                  </span>
+                  {result.policyAction ? (
+                    <Badge tone={result.policyAction === "allow" ? "ok" : "warn"}>
+                      {result.policyAction.toUpperCase()}
+                    </Badge>
+                  ) : null}
+                </div>
+              </div>
+
+              {result.verificationStatus.note ? (
+                <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                  {result.verificationStatus.note}
+                </p>
               ) : null}
             </div>
-          </div>
-
-          {result.verificationStatus.note ? (
-            <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-              {result.verificationStatus.note}
-            </p>
           ) : null}
         </section>
-      ) : null}
+      )}
 
+      {/* ========================================================================= */}
+      {/* 3. NEXT ACTION (Spec v8 §7.2: Actionable follow-ups and booking)           */}
+      {/* ========================================================================= */}
       {clinicalAnswer ? (
         <MedicalAnswerCanvas
           answer={clinicalAnswer}
@@ -248,7 +286,7 @@ function AnswerRenderer({
           uiLanguage={uiLanguage}
         />
       ) : (
-        <section className="relative overflow-hidden rounded-xl border border-[color:var(--brand-500)]/30 bg-[var(--brand-600)]/5 p-5 shadow-xs">
+        <section className="relative overflow-hidden rounded-xl border border-[color:var(--brand-500)]/30 bg-[var(--brand-600)]/5 p-5 shadow-xs" aria-label={copy("chat.answerRenderer.section.nextActions")}>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-brand)] mb-2.5">
             <Icon name="emergency" size={16} />
             <span>{copy("chat.answerRenderer.section.nextActions")}</span>
@@ -278,159 +316,208 @@ function AnswerRenderer({
         </section>
       )}
 
-      {/* 4. CITATIONS TAGS SECTION */}
-      {citationRegistry.length ? (
-        <section className="pt-2 border-t border-[color:var(--shell-border)]/50">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3 flex items-center gap-1.5">
-            <Icon name="scan" size={15} className="text-[var(--text-brand)]" />
-            <span>{copy("chat.answerRenderer.section.citations")} ({citationRegistry.length})</span>
-          </h3>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {citationRegistry.map((entry, index) => {
-              const badge = resolveSourceBadge(entry.sourceType || entry.title || "", entry.url, index, uiLanguage);
-              return (
-                <div
-                  key={`${entry.citationId}-${index}`}
-                  id={citationRegistryAnchorId(entry.citationId)}
-                  className="scroll-mt-24 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/80 dark:bg-[#181c1f] p-3.5 text-xs transition hover:border-[color:var(--brand-500)]/40 flex flex-col justify-between group"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span
-                        className={`inline-flex items-center justify-center rounded px-2 py-0.5 text-[10px] font-bold border ${badge.colorClass}`}
-                      >
-                        {badge.label}
-                      </span>
-                      {entry.sourceType ? (
-                        <span className="text-[10px] text-[var(--text-muted)]">
-                          {entry.sourceType}
+      {/* ========================================================================= */}
+      {/* 4. UNCERTAINTY (Spec v8 §7.2: Uncertainty & boundaries)                    */}
+      {/* ========================================================================= */}
+      {result.tier === "tier2" && result.verificationStatus && (
+        <section
+          className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-xs text-[var(--text-secondary)]"
+          aria-label={uiLanguage === "vi" ? "Mức độ tin cậy & Giới hạn y khoa" : "Uncertainty & Boundaries"}
+        >
+          <div className="flex items-center gap-2 font-semibold text-[var(--text-primary)] mb-1">
+            <Icon name="help" size={15} className="text-[var(--text-brand)]" />
+            <span>{uiLanguage === "vi" ? "Độ chắc chắn & Giới hạn lâm sàng" : "Uncertainty & Clinical Boundaries"}</span>
+          </div>
+          <p className="text-[11px] leading-relaxed text-[var(--text-muted)]">
+            {uiLanguage === "vi"
+              ? "Câu trả lời được tổng hợp từ nguồn y văn và phác đồ đã xác thực. Luôn tham vấn bác sĩ trực tiếp trước khi thay đổi phác đồ điều trị."
+              : "Synthesis is grounded on verified clinical guidelines and pharmacopeia. Always consult a treating clinician before altering treatment."}
+          </p>
+        </section>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 5. SOURCES (Spec v8 §7.2: Inspectable on wide desktop / InspectorDrawer)  */}
+      {/* ========================================================================= */}
+      {hasSources ? (
+        <section className="pt-2 border-t border-[color:var(--shell-border)]/50" aria-label={copy("chat.answerRenderer.section.citations")}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+              <Icon name="scan" size={15} className="text-[var(--text-brand)]" />
+              <span>
+                {citationRegistry.length > 0
+                  ? `${copy("chat.answerRenderer.section.citations")} (${citationRegistry.length})`
+                  : copy("chat.answerRenderer.presentation.sources")}
+              </span>
+            </h3>
+
+            {onInspectAllSources && (
+              <button
+                type="button"
+                onClick={() => onInspectAllSources(inspectionSources)}
+                className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--text-brand)] hover:bg-[var(--surface-brand-soft)] transition"
+              >
+                <Icon name="scan" size={14} />
+                <span>{uiLanguage === "vi" ? "Kiểm tra nguồn (Inspector)" : "Inspect Sources Drawer"}</span>
+              </button>
+            )}
+          </div>
+
+          {citationRegistry.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {citationRegistry.map((entry, index) => {
+                const badge = resolveSourceBadge(entry.sourceType || entry.title || "", entry.url, index, uiLanguage);
+                const inspectionItem: SourceInspectionItem = {
+                  id: entry.citationId,
+                  title: entry.title || entry.studyId || "—",
+                  source: entry.sourceType || "Medical Guideline / Reference",
+                  url: entry.url,
+                  trustTier: entry.sourceType?.toLowerCase().includes("guideline")
+                    ? "T3_CLINICAL_GUIDELINE"
+                    : "T2_PEER_REVIEWED",
+                };
+                return (
+                  <div
+                    key={`${entry.citationId}-${index}`}
+                    id={citationRegistryAnchorId(entry.citationId)}
+                    className="scroll-mt-24 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/80 dark:bg-[#181c1f] p-3.5 text-xs transition hover:border-[color:var(--brand-500)]/40 flex flex-col justify-between group"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span
+                          className={`inline-flex items-center justify-center rounded px-2 py-0.5 text-[10px] font-bold border ${badge.colorClass}`}
+                        >
+                          {badge.label}
                         </span>
-                      ) : null}
+                        {entry.sourceType ? (
+                          <span className="text-[10px] text-[var(--text-muted)]">
+                            {entry.sourceType}
+                          </span>
+                        ) : null}
+                      </div>
+                      <h4 className="font-semibold text-[var(--text-primary)] line-clamp-2 leading-snug">
+                        {entry.url ? (
+                          <a
+                            href={entry.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[var(--text-brand)] hover:underline"
+                          >
+                            {entry.title || entry.studyId || "—"}
+                          </a>
+                        ) : (
+                          entry.title || entry.studyId || "—"
+                        )}
+                      </h4>
                     </div>
-                    <h4 className="font-semibold text-[var(--text-primary)] line-clamp-2 leading-snug">
+                    <div className="mt-2.5 flex items-center justify-between">
                       {entry.url ? (
                         <a
                           href={entry.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[var(--text-brand)] hover:underline"
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text-brand)] hover:underline"
                         >
-                          {entry.title || entry.studyId || "—"}
+                          <span>{copy("chat.answerRenderer.viewFullSource")}</span>
+                          <Icon name="arrow-right" size={12} />
                         </a>
-                      ) : (
-                        entry.title || entry.studyId || "—"
+                      ) : <span />}
+
+                      {onInspectSource && (
+                        <button
+                          type="button"
+                          onClick={() => onInspectSource(inspectionItem)}
+                          className="text-[11px] font-semibold text-[var(--text-muted)] hover:text-[var(--text-brand)]"
+                        >
+                          {uiLanguage === "vi" ? "Chi tiết" : "Inspect"}
+                        </button>
                       )}
-                    </h4>
-                  </div>
-                  {entry.url ? (
-                    <a
-                      href={entry.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text-brand)] hover:underline"
-                    >
-                      <span>{copy("chat.answerRenderer.viewFullSource")}</span>
-                      <Icon name="arrow-right" size={12} />
-                    </a>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-
-      {presentation?.citationVisibility === "expanded" && citations.length && !citationRegistry.length ? (
-        <section className="pt-2 border-t border-[color:var(--shell-border)]/50">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2 flex items-center gap-1.5">
-            <Icon name="scan" size={15} className="text-[var(--text-brand)]" />
-            <span>{copy("chat.answerRenderer.presentation.sources")}</span>
-          </h3>
-          <ol className="space-y-1.5">
-            {citations.map((citation, index) => (
-              <li
-                key={`${citation.sourceId ?? citation.url ?? citation.title}-${index}`}
-                className="text-xs leading-relaxed text-[var(--text-secondary)]"
-              >
-                <span className="font-semibold text-[var(--text-primary)]">[{index + 1}]</span>{" "}
-                {citation.url ? (
-                  <a
-                    href={citation.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[var(--text-brand)] underline underline-offset-2"
-                  >
-                    {citation.title}
-                  </a>
-                ) : (
-                  citation.title
-                )}
-              </li>
-            ))}
-          </ol>
-        </section>
-      ) : null}
-
-      {citations.length && !citationRegistry.length ? (
-        <details className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] dark:bg-[#181c1f] p-3.5">
-          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-            <Icon name="scan" size={15} className="text-[var(--text-brand)]" />
-            <span>
-              {copy("chat.answerRenderer.references", {
-                count: citations.length,
-              })}
-            </span>
-          </summary>
-          <div className="mt-3.5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            {citations.map((citation, index) => {
-              const badge = resolveSourceBadge(citation.source || citation.title || "", citation.url, index, uiLanguage);
-              return (
-                <div
-                  key={`${citation.title}-${index}`}
-                  className="rounded-xl border border-[color:var(--shell-border)]/60 bg-[var(--surface-panel)] p-3 text-xs text-[var(--text-secondary)] flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-1.5 mb-1.5">
-                      <span
-                        className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[9px] font-bold border ${badge.colorClass}`}
-                      >
-                        {badge.label}
-                      </span>
                     </div>
-                    <h4 className="font-medium text-[var(--text-primary)] line-clamp-2 leading-snug">
-                      {citation.url ? (
-                        <a
-                          href={citation.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[var(--text-brand)] hover:underline"
-                        >
-                          {citation.title || citation.source || citation.url}
-                        </a>
-                      ) : (
-                        citation.title || citation.source || "—"
-                      )}
-                    </h4>
                   </div>
-                  {citation.url ? (
-                    <a
-                      href={citation.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-2 text-[11px] font-medium text-[var(--text-brand)] hover:underline inline-flex items-center gap-1"
+                );
+              })}
+            </div>
+          ) : (
+            <details className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] dark:bg-[#181c1f] p-3.5">
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+                <Icon name="scan" size={15} className="text-[var(--text-brand)]" />
+                <span>
+                  {copy("chat.answerRenderer.references", {
+                    count: citations.length,
+                  })}
+                </span>
+              </summary>
+              <div className="mt-3.5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                {citations.map((citation, index) => {
+                  const badge = resolveSourceBadge(citation.source || citation.title || "", citation.url, index, uiLanguage);
+                  const inspectionItem: SourceInspectionItem = {
+                    id: (citation as any).sourceId || `src-${index}`,
+                    title: citation.title || citation.source || `Source ${index + 1}`,
+                    source: citation.source || "Reference",
+                    url: citation.url,
+                    trustTier: "T2_PEER_REVIEWED",
+                  };
+                  return (
+                    <div
+                      key={`${citation.title}-${index}`}
+                      className="rounded-xl border border-[color:var(--shell-border)]/60 bg-[var(--surface-panel)] p-3 text-xs text-[var(--text-secondary)] flex flex-col justify-between"
                     >
-                      <span>{copy("chat.answerRenderer.viewFullSource")}</span>
-                      <Icon name="arrow-right" size={12} />
-                    </a>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </details>
+                      <div>
+                        <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                          <span
+                            className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[9px] font-bold border ${badge.colorClass}`}
+                          >
+                            {badge.label}
+                          </span>
+                        </div>
+                        <h4 className="font-medium text-[var(--text-primary)] line-clamp-2 leading-snug">
+                          {citation.url ? (
+                            <a
+                              href={citation.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[var(--text-brand)] hover:underline"
+                            >
+                              {citation.title || citation.source || citation.url}
+                            </a>
+                          ) : (
+                            citation.title || citation.source || "—"
+                          )}
+                        </h4>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between">
+                        {citation.url ? (
+                          <a
+                            href={citation.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[11px] font-medium text-[var(--text-brand)] hover:underline inline-flex items-center gap-1"
+                          >
+                            <span>{copy("chat.answerRenderer.viewFullSource")}</span>
+                            <Icon name="arrow-right" size={12} />
+                          </a>
+                        ) : <span />}
+
+                        {onInspectSource && (
+                          <button
+                            type="button"
+                            onClick={() => onInspectSource(inspectionItem)}
+                            className="text-[11px] font-semibold text-[var(--text-muted)] hover:text-[var(--text-brand)]"
+                          >
+                            {uiLanguage === "vi" ? "Chi tiết" : "Inspect"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </details>
+          )}
+        </section>
       ) : null}
 
-      {/* 5. EVIDENCE SYNTHESIS SECTION */}
+      {/* Research Integrity Diagnostics (admin/researcher only) */}
       {result.tier === "tier2" && (role === "researcher" || role === "admin") ? (
         <details className="mt-3 rounded-2xl border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)] dark:bg-[#111C29] p-4">
           <summary className="cursor-pointer text-xs sm:text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
@@ -500,8 +587,4 @@ function ResearchMetric({
   );
 }
 
-/**
- * Memoized: answer rendering parses markdown on every render, so we avoid
- * re-rendering when the owning turn is unchanged.
- */
 export default memo(AnswerRenderer);

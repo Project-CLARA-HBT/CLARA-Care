@@ -56,7 +56,7 @@ function MedicinesHub() {
       title={t(language, "medicines.title")}
       description={t(language, "medicines.description")}
     >
-      <div className="space-y-5">
+      <div className="space-y-5" data-testid="medicines-workspace">
         <Tabs
           idBase="medicines"
           items={tabItems}

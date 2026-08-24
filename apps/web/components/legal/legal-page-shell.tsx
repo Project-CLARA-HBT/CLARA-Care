@@ -150,7 +150,11 @@ export default function LegalPageShell({
   }));
 
   return (
-    <div className="min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+    <div
+      className="min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]"
+      data-shell-mode="PUBLIC_LEGAL"
+      data-layout-archetype="Legal Reader"
+    >
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pb-16 pt-8 sm:px-6 sm:pb-20 sm:pt-10 lg:px-8">
         {/* 1. Header & Navigation */}
         <header className="space-y-6 border-b border-[color:var(--shell-border)]/70 pb-8 sm:pb-10">

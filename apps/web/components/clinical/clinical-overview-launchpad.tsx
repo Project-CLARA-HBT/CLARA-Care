@@ -108,7 +108,7 @@ function getCaseStatusChip(
   return { tone: "info", label: language === "vi" ? "Đang mở" : "Active" };
 }
 
-export default function ClinicalOverviewLaunchpad({
+export function ClinicalOverview({
   className = "",
 }: {
   className?: string;
@@ -163,6 +163,13 @@ export default function ClinicalOverviewLaunchpad({
   const ready = !loading && !error;
   const cabinetCount = dashboard?.cabinet.itemTotal ?? null;
   const expiringCount = dashboard?.cabinet.expiringSoonTotal ?? null;
+
+  const routes = {
+    chat: { href: "/chat" },
+    evidence: { href: "/evidence" },
+    council: { href: "/council" },
+    sourceHub: { href: "/research/source-hub" },
+  };
 
   const isMlReachable = dashboard?.runtime.mlReachable === true;
   const isApiOk = dashboard?.runtime.apiStatus === "ok";
@@ -227,533 +234,329 @@ export default function ClinicalOverviewLaunchpad({
       })
     : null;
 
-  return (
-    <div className={`space-y-8 ${className}`.trim()}>
-      {/* Clinician Command Center Hero Banner */}
-      <section className="relative overflow-hidden rounded-[var(--radius-xl)] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] p-6 sm:p-8 shadow-sm">
-        {/* Subtle accent glow */}
-        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[var(--brand-600)]/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-[var(--brand-primary)]/5 blur-3xl" />
-
-        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-3xl space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--brand-primary)]/30 bg-[color:var(--surface-brand-soft)] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[color:var(--text-brand)]">
-                <Icon name="clinical-notes" size={14} />
-                {copy("KHÔNG GIAN LÂM SÀNG • COMMAND CENTER", "CLINICAL WORKSPACE • COMMAND CENTER")}
-              </span>
-              {loading ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-muted)]">
-                  <Icon name="progress" size={13} className="text-[var(--text-muted)]" />
-                  {copy("DrugBank: Đang kiểm tra…", "DrugBank: Checking…")}
-                </span>
-              ) : isOffline ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--status-warn-text)]">
-                  <Icon name="warning" size={13} />
-                  {copy("DrugBank v5.1.10 Ngoại tuyến", "DrugBank v5.1.10 Offline")}
-                </span>
-              ) : !isVerified ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--status-warn-text)]">
-                  <Icon name="warning" size={13} />
-                  {copy("DrugBank v5.1.10 Chưa xác thực", "DrugBank v5.1.10 Unverified")}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">
-                  <Icon name="check" size={13} className="text-[var(--text-brand)]" />
-                  {copy("DrugBank v5.1.10 Verified", "DrugBank v5.1.10 Verified")}
-                </span>
-              )}
-            </div>
-
-            <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)] sm:text-4xl">
-              {t(language, "clinical.overview.title")}
-            </h1>
-
-            <p className="max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)] sm:text-base">
-              {t(language, "clinical.overview.subtitle")}
-            </p>
-
-            {/* Live Status Indicators */}
-            <div className="flex flex-wrap items-center gap-2.5 pt-2">
-              <span className="inline-flex min-h-8 items-center gap-2 rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3.5 py-1 text-xs font-bold text-[var(--text-primary)]">
-                <span
-                  className={`h-2.5 w-2.5 rounded-full ${
-                    loading || error || isOffline
-                      ? "bg-[var(--text-muted)]"
-                      : isDegraded || !isVerified || needsAttention
-                        ? "bg-[var(--status-warn-text)] animate-pulse"
-                        : "bg-[var(--success-500)]"
-                  }`}
-                />
-                <span>{copy("Trạng thái:", "Status:")} {statusText}</span>
-              </span>
-
-              <span className="inline-flex min-h-8 items-center gap-2 rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-                <Icon name="progress" size={14} className="text-[var(--text-brand)]" />
-                {activeCase
-                  ? copy(`Ca #${activeCase.id} đang mở`, `Case #${activeCase.id} active`)
-                  : copy("Chưa có ca hội chẩn mở", "No active council case")}
-              </span>
-
-              {updatedTimestamp ? (
-                <span className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-1 text-xs text-[var(--text-muted)]">
-                  <Icon name="calendar" size={13} />
-                  <span>{copy("Đồng bộ:", "Synced:")} {updatedTimestamp}</span>
-                </span>
-              ) : null}
-            </div>
+  if (loading) {
+    return (
+      <div className={`space-y-6 ${className}`.trim()} aria-busy="true">
+        {/* Structural Skeleton matching final operational rows */}
+        <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] pb-4">
+          <div className="space-y-2">
+            <div className="h-4 w-40 animate-pulse rounded bg-[color:var(--surface-muted)]" />
+            <div className="h-6 w-64 animate-pulse rounded bg-[color:var(--surface-muted)]" />
           </div>
+          <div className="h-7 w-32 animate-pulse rounded-full bg-[color:var(--surface-muted)]" />
+        </div>
 
-          <div className="flex flex-wrap items-center gap-3 lg:flex-col lg:items-end">
-            <Link
-              href={activeCaseHref}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-6 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)]"
-            >
-              <Icon name="progress" size={18} />
-              {activeCase
-                ? t(language, "clinical.overview.resumeAction")
-                : t(language, "clinical.overview.newCaseAction")}
-            </Link>
-
-            <div className="flex gap-2">
-              <Link
-                href="/scribe"
-                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-muted)]"
-              >
-                <Icon name="clinical-notes" size={15} />
-                {copy("Ghi chép SOAP", "SOAP Scribe")}
-              </Link>
-              <Link
-                href="/selfmed/ddi"
-                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-muted)]"
-              >
-                <Icon name="medication" size={15} />
-                {copy("Tra cứu DDI", "DDI Checker")}
-              </Link>
-            </div>
+        <div className="space-y-4">
+          <div className="h-36 w-full animate-pulse rounded-2xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)]" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="h-28 animate-pulse rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)]" />
+            <div className="h-28 animate-pulse rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)]" />
           </div>
         </div>
-      </section>
+      </div>
+    );
+  }
 
-      {/* Network / General error fallback */}
-      {error ? (
+  return (
+    <div className={`space-y-6 ${className}`.trim()} data-role-view="doctor">
+      {/* 1. Contextual Header (Spec v8 §7.1: No giant hero banner; next action is first) */}
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[color:var(--shell-border)] pb-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
+              {copy("Bác sĩ Lâm sàng", "Clinical Doctor")}
+            </span>
+            <span className="text-xs text-[var(--text-muted)]">•</span>
+            <span className="text-xs text-[var(--text-muted)]">
+              {updatedTimestamp ? `${copy("Cập nhật:", "Updated:")} ${updatedTimestamp}` : copy("Hôm nay", "Today")}
+            </span>
+          </div>
+          <h1 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-primary)] sm:text-2xl">
+            {t(language, "clinical.overview.title")}
+          </h1>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {isOffline ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--status-warn-text)]">
+              <Icon name="warning" size={13} />
+              {copy("DrugBank v5.1.10 Ngoại tuyến", "DrugBank v5.1.10 Offline")}
+            </span>
+          ) : !isVerified ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--status-warn-text)]">
+              <Icon name="warning" size={13} />
+              {copy("DrugBank v5.1.10 Chưa xác thực", "DrugBank v5.1.10 Unverified")}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+              <Icon name="check" size={13} className="text-[var(--text-brand)]" />
+              {copy("DrugBank v5.1.10 Verified", "DrugBank v5.1.10 Verified")}
+            </span>
+          )}
+
+          <Link
+            href="/council/new"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-600)] px-3 py-1.5 text-xs font-semibold text-[var(--on-secondary-container)] shadow-xs transition hover:bg-[var(--brand-700)] active:scale-95"
+          >
+            <Icon name="plus" size={14} />
+            <span>{copy("Tạo ca hội chẩn", "New Council Case")}</span>
+          </Link>
+        </div>
+      </header>
+
+      {/* 2. Offline or Error Subsystem State */}
+      {isOffline && (
         <section
-          className="rounded-xl border border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] p-5"
           role="alert"
+          className="flex items-center justify-between rounded-xl border border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)]/20 p-4 text-xs text-[var(--status-warn-text)]"
         >
-          <h2 className="font-bold text-[var(--status-warn-text)]">
-            {copy("Chưa tải được tổng quan", "Overview unavailable")}
-          </h2>
-          <p className="mt-1 text-sm text-[var(--status-warn-text)]">
-            {copy(
-              "Các công cụ lâm sàng riêng lẻ vẫn hoạt động bình thường. Bạn có thể thử tải lại.",
-              "Clinical tools remain directly accessible. You can retry loading.",
-            )}
-          </p>
+          <div className="flex items-center gap-2.5">
+            <Icon name="warning" size={16} className="shrink-0" />
+            <div>
+              <p className="font-semibold">{copy("Chưa tải được tổng quan hoặc máy chủ ngoại tuyến", "Subsystem offline or unreachable")}</p>
+              <p className="mt-0.5 text-[var(--text-muted)]">{copy("Các công cụ độc lập vẫn hoạt động bình thường.", "Local offline capabilities remain functional.")}</p>
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => void loadData()}
-            className="mt-3 min-h-10 rounded-lg border border-[color:var(--status-warn-border)] px-4 text-sm font-bold text-[var(--status-warn-text)]"
+            className="rounded-lg border border-[color:var(--status-warn-border)] bg-[color:var(--surface-panel)] px-3 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[color:var(--surface-muted)]"
           >
             {copy("Thử lại", "Retry")}
           </button>
         </section>
-      ) : null}
+      )}
 
-      {/* Real-time Server Alert (Critical Red-flag Alert only at top) */}
-      {ready && topAlert && topAlert.severity === "critical" ? (
+      {/* 3. Attention Queue (Spec v8 §7.1: Attention Queue appears above routine work when issues require action) */}
+      {needsAttention && (
         <section
-          className="rounded-2xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] p-5 shadow-sm transition-all"
-          role="alert"
+          aria-label={copy("Hàng đợi cần chú ý", "Attention Queue")}
+          className="rounded-2xl border border-[color:var(--status-warn-border)]/80 bg-[color:var(--status-warn-bg)]/10 p-5 shadow-xs"
         >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <Icon
-                name="warning"
-                size={22}
-                className="text-[var(--status-danger-text)] animate-pulse"
-              />
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="font-bold text-base">
-                    {copy("Cảnh báo đỏ lâm sàng (Critical Alert)", "Critical Clinical Red Flag")}
-                  </h2>
-                  <span className="rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-current">
-                    CRITICAL
+          <div className="flex items-center justify-between border-b border-[color:var(--status-warn-border)]/30 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[color:var(--status-warn-bg)] text-[color:var(--status-warn-text)]">
+                <Icon name="warning" size={15} />
+              </span>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                {copy("Hàng đợi cần chú ý & Cảnh báo an toàn", "Attention Queue & Safety Alerts")}
+              </h2>
+            </div>
+            <span className="rounded-full bg-[color:var(--status-warn-bg)] px-2 py-0.5 text-[11px] font-bold text-[color:var(--status-warn-text)]">
+              {alerts.length + (expiringCount && expiringCount > 0 ? 1 : 0)} {copy("mục cần xử lý", "items")}
+            </span>
+          </div>
+
+          <div className="mt-3 divide-y divide-[color:var(--shell-border)]/50 text-xs">
+            {topAlert && (
+              <div className="flex items-center justify-between py-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                      topAlert.severity === "critical"
+                        ? "bg-red-900/40 text-red-300 border border-red-700/50"
+                        : "bg-amber-900/40 text-amber-300 border border-amber-700/50"
+                    }`}
+                  >
+                    {topAlert.severity === "critical" ? copy("Khẩn cấp", "Critical") : copy("Cảnh báo", "Warning")}
+                  </span>
+                  <span className="truncate font-medium text-[var(--text-primary)]">
+                    {topAlert.message}
                   </span>
                 </div>
-                <p className="mt-1 text-sm leading-relaxed">{topAlert.message}</p>
+                {topAlert.href && (
+                  <Link
+                    href={topAlert.href}
+                    className="shrink-0 ml-3 font-semibold text-[var(--text-brand)] hover:underline"
+                  >
+                    {copy("Xử lý ngay →", "Action →")}
+                  </Link>
+                )}
               </div>
-            </div>
-            <Link
-              href={topAlert.href}
-              className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-current bg-[var(--surface-panel)] px-4 text-xs font-bold text-[var(--text-primary)] transition hover:bg-[var(--surface-muted)]"
-            >
-              {copy("Xử lý ngay", "Resolve now")}
-            </Link>
+            )}
+
+            {expiringCount && expiringCount > 0 ? (
+              <div className="flex items-center justify-between py-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="inline-flex rounded bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-300 border border-amber-700/50">
+                    {copy("Tủ thuốc", "Cabinet")}
+                  </span>
+                  <span className="truncate font-medium text-[var(--text-primary)]">
+                    {copy(
+                      `Có ${expiringCount} thuốc sắp đến hạn kiểm tra liều dùng hoặc hết hạn.`,
+                      `${expiringCount} medication(s) expiring or require dosage review.`,
+                    )}
+                  </span>
+                </div>
+                <Link
+                  href="/medicines"
+                  className="shrink-0 ml-3 font-semibold text-[var(--text-brand)] hover:underline"
+                >
+                  {copy("Rà soát tủ thuốc →", "Review cabinet →")}
+                </Link>
+              </div>
+            ) : null}
           </div>
         </section>
-      ) : null}
+      )}
 
-      {/* Quick Case Resumption with case status chips and last updated time */}
-      <section aria-labelledby="active-clinical-activity" className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* 4. Priority Next Action (Spec v8 §7.1: Active Case / Recording-in-progress is FIRST) */}
+      <section
+        aria-label={copy("Công việc lâm sàng đang thực hiện", "Active Clinical Work")}
+        className="rounded-2xl border border-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] p-5 shadow-xs"
+      >
+        <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] pb-3">
           <div className="flex items-center gap-2">
-            <Icon name="progress" className="text-[var(--brand-600)]" />
-            <h2
-              id="active-clinical-activity"
-              className="text-xl font-bold text-[var(--text-primary)]"
-            >
-              {t(language, "clinical.overview.resumableCase")}
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+              <Icon name="clinical-notes" size={15} />
+            </span>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--text-primary)]">
+              {copy("Ca lâm sàng đang thực hiện", "Active Clinical Case")}
             </h2>
           </div>
-          <Link
-            href="/council/new"
-            className="text-xs font-bold text-[var(--text-brand)] hover:underline"
-          >
-            + {t(language, "clinical.overview.newCaseAction")}
-          </Link>
+          {caseStatus && <StatusChip tone={caseStatus.tone} label={caseStatus.label} />}
         </div>
 
         {activeCase ? (
-          <article className="group rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 transition-all hover:border-[color:var(--brand-600)] hover:shadow-md">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-4">
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[var(--surface-brand-soft)] text-[var(--text-brand)] transition group-hover:scale-105">
-                  <Icon name="clinical-notes" size={24} />
+          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs font-bold text-[var(--text-brand)]">
+                  #{activeCase.id}
                 </span>
-                <div className="space-y-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-0.5 font-mono text-xs font-bold text-[var(--text-primary)]">
-                      #{activeCase.id}
-                    </span>
-                    {caseStatus ? (
-                      <StatusChip
-                        tone={caseStatus.tone}
-                        label={caseStatus.label}
-                        size="sm"
-                      />
-                    ) : null}
-                    {activeCase.intake_mode ? (
-                      <span className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-muted)]">
-                        {activeCase.intake_mode === "transcript"
-                          ? copy("Hội thoại SOAP", "SOAP Dialogue")
-                          : copy("Hội đồng đa khoa", "Clinical Intake")}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <h3 className="text-lg font-bold text-[var(--text-primary)] group-hover:text-[var(--text-brand)] transition-colors">
-                    {activeCase.title || copy(`Ca hội chẩn #${activeCase.id}`, `Council Case #${activeCase.id}`)}
-                  </h3>
-
-                  <p className="text-xs text-[var(--text-secondary)]">
-                    <span className="font-semibold">{copy("Lần cập nhật cuối:", "Last updated:")}</span>{" "}
-                    {formatLocaleDate(language, new Date(activeCase.updated_at || activeCase.created_at || Date.now()), {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </p>
-                </div>
+                <h3 className="truncate text-base font-semibold text-[var(--text-primary)]">
+                  {activeCase.title || copy("Ca lâm sàng chưa đặt tên", "Untitled Case")}
+                </h3>
               </div>
-
-              <div className="flex flex-wrap gap-2.5 sm:shrink-0">
-                <Link
-                  href={activeCaseHref}
-                  className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-5 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)]"
-                >
-                  <Icon name="progress" size={16} />
-                  {t(language, "clinical.overview.resumeAction")}
-                </Link>
-                <Link
-                  href={`/council/new?caseId=${activeCase.id}`}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-muted)]"
-                >
-                  {copy("Chỉnh sửa", "Edit")}
-                </Link>
-              </div>
+              <p className="text-xs text-[var(--text-muted)]">
+                {copy("Lần cập nhật cuối:", "Last updated:")}{" "}
+                {formatLocaleDate(language, new Date(activeCase.updated_at || activeCase.created_at), {
+                  dateStyle: "short",
+                  timeStyle: "short",
+                })}
+              </p>
             </div>
-          </article>
+
+            <div className="flex items-center gap-2.5 shrink-0">
+              <Link
+                href={activeCaseHref}
+                className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg bg-[var(--brand-600)] px-4 text-xs font-semibold text-[var(--on-secondary-container)] shadow-xs transition hover:bg-[var(--brand-700)] active:scale-95"
+              >
+                <span>{copy("Tiếp tục ca này", "Continue this case")}</span>
+                <Icon name="arrow-right" size={14} />
+              </Link>
+            </div>
+          </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-[color:var(--shell-border-strong)] bg-[var(--surface-panel)] p-8 text-center">
-            <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[var(--surface-muted)] text-[var(--text-muted)]">
-              <Icon name="progress" size={24} />
-            </span>
-            <h3 className="mt-3 font-bold text-[var(--text-primary)]">
-              {t(language, "clinical.overview.noActiveCase")}
-            </h3>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              {t(language, "clinical.overview.noActiveCaseDesc")}
+          <div className="mt-4 flex flex-col items-center justify-center py-6 text-center">
+            <p className="text-xs text-[var(--text-muted)]">
+              {copy("Chưa có hoạt động gần đây để hiển thị.", "No recent clinical case in progress.")}
             </p>
-            <div className="mt-5 flex flex-wrap justify-center gap-3">
-              <Link
-                href="/council/new"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-5 text-sm font-bold text-[var(--on-secondary-container)] hover:bg-[var(--brand-700)]"
-              >
-                <Icon name="progress" size={16} />
-                {t(language, "clinical.overview.newCaseAction")}
-              </Link>
-              <Link
-                href="/scribe"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-panel)]"
-              >
-                <Icon name="clinical-notes" size={16} />
-                {copy("Ghi chép khám mới (SOAP)", "New SOAP Scribe")}
-              </Link>
-            </div>
+            <Link
+              href="/council/new"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-brand)] hover:bg-[color:var(--surface-panel)]"
+            >
+              <Icon name="plus" size={14} />
+              <span>{copy("Tạo ca hội chẩn mới", "Start new clinical case")}</span>
+            </Link>
           </div>
         )}
       </section>
 
-      {/* 4 Primary Clinical Tool Cards */}
-      <section aria-labelledby="clinical-launchpad-heading" className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon name="clinical-notes" className="text-[var(--text-brand)]" />
-            <h2
-              id="clinical-launchpad-heading"
-              className="text-xl font-bold text-[var(--text-primary)]"
+      {/* 5. Routine Work Grid (SOAP Scribe / Living Evidence / Cabinet Safety) */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        {/* Scribe Session Card */}
+        <div className="flex flex-col justify-between rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] p-4 shadow-xs">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-[var(--text-brand)]">
+              <Icon name="clinical-notes" size={16} />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                {copy("Ghi chép SOAP", "SOAP Notes")}
+              </h3>
+            </div>
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+              {copy("Chuyển âm hội thoại và lập bệnh án chuẩn SOAP.", "Real-time voice scribe & structured notes.")}
+            </p>
+          </div>
+          <div className="mt-4 pt-3 border-t border-[color:var(--shell-border)]/40 flex items-center justify-between">
+            <Link
+              href="/scribe"
+              className="text-xs font-semibold text-[var(--text-brand)] hover:underline"
             >
-              {t(language, "clinical.overview.launchpad")}
-            </h2>
+              {copy("Mở Scribe →", "Open Scribe →")}
+            </Link>
           </div>
-          <span className="text-xs font-semibold text-[var(--text-muted)]">
-            {copy("Hội đồng AI, Scribe, Bằng chứng & Tra cứu", "AI Council, Scribe, Living Evidence & Clinical Chat")}
-          </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {CLINICAL_TOOLS.map((tool) => {
-            const title = t(language, tool.titleKey);
-            const desc = t(language, tool.descKey);
-
-            return (
-              <Link
-                key={tool.id}
-                href={tool.href}
-                className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[color:var(--text-brand)] hover:shadow-lg"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="grid h-12 w-12 place-items-center rounded-xl bg-[var(--surface-muted)] text-[var(--text-brand)] transition group-hover:scale-105 group-hover:bg-[var(--surface-brand-soft)]">
-                      <Icon name={tool.icon} size={24} />
-                    </span>
-                    {tool.badge ? (
-                      <span className="rounded-full border border-[color:var(--brand-primary)]/20 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-brand)]">
-                        {tool.badge}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <h3 className="mt-4 text-lg font-bold text-[var(--text-primary)] transition group-hover:text-[var(--text-brand)]">
-                    {title}
-                  </h3>
-
-                  <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
-                    {desc}
-                  </p>
-
-                  {/* Highlights list */}
-                  {tool.highlights ? (
-                    <div className="mt-4 space-y-1.5 border-t border-[color:var(--shell-border)] pt-3">
-                      {tool.highlights.map((h, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]"
-                        >
-                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-brand)] opacity-70" />
-                          <span>{language === "vi" ? h.vi : h.en}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="mt-5 flex items-center justify-between pt-2">
-                  <span className="text-xs font-bold text-[var(--text-brand)]">
-                    {copy("Mở công cụ", "Open tool")}
-                  </span>
-                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[var(--surface-muted)] text-[var(--text-brand)] transition group-hover:translate-x-1 group-hover:bg-[var(--brand-600)] group-hover:text-[var(--on-secondary-container)]">
-                    <Icon name="arrow-right" size={14} />
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Real-time Server Alerts and DrugBank Updates Section */}
-      <section aria-labelledby="clinical-alerts-drugbank" className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon name="warning" className="text-[var(--brand-600)]" />
-            <h2
-              id="clinical-alerts-drugbank"
-              className="text-xl font-bold text-[var(--text-primary)]"
+        {/* Living Evidence Card */}
+        <div className="flex flex-col justify-between rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] p-4 shadow-xs">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-[var(--text-brand)]">
+              <Icon name="progress" size={16} />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                {copy("Bằng chứng", "Living Evidence")}
+              </h3>
+            </div>
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+              {copy("Phác đồ Bộ Y tế và mạng lưới tri thức GLHS.", "MoH guidelines & GLHS knowledge graph.")}
+            </p>
+          </div>
+          <div className="mt-4 pt-3 border-t border-[color:var(--shell-border)]/40 flex items-center justify-between">
+            <Link
+              href="/evidence"
+              className="text-xs font-semibold text-[var(--text-brand)] hover:underline"
             >
-              {copy("Cảnh báo máy chủ & Cập nhật Dược lý", "Real-Time Server Alerts & DrugBank Updates")}
-            </h2>
-          </div>
-          <span className="text-xs font-semibold text-[var(--text-muted)]">
-            {copy("Bảo đảm an toàn theo thời gian thực", "Real-time safety guardrails")}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Panel A: Server Alerts & Clinical Safety */}
-          <div className="rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--surface-muted)] text-[var(--text-brand)]">
-                  <Icon name="warning" size={18} />
-                </span>
-                <div>
-                  <h3 className="font-bold text-base text-[var(--text-primary)]">
-                    {copy("Cảnh báo an toàn lâm sàng", "Clinical Safety Alerts")}
-                  </h3>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    {copy("Rà soát tương tác, cảnh báo đỏ và ngưỡng an toàn", "DDI checks, red flags, and safety thresholds")}
-                  </p>
-                </div>
-              </div>
-              <StatusChip
-                tone={alerts.length > 0 ? "warning" : "success"}
-                label={
-                  alerts.length > 0
-                    ? copy(`${alerts.length} cảnh báo`, `${alerts.length} alert${alerts.length > 1 ? "s" : ""}`)
-                    : copy("An toàn", "Safe")
-                }
-                size="sm"
-              />
-            </div>
-
-            {alerts.length > 0 ? (
-              <div className="space-y-3 pt-2">
-                {alerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    className={`flex flex-col gap-2 rounded-xl border p-3.5 sm:flex-row sm:items-center sm:justify-between ${
-                      alert.severity === "critical"
-                        ? "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
-                        : "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
-                    }`}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <Icon
-                        name="warning"
-                        size={16}
-                        className="mt-0.5 shrink-0"
-                      />
-                      <span className="text-xs font-semibold leading-relaxed">
-                        {alert.message}
-                      </span>
-                    </div>
-                    {alert.href ? (
-                      <Link
-                        href={alert.href}
-                        className="inline-flex shrink-0 items-center gap-1 text-xs font-bold underline hover:opacity-80"
-                      >
-                        {copy("Xem chi tiết", "View details")}
-                        <Icon name="arrow-right" size={12} />
-                      </Link>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-xs text-[var(--text-secondary)] space-y-1.5">
-                <div className="flex items-center gap-2 font-bold text-[var(--text-primary)]">
-                  <Icon name="check" size={16} className="text-[var(--success-500)]" />
-                  <span>{copy("Hệ thống hoạt động an toàn", "System operating safely")}</span>
-                </div>
-                <p className="leading-relaxed">
-                  {copy(
-                    "Tất cả quy tắc FIDES, chốt chặn kê đơn và kiểm tra tương tác thuốc đang được giám sát chặt chẽ. Chưa phát hiện bất thường.",
-                    "All FIDES verification rules, legal hard-guards, and drug-interaction monitors are fully operational.",
-                  )}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Panel B: DrugBank & Evidence Knowledge Updates */}
-          <div className="rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--surface-muted)] text-[var(--text-brand)]">
-                  <Icon name="medication" size={18} />
-                </span>
-                <div>
-                  <h3 className="font-bold text-base text-[var(--text-primary)]">
-                    {copy("Cơ sở dữ liệu Dược & Tri thức", "DrugBank & Knowledge Bases")}
-                  </h3>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    {copy("DrugBank v5.1.10, Phác đồ Bộ Y tế & KDIGO", "DrugBank v5.1.10, MoH Guidelines & KDIGO")}
-                  </p>
-                </div>
-              </div>
-              <StatusChip
-                tone="success"
-                label={copy("Đã đồng bộ", "Synced")}
-                size="sm"
-              />
-            </div>
-
-            <div className="space-y-3 pt-1">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                  <span className="text-[11px] font-semibold text-[var(--text-muted)]">
-                    {copy("Thuốc đang theo dõi", "Tracked medicines")}
-                  </span>
-                  <div className="mt-1 text-xl font-bold text-[var(--text-primary)]">
-                    {cabinetCount === null
-                      ? copy("Chưa có dữ liệu", "Unavailable")
-                      : formatLocaleNumber(language, cabinetCount)}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                  <span className="text-[11px] font-semibold text-[var(--text-muted)]">
-                    {copy("Thuốc sắp đến hạn", "Expiring soon")}
-                  </span>
-                  <div className="mt-1 text-xl font-bold text-[var(--text-primary)]">
-                    {expiringCount === null
-                      ? 0
-                      : formatLocaleNumber(language, expiringCount)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Link
-                  href="/selfmed/ddi"
-                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-panel)] hover:text-[var(--text-brand)]"
-                >
-                  <Icon name="medication" size={14} />
-                  <span>{copy("Kiểm tra tương tác DrugBank", "DrugBank DDI check")}</span>
-                </Link>
-
-                <Link
-                  href="/medicines"
-                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-panel)] hover:text-[var(--text-brand)]"
-                >
-                  <Icon name="medication" size={14} />
-                  <span>{copy("Tủ thuốc lâm sàng", "Clinical cabinet")}</span>
-                </Link>
-
-                <Link
-                  href="/research/source-hub"
-                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-panel)] hover:text-[var(--text-brand)]"
-                >
-                  <Icon name="search" size={14} />
-                  <span>{copy("Nguồn tri thức y khoa", "Knowledge sources")}</span>
-                </Link>
-              </div>
-            </div>
+              {copy("Tra cứu phác đồ →", "Explore guidelines →")}
+            </Link>
           </div>
         </div>
-      </section>
+
+        {/* Drug Safety & Medicines Card */}
+        <div className="flex flex-col justify-between rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] p-4 shadow-xs">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-[var(--text-brand)]">
+              <Icon name="medication" size={16} />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                {copy("Tủ thuốc & Dược lý", "Medicines & Rx")}
+              </h3>
+            </div>
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+              {cabinetCount === null ? (
+                <span>{copy("Chưa có dữ liệu", "No data")}</span>
+              ) : (
+                <span>
+                  {copy(`Đang quản lý ${cabinetCount} thuốc.`, `${cabinetCount} tracked medications.`)}
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="mt-4 pt-3 border-t border-[color:var(--shell-border)]/40 flex items-center justify-between">
+            <Link
+              href="/medicines"
+              className="text-xs font-semibold text-[var(--text-brand)] hover:underline"
+            >
+              {copy("Kiểm tra tương tác DrugBank →", "Check DrugBank interactions →")}
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Decision Support Quick Link */}
+      <div className="flex items-center justify-between rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)]/60 px-4 py-3 text-xs">
+        <div className="flex items-center gap-2 text-[var(--text-secondary)]">
+          <Icon name="clinical-notes" size={15} className="text-[var(--text-brand)]" />
+          <span>{copy("Cần hỗ trợ tra cứu lâm sàng đa tầng?", "Need multi-layer clinical reasoning?")}</span>
+        </div>
+        <Link
+          href="/chat"
+          className="font-semibold text-[var(--text-brand)] hover:underline"
+        >
+          {copy("Tra cứu lâm sàng →", "Clinical Chat →")}
+        </Link>
+      </div>
     </div>
   );
 }
+
+export const ClinicalOverviewLaunchpad = ClinicalOverview;
+export default ClinicalOverview;

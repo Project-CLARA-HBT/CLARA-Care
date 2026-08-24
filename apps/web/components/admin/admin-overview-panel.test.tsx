@@ -130,11 +130,11 @@ describe("AdminOverviewPanel Component", () => {
     vi.spyOn(adminAuditLib, "getAdminAuditLog").mockResolvedValue(mockAuditLogs as any);
   });
 
-  it("renders System Overview Headline with FIDES safety indicator and live sync timestamp", async () => {
+  it("renders compact Header with ADMIN_COMMAND shell mode and FIDES safety indicator", async () => {
     render(<AdminOverviewPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText("TRUNG TÂM CHỈ HUY HỆ THỐNG")).toBeInTheDocument();
+      expect(screen.getByText("ADMIN_COMMAND")).toBeInTheDocument();
     });
 
     expect(screen.getByText("Tổng quan Điều phối & An toàn Hệ thống")).toBeInTheDocument();
@@ -143,48 +143,19 @@ describe("AdminOverviewPanel Component", () => {
     expect(screen.getByRole("button", { name: /Đồng bộ tức thì/i })).toBeInTheDocument();
   });
 
-  it("renders all 4 Systems Status Stream cards with correct routes and live metrics", async () => {
+  it("renders 1. Attention Queue in healthy state as a compact row", async () => {
     render(<AdminOverviewPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText("4 Phân hệ Trọng yếu (Systems Status Stream)")).toBeInTheDocument();
+      expect(screen.getByText("Hàng đợi Cần lưu ý (Attention Queue)")).toBeInTheDocument();
     });
 
-    // 1. Knowledge Core
-    expect(screen.getByText("Knowledge Core")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Quản lý nguồn tri thức/i })).toHaveAttribute(
-      "href",
-      "/admin/knowledge-sources"
-    );
-    expect(screen.getByText("2/3 bật")).toBeInTheDocument();
-
-    // 2. Answer Flow
-    expect(screen.getByText("Answer Flow")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Cấu hình luồng trả lời/i })).toHaveAttribute(
-      "href",
-      "/admin/answer-flow"
-    );
-    expect(screen.getByText("0.35")).toBeInTheDocument();
-
-    // 3. RAG Evaluation
-    expect(screen.getByText("RAG Evaluation")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Chạy đánh giá RAG/i })).toHaveAttribute(
-      "href",
-      "/admin/rag-eval"
-    );
-    expect(screen.getByText("k=10")).toBeInTheDocument();
-
-    // 4. Data Ingestion
-    expect(screen.getByText("Data Ingestion")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Mở trung tâm nạp dữ liệu/i })).toHaveAttribute(
-      "href",
-      "/admin/rag-ingestion"
-    );
-    expect(screen.getByText("Offline Plane")).toBeInTheDocument();
+    expect(screen.getByText("Hoạt động tốt")).toBeInTheDocument();
+    expect(screen.getByText("Toàn bộ phân hệ (All Systems)")).toBeInTheDocument();
+    expect(screen.getByText(/Mọi phân hệ hoạt động bình thường/i)).toBeInTheDocument();
   });
 
-  it("renders Attention / Critical Alerts block when anomalies are detected", async () => {
-    // Modify config to have abnormal threshold and 0 enabled sources
+  it("renders 1. Attention Queue with ordered alerts when anomalies are detected", async () => {
     const degradedConfig = {
       ...mockConfig,
       rag_sources: [
@@ -192,8 +163,8 @@ describe("AdminOverviewPanel Component", () => {
       ],
       rag_flow: {
         ...mockConfig.rag_flow,
-        low_context_threshold: 0.1, // abnormal threshold (< 0.2)
-        rule_verification_enabled: false, // FIDES disabled
+        low_context_threshold: 0.1,
+        rule_verification_enabled: false,
       },
     };
 
@@ -224,41 +195,68 @@ describe("AdminOverviewPanel Component", () => {
     render(<AdminOverviewPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText("Cảnh báo & Mục cần lưu ý (Attention / Critical Alerts)")).toBeInTheDocument();
+      expect(screen.getByText("Hàng đợi Cần lưu ý (Attention Queue)")).toBeInTheDocument();
     });
 
-    // Alert for degraded API
-    expect(screen.getByText("Dịch vụ API Gateway suy giảm")).toBeInTheDocument();
+    expect(screen.getByText("API Gateway")).toBeInTheDocument();
+    expect(screen.getByText("FIDES Shield")).toBeInTheDocument();
+    expect(screen.getByText("RAG Sources")).toBeInTheDocument();
+    expect(screen.getByText("Answer Flow Router")).toBeInTheDocument();
 
-    // Alert for FIDES disabled
-    expect(screen.getByText("Chốt chặn An toàn FIDES bị tắt")).toBeInTheDocument();
-
-    // Alert for 0 RAG sources enabled
-    expect(screen.getByText("Toàn bộ nguồn RAG đang bị tắt")).toBeInTheDocument();
-
-    // Alert for low-context threshold
-    expect(screen.getByText("Ngưỡng low_context_threshold bất thường")).toBeInTheDocument();
+    expect(screen.getByText("Bật lại FIDES")).toBeInTheDocument();
+    expect(screen.getByText("Bật Nguồn tri thức")).toBeInTheDocument();
+    expect(screen.getByText("Điều chỉnh Ngưỡng")).toBeInTheDocument();
   });
 
-  it("renders operational state with zero fabricated alerts when system is healthy", async () => {
+  it("renders 2. System Status Ledger dense table with 4 core subsystems", async () => {
     render(<AdminOverviewPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Mọi phân hệ hoạt động bình thường/i)).toBeInTheDocument();
+      expect(screen.getByText("Sổ cái Trạng thái Phân hệ (System Status Ledger)")).toBeInTheDocument();
     });
+
+    // 1. Knowledge Core
+    expect(screen.getByText("Knowledge Core")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Quản lý nguồn/i })).toHaveAttribute(
+      "href",
+      "/admin/knowledge-sources"
+    );
+    expect(screen.getAllByText("2/3").length).toBeGreaterThanOrEqual(1);
+
+    // 2. Answer Flow
+    expect(screen.getByText("Answer Flow")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Cấu hình luồng/i })).toHaveAttribute(
+      "href",
+      "/admin/answer-flow"
+    );
+    expect(screen.getByText("0.35")).toBeInTheDocument();
+
+    // 3. RAG Evaluation
+    expect(screen.getByText("RAG Evaluation")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Chạy đánh giá/i })).toHaveAttribute(
+      "href",
+      "/admin/rag-eval"
+    );
+    expect(screen.getByText("k=10")).toBeInTheDocument();
+
+    // 4. Data Ingestion
+    expect(screen.getByText("Data Ingestion")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Mở Ingestion/i })).toHaveAttribute(
+      "href",
+      "/admin/rag-ingestion"
+    );
+    expect(screen.getByText("Offline Plane")).toBeInTheDocument();
   });
 
-  it("renders Recent Operational Activity audit trail stream from getAdminAuditLog(6)", async () => {
+  it("renders 3. Recent Operations ledger table with audit records", async () => {
     render(<AdminOverviewPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText("Hoạt động Vận hành Gần đây (Recent Operational Activity)")).toBeInTheDocument();
+      expect(screen.getByText("Hoạt động Vận hành Gần đây (Recent Operations)")).toBeInTheDocument();
     });
 
-    // Calls getAdminAuditLog with limit 6
-    expect(adminAuditLib.getAdminAuditLog).toHaveBeenCalledWith(6);
+    expect(adminAuditLib.getAdminAuditLog).toHaveBeenCalledWith(8);
 
-    // Verifies real audit records rendering
     expect(screen.getAllByText("admin-sec-01").length).toBe(2);
     expect(screen.getByText("toggle_source_enabled")).toBeInTheDocument();
     expect(screen.getByText("rag_sources:s1")).toBeInTheDocument();
@@ -269,5 +267,22 @@ describe("AdminOverviewPanel Component", () => {
 
     expect(screen.getByText("ingest_corpus_batch")).toBeInTheDocument();
     expect(screen.getByText("Thất bại")).toBeInTheDocument();
+  });
+
+  it("renders 4. Audit Digest with compliance badges and link to immutable audit trail", async () => {
+    render(<AdminOverviewPanel />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Tóm lược Kiểm toán & Tuân thủ (Audit Digest)")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Zero-PII Invariant")).toBeInTheDocument();
+    expect(screen.getByText("Append-Only WAL")).toBeInTheDocument();
+    expect(screen.getByText("FIDES Guardrail")).toBeInTheDocument();
+    expect(screen.getByText("Sẵn sàng Kiểm toán")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Mở Nhật ký Kiểm toán Đầy đủ/i })).toHaveAttribute(
+      "href",
+      "/admin/audit-log"
+    );
   });
 });

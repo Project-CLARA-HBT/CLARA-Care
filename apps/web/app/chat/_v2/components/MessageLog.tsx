@@ -9,14 +9,11 @@ import type { UserRole } from "@/lib/auth-store";
 import type { ConversationItem } from "@/components/research/lib/research-page-types";
 import TurnView from "@/app/chat/_v2/components/TurnView";
 import { usePrefersReducedMotion } from "@/app/chat/_v2/theme/usePrefersReducedMotion";
+import type { SourceInspectionItem } from "@/components/shell/inspector-drawer";
 
 /**
- * Virtualized message log for the rebuilt CLARA Chat (CHAT_V2).
- *
- * Virtualizes long turn lists (Requirement 7.1) and exposes the log as an ARIA
- * live region so streaming/new turns are announced (Requirement 5.2). Auto
- * scrolls to the newest turn unless `prefers-reduced-motion` is set, in which
- * case it jumps without smooth animation (Requirement 4.5).
+ * Virtualized message log for CLARA Chat (CHAT_V2 / Spec v8 READ_COMPOSE).
+ * Constrains the main reading column to 760-900px centered canvas.
  */
 
 export type MessageLogProps = {
@@ -26,6 +23,8 @@ export type MessageLogProps = {
   role?: UserRole;
   onLaunchResearch?: (query: string) => void;
   onSaveNote?: (answerText: string) => void;
+  onInspectSource?: (source: SourceInspectionItem) => void;
+  onInspectAllSources?: (sources: SourceInspectionItem[]) => void;
 };
 
 function MessageLog({
@@ -35,6 +34,8 @@ function MessageLog({
   role = "normal",
   onLaunchResearch,
   onSaveNote,
+  onInspectSource,
+  onInspectAllSources,
 }: MessageLogProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -46,8 +47,6 @@ function MessageLog({
     overscan: 6,
   });
 
-  // Keep the newest turn in view as turns arrive. Respect reduced motion
-  // (Requirement 4.5): jump instantly instead of smooth-scrolling.
   useEffect(() => {
     const node = scrollRef.current;
     if (!node || !turns.length) return;
@@ -66,9 +65,10 @@ function MessageLog({
       aria-relevant="additions text"
       aria-label={t(uiLanguage, "chat.messageLog.aria")}
     >
+      {/* Centered reading column (760–900px) */}
       <div
         style={{ height: `${virtualizer.getTotalSize()}px` }}
-        className="relative mx-auto w-full max-w-3xl px-3 py-4"
+        className="relative mx-auto w-full max-w-[860px] px-4 sm:px-6 py-4"
       >
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const turn = turns[virtualRow.index];
@@ -93,6 +93,8 @@ function MessageLog({
                 role={role}
                 onLaunchResearch={onLaunchResearch}
                 onSaveNote={onSaveNote}
+                onInspectSource={onInspectSource}
+                onInspectAllSources={onInspectAllSources}
               />
             </div>
           );
@@ -102,10 +104,4 @@ function MessageLog({
   );
 }
 
-/**
- * Memoized so the virtualized log only re-renders when its turn list, language,
- * or running flag change — not on every unrelated parent (`ChatShell`) state
- * update such as search text or transient notices (Requirement 7.2, Property
- * P9).
- */
 export default memo(MessageLog);

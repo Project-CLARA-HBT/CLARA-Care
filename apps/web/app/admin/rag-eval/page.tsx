@@ -13,7 +13,10 @@ import { safeUserFacingError } from "@/lib/user-facing-text";
 import { aggregateEvalTrends, type EvalRunSummary } from "./eval-dashboard";
 
 /**
- * Bảng đánh giá RAG (rag-eval) — Admin Evaluation Workbench (Spec v5 Section 6.68, Yêu cầu 11.5).
+ * Bảng đánh giá RAG (rag-eval) — Admin Evaluation Workbench (Spec v8 Section 12.12, Spec v5 Section 6.68, Yêu cầu 11.5).
+ *
+ * Shell: ADMIN_COMMAND / DENSE
+ * Archetype: RAG Evaluation Workbench
  *
  * Quản trị viên chạy bộ đánh giá golden VN Q&A và xem các chỉ số chất lượng
  * truy xuất / trả lời: recall@k, nDCG@k, độ trung thực (faithfulness) và độ
@@ -180,7 +183,12 @@ export default function AdminRagEvalPage() {
       title={t(language, "admin.ragEval.title")}
       description={t(language, "admin.ragEval.description")}
     >
-      <div className="space-y-5">
+      <div
+        data-shell-mode="ADMIN_COMMAND"
+        data-layout-archetype="RAG Evaluation Workbench"
+        data-density="DENSE"
+        className="space-y-5"
+      >
         {/* Run Controls Separated from Inspection (Spec 6.68 #1) */}
         <div className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-soft">
           <div className="flex flex-wrap items-start justify-between gap-4">

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { SettingsLayout } from "@/components/page/settings-layout";
 import { EmergencyQrModal } from "@/components/consumer/emergency-qr-modal";
 import { Badge } from "@/components/ui/badge";
@@ -46,8 +45,8 @@ function YouOverviewSkeleton() {
 
 /**
  * YouOverviewContent
- * Spec v5 Section 6.74:
- * - Shell: EXPLORE
+ * Spec v8 Section 7.15 (Account & Preferences Hub):
+ * - Shell: EXPLORE / Settings
  * - Archetype: Account & Preferences Hub
  * - Layout:
  *   1. Identity & Profile card (Demographics, Emergency Medical Alert, Quick QR, Profile Switcher)
@@ -60,9 +59,10 @@ function YouOverviewSkeleton() {
  *      - Notifications
  *      - Security & Preferences
  *      - Help & Guides
+ *   3. Professional Mode Launcher (if doctor / researcher / admin)
+ *   4. Sign Out action
  */
 function YouOverviewContent() {
-  const router = useRouter();
   const uiLanguage = useUILanguage();
   const isEn = uiLanguage === "en";
   const { role, isLoggingOut, handleLogout } = useSession();

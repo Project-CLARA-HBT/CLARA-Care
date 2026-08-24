@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import ClaraKp3Landing from "@/components/landing/clara-kp3-landing";
+import LandingV7 from "@/components/landing/v7/landing-v7";
 
 export const metadata: Metadata = {
   title: "The Clara Care — Trợ lý AI Lâm sàng & Y tế An toàn",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <ClaraKp3Landing />;
+  return <LandingV7 />;
 }

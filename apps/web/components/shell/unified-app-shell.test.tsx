@@ -130,7 +130,7 @@ describe("UnifiedAppShell", () => {
   });
 
   describe("Composition on Standard/Focus/Dense routes", () => {
-    it("composes ContextHeader (top), ContentFrame (<main id='main-content'>), FloatingNavbar (bottom), and CommandPalette on /today", async () => {
+    it("composes ContextHeader (top), ContentFrame (<main id='main-content'>), WorkspaceDock (bottom), and CommandPalette on /today", async () => {
       renderUnifiedShell(<div>Today Content</div>);
 
       // Top: ContextHeader
@@ -144,9 +144,9 @@ describe("UnifiedAppShell", () => {
       expect(contentFrame).toHaveAttribute("id", "main-content");
       expect(screen.getByText("Today Content")).toBeInTheDocument();
 
-      // Bottom: FloatingNavbar
-      const floatingNavbar = screen.getByTestId("floating-navbar");
-      expect(floatingNavbar).toBeInTheDocument();
+      // Bottom: WorkspaceDock
+      const workspaceDock = screen.getByTestId("workspace-dock");
+      expect(workspaceDock).toBeInTheDocument();
 
       // Skip link
       const skipLink = screen.getByText("Bỏ qua, tới nội dung chính");
@@ -157,7 +157,7 @@ describe("UnifiedAppShell", () => {
       expect(screen.queryByTestId("admin-preview-banner")).not.toBeInTheDocument();
     });
 
-    it("mounts ContextHeader and FloatingNavbar on dense /dashboard route for doctor role", async () => {
+    it("mounts ContextHeader and WorkspaceDock on dense /dashboard route for doctor role", async () => {
       mocks.pathname = "/dashboard";
       mocks.apiGet.mockResolvedValue({ data: { role: "doctor" } });
 
@@ -168,36 +168,36 @@ describe("UnifiedAppShell", () => {
       });
 
       expect(screen.getByTestId("context-header")).toBeInTheDocument();
-      expect(screen.getByTestId("floating-navbar")).toBeInTheDocument();
+      expect(screen.getByTestId("workspace-dock")).toBeInTheDocument();
     });
   });
 
   describe("Public/Auth/Share Route Suppression", () => {
-    it("suppresses ContextHeader and FloatingNavbar on public /login route, mounting clean unauthenticated container", async () => {
+    it("suppresses ContextHeader and WorkspaceDock on public /login route, mounting clean unauthenticated container", async () => {
       mocks.pathname = "/login";
 
       renderUnifiedShell(<div>Login Form</div>);
 
       expect(screen.getByText("Login Form")).toBeInTheDocument();
       expect(screen.queryByTestId("context-header")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("floating-navbar")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("workspace-dock")).not.toBeInTheDocument();
 
       // Still mounts clean <main id="main-content">
       const main = screen.getByRole("main");
       expect(main).toHaveAttribute("id", "main-content");
     });
 
-    it("suppresses ContextHeader and FloatingNavbar on public share routes (/share/[token])", async () => {
+    it("suppresses ContextHeader and WorkspaceDock on public share routes (/share/[token])", async () => {
       mocks.pathname = "/share/sample-share-token";
 
       renderUnifiedShell(<div>Shared Packet Content</div>);
 
       expect(screen.getByText("Shared Packet Content")).toBeInTheDocument();
       expect(screen.queryByTestId("context-header")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("floating-navbar")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("workspace-dock")).not.toBeInTheDocument();
     });
 
-    it("suppresses ContextHeader and FloatingNavbar on utility onboarding routes (/welcome/start)", async () => {
+    it("suppresses ContextHeader and WorkspaceDock on utility onboarding routes (/welcome/start)", async () => {
       mocks.pathname = "/welcome/start";
       mocks.getOnboarding.mockResolvedValue({ needs_onboarding: true });
 
@@ -205,7 +205,7 @@ describe("UnifiedAppShell", () => {
 
       expect(screen.getByText("Welcome Step 1")).toBeInTheDocument();
       expect(screen.queryByTestId("context-header")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("floating-navbar")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("workspace-dock")).not.toBeInTheDocument();
 
       await waitFor(() => {
         expect(mocks.getOnboarding).toHaveBeenCalled();
@@ -214,7 +214,7 @@ describe("UnifiedAppShell", () => {
   });
 
   describe("Immersive Route Receding Behavior", () => {
-    it("smoothly recedes FloatingNavbar on immersive mode (e.g. Scribe recording, full-screen conversation)", async () => {
+    it("smoothly recedes WorkspaceDock on immersive mode (e.g. Scribe recording, full-screen conversation)", async () => {
       mocks.pathname = "/scribe";
       mocks.apiGet.mockResolvedValue({ data: { role: "doctor" } });
 
@@ -227,8 +227,8 @@ describe("UnifiedAppShell", () => {
       // ContextHeader remains visible for top-level navigation and breadcrumbs
       expect(screen.getByTestId("context-header")).toBeInTheDocument();
 
-      // FloatingNavbar smoothly recedes in immersive mode
-      expect(screen.queryByTestId("floating-navbar")).not.toBeInTheDocument();
+      // WorkspaceDock smoothly recedes in immersive mode
+      expect(screen.queryByTestId("workspace-dock")).not.toBeInTheDocument();
 
       // ContentFrame marked as immersive
       const contentFrame = screen.getByTestId("content-frame");
@@ -251,9 +251,9 @@ describe("UnifiedAppShell", () => {
       expect(banner).toBeInTheDocument();
       expect(screen.getByText(/ADMIN PREVIEW · CLINICAL/)).toBeInTheDocument();
 
-      // ContextHeader and FloatingNavbar also mount
+      // ContextHeader and WorkspaceDock also mount
       expect(screen.getByTestId("context-header")).toBeInTheDocument();
-      expect(screen.getByTestId("floating-navbar")).toBeInTheDocument();
+      expect(screen.getByTestId("workspace-dock")).toBeInTheDocument();
     });
   });
 

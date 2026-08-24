@@ -13,6 +13,9 @@ export { default as ShellModeProvider } from "./shell-mode-provider";
 export * from "./clara-orb";
 export { default as ClaraOrb } from "./clara-orb";
 
+export * from "./workspace-dock";
+export { default as WorkspaceDock } from "./workspace-dock";
+
 export * from "./floating-primary-dock";
 export { default as FloatingPrimaryDock } from "./floating-primary-dock";
 
@@ -28,8 +31,13 @@ export { default as CommandPalette } from "./command-palette";
 export * from "./command-palette-provider";
 export { default as CommandPaletteProvider } from "./command-palette-provider";
 
-export * from "./global-context-bar";
 export { default as GlobalContextBar } from "./global-context-bar";
+
+export * from "./global-command-bar";
+export { default as GlobalCommandBar } from "./global-command-bar";
+
+export * from "./admin-command-strip";
+export { default as AdminCommandStrip } from "./admin-command-strip";
 
 export * from "./consumer-layout";
 export { default as ConsumerLayout } from "./consumer-layout";
@@ -49,11 +57,23 @@ export { default as SessionBoundary } from "./session-boundary";
 export * from "./preview-banner";
 export { default as PreviewBanner } from "./preview-banner";
 
+export * from "./preview-context-strip";
+export { default as PreviewContextStrip } from "./preview-context-strip";
+
 export * from "./admin-preview-banner";
 export { default as AdminPreviewBanner } from "./admin-preview-banner";
 
 export * from "./chrome-surface";
 export { default as ChromeSurface } from "./chrome-surface";
+
+export * from "./context-rail";
+export { default as ContextRail } from "./context-rail";
+
+export * from "./inspector-drawer";
+export { default as InspectorDrawer } from "./inspector-drawer";
+
+export * from "./action-bar";
+export { default as ActionBar } from "./action-bar";
 
 export { ShellLayoutContext, type ShellMode as ShellLayoutMode, useShellLayout } from "./shell-context";
 

@@ -77,23 +77,24 @@ vi.mock("@/lib/council", () => ({
   getLatestCouncilCase: vi.fn(async () => mockCouncilCase),
 }));
 
-describe("ClinicalOverviewLaunchpad Component", () => {
+describe("ClinicalOverviewLaunchpad Component (Spec v8 §7.1)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("renders the Clinician Command Center hero banner and title", async () => {
+  it("renders contextual header with verified indicator without giant welcome banner", async () => {
     render(<ClinicalOverviewLaunchpad />);
 
     await waitFor(() => {
       expect(screen.getByText("Trung tâm Lâm sàng & Hội chẩn")).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/KHÔNG GIAN LÂM SÀNG • COMMAND CENTER/i)).toBeInTheDocument();
+    expect(screen.getByText("Bác sĩ Lâm sàng")).toBeInTheDocument();
     expect(screen.getByText(/DrugBank v5.1.10 Verified/i)).toBeInTheDocument();
+    expect(screen.queryByText(/KHÔNG GIAN LÂM SÀNG • COMMAND CENTER/i)).not.toBeInTheDocument();
   });
 
-  it("renders Quick Case Resumption with case status chips and last updated time", async () => {
+  it("renders Priority Active Case as first actionable object", async () => {
     render(<ClinicalOverviewLaunchpad />);
 
     await waitFor(() => {
@@ -108,47 +109,27 @@ describe("ClinicalOverviewLaunchpad Component", () => {
     expect(resumeLinks.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders all 4 Primary Clinical Tool cards with appropriate links and badges", async () => {
+  it("renders Attention Queue above routine work when issues require action", async () => {
     render(<ClinicalOverviewLaunchpad />);
 
     await waitFor(() => {
-      expect(screen.getByText("4 công cụ lâm sàng cốt lõi")).toBeInTheDocument();
+      expect(screen.getByText("Hàng đợi cần chú ý & Cảnh báo an toàn")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Hội chẩn AI")).toBeInTheDocument();
-    expect(screen.getAllByText("Ghi chép SOAP").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Bằng chứng")).toBeInTheDocument();
-    expect(screen.getByText("Tra cứu lâm sàng")).toBeInTheDocument();
-
-    expect(screen.getByText("AI Council")).toBeInTheDocument();
-    expect(screen.getByText("SOAP Notes")).toBeInTheDocument();
-    expect(screen.getByText("Living Evidence")).toBeInTheDocument();
-    expect(screen.getByText("Decision Support")).toBeInTheDocument();
-
-    // Check highlights
-    expect(screen.getByText("Triage đa chuyên khoa")).toBeInTheDocument();
-    expect(screen.getByText("Bệnh án SOAP chuẩn")).toBeInTheDocument();
-    expect(screen.getByText("Đồ thị tri thức GLHS")).toBeInTheDocument();
-    expect(screen.getByText("Chỉnh liều eGFR")).toBeInTheDocument();
+    expect(screen.getByText("Có 2 thuốc sắp đến hạn kiểm tra liều dùng.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Xử lý ngay/i })).toHaveAttribute("href", "/medicines");
   });
 
-  it("renders Real-time server alerts and DrugBank updates section", async () => {
+  it("renders operational clinical rows without 4 monolithic card blocks", async () => {
     render(<ClinicalOverviewLaunchpad />);
 
     await waitFor(() => {
-      expect(screen.getByText("Cảnh báo máy chủ & Cập nhật Dược lý")).toBeInTheDocument();
+      expect(screen.getByText("Ghi chép SOAP")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Cảnh báo an toàn lâm sàng")).toBeInTheDocument();
-    expect(screen.getByText("Có 2 thuốc sắp đến hạn kiểm tra liều dùng.")).toBeInTheDocument();
-
-    expect(screen.getByText("Cơ sở dữ liệu Dược & Tri thức")).toBeInTheDocument();
-    expect(screen.getByText("Thuốc đang theo dõi")).toBeInTheDocument();
-    expect(screen.getByText("12")).toBeInTheDocument();
-    expect(screen.getByText("Thuốc sắp đến hạn")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
-
-    expect(screen.getByRole("link", { name: /Kiểm tra tương tác DrugBank/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Tủ thuốc lâm sàng/i })).toBeInTheDocument();
+    expect(screen.getByText("Bằng chứng")).toBeInTheDocument();
+    expect(screen.getByText("Tủ thuốc & Dược lý")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Tra cứu phác đồ/i })).toHaveAttribute("href", "/evidence");
+    expect(screen.getByRole("link", { name: /Kiểm tra tương tác DrugBank/i })).toHaveAttribute("href", "/medicines");
   });
 });

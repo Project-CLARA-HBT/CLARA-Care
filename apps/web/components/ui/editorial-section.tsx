@@ -46,6 +46,7 @@ export interface EditorialSectionProps {
   as?: "section" | "article" | "div" | "main";
   id?: string;
   "aria-labelledby"?: string;
+  "data-testid"?: string;
   headerClassName?: string;
   contentClassName?: string;
   className?: string;
@@ -98,6 +99,7 @@ export function EditorialSection({
   as = "section",
   id,
   "aria-labelledby": ariaLabelledby,
+  "data-testid": dataTestId,
   headerClassName = "",
   contentClassName = "",
   className = "",
@@ -114,6 +116,7 @@ export function EditorialSection({
   return (
     <Component
       id={id}
+      data-testid={dataTestId}
       aria-labelledby={resolvedAriaLabelledby}
       className={`${variantClass} ${maxWidthClass} ${className}`}
     >

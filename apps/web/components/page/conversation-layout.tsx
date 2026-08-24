@@ -70,6 +70,7 @@ const BG_MAP: Record<PageCanvasBg, string> = {
   subtle: "bg-[var(--surface-muted)] text-[var(--text-primary)]",
   sidebar: "bg-[var(--surface-sidebar)] text-[var(--text-primary)]",
   transparent: "bg-transparent text-[var(--text-primary)]",
+  workbench: "bg-[var(--surface-panel)] text-[var(--text-primary)]",
 };
 
 const MAX_WIDTH_MAP: Record<PageMaxWidth, string> = {
@@ -87,6 +88,9 @@ const MAX_WIDTH_MAP: Record<PageMaxWidth, string> = {
   dense: "max-w-[1600px]",
   prose: "max-w-3xl",
   full: "max-w-full",
+  instrument: "max-w-7xl",
+  workbench: "max-w-7xl",
+  "full-bleed": "max-w-full",
 };
 
 /**

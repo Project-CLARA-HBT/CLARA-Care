@@ -4,17 +4,19 @@ import {
   ReactNode,
   useContext,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
 import TransparencyNoticeGate from "@/components/compliance/transparency-notice-gate";
+import PreviewContextStrip from "@/components/shell/preview-context-strip";
 import AdminPreviewBanner, {
   PreviewBanner,
 } from "@/components/shell/admin-preview-banner";
+import GlobalCommandBar from "@/components/shell/global-context-bar";
 import ContextHeader from "@/components/shell/context-header";
 import ContentFrame from "@/components/shell/content-frame";
+import WorkspaceDock from "@/components/shell/workspace-dock";
 import FloatingNavbar from "@/components/shell/floating-navbar";
 import CommandPalette from "@/components/shell/command-palette";
 import { PreferenceContext } from "@/components/shell/preference-provider";
@@ -70,7 +72,7 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
   );
   const isChatLayout = pathname === "/chat" || pathname.startsWith("/chat/");
   const isImmersive = shellMode.isImmersive || isImmersivePath;
-  const hideFloatingNavbar = shellMode.isImmersive;
+  const hideBottomDock = shellMode.isImmersive;
 
   // Fallback hydration if outside SessionBoundary
   useEffect(() => {
@@ -169,7 +171,7 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
     };
   }, [isRoleHydrated, isSessionChecked, pathname, role, router, sessionContext]);
 
-  // On public/auth/share routes: suppresses ContextHeader and FloatingNavbar, mounts clean unauthenticated container
+  // On public/auth/share routes: suppresses ContextHeader/GlobalCommandBar and WorkspaceDock, mounts clean unauthenticated container
   if (isPublicOrUtility) {
     return (
       <main
@@ -183,6 +185,7 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
   }
 
   // On standard/focus/dense/explore/read/immersive routes:
+  // Shell composition order: PreviewContextStrip -> GlobalCommandBar -> <main id="main-content"> (ContentFrame) -> WorkspaceDock -> CommandPalette
   return (
     <div
       data-testid="unified-app-shell"
@@ -193,13 +196,14 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
       </a>
       <TransparencyNoticeGate />
 
-      {/* Top: PreviewBanner (admin preview only) */}
+      {/* 1. Top: PreviewContextStrip & PreviewBanner (admin preview only) */}
+      <PreviewContextStrip />
       <PreviewBanner />
 
-      {/* Top: ContextHeader */}
-      <ContextHeader />
+      {/* 2. Top: GlobalCommandBar */}
+      <GlobalCommandBar />
 
-      {/* Main Content Canvas: ContentFrame */}
+      {/* 3. Main Content Canvas: ContentFrame (<main id="main-content">) */}
       <ContentFrame
         isImmersive={isImmersive}
         isChatLayout={isChatLayout}
@@ -207,10 +211,10 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
         {children}
       </ContentFrame>
 
-      {/* Bottom: FloatingNavbar (smoothly recedes on immersive routes) */}
-      {!hideFloatingNavbar && <FloatingNavbar role={effectiveRole} />}
+      {/* 4. Bottom: WorkspaceDock (smoothly recedes on immersive routes) */}
+      {!hideBottomDock && <WorkspaceDock role={effectiveRole} />}
 
-      {/* Universal Command Palette (Cmd+K / Ctrl+K) */}
+      {/* 5. Universal Command Palette (Cmd+K / Ctrl+K) */}
       <CommandPalette role={effectiveRole} />
     </div>
   );

@@ -5,12 +5,15 @@ import * as systemLib from "@/lib/system";
 import * as researchLib from "@/lib/research";
 import * as auditLib from "@/lib/admin-audit";
 
+const roleState = { role: "admin" as "normal" | "doctor" | "researcher" | "admin" };
+
 vi.mock("@/lib/auth-store", () => ({
-  getRole: () => "admin",
+  getRole: () => roleState.role,
 }));
 
 describe("AdminOverviewPage", () => {
   beforeEach(() => {
+    roleState.role = "admin";
     window.localStorage.setItem("clara_ui_language", "vi");
 
     vi.spyOn(systemLib, "getApiHealth").mockResolvedValue({
@@ -46,7 +49,7 @@ describe("AdminOverviewPage", () => {
     window.localStorage.clear();
   });
 
-  it("renders CommandCenterLayout with admin workspace and AdminOverviewPanel", async () => {
+  it("renders CommandCenterLayout with admin workspace, AdminCommandStrip, and ordered visual hierarchy", async () => {
     render(<AdminOverviewPage />);
 
     const commandCenter = document.querySelector('[data-archetype="command-center"]');
@@ -59,9 +62,25 @@ describe("AdminOverviewPage", () => {
       expect(screen.getByText("Tổng quan Điều phối & An toàn Hệ thống")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("4 Phân hệ Trọng yếu (Systems Status Stream)")).toBeInTheDocument();
+    // 1. Attention Queue
+    expect(screen.getByText("Hàng đợi Cần lưu ý (Attention Queue)")).toBeInTheDocument();
+
+    // 2. System Status Ledger
+    expect(screen.getByText("Sổ cái Trạng thái Phân hệ (System Status Ledger)")).toBeInTheDocument();
     expect(screen.getByText("Knowledge Core")).toBeInTheDocument();
     expect(screen.getByText("Answer Flow")).toBeInTheDocument();
-    expect(screen.getByText(/Trình Khởi chạy Toàn bộ Công cụ/i)).toBeInTheDocument();
+
+    // 3. Recent Operations
+    expect(screen.getByText("Hoạt động Vận hành Gần đây (Recent Operations)")).toBeInTheDocument();
+
+    // 4. Audit Digest
+    expect(screen.getByText("Tóm lược Kiểm toán & Tuân thủ (Audit Digest)")).toBeInTheDocument();
+  });
+
+  it("blocks non-admin users with 403 access denied message", async () => {
+    roleState.role = "normal";
+    render(<AdminOverviewPage />);
+
+    expect(screen.getByText(/Từ chối quyền truy cập/i)).toBeInTheDocument();
   });
 });

@@ -9,13 +9,11 @@ import type { ConversationItem } from "@/components/research/lib/research-page-t
 import AnswerRenderer from "@/app/chat/_v2/components/AnswerRenderer";
 import FlowTimeline from "@/app/chat/_v2/components/FlowTimeline";
 import Icon from "@/components/ui/icon";
+import type { SourceInspectionItem } from "@/components/shell/inspector-drawer";
 
 /**
- * Clean editorial conversation feed turn with refined bubble typography.
- * Aligned with Stitch template h_i_clara_active_conversation_refined.
- *
- * User bubble (right-aligned, refined bubble typography with soft contrast).
- * Assistant turn (left-aligned, AI avatar, status header, structured answer-first card).
+ * Clean editorial conversation feed turn with Spec v8 READ_COMPOSE layout.
+ * User bubble (compact) & AI Assistant turn (document-style structured answer).
  */
 
 type TurnErrorBoundaryProps = {
@@ -57,6 +55,8 @@ export type TurnViewProps = {
   role?: UserRole;
   onLaunchResearch?: (query: string) => void;
   onSaveNote?: (answerText: string) => void;
+  onInspectSource?: (source: SourceInspectionItem) => void;
+  onInspectAllSources?: (sources: SourceInspectionItem[]) => void;
 };
 
 function TurnView({
@@ -65,6 +65,8 @@ function TurnView({
   role = "normal",
   onLaunchResearch,
   onSaveNote,
+  onInspectSource,
+  onInspectAllSources,
 }: TurnViewProps) {
   const tier2Result = turn.result.tier === "tier2" ? turn.result : null;
 
@@ -111,6 +113,8 @@ function TurnView({
                   uiLanguage={uiLanguage}
                   role={role}
                   onSaveNote={onSaveNote}
+                  onInspectSource={onInspectSource}
+                  onInspectAllSources={onInspectAllSources}
                 />
                 <details className="group rounded-xl border border-[color:var(--shell-border)]/80 bg-[var(--surface-muted)]/70 px-4 py-3 transition-colors">
                   <summary className="cursor-pointer text-xs sm:text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-between gap-2">
@@ -133,6 +137,8 @@ function TurnView({
                 uiLanguage={uiLanguage}
                 role={role}
                 onSaveNote={onSaveNote}
+                onInspectSource={onInspectSource}
+                onInspectAllSources={onInspectAllSources}
               />
             )}
           </TurnErrorBoundary>
@@ -162,7 +168,4 @@ function TurnView({
   );
 }
 
-/**
- * Memoized turn view.
- */
 export default memo(TurnView);

@@ -17,7 +17,10 @@ import { getStoredUILanguage, type UILanguage, onUILanguageChange } from "@/lib/
 import { formatLocaleDate } from "@/lib/i18n/catalog";
 
 /**
- * Admin Moderation Workbench (Spec v5 Section 6.65).
+ * Admin Moderation Workbench (Spec v8 Section 12.11, Spec v5 Section 6.65).
+ *
+ * Shell: ADMIN_COMMAND / DENSE
+ * Archetype: Community Moderation Workbench
  *
  * Dedicated admin workbench to inspect community moderation queues, preview reported
  * posts and comments, and execute audited actions (dismiss report / remove violating content)
@@ -217,7 +220,12 @@ export default function CommunityModerationPage() {
 
   return (
     <AdminShell activeTab="community-moderation" title={title} description={description}>
-      <div className="space-y-5">
+      <div
+        data-shell-mode="ADMIN_COMMAND"
+        data-layout-archetype="Community Moderation Workbench"
+        data-density="DENSE"
+        className="space-y-5"
+      >
         {error ? <InlineError message={error} /> : null}
 
         {/* Top KPI Cards */}

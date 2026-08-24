@@ -82,6 +82,8 @@ export type LatencyPercentiles = {
   p99_ms: number;
 };
 
+import type { FidesBlockedPatternItem } from "./platform-analytics";
+
 export type ClinicalAnalytics = {
   generated_at: string;
   range: [string, string];
@@ -91,6 +93,7 @@ export type ClinicalAnalytics = {
   fallback_rate_pct: number;
   latency: LatencyPercentiles[];
   has_data: boolean;
+  top_hazardous_pairs?: FidesBlockedPatternItem[];
 };
 
 // ---------------------------------------------------------------------------

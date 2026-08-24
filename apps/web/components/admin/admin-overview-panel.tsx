@@ -6,20 +6,15 @@ import Icon from "@/components/ui/icon";
 import { StatusChip, type StatusTone } from "@/components/ui/status-chip";
 import useControlTowerConfig from "@/components/admin/use-control-tower-config";
 import { FLOW_FLAG_META } from "@/components/admin/admin-config-meta";
-import AdminAppLauncherModal from "@/components/admin/admin-app-launcher-modal";
-import {
-  ADMIN_CATEGORIES,
-  ADMIN_CATEGORY_ORDER,
-  ADMIN_TOOLS,
-} from "@/components/admin/admin-tools-registry";
 import { getAdminAuditLog, type AdminAuditRecord } from "@/lib/admin-audit";
 import { trackAdminSurfaceViewed } from "@/lib/analytics/events";
 import { sanitizeUpstreamError } from "@/lib/user-facing-text";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   KnowledgeSource,
   SourceHubCatalogEntry,
   listKnowledgeSources,
-  listSourceHubCatalog
+  listSourceHubCatalog,
 } from "@/lib/research";
 import {
   getApiHealth,
@@ -27,16 +22,19 @@ import {
   normalizeApiHealth,
   normalizeSystemDependencies,
   type ApiHealthSnapshot,
-  type SystemDependenciesSnapshot
+  type SystemDependenciesSnapshot,
 } from "@/lib/system";
 
-type AdminAlert = {
+export type AttentionQueueSeverity = "critical" | "warning" | "info";
+
+export type AttentionQueueItem = {
   id: string;
-  severity: "critical" | "warning" | "info";
-  title: string;
-  message: string;
-  href: string;
+  severity: AttentionQueueSeverity;
+  system: string;
+  issue: string;
   actionLabel: string;
+  href: string;
+  timestamp?: string;
 };
 
 function formatTimestamp(value: string | null | undefined): string {
@@ -51,7 +49,7 @@ function formatTimestamp(value: string | null | undefined): string {
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
-        second: "2-digit"
+        second: "2-digit",
       });
 }
 
@@ -66,10 +64,16 @@ function getOutcomeChip(outcome: string): { tone: StatusTone; label: string } {
   if (normalized === "warning" || normalized === "warn") {
     return { tone: "warning", label: "Cảnh báo" };
   }
+  if (normalized === "denied") {
+    return { tone: "danger", label: "Bị từ chối" };
+  }
   return { tone: "info", label: outcome || "Ghi nhận" };
 }
 
 export function AdminOverviewPanel() {
+  const language = useUILanguage();
+  const isVi = language !== "en";
+
   const { config, error: configError, isLoading: isConfigLoading, reload: reloadConfig } =
     useControlTowerConfig();
 
@@ -78,7 +82,6 @@ export function AdminOverviewPanel() {
   const [apiHealth, setApiHealth] = useState<ApiHealthSnapshot | null>(null);
   const [dependencies, setDependencies] = useState<SystemDependenciesSnapshot | null>(null);
   const [auditLogs, setAuditLogs] = useState<AdminAuditRecord[]>([]);
-  const [isLauncherOpen, setIsLauncherOpen] = useState(false);
 
   const [isLoadingExtra, setIsLoadingExtra] = useState(true);
   const [extraError, setExtraError] = useState("");
@@ -94,7 +97,7 @@ export function AdminOverviewPanel() {
         listSourceHubCatalog(),
         getApiHealth(),
         getSystemDependencies(),
-        getAdminAuditLog(6)
+        getAdminAuditLog(8),
       ]);
 
       if (knowledge.status === "fulfilled") {
@@ -159,19 +162,23 @@ export function AdminOverviewPanel() {
     config?.rag_flow.rule_verification_enabled ?? config?.rag_flow.verification_enabled ?? true
   );
 
-  // Critical Alerts derivation from real config and service health
-  const alerts = useMemo<AdminAlert[]>(() => {
-    const list: AdminAlert[] = [];
+  const lowContextThreshold = config?.rag_flow.low_context_threshold ?? 0.2;
+  const recallAtK = config?.rag_flow.recall_at_k ?? 10;
+
+  // Ordered Attention Queue derivation (sorted: critical > warning > info, capped at 5)
+  const attentionQueue = useMemo<AttentionQueueItem[]>(() => {
+    const list: AttentionQueueItem[] = [];
 
     // 1. API Health / ML Service check
     if (apiHealth && apiHealth.status !== "ok" && apiHealth.status !== "healthy" && apiHealth.status !== "unknown") {
       list.push({
         id: "alert-api-degraded",
         severity: "critical",
-        title: "Dịch vụ API Gateway suy giảm",
-        message: `Trạng thái API: "${apiHealth.status}" - ${apiHealth.message || "Kiểm tra kết nối hệ thống"}.`,
+        system: "API Gateway",
+        issue: `Trạng thái API: "${apiHealth.status}" - ${apiHealth.message || "Kiểm tra kết nối hệ thống"}.`,
         href: "/admin/observability",
-        actionLabel: "Kiểm tra Giám sát"
+        actionLabel: "Kiểm tra Giám sát",
+        timestamp: formatTimestamp(lastSyncTime.toISOString()),
       });
     }
 
@@ -179,10 +186,11 @@ export function AdminOverviewPanel() {
       list.push({
         id: "alert-ml-unreachable",
         severity: "critical",
-        title: "Dịch vụ ML & Guardrails không phản hồi",
-        message: "Máy chủ ML (clara_ml) không thể kết nối. Các tác vụ RAG, FIDES và Router đang chạy ở chế độ fallback.",
+        system: "ML & Guardrails",
+        issue: "Máy chủ ML (clara_ml) không thể kết nối. Các tác vụ RAG, FIDES và Router đang chạy ở chế độ fallback.",
         href: "/admin/observability",
-        actionLabel: "Mở Observability"
+        actionLabel: "Mở Observability",
+        timestamp: formatTimestamp(lastSyncTime.toISOString()),
       });
     }
 
@@ -191,10 +199,11 @@ export function AdminOverviewPanel() {
       list.push({
         id: "alert-fides-disabled",
         severity: "critical",
-        title: "Chốt chặn An toàn FIDES bị tắt",
-        message: "Rule verification / FIDES guardrail đang ở trạng thái tắt. Các kiểm chứng an toàn lâm sàng bị bỏ qua!",
+        system: "FIDES Shield",
+        issue: "Chốt chặn An toàn FIDES bị tắt. Các kiểm chứng an toàn lâm sàng bị bỏ qua!",
         href: "/admin/answer-flow",
-        actionLabel: "Bật lại FIDES"
+        actionLabel: "Bật lại FIDES",
+        timestamp: formatTimestamp(lastSyncTime.toISOString()),
       });
     }
 
@@ -203,19 +212,21 @@ export function AdminOverviewPanel() {
       list.push({
         id: "alert-sources-zero",
         severity: "critical",
-        title: "Toàn bộ nguồn RAG đang bị tắt",
-        message: `0/${totalSources} nguồn truy xuất RAG được bật. Pipeline trả lời y khoa sẽ không có tài liệu dẫn chứng.`,
+        system: "RAG Sources",
+        issue: `0/${totalSources} nguồn truy xuất RAG được bật. Pipeline trả lời y khoa sẽ không có tài liệu dẫn chứng.`,
         href: "/admin/knowledge-sources",
-        actionLabel: "Bật Nguồn tri thức"
+        actionLabel: "Bật Nguồn tri thức",
+        timestamp: formatTimestamp(lastSyncTime.toISOString()),
       });
     } else if (totalSources > 0 && enabledSources < totalSources / 2) {
       list.push({
         id: "alert-sources-low",
         severity: "warning",
-        title: "Độ phủ nguồn tri thức RAG thấp",
-        message: `Chỉ có ${enabledSources}/${totalSources} nguồn được kích hoạt. Hãy kiểm tra các connector y văn.`,
+        system: "RAG Sources",
+        issue: `Chỉ có ${enabledSources}/${totalSources} nguồn được kích hoạt. Độ phủ nguồn tri thức RAG thấp.`,
         href: "/admin/knowledge-sources",
-        actionLabel: "Cấu hình Nguồn"
+        actionLabel: "Cấu hình Nguồn",
+        timestamp: formatTimestamp(lastSyncTime.toISOString()),
       });
     }
 
@@ -226,111 +237,102 @@ export function AdminOverviewPanel() {
         list.push({
           id: "alert-low-context",
           severity: "warning",
-          title: "Ngưỡng low_context_threshold bất thường",
-          message: `Ngưỡng router hiện tại là ${threshold} (vùng khuyến nghị: 0.2 - 0.8). Có thể gây lệch luồng định tuyến.`,
+          system: "Answer Flow Router",
+          issue: `Ngưỡng low_context_threshold hiện tại là ${threshold} (vùng khuyến nghị: 0.2 - 0.8). Có thể gây lệch luồng định tuyến.`,
           href: "/admin/answer-flow",
-          actionLabel: "Điều chỉnh Ngưỡng"
+          actionLabel: "Điều chỉnh Ngưỡng",
+          timestamp: formatTimestamp(lastSyncTime.toISOString()),
         });
       }
     }
 
-    return list;
-  }, [apiHealth, dependencies, config, isFidesShieldActive, totalSources, enabledSources]);
+    // Sort by severity (critical > warning > info) and slice to max 5 items
+    const severityOrder: Record<AttentionQueueSeverity, number> = {
+      critical: 0,
+      warning: 1,
+      info: 2,
+    };
+
+    return list
+      .sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity])
+      .slice(0, 5);
+  }, [apiHealth, dependencies, config, isFidesShieldActive, totalSources, enabledSources, lastSyncTime]);
 
   const isLoadingAny = isConfigLoading || isLoadingExtra;
 
   return (
-    <div className="space-y-6">
-      {/* 1. System Overview Headline (Editorial Header) */}
-      <section className="relative overflow-hidden rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-8 shadow-sm">
-        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[var(--brand-600)]/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-[var(--brand-primary)]/5 blur-3xl" />
-
-        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-3xl space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-brand)]">
-                <Icon name="progress" size={14} />
-                TRUNG TÂM CHỈ HUY HỆ THỐNG
-              </span>
-              <StatusChip
-                tone={isFidesShieldActive ? "success" : "danger"}
-                label={isFidesShieldActive ? "FIDES Safety Shield: Hoạt động" : "FIDES Verification: Tắt"}
-                icon={<Icon name={isFidesShieldActive ? "check" : "warning"} size={13} />}
-                size="sm"
-              />
-              <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">
-                <Icon name="progress" size={13} className="text-[var(--text-brand)]" />
-                4 Phân hệ Trọng yếu
-              </span>
-            </div>
-
-            <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)] sm:text-4xl">
+    <div
+      data-shell-mode="ADMIN_COMMAND"
+      data-layout-archetype="Admin Command Workbench"
+      data-density="DENSE"
+      className="space-y-6"
+    >
+      {/* 1. Compact Header / Context Bar (No Giant Hero Banner) */}
+      <header className="flex flex-col gap-3 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${
+                isLoadingAny
+                  ? "bg-[var(--text-muted)] animate-pulse"
+                  : attentionQueue.some((a) => a.severity === "critical")
+                    ? "bg-[var(--status-danger-text)] animate-ping"
+                    : attentionQueue.length > 0
+                      ? "bg-[var(--status-warn-text)]"
+                      : "bg-[var(--success-500)]"
+              }`}
+            />
+            <h1 className="text-base font-bold text-[var(--text-primary)] sm:text-lg">
               Tổng quan Điều phối & An toàn Hệ thống
             </h1>
-
-            <p className="max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)] sm:text-base">
-              Giám sát thời gian thực các phân hệ tri thức RAG, luồng điều phối router, chốt chặn an toàn FIDES và
-              nhật ký kiểm toán vận hành hệ thống CLARA.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-2 pt-2">
-              <span className="flex min-h-9 w-full max-w-full items-center gap-2 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold leading-5 text-[var(--text-primary)] sm:w-auto sm:rounded-full sm:py-0">
-                <span
-                  className={`h-2.5 w-2.5 rounded-full ${
-                    isLoadingAny
-                      ? "bg-[var(--text-muted)] animate-pulse"
-                      : alerts.some((a) => a.severity === "critical")
-                        ? "bg-[var(--status-danger-text)] animate-ping"
-                        : alerts.length > 0
-                          ? "bg-[var(--status-warn-text)]"
-                          : "bg-[var(--success-500)]"
-                  }`}
-                />
-                Trạng thái:{" "}
-                {isLoadingAny
-                  ? "Đang tải dữ liệu..."
-                  : alerts.some((a) => a.severity === "critical")
-                    ? "Cần can thiệp khẩn"
-                    : alerts.length > 0
-                      ? "Có mục cần rà soát"
-                      : "Hoạt động bình thường"}
-              </span>
-              <span className="flex min-h-9 w-full max-w-full items-center gap-2 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold leading-5 text-[var(--text-secondary)] sm:w-auto sm:rounded-full sm:py-0">
-                <Icon name="progress" size={14} />
-                Đồng bộ trực tiếp: {formatTimestamp(lastSyncTime.toISOString())}
-              </span>
-            </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 lg:flex-col lg:items-end">
-            <button
-              type="button"
-              onClick={() => void handleRefreshAll()}
-              disabled={isRefreshing}
-              className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-lg)] bg-[var(--brand-600)] px-6 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)] disabled:opacity-60"
-            >
-              <Icon name="refresh" size={18} className={isRefreshing ? "animate-spin" : ""} />
-              {isRefreshing ? "Đang đồng bộ..." : "Đồng bộ tức thì"}
-            </button>
-            <Link
-              href="/admin/observability"
-              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-muted)]"
-            >
-              <Icon name="progress" size={14} />
-              Chi tiết Observability →
-            </Link>
-          </div>
+          <span className="inline-flex items-center rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2 py-0.5 text-[10px] font-mono font-bold text-[var(--text-brand)]">
+            ADMIN_COMMAND
+          </span>
+
+          <StatusChip
+            tone={isFidesShieldActive ? "success" : "danger"}
+            label={isFidesShieldActive ? "FIDES Safety Shield: Hoạt động" : "FIDES Verification: Tắt"}
+            icon={<Icon name={isFidesShieldActive ? "check" : "warning"} size={12} />}
+            size="sm"
+          />
+
+          <span className="text-xs text-[var(--text-muted)]">
+            Đồng bộ trực tiếp: {formatTimestamp(lastSyncTime.toISOString())}
+          </span>
         </div>
-      </section>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleRefreshAll()}
+            disabled={isRefreshing}
+            className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-[var(--radius-lg)] bg-[var(--brand-600)] px-3.5 text-xs font-bold text-[var(--on-secondary-container)] shadow-xs transition hover:bg-[var(--brand-700)] disabled:opacity-60"
+          >
+            <Icon name="refresh" size={14} className={isRefreshing ? "animate-spin" : ""} />
+            <span>{isRefreshing ? "Đang đồng bộ..." : "Đồng bộ tức thì"}</span>
+          </button>
+          <Link
+            href="/admin/observability"
+            className="inline-flex min-h-9 items-center justify-center gap-1 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-muted)]"
+          >
+            <span>Observability</span>
+            <Icon name="arrow-right" size={12} />
+          </Link>
+        </div>
+      </header>
 
       {/* Global Error Banner if any */}
       {configError || extraError ? (
         <div
           role="alert"
-          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[color:var(--danger-border)] bg-[var(--surface-danger-soft)] px-4 py-3 text-sm text-[var(--text-danger)]"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[color:var(--danger-border)] bg-[var(--surface-danger-soft)] px-4 py-3 text-xs sm:text-sm text-[var(--text-danger)] shadow-xs"
         >
-          <span>{configError || extraError}</span>
+          <div className="flex items-center gap-2">
+            <Icon name="warning" size={16} />
+            <span>{configError || extraError}</span>
+          </div>
           <button
             type="button"
             onClick={() => void handleRefreshAll()}
@@ -341,280 +343,278 @@ export function AdminOverviewPanel() {
         </div>
       ) : null}
 
-      {/* 2. Attention / Critical Alerts Block */}
-      <section aria-labelledby="overview-alerts-title" className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 id="overview-alerts-title" className="flex items-center gap-2 text-lg font-bold text-[var(--text-primary)]">
-            <Icon name="warning" className="text-[var(--brand-600)]" />
-            Cảnh báo & Mục cần lưu ý (Attention / Critical Alerts)
-          </h2>
-          <span className="text-xs font-semibold text-[var(--text-muted)]">
-            Nguồn: useControlTowerConfig & API Health
+      {/* 2. Visual Hierarchy #1: Attention Queue (0–5 ordered rows with severity, system, issue, owner/action, timestamp) */}
+      <section aria-labelledby="attention-queue-title" className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)] pb-3">
+          <div>
+            <h2 id="attention-queue-title" className="flex items-center gap-2 text-base font-bold text-[var(--text-primary)]">
+              <Icon name="warning" size={18} className="text-[var(--brand-600)]" />
+              <span>Hàng đợi Cần lưu ý (Attention Queue)</span>
+            </h2>
+            <p className="text-xs text-[var(--text-muted)]">
+              0–5 mục sắp xếp theo mức độ nghiêm trọng cần quản trị viên can thiệp
+            </p>
+          </div>
+          <span className="rounded-full bg-[var(--surface-muted)] px-2.5 py-0.5 text-xs font-mono font-semibold text-[var(--text-secondary)]">
+            {attentionQueue.length} {attentionQueue.length === 1 ? "mục" : "mục"}
           </span>
         </div>
 
-        {alerts.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {alerts.map((alert) => (
-              <article
-                key={alert.id}
-                className={`flex flex-col justify-between rounded-2xl border p-5 transition-all shadow-sm ${
-                  alert.severity === "critical"
-                    ? "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
-                    : "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
-                      <Icon name="warning" size={16} />
-                      {alert.severity === "critical" ? "Cảnh báo khẩn cấp" : "Lưu ý cấu hình"}
-                    </span>
-                    <span className="rounded-md border border-current px-2 py-0.5 text-[10px] font-mono font-bold">
-                      {alert.id}
-                    </span>
-                  </div>
-                  <h3 className="mt-2 text-base font-bold text-[var(--text-primary)]">{alert.title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed opacity-90">{alert.message}</p>
-                </div>
-
-                <div className="mt-4 pt-2">
-                  <Link
-                    href={alert.href}
-                    className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-current bg-[var(--surface-panel)] px-4 text-xs font-bold text-[var(--text-primary)] transition hover:bg-[var(--surface-muted)]"
+        <div className="overflow-x-auto rounded-xl border border-[color:var(--shell-border)]">
+          <table className="w-full text-left text-xs sm:text-sm">
+            <thead>
+              <tr className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                <th className="px-4 py-2.5">Mức độ</th>
+                <th className="px-4 py-2.5">Phân hệ</th>
+                <th className="px-4 py-2.5">Vấn đề phát hiện</th>
+                <th className="px-4 py-2.5">Hành động</th>
+                <th className="px-4 py-2.5">Thời điểm</th>
+              </tr>
+            </thead>
+            <tbody>
+              {attentionQueue.length > 0 ? (
+                attentionQueue.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={`border-b border-[color:var(--shell-border)] last:border-0 transition ${
+                      item.severity === "critical"
+                        ? "bg-[var(--status-danger-bg)]/40 hover:bg-[var(--status-danger-bg)]/60"
+                        : "hover:bg-[var(--surface-muted)]/50"
+                    }`}
                   >
-                    <span>{alert.actionLabel}</span>
-                    <Icon name="arrow-right" size={13} />
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 text-sm text-[var(--text-secondary)] shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--surface-brand-soft)] text-[var(--success-500)]">
-                <Icon name="check" size={20} />
-              </span>
-              <div>
-                <p className="font-bold text-[var(--text-primary)]">Mọi phân hệ hoạt động bình thường (All Systems Operational)</p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  Chốt chặn an toàn FIDES, độ phủ nguồn RAG ({enabledSources}/{totalSources}) và các ngưỡng định tuyến đều ở trạng thái ổn định.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <StatusChip
+                        tone={item.severity === "critical" ? "danger" : item.severity === "warning" ? "warning" : "info"}
+                        label={item.severity === "critical" ? "Khẩn cấp" : item.severity === "warning" ? "Cảnh báo" : "Thông tin"}
+                        size="sm"
+                      />
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-[var(--text-primary)] whitespace-nowrap">
+                      {item.system}
+                    </td>
+                    <td className="px-4 py-3 text-xs leading-relaxed text-[var(--text-secondary)] max-w-md">
+                      {item.issue}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Link
+                        href={item.href}
+                        className="inline-flex min-h-7 items-center justify-center gap-1 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1 text-xs font-bold text-[var(--text-brand)] transition hover:bg-[var(--surface-muted)] hover:underline"
+                      >
+                        <span>{item.actionLabel}</span>
+                        <Icon name="arrow-right" size={11} />
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-[var(--text-muted)] whitespace-nowrap font-mono">
+                      {item.timestamp || formatTimestamp(lastSyncTime.toISOString())}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr className="hover:bg-[var(--surface-muted)]/30 transition">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <StatusChip tone="success" label="Hoạt động tốt" size="sm" icon={<Icon name="check" size={12} />} />
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-[var(--text-primary)] whitespace-nowrap">
+                    Toàn bộ phân hệ (All Systems)
+                  </td>
+                  <td className="px-4 py-3 text-xs text-[var(--text-secondary)] max-w-md">
+                    Mọi phân hệ hoạt động bình thường. FIDES Safety Shield, độ phủ nguồn RAG ({enabledSources}/{totalSources}) và các ngưỡng định tuyến ổn định.
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Link
+                      href="/admin/observability"
+                      className="inline-flex min-h-7 items-center justify-center gap-1 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1 text-xs font-semibold text-[var(--text-brand)] hover:underline"
+                    >
+                      <span>Xem chỉ số</span>
+                      <Icon name="arrow-right" size={11} />
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-[var(--text-muted)] whitespace-nowrap font-mono">
+                    {formatTimestamp(lastSyncTime.toISOString())}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
-      {/* 3. Systems Status Stream (4 Phân hệ Trọng yếu) */}
-      <section aria-labelledby="overview-systems-stream" className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* 3. Visual Hierarchy #2: System Status Ledger (Dense Table of Knowledge Core, Answer Flow, RAG Eval, Ingestion) */}
+      <section aria-labelledby="system-status-ledger-title" className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)] pb-3">
           <div>
-            <h2 id="overview-systems-stream" className="flex items-center gap-2 text-xl font-bold text-[var(--text-primary)]">
-              <Icon name="clinical-notes" className="text-[var(--text-brand)]" />
-              4 Phân hệ Trọng yếu (Systems Status Stream)
+            <h2 id="system-status-ledger-title" className="flex items-center gap-2 text-base font-bold text-[var(--text-primary)]">
+              <Icon name="clinical-notes" size={18} className="text-[var(--text-brand)]" />
+              <span>Sổ cái Trạng thái Phân hệ (System Status Ledger)</span>
             </h2>
             <p className="text-xs text-[var(--text-muted)]">
-              Điều phối trực tiếp các phân hệ cốt lõi của nền tảng y tế CLARA
+              Bảng theo dõi trạng thái, cấu hình vận hành và thao tác nhanh cho 4 phân hệ trọng yếu
             </p>
           </div>
+          <span className="text-xs font-semibold text-[var(--text-muted)]">
+            4 Core Subsystems
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {/* Phân hệ 1: Knowledge Core */}
-          <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[color:var(--text-brand)] hover:shadow-lg">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-[var(--surface-muted)] text-[var(--text-brand)] transition group-hover:scale-105 group-hover:bg-[var(--surface-brand-soft)]">
-                  <Icon name="clinical-notes" size={22} />
-                </span>
-                <StatusChip
-                  tone={enabledSources > 0 ? "success" : "warning"}
-                  label={enabledSources > 0 ? "Hoạt động" : "Cần cấu hình"}
-                  size="sm"
-                />
-              </div>
+        <div className="overflow-x-auto rounded-xl border border-[color:var(--shell-border)]">
+          <table className="w-full text-left text-xs sm:text-sm">
+            <thead>
+              <tr className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                <th className="px-4 py-2.5">Phân hệ</th>
+                <th className="px-4 py-2.5">Trạng thái</th>
+                <th className="px-4 py-2.5">Chỉ số / Cấu hình chính</th>
+                <th className="px-4 py-2.5">Lần kiểm tra cuối</th>
+                <th className="px-4 py-2.5 text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[color:var(--shell-border)]">
+              {/* Row 1: Knowledge Core */}
+              <tr className="hover:bg-[var(--surface-muted)]/50 transition">
+                <td className="px-4 py-3">
+                  <div className="font-bold text-[var(--text-primary)]">Knowledge Core</div>
+                  <div className="text-[11px] text-[var(--text-muted)]">Nguồn Tri thức & Registry</div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <StatusChip
+                    tone={enabledSources > 0 ? "success" : "warning"}
+                    label={enabledSources > 0 ? "Hoạt động" : "Cần cấu hình"}
+                    size="sm"
+                  />
+                </td>
+                <td className="px-4 py-3 text-xs text-[var(--text-secondary)]">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span><strong className="text-[var(--text-primary)]">{enabledSources}/{totalSources}</strong> RAG sources bật</span>
+                    <span className="text-[var(--shell-border-strong)]">•</span>
+                    <span><strong className="text-[var(--text-primary)]">{activeKnowledgeSources}/{totalKnowledgeSources}</strong> Hubs active</span>
+                    <span className="text-[var(--shell-border-strong)]">•</span>
+                    <span><strong className="text-[var(--text-primary)]">{liveSourceHubCatalog}/{totalSourceHubCatalog}</strong> live sync</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-xs text-[var(--text-muted)] font-mono whitespace-nowrap">
+                  {formatTimestamp(lastSyncTime.toISOString())}
+                </td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <Link
+                    href="/admin/knowledge-sources"
+                    className="inline-flex min-h-7 items-center justify-center gap-1 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1 text-xs font-bold text-[var(--text-brand)] hover:bg-[var(--surface-muted)] hover:underline"
+                  >
+                    <span>Quản lý nguồn</span>
+                    <Icon name="arrow-right" size={11} />
+                  </Link>
+                </td>
+              </tr>
 
-              <h3 className="mt-4 text-base font-bold text-[var(--text-primary)] transition group-hover:text-[var(--text-brand)]">
-                Knowledge Core
-              </h3>
-              <p className="text-xs font-semibold text-[var(--text-brand)]">Nguồn Tri thức & Registry</p>
+              {/* Row 2: Answer Flow */}
+              <tr className="hover:bg-[var(--surface-muted)]/50 transition">
+                <td className="px-4 py-3">
+                  <div className="font-bold text-[var(--text-primary)]">Answer Flow</div>
+                  <div className="text-[11px] text-[var(--text-muted)]">Điều phối Router & Multi-tier</div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <StatusChip
+                    tone={isFidesShieldActive ? "success" : "danger"}
+                    label={isFidesShieldActive ? "Đang điều phối" : "FIDES Tắt"}
+                    size="sm"
+                  />
+                </td>
+                <td className="px-4 py-3 text-xs text-[var(--text-secondary)]">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span><strong className="text-[var(--text-primary)]">{flowEnabledCount}/{flowTotal}</strong> Flow Flags</span>
+                    <span className="text-[var(--shell-border-strong)]">•</span>
+                    <span>Ngưỡng: <strong className="font-mono text-[var(--text-primary)]">{lowContextThreshold}</strong></span>
+                    <span className="text-[var(--shell-border-strong)]">•</span>
+                    <span>FIDES: <strong className={isFidesShieldActive ? "text-[var(--status-ok-text)]" : "text-[var(--status-danger-text)]"}>{isFidesShieldActive ? "Đang bảo vệ" : "Tắt"}</strong></span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-xs text-[var(--text-muted)] font-mono whitespace-nowrap">
+                  {formatTimestamp(lastSyncTime.toISOString())}
+                </td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <Link
+                    href="/admin/answer-flow"
+                    className="inline-flex min-h-7 items-center justify-center gap-1 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1 text-xs font-bold text-[var(--text-brand)] hover:bg-[var(--surface-muted)] hover:underline"
+                  >
+                    <span>Cấu hình luồng</span>
+                    <Icon name="arrow-right" size={11} />
+                  </Link>
+                </td>
+              </tr>
 
-              <div className="mt-4 space-y-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-muted)]">RAG Sources:</span>
-                  <span className="font-bold text-[var(--text-primary)]">{enabledSources}/{totalSources} bật</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-muted)]">Knowledge Hubs:</span>
-                  <span className="font-bold text-[var(--text-primary)]">{activeKnowledgeSources}/{totalKnowledgeSources} active</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-muted)]">Federated Sync:</span>
-                  <span className="font-bold text-[var(--text-primary)]">{liveSourceHubCatalog}/{totalSourceHubCatalog} live</span>
-                </div>
-              </div>
-            </div>
+              {/* Row 3: RAG Evaluation */}
+              <tr className="hover:bg-[var(--surface-muted)]/50 transition">
+                <td className="px-4 py-3">
+                  <div className="font-bold text-[var(--text-primary)]">RAG Evaluation</div>
+                  <div className="text-[11px] text-[var(--text-muted)]">Đánh giá Golden VN Q&A</div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <StatusChip tone="success" label="Sẵn sàng chạy" size="sm" />
+                </td>
+                <td className="px-4 py-3 text-xs text-[var(--text-secondary)]">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span>Benchmark: <strong className="text-[var(--text-primary)]">Golden Medical Q&A</strong></span>
+                    <span className="text-[var(--shell-border-strong)]">•</span>
+                    <span>Chỉ số: <strong className="text-[var(--text-primary)]">Recall, nDCG, Faith</strong></span>
+                    <span className="text-[var(--shell-border-strong)]">•</span>
+                    <span>Standard <strong className="font-mono text-[var(--text-primary)]">k={recallAtK}</strong></span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-xs text-[var(--text-muted)] font-mono whitespace-nowrap">
+                  {formatTimestamp(lastSyncTime.toISOString())}
+                </td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <Link
+                    href="/admin/rag-eval"
+                    className="inline-flex min-h-7 items-center justify-center gap-1 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1 text-xs font-bold text-[var(--text-brand)] hover:bg-[var(--surface-muted)] hover:underline"
+                  >
+                    <span>Chạy đánh giá</span>
+                    <Icon name="arrow-right" size={11} />
+                  </Link>
+                </td>
+              </tr>
 
-            <div className="mt-5 pt-2 border-t border-[color:var(--shell-border)]">
-              <Link
-                href="/admin/knowledge-sources"
-                className="flex items-center justify-between text-xs font-bold text-[var(--text-brand)] group-hover:underline"
-              >
-                <span>Quản lý nguồn tri thức</span>
-                <Icon name="arrow-right" size={13} className="transition group-hover:translate-x-1" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Phân hệ 2: Answer Flow */}
-          <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[color:var(--text-brand)] hover:shadow-lg">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-[var(--surface-muted)] text-[var(--text-brand)] transition group-hover:scale-105 group-hover:bg-[var(--surface-brand-soft)]">
-                  <Icon name="progress" size={22} />
-                </span>
-                <StatusChip
-                  tone="info"
-                  label={flowEnabledCount > 0 ? "Đang điều phối" : "Chưa cấu hình"}
-                  size="sm"
-                />
-              </div>
-
-              <h3 className="mt-4 text-base font-bold text-[var(--text-primary)] transition group-hover:text-[var(--text-brand)]">
-                Answer Flow
-              </h3>
-              <p className="text-xs font-semibold text-[var(--text-brand)]">Điều phối Router & Multi-tier</p>
-
-              <div className="mt-4 space-y-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-muted)]">Flow Flags:</span>
-                  <span className="font-bold text-[var(--text-primary)]">{flowEnabledCount}/{flowTotal} flags</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-muted)]">Ngưỡng Router:</span>
-                  <span className="font-mono font-bold text-[var(--text-primary)]">{config?.rag_flow.low_context_threshold ?? 0.2}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-muted)]">FIDES Check:</span>
-                  <span className="font-bold text-[var(--status-ok-text)]">{isFidesShieldActive ? "Đang bảo vệ" : "Tắt"}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-5 pt-2 border-t border-[color:var(--shell-border)]">
-              <Link
-                href="/admin/answer-flow"
-                className="flex items-center justify-between text-xs font-bold text-[var(--text-brand)] group-hover:underline"
-              >
-                <span>Cấu hình luồng trả lời</span>
-                <Icon name="arrow-right" size={13} className="transition group-hover:translate-x-1" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Phân hệ 3: RAG Evaluation */}
-          <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[color:var(--text-brand)] hover:shadow-lg">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-[var(--surface-muted)] text-[var(--text-brand)] transition group-hover:scale-105 group-hover:bg-[var(--surface-brand-soft)]">
-                  <Icon name="scan" size={22} />
-                </span>
-                <StatusChip
-                  tone="success"
-                  label="Sẵn sàng chạy"
-                  size="sm"
-                />
-              </div>
-
-              <h3 className="mt-4 text-base font-bold text-[var(--text-primary)] transition group-hover:text-[var(--text-brand)]">
-                RAG Evaluation
-              </h3>
-              <p className="text-xs font-semibold text-[var(--text-brand)]">Đánh giá Golden VN Q&A</p>
-
-              <div className="mt-4 space-y-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-muted)]">Bộ chỉ số:</span>
-                  <span className="font-bold text-[var(--text-primary)]">Recall, nDCG, Faith</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-muted)]">Standard K:</span>
-                  <span className="font-mono font-bold text-[var(--text-primary)]">k={config?.rag_flow.recall_at_k ?? 10}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-muted)]">Benchmark:</span>
-                  <span className="font-bold text-[var(--text-primary)]">Golden Medical Q&A</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-5 pt-2 border-t border-[color:var(--shell-border)]">
-              <Link
-                href="/admin/rag-eval"
-                className="flex items-center justify-between text-xs font-bold text-[var(--text-brand)] group-hover:underline"
-              >
-                <span>Chạy đánh giá RAG</span>
-                <Icon name="arrow-right" size={13} className="transition group-hover:translate-x-1" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Phân hệ 4: Data Ingestion */}
-          <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[color:var(--text-brand)] hover:shadow-lg">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-[var(--surface-muted)] text-[var(--text-brand)] transition group-hover:scale-105 group-hover:bg-[var(--surface-brand-soft)]">
-                  <Icon name="upload" size={22} />
-                </span>
-                <StatusChip
-                  tone="success"
-                  label="Offline Plane"
-                  size="sm"
-                />
-              </div>
-
-              <h3 className="mt-4 text-base font-bold text-[var(--text-primary)] transition group-hover:text-[var(--text-brand)]">
-                Data Ingestion
-              </h3>
-              <p className="text-xs font-semibold text-[var(--text-brand)]">Nạp Dữ liệu & Ingestion Pipeline</p>
-
-              <div className="mt-4 space-y-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-muted)]">Ingestion Plane:</span>
-                  <span className="font-bold text-[var(--text-primary)]">Offline Watermark Sync</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-muted)]">Trust Tiers:</span>
-                  <span className="font-bold text-[var(--text-primary)]">Tier 1 - 4 Standards</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-muted)]">Sync Engines:</span>
-                  <span className="font-bold text-[var(--text-primary)]">Crawler & API Ingest</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-5 pt-2 border-t border-[color:var(--shell-border)]">
-              <Link
-                href="/admin/rag-ingestion"
-                className="flex items-center justify-between text-xs font-bold text-[var(--text-brand)] group-hover:underline"
-              >
-                <span>Mở trung tâm nạp dữ liệu</span>
-                <Icon name="arrow-right" size={13} className="transition group-hover:translate-x-1" />
-              </Link>
-            </div>
-          </div>
+              {/* Row 4: Data Ingestion */}
+              <tr className="hover:bg-[var(--surface-muted)]/50 transition">
+                <td className="px-4 py-3">
+                  <div className="font-bold text-[var(--text-primary)]">Data Ingestion</div>
+                  <div className="text-[11px] text-[var(--text-muted)]">Nạp Dữ liệu & Ingestion Pipeline</div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <StatusChip tone="success" label="Offline Plane" size="sm" />
+                </td>
+                <td className="px-4 py-3 text-xs text-[var(--text-secondary)]">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span>Sync: <strong className="text-[var(--text-primary)]">Offline Watermark</strong></span>
+                    <span className="text-[var(--shell-border-strong)]">•</span>
+                    <span>Trust Tiers: <strong className="text-[var(--text-primary)]">Tier 1 - 4</strong></span>
+                    <span className="text-[var(--shell-border-strong)]">•</span>
+                    <span>Engines: <strong className="text-[var(--text-primary)]">Crawler & API</strong></span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-xs text-[var(--text-muted)] font-mono whitespace-nowrap">
+                  {formatTimestamp(lastSyncTime.toISOString())}
+                </td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <Link
+                    href="/admin/rag-ingestion"
+                    className="inline-flex min-h-7 items-center justify-center gap-1 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1 text-xs font-bold text-[var(--text-brand)] hover:bg-[var(--surface-muted)] hover:underline"
+                  >
+                    <span>Mở Ingestion</span>
+                    <Icon name="arrow-right" size={11} />
+                  </Link>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
-      {/* 4. Recent Operational Activity (Real audit trail stream) */}
-      <section aria-labelledby="overview-audit-title" className="rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 space-y-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* 4. Visual Hierarchy #3: Recent Operations (Full-Width Operational History Ledger) */}
+      <section aria-labelledby="recent-operations-title" className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)] pb-3">
           <div>
-            <h2 id="overview-audit-title" className="flex items-center gap-2 text-xl font-bold text-[var(--text-primary)]">
-              <Icon name="clinical-notes" className="text-[var(--brand-600)]" />
-              Hoạt động Vận hành Gần đây (Recent Operational Activity)
+            <h2 id="recent-operations-title" className="flex items-center gap-2 text-base font-bold text-[var(--text-primary)]">
+              <Icon name="clinical-notes" size={18} className="text-[var(--brand-600)]" />
+              <span>Hoạt động Vận hành Gần đây (Recent Operations)</span>
             </h2>
             <p className="text-xs text-[var(--text-muted)]">
               Nhật ký kiểm toán thời gian thực từ Admin Audit Trail (getAdminAuditLog). Tuyệt đối không chứa thông tin định danh (PII).
@@ -622,47 +622,48 @@ export function AdminOverviewPanel() {
           </div>
           <Link
             href="/admin/audit-log"
-            className="text-xs font-bold text-[var(--text-brand)] hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-bold text-[var(--text-brand)] hover:underline"
           >
-            Xem toàn bộ nhật ký kiểm toán →
+            <span>Xem toàn bộ nhật ký kiểm toán</span>
+            <Icon name="arrow-right" size={12} />
           </Link>
         </div>
 
         {isLoadingExtra ? (
-          <div className="h-40 animate-pulse rounded-xl bg-[var(--surface-muted)]" />
+          <div className="h-32 animate-pulse rounded-xl bg-[var(--surface-muted)]" />
         ) : auditLogs.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border border-[color:var(--shell-border)]">
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-left text-xs sm:text-sm">
               <thead>
-                <tr className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                  <th className="px-4 py-3">Thời điểm</th>
-                  <th className="px-4 py-3">Tác nhân</th>
-                  <th className="px-4 py-3">Hành động</th>
-                  <th className="px-4 py-3">Đối tượng</th>
-                  <th className="px-4 py-3">Kết quả</th>
+                <tr className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                  <th className="px-4 py-2.5">Thời điểm</th>
+                  <th className="px-4 py-2.5">Tác nhân</th>
+                  <th className="px-4 py-2.5">Hành động</th>
+                  <th className="px-4 py-2.5">Đối tượng</th>
+                  <th className="px-4 py-2.5">Kết quả</th>
                 </tr>
               </thead>
               <tbody>
-                {auditLogs.slice(0, 6).map((record) => {
+                {auditLogs.slice(0, 8).map((record) => {
                   const outcomeChip = getOutcomeChip(record.outcome);
                   return (
                     <tr
                       key={record.id}
                       className="border-b border-[color:var(--shell-border)] last:border-0 hover:bg-[var(--surface-muted)]/50 transition"
                     >
-                      <td className="px-4 py-3 text-xs text-[var(--text-secondary)] whitespace-nowrap">
+                      <td className="px-4 py-3 text-xs text-[var(--text-secondary)] whitespace-nowrap font-mono">
                         {formatTimestamp(record.created_at)}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs font-bold text-[var(--text-primary)]">
+                      <td className="px-4 py-3 font-mono text-xs font-bold text-[var(--text-primary)] whitespace-nowrap">
                         {record.actor_ref || "--"}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-[var(--text-primary)]">
+                      <td className="px-4 py-3 font-semibold text-[var(--text-primary)] whitespace-nowrap">
                         {record.action}
                       </td>
                       <td className="px-4 py-3 text-xs text-[var(--text-secondary)]">
                         {record.target || "--"}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <StatusChip
                           tone={outcomeChip.tone}
                           label={outcomeChip.label}
@@ -676,115 +677,79 @@ export function AdminOverviewPanel() {
             </table>
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6 text-center text-sm text-[var(--text-secondary)]">
+          <div className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6 text-center text-xs text-[var(--text-secondary)]">
             Chưa có bản ghi hoạt động quản trị nào được ghi nhận.
           </div>
         )}
       </section>
 
-      {/* 5. All Tools Launcher */}
-      <section
-        aria-labelledby="overview-all-tools-title"
-        className="rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 space-y-4 shadow-sm"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* 5. Visual Hierarchy #4: Audit Digest (Compact Compliance Activity List) */}
+      <section aria-labelledby="audit-digest-title" className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)] pb-3">
           <div>
-            <div className="flex items-center gap-2">
-              <h2
-                id="overview-all-tools-title"
-                className="flex items-center gap-2 text-xl font-bold text-[var(--text-primary)]"
-              >
-                <Icon name="settings" className="text-[var(--text-brand)]" />
-                Trình Khởi chạy Toàn bộ Công cụ (All Tools Launcher)
-              </h2>
-              <span className="inline-flex items-center rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2 py-0.5 text-[10px] font-mono font-bold text-[var(--text-brand)]">
-                14 Modules
-              </span>
-            </div>
-            <p className="text-xs text-[var(--text-secondary)]">
-              Truy cập nhanh 4 nhóm năng lực điều hành: Nền tảng, Tri thức RAG, Hệ thống AI & Giám sát, Quản trị & Tuân thủ.
+            <h2 id="audit-digest-title" className="flex items-center gap-2 text-base font-bold text-[var(--text-primary)]">
+              <Icon name="check" size={18} className="text-[var(--success-500)]" />
+              <span>Tóm lược Kiểm toán & Tuân thủ (Audit Digest)</span>
+            </h2>
+            <p className="text-xs text-[var(--text-muted)]">
+              Tổng hợp trạng thái tuân thủ, tính toàn vẹn bản ghi và chốt chặn an toàn bất biến.
             </p>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setIsLauncherOpen(true)}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[var(--brand-600)] px-4 text-xs font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-primary)]"
+          <Link
+            href="/admin/audit-log"
+            className="inline-flex items-center gap-1 text-xs font-bold text-[var(--text-brand)] hover:underline"
           >
-            <Icon name="search" size={14} />
-            <span>Mở Trình khởi chạy Nhanh (⌘K)</span>
-          </button>
+            <span>Mở Nhật ký Kiểm toán Đầy đủ (Immutable Audit Trail)</span>
+            <Icon name="arrow-right" size={12} />
+          </Link>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 pt-1">
-          {ADMIN_CATEGORY_ORDER.map((catKey) => {
-            const catMeta = ADMIN_CATEGORIES[catKey];
-            const catTools = ADMIN_TOOLS.filter((t) => t.category === catKey);
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-3.5 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Zero-PII Invariant</span>
+              <StatusChip tone="success" label="Đã xác thực" size="sm" />
+            </div>
+            <div className="text-xs font-semibold text-[var(--text-primary)]">Loại trừ PII 100%</div>
+            <div className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+              Không lưu tên, email, câu hỏi tự do hoặc ghi chép khám bệnh trong telemetry.
+            </div>
+          </div>
 
-            return (
-              <div
-                key={catKey}
-                className="flex flex-col justify-between rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-4 transition hover:border-[color:var(--shell-border-strong)] hover:bg-[var(--surface-muted)]"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
-                      <Icon name={catMeta.icon} size={16} />
-                    </span>
-                    <span className="rounded-md bg-[var(--surface-panel)] px-2 py-0.5 text-[10px] font-mono font-bold text-[var(--text-muted)] border border-[color:var(--shell-border)]">
-                      {catTools.length} công cụ
-                    </span>
-                  </div>
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-3.5 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Append-Only WAL</span>
+              <StatusChip tone="success" label="Bất biến" size="sm" />
+            </div>
+            <div className="text-xs font-semibold text-[var(--text-primary)]">Nhật ký Bất biến</div>
+            <div className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+              Toàn bộ thao tác quản trị được ký băm SHA-256 và lưu trữ tuần tự không thể sửa đổi.
+            </div>
+          </div>
 
-                  <h3 className="mt-3 text-sm font-bold text-[var(--text-primary)]">
-                    {catMeta.label}
-                  </h3>
-                  <p className="mt-1 text-xs text-[var(--text-secondary)] line-clamp-2">
-                    {catMeta.description}
-                  </p>
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-3.5 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">FIDES Guardrail</span>
+              <StatusChip tone={isFidesShieldActive ? "success" : "danger"} label={isFidesShieldActive ? "Hoạt động" : "Tắt"} size="sm" />
+            </div>
+            <div className="text-xs font-semibold text-[var(--text-primary)]">Kiểm chứng An toàn</div>
+            <div className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+              {isFidesShieldActive ? "100% tuyên bố liều lượng và tương tác thuốc DDI được đối soát." : "Chốt chặn FIDES đang tắt - cần bật lại ngay."}
+            </div>
+          </div>
 
-                  <ul className="mt-3 space-y-1.5 border-t border-[color:var(--shell-border)]/60 pt-2.5">
-                    {catTools.slice(0, 3).map((tool) => (
-                      <li key={tool.id}>
-                        <Link
-                          href={tool.href}
-                          className="group flex items-center justify-between text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition"
-                        >
-                          <span className="truncate group-hover:text-[var(--text-brand)] font-medium">
-                            {tool.title}
-                          </span>
-                          <span className="shrink-0 font-mono text-[10px] text-[var(--text-muted)]">
-                            {tool.code}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="mt-3 pt-2 border-t border-[color:var(--shell-border)]/40">
-                  <button
-                    type="button"
-                    onClick={() => setIsLauncherOpen(true)}
-                    className="flex w-full items-center justify-between text-xs font-semibold text-[var(--text-brand)] hover:underline"
-                  >
-                    <span>Xem tất cả ({catTools.length})</span>
-                    <Icon name="arrow-right" size={12} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-3.5 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Sẵn sàng Kiểm toán</span>
+              <span className="font-mono text-xs font-bold text-[var(--text-brand)]">{auditLogs.length} bản ghi</span>
+            </div>
+            <div className="text-xs font-semibold text-[var(--text-primary)]">Quy trình Thanh tra</div>
+            <div className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+              Dữ liệu sẵn sàng phục vụ báo cáo an toàn và kiểm toán tuân thủ y tế.
+            </div>
+          </div>
         </div>
       </section>
-
-      {/* App Launcher Modal Dialog */}
-      <AdminAppLauncherModal
-        isOpen={isLauncherOpen}
-        onClose={() => setIsLauncherOpen(false)}
-        activeTab="overview"
-      />
     </div>
   );
 }

@@ -58,16 +58,7 @@ const mockSystemDashboard = {
       href: "/research/source-hub",
     },
   ],
-  tasks: [
-    {
-      id: "task-res-1",
-      title: "Rà soát tài liệu mới từ Bộ Y tế",
-      detail: "Cập nhật quyết định 2026 về phác đồ đái tháo đường.",
-      tone: "warn" as const,
-      href: "/evidence",
-      count: 1,
-    },
-  ],
+  tasks: [],
 };
 
 vi.mock("@/lib/system", () => ({
@@ -75,54 +66,54 @@ vi.mock("@/lib/system", () => ({
   normalizeSystemDashboard: vi.fn((data) => data),
 }));
 
-describe("ResearchOverviewLaunchpad Component", () => {
+describe("ResearchOverviewLaunchpad Component (Spec v8 §7.1)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getSystemDashboard).mockResolvedValue(mockSystemDashboard);
   });
 
-  it("renders Research Command Center banner with status and source metrics", async () => {
+  it("renders contextual header without giant welcome banner", async () => {
     render(<ResearchOverviewLaunchpad />);
 
     await waitFor(() => {
-      expect(screen.getByText("Trung tâm Nghiên cứu & Bằng chứng Y học")).toBeInTheDocument();
+      expect(screen.getByText("Nhà nghiên cứu Y học")).toBeInTheDocument();
     });
 
     expect(screen.getByText("GLHS Knowledge Graph & Living Evidence")).toBeInTheDocument();
-    expect(screen.getByText(/12 nguồn tri thức sẵn sàng/i)).toBeInTheDocument();
   });
 
-  it("renders all 4 core research tool cards with highlights", async () => {
+  it("renders active research inquiry as primary next action", async () => {
     render(<ResearchOverviewLaunchpad />);
 
     await waitFor(() => {
-      expect(screen.getByText("4 công cụ nghiên cứu & y văn cốt lõi")).toBeInTheDocument();
+      expect(screen.getByText("Câu hỏi nghiên cứu gần nhất")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Bằng chứng sống (Living Evidence)")).toBeInTheDocument();
-    expect(screen.getByText("Tra cứu y khoa (AI Chat)")).toBeInTheDocument();
+    expect(screen.getByText("Hiệu quả SGLT2i trên bệnh thận mạn")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Tiếp tục nghiên cứu/i })).toHaveAttribute("href", "/evidence");
+  });
+
+  it("renders Attention Queue when source alerts exist", async () => {
+    render(<ResearchOverviewLaunchpad />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Hàng đợi cần chú ý & Cảnh báo nguồn")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Có 2 nguồn PubMed mới cần đồng bộ.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Xử lý ngay/i })).toHaveAttribute("href", "/research/source-hub");
+  });
+
+  it("renders routine research rows without 4 monolithic card blocks", async () => {
+    render(<ResearchOverviewLaunchpad />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Bằng chứng sống (Living Evidence)")).toBeInTheDocument();
+    });
+
     expect(screen.getByText("Kho nguồn nghiên cứu (Source Hub)")).toBeInTheDocument();
     expect(screen.getByText("Giám sát biến động y văn")).toBeInTheDocument();
-
-    expect(screen.getByText("Living Evidence")).toBeInTheDocument();
-    expect(screen.getByText("Research Chat")).toBeInTheDocument();
-    expect(screen.getByText("Corpus Ingestion")).toBeInTheDocument();
-    expect(screen.getByText("Surveillance")).toBeInTheDocument();
-
-    expect(screen.getByText("Phác đồ Bộ Y tế & Quốc tế")).toBeInTheDocument();
-    expect(screen.getByText("Truy xuất có viện dẫn nguồn")).toBeInTheDocument();
-  });
-
-  it("renders recent research queries and task action cleanly", async () => {
-    render(<ResearchOverviewLaunchpad />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Hiệu quả SGLT2i trên bệnh thận mạn")).toBeInTheDocument();
-      expect(screen.getByText("So sánh GLP-1 RA và DPP-4i")).toBeInTheDocument();
-    });
-
-    expect(screen.getByText("Rà soát tài liệu mới từ Bộ Y tế")).toBeInTheDocument();
-    expect(screen.getByText("Có 2 nguồn PubMed mới cần đồng bộ.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Tra cứu y khoa \(Chat\)/i })).toHaveAttribute("href", "/chat");
   });
 
   it("renders error state when dashboard data fails to load", async () => {
@@ -131,7 +122,7 @@ describe("ResearchOverviewLaunchpad Component", () => {
     render(<ResearchOverviewLaunchpad />);
 
     await waitFor(() => {
-      expect(screen.getByText("Chưa tải được tổng quan")).toBeInTheDocument();
+      expect(screen.getByText("Chưa tải được tổng quan hoặc máy chủ ngoại tuyến")).toBeInTheDocument();
     });
 
     expect(screen.getByRole("button", { name: /Thử lại/i })).toBeInTheDocument();

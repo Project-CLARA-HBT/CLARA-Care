@@ -50,6 +50,7 @@ export default function ForgotPasswordPage() {
       backHref="/login"
       backLabel={t(language, "auth.passwordRecovery.back")}
       maxWidth="md"
+      archetype="Recovery Focus"
     >
       <form className="space-y-4" onSubmit={onSubmit}>
         <Field

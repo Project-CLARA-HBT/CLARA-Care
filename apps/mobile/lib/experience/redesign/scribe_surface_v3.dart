@@ -40,7 +40,7 @@ import '../../core/connectivity_service.dart';
 import '../../core/feature_flags.dart';
 import '../../core/session_store.dart';
 import '../../screens/scribe_screen.dart'
-    show ScribeSessionView, scribeStatusLabel;
+    show ScribeAudioClip, ScribeAudioProvider, ScribeSessionView, scribeStatusLabel;
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/clara_card.dart';
 import '../../theme/components/clara_input.dart';
@@ -159,6 +159,20 @@ class _ScribeTranscriptCopy {
       : 'Nhập hoặc dán nội dung trao đổi để thêm vào phiên';
   String get appendAndRegenerate => _english ? 'Add & create note' : 'Thêm & tạo ghi chú';
   String get regenerate => _english ? 'Regenerate note (SOAP)' : 'Tạo lại ghi chú (SOAP)';
+  String get audioCaptureTitle =>
+      _english ? 'Direct Audio Capture' : 'Ghi âm lời thoại trực tiếp';
+  String get audioCaptureDescription => _english
+      ? 'Record clinical encounter or upload audio for AI speech-to-text.'
+      : 'Thu âm trực tiếp buổi khám hoặc tải tệp âm thanh để AI chuyển thành văn bản.';
+  String get recordOrUploadAudio =>
+      _english ? 'Record / Upload Audio' : 'Thu âm / Tải tệp âm thanh';
+  String get audioReady =>
+      _english ? 'Audio capture ready' : 'Sẵn sàng thu âm';
+  String get audioBlockedConsent =>
+      _english ? 'Consent required before recording' : 'Cần đồng thuận trước khi ghi âm';
+  String get audioConsentRequired => _english
+      ? 'Patient consent must be captured before audio processing.'
+      : 'Cần thu thập sự đồng ý của bệnh nhân trước khi xử lý âm thanh.';
   String get audioUnavailable => _english
       ? 'Audio recording and file upload are not available in this build; enter the transcript as text.'
       : 'Ghi âm/tải tệp âm thanh chưa khả dụng trên bản dựng này; hãy nhập lời thoại bằng văn bản.';
@@ -256,6 +270,7 @@ class ScribeSurfaceV3 extends StatefulWidget {
     required this.apiClient,
     required this.sessionStore,
     required this.resolver,
+    this.audioProvider,
     ConnectivityService? connectivity,
     Analytics? analytics,
   })  : _connectivity = connectivity,
@@ -264,6 +279,10 @@ class ScribeSurfaceV3 extends StatefulWidget {
   final ApiClient apiClient;
   final SessionStore sessionStore;
   final MobileFeatureFlagResolver resolver;
+
+  /// Optional audio-bytes source for the upload transcription path. When null
+  /// only the text-entry transcript path is active.
+  final ScribeAudioProvider? audioProvider;
 
   /// Optional connectivity signal. When omitted a default (always-online in the
   /// absence of a probe) service is created; tests inject a fake to drive the
@@ -553,7 +572,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
     }
   }
 
-  // --- Transcript / SOAP processing ----------------------------------------
+  // --- Audio / transcript / SOAP processing -------------------------------
 
   /// The single client-side gate for every processing path: consent must be
   /// captured (INV-2) and the device must be online (Req 9.5). Returns true
@@ -569,6 +588,49 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
       return false;
     }
     return true;
+  }
+
+  /// Uploads audio bytes and appends recognized transcript text to the active session.
+  /// Blocked until consent is captured (INV-2).
+  Future<void> _uploadAudio() async {
+    final provider = widget.audioProvider;
+    if (provider == null) return;
+    if (!_canProcess()) return;
+    final token = _requireToken();
+    if (token == null) return;
+    final active = _active;
+    if (active == null) return;
+
+    final clip = await provider();
+    if (clip == null || clip.bytes.isEmpty) return;
+
+    setState(() {
+      _detailBusy = true;
+      _detailError = null;
+    });
+    try {
+      final data = await widget.apiClient.transcribeScribeAudio(
+        accessToken: token,
+        sessionId: active.id,
+        audioBytes: clip.bytes,
+        filename: clip.filename,
+      );
+      _analytics.track('mobile_scribe_audio_processed');
+      if (!mounted) return;
+      setState(() {
+        _active = ScribeSessionView.fromJson(data);
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _detailError = error.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _detailError = _transcriptCopy.regenerateFailed);
+    } finally {
+      if (mounted) {
+        setState(() => _detailBusy = false);
+      }
+    }
   }
 
   /// Appends typed transcript text and regenerates the SOAP note (Req 4.2,
@@ -878,6 +940,18 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
         ),
         const SizedBox(height: ClaraTokens.spaceMd),
 
+        // Immersive Audio Capture (waveform visualizer, audio upload & direct recording)
+        if (widget.audioProvider != null) ...[
+          _ImmersiveAudioCaptureCard(
+            canUploadAudio: true,
+            consentCaptured: _consentCaptured,
+            isBusy: _detailBusy,
+            copy: copy,
+            onRecordOrUpload: _uploadAudio,
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+        ],
+
         if (_detailError != null) ...[
           StatusByText(
             label: _detailError!,
@@ -1098,6 +1172,141 @@ class _ScribeWorkflowStepper extends StatelessWidget {
             }),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Immersive Audio Capture card with waveform visualization, live audio status,
+/// and direct consent-guarded transcription trigger.
+class _ImmersiveAudioCaptureCard extends StatelessWidget {
+  const _ImmersiveAudioCaptureCard({
+    required this.canUploadAudio,
+    required this.consentCaptured,
+    required this.isBusy,
+    required this.copy,
+    required this.onRecordOrUpload,
+  });
+
+  final bool canUploadAudio;
+  final bool consentCaptured;
+  final bool isBusy;
+  final _ScribeTranscriptCopy copy;
+  final VoidCallback onRecordOrUpload;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return ClaraCard.static_(
+      key: const Key('scribe-v3-audio-capture-card'),
+      semanticLabel: copy.audioCaptureTitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.mic, color: scheme.primary, size: 20),
+              ),
+              const SizedBox(width: ClaraTokens.spaceSm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      copy.audioCaptureTitle,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      copy.audioCaptureDescription,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+
+          // Waveform indicator & status
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: ClaraTokens.spaceMd,
+              vertical: ClaraTokens.spaceSm,
+            ),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+              border: Border.all(
+                color: scheme.outlineVariant.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                // Stylized audio waveform bars
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [8.0, 18.0, 28.0, 14.0, 24.0, 12.0, 20.0, 10.0].map((h) {
+                    return Container(
+                      width: 3,
+                      height: h,
+                      margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                      decoration: BoxDecoration(
+                        color: consentCaptured
+                            ? scheme.primary
+                            : scheme.onSurfaceVariant.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(width: ClaraTokens.spaceMd),
+                Expanded(
+                  child: Text(
+                    consentCaptured
+                        ? copy.audioReady
+                        : copy.audioBlockedConsent,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: consentCaptured
+                          ? scheme.primary
+                          : scheme.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+
+          if (canUploadAudio)
+            ClaraButton.primary(
+              key: const Key('scribe-upload-audio'),
+              label: copy.recordOrUploadAudio,
+              icon: Icons.mic_none_outlined,
+              loading: isBusy,
+              onPressed: isBusy ? null : onRecordOrUpload,
+            )
+          else
+            Text(
+              copy.audioUnavailable,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+        ],
       ),
     );
   }

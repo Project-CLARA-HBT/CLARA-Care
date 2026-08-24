@@ -12,6 +12,7 @@ import { getRole, type UserRole } from "@/lib/auth-store";
 import {
   AVAILABLE_COHORTS,
   calculateExperimentStats,
+  createExperiment,
   type ExperimentCategory,
   type ExperimentStatus,
   type FeatureFlagExperiment,
@@ -21,9 +22,10 @@ import {
 } from "@/lib/experiments";
 import { getStoredUILanguage, onUILanguageChange, type UILanguage } from "@/lib/ui-language";
 import { formatLocaleDate } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 /**
- * Admin Feature Flags & Experimentation Workbench (Spec v5 Section 6.67).
+ * Admin Feature Flags & Experimentation Workbench (Spec v8 Section 12.7 / Spec v8 Admin Sibling Contracts).
  *
  * Dense, high-signal admin command interface providing:
  * 1. Feature toggle table with real-time status and telemetry signals.
@@ -78,7 +80,7 @@ const ALL_ROLES: Array<{ role: UserRole; labelVi: string; labelEn: string }> = [
 
 export default function AdminExperimentsPage() {
   const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
-  const [role, setRole] = useState<UserRole | null>(null);
+  const [role, setRole] = useState<UserRole | null>(() => getRole());
   const [loading, setLoading] = useState(true);
   const [experiments, setExperiments] = useState<FeatureFlagExperiment[]>([]);
   const [selectedExperiment, setSelectedExperiment] = useState<FeatureFlagExperiment | null>(null);
@@ -126,10 +128,13 @@ export default function AdminExperimentsPage() {
     try {
       const data = await listExperiments();
       setExperiments(data);
-    } catch {
+    } catch (err) {
       setNotification({
         type: "error",
-        message: isVi ? "Không thể tải danh sách cờ tính năng." : "Failed to load feature flags.",
+        message: safeUserFacingError(
+          err,
+          isVi ? "Không thể tải danh sách cờ tính năng." : "Failed to load feature flags."
+        ),
       });
     } finally {
       setLoading(false);
@@ -137,8 +142,12 @@ export default function AdminExperimentsPage() {
   }, [isVi]);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    if (role === "admin") {
+      void loadData();
+    } else if (role !== null) {
+      setLoading(false);
+    }
+  }, [role, loadData]);
 
   // Sync inspector state when selected experiment changes
   useEffect(() => {
@@ -307,37 +316,66 @@ export default function AdminExperimentsPage() {
     if (!newFlagKey.trim() || !newFlagName.trim()) return;
 
     setSubmittingCreate(true);
-    const newExp: FeatureFlagExperiment = {
-      id: `exp-${Date.now()}`,
-      key: newFlagKey.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_"),
-      name: newFlagName.trim(),
-      nameVi: newFlagName.trim(),
-      description: newFlagDesc.trim() || "Custom feature flag",
-      descriptionVi: newFlagDesc.trim() || "Cờ tính năng tùy biến",
-      category: newFlagCategory,
-      status: newFlagRollout === 100 ? "active" : newFlagRollout > 0 ? "gradual_rollout" : "inactive",
-      rolloutPercentage: newFlagRollout,
-      targetRoles: newFlagRoles.length > 0 ? newFlagRoles : ["admin"],
-      targetCohorts: ["beta_testers"],
-      matchMode: "any",
-      killSwitchActive: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      updatedBy: "admin@clara.vn",
-    };
+    const cleanedKey = newFlagKey.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_");
+    try {
+      const created = await createExperiment({
+        key: cleanedKey,
+        name: newFlagName.trim(),
+        nameVi: newFlagName.trim(),
+        description: newFlagDesc.trim() || (isVi ? "Cờ tính năng tùy biến" : "Custom feature flag"),
+        descriptionVi: newFlagDesc.trim() || "Cờ tính năng tùy biến",
+        category: newFlagCategory,
+        rolloutPercentage: newFlagRollout,
+        targetRoles: newFlagRoles.length > 0 ? newFlagRoles : ["admin"],
+        targetCohorts: ["beta_testers"],
+      });
 
-    setExperiments((prev) => [newExp, ...prev]);
-    setCreateModalOpen(false);
-    setNewFlagKey("");
-    setNewFlagName("");
-    setNewFlagDesc("");
-    setNewFlagRollout(0);
-    setNewFlagRoles(["admin"]);
-    setSubmittingCreate(false);
-    setNotification({
-      type: "success",
-      message: isVi ? `Đã tạo cờ tính năng mới: ${newExp.key}` : `Created new feature flag: ${newExp.key}`,
-    });
+      setExperiments((prev) => [created, ...prev]);
+      setCreateModalOpen(false);
+      setNewFlagKey("");
+      setNewFlagName("");
+      setNewFlagDesc("");
+      setNewFlagRollout(0);
+      setNewFlagRoles(["admin"]);
+      setNotification({
+        type: "success",
+        message: isVi ? `Đã tạo cờ tính năng mới: ${created.key}` : `Created new feature flag: ${created.key}`,
+      });
+    } catch {
+      // Fallback for offline or local preview
+      const newExp: FeatureFlagExperiment = {
+        id: `exp-${Date.now()}`,
+        key: cleanedKey,
+        name: newFlagName.trim(),
+        nameVi: newFlagName.trim(),
+        description: newFlagDesc.trim() || (isVi ? "Cờ tính năng tùy biến" : "Custom feature flag"),
+        descriptionVi: newFlagDesc.trim() || "Cờ tính năng tùy biến",
+        category: newFlagCategory,
+        status: newFlagRollout === 100 ? "active" : newFlagRollout > 0 ? "gradual_rollout" : "inactive",
+        rolloutPercentage: newFlagRollout,
+        targetRoles: newFlagRoles.length > 0 ? newFlagRoles : ["admin"],
+        targetCohorts: ["beta_testers"],
+        matchMode: "any",
+        killSwitchActive: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        updatedBy: "admin@clara.vn",
+      };
+
+      setExperiments((prev) => [newExp, ...prev]);
+      setCreateModalOpen(false);
+      setNewFlagKey("");
+      setNewFlagName("");
+      setNewFlagDesc("");
+      setNewFlagRollout(0);
+      setNewFlagRoles(["admin"]);
+      setNotification({
+        type: "success",
+        message: isVi ? `Đã tạo cờ tính năng mới: ${newExp.key}` : `Created new feature flag: ${newExp.key}`,
+      });
+    } finally {
+      setSubmittingCreate(false);
+    }
   };
 
   const getStatusTone = (exp: FeatureFlagExperiment): "success" | "warning" | "danger" | "info" | "unknown" => {

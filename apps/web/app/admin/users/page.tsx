@@ -35,10 +35,10 @@ import { formatLocaleDate } from "@/lib/i18n/catalog";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 
 /**
- * User Administration Registry (Spec v5 Section 6.61).
+ * User Administration Registry (Spec v8 Section 12.5 / Spec v5 Section 6.61).
  *
  * Shell: ADMIN_COMMAND / DENSE
- * Archetype: User Administration Registry
+ * Archetype: User Administration Registry / User Directory Ledger
  *
  * Dense, high-signal administrative workbench providing:
  * 1. KPI summary cards (Total Users, Active, Doctors & Researchers, Locked Accounts, Active Sessions).
@@ -491,7 +491,12 @@ export default function AdminUsersPage() {
       title={pageTitle}
       description={pageDescription}
     >
-      <div className="space-y-6">
+      <div
+        data-shell-mode="ADMIN_COMMAND"
+        data-layout-archetype="User Directory Ledger"
+        data-density="dense"
+        className="space-y-6"
+      >
         {/* Page Title & Context Header */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>

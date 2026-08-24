@@ -271,7 +271,7 @@ const DEFAULT_LEGAL_HARDGUARDS: LegalHardGuardItem[] = [
   },
 ];
 
-const DEFAULT_BLOCKED_PATTERNS: FidesBlockedPatternItem[] = [
+export const DEFAULT_BLOCKED_PATTERNS: FidesBlockedPatternItem[] = [
   {
     pattern: "Simvastatin + Clarithromycin (CYP3A4)",
     riskTypeVi: "Tăng nồng độ statin đột ngột, nguy cơ tiêu cơ vân cấp",

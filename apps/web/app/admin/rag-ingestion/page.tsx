@@ -14,7 +14,10 @@ import { useUILanguage } from "@/lib/use-ui-language";
 import { sanitizeUpstreamError } from "@/lib/user-facing-text";
 
 /**
- * RAG Ingestion & ETL Monitor (Spec v5 Section 6.69, Requirement 13.3).
+ * RAG Ingestion & ETL Monitor (Spec v8 Section 12.13, Spec v5 Section 6.69, Requirement 13.3).
+ *
+ * Shell: ADMIN_COMMAND / DENSE
+ * Archetype: RAG Ingestion Monitor
  *
  * Dense, high-signal administration plane that drives the offline ingestion pipeline:
  *   - GET  /admin/rag/sources                    — source registry + watermarks
@@ -440,7 +443,12 @@ export default function AdminRagIngestionPage() {
       title={t(language, "admin.ragIngestion.title")}
       description={t(language, "admin.ragIngestion.description")}
     >
-      <div className="space-y-5">
+      <div
+        data-shell-mode="ADMIN_COMMAND"
+        data-layout-archetype="RAG Ingestion Monitor"
+        data-density="DENSE"
+        className="space-y-5"
+      >
         {/* Corpus Statistics (Spec 6.69 Top Bar) */}
         <AsyncSection<CorpusStats>
           state={statsState}

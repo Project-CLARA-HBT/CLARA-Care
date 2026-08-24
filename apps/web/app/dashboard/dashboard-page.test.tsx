@@ -143,12 +143,13 @@ describe("DashboardPage Role-Adaptive Home (Spec v5 Section 6.55)", () => {
     expect(screen.getByText("Ca lâm sàng đang thực hiện")).toBeInTheDocument();
     expect(screen.getByText("#105")).toBeInTheDocument();
     expect(screen.getByText("Hội chẩn suy tim phân suất tống máu giảm")).toBeInTheDocument();
+    expect(screen.getByText("Tiếp tục ca này")).toBeInTheDocument();
 
-    // 4 Primary Clinical Tools
-    expect(screen.getByText("Hội chẩn AI")).toBeInTheDocument();
-    expect(screen.getAllByText("Ghi chép SOAP").length).toBeGreaterThanOrEqual(1);
+    // Operational Rows
+    expect(screen.getByText("Ghi chép SOAP")).toBeInTheDocument();
     expect(screen.getByText("Bằng chứng")).toBeInTheDocument();
-    expect(screen.getByText("Tra cứu lâm sàng")).toBeInTheDocument();
+    expect(screen.getByText("Tủ thuốc & Dược lý")).toBeInTheDocument();
+    expect(screen.getByText("Tra cứu lâm sàng →")).toBeInTheDocument();
 
     expect(mockReplace).not.toHaveBeenCalled();
   });
@@ -159,14 +160,14 @@ describe("DashboardPage Role-Adaptive Home (Spec v5 Section 6.55)", () => {
     render(<DashboardPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Trung tâm Nghiên cứu & Bằng chứng Y học")).toBeInTheDocument();
+      expect(screen.getAllByText(/Tra cứu y khoa/i).length).toBeGreaterThanOrEqual(1);
     });
 
     expect(screen.getByText("GLHS Knowledge Graph & Living Evidence")).toBeInTheDocument();
+    expect(screen.getByText("Câu hỏi nghiên cứu gần nhất")).toBeInTheDocument();
 
-    // 4 Primary Research Tools
+    // Routine Work & Links
     expect(screen.getByText("Bằng chứng sống (Living Evidence)")).toBeInTheDocument();
-    expect(screen.getByText("Tra cứu y khoa (AI Chat)")).toBeInTheDocument();
     expect(screen.getByText("Kho nguồn nghiên cứu (Source Hub)")).toBeInTheDocument();
     expect(screen.getByText("Giám sát biến động y văn")).toBeInTheDocument();
 

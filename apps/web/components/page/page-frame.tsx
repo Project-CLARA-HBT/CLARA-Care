@@ -8,6 +8,10 @@ import React, {
 } from "react";
 
 export type PageMaxWidth =
+  | "prose"
+  | "instrument"
+  | "workbench"
+  | "full-bleed"
   | "sm"
   | "md"
   | "lg"
@@ -16,7 +20,6 @@ export type PageMaxWidth =
   | "3xl"
   | "4xl"
   | "full"
-  | "prose"
   | "default"
   | "narrow"
   | "medium"
@@ -24,7 +27,15 @@ export type PageMaxWidth =
   | "dense";
 
 export type PageGutter = "none" | "compact" | "default" | "spacious";
-export type PageCanvasBg = "canvas" | "panel" | "subtle" | "sidebar" | "transparent";
+export type PageCanvasBg =
+  | "canvas"
+  | "panel"
+  | "subtle"
+  | "sidebar"
+  | "transparent"
+  | "workbench";
+
+export type PageSurface = "default" | "panel" | "card" | "flush" | "none";
 
 export interface PageFrameProps extends HTMLAttributes<HTMLElement> {
   /** Underlying HTML container element, defaults to 'div' or 'main' */
@@ -37,12 +48,14 @@ export interface PageFrameProps extends HTMLAttributes<HTMLElement> {
   footer?: ReactNode;
   /** Optional side rail / secondary panel */
   aside?: ReactNode;
-  /** Width boundary token */
+  /** Width boundary token (Spec v8 §5.5: prose, instrument, workbench, full-bleed) */
   maxWidth?: PageMaxWidth;
-  /** Gutter padding preset */
+  /** Responsive gutter padding preset */
   gutter?: PageGutter;
-  /** Background canvas surface */
+  /** Background canvas surface token */
   bg?: PageCanvasBg;
+  /** Opaque content surface type (e.g. 'panel' renders opaque var(--surface-panel) container) */
+  surface?: PageSurface;
   /** Layout archetype identifier for styling and telemetry inspection */
   archetype?: string;
   /** Active workspace context (e.g. 'personal', 'clinical', 'research', 'admin') */
@@ -59,9 +72,15 @@ export interface PageFrameProps extends HTMLAttributes<HTMLElement> {
   footerClassName?: string;
   /** Additional class names for aside slot wrapper */
   asideClassName?: string;
+  /** Additional class names for opaque surface wrapper */
+  surfaceClassName?: string;
 }
 
 const MAX_WIDTH_MAP: Record<PageMaxWidth, string> = {
+  prose: "max-w-4xl",
+  instrument: "max-w-5xl",
+  workbench: "max-w-7xl",
+  "full-bleed": "max-w-full",
   sm: "max-w-3xl",
   narrow: "max-w-3xl",
   md: "max-w-5xl",
@@ -74,7 +93,6 @@ const MAX_WIDTH_MAP: Record<PageMaxWidth, string> = {
   "3xl": "max-w-[1680px]",
   "4xl": "max-w-[1680px]",
   dense: "max-w-[1680px]",
-  prose: "max-w-4xl",
   full: "max-w-full",
 };
 
@@ -91,11 +109,23 @@ const BG_MAP: Record<PageCanvasBg, string> = {
   subtle: "bg-[var(--surface-muted)] text-[var(--text-primary)]",
   sidebar: "bg-[var(--surface-sidebar)] text-[var(--text-primary)]",
   transparent: "bg-transparent text-[var(--text-primary)]",
+  workbench: "bg-[var(--bg-canvas)] text-[var(--text-primary)]",
+};
+
+const SURFACE_MAP: Record<PageSurface, string> = {
+  default: "",
+  none: "",
+  flush: "",
+  panel:
+    "rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] shadow-sm p-4 sm:p-6 lg:p-8",
+  card:
+    "rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] shadow-md p-4 sm:p-6",
 };
 
 /**
- * Standard page container primitive.
- * Enforces max-width tokens, header slot, gutter spacing, and background canvas.
+ * Standard page container primitive (Spec v8 §5.5).
+ * Enforces max-width tokens (`prose`, `instrument`, `workbench`, `full-bleed`),
+ * header slot, responsive gutters, background canvas tokens, and opaque content surfaces.
  */
 export const PageFrame = forwardRef<HTMLElement, PageFrameProps>(
   (
@@ -108,6 +138,7 @@ export const PageFrame = forwardRef<HTMLElement, PageFrameProps>(
       maxWidth = "default",
       gutter = "default",
       bg = "canvas",
+      surface = "default",
       archetype,
       workspace,
       className = "",
@@ -116,19 +147,30 @@ export const PageFrame = forwardRef<HTMLElement, PageFrameProps>(
       headerClassName = "",
       footerClassName = "",
       asideClassName = "",
+      surfaceClassName = "",
       ...rest
     },
-    ref
+    ref,
   ) => {
     const maxWClass = MAX_WIDTH_MAP[maxWidth] ?? MAX_WIDTH_MAP.default;
     const gutterClass = GUTTER_MAP[gutter] ?? GUTTER_MAP.default;
     const bgClass = BG_MAP[bg] ?? BG_MAP.canvas;
+    const surfaceClass = SURFACE_MAP[surface] ?? "";
+
+    const renderedChildren = surfaceClass ? (
+      <div className={`${surfaceClass} ${surfaceClassName}`}>
+        {children}
+      </div>
+    ) : (
+      children
+    );
 
     return (
       <Component
         ref={ref}
         data-archetype={archetype}
         data-workspace={workspace}
+        data-surface={surface !== "default" ? surface : undefined}
         className={`relative min-h-full w-full ${bgClass} ${className}`}
         {...rest}
       >
@@ -141,22 +183,26 @@ export const PageFrame = forwardRef<HTMLElement, PageFrameProps>(
 
           {aside ? (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px] lg:gap-8 xl:grid-cols-[1fr_360px]">
-              <div className={`min-w-0 ${contentClassName}`}>{children}</div>
+              <div className={`min-w-0 ${contentClassName}`}>
+                {renderedChildren}
+              </div>
               <aside className={`min-w-0 ${asideClassName}`}>{aside}</aside>
             </div>
           ) : (
-            <div className={contentClassName}>{children}</div>
+            <div className={contentClassName}>{renderedChildren}</div>
           )}
 
           {footer ? (
-            <div className={`mt-8 sm:mt-12 border-t border-[color:var(--shell-border)] pt-6 ${footerClassName}`}>
+            <div
+              className={`mt-8 sm:mt-12 border-t border-[color:var(--shell-border)] pt-6 ${footerClassName}`}
+            >
               {footer}
             </div>
           ) : null}
         </div>
       </Component>
     );
-  }
+  },
 );
 
 PageFrame.displayName = "PageFrame";

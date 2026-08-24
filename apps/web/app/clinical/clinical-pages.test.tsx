@@ -202,10 +202,10 @@ describe("Clinical Workflows (/clinical, /clinical/overview, /clinical/patients)
         expect(screen.getAllByText(/Trung tâm Lâm sàng & Hội chẩn/i).length).toBeGreaterThanOrEqual(1);
       });
 
-      expect(screen.getByText("Hội chẩn AI")).toBeInTheDocument();
+      expect(screen.getAllByText(/Tạo ca hội chẩn/i).length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Ghi chép SOAP").length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText("Bằng chứng")).toBeInTheDocument();
-      expect(screen.getByText("Tra cứu lâm sàng")).toBeInTheDocument();
+      expect(screen.getByText("Tra cứu lâm sàng →")).toBeInTheDocument();
     });
 
     it("renders /clinical/overview subroute for Doctor role", async () => {
@@ -215,7 +215,7 @@ describe("Clinical Workflows (/clinical, /clinical/overview, /clinical/patients)
       await waitFor(() => {
         expect(screen.getAllByText(/Trung tâm Lâm sàng & Hội chẩn/i).length).toBeGreaterThanOrEqual(1);
       });
-      expect(screen.getByText("Hội chẩn AI")).toBeInTheDocument();
+      expect(screen.getAllByText(/Tạo ca hội chẩn/i).length).toBeGreaterThanOrEqual(1);
     });
   });
 

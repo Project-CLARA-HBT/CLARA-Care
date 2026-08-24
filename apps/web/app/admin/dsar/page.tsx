@@ -23,8 +23,11 @@ import {
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 
 /**
- * Admin DSAR queue & compliance workbench (Spec v5 Section 6.66, Requirement 3.6,
- * Property P7).
+ * Admin DSAR queue & compliance workbench (Spec v8 Section 12.10, Spec v5 Section 6.66,
+ * Requirement 3.6, Property P7).
+ *
+ * Shell: ADMIN_COMMAND / DENSE
+ * Archetype: Statutory DSAR Queue
  *
  * An admin-only surface that lists every Data Subject Access Request in a dense,
  * high-signal table and tracks each against its statutory response window with
@@ -250,7 +253,12 @@ export default function AdminDsarQueuePage() {
       title={copy("admin.dsar.title")}
       description={copy("admin.dsar.description")}
     >
-      <div className="space-y-5">
+      <div
+        data-shell-mode="ADMIN_COMMAND"
+        data-layout-archetype="Statutory DSAR Queue"
+        data-density="DENSE"
+        className="space-y-5"
+      >
         {showForbidden ? (
           <p
             role="alert"

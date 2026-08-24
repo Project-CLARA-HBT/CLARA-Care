@@ -38,7 +38,7 @@ import { formatLocaleDate } from "@/lib/i18n/catalog";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 
 /**
- * System Telemetry & Health Dashboard (Spec v5 Section 6.63).
+ * System Telemetry & Health Dashboard (Spec v8 Section 12.9, Spec v5 Section 6.63).
  *
  * Shell: ADMIN_COMMAND / DENSE
  * Archetype: System Telemetry & Health
@@ -230,7 +230,13 @@ export default function AdminSystemTelemetryPage() {
 
   return (
     <AdminShell activeTab="system" title={pageTitle} description={pageDescription}>
-      {/* Toast message banner */}
+      <div
+        data-shell-mode="ADMIN_COMMAND"
+        data-layout-archetype="System Telemetry & Health"
+        data-density="DENSE"
+        className="space-y-5"
+      >
+        {/* Toast message banner */}
       {toastMessage ? (
         <div
           role="status"
@@ -1131,6 +1137,7 @@ export default function AdminSystemTelemetryPage() {
           </div>
         </Inspector>
       ) : null}
+      </div>
     </AdminShell>
   );
 }

@@ -382,11 +382,11 @@ function VisitsStream() {
                   state="completed"
                   isLast={isLast}
                   className="pb-8"
-                  data-testid={`past-visit-item-${visit.id}`}
                 >
                   <TimelineNode state="completed" icon="check" size="md" />
                   <TimelineContent>
                     <article
+                      data-testid={`past-visit-item-${visit.id}`}
                       onClick={() => setSelectedVisitId(visit.id)}
                       className={`rounded-[var(--radius-xl)] border p-4 sm:p-5 space-y-3.5 shadow-xs transition cursor-pointer ${
                         selectedVisitId === visit.id

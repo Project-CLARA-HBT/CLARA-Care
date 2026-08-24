@@ -93,7 +93,11 @@ const EDITORIAL_PILLARS = [
 
 export default function LegalHubPage() {
   return (
-    <div className="min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+    <div
+      className="min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]"
+      data-shell-mode="PUBLIC_LEGAL"
+      data-layout-archetype="Legal Index"
+    >
       <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-14 lg:px-8 space-y-10 sm:space-y-12">
         {/* 1. Public Legal Header */}
         <header className="space-y-5 border-b border-[color:var(--shell-border)]/70 pb-8 sm:pb-10">

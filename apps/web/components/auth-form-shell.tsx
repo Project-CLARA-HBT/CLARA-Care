@@ -14,6 +14,7 @@ export type AuthFormShellProps = {
   backLabel?: string;
   maxWidth?: "md" | "lg";
   hideLegal?: boolean;
+  archetype?: string;
   children: ReactNode;
 };
 
@@ -25,13 +26,18 @@ export default function AuthFormShell({
   backLabel,
   maxWidth = "lg",
   hideLegal = false,
+  archetype = "Auth Focus",
   children,
 }: AuthFormShellProps) {
   const language = useUILanguage();
   const maxClass = maxWidth === "md" ? "max-w-md" : "max-w-lg";
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] w-full items-center justify-center px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+    <main
+      className="mx-auto flex min-h-[100dvh] w-full items-center justify-center px-4 py-8 sm:px-6 sm:py-12 lg:px-8"
+      data-shell-mode="PUBLIC_AUTH"
+      data-layout-archetype={archetype}
+    >
       <section
         className={`w-full ${maxClass} rounded-[var(--radius-xl)] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-9 shadow-sm`}
         aria-labelledby="auth-form-title"

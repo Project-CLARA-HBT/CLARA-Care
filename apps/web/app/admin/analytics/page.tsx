@@ -39,7 +39,7 @@ import { getStoredUILanguage, onUILanguageChange, type UILanguage } from "@/lib/
 import { sanitizeUpstreamError } from "@/lib/user-facing-text";
 
 /**
- * Platform Analytics & Safety Dashboard (Spec v5 Section 6.64).
+ * Platform Analytics & Safety Dashboard (Spec v8 Section 12.4, Spec v5 Section 6.64).
  *
  * Shell: ADMIN_COMMAND / DENSE
  * Archetype: Platform Analytics & Safety Dashboard
