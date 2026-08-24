@@ -12,6 +12,8 @@ import type {
 } from "@/lib/research";
 import { IconButton } from "@/app/chat/_v2/components/primitives";
 import Icon from "@/components/ui/icon";
+import { ClaraOrb } from "@/components/shell/clara-orb";
+import type { ClaraOrbState } from "@/components/shell/shell-mode-provider";
 
 /**
  * Modern floating chat composer with medical prompt suggestions for CLARA Chat.
@@ -134,6 +136,12 @@ function Composer(props: ComposerProps) {
     }
   };
 
+  const effectiveOrbState = useMemo<ClaraOrbState>(() => {
+    if (isRunning) return "processing";
+    if (query.trim()) return "ready";
+    return "idle";
+  }, [isRunning, query]);
+
   return (
     <form
       onSubmit={onSubmit}
@@ -196,7 +204,24 @@ function Composer(props: ComposerProps) {
           <label className="sr-only" htmlFor="chat-composer-input">
             {t(uiLanguage, "chat.composer.questionLabel")}
           </label>
-          <div className="relative flex items-center gap-2">
+          <div className="relative flex items-center gap-2.5">
+            <div className="shrink-0 flex items-center justify-center">
+              <ClaraOrb
+                size="sm"
+                state={effectiveOrbState}
+                interactive
+                showTooltip
+                onClick={() => {
+                  const input = document.getElementById("chat-composer-input");
+                  if (input instanceof HTMLTextAreaElement) input.focus();
+                }}
+                label={
+                  isRunning
+                    ? (uiLanguage === "vi" ? "CLARA đang xử lý" : "CLARA processing")
+                    : (uiLanguage === "vi" ? "CLARA Trực tuyến" : "CLARA Online")
+                }
+              />
+            </div>
             <textarea
               id="chat-composer-input"
               value={query}

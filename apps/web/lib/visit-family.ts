@@ -1,5 +1,38 @@
 import api from "@/lib/http-client";
 
+export type VisitPrescription = {
+  id: string;
+  name: string;
+  dosage?: string;
+  instruction?: string;
+  reconciliation_status?: "continued" | "new" | "adjusted" | "discontinued" | string;
+};
+
+export type VisitLabOrder = {
+  id: string;
+  title: string;
+  status?: string;
+  result_summary?: string;
+};
+
+export type DoctorSoapNote = {
+  subjective?: string;
+  objective?: string;
+  assessment?: string;
+  plan?: string;
+  icd10_codes?: Array<{ code: string; label: string }>;
+  clinician_name?: string;
+  signed_at?: string;
+};
+
+export type VisitFollowUpTask = {
+  id: string;
+  title: string;
+  due_date?: string;
+  completed?: boolean;
+  priority?: "routine" | "high" | "urgent";
+};
+
 export type Visit = {
   id: string;
   title: string;
@@ -7,6 +40,22 @@ export type Visit = {
   visit_type: string;
   scheduled_at: string | null;
   status: string;
+  doctor_name?: string | null;
+  specialty?: string | null;
+  facility_name?: string | null;
+  location?: string | null;
+  prep_status?: "not_started" | "in_progress" | "ready" | "completed" | string;
+  notes?: string | null;
+  clinician_notes?: string | null;
+  soap_note?: DoctorSoapNote | null;
+  questions?: string[];
+  questions_count?: number;
+  prescriptions?: VisitPrescription[];
+  lab_orders?: VisitLabOrder[];
+  documents?: VisitDocument[];
+  follow_up_tasks?: VisitFollowUpTask[];
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type VisitPack = {
@@ -148,6 +197,10 @@ export type FamilyNotification = {
 
 export async function listVisits(): Promise<Visit[]> {
   return (await api.get<Visit[]>("/visits")).data;
+}
+
+export async function getVisit(visitId: string): Promise<Visit> {
+  return (await api.get<Visit>(`/visits/${encodeURIComponent(visitId)}`)).data;
 }
 
 export async function createVisit(input: {

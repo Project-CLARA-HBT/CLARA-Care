@@ -58,7 +58,8 @@ export default function DeleteDataFlowClient({ step }: { step: DeleteFlowStep })
   const unknownReceiptText = copy("account.dataDelete.unknownReceipt");
   const loadErrorText = copy("account.dataDelete.loadError");
   const submitErrorText = copy("account.dataDelete.submitError");
-  const currentStep = STEPS.findIndex((candidate) => candidate.id === step);
+  const isReviewOrWarning = step === "review" || step === "warning";
+  const currentStep = isReviewOrWarning ? 0 : STEPS.findIndex((candidate) => candidate.id === step);
   const requestId = searchParams.get("request");
   const available = isDsarEnabled();
 
@@ -109,13 +110,13 @@ export default function DeleteDataFlowClient({ step }: { step: DeleteFlowStep })
   }, [acknowledged, router, submitErrorText]);
 
   const title =
-    step === "review"
+    isReviewOrWarning
       ? copy("account.dataDelete.reviewTitle")
       : step === "confirm"
         ? copy("account.dataDelete.confirmTitle")
         : copy("account.dataDelete.statusTitle");
   const description =
-    step === "review"
+    isReviewOrWarning
       ? copy("account.dataDelete.reviewDescription")
       : step === "confirm"
         ? copy("account.dataDelete.confirmDescription")
@@ -147,7 +148,7 @@ export default function DeleteDataFlowClient({ step }: { step: DeleteFlowStep })
       currentStep={currentStep}
       saveState={saveState}
     >
-      {step === "review" ? (
+      {isReviewOrWarning ? (
         <div className="space-y-6">
           <ReviewSection
             title={copy("account.dataDelete.consequenceTitle")}

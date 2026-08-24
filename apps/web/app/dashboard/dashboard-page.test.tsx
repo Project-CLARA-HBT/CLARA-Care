@@ -1,6 +1,19 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import DashboardPage from "./page";
+import { getRole } from "@/lib/auth-store";
+import { getSystemDashboard } from "@/lib/system";
+
+const mockReplace = vi.fn();
+const mockPush = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    replace: mockReplace,
+    push: mockPush,
+    pathname: "/dashboard",
+  }),
+}));
 
 vi.mock("@/lib/use-ui-language", () => ({
   useUILanguage: () => "vi",
@@ -87,15 +100,39 @@ vi.mock("@/lib/council", () => ({
 }));
 
 vi.mock("@/lib/auth-store", () => ({
-  getRole: () => "doctor",
+  getRole: vi.fn(() => "doctor"),
 }));
 
-describe("DashboardPage Component", () => {
+describe("DashboardPage Role-Adaptive Home (Spec v5 Section 6.55)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getRole).mockReturnValue("doctor");
+    vi.mocked(getSystemDashboard).mockResolvedValue(mockSystemDashboard);
   });
 
-  it("renders Clinician Command Center banner for doctor role", async () => {
+  it("redirects admin role immediately to /admin/overview", async () => {
+    vi.mocked(getRole).mockReturnValue("admin");
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/admin/overview");
+    });
+  });
+
+  it("redirects normal role immediately to /today", async () => {
+    vi.mocked(getRole).mockReturnValue("normal");
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/today");
+    });
+  });
+
+  it("renders Clinical Overview Launchpad for doctor role", async () => {
+    vi.mocked(getRole).mockReturnValue("doctor");
+
     render(<DashboardPage />);
 
     await waitFor(() => {
@@ -103,62 +140,57 @@ describe("DashboardPage Component", () => {
     });
 
     expect(screen.getByText(/DrugBank v5.1.10 Verified/i)).toBeInTheDocument();
-  });
-
-  it("renders Quick Case Resumption card with status chip and last updated time", async () => {
-    render(<DashboardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Ca lâm sàng đang thực hiện")).toBeInTheDocument();
-    });
-
+    expect(screen.getByText("Ca lâm sàng đang thực hiện")).toBeInTheDocument();
     expect(screen.getByText("#105")).toBeInTheDocument();
-    expect(screen.getByText("Cần rà soát")).toBeInTheDocument();
     expect(screen.getByText("Hội chẩn suy tim phân suất tống máu giảm")).toBeInTheDocument();
-    expect(screen.getByText(/Lần cập nhật cuối:/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Tiếp tục ca này/i })).toBeInTheDocument();
+
+    // 4 Primary Clinical Tools
+    expect(screen.getByText("Hội chẩn AI")).toBeInTheDocument();
+    expect(screen.getAllByText("Ghi chép SOAP").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Bằng chứng")).toBeInTheDocument();
+    expect(screen.getByText("Tra cứu lâm sàng")).toBeInTheDocument();
+
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it("renders all 4 Primary Clinical Tools cards", async () => {
+  it("renders Research Overview Launchpad for researcher role", async () => {
+    vi.mocked(getRole).mockReturnValue("researcher");
+
     render(<DashboardPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("4 công cụ lâm sàng cốt lõi")).toBeInTheDocument();
+      expect(screen.getByText("Trung tâm Nghiên cứu & Bằng chứng Y học")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Hội chẩn AI (Council)")).toBeInTheDocument();
-    expect(screen.getByText("Ghi chép khám (Scribe)")).toBeInTheDocument();
+    expect(screen.getByText("GLHS Knowledge Graph & Living Evidence")).toBeInTheDocument();
+
+    // 4 Primary Research Tools
     expect(screen.getByText("Bằng chứng sống (Living Evidence)")).toBeInTheDocument();
-    expect(screen.getByText("Tra cứu lâm sàng (Chat)")).toBeInTheDocument();
+    expect(screen.getByText("Tra cứu y khoa (AI Chat)")).toBeInTheDocument();
+    expect(screen.getByText("Kho nguồn nghiên cứu (Source Hub)")).toBeInTheDocument();
+    expect(screen.getByText("Giám sát biến động y văn")).toBeInTheDocument();
 
-    expect(screen.getByText("AI Council")).toBeInTheDocument();
-    expect(screen.getByText("SOAP Notes")).toBeInTheDocument();
-    expect(screen.getByText("Living Evidence")).toBeInTheDocument();
-    expect(screen.getByText("Decision Support")).toBeInTheDocument();
+    // Links to /evidence and /chat
+    expect(screen.getByRole("link", { name: /Tra cứu y khoa \(Chat\)/i })).toHaveAttribute("href", "/chat");
+    expect(screen.getAllByRole("link", { name: /Bằng chứng sống/i })[0]).toHaveAttribute("href", "/evidence");
+
+    // Recent queries
+    expect(screen.getByText("Phác đồ ĐTĐ tuýp 2 suy thận")).toBeInTheDocument();
+
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it("renders Real-time server alerts and DrugBank updates section", async () => {
+  it("does not render generic monolithic card dashboard fallback", async () => {
+    vi.mocked(getRole).mockReturnValue("doctor");
+
     render(<DashboardPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Cảnh báo máy chủ & Cập nhật Dược lý")).toBeInTheDocument();
+      expect(screen.getAllByText(/Trung tâm Lâm sàng & Hội chẩn/i).length).toBeGreaterThanOrEqual(1);
     });
 
-    expect(screen.getByText("Cảnh báo máy chủ & An toàn")).toBeInTheDocument();
-    expect(screen.getByText("Cần kiểm tra tương tác thuốc trong tủ.")).toBeInTheDocument();
-
-    expect(screen.getByText("Cơ sở dữ liệu Dược & Tri thức")).toBeInTheDocument();
-    expect(screen.getAllByText("Thuốc đang theo dõi").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("8")).toBeInTheDocument();
-    expect(screen.getByText("Thuốc sắp đến hạn")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
-  });
-
-  it("renders recent queries activity cleanly", async () => {
-    render(<DashboardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Phác đồ ĐTĐ tuýp 2 suy thận")).toBeInTheDocument();
-    });
+    // Verify monolithic legacy widgets are not present
+    expect(screen.queryByText("TRUNG TÂM ĐIỀU HÀNH & QUẢN TRỊ HỆ THỐNG")).not.toBeInTheDocument();
+    expect(screen.queryByText("4 Phân hệ Trọng yếu Sẵn sàng")).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -7,8 +8,10 @@ import {
   LANDING_COPY,
   LANDING_MODULE_HREFS,
   LANDING_MODULE_ICONS,
+  type InteractivePreviewTab,
 } from "@/components/landing/clara-kp3-copy";
 import { SPONSORS } from "@/components/landing/clara-kp3-data";
+import { Badge } from "@/components/ui/badge";
 import Icon, { type IconName } from "@/components/ui/icon";
 import { saveUILanguage, type UILanguage } from "@/lib/ui-language";
 import { useUILanguage } from "@/lib/use-ui-language";
@@ -46,289 +49,638 @@ const LANDING_ICONS: Record<string, IconName> = {
   verified: "check",
   widgets: "more",
   biotech: "search",
+  search: "search",
+  emergency: "emergency",
+  "user-card": "user-card",
+  chat: "chat",
 };
 
-function LandingIcon({ glyph, className = "", size = 20 }: { glyph: string; className?: string; size?: number }) {
-  return <Icon name={LANDING_ICONS[glyph] ?? "clinical-notes"} size={size} className={className} aria-hidden="true" />;
+function LandingIcon({
+  glyph,
+  className = "",
+  size = 20,
+}: {
+  glyph: string;
+  className?: string;
+  size?: number;
+}) {
+  return (
+    <Icon
+      name={LANDING_ICONS[glyph] ?? "clinical-notes"}
+      size={size}
+      className={className}
+      aria-hidden="true"
+    />
+  );
 }
 
 export default function ClaraKp3Landing() {
   const language = useUILanguage();
-  const copy = LANDING_COPY[language];
+  const copy = LANDING_COPY[language] ?? LANDING_COPY.vi;
+  const [activePreviewTab, setActivePreviewTab] = useState<InteractivePreviewTab["id"]>("ddi");
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+
   const modules = copy.modules.map((module, index) => ({
     ...module,
-    icon: LANDING_MODULE_ICONS[index],
-    href: LANDING_MODULE_HREFS[index],
+    icon: LANDING_MODULE_ICONS[index] ?? "clinical-notes",
+    href: LANDING_MODULE_HREFS[index] ?? "/chat",
   }));
-  const useCaseIcons = ["stethoscope", "school", "biotech"] as const;
+
+  const currentTab =
+    copy.interactivePreview.tabs.find((t) => t.id === activePreviewTab) ??
+    copy.interactivePreview.tabs[0];
 
   return (
-    <>
-      <style>{`
-        .glass-panel {
-          background: var(--surface-panel);
-          border: 1px solid var(--shell-border);
-          border-top-color: var(--card-top-border);
-        }
-
-        .cyber-grid {
-          background-color: var(--bg-canvas);
-        }
-
-        .data-stream {
-          display: none;
-        }
-
-        .neural-pulse {
-          display: none;
-        }
-
-        .glow-cyan {
-          color: var(--text-brand);
-        }
-
-        .module-blade {
-          position: relative;
-          overflow: hidden;
-          transition: background-color 150ms ease, border-color 150ms ease;
-        }
-
-        .module-blade::after {
-          content: "";
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 2px;
-          height: 100%;
-          background: var(--brand-500);
-          transform: scaleY(0);
-          transition: transform 0.3s ease;
-        }
-
-        .module-blade:hover::after {
-          transform: scaleY(1);
-        }
-      `}</style>
-
-      <main className="cyber-grid overflow-x-hidden text-[var(--text-primary)]">
-        <nav className="glass-panel fixed top-0 z-[100] flex w-full items-center justify-between border-b border-[color:var(--shell-border)] px-4 py-4 min-[1024px]:px-8">
+    <div
+      className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]"
+      data-shell-mode="PUBLIC_MARKETING"
+      data-layout-archetype="Marketing Landing"
+    >
+      {/* 1. Quiet Public Navigation Header */}
+      <header className="sticky top-0 z-50 w-full border-b border-[color:var(--shell-border)] bg-[var(--surface-panel)]/95 backdrop-blur-md">
+        <nav
+          className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8"
+          aria-label="Public Navigation"
+        >
           <div className="flex items-center gap-3">
-            <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-[var(--brand-600)] text-lg font-bold text-[var(--button-primary-text)]">
-              C
-            </div>
-            <div className="text-xl font-extrabold tracking-tight text-[var(--text-primary)]">
-              The <span className="text-[var(--text-brand)]">Clara Care</span>
-            </div>
+            <Link href="/" className="flex items-center gap-2.5 focus-ring rounded-lg">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-600)] text-base font-black text-[var(--button-primary-text)] shadow-sm">
+                C
+              </div>
+              <div className="flex flex-col">
+                <span className="text-base font-extrabold tracking-tight text-[var(--text-primary)]">
+                  The <span className="text-[var(--text-brand)]">Clara Care</span>
+                </span>
+                <span className="text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase">
+                  Clinical AI Assistant
+                </span>
+              </div>
+            </Link>
           </div>
 
-          <div className="hidden items-center gap-8 min-[900px]:flex">
-            <a className="glow-cyan inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-brand)]" href="#engine">
-              <LandingIcon glyph="play_circle" className="text-sm" />
+          <div className="hidden items-center gap-6 lg:flex">
+            <a
+              href="#hero"
+              className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            >
               {copy.nav.engine}
             </a>
-            <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]" href="#modules">
-              <LandingIcon glyph="widgets" className="text-sm" />
+            <a
+              href="#preview"
+              className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            >
               {copy.nav.modules}
             </a>
-            <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]" href="#workflow">
-              <LandingIcon glyph="account_tree" className="text-sm" />
+            <a
+              href="#pathways"
+              className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            >
+              {copy.nav.pathways}
+            </a>
+            <a
+              href="#safety"
+              className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            >
+              {copy.nav.safety}
+            </a>
+            <a
+              href="#workflow"
+              className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            >
               {copy.nav.workflow}
             </a>
-            <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]" href="#faq">
-              <LandingIcon glyph="help" className="text-sm" />
+            <Link
+              href="/huong-dan"
+              className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-brand)]"
+            >
+              {copy.nav.guide}
+            </Link>
+            <a
+              href="#faq"
+              className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            >
               {copy.nav.faq}
             </a>
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="sr-only" htmlFor="landing-language">
+          <div className="flex items-center gap-2.5">
+            <label htmlFor="landing-lang-select" className="sr-only">
               {copy.languageLabel}
             </label>
             <select
-              id="landing-language"
+              id="landing-lang-select"
               value={language}
-              onChange={(event) => saveUILanguage(event.target.value as UILanguage)}
-              className="focus-ring rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-2 text-sm font-bold text-[var(--text-primary)]"
+              onChange={(e) => saveUILanguage(e.target.value as UILanguage)}
+              className="focus-ring rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1.5 text-xs font-bold text-[var(--text-primary)] transition-colors"
             >
               <option value="vi">{copy.languageNames.vi}</option>
               <option value="en">{copy.languageNames.en}</option>
             </select>
+
             <Link
               href="/login"
-              className="focus-ring rounded-lg px-4 py-2 text-sm font-bold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              className="focus-ring rounded-lg px-3.5 py-1.5 text-xs font-bold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
             >
               {copy.nav.login}
             </Link>
+
             <Link
               href="/register"
-              className="focus-ring rounded-lg border border-[var(--brand-700)] bg-[var(--brand-600)] px-4 py-2 text-sm font-bold text-[var(--button-primary-text)] transition-colors hover:bg-[var(--brand-700)]"
+              className="focus-ring rounded-lg border border-[var(--brand-700)] bg-[var(--brand-600)] px-4 py-1.5 text-xs font-bold text-[var(--button-primary-text)] transition-colors hover:bg-[var(--brand-700)] shadow-sm"
             >
               {copy.nav.register}
             </Link>
           </div>
         </nav>
+      </header>
 
-        <section className="relative mx-auto max-w-7xl px-4 pb-14 pt-28 min-[1024px]:px-8 min-[1024px]:pb-20 min-[1024px]:pt-36">
-          <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-30">
-            <div className="data-stream left-1/4" style={{ animationDelay: "0s" }} />
-            <div className="data-stream left-1/3" style={{ animationDelay: "1.5s" }} />
-            <div className="data-stream left-2/3" style={{ animationDelay: "0.7s" }} />
-            <div className="data-stream left-3/4" style={{ animationDelay: "2.2s" }} />
-          </div>
-
-          <div className="relative z-10 flex flex-col gap-10 min-[1120px]:flex-row min-[1120px]:items-center min-[1120px]:gap-12">
-            <div className="w-full space-y-6 min-[1120px]:w-[54%] min-[1280px]:w-[56%]">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-brand)]">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-500)]" />
-                {copy.hero.eyebrow}
+      <main className="overflow-x-hidden">
+        {/* 2. Spatial Editorial Hero Section */}
+        <section
+          id="hero"
+          className="relative mx-auto max-w-7xl px-4 pb-16 pt-12 sm:px-6 sm:pb-24 sm:pt-16 lg:px-8 lg:pb-28 lg:pt-20"
+        >
+          <div className="flex flex-col gap-12 lg:flex-row lg:items-center lg:gap-14">
+            {/* Left Hero Content */}
+            <div className="w-full space-y-7 lg:w-[54%]">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone="brand" icon="check">
+                  {copy.hero.safetyBadgeFides}
+                </Badge>
+                <Badge tone="ok" icon="warning">
+                  {copy.hero.safetyBadgeZeroCot}
+                </Badge>
               </div>
 
               <h1
-                className="font-black leading-[1.08] tracking-tight text-[var(--text-primary)] [text-wrap:balance] min-[640px]:leading-[0.98]"
-                style={{ fontSize: "clamp(1.4rem, 6.4vw, 4.25rem)" }}
+                className="font-black leading-[1.08] tracking-tight text-[var(--text-primary)] [text-wrap:balance]"
+                style={{ fontSize: "clamp(2rem, 5.2vw, 3.8rem)" }}
               >
                 {copy.hero.headingStart}{" "}
                 <span className="text-[var(--text-brand)]">{copy.hero.headingAccent}</span>{" "}
                 {copy.hero.headingEnd}
               </h1>
 
-              <p className="max-w-[56ch] text-[0.95rem] font-medium leading-relaxed text-[var(--text-secondary)] min-[640px]:text-base min-[1280px]:text-lg">
-                {copy.hero.descriptionBefore}<strong className="font-black text-[var(--text-primary)]">{copy.hero.audience}</strong>{copy.hero.descriptionAfter}
+              <p className="max-w-[58ch] text-base font-medium leading-relaxed text-[var(--text-secondary)] sm:text-lg">
+                {copy.hero.descriptionBefore}
+                <strong className="font-bold text-[var(--text-primary)]">
+                  {copy.hero.audience}
+                </strong>
+                {copy.hero.descriptionAfter}
               </p>
 
-              <div className="flex flex-wrap gap-3">
+              {/* Primary Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3.5 pt-2">
                 <Link
                   href="/chat"
-                  className="focus-ring group inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-600)] px-6 py-4 text-base font-black text-[var(--button-primary-text)] transition-colors hover:bg-[var(--brand-700)] min-[480px]:flex-none min-[480px]:px-8"
+                  className="focus-ring group inline-flex items-center justify-center gap-2.5 rounded-xl bg-[var(--brand-600)] px-7 py-3.5 text-base font-bold text-[var(--button-primary-text)] shadow-sm transition-all hover:bg-[var(--brand-700)] hover:shadow"
                 >
                   {copy.hero.primaryCta}
-                  <LandingIcon glyph="arrow_forward" className="transition-transform group-hover:translate-x-1" />
+                  <Icon
+                    name="arrow-right"
+                    size={18}
+                    className="transition-transform group-hover:translate-x-1"
+                  />
                 </Link>
                 <a
-                  href="#engine"
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-6 py-4 text-base font-black text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-muted)] min-[480px]:flex-none min-[480px]:px-8"
+                  href="#pathways"
+                  className="focus-ring inline-flex items-center justify-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-6 py-3.5 text-base font-bold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-muted)]"
                 >
-                  <LandingIcon glyph="play_circle" className="text-base" />
+                  <Icon name="chevron-down" size={18} className="text-[var(--text-secondary)]" />
                   {copy.hero.secondaryCta}
                 </a>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 border-t border-[color:var(--shell-border)] pt-8">
-                <div className="flex items-start gap-1.5">
-                  <LandingIcon glyph="verified" className="mt-0.5 text-base text-[var(--text-brand)]" />
-                  <span className="text-xs font-black leading-tight text-[var(--text-secondary)]">{copy.hero.sourceWhenAvailable}</span>
+              {/* Safety & Evidence Invariant Highlights */}
+              <div className="grid grid-cols-1 gap-3 border-t border-[color:var(--shell-border)] pt-7 sm:grid-cols-3 sm:gap-4">
+                <div className="flex items-start gap-2.5">
+                  <Icon name="check" size={18} className="mt-0.5 text-[var(--text-brand)]" />
+                  <span className="text-xs font-semibold leading-snug text-[var(--text-secondary)]">
+                    {copy.hero.sourceWhenAvailable}
+                  </span>
                 </div>
-                <div className="flex items-start gap-1.5">
-                  <LandingIcon glyph="timer" className="mt-0.5 text-base text-[var(--text-brand)]" />
-                  <span className="text-xs font-black leading-tight text-[var(--text-secondary)]">{copy.hero.uncertainty}</span>
+                <div className="flex items-start gap-2.5">
+                  <Icon name="warning" size={18} className="mt-0.5 text-[var(--text-brand)]" />
+                  <span className="text-xs font-semibold leading-snug text-[var(--text-secondary)]">
+                    {copy.hero.uncertainty}
+                  </span>
                 </div>
-                <div className="flex items-start gap-1.5">
-                  <LandingIcon glyph="fact_check" className="mt-0.5 text-base text-[var(--text-brand)]" />
-                  <span className="text-xs font-black leading-tight text-[var(--text-secondary)]">{copy.hero.safetyGuard}</span>
+                <div className="flex items-start gap-2.5">
+                  <Icon name="emergency" size={18} className="mt-0.5 text-[var(--text-brand)]" />
+                  <span className="text-xs font-semibold leading-snug text-[var(--text-secondary)]">
+                    {copy.hero.safetyGuard}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="relative mx-auto w-full max-w-xl self-center min-[1120px]:mx-0 min-[1120px]:w-[46%] min-[1280px]:w-[44%]">
-              <div className="glass-panel relative overflow-hidden rounded-2xl p-5">
+            {/* Right Hero Visual Card */}
+            <div className="w-full lg:w-[46%]">
+              <div className="relative rounded-2xl border border-[color:var(--shell-border)] border-t-[color:var(--card-top-border)] bg-[var(--surface-panel)] p-5 shadow-lg sm:p-6">
+                {/* Visual Header */}
                 <div className="mb-4 flex items-center justify-between border-b border-[color:var(--shell-border)] pb-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     <div className="flex gap-1.5">
-                      <div className="h-2.5 w-2.5 rounded-full bg-[var(--status-danger-bg)]" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-[var(--status-warn-bg)]" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-[var(--surface-brand-soft)]" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[var(--brand-500)]" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[var(--status-ok-border)]" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[var(--status-warn-border)]" />
                     </div>
-                    <div className="h-4 w-px bg-[var(--surface-muted)]" />
-                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
                       {copy.hero.preview.systemCore}
-                    </div>
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-[var(--text-brand)]">{copy.hero.preview.activeSession}</span>
-                    <span className="h-2 w-2 rounded-full bg-[var(--surface-brand-soft)]" />
-                  </div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--text-brand)]">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-500)]" />
+                    {copy.hero.preview.activeSession}
+                  </span>
                 </div>
 
-                <div className="space-y-5">
-                  <div className="flex justify-between">
-                    <div>
-                      <div className="text-sm font-black text-[var(--text-primary)]">{copy.hero.preview.engineTitle}</div>
-                      <div className="mt-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--surface-brand-soft)]" />
-                        {copy.hero.preview.clinicalContext}
-                      </div>
-                    </div>
-                    <div className="flex h-8 items-end gap-1">
-                      <div className="h-4 w-1 rounded-full bg-[var(--surface-brand-soft)]" />
-                      <div className="h-6 w-1 animate-bounce rounded-full bg-[var(--surface-brand-soft)]" style={{ animationDelay: "0.1s" }} />
-                      <div className="h-8 w-1 rounded-full bg-[var(--surface-container-high)]" />
+                {/* Simulated Conversation */}
+                <div className="space-y-4">
+                  {/* User Query */}
+                  <div className="flex justify-end">
+                    <div className="max-w-[88%] rounded-2xl rounded-tr-sm border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm font-medium text-[var(--text-primary)]">
+                      {copy.hero.preview.question}
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex justify-end">
-                      <div className="max-w-[82%] rounded-xl rounded-tr-none border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-base font-medium text-[var(--text-secondary)]">
-                        {copy.hero.preview.question}
-                      </div>
+                  {/* AI Response */}
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-600)] text-xs font-bold text-[var(--button-primary-text)]">
+                      C
                     </div>
-
-                    <div className="flex justify-start gap-3">
-                      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-container-high)] text-[var(--text-primary)]">
-                        <div className="neural-pulse absolute inset-0 rounded-full bg-[var(--surface-brand-soft)]/20" />
-                        <LandingIcon glyph="psychology" className="relative z-10 text-lg" />
+                    <div className="space-y-2.5 rounded-2xl rounded-tl-sm border border-[color:var(--shell-border)] bg-[var(--surface-container-high)] p-4 text-[var(--text-primary)]">
+                      <div className="flex items-center gap-2">
+                        <Badge tone="warn" icon="warning">
+                          FIDES CẢNH BÁO LIỀU
+                        </Badge>
+                        <span className="text-[10px] font-bold text-[var(--text-muted)]">
+                          CYP3A4 Inhibition
+                        </span>
                       </div>
-
-                      <div className="max-w-[86%] space-y-3">
-                        <div className="relative overflow-hidden rounded-2xl rounded-tl-none bg-[var(--surface-container-high)] p-4 text-[var(--text-primary)]">
-                          <div className="absolute right-2 top-1 opacity-20">
-                            <LandingIcon glyph="neurology" className="text-4xl" />
-                          </div>
-                          <p className="relative z-10 text-base leading-relaxed">
-                            {copy.hero.preview.answer}
-                          </p>
-                          <div className="relative z-10 mt-3 flex flex-wrap gap-2 border-t border-[color:var(--shell-border)] pt-3">
-                            <span className="rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-[10px] font-bold">{copy.hero.preview.sourceWhenAvailable}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-brand)]">
-                            {copy.hero.preview.reviewSource}
-                          </span>
-                        </div>
+                      <p className="text-xs leading-relaxed text-[var(--text-secondary)] sm:text-sm">
+                        {copy.hero.preview.answer}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 border-t border-[color:var(--shell-border)] pt-2.5 text-[11px]">
+                        <span className="rounded bg-[var(--surface-muted)] px-2 py-0.5 font-semibold text-[var(--text-brand)]">
+                          {copy.hero.preview.sourceWhenAvailable}
+                        </span>
+                        <span className="font-medium text-[var(--text-muted)]">
+                          {copy.hero.preview.reviewSource}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                    <LandingIcon glyph="barcode_scanner" className="text-[var(--text-brand)]" />
-                    <div className="flex-1 text-xs font-bold italic text-[var(--text-muted)]">
-                      {copy.hero.preview.analysing}
+                  {/* Status Bar */}
+                  <div className="flex items-center justify-between rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-2.5 text-xs">
+                    <div className="flex items-center gap-2 text-[var(--text-brand)]">
+                      <Icon name="check" size={16} />
+                      <span className="font-semibold">{copy.hero.preview.analysing}</span>
                     </div>
-                    <div className="flex gap-1">
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--surface-brand-soft)]" />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--surface-brand-soft)]" style={{ animationDelay: "0.2s" }} />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--surface-brand-soft)]" style={{ animationDelay: "0.4s" }} />
-                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                      Zero-CoT Active
+                    </span>
                   </div>
                 </div>
-              </div>
-
-              <div className="glass-panel absolute -right-6 -top-6 hidden w-36 flex-col items-center justify-center rounded-2xl border border-[color:var(--shell-border)] p-4  min-[1200px]:flex">
-                <LandingIcon glyph="verified" className="mb-2 text-3xl text-[var(--text-brand)]" />
-                <div className="text-center text-xs font-black uppercase text-[var(--text-secondary)]">{copy.hero.preview.sourceWhenAvailable}</div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="border-y border-[color:var(--shell-border)] bg-[var(--surface-panel)] py-8">
-          <div className="mx-auto max-w-7xl px-4 min-[1024px]:px-8">
-            <div className="mb-2 text-center text-xs font-black uppercase tracking-[0.28em] text-[var(--text-secondary)]">
-              <LandingIcon glyph="handshake" className="mr-1 align-[-3px] text-sm" />
+        {/* 3. Interactive Feature Preview Showcase */}
+        <section
+          id="preview"
+          className="border-y border-[color:var(--shell-border)] bg-[var(--surface-panel)] py-16 sm:py-20 lg:py-24"
+        >
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-3xl text-center">
+              <Badge tone="brand" className="mb-3">
+                {copy.interactivePreview.eyebrow}
+              </Badge>
+              <h2
+                className="font-black tracking-tight text-[var(--text-primary)] [text-wrap:balance]"
+                style={{ fontSize: "clamp(1.75rem, 4vw, 2.75rem)" }}
+              >
+                {copy.interactivePreview.title}
+              </h2>
+              <p className="mt-3 text-base font-medium text-[var(--text-secondary)] sm:text-lg">
+                {copy.interactivePreview.subtitle}
+              </p>
+            </div>
+
+            {/* Tab Selector Buttons */}
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+              {copy.interactivePreview.tabs.map((tab) => {
+                const isActive = tab.id === activePreviewTab;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActivePreviewTab(tab.id)}
+                    className={`focus-ring rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${
+                      isActive
+                        ? "border border-[var(--brand-500)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)] shadow-sm"
+                        : "border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:bg-[var(--surface-container-high)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {tab.tabLabel}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Active Tab Preview Card */}
+            {currentTab ? (
+              <div className="mt-8 rounded-2xl border border-[color:var(--shell-border)] border-t-[color:var(--card-top-border)] bg-[var(--surface-container-high)] p-6 sm:p-8 lg:p-10 shadow-md">
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-10">
+                  {/* Left Column: Simulated Clinical Query & AI Result */}
+                  <div className="space-y-6 lg:col-span-7">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <Badge tone="brand" icon="clinical-notes">
+                        {currentTab.badge}
+                      </Badge>
+                      <span className="text-xs font-bold text-[var(--text-muted)]">
+                        {currentTab.safetyTag}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                        Câu hỏi / Tình huống đầu vào:
+                      </span>
+                      <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-sm font-medium text-[var(--text-primary)]">
+                        &ldquo;{currentTab.query}&rdquo;
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-brand)]">
+                        <Icon name="check" size={16} />
+                        {currentTab.responseHeadline}
+                      </div>
+                      <p className="text-sm font-normal leading-relaxed text-[var(--text-secondary)] whitespace-pre-line">
+                        {currentTab.responseBody}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--shell-border)] pt-4">
+                      <div className="space-y-1">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                          Nguồn trích dẫn:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {currentTab.citations.map((c) => (
+                            <span
+                              key={c}
+                              className="rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-secondary)]"
+                            >
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Parameters, Assurance & Feature CTA */}
+                  <div className="flex flex-col justify-between space-y-6 border-t border-[color:var(--shell-border)] pt-6 lg:col-span-5 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
+                    <div className="space-y-5">
+                      <h3 className="text-lg font-bold text-[var(--text-primary)]">
+                        {currentTab.title}
+                      </h3>
+
+                      {currentTab.detailPoints ? (
+                        <div className="space-y-2.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
+                          {currentTab.detailPoints.map((pt) => (
+                            <div
+                              key={pt.label}
+                              className="flex items-center justify-between text-xs"
+                            >
+                              <span className="font-semibold text-[var(--text-muted)]">
+                                {pt.label}:
+                              </span>
+                              <span className="font-bold text-[var(--text-primary)]">
+                                {pt.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)]/40 p-4 text-xs">
+                        <div className="flex items-center gap-2 font-bold text-[var(--text-brand)]">
+                          <Icon name="warning" size={16} />
+                          Bảo vệ dữ liệu Zero-CoT
+                        </div>
+                        <p className="mt-1 text-[var(--text-secondary)]">
+                          {currentTab.zeroCotAssurance}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Link
+                      href={currentTab.ctaHref}
+                      className="focus-ring group inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-600)] px-6 py-3 text-sm font-bold text-[var(--button-primary-text)] transition-colors hover:bg-[var(--brand-700)] shadow-sm"
+                    >
+                      {currentTab.ctaText}
+                      <Icon
+                        name="arrow-right"
+                        size={16}
+                        className="transition-transform group-hover:translate-x-1"
+                      />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        {/* 4. Clinician & Personal Pathways */}
+        <section id="pathways" className="py-20 sm:py-24 lg:py-28">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-3xl text-center">
+              <Badge tone="brand" className="mb-3">
+                {copy.pathways.eyebrow}
+              </Badge>
+              <h2
+                className="font-black tracking-tight text-[var(--text-primary)] [text-wrap:balance]"
+                style={{ fontSize: "clamp(1.85rem, 4.5vw, 3rem)" }}
+              >
+                {copy.pathways.title}
+              </h2>
+              <p className="mt-3 text-base font-medium text-[var(--text-secondary)] sm:text-lg">
+                {copy.pathways.subtitle}
+              </p>
+            </div>
+
+            <div className="mt-14 space-y-12">
+              {copy.pathways.sections.map((pathway) => (
+                <div
+                  key={pathway.id}
+                  className="rounded-2xl border border-[color:var(--shell-border)] border-t-[color:var(--card-top-border)] bg-[var(--surface-panel)] p-6 sm:p-8 lg:p-10"
+                >
+                  <div className="flex flex-col justify-between gap-4 border-b border-[color:var(--shell-border)] pb-6 sm:flex-row sm:items-center">
+                    <div>
+                      <Badge tone="brand" className="mb-2">
+                        {pathway.tag}
+                      </Badge>
+                      <h3 className="text-xl font-bold tracking-tight text-[var(--text-primary)] sm:text-2xl">
+                        {pathway.title}
+                      </h3>
+                      <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
+                        {pathway.subtitle}
+                      </p>
+                    </div>
+
+                    <Link
+                      href={pathway.primaryCta.href}
+                      className="focus-ring group inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--brand-600)] px-5 py-2.5 text-xs font-bold text-[var(--button-primary-text)] transition-colors hover:bg-[var(--brand-700)] shadow-sm"
+                    >
+                      {pathway.primaryCta.label}
+                      <Icon
+                        name="arrow-right"
+                        size={14}
+                        className="transition-transform group-hover:translate-x-1"
+                      />
+                    </Link>
+                  </div>
+
+                  <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {pathway.features.map((feature) => (
+                      <Link
+                        key={feature.title}
+                        href={feature.href}
+                        className="focus-ring group flex flex-col justify-between rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5 transition-all hover:-translate-y-0.5 hover:bg-[var(--surface-container-high)]"
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+                              <LandingIcon glyph={feature.icon} size={20} />
+                            </div>
+                            {feature.badge ? (
+                              <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">
+                                {feature.badge}
+                              </span>
+                            ) : null}
+                          </div>
+                          <h4 className="text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--text-brand)] transition-colors">
+                            {feature.title}
+                          </h4>
+                          <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                            {feature.desc}
+                          </p>
+                        </div>
+
+                        <div className="mt-4 flex items-center gap-1 text-[11px] font-bold text-[var(--text-brand)]">
+                          <span>Chi tiết</span>
+                          <Icon
+                            name="arrow-right"
+                            size={12}
+                            className="transition-transform group-hover:translate-x-1"
+                          />
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 5. Trust & Safety Invariants Strip */}
+        <section
+          id="safety"
+          className="border-y border-[color:var(--shell-border)] bg-[var(--surface-container-high)] py-16 sm:py-20 lg:py-24"
+        >
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-3xl text-center">
+              <Badge tone="warn" icon="warning" className="mb-3">
+                {copy.safetyStrip.eyebrow}
+              </Badge>
+              <h2
+                className="font-black tracking-tight text-[var(--text-primary)] [text-wrap:balance]"
+                style={{ fontSize: "clamp(1.75rem, 4vw, 2.75rem)" }}
+              >
+                {copy.safetyStrip.title}
+              </h2>
+              <p className="mt-3 text-base font-medium text-[var(--text-secondary)] sm:text-lg">
+                {copy.safetyStrip.subtitle}
+              </p>
+            </div>
+
+            <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {copy.safetyStrip.invariants.map((item) => (
+                <div
+                  key={item.title}
+                  className="flex flex-col justify-between rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+                        <LandingIcon glyph={item.icon} size={22} />
+                      </div>
+                      <Badge tone="neutral">{item.badge}</Badge>
+                    </div>
+                    <h3 className="text-base font-bold text-[var(--text-primary)]">{item.title}</h3>
+                    <p className="text-xs leading-relaxed text-[var(--text-secondary)] sm:text-sm">
+                      {item.desc}
+                    </p>
+                  </div>
+                  <div className="mt-5 border-t border-[color:var(--shell-border)] pt-3 text-[11px] font-bold text-[var(--text-brand)]">
+                    ✓ Bất biến & Khóa hồi quy
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 6. Real Product Workflow */}
+        <section id="workflow" className="py-20 sm:py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-3xl text-center">
+              <h2
+                className="font-black tracking-tight text-[var(--text-primary)]"
+                style={{ fontSize: "clamp(1.75rem, 4.5vw, 2.85rem)" }}
+              >
+                {copy.workflow.titleStart}{" "}
+                <span className="text-[var(--text-brand)]">{copy.workflow.titleAccent}</span>
+              </h2>
+            </div>
+
+            <div className="mt-14 grid grid-cols-1 gap-8 md:grid-cols-3">
+              {copy.workflow.steps.map((step) => (
+                <div
+                  key={step.number}
+                  className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-7 space-y-4"
+                >
+                  <div className="text-4xl font-black text-[var(--text-brand)]">{step.number}</div>
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-[var(--text-primary)]">
+                    <LandingIcon glyph={step.icon} size={20} className="text-[var(--text-brand)]" />
+                    {step.title}
+                  </h3>
+                  <p className="text-sm font-medium leading-relaxed text-[var(--text-secondary)]">
+                    {step.description}
+                  </p>
+                  <div className="border-t border-[color:var(--shell-border)] pt-3 text-xs font-bold text-[var(--text-brand)]">
+                    → {step.outcome}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 7. Sponsors & Ecosystem Strip */}
+        <section className="border-y border-[color:var(--shell-border)] bg-[var(--surface-muted)] py-10">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-2 text-center text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
               {copy.sponsors.heading}
             </div>
-            <div className="mb-8 text-center text-sm font-medium text-[var(--text-secondary)]">
+            <div className="mb-6 text-center text-xs font-medium text-[var(--text-secondary)]">
               {copy.sponsors.description}
             </div>
             <div className="flex flex-wrap justify-center gap-4">
@@ -338,365 +690,310 @@ export default function ClaraKp3Landing() {
                   href={sponsor.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex min-h-[120px] w-full max-w-xs items-center justify-center rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-container-high)] p-6  transition-all hover:-translate-y-0.5"
+                  className="flex min-h-[90px] w-full max-w-xs items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 transition-transform hover:-translate-y-0.5"
                 >
                   <Image
                     src={sponsor.logo}
                     alt={`${sponsor.name} logo`}
-                    width={sponsor.name === "BNIX" ? 260 : 560}
-                    height={sponsor.name === "BNIX" ? 78 : 180}
-                    className={sponsor.name === "BNIX" ? "h-12 w-auto object-contain" : "h-16 w-auto object-contain"}
+                    width={sponsor.name === "BNIX" ? 220 : 400}
+                    height={sponsor.name === "BNIX" ? 60 : 120}
+                    className={
+                      sponsor.name === "BNIX"
+                        ? "h-9 w-auto object-contain"
+                        : "h-11 w-auto object-contain"
+                    }
                   />
                 </a>
               ))}
             </div>
-            <p className="mt-6 text-center text-base font-medium text-[var(--text-muted)]">
-              {copy.sponsors.network}
-            </p>
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 py-20 min-[1024px]:px-8" id="engine">
-          <div className="mb-16 text-center">
+        {/* 8. FAQ Section */}
+        <section id="faq" className="py-20 sm:py-24">
+          <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
             <h2
-              className="mb-4 font-black tracking-tight text-[var(--text-primary)]"
-              style={{ fontSize: "clamp(1.75rem, 5vw, 3rem)" }}
+              className="mb-10 text-center font-black tracking-tight text-[var(--text-primary)]"
+              style={{ fontSize: "clamp(1.75rem, 4vw, 2.5rem)" }}
             >
-              {copy.engine.title}
+              {copy.faqTitle}
             </h2>
-            <p className="mx-auto max-w-3xl text-base font-medium text-[var(--text-secondary)]">
-              {copy.engine.description}
-            </p>
-          </div>
 
-          <div className="flex flex-col gap-3 min-[900px]:flex-row min-[900px]:items-stretch">
-            {copy.engine.steps.flatMap((step, idx, arr) => [
-              <article
-                key={step.title}
-                className={
-                  step.solid
-                    ? "relative z-10 flex-1 rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-container-high)] p-7 text-[var(--text-primary)]"
-                    : "glass-panel relative z-10 flex-1 rounded-2xl p-7"
-                }
-              >
-                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--surface-muted)]">
-                  <LandingIcon glyph={step.icon} size={24} className="text-[var(--text-brand)]" />
-                </div>
-                <p className="mb-1 text-xs font-black uppercase tracking-[0.15em] text-[var(--text-brand)]">{step.layer}</p>
-                <h3 className="mb-3 text-xl font-black">{step.title}</h3>
-                <p className={`text-base leading-relaxed ${step.solid ? "text-[var(--text-secondary)]" : "text-[var(--text-secondary)]"}`}>{step.description}</p>
-              </article>,
-              idx < arr.length - 1 ? (
-                <div key={`arrow-${idx}`} className="hidden shrink-0 items-center justify-center text-[var(--text-brand)]/50 min-[900px]:flex">
-                  <LandingIcon glyph="arrow_forward" className="text-2xl" />
-                </div>
-              ) : null,
-            ])}
-          </div>
-        </section>
-
-        <section className="border-y border-[color:var(--shell-border)] bg-[var(--surface-panel)] py-20" id="modules">
-          <div className="mx-auto grid max-w-7xl gap-12 px-4 min-[1120px]:grid-cols-12 min-[1024px]:px-8">
-            <div className="space-y-8 min-[1120px]:col-span-5">
-              <div className="inline-flex rounded-full bg-[var(--surface-container-high)] px-4 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[var(--text-primary)]">
-                {copy.moduleSection.eyebrow}
-              </div>
-              <h2
-                className="font-black leading-tight tracking-tight text-[var(--text-primary)]"
-                style={{ fontSize: "clamp(1.75rem, 5vw, 3rem)" }}
-              >
-                {copy.moduleSection.title}
-                <br />
-                <span className="text-[var(--text-brand)]">{copy.moduleSection.coreEngine}</span>
-              </h2>
-              <p className="text-lg font-medium leading-relaxed text-[var(--text-secondary)]">
-                {copy.moduleSection.description}
-              </p>
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <p className="text-5xl font-light tracking-tight text-[var(--text-brand)]">{copy.moduleSection.source}</p>
-                  <p className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-[var(--text-secondary)]">
-                    {copy.moduleSection.sourceDetail}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-5xl font-light tracking-tight text-[var(--text-brand)]">{copy.moduleSection.limits}</p>
-                  <p className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-[var(--text-secondary)]">
-                    {copy.moduleSection.limitsDetail}
-                  </p>
-                </div>
-              </div>
-              <Link
-                href="/chat"
-                className="inline-flex rounded-xl bg-[var(--surface-container-high)] px-8 py-4 text-base font-black text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-panel)]"
-              >
-                {copy.moduleSection.cta}
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 min-[760px]:grid-cols-2 min-[1120px]:col-span-7">
-              {modules.map((module) => (
-                <article
-                  key={module.title}
-                  className="glass-panel module-blade rounded-2xl p-7 hover:bg-[var(--surface-container-high)]"
-                >
-                  <div className="mb-6 flex items-center justify-between">
-                    <div className="rounded-xl bg-[var(--surface-brand-soft)] p-3">
-                      <LandingIcon glyph={module.icon} size={24} className="text-[var(--text-brand)]" />
-                    </div>
-                    <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-2.5 py-1 text-xs font-bold text-[var(--text-brand)]">
-                      {module.audience}
-                    </span>
-                  </div>
-                  <h3 className="mb-2 text-xl font-black text-[var(--text-primary)]">{module.title}</h3>
-                  <p className="mb-6 text-base font-medium leading-relaxed text-[var(--text-secondary)]">
-                    {module.description}
-                  </p>
-                  <Link
-                    href={module.href}
-                    className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-[0.12em] text-[var(--text-brand)]"
+            <div className="space-y-3">
+              {copy.faqs.map((faq, index) => {
+                const isOpen = openFaqIndex === index;
+                return (
+                  <div
+                    key={faq.q}
+                    className="overflow-hidden rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)]"
                   >
-                    {module.cta}
-                    <i className="fa fa-chevron-right text-base" aria-hidden="true" />
-                  </Link>
-                </article>
-              ))}
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                      className="flex min-h-[56px] w-full items-center justify-between gap-3 p-5 text-left font-bold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-muted)]"
+                      aria-expanded={isOpen}
+                    >
+                      <span className="text-sm sm:text-base">{faq.q}</span>
+                      <Icon
+                        name="chevron-down"
+                        size={18}
+                        className={`text-[var(--text-muted)] transition-transform duration-200 ${
+                          isOpen ? "rotate-180 text-[var(--text-brand)]" : ""
+                        }`}
+                      />
+                    </button>
+                    {isOpen ? (
+                      <div className="border-t border-[color:var(--shell-border)] px-5 pb-5 pt-3 text-xs leading-relaxed text-[var(--text-secondary)] sm:text-sm">
+                        {faq.a}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 py-20 min-[1024px]:px-8" id="workflow">
-          <h2
-            className="mb-16 text-center font-black leading-tight tracking-tight text-[var(--text-primary)]"
-            style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
-          >
-            {copy.workflow.titleStart}
-            <br />
-            <span className="text-[var(--text-brand)]">{copy.workflow.titleAccent}</span>
-          </h2>
-
-          <div className="grid grid-cols-1 gap-12 min-[900px]:grid-cols-3">
-            {copy.workflow.steps.map((step) => (
-              <article key={step.number} className="space-y-4">
-                <div className="text-7xl font-black text-[var(--text-brand)]/60">{step.number}</div>
-                <h3 className="flex items-center gap-2 text-2xl font-black text-[var(--text-primary)]">
-                  <LandingIcon glyph={step.icon} className="text-[var(--text-brand)]" />
-                  {step.title}
-                </h3>
-                <p className="text-base font-medium leading-relaxed text-[var(--text-secondary)]">{step.description}</p>
-                <p className="text-xs font-black uppercase tracking-widest text-[var(--text-brand)]">
-                  → {step.outcome}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="relative overflow-hidden bg-[var(--surface-container-high)] py-20 text-[var(--text-primary)]">
-          <div className="cyber-grid absolute inset-0 opacity-10" />
-          <div className="relative z-10 mx-auto max-w-7xl px-4 min-[1024px]:px-8">
-            <div className="mb-14 flex flex-col gap-6 min-[1024px]:flex-row min-[1024px]:items-end min-[1024px]:justify-between">
-              <h2
-                className="font-black leading-tight tracking-tight"
-                style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
-              >
-                {copy.principles.title}
-                <br />
-                <span className="text-[var(--text-brand)]">{copy.principles.titleAccent}</span>
-              </h2>
-              <p className="max-w-sm text-base font-bold text-[var(--text-secondary)]">
-                {copy.principles.description}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-5 min-[900px]:grid-cols-3">
-            {copy.principles.items.map((item) => (
-                <article key={item.title} className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-8">
-                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--surface-brand-soft)]/15">
-                    <LandingIcon glyph={item.icon} size={30} className="text-[var(--text-brand)]" />
-                  </div>
-                  <h3 className="mb-3 text-2xl font-black text-[var(--text-primary)]">{item.title}</h3>
-                  <p className="mb-4 text-base font-medium leading-relaxed text-[var(--text-secondary)]">{item.description}</p>
-                  <div className="flex items-start gap-2 border-t border-[color:var(--shell-border)] pt-3">
-                    <LandingIcon glyph="check_circle" className="mt-0.5 text-sm text-[var(--text-brand)]" />
-                    <p className="text-sm font-bold leading-snug text-[var(--text-secondary)]">{copy.principles.outcomeLabel}: {item.outcome}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-7xl px-4 py-20 min-[1024px]:px-8">
-          <h2
-            className="mb-4 text-center font-black tracking-tight text-[var(--text-primary)]"
-            style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
-          >
-            {copy.useCaseSection.title}
-          </h2>
-          <p className="mb-14 text-center text-base font-medium text-[var(--text-secondary)]">
-            {copy.useCaseSection.description}
-          </p>
-          <div className="grid grid-cols-1 gap-6 min-[1000px]:grid-cols-3">
-            {copy.useCases.map((item, index) => (
-              <article key={item.role} className="glass-panel rounded-2xl border-l-4 border-[color:var(--shell-border)] p-8">
-                <div className="mb-4 flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--surface-brand-soft)]">
-                    <LandingIcon glyph={useCaseIcons[index]} className="text-[var(--text-brand)]" />
-                  </div>
-                  <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-black text-[var(--text-brand)]">
-                    {item.tag}
-                  </span>
-                </div>
-                <p className="mb-1 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-secondary)]">{item.role}</p>
-                <p className="mb-4 text-base font-medium leading-relaxed text-[var(--text-secondary)]">
-                  {item.scenario}
-                </p>
-                <p className="border-t border-[color:var(--shell-border)] pt-4 text-sm font-bold text-[var(--text-secondary)]">
-                  ✓ {item.benefit}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {/* CTA giữa trang */}
-        <section className="relative overflow-hidden bg-[var(--surface-container-high)] py-16">
-          <div className="relative z-10 mx-auto max-w-3xl px-4 text-center min-[1024px]:px-8">
-            <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-[var(--text-brand)]">{copy.primaryCta.eyebrow}</p>
+        {/* 9. Pre-Footer Call-to-Action */}
+        <section className="border-t border-[color:var(--shell-border)] bg-[var(--surface-container-high)] py-16 sm:py-20">
+          <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+            <Badge tone="brand" className="mb-3">
+              {copy.primaryCta.eyebrow}
+            </Badge>
             <h2
-              className="mb-4 font-black leading-tight tracking-tight text-[var(--text-primary)]"
-              style={{ fontSize: "clamp(1.7rem, 5vw, 2.6rem)" }}
+              className="font-black leading-tight tracking-tight text-[var(--text-primary)]"
+              style={{ fontSize: "clamp(1.75rem, 4.5vw, 2.5rem)" }}
             >
               {copy.primaryCta.title}
             </h2>
-            <p className="mb-8 text-base font-medium leading-relaxed text-[var(--text-secondary)]">
+            <p className="mt-3 text-sm font-medium text-[var(--text-secondary)] sm:text-base">
               {copy.primaryCta.description}
             </p>
-            <div className="flex flex-wrap justify-center gap-4">
+            <div className="mt-8 flex flex-wrap justify-center gap-3.5">
               <Link
                 href="/chat"
-                className="group inline-flex items-center gap-2 rounded-xl bg-[var(--brand-600)] px-8 py-4 text-base font-black text-[var(--button-primary-text)] transition-colors hover:bg-[var(--brand-700)]"
+                className="focus-ring group inline-flex items-center gap-2 rounded-xl bg-[var(--brand-600)] px-7 py-3.5 text-sm font-bold text-[var(--button-primary-text)] transition-colors hover:bg-[var(--brand-700)] shadow-sm"
               >
                 {copy.primaryCta.chat}
-                <LandingIcon glyph="arrow_forward" className="transition-transform group-hover:translate-x-1" />
+                <Icon
+                  name="arrow-right"
+                  size={16}
+                  className="transition-transform group-hover:translate-x-1"
+                />
               </Link>
-              <a
-                href="#workflow"
-                className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-8 py-4 text-base font-black text-[var(--text-secondary)] transition-all hover:border-[color:var(--shell-border)] hover:bg-[var(--surface-muted)]"
-              >
-                <LandingIcon glyph="fact_check" className="text-base" />
-                {copy.primaryCta.workflow}
-              </a>
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-3xl px-4 py-20 min-[1024px]:px-8" id="faq">
-          <h2
-            className="mb-10 text-center font-black tracking-tight text-[var(--text-primary)]"
-            style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
-          >
-            {copy.faqTitle}
-          </h2>
-          <div className="space-y-4">
-            {copy.faqs.map((faq) => (
-              <details key={faq.q} className="glass-panel overflow-hidden rounded-2xl border border-[color:var(--shell-border)]">
-                <summary className="flex cursor-pointer list-none items-center justify-between p-5 text-left">
-                  <span className="font-black text-[var(--text-primary)]">{faq.q}</span>
-                  <LandingIcon glyph="expand_more" className="text-[var(--text-muted)]" />
-                </summary>
-                <div className="px-5 pb-5 text-base font-medium leading-relaxed text-[var(--text-secondary)]">{faq.a}</div>
-              </details>
-            ))}
-          </div>
-        </section>
-
-        <footer className="relative overflow-hidden bg-[var(--surface-container-high)] py-14">
-          <div className="cyber-grid absolute inset-0 opacity-5" />
-          <div className="relative z-10 mx-auto max-w-7xl px-4 text-[var(--text-secondary)] min-[1024px]:px-8">
-
-            {/* CTA đầu footer */}
-            <div className="mb-10 flex flex-col items-center justify-between gap-6 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)]/80 px-8 py-8  min-[900px]:flex-row">
-              <div>
-                <p className="mb-1 text-lg font-black text-[var(--text-primary)]">{copy.footer.ctaTitle}</p>
-                <p className="text-sm font-medium text-[var(--text-muted)]">{copy.footer.ctaDetail}</p>
-              </div>
               <Link
                 href="/register"
-                className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-[var(--brand-600)] px-6 py-3 text-sm font-black text-[var(--button-primary-text)] transition-colors hover:bg-[var(--brand-700)]"
+                className="focus-ring inline-flex items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-6 py-3.5 text-sm font-bold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-muted)]"
               >
-                <LandingIcon glyph="person_add" className="text-base" />
+                <Icon name="user-card" size={16} className="text-[var(--text-secondary)]" />
                 {copy.footer.register}
               </Link>
             </div>
+          </div>
+        </section>
+      </main>
 
-            <div className="grid grid-cols-1 gap-10 border-b border-[color:var(--shell-border)] pb-10 md:grid-cols-12 md:gap-8">
-              <div className="space-y-4 md:col-span-5">
-                <p className="text-2xl font-black text-[var(--text-primary)]">
+      {/* 10. Footer with Explicit Links to /legal and /huong-dan */}
+      <footer className="border-t border-[color:var(--shell-border)] bg-[var(--surface-panel)] py-14">
+        <div className="mx-auto max-w-7xl px-4 text-[var(--text-secondary)] sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-10 border-b border-[color:var(--shell-border)] pb-12 sm:grid-cols-2 lg:grid-cols-12">
+            {/* Brand Column */}
+            <div className="space-y-4 lg:col-span-4">
+              <Link href="/" className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--brand-600)] text-sm font-black text-[var(--button-primary-text)]">
+                  C
+                </div>
+                <span className="text-lg font-black text-[var(--text-primary)]">
                   The <span className="text-[var(--text-brand)]">Clara Care</span>
-                </p>
-                <p className="max-w-md text-base font-medium leading-relaxed text-[var(--text-secondary)]">
-                  {copy.footer.description}
-                </p>
-                <p className="text-xs font-black uppercase tracking-[0.15em] text-[var(--text-brand)]">© 2026 The Clara Care</p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 md:col-span-7">
-                <div className="space-y-3">
-                  <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-[var(--text-primary)]">
-                    <LandingIcon glyph="category" className="text-sm" />
-                    {copy.footer.product}
-                  </p>
-                  <a className="block text-sm font-bold hover:text-[var(--text-brand)]" href="#engine">
-                    {copy.nav.engine}
-                  </a>
-                  <a className="block text-sm font-bold hover:text-[var(--text-brand)]" href="#modules">
-                    {copy.nav.modules}
-                  </a>
-                  <a className="block text-sm font-bold hover:text-[var(--text-brand)]" href="#workflow">
-                    {copy.nav.workflow}
-                  </a>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-[var(--text-primary)]">
-                    <LandingIcon glyph="gavel" className="text-sm" />
-                    {copy.footer.legal}
-                  </p>
-                  <Link className="block text-sm font-bold hover:text-[var(--text-brand)]" href="/legal/privacy">
-                    {copy.footer.privacy}
-                  </Link>
-                  <Link className="block text-sm font-bold hover:text-[var(--text-brand)]" href="/legal/terms">
-                    {copy.footer.terms}
-                  </Link>
-                  <Link className="block text-sm font-bold hover:text-[var(--text-brand)]" href="/legal/consent">
-                    {copy.footer.consent}
-                  </Link>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-[var(--text-primary)]">
-                    <LandingIcon glyph="contact_support" className="text-sm" />
-                    {copy.footer.contact}
-                  </p>
-                  <a className="block text-sm font-bold hover:text-[var(--text-brand)]" href="mailto:clara@thiennn.icu">
-                    clara@thiennn.icu
-                  </a>
-                  <a className="block text-sm font-bold hover:text-[var(--text-brand)]" href="tel:0853374247">
-                    0853374247
-                  </a>
-                </div>
+                </span>
+              </Link>
+              <p className="max-w-sm text-xs leading-relaxed text-[var(--text-secondary)] sm:text-sm">
+                {copy.footer.description}
+              </p>
+              <div className="flex items-center gap-2 pt-2">
+                <Badge tone="ok">Zero-CoT Privacy Safe</Badge>
+                <Badge tone="brand">FIDES 2026</Badge>
               </div>
             </div>
 
-            <div className="flex flex-col items-start justify-between gap-2 pt-4 text-xs text-[var(--text-secondary)] sm:flex-row sm:items-center">
-              <p>{copy.footer.madeFor}</p>
-              <p className="text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy.footer.productLine}</p>
+            {/* Link Columns */}
+            <div className="grid grid-cols-2 gap-8 sm:col-span-2 sm:grid-cols-3 lg:col-span-8">
+              {/* Column 1: Products */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-[var(--text-primary)]">
+                  {copy.footer.product}
+                </h4>
+                <ul className="space-y-2 text-xs font-semibold">
+                  <li>
+                    <Link href="/chat" className="hover:text-[var(--text-brand)] transition-colors">
+                      CLARA Chat
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/council"
+                      className="hover:text-[var(--text-brand)] transition-colors"
+                    >
+                      Council AI
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/scribe"
+                      className="hover:text-[var(--text-brand)] transition-colors"
+                    >
+                      Scribe Y khoa
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/careguard"
+                      className="hover:text-[var(--text-brand)] transition-colors"
+                    >
+                      CareGuard
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/medicines?tab=cabinet"
+                      className="hover:text-[var(--text-brand)] transition-colors"
+                    >
+                      Self-Med & Thuốc
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/lifemap"
+                      className="hover:text-[var(--text-brand)] transition-colors"
+                    >
+                      LifeMap
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Column 2: Guides & Support */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-[var(--text-primary)]">
+                  {copy.footer.guide}
+                </h4>
+                <ul className="space-y-2 text-xs font-semibold">
+                  <li>
+                    <Link
+                      href="/huong-dan"
+                      className="text-[var(--text-brand)] font-bold hover:underline"
+                    >
+                      Trung tâm hướng dẫn (/huong-dan)
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/huong-dan"
+                      className="hover:text-[var(--text-brand)] transition-colors"
+                    >
+                      Hướng dẫn Bác sĩ
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/huong-dan"
+                      className="hover:text-[var(--text-brand)] transition-colors"
+                    >
+                      Hướng dẫn Người dùng
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/huong-dan"
+                      className="hover:text-[var(--text-brand)] transition-colors"
+                    >
+                      Quy trình kiểm chứng FIDES
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Column 3: Legal & Privacy */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-[var(--text-primary)]">
+                  {copy.footer.legal}
+                </h4>
+                <ul className="space-y-2 text-xs font-semibold">
+                  <li>
+                    <Link
+                      href="/legal"
+                      className="text-[var(--text-brand)] font-bold hover:underline"
+                    >
+                      Trung tâm pháp lý (/legal)
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/legal/privacy"
+                      className="hover:text-[var(--text-brand)] transition-colors"
+                    >
+                      {copy.footer.privacy}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/legal/terms"
+                      className="hover:text-[var(--text-brand)] transition-colors"
+                    >
+                      {copy.footer.terms}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/legal/consent"
+                      className="hover:text-[var(--text-brand)] transition-colors"
+                    >
+                      {copy.footer.consent}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/legal/cookies"
+                      className="hover:text-[var(--text-brand)] transition-colors"
+                    >
+                      {copy.footer.cookies}
+                    </Link>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
-        </footer>
-      </main>
-    </>
+
+          {/* Contact & Disclaimer Bar */}
+          <div className="mt-8 space-y-4">
+            <div className="flex flex-col items-start justify-between gap-3 text-xs sm:flex-row sm:items-center">
+              <div className="flex flex-wrap items-center gap-4 text-[var(--text-muted)]">
+                <span>{copy.footer.contact}:</span>
+                <a
+                  href="mailto:clara@thiennn.icu"
+                  className="font-bold text-[var(--text-secondary)] hover:text-[var(--text-brand)]"
+                >
+                  clara@thiennn.icu
+                </a>
+                <a
+                  href="tel:0853374247"
+                  className="font-bold text-[var(--text-secondary)] hover:text-[var(--text-brand)]"
+                >
+                  0853374247
+                </a>
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                © 2026 The Clara Care · {copy.footer.madeFor}
+              </span>
+            </div>
+
+            {/* Prominent Medical Disclaimer */}
+            <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-[11px] leading-relaxed text-[var(--text-muted)]">
+              {copy.footer.disclaimer}
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }

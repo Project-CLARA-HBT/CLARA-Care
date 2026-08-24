@@ -1120,4 +1120,100 @@ class FakeApiClient extends ApiClient {
       accessToken: accessToken,
     );
   }
+
+  // --- Family & Access Grants -----------------------------------------------
+
+  @override
+  Future<Map<String, dynamic>> getFamilyRelationships({
+    required String accessToken,
+  }) {
+    return _dispatch('getFamilyRelationships', const {}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> getFamilyNotifications({
+    required String accessToken,
+  }) {
+    return _dispatch('getFamilyNotifications', const {}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> acknowledgeFamilyNotification({
+    required String accessToken,
+    required String grantId,
+    required String taskId,
+    required String purpose,
+  }) {
+    return _dispatch(
+      'acknowledgeFamilyNotification',
+      {'grantId': grantId, 'taskId': taskId, 'purpose': purpose},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> getFamilyAccessGrants({
+    required String accessToken,
+  }) {
+    return _dispatch('getFamilyAccessGrants', const {}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> revokeFamilyAccessGrant({
+    required String accessToken,
+    required String grantId,
+  }) {
+    return _dispatch('revokeFamilyAccessGrant', {'grantId': grantId}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> getFamilyAccessLog({
+    required String accessToken,
+  }) {
+    return _dispatch('getFamilyAccessLog', const {}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> getFamilyShareOptions({
+    required String accessToken,
+  }) {
+    return _dispatch('getFamilyShareOptions', const {}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> createFamilyInvitation({
+    required String accessToken,
+    required Map<String, dynamic> payload,
+  }) {
+    return _dispatch('createFamilyInvitation', {'payload': payload}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> previewFamilyInvitation({
+    required String accessToken,
+    required String invitationToken,
+  }) {
+    return _dispatch('previewFamilyInvitation', {'invitationToken': invitationToken}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> acceptFamilyInvitation({
+    required String accessToken,
+    required String invitationToken,
+  }) {
+    return _dispatch('acceptFamilyInvitation', {'invitationToken': invitationToken}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> renewFamilyAccessGrant({
+    required String accessToken,
+    required String grantId,
+    required DateTime expiresAt,
+  }) {
+    return _dispatch(
+      'renewFamilyAccessGrant',
+      {'grantId': grantId, 'expiresAt': expiresAt},
+      accessToken: accessToken,
+    );
+  }
 }

@@ -1,875 +1,180 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import CouncilEmptyState from "@/components/council/council-empty-state";
-import CouncilFlowStepper from "@/components/council/council-flow-stepper";
-import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
-import { Icon, resolveIconName } from "@/components/ui/icon";
-import Modal from "@/components/ui/modal";
+import { Icon, type IconName } from "@/components/ui/icon";
 import PageShell from "@/components/ui/page-shell";
-import { getRole } from "@/lib/auth-store";
 import { trackCouncilViewed } from "@/lib/analytics/events";
+import { formatLocaleDate, t } from "@/lib/i18n/catalog";
 import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-text";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
-  CouncilAiDisclosure,
   CouncilCaseRecord,
-  CouncilEvidenceAttachment,
-  CouncilEvidenceSnapshotOption,
-  CouncilRunRecord,
-  CouncilStreamStage,
-  attachCouncilEvidenceSnapshot,
-  buildSnapshotFromCouncilCase,
-  clearActiveCouncilCaseId,
   getActiveCouncilCaseId,
   getCouncilCase,
-  listCouncilEvidenceAttachments,
-  listCouncilEvidenceSnapshotOptions,
-  getCouncilRuns,
   getLatestCouncilCase,
-  isCouncilModelDisclosureEnabled,
-  isCouncilOversightEnabled,
-  isCouncilStreamingEnabled,
-  normalizeCouncilRunResult,
-  runCouncilCaseById,
+  listCouncilCases,
   setActiveCouncilCaseId,
-  streamCouncilRun,
-  submitCouncilOversight,
 } from "@/lib/council";
-import { buildCouncilView } from "@/lib/council-view";
-import { formatLocaleDate, t } from "@/lib/i18n/catalog";
-import type { UserRole } from "@/lib/navigation.config";
-import type { UILanguage } from "@/lib/ui-language";
-import { useUILanguage } from "@/lib/use-ui-language";
 
-type SeverityLevel = "stable" | "warning" | "critical";
-type CouncilBannerState =
-  "stable" | "review" | "conflict" | "safety" | "incomplete";
-type GuardAction = "override" | "pause";
+type StatusFilter = "all" | "analyzed" | "in_progress" | "draft";
 
-const PANEL_CLASS =
-  "rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)]";
-const SOFT_PANEL_CLASS =
-  "rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]";
-const BODY_TEXT_CLASS = "text-[color:var(--text-primary)]";
-const SECONDARY_TEXT_CLASS =
-  "text-[color:var(--text-secondary)]";
-const MUTED_TEXT_CLASS = "text-[color:var(--text-muted)]";
-
-function parseNumericLab(value: string): number | null {
-  const match = value.match(/-?\d+(?:\.\d+)?/);
-  if (!match) return null;
-  const parsed = Number(match[0]);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function formatElapsed(fromIso?: string): string {
-  if (!fromIso) return "00:00:00";
-  const from = Date.parse(fromIso);
-  if (!Number.isFinite(from)) return "00:00:00";
-
-  const diffMs = Math.max(0, Date.now() - from);
-  const totalSeconds = Math.floor(diffMs / 1000);
-  const h = Math.floor(totalSeconds / 3600)
-    .toString()
-    .padStart(2, "0");
-  const m = Math.floor((totalSeconds % 3600) / 60)
-    .toString()
-    .padStart(2, "0");
-  const s = (totalSeconds % 60).toString().padStart(2, "0");
-  return `${h}:${m}:${s}`;
-}
-
-function formatRunTimestamp(language: UILanguage, iso: string): string {
-  const parsed = Date.parse(iso);
-  if (!Number.isFinite(parsed)) {
-    return t(language, "council.history.timestampUnknown");
-  }
-  try {
-    return formatLocaleDate(language, parsed, {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return t(language, "council.history.timestampUnknown");
+function getCaseStatusMeta(
+  language: "vi" | "en",
+  status: string,
+): { label: string; className: string; icon: IconName } {
+  switch (status) {
+    case "analyzed":
+      return {
+        label: language === "vi" ? "Đã hội chẩn" : "Deliberated",
+        className:
+          "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]",
+        icon: "check",
+      };
+    case "specialists_ready":
+      return {
+        label: language === "vi" ? "Chờ rà soát" : "Ready for Review",
+        className:
+          "border-[color:var(--status-warning-border)] bg-[var(--surface-warning-soft)] text-[var(--text-warning)]",
+        icon: "progress",
+      };
+    case "intake_ready":
+      return {
+        label: language === "vi" ? "Chờ chuyên khoa" : "Intake Ready",
+        className:
+          "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
+        icon: "clinical-notes",
+      };
+    default:
+      return {
+        label: language === "vi" ? "Bản nháp" : "Draft",
+        className:
+          "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-muted)]",
+        icon: "clinical-notes",
+      };
   }
 }
 
-// Derive a short, non-PII outcome label for a historical run from its snapshot.
-function summarizeRunOutcome(language: UILanguage, run: CouncilRunRecord): string {
-  if (run.emergencyTriggered) {
-    return t(language, "council.history.outcome.emergency");
+function resolveCaseHref(caseItem: CouncilCaseRecord): string {
+  switch (caseItem.status) {
+    case "analyzed":
+      return `/council/result?caseId=${caseItem.id}`;
+    case "specialists_ready":
+      return `/council/new/review?caseId=${caseItem.id}`;
+    case "intake_ready":
+      return `/council/new/specialists?caseId=${caseItem.id}`;
+    default:
+      return `/council/new/intake?caseId=${caseItem.id}`;
   }
-  if (!run.result) return t(language, "council.history.outcome.completed");
-  try {
-    const normalized = normalizeCouncilRunResult(run.result);
-    if (normalized.isEmergency) {
-      return t(language, "council.history.outcome.emergency");
+}
+
+function resolveActionLabel(language: "vi" | "en", status: string): string {
+  switch (status) {
+    case "analyzed":
+      return language === "vi" ? "Xem kết luận hội chẩn" : "View Council Result";
+    case "specialists_ready":
+      return language === "vi" ? "Rà soát & Bắt đầu" : "Review & Run";
+    case "intake_ready":
+      return language === "vi" ? "Chọn chuyên khoa" : "Select Specialists";
+    default:
+      return language === "vi" ? "Tiếp tục nhập liệu" : "Continue Intake";
+  }
+}
+
+function getCaseSnippet(caseItem: CouncilCaseRecord): string {
+  const request = (caseItem.request ?? {}) as Record<string, unknown>;
+  if (typeof request.question === "string" && request.question.trim()) {
+    return request.question.trim();
+  }
+  if (caseItem.result && typeof caseItem.result === "object") {
+    const finalRec = (caseItem.result as Record<string, unknown>).final_recommendation;
+    if (typeof finalRec === "string" && finalRec.trim()) {
+      return stripTelemetryLabels(finalRec);
     }
-    if ((normalized.conflicts?.length ?? 0) > 0) {
-      return t(language, "council.history.outcome.conflict");
-    }
-    if (normalized.consensus?.trim()) {
-      return t(language, "council.history.outcome.consensus");
-    }
-    return t(language, "council.history.outcome.completed");
-  } catch {
-    return t(language, "council.history.outcome.completed");
   }
-}
-
-// Derive a concise, user-facing label for the model basis behind a Council
-// result (Req 6.3, 6.4). Coarse and non-identifying — safe for every role; the
-// raw model identifiers stay admin-only at the call site.
-function describeModelBasis(
-  language: UILanguage,
-  disclosure: CouncilAiDisclosure,
-): string {
-  const family = disclosure.modelFamily.toLowerCase();
-  const version = disclosure.modelVersion.toLowerCase();
-  if (/rule/.test(family) || /rule/.test(version)) {
-    return t(language, "council.model.ruleBased");
+  if (Array.isArray(request.symptoms) && request.symptoms.length > 0) {
+    return request.symptoms.map(String).join(", ");
   }
-  if (/heuristic|fallback/.test(family) || /heuristic|fallback/.test(version)) {
-    return t(language, "council.model.fallback");
+  if (caseItem.transcript) {
+    return caseItem.transcript.slice(0, 140);
   }
-  if (/deepseek/.test(family)) {
-    return t(language, "council.model.deepseek");
+  return "";
+}
+
+function getSpecialists(caseItem: CouncilCaseRecord): string[] {
+  const request = (caseItem.request ?? {}) as Record<string, unknown>;
+  if (Array.isArray(request.specialists)) {
+    return request.specialists.map(String).filter(Boolean);
   }
-  return disclosure.modelFamily || t(language, "council.model.generic");
-}
-
-function getSeverity(
-  view: ReturnType<typeof buildCouncilView> | null,
-): SeverityLevel {
-  if (!view) return "stable";
-  if (view.quality.requiresHumanHandoff) return "critical";
-  if (
-    (view.summary.conflicts?.length ?? 0) > 0 ||
-    (view.quality.disagreementIndex ?? 0) >= 0.35
-  )
-    return "warning";
-  return "stable";
-}
-
-const HANDOFF_SPECIALTIES = [
-  {
-    name: "Tim mạch",
-    reason:
-      "Phù hợp khi cần đánh giá huyết động, đau ngực, loạn nhịp hoặc nguy cơ tim mạch.",
-  },
-  {
-    name: "Nội tiết",
-    reason:
-      "Phù hợp khi ca bệnh liên quan glucose, đái tháo đường, steroid hoặc rối loạn nội tiết.",
-  },
-  {
-    name: "Thận",
-    reason:
-      "Đề xuất mời Thận học vì thiếu creatinine/eGFR và có tín hiệu nguy cơ độc thận.",
-  },
-  {
-    name: "Dược lâm sàng",
-    reason:
-      "Phù hợp khi có thuốc cần chỉnh liều, tương tác thuốc hoặc cần rà soát an toàn đơn thuốc.",
-  },
-  {
-    name: "ICU/Cấp cứu",
-    reason:
-      "Phù hợp khi có dấu hiệu nguy kịch, tụt huyết áp, suy hô hấp hoặc cần xử trí khẩn.",
-  },
-  {
-    name: "Hô hấp",
-    reason: "Phù hợp khi có khó thở, SpO2 giảm, viêm phổi hoặc bệnh phổi nền.",
-  },
-  {
-    name: "Thần kinh",
-    reason:
-      "Phù hợp khi có rối loạn ý thức, yếu liệt, co giật hoặc nghi đột quỵ.",
-  },
-] as const;
-
-function normalizeSearch(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
-
-function summarizeClinicalText(
-  value: string | undefined,
-  fallback: string,
-): string {
-  const text = stripTelemetryLabels(value ?? "").trim();
-  if (!text) return fallback;
-  const firstLine = text.split(/\n|\.\s+/)[0]?.trim() || text;
-  if (firstLine.length <= 130) return firstLine;
-  return `${firstLine.slice(0, 127)}...`;
-}
-
-function translateSpecialistLabel(value: string): string {
-  const normalized = normalizeSearch(value);
-  if (/cardio|tim/.test(normalized)) return "Tim mạch";
-  if (/endo|noi tiet/.test(normalized)) return "Nội tiết";
-  if (/nephro|renal|than/.test(normalized)) return "Thận";
-  if (/pharma|duoc/.test(normalized)) return "Dược lâm sàng";
-  if (/icu|emergency|cap cuu/.test(normalized)) return "ICU/Cấp cứu";
-  if (/pulmo|resp|ho hap/.test(normalized)) return "Hô hấp";
-  if (/neuro|than kinh/.test(normalized)) return "Thần kinh";
-  return value || "Chuyên khoa";
-}
-
-function getTimelineTitle(language: UILanguage, step: string): string {
-  const normalized = step.toLowerCase();
-  if (/intake|normal/.test(normalized))
-    return t(language, "council.overview.timeline.intake");
-  if (/specialist|assessment/.test(normalized))
-    return t(language, "council.overview.timeline.specialists");
-  if (/conflict|review/.test(normalized))
-    return t(language, "council.overview.timeline.conflicts");
-  if (/consensus|decision/.test(normalized))
-    return t(language, "council.overview.timeline.consensus");
-  if (/safety|gate|guard/.test(normalized))
-    return t(language, "council.overview.timeline.safety");
-  if (/final|recommend/.test(normalized))
-    return t(language, "council.overview.timeline.final");
-  return step;
-}
-
-function getTimelineStatus(
-  step: string,
-  hasMissingData: boolean,
-  isProblemStep: boolean,
-): "done" | "review" | "missing" | "pending" {
-  const normalized = normalizeSearch(step);
-  if (
-    hasMissingData &&
-    /(safety|gate|guard|final|recommend|consensus|decision)/.test(normalized)
-  )
-    return "missing";
-  if (isProblemStep || /conflict|review/.test(normalized)) return "review";
-  return "done";
-}
-
-function timelineStatusMeta(
-  language: UILanguage,
-  status: "done" | "review" | "missing" | "pending",
-) {
-  if (status === "missing")
-    return {
-      label: t(language, "council.overview.timeline.status.missing"),
-      className:
-        "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]",
-    };
-  if (status === "review")
-    return {
-      label: t(language, "council.overview.timeline.status.review"),
-      className:
-        "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]",
-    };
-  if (status === "pending")
-    return {
-      label: t(language, "council.overview.timeline.status.pending"),
-      className:
-        "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]",
-    };
-  return {
-    label: t(language, "council.overview.timeline.status.done"),
-    className:
-        "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]",
-  };
-}
-
-function bannerMeta(language: UILanguage, state: CouncilBannerState) {
-  if (state === "safety") {
-    return {
-      icon: "emergency_home",
-      title: t(language, "council.overview.banner.safety.title"),
-      detail: t(language, "council.overview.banner.safety.detail"),
-      className:
-        "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]",
-      iconClassName: "bg-[var(--status-danger-text)] text-[var(--on-error)]",
-    };
-  }
-  if (state === "conflict") {
-    return {
-      icon: "warning",
-      title: t(language, "council.overview.banner.conflict.title"),
-      detail: t(language, "council.overview.banner.conflict.detail"),
-      className:
-        "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]",
-      iconClassName: "bg-[var(--status-warn-text)] text-[var(--on-tertiary)]",
-    };
-  }
-  if (state === "review") {
-    return {
-      icon: "error",
-      title: t(language, "council.overview.banner.review.title"),
-      detail: t(language, "council.overview.banner.review.detail"),
-      className:
-        "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]",
-      iconClassName: "bg-[var(--status-warn-text)] text-[var(--on-tertiary)]",
-    };
-  }
-  if (state === "incomplete") {
-    return {
-      icon: "info",
-      title: t(language, "council.overview.banner.incomplete.title"),
-      detail: t(language, "council.overview.banner.incomplete.detail"),
-      className:
-        "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]",
-      iconClassName: "bg-[var(--brand-600)] text-[var(--on-secondary-container)]",
-    };
-  }
-  return {
-    icon: "check_circle",
-    title: t(language, "council.overview.banner.stable.title"),
-    detail: t(language, "council.overview.banner.stable.detail"),
-    className:
-      "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]",
-    iconClassName: "bg-[var(--brand-600)] text-[var(--on-secondary-container)]",
-  };
+  return [];
 }
 
 export default function CouncilPage() {
+  const router = useRouter();
   const language = useUILanguage();
-  const [queryCaseId, setQueryCaseId] = useState<number | null | undefined>(
-    undefined,
-  );
-  const [caseItem, setCaseItem] = useState<CouncilCaseRecord | null>(null);
-  const [loadError, setLoadError] = useState("");
-  const [role, setRoleState] = useState<UserRole>("normal");
-  const [handoffOpen, setHandoffOpen] = useState(false);
-  const [selectedSpecialty, setSelectedSpecialty] =
-    useState<(typeof HANDOFF_SPECIALTIES)[number]["name"]>("Thận");
-  const [guardAction, setGuardAction] = useState<GuardAction | null>(null);
-  const [guardReason, setGuardReason] = useState("");
-  const [actionNotice, setActionNotice] = useState("");
-  const [isRunning, setIsRunning] = useState(false);
-  const [streamStages, setStreamStages] = useState<CouncilStreamStage[]>([]);
-  const [runNotice, setRunNotice] = useState("");
-  const [runHistory, setRunHistory] = useState<CouncilRunRecord[]>([]);
-  const [evidenceOptions, setEvidenceOptions] = useState<
-    CouncilEvidenceSnapshotOption[]
-  >([]);
-  const [evidenceAttachments, setEvidenceAttachments] = useState<
-    CouncilEvidenceAttachment[]
-  >([]);
-  const [evidenceShadowAvailable, setEvidenceShadowAvailable] = useState(false);
-  const [selectedEvidenceJobId, setSelectedEvidenceJobId] = useState("");
-  const [isAttachingEvidence, setIsAttachingEvidence] = useState(false);
-  const [evidenceNotice, setEvidenceNotice] = useState("");
-  const [oversightPaused, setOversightPaused] = useState(false);
-  const streamingEnabled = isCouncilStreamingEnabled();
-  const oversightEnabled = isCouncilOversightEnabled();
-  const modelDisclosureEnabled = isCouncilModelDisclosureEnabled();
+  const [cases, setCases] = useState<CouncilCaseRecord[]>([]);
+  const [activeCase, setActiveCase] = useState<CouncilCaseRecord | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    setRoleState(getRole());
-    // The Council surface was viewed (Req 9.1). No PII — coarse view label only.
     trackCouncilViewed({ view: "landing" });
   }, []);
 
   useEffect(() => {
-    const raw = new URLSearchParams(window.location.search).get("caseId");
-    const parsed = Number(raw);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      setQueryCaseId(Math.trunc(parsed));
-      return;
-    }
-    setQueryCaseId(getActiveCouncilCaseId());
-  }, []);
-
-  useEffect(() => {
     const load = async () => {
-      setLoadError("");
+      setIsLoading(true);
+      setError("");
       try {
-        let loaded: CouncilCaseRecord | null;
-        if (queryCaseId) {
-          loaded = await getCouncilCase(queryCaseId);
+        const storedActiveId = getActiveCouncilCaseId();
+        const [caseList, latest] = await Promise.all([
+          listCouncilCases(50, 0),
+          storedActiveId ? getCouncilCase(storedActiveId).catch(() => getLatestCouncilCase()) : getLatestCouncilCase(),
+        ]);
+        setCases(caseList.items || []);
+        if (latest) {
+          setActiveCase(latest);
+          setActiveCouncilCaseId(latest.id);
+        } else if (caseList.items && caseList.items.length > 0) {
+          setActiveCase(caseList.items[0]);
+          setActiveCouncilCaseId(caseList.items[0].id);
         } else {
-          loaded = await getLatestCouncilCase();
-        }
-        if (loaded) {
-          setActiveCouncilCaseId(loaded.id);
-          setCaseItem(loaded);
-        } else {
-          clearActiveCouncilCaseId();
-          setCaseItem(null);
+          setActiveCase(null);
         }
       } catch (cause) {
-        setLoadError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
+        setError(safeUserFacingError(cause, t(language, "council.error.loadCases")));
+      } finally {
+        setIsLoading(false);
       }
     };
-    if (queryCaseId !== undefined) {
-      void load();
-    }
-  }, [language, queryCaseId]);
+    void load();
+  }, [language]);
 
-  // Load the owner-isolated, newest-first run history for the active case
-  // (Req 2.4). Owner isolation is enforced server-side; we render only what the
-  // server returns. The /runs endpoint is only mounted when
-  // COUNCIL_RUN_HISTORY_ENABLED is on, so an absent endpoint or empty payload
-  // degrades gracefully to "no history" (the section simply does not render).
-  const activeCaseId = caseItem?.id ?? null;
-  useEffect(() => {
-    if (!activeCaseId) {
-      setRunHistory([]);
-      return;
-    }
-    setEvidenceShadowAvailable(false);
-    let active = true;
-    const loadRuns = async () => {
-      try {
-        const runs = await getCouncilRuns(activeCaseId);
-        if (active) setRunHistory(runs);
-      } catch {
-        // Run history disabled (endpoint not mounted) or unavailable — no-op.
-        if (active) setRunHistory([]);
-      }
-    };
-    void loadRuns();
-    return () => {
-      active = false;
-    };
-  }, [activeCaseId]);
+  const filteredCases = useMemo(() => {
+    return cases.filter((item) => {
+      if (statusFilter === "analyzed" && item.status !== "analyzed") return false;
+      if (statusFilter === "in_progress" && (item.status === "analyzed" || item.status === "created")) return false;
+      if (statusFilter === "draft" && item.status !== "created" && item.status !== "intake_ready") return false;
 
-  // This selector receives only completed owner-scoped Research job IDs and
-  // opaque provenance counts/categories. It intentionally never loads query
-  // text, report prose, citation titles, URLs, or a client-built packet.
-  useEffect(() => {
-    if (!activeCaseId) {
-      setEvidenceOptions([]);
-      setEvidenceAttachments([]);
-      setSelectedEvidenceJobId("");
-      setEvidenceShadowAvailable(false);
-      return;
-    }
-    let active = true;
-    const loadEvidence = async () => {
-      try {
-        const [options, attachments] = await Promise.all([
-          listCouncilEvidenceSnapshotOptions(activeCaseId),
-          listCouncilEvidenceAttachments(activeCaseId),
-        ]);
-        if (!active) return;
-        setEvidenceOptions(options);
-        setEvidenceAttachments(attachments);
-        setEvidenceShadowAvailable(true);
-      } catch {
-        // This optional shadow-review aid must never block the Council case.
-        if (active) {
-          setEvidenceOptions([]);
-          setEvidenceAttachments([]);
-          setEvidenceShadowAvailable(false);
-        }
-      }
-    };
-    void loadEvidence();
-    return () => {
-      active = false;
-    };
-  }, [activeCaseId]);
-
-  // Sync the "not yet confirmed" pause state from the loaded case. The server is
-  // the source of truth: `oversight_state === "paused"` means the case was
-  // paused via the real oversight endpoint (Req 3.2). Resets when switching
-  // cases or when the server reports the pause cleared. Pre-feature payloads
-  // omit `oversight_state`, so this is a no-op when the feature is off.
-  useEffect(() => {
-    setOversightPaused(caseItem?.oversight_state === "paused");
-  }, [caseItem?.id, caseItem?.oversight_state]);
-
-  // Re-run the deliberation on the result surface. When streaming is enabled
-  // (NEXT_PUBLIC_COUNCIL_STREAMING_ENABLED) we open the SSE deliberation stream
-  // and surface progressive stage updates; otherwise we fall back to the
-  // existing blocking run. Either way the persisted case is reloaded once the
-  // terminal result lands so the rendered view reflects the newest run. (Req 1.3)
-  const handleRerun = async () => {
-    if (!caseItem || isRunning) return;
-    const caseId = caseItem.id;
-    const requestPayload =
-      caseItem.request && typeof caseItem.request === "object"
-        ? { request: caseItem.request as Record<string, unknown> }
-        : {};
-
-    setIsRunning(true);
-    setRunNotice("");
-    setStreamStages([]);
-
-    const reload = async () => {
-      try {
-        const refreshed = await getCouncilCase(caseId);
-        setActiveCouncilCaseId(refreshed.id);
-        setCaseItem(refreshed);
-      } catch {
-        /* keep the current view if the refresh fails; the run itself succeeded */
-      }
-      try {
-        // Refresh run history so a new run appears (newest-first) when the
-        // run-history feature is on; no-op gracefully when it is off.
-        setRunHistory(await getCouncilRuns(caseId));
-      } catch {
-        /* run history disabled or unavailable — leave the current list as-is */
-      }
-    };
-
-    const runBlocking = async () => {
-      await runCouncilCaseById(caseId, requestPayload);
-      await reload();
-      setRunNotice("Đã chạy lại hội chẩn.");
-    };
-
-    try {
-      if (streamingEnabled) {
-        let streamFailed = false;
-        try {
-          await streamCouncilRun(caseId, requestPayload, {
-            onStage: (stage) =>
-              setStreamStages((prev) => {
-                const next = prev.filter(
-                  (item) => item.sequence !== stage.sequence,
-                );
-                next.push(stage);
-                return next.sort((a, b) => a.sequence - b.sequence);
-              }),
-            onResult: () => {
-              setRunNotice("Hội chẩn hoàn tất.");
-            },
-            onError: () => {
-              streamFailed = true;
-            },
-          });
-        } catch {
-          streamFailed = true;
-        }
-        if (streamFailed) {
-          // Stream unavailable or errored mid-deliberation: fall back to blocking.
-          await runBlocking();
-        } else {
-          await reload();
-        }
-      } else {
-        await runBlocking();
-      }
-    } catch (cause) {
-      setRunNotice(safeUserFacingError(cause, t(language, "council.error.run")));
-    } finally {
-      setIsRunning(false);
-    }
-  };
-
-  const handleAttachEvidence = async () => {
-    if (!caseItem || !selectedEvidenceJobId || isAttachingEvidence) return;
-    setIsAttachingEvidence(true);
-    setEvidenceNotice("");
-    try {
-      const attached = await attachCouncilEvidenceSnapshot(
-        caseItem.id,
-        selectedEvidenceJobId,
-      );
-      setEvidenceAttachments((current) => [attached, ...current]);
-      setSelectedEvidenceJobId("");
-      setEvidenceNotice(t(language, "council.evidence.attached"));
-    } catch (cause) {
-      setEvidenceNotice(
-        safeUserFacingError(cause, t(language, "council.evidence.attachError")),
-      );
-    } finally {
-      setIsAttachingEvidence(false);
-    }
-  };
-
-  const snapshot = useMemo(
-    () => (caseItem ? buildSnapshotFromCouncilCase(caseItem) : null),
-    [caseItem],
-  );
-  const view = useMemo(
-    () => (snapshot ? buildCouncilView(snapshot) : null),
-    [snapshot],
-  );
-  const isAnalyzedCase = useMemo(() => {
-    if (!caseItem) return false;
-    return (
-      caseItem.status === "analyzed" &&
-      Boolean(caseItem.result && Object.keys(caseItem.result).length > 0)
-    );
-  }, [caseItem]);
-  const severity = useMemo(() => getSeverity(view), [view]);
-
-  const elapsed = useMemo(
-    () => formatElapsed(snapshot?.createdAt),
-    [snapshot?.createdAt],
-  );
-
-  const consensusText = view?.summary.consensus?.trim() || "";
-  const escalationText = view?.summary.escalationReason?.trim() || "";
-
-  // Model & fallback disclosure (Req 6.4, 6.5). Rendered only when the
-  // client-readable flag is on AND the ML tier attached an `ai_disclosure`
-  // block (present only when COUNCIL_MODEL_DISCLOSURE_ENABLED is on server-side).
-  // With the flag off, `disclosure` is null and nothing about disclosure
-  // renders — byte-identical to today. The coarse basis + fallback note is safe
-  // for every role; the raw model identifiers are gated to admins below.
-  const disclosure = modelDisclosureEnabled
-    ? (snapshot?.result.aiDisclosure ?? null)
-    : null;
-  const isAdmin = role === "admin";
-
-  const mapLab = useMemo(() => {
-    const found = view?.requestSummary.labs.find((lab) => {
-      const key = normalizeSearch(lab.name);
-      return (
-        key.includes("map") ||
-        key.includes("mean arterial") ||
-        key.includes("huyet ap trung binh")
-      );
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      const titleMatch = (item.title || "").toLowerCase().includes(q);
+      const idMatch = String(item.id).includes(q);
+      const snippetMatch = getCaseSnippet(item).toLowerCase().includes(q);
+      return titleMatch || idMatch || snippetMatch;
     });
-    return parseNumericLab(found?.value ?? "");
-  }, [view]);
+  }, [cases, searchQuery, statusFilter]);
 
-  const creatinineLab = useMemo(() => {
-    const found = view?.requestSummary.labs.find((lab) => {
-      const key = normalizeSearch(lab.name);
-      return key.includes("creatin") || key.includes("cre");
-    });
-    return parseNumericLab(found?.value ?? "");
-  }, [view]);
-
-  const egfrLab = useMemo(() => {
-    const found = view?.requestSummary.labs.find((lab) => {
-      const key = normalizeSearch(lab.name);
-      return (
-        key.includes("egfr") || key.includes("gfr") || key.includes("loc cau")
-      );
-    });
-    return parseNumericLab(found?.value ?? "");
-  }, [view]);
-
-  const conflictSignalText = normalizeSearch(
-    [
-      ...(view?.summary.conflicts ?? []),
-      ...(view?.summary.divergence ?? []),
-      view?.summary.escalationReason ?? "",
-      view?.summary.consensus ?? "",
-    ].join(" "),
-  );
-  const hasConflictSignals =
-    (view?.summary.conflicts?.length ?? 0) > 0 ||
-    (view?.quality.disagreementIndex ?? 0) >= 0.35 ||
-    /conflict|critical interaction|xung dot|bat dong|divergence|dissent/.test(
-      conflictSignalText,
-    );
-  const requiresSafetyConfirm = Boolean(
-    view?.quality.requiresHumanHandoff ||
-    view?.urgencyTone === "emergency" ||
-    severity === "critical",
-  );
-  const missingMap = mapLab == null;
-  const missingRenal = creatinineLab == null && egfrLab == null;
-  const missingCriticalData = missingMap || missingRenal;
-  const missingDataLabels = [
-    missingMap ? "MAP" : "",
-    missingRenal ? "Creatinine/eGFR" : "",
-  ].filter(Boolean);
-  const bannerState: CouncilBannerState = requiresSafetyConfirm
-    ? "safety"
-    : hasConflictSignals
-      ? "conflict"
-      : missingCriticalData
-        ? "incomplete"
-        : severity === "warning"
-          ? "review"
-          : "stable";
-  const banner = bannerMeta(language, bannerState);
-  const finalDecisionBlocked =
-    hasConflictSignals || requiresSafetyConfirm || missingCriticalData;
-  const renalDataLabel =
-    egfrLab != null
-      ? `eGFR ${egfrLab}`
-      : creatinineLab != null
-        ? `${creatinineLab.toFixed(1)} mg/dL`
-        : t(language, "council.overview.dataUnavailable");
-  const assessmentLabel = missingCriticalData
-    ? t(language, "council.overview.assessment.insufficientData")
-    : requiresSafetyConfirm
-      ? t(language, "council.overview.assessment.clinicianReview")
-      : hasConflictSignals
-        ? t(language, "council.overview.assessment.reviewDifferences")
-        : t(language, "council.overview.assessment.continueDiscussion");
-  const assessmentStateLabel = missingCriticalData
-    ? t(language, "council.overview.assessment.missingInformation")
-    : bannerState === "stable"
-      ? t(language, "council.overview.assessment.draft")
-      : t(language, "council.overview.assessment.requiresConfirmation");
-
-  const specialistLogs = view?.details.specialistLogs ?? [];
-  const cardiologyIndex = specialistLogs.findIndex((log) =>
-    /cardio|tim/i.test(normalizeSearch(log.specialist)),
-  );
-  const primarySpecialistIndex = cardiologyIndex >= 0 ? cardiologyIndex : 0;
-  const cardiologyLog = specialistLogs[primarySpecialistIndex];
-  const renalEndoLog =
-    specialistLogs.find(
-      (log, index) =>
-        index !== primarySpecialistIndex &&
-        /endo|noi tiet|nephro|renal|than|pharma|duoc/i.test(
-          normalizeSearch(log.specialist),
-        ),
-    ) ?? specialistLogs.find((_, index) => index !== primarySpecialistIndex);
-  const cardiologyNode = translateSpecialistLabel(
-    cardiologyLog?.specialist ?? "Tim mạch",
-  );
-  const renalEndoNode = translateSpecialistLabel(
-    renalEndoLog?.specialist ?? "Nội tiết/Thận",
-  );
-  const cardiologyDetail = summarizeClinicalText(
-    cardiologyLog?.recommendation ?? cardiologyLog?.findings.join(", "),
-    "Cân nhắc hỗ trợ huyết động hoặc tăng vận mạch nếu có dấu hiệu tụt huyết áp.",
-  );
-  const renalEndoDetail = summarizeClinicalText(
-    renalEndoLog?.recommendation ?? renalEndoLog?.findings.join(", "),
-    "Cảnh báo nguy cơ độc thận hoặc cần chỉnh liều theo creatinine/eGFR.",
-  );
-  const conflictDetail = missingRenal
-    ? "Chưa đủ dữ liệu creatinine/eGFR để quyết định thuốc hoặc xử trí có an toàn hay không."
-    : hasConflictSignals
-      ? "Các chuyên khoa đưa ra tín hiệu khác nhau nên cần bác sĩ phụ trách xác nhận trước khi kết luận."
-      : "Chưa phát hiện điểm xung đột lớn trong dữ liệu hiện tại.";
-
-  const timeline = useMemo(() => {
-    const base = view?.timeline.steps ?? [];
-    return base.slice(0, 6).map((step) => ({
-      id: `${step.sequence}-${step.step}`,
-      time: t(language, "council.overview.timeline.step", {
-        sequence: step.sequence,
-      }),
-      title: getTimelineTitle(language, step.step),
-      status: getTimelineStatus(
-        step.step,
-        missingCriticalData,
-        hasConflictSignals &&
-          /conflict|review|consensus|safety|final/i.test(step.step),
-      ),
-    }));
-  }, [language, view, missingCriticalData, hasConflictSignals]);
-
-  const selectedSpecialtyMeta =
-    HANDOFF_SPECIALTIES.find((item) => item.name === selectedSpecialty) ??
-    HANDOFF_SPECIALTIES[2];
-  const canUseDoctorActions = role === "doctor" || role === "admin";
-
-  const closeGuardDialog = () => {
-    setGuardAction(null);
-    setGuardReason("");
+  const onSelectCase = (item: CouncilCaseRecord) => {
+    setActiveCouncilCaseId(item.id);
+    setActiveCase(item);
+    const href = resolveCaseHref(item);
+    router.push(href);
   };
-
-  const confirmGuardAction = async () => {
-    if (!guardAction || !guardReason.trim()) return;
-    const action = guardAction;
-    const reason = guardReason.trim();
-    const label =
-      action === "override"
-        ? t(language, "council.overview.guard.overrideAction")
-        : t(language, "council.overview.guard.pauseAction");
-    const localNotice = t(language, "council.overview.guard.requestRecorded", {
-      action: label,
-      reason,
-    });
-    closeGuardDialog();
-
-    // Flag OFF (or no active case): byte-identical legacy local-notice behavior;
-    // nothing is persisted. (Req 3.6)
-    if (!oversightEnabled || !caseItem) {
-      setActionNotice(localNotice);
-      return;
-    }
-
-    // Flag ON: persist server-side. A `pause` flips the case oversight_state so
-    // the final recommendation renders as "chưa được xác nhận". (Req 3.2)
-    try {
-      const result = await submitCouncilOversight(caseItem.id, {
-        action,
-        reason,
-      });
-      if (action === "pause" || result.oversightState === "paused") {
-        setOversightPaused(true);
-        setActionNotice(t(language, "council.overview.guard.pauseRecorded"));
-      } else {
-        setActionNotice(localNotice);
-      }
-    } catch {
-      // Endpoint absent/unavailable (e.g. server flag still off): fall back to
-      // the local-notice behavior so the control never silently fails.
-      setActionNotice(localNotice);
-    }
-  };
-
-  const confirmHandoff = async () => {
-    const localNotice = t(language, "council.overview.handoff.prepared", {
-      specialty: selectedSpecialtyMeta.name,
-      reason: selectedSpecialtyMeta.reason,
-    });
-    setHandoffOpen(false);
-
-    // Flag OFF (or no active case): byte-identical legacy local-notice behavior;
-    // nothing is persisted. (Req 3.6)
-    if (!oversightEnabled || !caseItem) {
-      setActionNotice(localNotice);
-      return;
-    }
-
-    // Flag ON: persist the handoff against the case. (Req 3.1)
-    try {
-      await submitCouncilOversight(caseItem.id, {
-        action: "handoff",
-        handoffSpecialty: selectedSpecialtyMeta.name,
-        reason: selectedSpecialtyMeta.reason,
-      });
-      setActionNotice(
-        t(language, "council.overview.handoff.sent", {
-          specialty: selectedSpecialtyMeta.name,
-          reason: selectedSpecialtyMeta.reason,
-        }),
-      );
-    } catch {
-      // Endpoint absent/unavailable: fall back to the local-notice behavior.
-      setActionNotice(localNotice);
-    }
-  };
-
-  if (!view || !isAnalyzedCase) {
-    return (
-      <PageShell
-        title={t(language, "navigation.item.council.title")}
-        description={t(language, "navigation.item.council.subtitle")}
-        variant="plain"
-      >
-        <div className="space-y-5">
-          <CouncilWorkspaceNav />
-          <CouncilFlowStepper currentStep="case" />
-          <CouncilEmptyState
-            title={t(language, "council.overview.empty.title")}
-            description={
-              loadError ||
-              t(language, "council.overview.empty.description")
-            }
-          />
-          <div className="flex">
-            <Link
-              href="/council/new"
-              className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)]"
-            >
-              {t(language, "council.overview.empty.openCase")}
-            </Link>
-          </div>
-        </div>
-      </PageShell>
-    );
-  }
 
   return (
     <PageShell
@@ -877,745 +182,312 @@ export default function CouncilPage() {
       description={t(language, "navigation.item.council.subtitle")}
       variant="plain"
     >
-      <div className="space-y-5">
-        <CouncilWorkspaceNav />
-        <CouncilFlowStepper currentStep="case" caseId={caseItem?.id} />
+      <div className="space-y-6">
+        {/* 1. Clinical Heading & New Council CTA */}
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[color:var(--shell-border)] pb-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
+                {language === "vi" ? "Hội đồng Chuyên khoa" : "Clinical Council Library"}
+              </span>
+              <span className="text-xs font-medium text-[var(--text-muted)]">
+                {cases.length > 0 ? `${cases.length} ${language === "vi" ? "ca bệnh" : "cases"}` : ""}
+              </span>
+            </div>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+              {language === "vi" ? "Thư viện ca hội chẩn" : "Case Library"}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              {language === "vi"
+                ? "Quản lý danh sách ca bệnh lâm sàng, tiếp tục ca đang thực hiện hoặc khởi tạo phiên hội chẩn mới."
+                : "Manage clinical cases, resume active deliberation, or create a new multi-specialty council."}
+            </p>
+          </div>
 
-        <section
-          className={`rounded-[14px] border border-t-[color:var(--card-top-border)] p-4 ${banner.className}`}
-        >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-start gap-3">
-              <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${banner.iconClassName}`}
-              >
-                <Icon name={resolveIconName(banner.icon)} size="22px" />
-              </div>
-              <div>
-                <h2 className="text-lg font-extrabold tracking-tight">
-                  {banner.title}
-                </h2>
-                <p className="mt-1 max-w-3xl text-sm font-medium leading-relaxed">
-                  {banner.detail}
-                </p>
-                {missingDataLabels.length > 0 ? (
-                  <p className="mt-2 text-xs font-bold">
-                    {t(language, "council.overview.summary.missingData")} {missingDataLabels.join(", ")}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-            <div className="rounded-lg border border-current/20 bg-[var(--surface-panel)]/70 px-3 py-2 text-left sm:text-right">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] opacity-80">
-                {t(language, "council.overview.elapsed")}
-              </p>
-              <p className="font-mono text-xl font-bold">{elapsed}</p>
-            </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <Link
+              href="/council/new"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-5 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)]"
+            >
+              <Icon name="progress" size={16} />
+              <span>+ {language === "vi" ? "Tạo ca mới" : "New Council"}</span>
+            </Link>
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-          <div className="space-y-6 xl:col-span-8">
-            <article className={`${PANEL_CLASS} overflow-hidden p-6`}>
-              <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h3
-                  className={`flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em] ${SECONDARY_TEXT_CLASS}`}
-                >
-                  <span className="h-4 w-1 rounded-full bg-[color:var(--brand-600)]" />
-                  {t(language, "council.overview.conflictMap.title")}
-                </h3>
-                <span className="rounded-full border border-[color:var(--status-warning-border)] bg-[var(--surface-warning-soft)] px-3 py-1 text-xs font-bold text-[var(--text-warning)]">
-                  {t(language, "council.overview.conflictMap.noAutomaticConsensus")}
+        {error ? (
+          <div className="rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-4 text-sm font-semibold text-[var(--status-danger-text)]">
+            {error}
+          </div>
+        ) : null}
+
+        {/* 2. Resumable Active Case HeroObject */}
+        {activeCase ? (
+          <section
+            aria-label="Active resumable case"
+            className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] border-l-4 border-l-[color:var(--brand-600)] bg-[var(--surface-panel)] p-6 shadow-sm"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-2.5 w-2.5 rounded-full bg-[var(--brand-600)] animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
+                  {language === "vi" ? "Ca đang thực hiện" : "Active Case"}
+                </span>
+                <span className="font-mono text-xs font-bold text-[var(--text-muted)]">
+                  #{activeCase.id}
                 </span>
               </div>
 
-              <div className={`${SOFT_PANEL_CLASS} p-5`}>
-                <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
-                  <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[color:var(--surface-brand-soft)] text-[var(--text-brand)]">
-                        <Icon name="clinical-notes" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
-                          {cardiologyNode}
-                        </p>
-                        <p
-                          className={`mt-1 text-sm font-semibold ${BODY_TEXT_CLASS}`}
-                        >
-                          {t(language, "council.overview.conflictMap.cardiologyPrompt")}
-                        </p>
-                      </div>
-                    </div>
-                    <p
-                      className={`mt-4 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const meta = getCaseStatusMeta(language, activeCase.status);
+                  return (
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${meta.className}`}
                     >
-                      {cardiologyDetail}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-center">
-                    <div className="flex min-h-[116px] w-full flex-col items-center justify-center rounded-lg border border-[color:var(--status-warning-border)] bg-[var(--surface-warning-soft)] px-4 text-center text-[var(--text-warning)] md:w-[150px]">
-                      <Icon name="warning" size="1.875rem" />
-                      <p className="mt-2 text-xs font-black uppercase tracking-[0.12em]">
-                        {t(language, "council.overview.conflictMap.criticalConflict")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--surface-danger-soft)] text-[var(--text-danger)]">
-                        <Icon name="medication" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-danger)]">
-                          {renalEndoNode}
-                        </p>
-                        <p
-                          className={`mt-1 text-sm font-semibold ${BODY_TEXT_CLASS}`}
-                        >
-                          {t(language, "council.overview.conflictMap.renalPrompt")}
-                        </p>
-                      </div>
-                    </div>
-                    <p
-                      className={`mt-4 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
-                    >
-                      {renalEndoDetail}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-lg border border-[color:var(--status-warning-border)] bg-[var(--surface-panel)] p-4">
-                  <p className="text-sm font-bold text-[var(--text-warning)]">
-                    {t(language, "council.overview.conflictMap.question")}
-                  </p>
-                  <p
-                    className={`mt-1 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
-                  >
-                    {conflictDetail}
-                  </p>
-                </div>
+                      <Icon name={meta.icon} size={12} />
+                      {meta.label}
+                    </span>
+                  );
+                })()}
+                <span className="font-mono text-xs text-[var(--text-muted)]">
+                  {formatLocaleDate(language, activeCase.updated_at, {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
               </div>
-            </article>
+            </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <article className={`${PANEL_CLASS} p-4`}>
-                <div className="mb-2 flex items-start justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
-                    MAP
-                  </p>
-                  <Icon name="progress" size="0.875rem" className="text-[var(--text-brand)]" />
-                </div>
-                <div className="flex items-end gap-2">
-                  <span
-                    className={`text-2xl font-bold tracking-tight ${BODY_TEXT_CLASS}`}
-                  >
-                    {mapLab != null
-                      ? `${mapLab} mmHg`
-                      : t(language, "council.overview.dataUnavailable")}
-                  </span>
-                </div>
-                <p className={`mt-3 text-xs ${MUTED_TEXT_CLASS}`}>
-                  {t(language, "council.overview.assessment.mapHint")}
+            <div className="mt-2">
+              <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
+                {activeCase.title || t(language, "council.new.caseFallback", { id: activeCase.id })}
+              </h2>
+              {getCaseSnippet(activeCase) ? (
+                <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)] line-clamp-2">
+                  {getCaseSnippet(activeCase)}
                 </p>
-              </article>
+              ) : null}
+            </div>
 
-              <article className={`${PANEL_CLASS} p-4`}>
-                <div className="mb-2 flex items-start justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
-                    Creatinine/eGFR
-                  </p>
-                  <Icon name="scan" size="0.875rem" className="text-[var(--text-brand)]" />
-                </div>
-                <div className="flex items-end gap-2">
+            {getSpecialists(activeCase).length > 0 ? (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-[var(--text-muted)]">
+                  {language === "vi" ? "Chuyên khoa:" : "Specialists:"}
+                </span>
+                {getSpecialists(activeCase).map((s) => (
                   <span
-                    className={`text-2xl font-bold tracking-tight ${BODY_TEXT_CLASS}`}
+                    key={s}
+                    className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-primary)]"
                   >
-                    {renalDataLabel}
+                    {s}
                   </span>
-                </div>
-                <p className={`mt-3 text-xs ${MUTED_TEXT_CLASS}`}>
-                  {t(language, "council.overview.assessment.renalHint")}
-                </p>
-              </article>
+                ))}
+              </div>
+            ) : null}
 
-              <article className={`${PANEL_CLASS} p-4`}>
-                <div className="mb-2 flex items-start justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
-                    {t(language, "council.overview.assessment.title")}
-                  </p>
-                  <Icon name="progress" size="0.875rem" className="text-[var(--text-brand)]" />
-                </div>
-                <div className="flex items-end gap-2">
-                  <span
-                    className={`text-2xl font-bold tracking-tight ${BODY_TEXT_CLASS}`}
-                  >
-                    {assessmentLabel}
-                  </span>
-                  <span
-                    className={`mb-1 text-xs font-bold ${MUTED_TEXT_CLASS}`}
-                  >
-                    {assessmentStateLabel}
-                  </span>
-                </div>
-                <p className={`mt-4 text-xs ${MUTED_TEXT_CLASS}`}>
-                  {t(language, "council.overview.assessment.disclaimer")}
-                </p>
-                {missingCriticalData ? (
-                  <p className="mt-3 text-xs font-semibold text-[var(--status-warn-text)]">
-                    {t(language, "council.overview.assessment.missingReason", {
-                      items: missingDataLabels.join(
-                        t(language, "council.overview.listJoin"),
-                      ),
-                    })}
-                  </p>
-                ) : null}
-              </article>
+            {activeCase.oversight_state === "paused" ? (
+              <div className="mt-4 rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-xs font-semibold text-[var(--status-warn-text)]">
+                {language === "vi"
+                  ? "Quy trình hội chẩn ca này đang tạm dừng để bác sĩ đối chiếu chuyên môn."
+                  : "Council process is currently paused for clinician review."}
+              </div>
+            ) : null}
+
+            <div className="mt-6 flex flex-wrap items-center gap-3 pt-4 border-t border-[color:var(--shell-border)]">
+              <button
+                type="button"
+                onClick={() => onSelectCase(activeCase)}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-6 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)]"
+              >
+                <span>{resolveActionLabel(language, activeCase.status)}</span>
+                <Icon name="arrow-right" size={16} />
+              </button>
+
+              <Link
+                href="/council/new"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 text-sm font-semibold text-[var(--text-primary)] hover:border-[color:var(--brand-600)] hover:bg-[var(--surface-panel)]"
+              >
+                {language === "vi" ? "Khởi tạo ca khác" : "Create another case"}
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        {/* 3. Recent Cases List as Rows */}
+        <section className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-[var(--text-primary)]">
+                {language === "vi" ? "Danh sách ca gần đây" : "Recent Cases"}
+              </h3>
+              <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-0.5 text-xs font-bold text-[var(--text-secondary)]">
+                {filteredCases.length}
+              </span>
+            </div>
+
+            {/* Filter Tabs & Search */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("all")}
+                  className={`rounded-lg px-3 py-1 text-xs font-bold transition ${
+                    statusFilter === "all"
+                      ? "bg-[var(--surface-panel)] text-[var(--text-primary)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  {language === "vi" ? "Tất cả" : "All"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("analyzed")}
+                  className={`rounded-lg px-3 py-1 text-xs font-bold transition ${
+                    statusFilter === "analyzed"
+                      ? "bg-[var(--surface-panel)] text-[var(--text-brand)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  {language === "vi" ? "Đã hội chẩn" : "Deliberated"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("in_progress")}
+                  className={`rounded-lg px-3 py-1 text-xs font-bold transition ${
+                    statusFilter === "in_progress"
+                      ? "bg-[var(--surface-panel)] text-[var(--text-warning)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  {language === "vi" ? "Đang xử lý" : "In Progress"}
+                </button>
+              </div>
+
+              <div className="relative min-w-[200px]">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={language === "vi" ? "Tìm theo tiêu đề, #ID..." : "Search title, #ID..."}
+                  className="w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-1.5 text-xs text-[var(--text-primary)] focus:border-[color:var(--brand-600)] focus:outline-none"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-6 xl:col-span-4">
-            <article className={`${PANEL_CLASS} flex-1 p-6`}>
-              <h3
-                className={`mb-6 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em] ${SECONDARY_TEXT_CLASS}`}
-              >
-                <Icon name="progress" className="text-[var(--text-brand)]" />
-                {t(language, "council.overview.timeline.title")}
-              </h3>
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-20 animate-pulse rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]"
+                />
+              ))}
+            </div>
+          ) : null}
 
-              {timeline.length ? (
-                <div className="relative space-y-6">
-                  <div className="absolute bottom-2 left-2.5 top-2 w-px bg-[color:var(--shell-border)]" />
-                  {timeline.map((step) => {
-                    const meta = timelineStatusMeta(language, step.status);
-                    const dotClass =
-                      step.status === "missing"
-                        ? "border-[color:var(--brand-primary)] bg-[var(--surface-brand-soft)]"
-                        : step.status === "review"
-                          ? "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)]"
-                          : step.status === "pending"
-                            ? "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)]"
-                            : "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)]";
-                    const innerDotClass =
-                      step.status === "missing"
-                        ? "bg-[var(--brand-600)]"
-                        : step.status === "review"
-                          ? "bg-[var(--tertiary)]"
-                          : step.status === "pending"
-                            ? "bg-[var(--tertiary)]"
-                            : "bg-[var(--primary)]";
-                    return (
-                      <div className="relative pl-8" key={step.id}>
-                        <div
-                          className={[
-                            "absolute left-0 top-1 flex h-5 w-5 items-center justify-center rounded-full border-2",
-                            dotClass,
-                          ].join(" ")}
-                        >
-                          <div
-                            className={`h-1.5 w-1.5 rounded-full ${innerDotClass}`}
-                          />
-                        </div>
-                        <div className="mb-1 flex flex-wrap items-center gap-2">
-                          <p
-                            className={`text-[10px] font-bold uppercase tracking-[0.14em] ${MUTED_TEXT_CLASS}`}
-                          >
-                            {step.time}
-                          </p>
-                          <span
-                            className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${meta.className}`}
-                          >
-                            {meta.label}
-                          </span>
-                        </div>
-                        <p className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>
-                          {step.title}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className={`text-xs ${SECONDARY_TEXT_CLASS}`}>
-                  {t(language, "council.overview.timeline.empty")}
-                </p>
-              )}
+          {/* 5. Empty State */}
+          {!isLoading && filteredCases.length === 0 ? (
+            <CouncilEmptyState
+              title={t(language, "council.empty.title")}
+              description={
+                searchQuery
+                  ? language === "vi"
+                    ? "Không tìm thấy ca bệnh nào phù hợp với bộ lọc."
+                    : "No cases match your search filter."
+                  : t(language, "council.new.empty")
+              }
+            />
+          ) : null}
 
-              {streamingEnabled && streamStages.length > 0 ? (
-                <div className="mt-6 rounded-lg border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
-                    {t(language, "council.overview.timeline.liveProgress")}
-                  </p>
-                  <ul className="mt-2 space-y-2">
-                    {streamStages.map((stage) => (
-                      <li
-                        key={`${stage.sequence}-${stage.step}`}
-                        className="flex items-start gap-2"
-                      >
-                        <Icon name="progress" size="1rem" className="text-[var(--text-brand)]" />
-                        <div>
-                          <p
-                            className={`text-sm font-semibold ${BODY_TEXT_CLASS}`}
-                          >
-                            {getTimelineTitle(language, stage.step)}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
+          {/* List Rows */}
+          {!isLoading && filteredCases.length > 0 ? (
+            <div className="divide-y divide-[color:var(--shell-border)] rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] overflow-hidden shadow-sm">
+              {filteredCases.map((item) => {
+                const meta = getCaseStatusMeta(language, item.status);
+                const snippet = getCaseSnippet(item);
+                const specialists = getSpecialists(item);
+                const isActive = activeCase?.id === item.id;
 
-              <div className="mt-6 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handleRerun()}
-                  disabled={isRunning}
-                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[color:var(--brand-600)] bg-[var(--surface-panel)] px-4 text-sm font-bold text-[var(--text-brand)] transition hover:bg-[color:var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Icon
-                    name="progress"
-                    size="20px"
-                    className={isRunning ? "animate-spin" : ""}
-                  />
-                  {isRunning
-                    ? streamingEnabled
-                      ? t(language, "council.overview.rerun.live")
-                      : t(language, "council.overview.rerun.running")
-                    : t(language, "council.overview.rerun.action")}
-                </button>
-                {runNotice ? (
-                  <p
-                    className={`text-xs font-semibold ${SECONDARY_TEXT_CLASS}`}
+                return (
+                  <article
+                    key={item.id}
+                    onClick={() => onSelectCase(item)}
+                    className={`cursor-pointer p-4 sm:p-5 transition-colors hover:bg-[var(--surface-muted)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                      isActive ? "bg-[var(--surface-brand-soft)]/30" : ""
+                    }`}
                   >
-                    {runNotice}
-                  </p>
-                ) : null}
-              </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-[var(--text-brand)]">
+                          #{item.id}
+                        </span>
+                        <h4 className="text-sm font-bold text-[var(--text-primary)] truncate">
+                          {item.title || t(language, "council.new.caseFallback", { id: item.id })}
+                        </h4>
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${meta.className}`}
+                        >
+                          <Icon name={meta.icon} size={11} />
+                          {meta.label}
+                        </span>
+                      </div>
 
-              {evidenceShadowAvailable ? (
-              <div className="mt-6 border-t border-[color:var(--shell-border)] pt-5">
-                <div className="flex items-start gap-2">
-                  <Icon name="check" size="1.125rem" className="mt-0.5 text-[var(--text-brand)]" />
-                  <div>
-                    <h4 className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>
-                      {t(language, "council.evidence.title")}
-                    </h4>
-                    <p className={`mt-1 text-xs leading-relaxed ${SECONDARY_TEXT_CLASS}`}>
-                      {t(language, "council.evidence.description")}
-                    </p>
-                  </div>
-                </div>
+                      {snippet ? (
+                        <p className="mt-1.5 text-xs text-[var(--text-secondary)] line-clamp-1">
+                          {snippet}
+                        </p>
+                      ) : null}
 
-                {evidenceAttachments.length > 0 ? (
-                  <p className={`mt-3 text-xs font-semibold ${SECONDARY_TEXT_CLASS}`}>
-                    {t(language, "council.evidence.current", {
-                      count: evidenceAttachments[0].evidence_count,
-                      date: formatRunTimestamp(language, evidenceAttachments[0].created_at),
-                    })}
-                  </p>
-                ) : (
-                  <p className={`mt-3 text-xs ${MUTED_TEXT_CLASS}`}>
-                    {t(language, "council.evidence.noneAttached")}
-                  </p>
-                )}
-
-                {evidenceOptions.length > 0 ? (
-                  <div className="mt-4 space-y-3">
-                    <label className={`block text-xs font-bold ${BODY_TEXT_CLASS}`} htmlFor="council-evidence-snapshot">
-                      {t(language, "council.evidence.selectorLabel")}
-                    </label>
-                    <select
-                      id="council-evidence-snapshot"
-                      value={selectedEvidenceJobId}
-                      onChange={(event) => setSelectedEvidenceJobId(event.target.value)}
-                      className="min-h-[44px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[color:var(--text-primary)]"
-                    >
-                      <option value="">{t(language, "council.evidence.selectorPlaceholder")}</option>
-                      {evidenceOptions.map((option) => (
-                        <option key={option.job_id} value={option.job_id}>
-                          {t(language, "council.evidence.option", {
-                            count: option.evidence_count,
-                            date: option.captured_at
-                              ? formatRunTimestamp(language, option.captured_at)
-                              : t(language, "council.history.timestampUnknown"),
-                          })}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => void handleAttachEvidence()}
-                      disabled={!selectedEvidenceJobId || isAttachingEvidence}
-                      className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 text-sm font-bold text-[color:var(--text-primary)] transition hover:bg-[var(--surface-panel)] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <Icon
-                        name={isAttachingEvidence ? "progress" : "folder"}
-                        size="18px"
-                        className={isAttachingEvidence ? "animate-spin" : ""}
-                      />
-                      {isAttachingEvidence
-                        ? t(language, "council.evidence.attaching")
-                        : t(language, "council.evidence.attach")}
-                    </button>
-                  </div>
-                ) : (
-                  <p className={`mt-4 text-xs ${MUTED_TEXT_CLASS}`}>
-                    {t(language, "council.evidence.noEligible")}
-                  </p>
-                )}
-                {evidenceNotice ? (
-                  <p aria-live="polite" className={`mt-3 text-xs font-semibold ${SECONDARY_TEXT_CLASS}`}>
-                    {evidenceNotice}
-                  </p>
-                ) : null}
-              </div>
-              ) : null}
-            </article>
-
-            {runHistory.length > 0 ? (
-              <article className={`${PANEL_CLASS} p-6`}>
-                <h3
-                  className={`mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em] ${SECONDARY_TEXT_CLASS}`}
-                >
-                  <Icon name="progress" className="text-[var(--text-brand)]" />
-                  {t(language, "council.history.title")}
-                </h3>
-                <ol className="space-y-3">
-                  {runHistory.map((run, index) => (
-                    <li
-                      key={run.id}
-                      className={`${SOFT_PANEL_CLASS} flex items-start justify-between gap-3 p-3`}
-                    >
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={`text-sm font-bold ${BODY_TEXT_CLASS}`}
-                          >
-                            {index === 0
-                              ? t(language, "council.history.latestRun")
-                              : t(language, "council.history.runNumber", {
-                                  count: runHistory.length - index,
-                                })}
-                          </span>
-                          {run.emergencyTriggered ? (
-                            <span className="rounded-full border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-2 py-0.5 text-[10px] font-bold text-[var(--status-danger-text)]">
-                              {t(language, "council.history.emergencyBadge")}
+                      {specialists.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          {specialists.slice(0, 4).map((spec) => (
+                            <span
+                              key={spec}
+                              className="rounded bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-muted)]"
+                            >
+                              {spec}
+                            </span>
+                          ))}
+                          {specialists.length > 4 ? (
+                            <span className="text-[10px] text-[var(--text-muted)]">
+                              +{specialists.length - 4}
                             </span>
                           ) : null}
                         </div>
-                        <p className={`mt-1 text-xs ${SECONDARY_TEXT_CLASS}`}>
-                          {summarizeRunOutcome(language, run)}
-                        </p>
-                        {run.modelVersion ? (
-                          <p
-                            className={`mt-0.5 text-[10px] font-medium uppercase tracking-[0.1em] ${MUTED_TEXT_CLASS}`}
-                          >
-                            {run.modelVersion}
-                          </p>
-                        ) : null}
-                      </div>
-                      <span
-                        className={`shrink-0 text-right text-[11px] font-mono ${MUTED_TEXT_CLASS}`}
-                      >
-                        {formatRunTimestamp(language, run.createdAt)}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </article>
-            ) : null}
-
-            <article className="space-y-3">
-              <button
-                type="button"
-                onClick={() => setHandoffOpen(true)}
-                className="group flex w-full items-center justify-between rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] p-4 text-[var(--on-secondary-container)] transition hover:bg-[color:var(--brand-700)]"
-              >
-                <div className="text-left">
-                  <p className="text-base font-black leading-tight">
-                    {t(language, "council.overview.handoff.action")}
-                  </p>
-                  <p className="mt-1 text-xs font-semibold text-[var(--on-secondary-container)]">
-                    {t(language, "council.overview.handoff.actionHint")}
-                  </p>
-                </div>
-                <Icon name="contact" size="1.875rem" className="transition-transform group-hover:translate-x-1" />
-              </button>
-
-              {canUseDoctorActions ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGuardAction("override");
-                      setGuardReason("");
-                    }}
-                    className={`${PANEL_CLASS} flex flex-col items-center gap-2 p-4 text-center transition hover:bg-[color:var(--surface-muted)]`}
-                  >
-                    <Icon name="user-card" className="text-[var(--text-brand)]" />
-                    <p className="text-xs font-bold text-[var(--text-brand)]">
-                      {t(language, "council.overview.guard.overrideAction")}
-                    </p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGuardAction("pause");
-                      setGuardReason("");
-                    }}
-                    className="flex flex-col items-center gap-2 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-4 text-center transition hover:bg-[var(--surface-panel)]"
-                  >
-                    <Icon name="stop" className="text-[var(--status-danger-text)]" />
-                    <p className="text-xs font-bold text-[var(--status-danger-text)]">
-                      {t(language, "council.overview.guard.pauseAction")}
-                    </p>
-                  </button>
-                </div>
-              ) : null}
-
-              {actionNotice ? (
-                <div className="rounded-lg border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-3 text-sm font-semibold text-[var(--status-ok-text)]">
-                  {actionNotice}
-                </div>
-              ) : null}
-
-              <div className={`${SOFT_PANEL_CLASS} p-4`}>
-                <div className="flex items-center justify-between gap-2">
-                  <p className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>
-                    {t(language, "council.overview.summary.title")}
-                  </p>
-                  {oversightPaused ? (
-                    <span className="rounded-full border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-1 text-xs font-bold text-[var(--status-warn-text)]">
-                      {t(language, "council.overview.summary.unconfirmed")}
-                    </span>
-                  ) : null}
-                </div>
-                {oversightPaused ? (
-                  <p className="mt-2 rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-xs font-semibold text-[var(--status-warn-text)]">
-                    {t(language, "council.overview.summary.pausedNotice")}
-                  </p>
-                ) : null}
-                {finalDecisionBlocked ? (
-                  <div
-                    className={`mt-3 space-y-3 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
-                  >
-                    <p>
-                      {t(language, "council.overview.summary.noConsensus")}
-                    </p>
-                    {hasConflictSignals ? (
-                      <p>
-                        {t(language, "council.overview.summary.conflictSignal", {
-                          first: cardiologyNode,
-                          second: renalEndoNode,
-                        })}
-                      </p>
-                    ) : null}
-                    {missingDataLabels.length > 0 ? (
-                      <div>
-                        <p className={`font-bold ${BODY_TEXT_CLASS}`}>
-                          {t(language, "council.overview.summary.missingData")}
-                        </p>
-                        <ul className="mt-1 list-disc space-y-1 pl-5">
-                          {missingDataLabels.map((label) => (
-                            <li key={label}>{label}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-                    <div>
-                      <p className={`font-bold ${BODY_TEXT_CLASS}`}>
-                        {t(language, "council.overview.summary.nextStep")}
-                      </p>
-                      <ul className="mt-1 list-disc space-y-1 pl-5">
-                        <li>
-                          {t(language, "council.overview.summary.nextStep.renal")}
-                        </li>
-                        <li>
-                          {t(language, "council.overview.summary.nextStep.pharmacy")}
-                        </li>
-                        <li>
-                          {t(language, "council.overview.summary.nextStep.review")}
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className={`mt-3 space-y-2 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
-                  >
-                    <p>
-                      {t(language, "council.overview.summary.noMaterialConflict")}
-                    </p>
-                    <p>{t(language, "council.overview.summary.routine")}</p>
-                    {consensusText ? (
-                      <p>
-                        {t(language, "council.overview.summary.recorded", {
-                          consensus: consensusText,
-                        })}
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-                {escalationText && finalDecisionBlocked ? (
-                  <p className="mt-3 rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-xs font-semibold text-[var(--status-warn-text)]">
-                    {t(language, "council.overview.summary.systemNote")}{" "}
-                    {summarizeClinicalText(
-                      escalationText,
-                      t(language, "council.overview.summary.professionalReview"),
-                    )}
-                  </p>
-                ) : null}
-                <div
-                  className={`mt-4 flex items-center justify-between text-xs ${MUTED_TEXT_CLASS}`}
-                >
-                  <span>{t(language, "council.overview.summary.specialtyConsensus")}</span>
-                  <span>
-                    {hasConflictSignals
-                      ? t(language, "council.overview.summary.needsReview")
-                      : t(language, "council.overview.summary.noMaterialConflict")}
-                  </span>
-                </div>
-                <div
-                  className={`mt-1 flex items-center justify-between text-xs ${MUTED_TEXT_CLASS}`}
-                >
-                  <span>{t(language, "council.overview.summary.finalDecision")}</span>
-                  <span>
-                    {finalDecisionBlocked
-                      ? t(language, "council.overview.summary.waitForProfessional")
-                      : t(language, "council.overview.summary.checkBeforeUse")}
-                  </span>
-                </div>
-                {disclosure ? (
-                  <div className="mt-4 border-t border-[color:var(--shell-border)] pt-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`text-[10px] font-bold uppercase tracking-[0.14em] ${MUTED_TEXT_CLASS}`}
-                      >
-                        {t(language, "council.model.basisLabel")}
-                      </span>
-                      {disclosure.isFallback ? (
-                        <span className="rounded-full border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-2 py-0.5 text-[10px] font-bold text-[var(--status-warn-text)]">
-                          {t(language, "council.model.degradedBadge")}
-                        </span>
                       ) : null}
                     </div>
-                    <p
-                      className={`mt-1 text-xs leading-relaxed ${SECONDARY_TEXT_CLASS}`}
-                    >
-                      {t(language, "council.model.generatedBy", {
-                        basis: describeModelBasis(language, disclosure),
-                      })}
-                      {disclosure.isFallback
-                        ? t(language, "council.model.fallbackNotice")
-                        : ""}
-                    </p>
-                    {isAdmin &&
-                    (disclosure.modelFamily || disclosure.modelVersion) ? (
-                      <p
-                        className={`mt-1 font-mono text-[10px] ${MUTED_TEXT_CLASS}`}
+
+                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                      <span className="font-mono text-xs text-[var(--text-muted)]">
+                        {formatLocaleDate(language, item.updated_at, {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectCase(item);
+                        }}
+                        className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 text-xs font-bold text-[var(--text-primary)] hover:border-[color:var(--brand-600)] hover:bg-[var(--surface-panel)] transition"
                       >
-                        {[disclosure.modelFamily, disclosure.modelVersion]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            </article>
-          </div>
+                        <span>{resolveActionLabel(language, item.status)}</span>
+                        <Icon name="arrow-right" size={14} />
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
         </section>
-
-        {handoffOpen ? (
-          <Modal
-            open
-            onClose={() => setHandoffOpen(false)}
-            title={t(language, "council.overview.handoff.dialogTitle")}
-            description={t(language, "council.overview.handoff.dialogDescription")}
-            closeLabel={t(language, "council.overview.close")}
-            size="lg"
-            footer={
-              <>
-                <button
-                  type="button"
-                  onClick={() => setHandoffOpen(false)}
-                  className="min-h-[44px] rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-panel)]"
-                >
-                  {t(language, "council.guard.cancel")}
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmHandoff}
-                  className="min-h-[44px] rounded-[var(--radius-md)] border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-bold text-[var(--on-secondary-container)] hover:bg-[var(--brand-700)]"
-                >
-                  {t(language, "council.overview.handoff.send")}
-                </button>
-              </>
-            }
-          >
-              <div className="grid gap-3 sm:grid-cols-2">
-                {HANDOFF_SPECIALTIES.map((item) => {
-                  const active = selectedSpecialty === item.name;
-                  return (
-                    <button
-                      key={item.name}
-                      type="button"
-                      onClick={() => setSelectedSpecialty(item.name)}
-                      className={[
-                        "rounded-lg border p-3 text-left transition",
-                        active
-                          ? "border-[color:var(--brand-primary)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
-                          : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-primary)] hover:border-[color:var(--brand-primary)] hover:bg-[var(--surface-panel)]",
-                      ].join(" ")}
-                    >
-                      <p className="font-bold">{item.name}</p>
-                      <p className="mt-1 text-xs font-medium leading-relaxed text-[color:var(--text-muted)]">
-                        {item.reason}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-
-          </Modal>
-        ) : null}
-
-        {guardAction ? (
-          <Modal
-            open
-            onClose={closeGuardDialog}
-            title={guardAction === "override" ? t(language, "council.guard.overrideTitle") : t(language, "council.guard.pauseTitle")}
-            description={guardAction === "override" ? t(language, "council.guard.overrideDescription") : t(language, "council.guard.pauseDescription")}
-            closeLabel={t(language, "council.overview.close")}
-            footer={
-              <>
-                <button type="button" onClick={closeGuardDialog} className="min-h-[44px] rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-panel)]">
-                  {t(language, "council.guard.cancel")}
-                </button>
-                <button type="button" onClick={confirmGuardAction} disabled={!guardReason.trim()} className="min-h-[44px] rounded-[var(--radius-md)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-text)] px-4 text-sm font-bold text-[var(--on-error)] transition hover:opacity-90 disabled:bg-[var(--status-danger-bg)] disabled:text-[var(--status-danger-text)] disabled:opacity-60">
-                  {t(language, "council.guard.confirm")}
-                </button>
-              </>
-            }
-          >
-              <label
-                className={`block text-sm font-bold ${BODY_TEXT_CLASS}`}
-                htmlFor="guard-reason"
-              >
-                {t(language, "council.guard.reasonLabel")}
-              </label>
-              <textarea
-                id="guard-reason"
-                value={guardReason}
-                onChange={(event) => setGuardReason(event.target.value)}
-                className="mt-2 min-h-[120px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-3 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-muted)] focus:border-[color:var(--brand-primary)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
-                placeholder={t(language, "council.guard.reasonPlaceholder")}
-              />
-          </Modal>
-        ) : null}
       </div>
     </PageShell>
   );

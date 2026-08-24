@@ -5,9 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import CouncilEmptyState from "@/components/council/council-empty-state";
 import CouncilFlowStepper from "@/components/council/council-flow-stepper";
-import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
-import { CouncilList, CouncilMetricCard, CouncilSection } from "@/components/council/council-primitives";
-import { Icon, resolveIconName } from "@/components/ui/icon";
+import { CouncilList, CouncilMetricCard } from "@/components/council/council-primitives";
+import { Icon } from "@/components/ui/icon";
 import Modal from "@/components/ui/modal";
 import PageShell from "@/components/ui/page-shell";
 import { trackCouncilViewed } from "@/lib/analytics/events";
@@ -109,21 +108,6 @@ export default function CouncilResultPage() {
   };
 
   const medicationSafety = snapshot?.result.medicationSafety ?? null;
-  const medicationSafetyLabel = medicationSafety
-    ? medicationSafety.state === "checked"
-      ? t(language, "council.result.medicationSafety.checked")
-      : medicationSafety.state === "requires_clarification"
-        ? t(language, "council.result.medicationSafety.clarification")
-        : t(language, "council.result.medicationSafety.unavailable")
-    : "";
-  const medicationSafetyHint = medicationSafety?.drugbankVersion
-    ? t(language, "council.result.medicationSafety.version", {
-        version: medicationSafety.drugbankVersion,
-      })
-    : medicationSafety
-      ? t(language, "council.result.medicationSafety.noVersion")
-      : "";
-
   const selectedSpecialtyMeta =
     HANDOFF_SPECIALTIES.find((item) => item.name === selectedSpecialty) ?? HANDOFF_SPECIALTIES[2];
 
@@ -203,7 +187,7 @@ export default function CouncilResultPage() {
       variant="plain"
     >
       <div className="space-y-6">
-        <CouncilWorkspaceNav />
+        {/* Step Progress */}
         <CouncilFlowStepper currentStep="result" caseId={caseItem?.id} />
 
         {actionNotice ? (
@@ -219,8 +203,8 @@ export default function CouncilResultPage() {
           />
         ) : (
           <div className="space-y-6">
-            {/* Quick Metrics Header Card */}
-            <section className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 sm:p-6">
+            {/* Case/Run Context Quick Summary Card */}
+            <section className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 sm:p-6 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
@@ -234,7 +218,13 @@ export default function CouncilResultPage() {
                   <span className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 font-mono text-xs font-bold text-[var(--text-primary)]">
                     #{caseItem?.id}
                   </span>
-                  <span className={`rounded-md px-3 py-1 text-xs font-bold ${hasRedFlag ? "border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]" : "border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-primary)]"}`}>
+                  <span
+                    className={`rounded-md px-3 py-1 text-xs font-bold ${
+                      hasRedFlag
+                        ? "border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
+                        : "border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-primary)]"
+                    }`}
+                  >
                     {view.urgencyLabel}
                   </span>
                 </div>
@@ -287,10 +277,10 @@ export default function CouncilResultPage() {
               </div>
             </section>
 
-            {/* 1. ESCALATION / RED FLAGS */}
+            {/* 1. RED FLAGS / ESCALATION */}
             <section
               aria-labelledby="hierarchy-escalation-heading"
-              className={`rounded-[1.55rem] border p-6 ${
+              className={`rounded-[1.55rem] border p-6 shadow-sm ${
                 hasRedFlag
                   ? "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
                   : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-primary)]"
@@ -307,10 +297,10 @@ export default function CouncilResultPage() {
                     <p className="text-xs font-bold uppercase tracking-[0.14em]">
                       {t(language, "council.result.hierarchy.escalation")}
                     </p>
-                    <h3 className="mt-1 text-xl font-bold">
+                    <h3 id="hierarchy-escalation-heading" className="mt-1 text-xl font-bold">
                       {hasRedFlag
                         ? language === "vi"
-                          ? "Cảnh báo khẩn & Điểm cần can thiệp ngay"
+                          ? "Cảnh báo đỏ & Leo thang khẩn cấp"
                           : "Immediate Escalation & Red Flag Alerts"
                         : language === "vi"
                           ? "Không phát hiện dấu hiệu leo thang khẩn cấp"
@@ -354,7 +344,7 @@ export default function CouncilResultPage() {
               ) : null}
             </section>
 
-            {/* 2. RECOMMENDATION (TÓM TẮT NGẮN & KHUYẾN NGHỊ LÂM SÀNG) */}
+            {/* 2. RECOMMENDATION (TÓM TẮT KHUYẾN NGHỊ LÂM SÀNG) */}
             <section
               aria-labelledby="hierarchy-recommendation-heading"
               className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] border-l-4 border-l-[color:var(--brand-600)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
@@ -381,32 +371,37 @@ export default function CouncilResultPage() {
                 </p>
               </div>
 
-              {/* Next Action Quick Pills */}
-              <div className="mt-5 flex flex-wrap gap-2 pt-2 border-t border-[color:var(--shell-border)]">
-                <button
-                  type="button"
-                  onClick={() => setHandoffOpen(true)}
-                  className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[color:var(--brand-600)] hover:bg-[var(--surface-panel)]"
-                >
-                  {language === "vi" ? "Chuyển giao chuyên khoa" : "Specialist Handoff"}
-                </button>
+              {/* Sub-view Canonical Tab Anchors */}
+              <div className="mt-5 flex flex-wrap gap-2 pt-3 border-t border-[color:var(--shell-border)]">
                 <Link
-                  href="/scribe"
+                  href={`/council/analyze?caseId=${caseItem?.id}`}
                   className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[color:var(--brand-600)] hover:bg-[var(--surface-panel)]"
                 >
-                  {language === "vi" ? "Lưu vào Ghi chép SOAP" : "Save to SOAP Note"}
+                  {language === "vi" ? "Phân tích tín hiệu" : "Signal Analysis"}
                 </Link>
                 <Link
-                  href="/selfmed/ddi"
+                  href={`/council/details?caseId=${caseItem?.id}`}
                   className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[color:var(--brand-600)] hover:bg-[var(--surface-panel)]"
                 >
-                  {language === "vi" ? "Kiểm tra DDI DrugBank" : "DrugBank DDI"}
+                  {language === "vi" ? "Chi tiết chuyên khoa" : "Specialist Logs"}
                 </Link>
                 <Link
-                  href="/evidence"
+                  href={`/council/citations?caseId=${caseItem?.id}`}
                   className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[color:var(--brand-600)] hover:bg-[var(--surface-panel)]"
                 >
-                  {language === "vi" ? "Tra cứu Bằng chứng sống" : "Living Evidence"}
+                  {language === "vi" ? "Tra cứu trích dẫn" : "Citations"}
+                </Link>
+                <Link
+                  href={`/council/research?caseId=${caseItem?.id}`}
+                  className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[color:var(--brand-600)] hover:bg-[var(--surface-panel)]"
+                >
+                  {language === "vi" ? "Tổng hợp nghiên cứu" : "Research Synthesis"}
+                </Link>
+                <Link
+                  href={`/council/deepdive?caseId=${caseItem?.id}`}
+                  className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[color:var(--brand-600)] hover:bg-[var(--surface-panel)]"
+                >
+                  {language === "vi" ? "Đào sâu ca bệnh" : "Deep Dive"}
                 </Link>
               </div>
             </section>
@@ -414,7 +409,7 @@ export default function CouncilResultPage() {
             {/* 3. CONSENSUS / AGREEMENT */}
             <section
               aria-labelledby="hierarchy-consensus-heading"
-              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7"
+              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -440,11 +435,11 @@ export default function CouncilResultPage() {
                 </p>
               </div>
 
-              {/* Specialist Logs / Findings Breakdown */}
+              {/* Specialist Perspectives breakdown */}
               {view.details.specialistLogs.length > 0 ? (
                 <div className="mt-6 space-y-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                    {language === "vi" ? "Ý kiến theo từng chuyên khoa" : "Specialist Findings & Perspectives"}
+                    {language === "vi" ? "Góc nhìn theo từng chuyên khoa" : "Specialist Findings & Perspectives"}
                   </p>
                   <div className="grid gap-3 md:grid-cols-2">
                     {view.details.specialistLogs.map((log, idx) => (
@@ -479,7 +474,7 @@ export default function CouncilResultPage() {
             {/* 4. UNCERTAINTY */}
             <section
               aria-labelledby="hierarchy-uncertainty-heading"
-              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7"
+              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
             >
               <div className="flex items-center gap-2">
                 <span className="rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
@@ -532,10 +527,75 @@ export default function CouncilResultPage() {
               </p>
             </section>
 
-            {/* 5. EVIDENCE */}
+            {/* 5. CLINICIAN ACTION */}
+            <section
+              aria-labelledby="hierarchy-action-heading"
+              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <span className="rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
+                  {t(language, "council.result.hierarchy.clinicianAction")}
+                </span>
+              </div>
+              <h3 id="hierarchy-action-heading" className="mt-3 text-xl font-bold text-[var(--text-primary)]">
+                {language === "vi" ? "Quyết định lâm sàng & Xử trí tiếp theo" : "Clinical Governance & Next Actions"}
+              </h3>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                {language === "vi"
+                  ? "Bác sĩ phụ trách có toàn quyền chấp nhận, ghi đè hoặc phân luồng tiếp theo cho ca bệnh."
+                  : "The attending clinician holds full authority to confirm, override, or handoff this case."}
+              </p>
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setHandoffOpen(true)}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 text-sm font-bold text-[var(--text-primary)] hover:border-[color:var(--brand-600)] hover:bg-[var(--surface-panel)]"
+                >
+                  <Icon name="clinical-notes" size={16} />
+                  {t(language, "council.overview.handoff.action")}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setGuardAction("override")}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-5 text-sm font-bold text-[var(--status-danger-text)] hover:opacity-90"
+                >
+                  <Icon name="warning" size={16} />
+                  {t(language, "council.guard.overrideTitle")}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setGuardAction("pause")}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-5 text-sm font-bold text-[var(--status-warn-text)] hover:opacity-90"
+                >
+                  <Icon name="progress" size={16} />
+                  {t(language, "council.guard.pauseTitle")}
+                </button>
+
+                <Link
+                  href="/scribe"
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-panel)]"
+                >
+                  <Icon name="clinical-notes" size={16} />
+                  {language === "vi" ? "Mở trong Ghi chép SOAP" : "Open in Scribe"}
+                </Link>
+
+                <Link
+                  href="/council/new"
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-5 text-sm font-bold text-[var(--on-secondary-container)] hover:bg-[var(--brand-700)]"
+                >
+                  <Icon name="progress" size={16} />
+                  {t(language, "council.result.newCase")}
+                </Link>
+              </div>
+            </section>
+
+            {/* 6. EVIDENCE */}
             <section
               aria-labelledby="hierarchy-evidence-heading"
-              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7"
+              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -615,72 +675,8 @@ export default function CouncilResultPage() {
               )}
             </section>
 
-            {/* 6. CLINICIAN ACTION */}
-            <section
-              aria-labelledby="hierarchy-action-heading"
-              className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7"
-            >
-              <div className="flex items-center gap-2">
-                <span className="rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
-                  {t(language, "council.result.hierarchy.clinicianAction")}
-                </span>
-              </div>
-              <h3 id="hierarchy-action-heading" className="mt-3 text-xl font-bold text-[var(--text-primary)]">
-                {language === "vi" ? "Quyết định lâm sàng & Xử trí tiếp theo" : "Clinical Governance & Next Actions"}
-              </h3>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                {language === "vi"
-                  ? "Bác sĩ phụ trách có toàn quyền chấp nhận, ghi đè hoặc phân luồng tiếp theo cho ca bệnh."
-                  : "The attending clinician holds full authority to confirm, override, or handoff this case."}
-              </p>
-
-              <div className="mt-5 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => setHandoffOpen(true)}
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 text-sm font-bold text-[var(--text-primary)] hover:border-[color:var(--brand-600)] hover:bg-[var(--surface-panel)]"
-                >
-                  <Icon name="clinical-notes" size={16} />
-                  {t(language, "council.overview.handoff.action")}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setGuardAction("override")}
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-5 text-sm font-bold text-[var(--status-danger-text)] hover:opacity-90"
-                >
-                  <Icon name="warning" size={16} />
-                  {t(language, "council.guard.overrideTitle")}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setGuardAction("pause")}
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-5 text-sm font-bold text-[var(--status-warn-text)] hover:opacity-90"
-                >
-                  {t(language, "council.guard.pauseTitle")}
-                </button>
-
-                <Link
-                  href="/scribe"
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-panel)]"
-                >
-                  <Icon name="clinical-notes" size={16} />
-                  {language === "vi" ? "Mở trong Ghi chép khám" : "Open in Scribe"}
-                </Link>
-
-                <Link
-                  href="/council/new"
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-5 text-sm font-bold text-[var(--on-secondary-container)] hover:bg-[var(--brand-700)]"
-                >
-                  <Icon name="progress" size={16} />
-                  {t(language, "council.result.newCase")}
-                </Link>
-              </div>
-            </section>
-
             {/* 7. TECHNICAL DETAILS */}
-            <details className="group rounded-[1.55rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 transition-colors open:bg-[var(--surface-panel)]">
+            <details className="group rounded-[1.55rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 transition-colors open:bg-[var(--surface-panel)] shadow-sm">
               <summary className="flex cursor-pointer items-center justify-between text-base font-bold text-[var(--text-primary)]">
                 <span className="flex items-center gap-2">
                   <span className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">

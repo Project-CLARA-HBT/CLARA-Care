@@ -24,11 +24,22 @@ describe("personal workspace progressive disclosure", () => {
     expect(family).toContain("<TabPanel");
   });
 
-  it("organizes visit preparation into four URL-addressable steps", () => {
+  it("presents visits as a vertical chronological timeline stream with upcoming HeroObject", () => {
     const visits = source("app/visits/page.tsx");
-    expect(visits).toContain('type VisitStep = "concerns" | "records" | "questions" | "review"');
-    expect(visits).toContain('next.set("step", key)');
-    expect(visits).toContain('copy("visits.stepsLabel")');
-    expect(visits).toContain('activeStep === "review"');
+    expect(visits).toContain("<HeroObject");
+    expect(visits).toContain("<Timeline");
+    expect(visits).toContain('href="/visits/new"');
+    expect(visits).toContain('copy("visits.newVisitCta")');
+    expect(visits).toContain('copy("visits.upcomingEyebrow")');
+    expect(visits).toContain('copy("visits.pastVisitsEyebrow")');
+  });
+
+  it("organizes visit preparation into four guided steps in the new visit flow", () => {
+    const newVisit = source("app/visits/new/new-visit-flow.tsx");
+    expect(newVisit).toContain('type Step = "reason" | "symptoms" | "medications" | "summary"');
+    expect(newVisit).toContain('"visitWizard.step.reason"');
+    expect(newVisit).toContain('"visitWizard.step.symptoms"');
+    expect(newVisit).toContain('"visitWizard.step.medications"');
+    expect(newVisit).toContain('"visitWizard.step.summary"');
   });
 });

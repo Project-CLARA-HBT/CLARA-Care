@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { t } from "@/lib/i18n/catalog";
@@ -47,7 +47,8 @@ export function SurfaceCard({
   children,
   className = "",
   interactive = false,
-}: {
+  ...rest
+}: HTMLAttributes<HTMLElement> & {
   children: ReactNode;
   className?: string;
   interactive?: boolean;
@@ -59,6 +60,7 @@ export function SurfaceCard({
           ? "hover:border-[color:var(--shell-border-strong)]/60 hover:bg-[var(--surface-muted)]"
           : ""
       } ${className}`}
+      {...rest}
     >
       {children}
     </section>

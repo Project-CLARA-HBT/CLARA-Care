@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import DeleteDataFlowClient from "./delete-data-flow-client";
 
-const DELETE_FLOW_STEPS = ["review", "confirm", "status"] as const;
+const DELETE_FLOW_STEPS = ["review", "warning", "confirm", "status"] as const;
 
 export type DeleteFlowStep = (typeof DELETE_FLOW_STEPS)[number];
 

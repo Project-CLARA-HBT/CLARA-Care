@@ -23,6 +23,9 @@ describe("GlobalContextBar", () => {
 
   const defaultSession = {
     role: "normal" as const,
+    effectiveRole: "normal" as const,
+    adminPreviewMode: null,
+    setAdminPreviewMode: vi.fn(),
     setRole: vi.fn(),
     isRoleHydrated: true,
     isSessionChecked: true,
@@ -129,5 +132,69 @@ describe("GlobalContextBar", () => {
     const langBtn = screen.getByRole("button", { name: /Đổi ngôn ngữ/ });
     fireEvent.click(langBtn);
     expect(defaultPreferences.handleLanguageChange).toHaveBeenCalledWith("en");
+  });
+
+  it("does not render admin preview section for normal consumer role", () => {
+    renderBar({}, { role: "normal" });
+
+    expect(screen.queryByText(/Chế độ xem trước \(Admin Preview\)/)).not.toBeInTheDocument();
+  });
+
+  it("renders 4 admin preview mode options when role is admin and invokes setAdminPreviewMode on selection", () => {
+    const setAdminPreviewMode = vi.fn();
+    renderBar(
+      {},
+      {
+        role: "admin",
+        effectiveRole: "admin",
+        adminPreviewMode: null,
+        setAdminPreviewMode,
+      },
+    );
+
+    // Section header
+    expect(screen.getByText(/Chế độ xem trước \(Admin Preview\)/)).toBeInTheDocument();
+
+    // 4 Workspace Options
+    const adminOpt = screen.getByRole("button", { name: /Quản trị viên \(Administration\)/ });
+    const clinicalOpt = screen.getByRole("button", { name: /Lâm sàng \(Clinical\)/ });
+    const researchOpt = screen.getByRole("button", { name: /Nghiên cứu \(Research\)/ });
+    const personalOpt = screen.getByRole("button", { name: /Cá nhân \(Personal\)/ });
+
+    expect(adminOpt).toBeInTheDocument();
+    expect(clinicalOpt).toBeInTheDocument();
+    expect(researchOpt).toBeInTheDocument();
+    expect(personalOpt).toBeInTheDocument();
+
+    // Select Clinical Preview
+    fireEvent.click(clinicalOpt);
+    expect(setAdminPreviewMode).toHaveBeenCalledWith("clinical");
+
+    // Select Research Preview
+    fireEvent.click(researchOpt);
+    expect(setAdminPreviewMode).toHaveBeenCalledWith("research");
+
+    // Select Personal Preview
+    fireEvent.click(personalOpt);
+    expect(setAdminPreviewMode).toHaveBeenCalledWith("personal");
+
+    // Select Administration (reset)
+    fireEvent.click(adminOpt);
+    expect(setAdminPreviewMode).toHaveBeenCalledWith(null);
+  });
+
+  it("updates the active pill label and styling in ContextBar when adminPreviewMode is active", () => {
+    renderBar(
+      {},
+      {
+        role: "admin",
+        effectiveRole: "doctor",
+        adminPreviewMode: "clinical",
+      },
+    );
+
+    // Context bar summary button should reflect clinical preview
+    expect(screen.getByLabelText(/Chế độ xem trước: Lâm sàng/)).toBeInTheDocument();
+    expect(screen.getByText("Xem trước: Lâm sàng")).toBeInTheDocument();
   });
 });

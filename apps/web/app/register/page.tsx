@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/http-client";
 import Button from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
-import { Badge } from "@/components/ui/badge";
-import { SurfaceCard } from "@/components/ui/surface";
+import AuthFormShell from "@/components/auth-form-shell";
 import { t } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import { useUILanguage } from "@/lib/use-ui-language";
@@ -60,6 +59,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [needsVerificationLink, setNeedsVerificationLink] = useState(false);
+
   const passwordValidationError = getPasswordValidationError(password, language);
   const confirmPasswordError =
     confirmPassword && password !== confirmPassword
@@ -71,6 +71,7 @@ export default function RegisterPage() {
     setError("");
     setNotice("");
     setNeedsVerificationLink(false);
+
     if (!acceptedLegal) {
       setError(t(language, "auth.register.acceptRequired"));
       return;
@@ -83,6 +84,7 @@ export default function RegisterPage() {
       setError(t(language, "auth.register.passwordMismatch"));
       return;
     }
+
     setIsSubmitting(true);
     try {
       const response = await api.post("/auth/register", {
@@ -115,7 +117,7 @@ export default function RegisterPage() {
       setError(
         cause instanceof Error
           ? normalizeRegisterErrorMessage(cause.message, language)
-          : t(language, "auth.register.failure")
+          : t(language, "auth.register.failure"),
       );
     } finally {
       setIsSubmitting(false);
@@ -123,160 +125,167 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] max-w-lg items-center justify-center px-4 py-12 sm:px-6">
-      <SurfaceCard className="w-full p-7 sm:p-9">
-        <Badge tone="brand">{t(language, "auth.brand")}</Badge>
-        <h1 className="mt-4 text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-3xl">
-          {t(language, "auth.register.title")}
-        </h1>
-        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-          {t(language, "auth.register.description")}
-        </p>
+    <AuthFormShell
+      title={t(language, "auth.register.title")}
+      subtitle={t(language, "auth.register.description")}
+      backHref="/"
+      backLabel={t(language, "auth.backToHome")}
+      maxWidth="lg"
+    >
+      <form className="space-y-4" onSubmit={onSubmit}>
+        <Field
+          id="register-full-name"
+          label={t(language, "auth.register.fullName")}
+          value={fullName}
+          onChange={(event) => setFullName(event.target.value)}
+          placeholder={t(language, "auth.register.fullNamePlaceholder")}
+          autoComplete="name"
+          required
+        />
 
-        <form className="mt-7 space-y-4" onSubmit={onSubmit}>
+        <Field
+          id="register-email"
+          label={t(language, "auth.email")}
+          type="email"
+          inputMode="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder={t(language, "auth.emailPlaceholder")}
+          autoComplete="email"
+          required
+        />
+
+        <div className="space-y-1.5">
           <Field
-            id="register-full-name"
-            label={t(language, "auth.register.fullName")}
-            value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
-            placeholder={t(language, "auth.register.fullNamePlaceholder")}
+            id="register-password"
+            label={t(language, "auth.register.password")}
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder={t(language, "auth.register.passwordPlaceholder")}
+            autoComplete="new-password"
+            minLength={8}
             required
           />
-          <Field
-            id="register-email"
-            label={t(language, "auth.email")}
-            type="email"
-            inputMode="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder={t(language, "auth.emailPlaceholder")}
-            required
-          />
-          <div className="space-y-1.5">
-            <Field
-              id="register-password"
-              label={t(language, "auth.register.password")}
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder={t(language, "auth.register.passwordPlaceholder")}
-              autoComplete="new-password"
-              minLength={8}
-              required
-            />
-            <p className="text-sm text-[var(--text-secondary)]">
-              {t(language, "auth.register.passwordHint")}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <Field
-              id="register-confirm-password"
-              label={t(language, "auth.register.confirmPassword")}
-              type="password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              placeholder={t(language, "auth.register.confirmPasswordPlaceholder")}
-              autoComplete="new-password"
-              minLength={8}
-              required
-              aria-invalid={confirmPasswordError ? true : undefined}
-            />
-            {confirmPasswordError ? (
-              <p role="alert" className="text-sm font-medium text-[var(--status-danger-text)]">
-                {confirmPasswordError}
-              </p>
-            ) : (
-              <p className="text-sm text-[var(--text-secondary)]">
-                {t(language, "auth.register.confirmPasswordHint")}
-              </p>
-            )}
-          </div>
-
-          <Select
-            id="register-role"
-            label={t(language, "auth.register.role")}
-            value={role}
-            onChange={(event) => setRole(event.target.value as UserRole)}
-          >
-            <option value="normal">{t(language, "auth.register.role.normal")}</option>
-            <option value="researcher">{t(language, "auth.register.role.researcher")}</option>
-            <option value="doctor">{t(language, "auth.register.role.doctor")}</option>
-          </Select>
-
-          <label className="flex cursor-pointer items-start gap-3 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-            <input
-              type="checkbox"
-              checked={acceptedLegal}
-              onChange={(event) => setAcceptedLegal(event.target.checked)}
-              className="focus-ring mt-1 h-5 w-5 rounded border-[color:var(--shell-border-strong)]"
-            />
-            <span className="text-sm leading-6 text-[var(--text-secondary)]">
-              {t(language, "auth.register.acceptLegal")} {" "}
-              <Link
-                href="/legal/terms"
-                className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
-              >
-                {t(language, "auth.register.terms")}
-              </Link>
-              ,{" "}
-              <Link
-                href="/legal/privacy"
-                className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
-              >
-                {t(language, "auth.register.privacy")}
-              </Link>{" "}
-              và{" "}
-              <Link
-                href="/legal/consent"
-                className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
-              >
-                {t(language, "auth.register.medicalConsent")}
-              </Link>
-              .
-            </span>
-          </label>
-
-          {notice ? (
-            <p
-              role="status"
-              className="rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-ok-text)]"
-            >
-              {notice}
-            </p>
-          ) : null}
-          {error ? (
-            <p
-              role="alert"
-              className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-danger-text)]"
-            >
-              {error}
-            </p>
-          ) : null}
-
-          {needsVerificationLink ? (
-            <Link
-              href={`/verify-email?email=${encodeURIComponent(email)}`}
-              className="focus-ring inline-block rounded text-sm font-medium text-[var(--text-brand)] hover:underline"
-            >
-              {t(language, "auth.register.goToVerify")}
-            </Link>
-          ) : null}
-
-          <Button type="submit" block loading={isSubmitting} loadingLabel={t(language, "auth.register.submitting")}>
-            {t(language, "auth.register.submit")}
-          </Button>
-
-          <p className="text-sm text-[var(--text-secondary)]">
-            {t(language, "auth.register.hasAccount")} {" "}
-            <Link
-              href="/login"
-              className="focus-ring rounded font-medium text-[var(--text-brand)] hover:underline"
-            >
-              {t(language, "auth.login.submit")}
-            </Link>
+          <p className="text-xs text-[var(--text-secondary)]">
+            {t(language, "auth.register.passwordHint")}
           </p>
-        </form>
-      </SurfaceCard>
-    </main>
+        </div>
+
+        <div className="space-y-1.5">
+          <Field
+            id="register-confirm-password"
+            label={t(language, "auth.register.confirmPassword")}
+            type="password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            placeholder={t(language, "auth.register.confirmPasswordPlaceholder")}
+            autoComplete="new-password"
+            minLength={8}
+            required
+            aria-invalid={confirmPasswordError ? true : undefined}
+          />
+          {confirmPasswordError ? (
+            <p role="alert" className="text-xs font-medium text-[var(--status-danger-text)]">
+              {confirmPasswordError}
+            </p>
+          ) : (
+            <p className="text-xs text-[var(--text-secondary)]">
+              {t(language, "auth.register.confirmPasswordHint")}
+            </p>
+          )}
+        </div>
+
+        <Select
+          id="register-role"
+          label={t(language, "auth.register.role")}
+          value={role}
+          onChange={(event) => setRole(event.target.value as UserRole)}
+        >
+          <option value="normal">{t(language, "auth.register.role.normal")}</option>
+          <option value="researcher">{t(language, "auth.register.role.researcher")}</option>
+          <option value="doctor">{t(language, "auth.register.role.doctor")}</option>
+        </Select>
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+          <input
+            type="checkbox"
+            checked={acceptedLegal}
+            onChange={(event) => setAcceptedLegal(event.target.checked)}
+            className="focus-ring mt-1 h-4 w-4 rounded border-[color:var(--shell-border-strong)] text-[var(--brand-500)]"
+          />
+          <span className="text-xs leading-5 text-[var(--text-secondary)]">
+            {t(language, "auth.register.acceptLegal")}{" "}
+            <Link
+              href="/legal/terms"
+              className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
+            >
+              {t(language, "auth.register.terms")}
+            </Link>
+            ,{" "}
+            <Link
+              href="/legal/privacy"
+              className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
+            >
+              {t(language, "auth.register.privacy")}
+            </Link>{" "}
+            và{" "}
+            <Link
+              href="/legal/consent"
+              className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
+            >
+              {t(language, "auth.register.medicalConsent")}
+            </Link>
+            .
+          </span>
+        </label>
+
+        {notice ? (
+          <p
+            role="status"
+            className="rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-ok-text)]"
+          >
+            {notice}
+          </p>
+        ) : null}
+
+        {error ? (
+          <p
+            role="alert"
+            className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-danger-text)]"
+          >
+            {error}
+          </p>
+        ) : null}
+
+        {needsVerificationLink ? (
+          <Link
+            href={`/verify-email?email=${encodeURIComponent(email)}`}
+            className="focus-ring inline-block rounded text-sm font-medium text-[var(--text-brand)] hover:underline"
+          >
+            {t(language, "auth.register.goToVerify")}
+          </Link>
+        ) : null}
+
+        <Button
+          type="submit"
+          block
+          loading={isSubmitting}
+          loadingLabel={t(language, "auth.register.submitting")}
+        >
+          {t(language, "auth.register.submit")}
+        </Button>
+
+        <div className="pt-2 text-center text-sm text-[var(--text-secondary)]">
+          <span>{t(language, "auth.register.hasAccount")} </span>
+          <Link
+            href="/login"
+            className="focus-ring rounded font-semibold text-[var(--text-brand)] hover:underline"
+          >
+            {t(language, "auth.login.submit")}
+          </Link>
+        </div>
+      </form>
+    </AuthFormShell>
   );
 }

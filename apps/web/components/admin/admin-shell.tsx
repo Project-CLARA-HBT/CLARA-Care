@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { ReactNode } from "react";
+import AdminCommandStrip from "./admin-command-strip";
 
 export type AdminTabKey =
   | "overview"
@@ -7,7 +7,9 @@ export type AdminTabKey =
   | "answer-flow"
   | "observability"
   | "product-analytics"
-  | "clinical-analytics";
+  | "clinical-analytics"
+  | "users"
+  | (string & {});
 
 type AdminShellProps = {
   activeTab: AdminTabKey;
@@ -16,105 +18,20 @@ type AdminShellProps = {
   children: ReactNode;
 };
 
-const ADMIN_TABS: Array<{
-  key: AdminTabKey;
-  href: string;
-  label: string;
-  hint: string;
-  code: string;
-}> = [
-  {
-    key: "overview",
-    href: "/admin/overview",
-    label: "Tổng quan",
-    hint: "Toàn cảnh cấu hình và trạng thái",
-    code: "A01"
-  },
-  {
-    key: "knowledge-sources",
-    href: "/admin/knowledge-sources",
-    label: "Nguồn tri thức",
-    hint: "Kho tri thức và connector truy xuất",
-    code: "A02"
-  },
-  {
-    key: "answer-flow",
-    href: "/admin/answer-flow",
-    label: "Luồng trả lời",
-    hint: "Flow flags và runtime debug",
-    code: "A03"
-  },
-  {
-    key: "observability",
-    href: "/admin/observability",
-    label: "Giám sát",
-    hint: "Health, metrics và signal board",
-    code: "A04"
-  },
-  {
-    key: "product-analytics",
-    href: "/admin/analytics",
-    label: "Phân tích sản phẩm",
-    hint: "Người dùng, Surface và giữ chân",
-    code: "A05"
-  },
-  {
-    key: "clinical-analytics",
-    href: "/admin/analytics/clinical",
-    label: "Phân tích lâm sàng",
-    hint: "Kiểm chứng, DDI và độ trễ",
-    code: "A06"
-  }
-];
-
-export default function AdminShell({ activeTab, title, description, children }: AdminShellProps) {
+export default function AdminShell({
+  activeTab,
+  title,
+  description,
+  children,
+}: AdminShellProps) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="sr-only">
         <h2>{title}</h2>
         <p>{description}</p>
       </div>
 
-      <nav
-        className="rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5"
-        aria-label="Admin navigation"
-      >
-        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
-          {ADMIN_TABS.map((tab) => {
-            const isActive = tab.key === activeTab;
-            return (
-              <li key={tab.key}>
-                <Link
-                  href={tab.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={[
-                    "group flex min-h-[90px] flex-col justify-between rounded-[var(--radius-lg)] border p-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-primary)]/15",
-                    isActive
-                      ? "border-[color:var(--brand-600)] bg-[var(--brand-600)] text-[#cdd7ff]"
-                      : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:border-[color:var(--shell-border-strong)] hover:text-[var(--text-primary)]"
-                  ].join(" ")}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold">{tab.label}</span>
-                    <span
-                      className={[
-                        "inline-flex min-w-[2rem] items-center justify-center rounded-lg border px-2 py-0.5 text-[11px] font-semibold",
-                        isActive
-                          ? "border-[#cdd7ff]/30 bg-[#00174b]/25 text-[#cdd7ff]"
-                          : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-muted)]"
-                      ].join(" ")}
-                      aria-hidden="true"
-                    >
-                      {tab.code}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs leading-relaxed text-[var(--text-muted)]">{tab.hint}</p>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+      <AdminCommandStrip activeTab={activeTab} />
 
       {children}
     </div>

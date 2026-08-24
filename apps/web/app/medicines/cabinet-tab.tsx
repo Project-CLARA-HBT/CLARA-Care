@@ -7,6 +7,7 @@ import { SurfaceCard, EmptyState, InlineError } from "@/components/ui/surface";
 import Icon from "@/components/ui/icon";
 import MedicalConsentGate from "@/components/medicines/medical-consent-gate";
 import { CabinetItem, deleteCabinetItem, getCabinet } from "@/lib/selfmed";
+import { createMedicationCourse } from "@/lib/medication-courses";
 import { trackCareguardViewed } from "@/lib/analytics/events";
 import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
@@ -178,6 +179,34 @@ export default function MedicinesCabinetTab() {
     }
   };
 
+  const onConvertToActive = async (item: CabinetItem) => {
+    setNotice("");
+    setError("");
+    try {
+      await createMedicationCourse({
+        medication_name: item.drug_name,
+        dose_text: item.dosage || undefined,
+        form_text: item.dosage_form || undefined,
+        route_text: language === "en" ? "oral" : "uống",
+        schedule_text: language === "en" ? "1 dose daily" : "Uống hàng ngày",
+      });
+      setNotice(
+        language === "en"
+          ? `Promoted "${item.drug_name}" to active medication list.`
+          : `Đã chuyển "${item.drug_name}" thành thuốc đang dùng.`,
+      );
+    } catch (cause) {
+      setError(
+        safeUserFacingError(
+          cause,
+          language === "en"
+            ? "Unable to convert item to active course."
+            : "Không thể chuyển thuốc vào đơn đang dùng.",
+        ),
+      );
+    }
+  };
+
   return (
     <MedicalConsentGate>
       <div className="space-y-6">
@@ -320,17 +349,27 @@ export default function MedicinesCabinetTab() {
                       </div>
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end">
                       <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">{t(language, "medicines.cabinet.quantity")}</p>
                       <p className="text-xl font-extrabold text-[var(--text-primary)]">{formatLocaleNumber(language, item.quantity)}</p>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        className="mt-3"
-                        onClick={() => void onDelete(item.id)}
-                      >
-                        {t(language, "medicines.cabinet.delete")}
-                      </Button>
+                      <div className="flex flex-wrap gap-1.5 mt-3 justify-end">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          icon="medication"
+                          onClick={() => void onConvertToActive(item)}
+                          title={language === "en" ? "Promote to active taking medication" : "Chuyển thành thuốc đang dùng"}
+                        >
+                          {language === "en" ? "Use as active" : "Dùng thuốc này"}
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => void onDelete(item.id)}
+                        >
+                          {t(language, "medicines.cabinet.delete")}
+                        </Button>
+                      </div>
                     </div>
                   </div>
 

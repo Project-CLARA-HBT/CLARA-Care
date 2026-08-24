@@ -15,6 +15,7 @@
     "consumer-terminology:check": "node scripts/generate-consumer-terminology.mjs --check && node scripts/check-consumer-terminology-contract.mjs",
     "i18n:check": "node scripts/check-i18n.mjs",
     "route-matrix:check": "node scripts/check-route-capability-matrix.mjs",
+    "route-layout:check": "node scripts/check-route-layout-registry.mjs",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run",

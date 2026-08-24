@@ -1,13 +1,15 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Field } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
 import Icon, { type IconName } from "@/components/ui/icon";
-import { t } from "@/lib/i18n/catalog";
+import ActionObject from "@/components/ui/action-object";
+import EditorialSection from "@/components/ui/editorial-section";
+import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 import {
@@ -16,6 +18,8 @@ import {
   getMedicationCourses,
   type MedicationCourse,
 } from "@/lib/medication-courses";
+import { CabinetItem, getCabinet } from "@/lib/selfmed";
+import { requiresTwoMedicines } from "@/lib/careguard";
 
 const FIRST_RUN_ICON: Record<string, IconName> = {
   add_circle: "plus",
@@ -26,9 +30,12 @@ const FIRST_RUN_ICON: Record<string, IconName> = {
 export default function MedicinesListTab() {
   const language = useUILanguage();
   const [courses, setCourses] = useState<MedicationCourse[]>([]);
+  const [cabinetItems, setCabinetItems] = useState<CabinetItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Edit form state
   const [name, setName] = useState("");
   const [dose, setDose] = useState("");
   const [schedule, setSchedule] = useState("");
@@ -40,7 +47,12 @@ export default function MedicinesListTab() {
     setLoading(true);
     setError("");
     try {
-      setCourses(await getMedicationCourses());
+      const [coursesData, cabinetData] = await Promise.all([
+        getMedicationCourses(),
+        getCabinet().catch(() => ({ cabinet_id: 0, label: "", items: [] })),
+      ]);
+      setCourses(coursesData);
+      setCabinetItems(cabinetData.items ?? []);
     } catch (cause) {
       setError(safeUserFacingError(cause, t(language, "medicines.list.loadError")));
     } finally {
@@ -94,11 +106,7 @@ export default function MedicinesListTab() {
   };
 
   const end = async (course: MedicationCourse) => {
-    if (
-      !window.confirm(
-        t(language, "medicines.list.endConfirm"),
-      )
-    ) {
+    if (!window.confirm(t(language, "medicines.list.endConfirm"))) {
       return;
     }
     setSaving(true);
@@ -117,39 +125,119 @@ export default function MedicinesListTab() {
     }
   };
 
-  const hasCourses = courses.length > 0;
+  // Domain 1: Active confirmed medications (taking)
+  const activeConfirmedCourses = useMemo(
+    () =>
+      courses.filter(
+        (c) => c.status === "active" && c.reconciliation_status === "matched",
+      ),
+    [courses],
+  );
+
+  // Domain 2: Needs confirmation / unverified proposals (unresolved)
+  const unresolvedCourses = useMemo(
+    () =>
+      courses.filter(
+        (c) => c.status === "active" && c.reconciliation_status !== "matched",
+      ),
+    [courses],
+  );
+
+  // Ended / past courses
+  const endedCourses = useMemo(
+    () => courses.filter((c) => c.status !== "active"),
+    [courses],
+  );
+
+  // Domain 3: Two-medicine interaction guard
+  const distinctMedicineNames = useMemo(() => {
+    const names = new Set<string>();
+    courses
+      .filter((c) => c.status === "active")
+      .forEach((c) => {
+        if (c.medication_name.trim()) names.add(c.medication_name.trim().toLowerCase());
+      });
+    cabinetItems.forEach((item) => {
+      if (item.drug_name.trim()) names.add(item.drug_name.trim().toLowerCase());
+    });
+    return Array.from(names);
+  }, [cabinetItems, courses]);
+
+  const needsMoreMedicinesForDdi = requiresTwoMedicines(distinctMedicineNames);
+
+  // Domain 4: Cabinet inventory stats & expiry
+  const cabinetStats = useMemo(() => {
+    const now = Date.now();
+    const in30Days = now + 30 * 24 * 60 * 60 * 1000;
+    let expired = 0;
+    let expiringSoon = 0;
+    let missingDosage = 0;
+
+    cabinetItems.forEach((item) => {
+      if (!String(item.dosage ?? "").trim()) {
+        missingDosage += 1;
+      }
+      if (!item.expires_on) return;
+      const expiresAt = Date.parse(item.expires_on);
+      if (!Number.isFinite(expiresAt)) return;
+      if (expiresAt < now) {
+        expired += 1;
+      } else if (expiresAt <= in30Days) {
+        expiringSoon += 1;
+      }
+    });
+
+    return {
+      total: cabinetItems.length,
+      expired,
+      expiringSoon,
+      missingDosage,
+    };
+  }, [cabinetItems]);
+
+  const hasAnyCourses = courses.length > 0;
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="space-y-5">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="space-y-8">
         {error ? <InlineError message={error} onRetry={() => void load()} /> : null}
 
         {loading ? (
-          <LoadingCards count={2} />
+          <LoadingCards count={3} />
         ) : (
           <>
-            <SurfaceCard className="overflow-hidden">
-              {hasCourses ? (
-                <>
-                  <div className="flex flex-col gap-3 border-b border-[color:var(--shell-border)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h2 className="font-semibold text-[var(--text-primary)]">{t(language, "medicines.list.trackedTitle")}</h2>
-                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                        {t(language, "medicines.list.trackedDescription")}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button as="link" href="/medicines/add" size="sm" icon="add">
-                        {t(language, "medicines.list.addStepByStep")}
-                      </Button>
-                      <Button as="link" href="/medicines?tab=safety" size="sm" variant="secondary" icon="labs">
-                        {t(language, "medicines.list.openSafety")}
-                      </Button>
-                    </div>
+            {/* ================================================================= */}
+            {/* DOMAIN 1: Current / Confirmed Active Medications (taking)         */}
+            {/* ================================================================= */}
+            <EditorialSection
+              id="active-taking-domain"
+              eyebrow={t(language, "medicines.list.active")}
+              title={t(language, "medicines.workspace.activeTaking.title")}
+              description={t(language, "medicines.workspace.activeTaking.desc")}
+              variant="card"
+              action={
+                hasAnyCourses ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button as="link" href="/medicines/add" size="sm" icon="add">
+                      {t(language, "medicines.list.addStepByStep")}
+                    </Button>
+                    <Button
+                      as="link"
+                      href="/medicines?tab=safety"
+                      size="sm"
+                      variant="secondary"
+                      icon="labs"
+                    >
+                      {t(language, "medicines.list.openSafety")}
+                    </Button>
                   </div>
+                ) : null
+              }
+            >
+              {activeConfirmedCourses.length > 0 ? (
                 <ul className="divide-y divide-[color:var(--shell-border)]">
-                  {courses.map((course) => (
-                    <li key={course.id} className="flex items-start gap-3 px-5 py-4">
+                  {activeConfirmedCourses.map((course) => (
+                    <li key={course.id} className="flex items-start gap-3.5 py-4 first:pt-1 last:pb-1">
                       <span
                         className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
                         aria-hidden="true"
@@ -157,17 +245,23 @@ export default function MedicinesListTab() {
                         <Icon name="medication" aria-hidden="true" />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-[var(--text-primary)]">
-                          {course.medication_name}
-                        </p>
-                        <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-[var(--text-primary)]">
+                            {course.medication_name}
+                          </p>
+                          <Badge tone="brand" icon="check_circle">
+                            {t(language, "medicines.list.reconciled")}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-sm text-[var(--text-secondary)]">
                           {[
                             course.dose_text,
                             course.schedule_text,
                             course.route_text,
                             course.form_text,
-                          ].filter(Boolean).join(" · ") ||
-                            t(language, "medicines.list.noDoseOrSchedule")}
+                          ]
+                            .filter(Boolean)
+                            .join(" · ") || t(language, "medicines.list.noDoseOrSchedule")}
                         </p>
                         {course.drugbank_id ? (
                           <p className="mt-1 text-xs text-[var(--text-muted)]">
@@ -176,20 +270,8 @@ export default function MedicinesListTab() {
                         ) : null}
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-2">
-                        <Badge
-                          tone={course.status === "active" ? "ok" : "neutral"}
-                          icon={course.status === "active" ? "check_circle" : "history"}
-                        >
-                          {course.status === "active" ? t(language, "medicines.list.active") : t(language, "medicines.list.ended")}
-                        </Badge>
-                        <Badge
-                          tone={
-                            course.reconciliation_status === "matched" ? "brand" : "warn"
-                          }
-                        >
-                          {course.reconciliation_status === "matched"
-                            ? t(language, "medicines.list.reconciled")
-                            : t(language, "medicines.list.notReconciled")}
+                        <Badge tone="ok" icon="check_circle">
+                          {t(language, "medicines.list.active")}
                         </Badge>
                         <div className="flex gap-1">
                           <Button
@@ -200,24 +282,30 @@ export default function MedicinesListTab() {
                           >
                             {t(language, "medicines.list.edit")}
                           </Button>
-                          {course.status === "active" ? (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              icon="stop_circle"
-                              onClick={() => void end(course)}
-                            >
-                              {t(language, "medicines.list.end")}
-                            </Button>
-                          ) : null}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            icon="stop_circle"
+                            onClick={() => void end(course)}
+                          >
+                            {t(language, "medicines.list.end")}
+                          </Button>
                         </div>
                       </div>
                     </li>
                   ))}
                 </ul>
-                </>
+              ) : hasAnyCourses ? (
+                <div className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5 text-center">
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    {t(language, "medicines.workspace.activeTaking.empty")}
+                  </p>
+                  <Button as="link" href="/medicines/add" size="sm" icon="add" className="mt-3">
+                    {t(language, "medicines.list.addStepByStep")}
+                  </Button>
+                </div>
               ) : (
-                <div className="px-5 py-8 sm:px-8 sm:py-12">
+                <div className="py-6 sm:py-8">
                   <EmptyState
                     icon="medication"
                     title={t(language, "medicines.list.emptyTitle")}
@@ -233,25 +321,299 @@ export default function MedicinesListTab() {
                       ["fact_check", t(language, "medicines.list.firstRun.confirm")],
                       ["health_and_safety", t(language, "medicines.list.firstRun.safety")],
                     ].map(([icon, label], index) => (
-                      <li key={String(icon)} className="flex items-center gap-3 text-left sm:flex-col sm:text-center">
+                      <li
+                        key={String(icon)}
+                        className="flex items-center gap-3 text-left sm:flex-col sm:text-center"
+                      >
                         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--surface-muted)] text-[var(--text-brand)]">
-                          <Icon name={FIRST_RUN_ICON[String(icon)] ?? "clinical-notes"} size={18} aria-hidden="true" />
+                          <Icon
+                            name={FIRST_RUN_ICON[String(icon)] ?? "clinical-notes"}
+                            size={18}
+                            aria-hidden="true"
+                          />
                         </span>
                         <span className="text-sm text-[var(--text-secondary)]">
-                          <span className="mr-1 font-semibold text-[var(--text-primary)]">{index + 1}.</span>{label}
+                          <span className="mr-1 font-semibold text-[var(--text-primary)]">
+                            {index + 1}.
+                          </span>
+                          {label}
                         </span>
                       </li>
                     ))}
                   </ol>
                 </div>
               )}
-            </SurfaceCard>
+            </EditorialSection>
 
+            {/* ================================================================= */}
+            {/* DOMAIN 2: Needs Confirmation / Unverified Proposals (unresolved)  */}
+            {/* ================================================================= */}
+            <EditorialSection
+              id="unresolved-proposals-domain"
+              eyebrow={t(language, "medicines.cabinet.normalization.review")}
+              title={t(language, "medicines.workspace.unresolved.title")}
+              description={t(language, "medicines.workspace.unresolved.desc")}
+              variant="card"
+            >
+              {unresolvedCourses.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3.5 text-xs font-semibold text-[var(--status-warn-text)]">
+                    <p>
+                      {t(language, "medicines.workspace.unresolved.pendingCount", {
+                        count: formatLocaleNumber(language, unresolvedCourses.length),
+                      })}
+                    </p>
+                  </div>
+                  <ul className="divide-y divide-[color:var(--shell-border)]">
+                    {unresolvedCourses.map((course) => (
+                      <li
+                        key={course.id}
+                        className="flex items-start gap-3.5 py-4 first:pt-1 last:pb-1"
+                      >
+                        <span
+                          className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
+                          aria-hidden="true"
+                        >
+                          <Icon name="warning" aria-hidden="true" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-[var(--text-primary)]">
+                              {course.medication_name}
+                            </p>
+                            <Badge tone="warn">
+                              {t(language, "medicines.list.notReconciled")}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                            {[
+                              course.dose_text,
+                              course.schedule_text,
+                              course.route_text,
+                              course.form_text,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ") || t(language, "medicines.list.noDoseOrSchedule")}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-1">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            icon="edit"
+                            onClick={() => edit(course)}
+                          >
+                            {t(language, "medicines.list.edit")}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            icon="stop_circle"
+                            onClick={() => void end(course)}
+                          >
+                            {t(language, "medicines.list.end")}
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 rounded-xl border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-4 text-xs font-semibold text-[var(--status-ok-text)]">
+                  <Icon name="check" size={18} />
+                  <span>{t(language, "medicines.workspace.unresolved.allReconciled")}</span>
+                </div>
+              )}
+            </EditorialSection>
+
+            {/* ================================================================= */}
+            {/* DOMAIN 3: Drug Interaction Safety ActionObject                    */}
+            {/* ================================================================= */}
+            <div id="ddi-safety-domain" className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
+                {t(language, "medicines.safety.module")}
+              </p>
+              <ActionObject
+                title={t(language, "medicines.workspace.ddi.title")}
+                description={t(language, "medicines.workspace.ddi.desc")}
+                badge={t(language, "medicines.workspace.ddi.badge")}
+                tone={needsMoreMedicinesForDdi ? "warning" : "brand"}
+                icon="labs"
+                highlights={[
+                  t(language, "medicines.workspace.ddi.highlight1"),
+                  t(language, "medicines.workspace.ddi.highlight2"),
+                  t(language, "medicines.workspace.ddi.highlight3"),
+                ]}
+                actionLabel={t(language, "medicines.workspace.ddi.action")}
+                href="/medicines?tab=safety"
+              >
+                <div className="mt-2 rounded-lg border border-[color:var(--shell-border)]/60 bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+                  {needsMoreMedicinesForDdi ? (
+                    <span className="font-medium text-[var(--status-warn-text)]">
+                      {t(language, "medicines.workspace.ddi.needsTwo")}
+                    </span>
+                  ) : (
+                    <span className="font-medium text-[var(--status-ok-text)]">
+                      {t(language, "medicines.workspace.ddi.ready", {
+                        count: formatLocaleNumber(language, distinctMedicineNames.length),
+                      })}
+                    </span>
+                  )}
+                </div>
+              </ActionObject>
+            </div>
+
+            {/* ================================================================= */}
+            {/* DOMAIN 4: Home Medicine Cabinet (cabinet_stored)                  */}
+            {/* ================================================================= */}
+            <EditorialSection
+              id="cabinet-stored-domain"
+              eyebrow={t(language, "medicines.cabinet.defaultLabel")}
+              title={t(language, "medicines.workspace.cabinet.title")}
+              description={t(language, "medicines.workspace.cabinet.desc")}
+              variant="card"
+              action={
+                <div className="flex flex-wrap gap-2">
+                  <Button as="link" href="/medicines/cabinet/add" size="sm" icon="add">
+                    {t(language, "medicines.workspace.cabinet.add")}
+                  </Button>
+                  <Button as="link" href="/medicines?tab=cabinet" size="sm" variant="secondary">
+                    {t(language, "medicines.workspace.cabinet.viewAll")}
+                  </Button>
+                </div>
+              }
+            >
+              {/* Invariant callout: possession vs active usage */}
+              <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3.5 text-xs text-[var(--text-secondary)]">
+                <div className="flex items-start gap-2.5">
+                  <Icon name="warning" size={16} className="mt-0.5 shrink-0 text-[var(--text-brand)]" />
+                  <p>{t(language, "medicines.workspace.cabinet.disclaimer")}</p>
+                </div>
+              </div>
+
+              {/* Cabinet metrics summary */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                    {t(language, "medicines.cabinet.currentList")}
+                  </p>
+                  <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
+                    {formatLocaleNumber(language, cabinetStats.total)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                    {t(language, "medicines.cabinet.expiry")}
+                  </p>
+                  <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
+                    {cabinetStats.expired > 0 ? (
+                      <span className="text-[var(--status-danger-text)]">
+                        {t(language, "medicines.cabinet.expiredCount", {
+                          count: formatLocaleNumber(language, cabinetStats.expired),
+                        })}
+                      </span>
+                    ) : cabinetStats.expiringSoon > 0 ? (
+                      <span className="text-[var(--status-warn-text)]">
+                        {t(language, "medicines.cabinet.expiringCount", {
+                          count: formatLocaleNumber(language, cabinetStats.expiringSoon),
+                        })}
+                      </span>
+                    ) : (
+                      t(language, "medicines.cabinet.noneExpired")
+                    )}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                    {t(language, "medicines.cabinet.completeness")}
+                  </p>
+                  <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
+                    {cabinetStats.missingDosage > 0
+                      ? t(language, "medicines.cabinet.missingDose", {
+                          count: formatLocaleNumber(language, cabinetStats.missingDosage),
+                        })
+                      : t(language, "medicines.cabinet.basicDataReady")}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                    {t(language, "medicines.cabinet.defaultLabel")}
+                  </p>
+                  <Link
+                    href="/medicines?tab=cabinet"
+                    className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-brand)] hover:underline"
+                  >
+                    {t(language, "medicines.list.openCabinet")}
+                    <Icon name="arrow-right" size={14} />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Quick cabinet items preview */}
+              {cabinetItems.length > 0 ? (
+                <ul className="divide-y divide-[color:var(--shell-border)]">
+                  {cabinetItems.slice(0, 3).map((item) => (
+                    <li key={item.id} className="flex items-center justify-between py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-[var(--text-primary)]">{item.drug_name}</p>
+                        <p className="text-xs text-[var(--text-secondary)]">
+                          {[
+                            item.dosage || t(language, "medicines.cabinet.notAvailable"),
+                            item.brand_name,
+                            item.expires_on
+                              ? t(language, "medicines.cabinet.expiryValue", {
+                                  date: formatLocaleDate(language, new Date(item.expires_on)),
+                                })
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      </div>
+                      <Badge tone={item.source === "ocr" ? "brand" : "neutral"}>
+                        {item.source === "ocr" ? "OCR" : t(language, "medicines.cabinet.source.manual")}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="py-2 text-center text-xs text-[var(--text-muted)]">
+                  {t(language, "medicines.workspace.cabinet.empty")}
+                </p>
+              )}
+            </EditorialSection>
+
+            {/* Ended / Past courses archive if any */}
+            {endedCourses.length > 0 && (
+              <EditorialSection
+                id="ended-courses-archive"
+                eyebrow={t(language, "medicines.list.ended")}
+                title={t(language, "medicines.list.ended")}
+                variant="subtle"
+              >
+                <ul className="divide-y divide-[color:var(--shell-border)]/60">
+                  {endedCourses.map((course) => (
+                    <li key={course.id} className="flex items-center justify-between py-3">
+                      <div>
+                        <p className="font-medium text-[var(--text-secondary)] line-through">
+                          {course.medication_name}
+                        </p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          {course.dose_text || t(language, "medicines.list.noDoseOrSchedule")}
+                        </p>
+                      </div>
+                      <Badge tone="neutral">{t(language, "medicines.list.ended")}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              </EditorialSection>
+            )}
           </>
         )}
       </div>
 
-      <aside className="space-y-5">
+      {/* Aside: Edit form & Context panel */}
+      <aside className="space-y-6">
         {editing ? (
           <SurfaceCard className="p-5">
             <h2 className="font-semibold text-[var(--text-primary)]">
@@ -313,7 +675,9 @@ export default function MedicinesListTab() {
         ) : null}
 
         <SurfaceCard className="p-5">
-          <h2 className="font-semibold text-[var(--text-primary)]">{t(language, "medicines.list.cabinetTitle")}</h2>
+          <h2 className="font-semibold text-[var(--text-primary)]">
+            {t(language, "medicines.list.cabinetTitle")}
+          </h2>
           <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
             {t(language, "medicines.list.cabinetDescription")}
           </p>

@@ -27,6 +27,7 @@ export const PUBLIC_ROUTES = new Set([
   "/forgot-password",
   "/reset-password",
   "/verify-email",
+  "/auth/callback",
 ]);
 
 export const DEFAULT_POST_LOGIN_PATH = "/home";
@@ -87,6 +88,7 @@ export function isPublicRoute(pathname: string): boolean {
   return (
     PUBLIC_ROUTES.has(pathname) ||
     pathname.startsWith("/share/") ||
+    pathname.startsWith("/chat/share/") ||
     pathname.startsWith("/phr/shared/")
   );
 }

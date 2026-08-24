@@ -1,299 +1,565 @@
 "use client";
 
-import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import PageShell from "@/components/ui/page-shell";
-import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
 import Button from "@/components/ui/button";
-import { Field, Select, Textarea } from "@/components/ui/field";
-import { Tabs } from "@/components/ui/tabs";
+import { Icon } from "@/components/ui/icon";
+import { HeroObject } from "@/components/ui/hero-object";
+import {
+  Timeline,
+  TimelineContent,
+  TimelineItem,
+  TimelineNode,
+} from "@/components/ui/timeline";
+import { EmptyState } from "@/components/ui/empty-state";
+import { InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 import {
-  addVisitConcern, answerVisitIntake, approveVisitPack, confirmVisitPlan,
-  createVisitDocument, createVisitPack, deleteVisitDocument, extractVisitPlan,
-  getVisitPackOptions,
-  grantVisitScribeConsent, listVisitDocuments, listVisits, revokeVisitScribeConsent,
-  revokeVisitShare, shareVisitPack, withdrawVisitDocument, withdrawVisitPlan,
-  type Visit, type VisitDocument, type VisitIntakeQuestion, type VisitPack,
-  type VisitPlanDraft, type VisitShare,
-  type VisitPackOptions,
+  grantVisitScribeConsent,
+  listVisitDocuments,
+  listVisits,
+  revokeVisitScribeConsent,
+  type Visit,
+  type VisitDocument,
 } from "@/lib/visit-family";
 
-type VisitStep = "concerns" | "records" | "questions" | "review";
-
-function isVisitStep(value: string | null): value is VisitStep {
-  return value === "concerns" || value === "records" || value === "questions" || value === "review";
+function getPrepStatusTone(status?: string): "ok" | "brand" | "warn" {
+  switch (status) {
+    case "completed":
+    case "ready":
+      return "ok";
+    case "in_progress":
+      return "brand";
+    case "not_started":
+    default:
+      return "warn";
+  }
 }
 
-const initialQuestion = (visit: Visit, language: "vi" | "en"): VisitIntakeQuestion => visit.goal.trim()
-  ? {
-    key: "main_concern",
-    text: t(language, "visits.initialQuestionWithGoal"),
-    reason: t(language, "visits.initialQuestionWithGoalReason"),
+function getPrepStatusLabel(
+  status: string | undefined,
+  copy: (key: UITranslationKey) => string,
+): string {
+  switch (status) {
+    case "completed":
+      return copy("visits.prepStatusCompleted");
+    case "ready":
+      return copy("visits.prepStatusReady");
+    case "in_progress":
+      return copy("visits.prepStatusInProgress");
+    case "not_started":
+    default:
+      return copy("visits.prepStatusNotStarted");
   }
-  : {
-    key: "visit_goal",
-    text: t(language, "visits.initialQuestionWithoutGoal"),
-    reason: t(language, "visits.initialQuestionWithoutGoalReason"),
-  };
-
-function candidateText(candidate: Record<string, unknown>, index: number, language: "vi" | "en") {
-  for (const key of ["text", "title", "instruction", "label", "name"]) {
-    if (typeof candidate[key] === "string" && String(candidate[key]).trim()) return String(candidate[key]).trim();
-  }
-  return t(language, "visits.extractedItem", { index: index + 1 });
 }
 
-function candidateSource(candidate: Record<string, unknown>): string {
-  const spans = candidate.source_spans;
-  if (Array.isArray(spans)) {
-    return spans
-      .map((span) =>
-        span && typeof span === "object" && typeof (span as { text?: unknown }).text === "string"
-          ? String((span as { text: string }).text).trim()
-          : "",
-      )
-      .filter(Boolean)
-      .join(" … ");
-  }
-  if (typeof candidate.source_span === "string") return candidate.source_span;
-  if (typeof candidate.source_text === "string") return candidate.source_text;
-  return "";
-}
-
-function VisitsWorkspace() {
+function VisitsTimelineStream() {
   const language = useUILanguage();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const requestedVisitId = searchParams.get("visit");
-  const requestedStep = searchParams.get("step");
-  const activeStep: VisitStep = isVisitStep(requestedStep) ? requestedStep : "concerns";
   const copy = useCallback(
     (key: UITranslationKey, values?: Record<string, string | number>) =>
       t(language, key, values ?? {}),
     [language],
   );
-  const [visits, setVisits] = useState<Visit[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [documents, setDocuments] = useState<VisitDocument[]>([]);
-  const [question, setQuestion] = useState<VisitIntakeQuestion | null>(null);
-  const [answer, setAnswer] = useState("");
-  const [progress, setProgress] = useState({ answered: 0, total: 0 });
-  const [complete, setComplete] = useState(false);
-  const [draft, setDraft] = useState<VisitPlanDraft | null>(null);
-  const [candidateIds, setCandidateIds] = useState<string[]>([]);
-  const [pack, setPack] = useState<VisitPack | null>(null);
-  const [packOptions, setPackOptions] = useState<VisitPackOptions>({
-    concerns: [],
-    episodes: [],
-    events: [],
-    medications: [],
-    instructions: [],
-  });
-  const [packSelection, setPackSelection] = useState<Record<string, boolean>>({});
-  const [share, setShare] = useState<VisitShare | null>(null);
-  const [consented, setConsented] = useState(false);
-  const [concern, setConcern] = useState("");
-  const [priority, setPriority] = useState("routine");
-  const [documentTitle, setDocumentTitle] = useState("");
-  const [documentText, setDocumentText] = useState("");
-  const [documentLink, setDocumentLink] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const selected = useMemo(() => visits.find((visit) => visit.id === selectedId) ?? null, [visits, selectedId]);
 
-  const changeStep = (key: string) => {
-    if (!isVisitStep(key) || !selectedId) return;
-    const next = new URLSearchParams(searchParams.toString());
-    next.set("visit", selectedId);
-    if (key === "concerns") next.delete("step");
-    else next.set("step", key);
-    router.replace(`/visits?${next.toString()}`, { scroll: false });
-  };
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [documentsMap, setDocumentsMap] = useState<Record<string, VisitDocument[]>>({});
+  const [scribeConsents, setScribeConsents] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+  const [savingConsent, setSavingConsent] = useState(false);
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
-      const next = await listVisits();
-      setVisits(next);
-      setSelectedId((current) =>
-        current || (requestedVisitId && next.some((visit) => visit.id === requestedVisitId)
-          ? requestedVisitId
-          : next[0]?.id || ""),
-      );
+      const result = await listVisits();
+      setVisits(result);
+
+      // Load documents for visits in parallel
+      if (result.length > 0) {
+        const docEntries = await Promise.all(
+          result.map(async (v) => {
+            try {
+              const docs = await listVisitDocuments(v.id);
+              return [v.id, docs] as const;
+            } catch {
+              return [v.id, []] as const;
+            }
+          }),
+        );
+        setDocumentsMap(Object.fromEntries(docEntries));
+      }
     } catch (cause) {
       setError(safeUserFacingError(cause, copy("visits.loadError")));
-    } finally { setLoading(false); }
-  }, [copy, requestedVisitId]);
-  useEffect(() => { void load(); }, [load]);
+    } finally {
+      setLoading(false);
+    }
+  }, [copy]);
+
   useEffect(() => {
-    if (!selectedId) { setDocuments([]); return; }
-    void Promise.all([
-      listVisitDocuments(selectedId),
-      getVisitPackOptions(selectedId),
-    ]).then(([nextDocuments, nextOptions]) => {
-      setDocuments(nextDocuments);
-      setPackOptions(nextOptions);
-      setPackSelection({});
-    }).catch((cause: unknown) =>
-      setError(safeUserFacingError(cause, copy("visits.loadVisitDataError"))),
+    void load();
+  }, [load]);
+
+  // Identify upcoming visit vs past visits
+  const now = useMemo(() => Date.now(), []);
+
+  const upcomingVisit = useMemo(() => {
+    if (!visits.length) return null;
+    return (
+      visits.find((v) => {
+        if (v.status === "completed" || v.status === "cancelled") return false;
+        if (!v.scheduled_at) return true;
+        return new Date(v.scheduled_at).getTime() >= now;
+      }) ??
+      visits.find((v) => v.status !== "completed") ??
+      visits[0]
     );
-  }, [copy, selectedId]);
-  useEffect(() => {
-    if (!share) return;
-    const timer = window.setTimeout(() => setShare(null), 60_000);
-    return () => window.clearTimeout(timer);
-  }, [share]);
+  }, [visits, now]);
 
-  const choose = (id: string) => {
-    setSelectedId(id); setQuestion(null); setComplete(false); setProgress({ answered: 0, total: 0 });
-    setDraft(null); setCandidateIds([]); setPack(null); setShare(null); setConsented(false); setPackSelection({});
-    router.replace(`/visits?visit=${encodeURIComponent(id)}`, { scroll: false });
-  };
-  const action = async (work: () => Promise<void>, fallback: string) => {
-    setSaving(true); setError("");
-    try { await work(); } catch (cause) { setError(safeUserFacingError(cause, fallback)); }
-    finally { setSaving(false); }
-  };
-  const submitIntake = (state: "answered" | "skipped" | "unknown") => {
-    if (!selectedId || !question) return;
-    if (state === "answered" && !answer.trim()) { setError(copy("visits.answerRequired")); return; }
-    void action(async () => {
-      const result = await answerVisitIntake(selectedId, { question_key: question.key, response_state: state, answer_text: state === "answered" ? answer.trim() : undefined });
-      setAnswer(""); setQuestion(result.next_question); setProgress(result.progress); setComplete(result.complete);
-    }, copy("visits.answerError"));
-  };
-  const saveDocument = (event: FormEvent) => {
-    event.preventDefault();
-    if (!selectedId) return;
-    void action(async () => {
-      const link = documentLink.trim();
-      if (link) new URL(link);
-      const text = file ? await file.text() : "";
-      if (!documentTitle.trim() && !file && !link) throw new Error(copy("visits.documentRequired"));
-      const created = await createVisitDocument(selectedId, {
-        title: documentTitle.trim() || file?.name || new URL(link).hostname,
-        text_content: documentText.trim() || text.trim() || undefined,
-        media_type: file?.type || (link ? "text/uri-list" : "text/plain"),
-        metadata: { capture: "user_selected", ...(file ? { source_file_name: file.name, source_file_size: file.size } : {}), ...(link ? { external_url: link } : {}) },
+  const pastVisits = useMemo(() => {
+    return visits
+      .filter((v) => v.id !== upcomingVisit?.id)
+      .sort((a, b) => {
+        const timeA = a.scheduled_at ? new Date(a.scheduled_at).getTime() : 0;
+        const timeB = b.scheduled_at ? new Date(b.scheduled_at).getTime() : 0;
+        return timeB - timeA;
       });
-      setDocuments((current) => [created, ...current]);
-      setDocumentTitle(""); setDocumentText(""); setDocumentLink(""); setFile(null);
-    }, copy("visits.documentSaveError"));
-  };
-  const changeDocument = (document: VisitDocument, kind: "withdraw" | "delete") => {
-    if (!selectedId) return;
-    void action(async () => {
-      const next = kind === "withdraw" ? await withdrawVisitDocument(selectedId, document.id) : await deleteVisitDocument(selectedId, document.id);
-      setDocuments((current) => current.map((item) => item.id === next.id ? next : item));
-    }, copy("visits.documentPermissionError"));
-  };
-  const extract = (document: VisitDocument) => {
-    if (!selectedId) return;
-    void action(async () => { setDraft(await extractVisitPlan(selectedId, document.id)); setCandidateIds([]); }, copy("visits.extractError"));
-  };
-  const confirm = () => {
-    if (!selectedId || !draft || !candidateIds.length) return;
-    void action(async () => {
-      await confirmVisitPlan(selectedId, { draft_id: draft.id, candidate_ids: candidateIds });
-      setDraft({ ...draft, status: "confirmed" });
-    }, copy("visits.confirmError"));
-  };
-  const withdrawDraft = () => {
-    if (!selectedId || !draft) return;
-    void action(async () => { await withdrawVisitPlan(selectedId, draft.id); setDraft({ ...draft, status: "withdrawn" }); setCandidateIds([]); }, copy("visits.withdrawDraftError"));
-  };
-  const addConcern = (event: FormEvent) => {
-    event.preventDefault();
-    if (!selectedId) return;
-    void action(async () => { await addVisitConcern(selectedId, concern.trim(), priority); setConcern(""); }, copy("visits.concernError"));
-  };
-  const makePack = () => {
-    if (!selectedId) return;
-    void action(async () => {
-      const selected = (items: Array<{ id: string }>) =>
-        items.filter((item) => packSelection[item.id]).map((item) => item.id);
-      const created = await createVisitPack(selectedId, {
-        concern_ids: selected(packOptions.concerns),
-        episode_ids: selected(packOptions.episodes),
-        event_ids: selected(packOptions.events),
-        medication_course_ids: selected(packOptions.medications),
-        instruction_candidate_ids: selected(packOptions.instructions),
-        questions: [],
-      });
-      setPack(await approveVisitPack(created.id)); setShare(null);
-    }, copy("visits.packError"));
-  };
-  const selectedPackCount = Object.values(packSelection).filter(Boolean).length;
-  const packGroups = [
-    { key: "concerns", label: copy("visits.groupConcerns"), items: packOptions.concerns },
-    { key: "medications", label: copy("visits.groupMedications"), items: packOptions.medications },
-    { key: "episodes", label: copy("visits.groupEpisodes"), items: packOptions.episodes },
-    { key: "events", label: copy("visits.groupEvents"), items: packOptions.events },
-    { key: "instructions", label: copy("visits.groupInstructions"), items: packOptions.instructions },
-  ];
-  const makeShare = () => {
-    if (!pack) return;
-    void action(async () => setShare(await shareVisitPack(pack.id, new Date(Date.now() + 604800000).toISOString())), copy("visits.shareCreateError"));
-  };
-  const removeShare = () => {
-    if (!pack || !share) return;
-    void action(async () => {
-      await revokeVisitShare(pack.id, share.id);
-      setShare(null);
-    }, copy("visits.shareRevokeError"));
-  };
-  const toggleConsent = () => {
-    if (!selectedId) return;
-    void action(async () => { if (consented) await revokeVisitScribeConsent(selectedId); else await grantVisitScribeConsent(selectedId); setConsented(!consented); }, copy("visits.scribeConsentError"));
+  }, [visits, upcomingVisit]);
+
+  const toggleScribeConsent = async (visitId: string) => {
+    setSavingConsent(true);
+    setError("");
+    const isCurrentlyConsented = Boolean(scribeConsents[visitId]);
+    try {
+      if (isCurrentlyConsented) {
+        await revokeVisitScribeConsent(visitId);
+      } else {
+        await grantVisitScribeConsent(visitId);
+      }
+      setScribeConsents((current) => ({
+        ...current,
+        [visitId]: !isCurrentlyConsented,
+      }));
+    } catch (cause) {
+      setError(safeUserFacingError(cause, copy("visits.scribeConsentError")));
+    } finally {
+      setSavingConsent(false);
+    }
   };
 
-  return <PageShell variant="plain" title={copy("visits.title")} description={copy("visits.description")}>
-    {error ? <InlineError message={error} onRetry={() => void load()} /> : null}
-    <div className="space-y-5">
-      <aside className="space-y-4">
-        <SurfaceCard className="overflow-hidden"><div className="border-b border-[color:var(--shell-border)] px-4 py-3"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy("visits.listEyebrow")}</p><h2 className="mt-1 font-semibold text-[var(--text-primary)]">{copy("visits.choose")}</h2></div>
-          {loading ? <div className="p-3"><LoadingCards count={2} /></div> : visits.length ? <div className="grid gap-2 p-2 sm:grid-cols-2 lg:grid-cols-3">{visits.map((visit) => <button key={visit.id} type="button" onClick={() => choose(visit.id)} aria-pressed={selectedId === visit.id} className={"focus-ring w-full rounded-[var(--radius-lg)] p-3 text-left transition " + (selectedId === visit.id ? "bg-[var(--surface-brand-soft)] ring-1 ring-[var(--brand-500)]" : "hover:bg-[var(--surface-muted)]")}><p className="font-medium text-[var(--text-primary)]">{visit.title}</p><p className="mt-1 text-xs text-[var(--text-secondary)]">{visit.scheduled_at ? formatLocaleDate(language, visit.scheduled_at, { dateStyle: "medium", timeStyle: "short" }) : copy("visits.noScheduledTime")}</p></button>)}</div> : <EmptyState icon="event_available" title={copy("visits.emptyTitle")} description={copy("visits.emptyDescription")} />}
-        </SurfaceCard>
-        <SurfaceCard className="p-4"><p className="text-sm font-semibold text-[var(--text-primary)]">{copy("visits.controlTitle")}</p><p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">{copy("visits.controlDescription")}</p></SurfaceCard>
-      </aside>
-      <main className="space-y-5">
-        {!selected && !loading ? <SurfaceCard><EmptyState icon="assignment" title={copy("visits.startTitle")} description={copy("visits.startDescription")}><Button as="link" href="/visits/new" icon="add">{copy("visits.createVisit")}</Button></EmptyState></SurfaceCard> : null}
-        {selected ? <><Tabs idBase="visit-preparation" ariaLabel={copy("visits.stepsLabel")} active={activeStep} onChange={changeStep} items={[{ key: "concerns", label: copy("visits.step.concerns"), icon: "symptoms" }, { key: "records", label: copy("visits.step.records"), icon: "folder_open" }, { key: "questions", label: copy("visits.step.questions"), icon: "help" }, { key: "review", label: copy("visits.step.review"), icon: "fact_check" }]} /><SurfaceCard className={activeStep === "concerns" ? "p-5" : "hidden"}><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy("visits.stepOne")}</p><h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{selected.title}</h2><p className="mt-1 text-sm text-[var(--text-secondary)]">{copy("visits.oneQuestionAtATime")}</p></div>{progress.total ? <Badge tone="neutral">{copy("visits.questionCount", { answered: progress.answered, total: progress.total })}</Badge> : null}</div>
-          {!question && !complete ? <Button type="button" className="mt-4" onClick={() => setQuestion(initialQuestion(selected, language))}>{copy("visits.startShortQuestions")}</Button> : null}
-          {question ? <div className="mt-4 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4"><p className="font-semibold text-[var(--text-primary)]">{question.text}</p><p className="mt-1 text-sm text-[var(--text-secondary)]">{question.reason}</p><Textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder={copy("visits.answerPlaceholder")} className="min-h-24" wrapperClassName="mt-3" /><div className="mt-3 flex flex-wrap gap-2"><Button type="button" disabled={saving} onClick={() => submitIntake("answered")}>{copy("visits.saveAndContinue")}</Button><Button type="button" variant="secondary" disabled={saving} onClick={() => submitIntake("skipped")}>{copy("visits.skip")}</Button><Button type="button" variant="secondary" disabled={saving} onClick={() => submitIntake("unknown")}>{copy("visits.unknown")}</Button></div></div> : null}
-          {complete ? <p className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-3 text-sm text-[var(--status-ok-text)]">{copy("visits.quickPrepComplete")}</p> : null}
-        </SurfaceCard>
-        <SurfaceCard className={activeStep === "records" ? "p-5" : "hidden"}><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy("visits.stepTwo")}</p><h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{copy("visits.addDocument")}</h2><p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{copy("visits.documentPrivacy")}</p>
-          <form className="mt-4 grid gap-3" onSubmit={saveDocument}><Field label={copy("visits.documentName")} value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /><label className="text-sm font-medium text-[var(--text-primary)]">{copy("visits.textFileOptional")}<input type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="mt-1.5 block w-full text-sm text-[var(--text-secondary)]" /></label><Textarea label={copy("visits.pasteContent")} value={documentText} onChange={(event) => setDocumentText(event.target.value)} className="min-h-20" /><Field label={copy("visits.pasteLink")} type="url" value={documentLink} onChange={(event) => setDocumentLink(event.target.value)} placeholder="https://…" /><Button type="submit" variant="secondary" className="justify-self-start" disabled={saving}>{copy("visits.saveSelectedItem")}</Button></form>
-          <div className="mt-5 space-y-2">{documents.length ? documents.map((document) => <div key={document.id} className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium text-[var(--text-primary)]">{document.title}</p><p className="mt-0.5 text-xs text-[var(--text-secondary)]">{document.deleted_at ? copy("visits.documentDeleted") : document.withdrawn_at ? copy("visits.documentWithdrawn") : document.status === "external_unverified" ? copy("visits.externalUnverified") : copy("visits.documentProcessing")}</p></div>{!document.deleted_at && !document.withdrawn_at ? <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="secondary" disabled={saving} onClick={() => extract(document)}>{copy("visits.checkPlan")}</Button><Button type="button" size="sm" variant="secondary" disabled={saving} onClick={() => changeDocument(document, "withdraw")}>{copy("visits.withdrawFromProcessing")}</Button><Button type="button" size="sm" variant="danger" disabled={saving} onClick={() => changeDocument(document, "delete")}>{copy("visits.deleteContent")}</Button></div> : null}</div></div>) : <p className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3 text-sm text-[var(--text-secondary)]">{copy("visits.noDocuments")}</p>}</div>
-        </SurfaceCard>
-        {draft ? <SurfaceCard className={activeStep === "records" ? "p-5" : "hidden"}><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy("visits.stepThree")}</p><h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{copy("visits.confirmBeforeTasks")}</h2>
-          {draft.safe_unavailable || !draft.candidates.length ? <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-4 text-sm text-[var(--status-warn-text)]"><p className="font-semibold">{copy("visits.noPlanTitle")}</p><p className="mt-1">{draft.reason || copy("visits.noPlanReason")}</p></div> : <div className="mt-4 space-y-2"><p className="text-sm text-[var(--text-secondary)]">{copy("visits.draftGuidance")}</p>{draft.candidates.map((candidate, index) => { const source = candidateSource(candidate); const checked = candidateIds.includes(candidate.id); const confirmable = Boolean(source) && candidate.classification === "clinician_instruction"; return <label key={candidate.id} className="block rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"><span className="flex gap-3"><input type="checkbox" disabled={!confirmable} checked={checked} onChange={() => setCandidateIds((current) => checked ? current.filter((id) => id !== candidate.id) : [...current, candidate.id])} className="mt-1 h-4 w-4 accent-[var(--brand-600)]" /><span><span className="block font-medium text-[var(--text-primary)]">{candidateText(candidate, index, language)}</span><span className="mt-1 block text-xs font-medium text-[var(--text-muted)]">{candidate.classification === "clinician_instruction" ? copy("visits.clinicianInstruction") : copy("visits.aiInterpretation")}</span><span className="mt-1 block text-sm text-[var(--text-secondary)]">{source ? copy("visits.source", { source }) : copy("visits.noSource")}</span></span></span></label>; })}</div>}
-          <div className="mt-4 flex flex-wrap gap-2">{draft.candidates.length && !draft.safe_unavailable ? <Button type="button" disabled={saving || !candidateIds.length || draft.status === "confirmed"} onClick={confirm}>{draft.status === "confirmed" ? copy("visits.confirmed") : copy("visits.confirmSelected")}</Button> : null}{draft.status !== "withdrawn" && draft.status !== "confirmed" ? <Button type="button" variant="secondary" disabled={saving} onClick={withdrawDraft}>{copy("visits.withdrawDraft")}</Button> : null}</div>
-        </SurfaceCard> : null}
-        <SurfaceCard className={activeStep === "review" ? "p-5" : "hidden"}><div className="flex flex-col gap-4 sm:flex-row sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy("visits.stepFour")}</p><h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{copy("visits.selectAndApprove")}</h2><p className="mt-1 text-sm text-[var(--text-secondary)]">{copy("visits.packPrivacy")}</p></div><Button type="button" disabled={saving || selectedPackCount === 0} onClick={makePack}>{pack ? copy("visits.createNewVersion") : copy("visits.createAndApprove", { count: selectedPackCount })}</Button></div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">{packGroups.map((group) => <fieldset key={group.key} className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"><legend className="px-1 text-sm font-semibold text-[var(--text-primary)]">{group.label}</legend>{group.items.length ? <div className="mt-1 space-y-2">{group.items.map((item) => <label key={item.id} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]"><input type="checkbox" checked={Boolean(packSelection[item.id])} onChange={(event) => setPackSelection((current) => ({ ...current, [item.id]: event.target.checked }))} className="mt-1 h-4 w-4 accent-[var(--brand-600)]" /><span>{item.label}</span></label>)}</div> : <p className="mt-1 text-xs text-[var(--text-muted)]">{copy("visits.noMatchingItems")}</p>}</fieldset>)}</div>
-          {pack ? <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-4"><p className="font-semibold text-[var(--status-ok-text)]">{copy("visits.approvedVersion", { version: pack.version_no })}</p><Button type="button" size="sm" className="mt-3" disabled={saving || Boolean(share)} onClick={makeShare}>{copy("visits.createShare")}</Button>{share ? <><code className="mt-3 block break-all rounded-[var(--radius-md)] bg-[var(--surface-panel)] p-3 text-xs text-[var(--status-ok-text)]">{window.location.origin + "/api/v1/visit-packs/shared/" + share.token}</code><Button type="button" size="sm" variant="secondary" className="mt-2" disabled={saving} onClick={removeShare}>{copy("visits.revokeShare")}</Button></> : null}</div> : null}
-        </SurfaceCard></> : null}
-      </main>
-      <aside className="space-y-5">{!selected ? <SurfaceCard className="border-[color:var(--brand-200)] bg-[var(--surface-brand-soft)] p-5"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-brand)]">{copy("visits.createVisit")}</p><h2 className="mt-2 font-semibold text-[var(--text-primary)]">{copy("visits.newVisitTitle")}</h2><p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{copy("visits.newVisitDescription")}</p><Button as="link" href="/visits/new" className="mt-4" icon="add">{copy("visits.startNewVisit")}</Button></SurfaceCard> : null}
-        {selected && activeStep === "questions" ? <SurfaceCard className="p-5"><h2 className="font-semibold text-[var(--text-primary)]">{copy("visits.concernTitle")}</h2><form className="mt-4 max-w-2xl space-y-3" onSubmit={addConcern}><Textarea required minLength={2} disabled={!selectedId} value={concern} onChange={(event) => setConcern(event.target.value)} placeholder={copy("visits.concernPlaceholder")} className="min-h-24" /><Select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="routine">{copy("visits.priorityRoutine")}</option><option value="soon">{copy("visits.prioritySoon")}</option><option value="urgent">{copy("visits.priorityUrgent")}</option></Select><Button type="submit" disabled={saving || !selectedId}>{copy("visits.saveQuestion")}</Button></form></SurfaceCard> : null}
-        {selected && activeStep === "review" ? <SurfaceCard className="p-5"><h2 className="font-semibold text-[var(--text-primary)]">{copy("visits.scribeTitle")}</h2><p className="mt-1 text-sm text-[var(--text-secondary)]">{copy("visits.scribeDescription")}</p><Button type="button" variant="secondary" className="mt-4" disabled={saving || !selectedId} onClick={toggleConsent}>{consented ? copy("visits.revokeScribeConsent") : copy("visits.grantScribeConsent")}</Button></SurfaceCard> : null}
-      </aside>
-    </div>
-  </PageShell>;
+  return (
+    <PageShell
+      variant="plain"
+      title={copy("visits.title")}
+      description={copy("visits.description")}
+    >
+      <div className="space-y-8" data-testid="visits-timeline-page">
+        {/* 1. Header Row + "Chuẩn bị lần khám mới" CTA */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[color:var(--shell-border)] pb-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-brand)]">
+              {copy("visits.timelineStream")}
+            </p>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              {copy("visits.description")}
+            </p>
+          </div>
+          <Button
+            as="link"
+            href="/visits/new"
+            icon="add"
+            variant="primary"
+            className="shrink-0"
+            data-testid="prepare-new-visit-cta"
+          >
+            {copy("visits.newVisitCta")}
+          </Button>
+        </div>
+
+        {/* Inline Error Alert */}
+        {error ? <InlineError message={error} onRetry={() => void load()} /> : null}
+
+        {/* Loading State */}
+        {loading ? (
+          <div className="space-y-4">
+            <LoadingCards count={2} />
+          </div>
+        ) : null}
+
+        {/* 4. Empty State with guidance on how visit preparation works */}
+        {!loading && visits.length === 0 ? (
+          <div className="space-y-6" data-testid="visits-empty-state">
+            <EmptyState
+              icon={<Icon name="calendar" size="2rem" />}
+              title={copy("visits.emptyTitle")}
+              description={copy("visits.emptyDescription")}
+              primaryAction={{
+                label: copy("visits.newVisitCta"),
+                href: "/visits/new",
+              }}
+            />
+
+            {/* Guidance Section: How visit preparation works */}
+            <SurfaceCard className="p-5 sm:p-6 space-y-4 max-w-3xl mx-auto">
+              <div className="flex items-center gap-2">
+                <Icon name="clinical-notes" size="1.2rem" className="text-[var(--text-brand)]" />
+                <h3 className="font-bold text-base text-[var(--text-primary)]">
+                  {copy("visits.howPrepWorksTitle")}
+                </h3>
+              </div>
+              <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+                {copy("visits.howPrepWorksDesc")}
+              </p>
+              <div className="grid gap-3 pt-1 sm:grid-cols-2">
+                <div className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)]/60 bg-[var(--surface-muted)]/40 p-3 text-xs text-[var(--text-secondary)]">
+                  {copy("visits.guidanceStep1")}
+                </div>
+                <div className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)]/60 bg-[var(--surface-muted)]/40 p-3 text-xs text-[var(--text-secondary)]">
+                  {copy("visits.guidanceStep2")}
+                </div>
+                <div className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)]/60 bg-[var(--surface-muted)]/40 p-3 text-xs text-[var(--text-secondary)]">
+                  {copy("visits.guidanceStep3")}
+                </div>
+                <div className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)]/60 bg-[var(--surface-muted)]/40 p-3 text-xs text-[var(--text-secondary)]">
+                  {copy("visits.guidanceStep4")}
+                </div>
+              </div>
+            </SurfaceCard>
+          </div>
+        ) : null}
+
+        {/* 2. Upcoming visit HeroObject */}
+        {!loading && upcomingVisit ? (
+          <section className="space-y-3" data-testid="upcoming-visit-section">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-brand)]">
+                {copy("visits.upcomingEyebrow")}
+              </p>
+              <Badge tone={getPrepStatusTone(upcomingVisit.prep_status)}>
+                {getPrepStatusLabel(upcomingVisit.prep_status, copy)}
+              </Badge>
+            </div>
+
+            <HeroObject
+              id={`upcoming-visit-${upcomingVisit.id}`}
+              variant="primary"
+              contextTag={copy("visits.upcomingEyebrow")}
+              title={upcomingVisit.title}
+              description={upcomingVisit.goal || undefined}
+              icon="calendar"
+              supportingMeta={
+                upcomingVisit.scheduled_at ? (
+                  <span className="inline-flex items-center gap-1 font-semibold text-[var(--text-brand)]">
+                    <Icon name="calendar" size="0.9rem" />
+                    <span>
+                      {formatLocaleDate(language, upcomingVisit.scheduled_at, {
+                        weekday: "short",
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </span>
+                ) : (
+                  copy("visits.noScheduledTime")
+                )
+              }
+              primaryAction={{
+                label: copy("visits.prepareVisitAction"),
+                href: `/visits/new?visit=${encodeURIComponent(upcomingVisit.id)}`,
+                icon: "clinical-notes",
+                tone: "primary",
+              }}
+              secondaryAction={{
+                label: copy("visits.newVisitCta"),
+                href: "/visits/new",
+                icon: "add",
+                tone: "secondary",
+              }}
+            >
+              <div className="mt-4 space-y-4 border-t border-[color:var(--shell-border)]/60 pt-4">
+                {/* Doctor, Specialty, Facility */}
+                {(upcomingVisit.doctor_name || upcomingVisit.specialty || upcomingVisit.facility_name) ? (
+                  <div className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)]/60 p-3 text-xs space-y-1">
+                    {upcomingVisit.doctor_name ? (
+                      <p className="font-bold text-[var(--text-primary)]">
+                        {upcomingVisit.doctor_name}
+                        {upcomingVisit.specialty ? ` • ${upcomingVisit.specialty}` : ""}
+                      </p>
+                    ) : null}
+                    {upcomingVisit.facility_name ? (
+                      <p className="text-[var(--text-secondary)]">
+                        {upcomingVisit.facility_name}
+                        {upcomingVisit.location ? ` (${upcomingVisit.location})` : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {/* Preparation Pack Status & Questions Ready */}
+                <div className="grid gap-3 sm:grid-cols-2 text-xs">
+                  <div className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)]/70 bg-[var(--surface-lowest,#0b0e13)]/40 p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-[var(--text-muted)]">
+                        {copy("visits.prepPackStatus")}
+                      </span>
+                      <Badge tone={getPrepStatusTone(upcomingVisit.prep_status)}>
+                        {getPrepStatusLabel(upcomingVisit.prep_status, copy)}
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-secondary)]">
+                      {copy("visits.controlDescription")}
+                    </p>
+                  </div>
+
+                  <div className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)]/70 bg-[var(--surface-lowest,#0b0e13)]/40 p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-[var(--text-muted)]">
+                        {copy("visits.questionsReady")}
+                      </span>
+                      <Badge tone="brand">
+                        {upcomingVisit.questions?.length
+                          ? copy("visits.questionsCount", { count: upcomingVisit.questions.length })
+                          : copy("visits.priorityRoutine")}
+                      </Badge>
+                    </div>
+                    {upcomingVisit.questions && upcomingVisit.questions.length > 0 ? (
+                      <ul className="mt-1 space-y-0.5 text-[11px] text-[var(--text-secondary)] list-disc list-inside">
+                        {upcomingVisit.questions.slice(0, 2).map((q, idx) => (
+                          <li key={idx} className="truncate">{q}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-[11px] text-[var(--text-muted)]">
+                        {copy("visits.oneQuestionAtATime")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scribe Consent Control Context */}
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)]/40 bg-[var(--surface-muted)]/30 p-3 text-xs">
+                  <div>
+                    <p className="font-semibold text-[var(--text-primary)]">
+                      {copy("visits.scribeTitle")}
+                    </p>
+                    <p className="text-[11px] text-[var(--text-secondary)]">
+                      {copy("visits.scribeDescription")}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={scribeConsents[upcomingVisit.id] ? "secondary" : "ghost"}
+                    disabled={savingConsent}
+                    onClick={() => toggleScribeConsent(upcomingVisit.id)}
+                  >
+                    {scribeConsents[upcomingVisit.id]
+                      ? copy("visits.revokeScribeConsent")
+                      : copy("visits.grantScribeConsent")}
+                  </Button>
+                </div>
+              </div>
+            </HeroObject>
+          </section>
+        ) : null}
+
+        {/* 3. Chronological Past Visit Timeline Rows */}
+        {!loading && pastVisits.length > 0 ? (
+          <section className="space-y-4" data-testid="past-visits-timeline-stream">
+            <div className="flex items-center justify-between border-b border-[color:var(--shell-border)]/60 pb-3">
+              <div className="flex items-center gap-2">
+                <Icon name="progress" size="1.1rem" className="text-[var(--text-brand)]" />
+                <h2 className="text-base font-bold text-[var(--text-primary)] sm:text-lg">
+                  {copy("visits.pastVisitsEyebrow")}
+                </h2>
+              </div>
+              <Badge tone="neutral">
+                {pastVisits.length} {copy("visits.listEyebrow").toLowerCase()}
+              </Badge>
+            </div>
+
+            <Timeline orientation="vertical" className="pl-1 sm:pl-2 pt-2">
+              {pastVisits.map((visit, index) => {
+                const isLast = index === pastVisits.length - 1;
+                const docs = documentsMap[visit.id] || visit.documents || [];
+                const formattedTime = visit.scheduled_at
+                  ? formatLocaleDate(language, visit.scheduled_at, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })
+                  : copy("visits.noScheduledTime");
+
+                return (
+                  <TimelineItem
+                    key={visit.id}
+                    state="completed"
+                    isLast={isLast}
+                    className="pb-8"
+                    data-testid={`past-visit-item-${visit.id}`}
+                  >
+                    <TimelineNode state="completed" icon="check" size="md" />
+                    <TimelineContent>
+                      <article className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 sm:p-5 space-y-3.5 shadow-xs">
+                        {/* Visit Title, Specialty & Appointment Time */}
+                        <div className="flex flex-wrap items-start justify-between gap-2 border-b border-[color:var(--shell-border)]/40 pb-3">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-bold text-sm sm:text-base text-[var(--text-primary)]">
+                                {visit.title}
+                              </h3>
+                              <Badge tone="neutral">
+                                {visit.visit_type || "Khám chuyên khoa"}
+                              </Badge>
+                            </div>
+                            {(visit.doctor_name || visit.specialty || visit.facility_name) ? (
+                              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                {visit.doctor_name ? (
+                                  <span className="font-semibold text-[var(--text-primary)]">
+                                    {visit.doctor_name}
+                                  </span>
+                                ) : null}
+                                {visit.specialty ? ` • ${visit.specialty}` : ""}
+                                {visit.facility_name ? ` • ${visit.facility_name}` : ""}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          <time className="text-xs font-semibold text-[var(--text-brand)]">
+                            {formattedTime}
+                          </time>
+                        </div>
+
+                        {/* Clinician Notes */}
+                        {(visit.clinician_notes || visit.notes || visit.goal) ? (
+                          <div className="space-y-1.5 rounded-[var(--radius-lg)] bg-[var(--surface-muted)]/50 p-3">
+                            <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+                              <Icon name="clinical-notes" size="0.85rem" className="text-[var(--text-brand)]" />
+                              <span>{copy("visits.clinicianNotes")}</span>
+                            </p>
+                            <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+                              {visit.clinician_notes || visit.notes || visit.goal}
+                            </p>
+                          </div>
+                        ) : null}
+
+                        {/* Prescriptions */}
+                        {visit.prescriptions && visit.prescriptions.length > 0 ? (
+                          <div className="space-y-2">
+                            <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+                              <Icon name="medication" size="0.85rem" className="text-[var(--brand-600)]" />
+                              <span>{copy("visits.prescriptions")}</span>
+                            </p>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              {visit.prescriptions.map((rx) => (
+                                <div
+                                  key={rx.id}
+                                  className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--shell-border)]/60 bg-[var(--surface-lowest,#0b0e13)]/40 p-2.5 text-xs"
+                                >
+                                  <Icon
+                                    name="medication"
+                                    size="0.9rem"
+                                    className="text-[var(--text-brand)] shrink-0 mt-0.5"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-semibold text-[var(--text-primary)] truncate">
+                                      {rx.name}
+                                    </p>
+                                    {rx.dosage ? (
+                                      <p className="text-[11px] text-[var(--text-secondary)]">
+                                        {rx.dosage}
+                                      </p>
+                                    ) : null}
+                                    {rx.instruction ? (
+                                      <p className="mt-0.5 text-[11px] text-[var(--text-muted)] italic">
+                                        {rx.instruction}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {/* Lab Orders & Document Attachments */}
+                        {((visit.lab_orders && visit.lab_orders.length > 0) || docs.length > 0) ? (
+                          <div className="space-y-2 border-t border-[color:var(--shell-border)]/40 pt-3">
+                            <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+                              <Icon name="folder" size="0.85rem" className="text-[var(--text-brand)]" />
+                              <span>{copy("visits.labOrders")}</span>
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {visit.lab_orders?.map((lab) => (
+                                <div
+                                  key={lab.id}
+                                  className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/60 px-2.5 py-1 text-xs"
+                                >
+                                  <Icon name="scan" size="0.8rem" className="text-[var(--text-brand)]" />
+                                  <span className="font-medium text-[var(--text-primary)]">
+                                    {lab.title}
+                                  </span>
+                                  {lab.result_summary ? (
+                                    <span className="text-[11px] text-[var(--text-muted)]">
+                                      ({lab.result_summary})
+                                    </span>
+                                  ) : null}
+                                </div>
+                              ))}
+                              {docs.map((doc) => (
+                                <div
+                                  key={doc.id}
+                                  className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/60 px-2.5 py-1 text-xs"
+                                >
+                                  <Icon name="clinical-notes" size="0.8rem" className="text-[var(--text-brand)]" />
+                                  <span className="font-medium text-[var(--text-primary)]">
+                                    {doc.title}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </article>
+                    </TimelineContent>
+                  </TimelineItem>
+                );
+              })}
+            </Timeline>
+          </section>
+        ) : null}
+
+        {/* Guidance / Privacy Control Footer */}
+        {!loading && visits.length > 0 ? (
+          <SurfaceCard className="p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <Icon name="check" size="1.2rem" className="text-[var(--brand-600)] shrink-0 mt-0.5" />
+              <div className="text-xs space-y-1">
+                <p className="font-semibold text-[var(--text-primary)]">
+                  {copy("visits.controlTitle")}
+                </p>
+                <p className="text-[var(--text-secondary)] leading-relaxed">
+                  {copy("visits.controlDescription")}
+                </p>
+              </div>
+            </div>
+          </SurfaceCard>
+        ) : null}
+      </div>
+    </PageShell>
+  );
 }
 
 export default function VisitsPage() {
   return (
     <Suspense fallback={null}>
-      <VisitsWorkspace />
+      <VisitsTimelineStream />
     </Suspense>
   );
 }

@@ -1136,6 +1136,8 @@ export interface NotificationCategoryPreferencesDto {
   visits: boolean;
   review_items: boolean;
   safety_alerts: boolean;
+  journey_milestones?: boolean;
+  family_activity?: boolean;
 }
 
 export interface NotificationPreferencesDto {
@@ -1150,6 +1152,28 @@ export interface NotificationPreferencesDto {
     start_time: string;
     end_time: string;
   };
+}
+
+export interface ActiveSessionDto {
+  id: string;
+  device_name: string;
+  device_type: "desktop" | "mobile" | "tablet" | "browser";
+  platform: string;
+  browser?: string;
+  ip_address: string;
+  location: string;
+  last_active_at: string;
+  is_current: boolean;
+}
+
+export interface SecuritySettingsDto {
+  mfa_enabled: boolean;
+  mfa_method?: "totp" | "sms" | "security_key";
+  mfa_configured_at?: string | null;
+  inactivity_timeout_minutes: number;
+  new_login_alerts: boolean;
+  reauth_for_sensitive: boolean;
+  active_sessions: ActiveSessionDto[];
 }
 
 export function parseSseFrame(block: string): { event: string; data: string } | null {
@@ -2306,6 +2330,51 @@ export class ApiV2Client {
     );
     return res.data;
   }
+
+  async getSecuritySettings(
+    profileId?: string | null,
+    options?: ApiV2RequestOptions,
+  ): Promise<SecuritySettingsDto> {
+    const res = await this.get<SecuritySettingsDto>("/you/settings/security", {
+      ...options,
+      profileId: profileId ?? options?.profileId,
+    });
+    return res.data;
+  }
+
+  async updateSecuritySettings(
+    data: Partial<SecuritySettingsDto>,
+    options?: ApiV2RequestOptions,
+  ): Promise<SecuritySettingsDto> {
+    const res = await this.patch<SecuritySettingsDto>(
+      "/you/settings/security",
+      data,
+      options,
+    );
+    return res.data;
+  }
+
+  async revokeSession(
+    sessionId: string,
+    options?: ApiV2RequestOptions,
+  ): Promise<{ success: boolean; revoked_id: string }> {
+    const res = await this.delete<{ success: boolean; revoked_id: string }>(
+      `/you/settings/sessions/${encodeURIComponent(sessionId)}`,
+      options,
+    );
+    return res.data;
+  }
+
+  async revokeAllOtherSessions(
+    options?: ApiV2RequestOptions,
+  ): Promise<{ success: boolean; revoked_count: number }> {
+    const res = await this.post<{ success: boolean; revoked_count: number }>(
+      "/you/settings/sessions/revoke-others",
+      {},
+      options,
+    );
+    return res.data;
+  }
 }
 
 export const v2Client = new ApiV2Client();
@@ -2535,3 +2604,22 @@ export const apiV2UpdateNotificationPreferences = (
   data: Partial<NotificationPreferencesDto>,
   options?: ApiV2RequestOptions,
 ) => v2Client.updateNotificationPreferences(data, options);
+
+export const apiV2GetSecuritySettings = (
+  profileId?: string | null,
+  options?: ApiV2RequestOptions,
+) => v2Client.getSecuritySettings(profileId, options);
+
+export const apiV2UpdateSecuritySettings = (
+  data: Partial<SecuritySettingsDto>,
+  options?: ApiV2RequestOptions,
+) => v2Client.updateSecuritySettings(data, options);
+
+export const apiV2RevokeSession = (
+  sessionId: string,
+  options?: ApiV2RequestOptions,
+) => v2Client.revokeSession(sessionId, options);
+
+export const apiV2RevokeAllOtherSessions = (
+  options?: ApiV2RequestOptions,
+) => v2Client.revokeAllOtherSessions(options);

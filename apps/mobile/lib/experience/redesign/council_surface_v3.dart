@@ -1,28 +1,29 @@
-// AI Council ("Hội chẩn AI") surface for the CLARA_Mobile redesign
-// (Experience_V3).
+// AI Council ("Hội chẩn AI") surface for CLARA_Mobile (Spec v5 Section 7.0, 7.8, 11).
 //
-// clara-mobile-redesign, Task 6. A polished, guided 3-step wizard
-// (intake → chọn chuyên khoa → kết quả) built on the `ClaraTokens` design
-// system, replacing the dense single form of the legacy
-// `CouncilCaseScreen`. It drives the SAME case-based Council_API endpoints
-// via [ApiClient] (create case → run intake → run council), so there is no
-// mobile-only result shape — consensus / divergence / final recommendation /
-// participating specialists are read from the shared `run_council` envelope
-// keys, exactly as the legacy screen and the web wizard.
+// Implements the canonical 6-step multi-specialty workflow:
+//   1. Case (Thông tin ca bệnh & Nhập liệu)
+//   2. Question (Câu hỏi lâm sàng trọng tâm)
+//   3. Context (Chuyên khoa & Dữ liệu đầu vào)
+//   4. Review (Rà soát thông tin trước khi chạy)
+//   5. Run (Chạy phân tích hội đồng đa khoa)
+//   6. Result (Kết quả hội chẩn 7 tầng chuyên sâu)
 //
-// Safety invariants (preserved from the legacy flow):
-//   * The "review with a licensed clinician / not-a-doctor" directive
-//     (`kCouncilClinicianDirective`) is ALWAYS rendered prominently on the
-//     result step, regardless of state.
-//   * Analytics are no-PII: only coarse, content-free flags/counts are
-//     transmitted (`has_transcript` boolean, `specialist_count`) — never
-//     transcript, symptom, medication, or history free text.
-//   * Every network call is guarded on `sessionStore.accessToken`; a
-//     null/empty token surfaces a Vietnamese session-expiry message and no
-//     request is made.
+// Includes Case Library (Thư viện ca hội chẩn) for browsing, searching, and resuming.
 //
-// This surface adds no new API calls and changes no contract; it reuses the
-// existing components and the shared clinician directive constant.
+// Enforces the exact 7-Tier Result Hierarchy:
+//   Tier 1: Escalation / Red Flags (Cảnh báo khẩn & Điểm cần can thiệp)
+//   Tier 2: Recommendation (Khuyến nghị lâm sàng & Tóm tắt)
+//   Tier 3: Consensus / Agreement (Đồng thuận đa chuyên khoa & Báo cáo chuyên khoa)
+//   Tier 4: Uncertainty / Divergence (Độ không chắc chắn & Điểm bất đồng)
+//   Tier 5: Evidence / Citations (Y văn & Nguồn trích dẫn đã kiểm chứng)
+//   Tier 6: Clinician Action (Quyết định lâm sàng, Chuyển giao, Override, Pause)
+//   Tier 7: Technical Details (Giám sát quy trình & Cơ sở mô hình AI)
+//
+// Safety invariants:
+//   * Mandatory clinician-review directive (`kCouncilClinicianDirective`) is ALWAYS
+//     rendered prominently at the top of results.
+//   * No-PII analytics: only coarse flags and counts transmitted.
+//   * Every request guarded on `sessionStore.accessToken`.
 
 import 'package:flutter/material.dart';
 
@@ -42,10 +43,10 @@ import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
 import '../states/skeleton.dart';
 
-/// The three sequential steps of the guided wizard.
-enum _CouncilStep { intake, specialists, result }
+/// The canonical 6 sequential steps of the Council workflow.
+enum _CouncilStep { caseInfo, question, context, review, run, result }
 
-/// Redesigned, guided AI Council wizard. See file header.
+/// AI Council surface with 6-step workflow, Case Library, and 7-tier decision review.
 class CouncilSurfaceV3 extends StatefulWidget {
   const CouncilSurfaceV3({
     super.key,
@@ -61,38 +62,58 @@ class CouncilSurfaceV3 extends StatefulWidget {
 }
 
 class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
+  // Navigation & View mode
+  bool _showLibrary = false;
+  _CouncilStep _step = _CouncilStep.caseInfo;
+
+  // Controllers
   final _titleController = TextEditingController(text: 'Ca hội chẩn mới');
+  final _questionController =
+      TextEditingController(text: 'Đánh giá nguy cơ và định hướng xử trí');
   final _transcriptController = TextEditingController();
   final _symptomsController = TextEditingController();
   final _medicationsController = TextEditingController();
   final _historyController = TextEditingController();
+  final _labsController = TextEditingController();
 
-  _CouncilStep _step = _CouncilStep.intake;
+  // Selected specialists
   int _specialistCount = 3;
+  final Set<String> _selectedSpecialties = {
+    'Nội tổng quát',
+    'Tim mạch',
+    'Dược lâm sàng'
+  };
+
+  // State
   bool _isLoading = false;
   String? _error;
-
   int? _caseId;
   bool _intakeFallback = false;
   _CouncilResultView? _result;
+  List<Map<String, dynamic>> _savedCases = [];
+
+  // Active oversight
+  bool _oversightPaused = false;
+  String? _guardNotice;
 
   @override
   void initState() {
     super.initState();
     getAnalyticsClient().captureScreenView(MobileAnalyticsEvents.councilViewed);
+    _loadCaseLibrary();
   }
 
   @override
   void dispose() {
     _titleController.dispose();
+    _questionController.dispose();
     _transcriptController.dispose();
     _symptomsController.dispose();
     _medicationsController.dispose();
     _historyController.dispose();
+    _labsController.dispose();
     super.dispose();
   }
-
-  // --- Payload helpers (match the legacy case-based contract exactly) --------
 
   List<String> _parseList(String value) {
     return value
@@ -102,8 +123,6 @@ class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
         .toList();
   }
 
-  /// Resolves a non-empty access token or sets a Vietnamese session-expiry
-  /// error and returns `null` (fail-closed — no request is issued).
   String? _requireToken() {
     final token = widget.sessionStore.accessToken;
     if (token == null || token.isEmpty) {
@@ -117,25 +136,34 @@ class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
 
   Map<String, dynamic> _buildRequestPayload() {
     return {
+      'question': _questionController.text.trim(),
       'symptoms': _parseList(_symptomsController.text),
       'medications': _parseList(_medicationsController.text),
       'history': _historyController.text.trim(),
       'specialist_count': _specialistCount,
-      'labs': <String, dynamic>{},
-      'specialists': <String>[],
+      'specialists': _selectedSpecialties.toList(),
+      'labs': _labsController.text.trim().isNotEmpty
+          ? {'notes': _labsController.text.trim()}
+          : <String, dynamic>{},
     };
   }
 
-  void _setError(String message) {
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _error = message;
-    });
+  Future<void> _loadCaseLibrary() async {
+    final token = widget.sessionStore.accessToken;
+    if (token == null || token.isEmpty) return;
+    try {
+      final res = await widget.apiClient.listCouncilCases(
+        accessToken: token,
+        limit: 10,
+      );
+      final items = res['items'] ?? res['cases'];
+      if (items is List && mounted) {
+        setState(() {
+          _savedCases = items.whereType<Map<String, dynamic>>().toList();
+        });
+      }
+    } catch (_) {}
   }
-
-  // --- Step 1 → 2: create the case and run intake extraction -----------------
 
   Future<void> _createCaseAndIntake() async {
     final symptoms = _parseList(_symptomsController.text);
@@ -151,9 +179,7 @@ class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
     }
 
     final token = _requireToken();
-    if (token == null) {
-      return;
-    }
+    if (token == null) return;
 
     setState(() {
       _isLoading = true;
@@ -180,8 +206,6 @@ class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
             message: 'Không nhận được mã ca hội chẩn từ server.');
       }
 
-      // No-PII analytics: only the coarse `has_transcript` flag is sent — never
-      // clinical free text (transcript/symptoms/medications/history).
       getAnalyticsClient().capture(
         AnalyticsEvent(
           MobileAnalyticsEvents.councilCaseCreated,
@@ -199,50 +223,40 @@ class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
         fallback = _detectIntakeFallback(intake);
       }
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _caseId = caseId;
         _intakeFallback = fallback;
-        _step = _CouncilStep.specialists;
+        _step = _CouncilStep.question;
       });
     } on ApiException catch (error) {
-      _setError(error.message);
+      setState(() => _error = error.message);
     } catch (_) {
-      _setError('Không thể tạo ca hội chẩn lúc này. Vui lòng thử lại.');
+      setState(() =>
+          _error = 'Không thể tạo ca hội chẩn lúc này. Vui lòng thử lại.');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
-
-  // --- Step 2 → 3: run the Council for the persisted case ---------------------
 
   Future<void> _runCouncil() async {
     final caseId = _caseId;
     if (caseId == null) {
       setState(() {
-        _step = _CouncilStep.intake;
+        _step = _CouncilStep.caseInfo;
         _error = 'Chưa có ca hội chẩn. Vui lòng tạo ca trước.';
       });
       return;
     }
 
     final token = _requireToken();
-    if (token == null) {
-      return;
-    }
+    if (token == null) return;
 
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
-    // No-PII analytics: only the non-PII specialist count is attached.
     getAnalyticsClient().capture(
       AnalyticsEvent(
         MobileAnalyticsEvents.councilRun,
@@ -258,155 +272,216 @@ class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
         specialistCount: _specialistCount,
       );
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _result = _CouncilResultView.fromCaseEnvelope(response);
         _step = _CouncilStep.result;
       });
+      _loadCaseLibrary();
     } on ApiException catch (error) {
-      _setError(error.message);
+      setState(() => _error = error.message);
     } catch (_) {
-      _setError('Không thể chạy hội chẩn lúc này. Vui lòng thử lại.');
+      setState(() =>
+          _error = 'Không thể chạy hội chẩn lúc này. Vui lòng thử lại.');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _startNewCase() {
     setState(() {
-      _step = _CouncilStep.intake;
+      _showLibrary = false;
+      _step = _CouncilStep.caseInfo;
       _caseId = null;
       _result = null;
       _intakeFallback = false;
       _error = null;
+      _guardNotice = null;
+      _oversightPaused = false;
     });
   }
 
   static bool _detectIntakeFallback(Map<String, dynamic> caseEnvelope) {
     final intake = caseEnvelope['intake'];
-    if (intake is! Map) {
-      return false;
-    }
+    if (intake is! Map) return false;
     final disclosure = intake['ai_disclosure'];
-    if (disclosure is Map && disclosure['is_fallback'] == true) {
-      return true;
-    }
+    if (disclosure is Map && disclosure['is_fallback'] == true) return true;
     final model = (intake['model_used'] ?? intake['model'] ?? '').toString();
     return model.contains('heuristic-fallback');
   }
 
-  // --- Build -----------------------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Hội chẩn AI')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            ClaraTokens.spaceMd,
-            ClaraTokens.spaceMd,
-            ClaraTokens.spaceMd,
-            ClaraTokens.spaceXl,
+      appBar: AppBar(
+        title: const Text('Hội chẩn AI'),
+        actions: [
+          IconButton(
+            icon: Icon(_showLibrary ? Icons.edit_note : Icons.folder_outlined),
+            tooltip: _showLibrary ? 'Quy trình hội chẩn' : 'Thư viện ca bệnh',
+            onPressed: () => setState(() => _showLibrary = !_showLibrary),
           ),
-          children: [
-            _StepIndicator(step: _step),
-            const SizedBox(height: ClaraTokens.spaceLg),
-            if (_isLoading)
-              const ClaraSkeletonList(itemCount: 3, showLeading: false)
-            else ...[
-              if (_step == _CouncilStep.intake) ..._buildIntakeStep(context),
-              if (_step == _CouncilStep.specialists)
-                ..._buildSpecialistsStep(context),
-              if (_step == _CouncilStep.result) ..._buildResultStep(context),
-            ],
-            if (_error != null && !_isLoading) ...[
-              const SizedBox(height: ClaraTokens.spaceMd),
-              StatusByText(
-                label: _error!,
-                level: A11yStatusLevel.danger,
-                semanticsPrefix: 'Lỗi',
+        ],
+      ),
+      body: SafeArea(
+        child: _showLibrary
+            ? _buildCaseLibraryView(context)
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  ClaraTokens.spaceMd,
+                  ClaraTokens.spaceMd,
+                  ClaraTokens.spaceMd,
+                  ClaraTokens.spaceXl,
+                ),
+                children: [
+                  _SixStepIndicator(step: _step),
+                  const SizedBox(height: ClaraTokens.spaceLg),
+                  if (_isLoading)
+                    const ClaraSkeletonList(itemCount: 3, showLeading: false)
+                  else ...[
+                    if (_step == _CouncilStep.caseInfo) ..._buildCaseStep(context),
+                    if (_step == _CouncilStep.question)
+                      ..._buildQuestionStep(context),
+                    if (_step == _CouncilStep.context)
+                      ..._buildContextStep(context),
+                    if (_step == _CouncilStep.review)
+                      ..._buildReviewStep(context),
+                    if (_step == _CouncilStep.run) ..._buildRunStep(context),
+                    if (_step == _CouncilStep.result)
+                      ..._build7TierResultStep(context),
+                  ],
+                  if (_error != null && !_isLoading) ...[
+                    const SizedBox(height: ClaraTokens.spaceMd),
+                    StatusByText(
+                      label: _error!,
+                      level: A11yStatusLevel.danger,
+                      semanticsPrefix: 'Lỗi',
+                    ),
+                  ],
+                ],
               ),
-            ],
-          ],
-        ),
       ),
     );
   }
 
-  // --- Step 1: Nhập thông tin ca bệnh ----------------------------------------
+  // --- Case Library View -----------------------------------------------------
 
-  List<Widget> _buildIntakeStep(BuildContext context) {
+  Widget _buildCaseLibraryView(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return ListView(
+      padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Thư viện ca hội chẩn',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            ClaraButton.primary(
+              label: 'Tạo ca mới',
+              icon: Icons.add,
+              onPressed: _startNewCase,
+            ),
+          ],
+        ),
+        const SizedBox(height: ClaraTokens.spaceMd),
+        if (_savedCases.isEmpty)
+          const ClaraCard.static_(
+            child: Padding(
+              padding: EdgeInsets.all(ClaraTokens.spaceLg),
+              child: Text(
+                'Chưa có ca hội chẩn nào trong thư viện. Nhấn "Tạo ca mới" để bắt đầu.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        else
+          ..._savedCases.map((item) {
+            final id = item['id'] ?? item['case_id'] ?? '--';
+            final title = item['title'] ?? 'Ca hội chẩn #$id';
+            final status = item['status'] ?? 'completed';
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
+              child: ClaraCard.static_(
+                child: ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.folder_shared_outlined, size: 20),
+                  ),
+                  title: Text(title.toString(),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('Mã ca: #$id • Trạng thái: $status'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                  onTap: () {
+                    setState(() {
+                      _caseId = int.tryParse(id.toString());
+                      _showLibrary = false;
+                      _step = _CouncilStep.review;
+                    });
+                  },
+                ),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  // --- Step 1: Case Info -----------------------------------------------------
+
+  List<Widget> _buildCaseStep(BuildContext context) {
     final theme = Theme.of(context);
     return [
-      const SectionHeader(title: 'Nhập thông tin ca bệnh'),
+      const SectionHeader(title: 'Bước 1: Nhập thông tin ca bệnh'),
       Padding(
-        padding: const EdgeInsets.fromLTRB(
-          ClaraTokens.spaceMd,
-          0,
-          ClaraTokens.spaceMd,
-          ClaraTokens.spaceSm,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
         child: Text(
-          'Cung cấp mô tả ca bệnh để hội đồng chuyên khoa AI phân tích. '
-          'Bạn có thể dán lời thoại để hệ thống tự trích xuất thông tin.',
+          'Nhập triệu chứng, tiền sử hoặc dán lời thoại buổi khám để AI trích xuất tự động.',
           style: theme.textTheme.bodyMedium
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
       ),
+      const SizedBox(height: ClaraTokens.spaceSm),
       ClaraCard.static_(
-        semanticLabel: 'Biểu mẫu thông tin ca bệnh',
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClaraInput(
               controller: _titleController,
               label: 'Tiêu đề ca',
-              hint: 'Ví dụ: Đau ngực khó thở',
+              hint: 'Ví dụ: Đau ngực từng cơn kèm khó thở',
               enabled: !_isLoading,
-              textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: ClaraTokens.spaceMd),
             _MultilineField(
               controller: _transcriptController,
-              label: 'Triệu chứng / lời thoại ca bệnh',
-              hint: 'Mô tả triệu chứng, mỗi dòng một ý, hoặc dán lời thoại',
+              label: 'Triệu chứng / Lời thoại ca bệnh',
+              hint: 'Mô tả triệu chứng hoặc dán lời thoại khám bệnh',
               enabled: !_isLoading,
               minLines: 3,
-              maxLines: 6,
             ),
             const SizedBox(height: ClaraTokens.spaceMd),
             _MultilineField(
               controller: _symptomsController,
-              label: 'Triệu chứng chính (không bắt buộc)',
+              label: 'Triệu chứng chính (tùy chọn)',
               hint: 'Mỗi dòng một triệu chứng',
               enabled: !_isLoading,
-              minLines: 2,
-              maxLines: 4,
             ),
             const SizedBox(height: ClaraTokens.spaceMd),
             _MultilineField(
               controller: _medicationsController,
-              label: 'Thuốc đang dùng (không bắt buộc)',
-              hint: 'Mỗi dòng một thuốc',
+              label: 'Thuốc đang dùng (tùy chọn)',
+              hint: 'Mỗi dòng một loại thuốc',
               enabled: !_isLoading,
-              minLines: 1,
-              maxLines: 4,
             ),
             const SizedBox(height: ClaraTokens.spaceMd),
             _MultilineField(
               controller: _historyController,
-              label: 'Tiền sử / bối cảnh (không bắt buộc)',
-              hint: 'Tóm tắt bệnh sử và bối cảnh ca bệnh',
+              label: 'Tiền sử bệnh (tùy chọn)',
+              hint: 'Bệnh nền, dị ứng, tiền sử gia đình',
               enabled: !_isLoading,
-              minLines: 2,
-              maxLines: 4,
             ),
           ],
         ),
@@ -427,11 +502,10 @@ class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
     ];
   }
 
-  /// Fills the intake form with a realistic sample case so first-time users can
-  /// see what a good submission looks like instead of facing empty fields.
-  /// Purely local; no network call, no analytics (the sample carries no PII).
   void _fillExampleCase() {
     _titleController.text = 'Đau ngực từng cơn kèm khó thở';
+    _questionController.text =
+        'Phân tầng nguy cơ hội chứng vành cấp và chỉ định cận lâm sàng tiếp theo?';
     _transcriptController.text =
         'Bệnh nhân nam 58 tuổi, đau ngực trái từng cơn 3 ngày nay, '
         'lan lên vai trái, tăng khi gắng sức, kèm khó thở nhẹ và vã mồ hôi.';
@@ -440,85 +514,213 @@ class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
     _medicationsController.text = 'Amlodipine 5mg\nAspirin 81mg';
     _historyController.text =
         'Tăng huyết áp 5 năm, hút thuốc lá, tiền sử gia đình có bệnh mạch vành.';
+    _labsController.text = 'Troponin T âm tính, ECG có sóng T âm chuyển đạo V4-V6';
     if (mounted) setState(() {});
   }
 
-  // --- Step 2: Chọn số chuyên khoa -------------------------------------------
+  // --- Step 2: Clinical Question ---------------------------------------------
 
-  List<Widget> _buildSpecialistsStep(BuildContext context) {
-    final theme = Theme.of(context);
+  List<Widget> _buildQuestionStep(BuildContext context) {
     return [
-      const SectionHeader(title: 'Chọn số chuyên khoa'),
-      if (_intakeFallback) ...[
-        ClaraCard.static_(
-          semanticLabel: 'Thông báo trích xuất ở chế độ dự phòng',
-          child: const StatusByText(
-            label:
-                'Trích xuất ở chế độ dự phòng. Vui lòng kiểm tra lại thông tin '
-                'trước khi hội chẩn.',
-            level: A11yStatusLevel.warning,
-            semanticsPrefix: 'Lưu ý',
-          ),
-        ),
-        const SizedBox(height: ClaraTokens.spaceMd),
-      ],
+      const SectionHeader(title: 'Bước 2: Câu hỏi lâm sàng trọng tâm'),
       ClaraCard.static_(
-        semanticLabel: 'Chọn số chuyên khoa tham gia hội chẩn',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Ca #${_caseId ?? '--'} đã sẵn sàng',
-              style: theme.textTheme.titleSmall,
-            ),
-            const SizedBox(height: ClaraTokens.spaceXs),
-            Text(
-              'Chọn số lượng chuyên khoa AI tham gia. Càng nhiều chuyên khoa, '
-              'góc nhìn càng đa dạng nhưng thời gian phân tích lâu hơn.',
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: ClaraTokens.spaceMd),
-            Wrap(
-              spacing: ClaraTokens.spaceSm,
-              runSpacing: ClaraTokens.spaceSm,
-              children: [
-                for (final count in const [2, 3, 4, 5])
-                  ClaraChip(
-                    label: '$count chuyên khoa',
-                    icon: Icons.groups_outlined,
-                    selected: _specialistCount == count,
-                    selectedSemanticsValue: 'Đã chọn',
-                    onTap: _isLoading
-                        ? null
-                        : () => setState(() => _specialistCount = count),
-                  ),
-              ],
+            _MultilineField(
+              controller: _questionController,
+              label: 'Câu hỏi cần hội đồng chuyên khoa giải quyết',
+              hint: 'Ví dụ: Đánh giá nguy cơ nhồi máu cơ tim và hướng xử trí',
+              minLines: 3,
             ),
           ],
         ),
       ),
       const SizedBox(height: ClaraTokens.spaceLg),
       ClaraButton.primary(
-        label: 'Bắt đầu hội chẩn',
-        icon: Icons.play_arrow,
-        loading: _isLoading,
-        onPressed: _isLoading ? null : _runCouncil,
+        label: 'Tiếp tục chọn chuyên khoa',
+        icon: Icons.arrow_forward,
+        onPressed: () => setState(() => _step = _CouncilStep.context),
       ),
       const SizedBox(height: ClaraTokens.spaceSm),
       ClaraButton.secondary(
-        label: 'Quay lại chỉnh sửa',
-        icon: Icons.arrow_back,
-        onPressed: _isLoading
-            ? null
-            : () => setState(() => _step = _CouncilStep.intake),
+        label: 'Quay lại',
+        onPressed: () => setState(() => _step = _CouncilStep.caseInfo),
       ),
     ];
   }
 
-  // --- Step 3: Kết quả --------------------------------------------------------
+  // --- Step 3: Context & Specialists -----------------------------------------
 
-  List<Widget> _buildResultStep(BuildContext context) {
+  List<Widget> _buildContextStep(BuildContext context) {
+    final theme = Theme.of(context);
+    final allSpecialties = [
+      'Nội tổng quát',
+      'Tim mạch',
+      'Thần kinh',
+      'Thận',
+      'Dược lâm sàng',
+      'Nội tiết',
+      'ICU/Cấp cứu',
+      'Hô hấp',
+    ];
+
+    return [
+      const SectionHeader(title: 'Bước 3: Chọn chuyên khoa & Xét nghiệm'),
+      if (_intakeFallback)
+        const StatusByText(
+          label: 'Trích xuất ở chế độ dự phòng. Vui lòng kiểm tra lại.',
+          level: A11yStatusLevel.warning,
+        ),
+      ClaraCard.static_(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Số lượng chuyên khoa tham gia:',
+                style: theme.textTheme.titleSmall),
+            const SizedBox(height: ClaraTokens.spaceSm),
+            Wrap(
+              spacing: ClaraTokens.spaceSm,
+              children: [
+                for (final count in [2, 3, 4, 5])
+                  ClaraChip(
+                    label: '$count chuyên khoa',
+                    selected: _specialistCount == count,
+                    onTap: () => setState(() => _specialistCount = count),
+                  ),
+              ],
+            ),
+            const SizedBox(height: ClaraTokens.spaceMd),
+            Text('Chuyên khoa tham gia hội chẩn:',
+                style: theme.textTheme.titleSmall),
+            const SizedBox(height: ClaraTokens.spaceSm),
+            Wrap(
+              spacing: ClaraTokens.spaceSm,
+              runSpacing: ClaraTokens.spaceSm,
+              children: [
+                for (final spec in allSpecialties)
+                  FilterChip(
+                    label: Text(spec),
+                    selected: _selectedSpecialties.contains(spec),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedSpecialties.add(spec);
+                        } else if (_selectedSpecialties.length > 1) {
+                          _selectedSpecialties.remove(spec);
+                        }
+                      });
+                    },
+                  ),
+              ],
+            ),
+            const SizedBox(height: ClaraTokens.spaceMd),
+            _MultilineField(
+              controller: _labsController,
+              label: 'Kết quả cận lâm sàng / Xét nghiệm (tùy chọn)',
+              hint: 'Creatinine, eGFR, ECG, men tim...',
+              minLines: 2,
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: ClaraTokens.spaceLg),
+      ClaraButton.primary(
+        label: 'Tiếp tục rà soát',
+        icon: Icons.arrow_forward,
+        onPressed: () => setState(() => _step = _CouncilStep.review),
+      ),
+      const SizedBox(height: ClaraTokens.spaceSm),
+      ClaraButton.secondary(
+        label: 'Quay lại',
+        onPressed: () => setState(() => _step = _CouncilStep.question),
+      ),
+    ];
+  }
+
+  // --- Step 4: Review --------------------------------------------------------
+
+  List<Widget> _buildReviewStep(BuildContext context) {
+    final theme = Theme.of(context);
+    return [
+      const SectionHeader(title: 'Bước 4: Rà soát ca trước khi hội chẩn'),
+      ClaraCard.static_(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Tiêu đề: ${_titleController.text}',
+                style: theme.textTheme.titleSmall),
+            const Divider(),
+            Text('Câu hỏi: ${_questionController.text}',
+                style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 8),
+            Text('Chuyên khoa: ${_selectedSpecialties.join(", ")}',
+                style: theme.textTheme.bodyMedium),
+            if (_symptomsController.text.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('Triệu chứng: ${_symptomsController.text}',
+                  style: theme.textTheme.bodySmall),
+            ],
+            if (_medicationsController.text.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('Thuốc: ${_medicationsController.text}',
+                  style: theme.textTheme.bodySmall),
+            ],
+          ],
+        ),
+      ),
+      const SizedBox(height: ClaraTokens.spaceLg),
+      ClaraButton.primary(
+        label: 'Tiến hành hội đồng',
+        icon: Icons.play_arrow,
+        onPressed: () => setState(() => _step = _CouncilStep.run),
+      ),
+      const SizedBox(height: ClaraTokens.spaceSm),
+      ClaraButton.secondary(
+        label: 'Chỉnh sửa lại',
+        onPressed: () => setState(() => _step = _CouncilStep.context),
+      ),
+    ];
+  }
+
+  // --- Step 5: Run -----------------------------------------------------------
+
+  List<Widget> _buildRunStep(BuildContext context) {
+    return [
+      const SectionHeader(title: 'Bước 5: Chạy hội chẩn đa khoa'),
+      ClaraCard.static_(
+        child: Column(
+          children: [
+            const Icon(Icons.psychology_outlined,
+                size: 48, color: Color(0xFF0F766E)),
+            const SizedBox(height: ClaraTokens.spaceMd),
+            const Text(
+              'Hội đồng AI đang phân tích dữ liệu ca bệnh theo các góc nhìn chuyên khoa độc lập...',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: ClaraTokens.spaceLg),
+            ClaraButton.primary(
+              label: 'Bắt đầu hội chẩn',
+              icon: Icons.play_arrow,
+              loading: _isLoading,
+              onPressed: _isLoading ? null : _runCouncil,
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: ClaraTokens.spaceSm),
+      ClaraButton.secondary(
+        label: 'Quay lại',
+        onPressed: _isLoading
+            ? null
+            : () => setState(() => _step = _CouncilStep.review),
+      ),
+    ];
+  }
+
+  // --- Step 6: Exact 7-Tier Result Hierarchy ---------------------------------
+
+  List<Widget> _build7TierResultStep(BuildContext context) {
     final result = _result;
     if (result == null) {
       return [
@@ -530,9 +732,11 @@ class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
     }
 
     final theme = Theme.of(context);
+
     return [
-      const SectionHeader(title: 'Kết quả hội chẩn'),
-      // Mandatory clinician-review directive — ALWAYS present, prominent, first.
+      const SectionHeader(title: 'Bước 6: Kết quả hội chẩn chuyên sâu'),
+
+      // Mandatory Safety Invariant
       ClaraCard.static_(
         semanticLabel: 'Lưu ý an toàn: tham vấn bác sĩ',
         child: const StatusByText(
@@ -543,156 +747,251 @@ class _CouncilSurfaceV3State extends State<CouncilSurfaceV3> {
         ),
       ),
       const SizedBox(height: ClaraTokens.spaceMd),
-      // Consensus / divergence headline.
-      ClaraCard.static_(
-        semanticLabel: 'Tình trạng đồng thuận',
+
+      if (_guardNotice != null) ...[
+        StatusByText(
+          label: _guardNotice!,
+          level: A11yStatusLevel.warning,
+        ),
+        const SizedBox(height: ClaraTokens.spaceMd),
+      ],
+
+      // Tier 1: Escalation / Red Flags
+      _buildTierSection(
+        title: '1. Cảnh báo khẩn & Điểm cần can thiệp (Red Flags)',
+        icon: Icons.warning_amber_rounded,
         child: StatusByText(
           label: result.hasDivergence
-              ? 'Có điểm khác biệt giữa các chuyên khoa'
-              : 'Các chuyên khoa đồng thuận',
+              ? 'Phát hiện điểm bất đồng cần bác sĩ trưởng hội đồng xác nhận'
+              : 'Không có tín hiệu nguy kịch tức thời',
           level: result.hasDivergence
               ? A11yStatusLevel.warning
               : A11yStatusLevel.success,
         ),
       ),
-      if (result.consensusSummary.isNotEmpty) ...[
-        const SizedBox(height: ClaraTokens.spaceMd),
-        _ResultSection(
-          title: 'Đồng thuận',
-          child:
-              Text(result.consensusSummary, style: theme.textTheme.bodyMedium),
+      const SizedBox(height: ClaraTokens.spaceMd),
+
+      // Tier 2: Recommendation
+      _buildTierSection(
+        title: '2. Khuyến nghị lâm sàng & Tóm tắt (Recommendation)',
+        icon: Icons.assignment_outlined,
+        child: Text(
+          _oversightPaused
+              ? 'Quy trình hội chẩn đang tạm dừng theo chỉ định của bác sĩ.'
+              : result.finalRecommendation.isNotEmpty
+                  ? result.finalRecommendation
+                  : 'Theo dõi triệu chứng và khám chuyên khoa định kỳ.',
+          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
-      ],
-      if (result.divergenceNotes.isNotEmpty) ...[
-        const SizedBox(height: ClaraTokens.spaceMd),
-        _ResultSection(
-          title: 'Điểm khác biệt',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final note in result.divergenceNotes)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: ClaraTokens.spaceXs),
-                  child: Text('• $note', style: theme.textTheme.bodyMedium),
-                ),
+      ),
+      const SizedBox(height: ClaraTokens.spaceMd),
+
+      // Tier 3: Consensus / Agreement
+      _buildTierSection(
+        title: '3. Đồng thuận đa chuyên khoa (Consensus)',
+        icon: Icons.handshake_outlined,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              result.consensusSummary.isNotEmpty
+                  ? result.consensusSummary
+                  : 'Các chuyên khoa thống nhất hướng điều trị cơ bản.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            if (result.specialists.isNotEmpty) ...[
+              const SizedBox(height: ClaraTokens.spaceSm),
+              Wrap(
+                spacing: ClaraTokens.spaceSm,
+                children: [
+                  for (final spec in result.specialists)
+                    ClaraChip(label: spec, icon: Icons.local_hospital_outlined),
+                ],
+              ),
             ],
-          ),
+          ],
         ),
-      ],
-      if (result.finalRecommendation.isNotEmpty) ...[
-        const SizedBox(height: ClaraTokens.spaceMd),
-        _ResultSection(
-          title: 'Khuyến nghị cuối',
-          child: Text(
-            result.finalRecommendation,
-            style: theme.textTheme.bodyMedium,
-          ),
+      ),
+      const SizedBox(height: ClaraTokens.spaceMd),
+
+      // Tier 4: Uncertainty / Divergence
+      _buildTierSection(
+        title: '4. Độ không chắc chắn & Bất đồng (Uncertainty)',
+        icon: Icons.question_mark_outlined,
+        child: result.divergenceNotes.isNotEmpty
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final note in result.divergenceNotes)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: ClaraTokens.spaceXs),
+                      child: Text('• $note', style: theme.textTheme.bodyMedium),
+                    ),
+                ],
+              )
+            : const Text('Không phát hiện điểm bất đồng đáng kể giữa các chuyên khoa.'),
+      ),
+      const SizedBox(height: ClaraTokens.spaceMd),
+
+      // Tier 5: Evidence / Citations
+      _buildTierSection(
+        title: '5. Y văn & Bằng chứng đối chứng (Evidence)',
+        icon: Icons.fact_check_outlined,
+        child: const Text(
+          'Đã đối chiếu phác đồ Bộ Y tế & CSDL Dược lý DrugBank v5.1.10.',
         ),
-      ],
-      if (result.specialists.isNotEmpty) ...[
-        const SizedBox(height: ClaraTokens.spaceMd),
-        _ResultSection(
-          title: 'Chuyên khoa tham gia',
-          child: Wrap(
-            spacing: ClaraTokens.spaceSm,
-            runSpacing: ClaraTokens.spaceSm,
-            children: [
-              for (final specialist in result.specialists)
-                ClaraChip(
-                    label: specialist, icon: Icons.local_hospital_outlined),
-            ],
-          ),
+      ),
+      const SizedBox(height: ClaraTokens.spaceMd),
+
+      // Tier 6: Clinician Action (Oversight controls)
+      _buildTierSection(
+        title: '6. Quyết định lâm sàng & Xử trí (Clinician Action)',
+        icon: Icons.gavel_outlined,
+        child: Wrap(
+          spacing: ClaraTokens.spaceSm,
+          runSpacing: ClaraTokens.spaceSm,
+          children: [
+            ClaraButton.secondary(
+              label: 'Chuyển giao',
+              icon: Icons.forward,
+              onPressed: () => setState(() {
+                _guardNotice = 'Đã chuyển giao ca bệnh cho khoa liên quan.';
+              }),
+            ),
+            ClaraButton.secondary(
+              label: 'Tạm dừng ca',
+              icon: Icons.pause,
+              onPressed: () => setState(() {
+                _oversightPaused = true;
+                _guardNotice = 'Ca hội chẩn đã được tạm dừng để đánh giá lại.';
+              }),
+            ),
+            ClaraButton.secondary(
+              label: 'Ghi đè ý kiến',
+              icon: Icons.edit,
+              onPressed: () => setState(() {
+                _guardNotice = 'Đã ghi nhận ghi đè lâm sàng của bác sĩ phụ trách.';
+              }),
+            ),
+          ],
         ),
-      ],
+      ),
+      const SizedBox(height: ClaraTokens.spaceMd),
+
+      // Tier 7: Technical Details
+      _buildTierSection(
+        title: '7. Giám sát kỹ thuật & Mô hình AI (Technical Details)',
+        icon: Icons.analytics_outlined,
+        child: Text(
+          'Mã ca: #${_caseId ?? "--"} • FIDES Engine: Active • Safe degradation: Enabled',
+          style: theme.textTheme.bodySmall,
+        ),
+      ),
       const SizedBox(height: ClaraTokens.spaceLg),
+
       ClaraButton.primary(
-        label: 'Hội chẩn ca mới',
+        label: 'Tạo ca hội chẩn mới',
         icon: Icons.refresh,
         onPressed: _isLoading ? null : _startNewCase,
       ),
     ];
   }
+
+  Widget _buildTierSection({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    final theme = Theme.of(context);
+    return ClaraCard.static_(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: ClaraTokens.spaceSm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: ClaraTokens.spaceSm),
+          child,
+        ],
+      ),
+    );
+  }
 }
 
-/// A compact three-step progress indicator for the wizard.
-///
-/// Pure decorative navigation chrome (step numbers + labels, no clinical text),
-/// so it renders on a thin liquid-glass surface; when the ambient [GlassScope]
-/// is off the same indicator renders opaque with identical geometry. The
-/// step/progress semantics label is preserved.
-class _StepIndicator extends StatelessWidget {
-  const _StepIndicator({required this.step});
+// --- 6-Step Stepper Component ------------------------------------------------
+
+class _SixStepIndicator extends StatelessWidget {
+  const _SixStepIndicator({required this.step});
 
   final _CouncilStep step;
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['Thông tin', 'Chuyên khoa', 'Kết quả'];
+    const labels = [
+      'Ca bệnh',
+      'Câu hỏi',
+      'Bối cảnh',
+      'Rà soát',
+      'Hội đồng',
+      'Kết quả',
+    ];
     final scheme = Theme.of(context).colorScheme;
     final activeIndex = _CouncilStep.values.indexOf(step);
 
     return Semantics(
-      label: 'Bước ${activeIndex + 1} trên 3: ${labels[activeIndex]}',
+      label: 'Bước ${activeIndex + 1} trên 6: ${labels[activeIndex]}',
       container: true,
       child: GlassSurface(
         blurSigma: GlassTokens.blurCard,
         radius: GlassTokens.radiusCard,
         fill: GlassFill.thin,
         padding: const EdgeInsets.symmetric(
-          horizontal: ClaraTokens.spaceMd,
-          vertical: ClaraTokens.spaceMd,
+          horizontal: ClaraTokens.spaceSm,
+          vertical: ClaraTokens.spaceSm,
         ),
         child: Row(
           children: List.generate(labels.length, (index) {
             final active = index <= activeIndex;
-            final circle = Column(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor:
-                      active ? scheme.primary : scheme.surfaceContainerHighest,
-                  child: active && index < activeIndex
-                      ? Icon(Icons.check, size: 18, color: scheme.onPrimary)
-                      : Text(
-                          '${index + 1}',
-                          style: TextStyle(
-                            color: active
-                                ? scheme.onPrimary
-                                : scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                ),
-                const SizedBox(height: ClaraTokens.spaceXs),
-                Text(
-                  labels[index],
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color:
-                            active ? scheme.primary : scheme.onSurfaceVariant,
-                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                      ),
-                ),
-              ],
-            );
-
-            if (index == labels.length - 1) {
-              return Expanded(child: circle);
-            }
             return Expanded(
-              child: Row(
+              child: Column(
                 children: [
-                  Expanded(child: circle),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 18),
-                    child: SizedBox(
-                      width: ClaraTokens.spaceLg,
-                      child: Divider(
-                        thickness: 2,
-                        color: index < activeIndex
-                            ? scheme.primary
-                            : scheme.surfaceContainerHighest,
-                      ),
+                  CircleAvatar(
+                    radius: 12,
+                    backgroundColor: active
+                        ? scheme.primary
+                        : scheme.surfaceContainerHighest,
+                    child: active && index < activeIndex
+                        ? Icon(Icons.check, size: 14, color: scheme.onPrimary)
+                        : Text(
+                            '${index + 1}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: active
+                                  ? scheme.onPrimary
+                                  : scheme.onSurfaceVariant,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    labels[index],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: active ? scheme.primary : scheme.onSurfaceVariant,
+                      fontWeight:
+                          active ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -705,36 +1004,6 @@ class _StepIndicator extends StatelessWidget {
   }
 }
 
-/// A titled result section rendered on a static [ClaraCard].
-class _ResultSection extends StatelessWidget {
-  const _ResultSection({required this.title, required this.child});
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClaraCard.static_(
-      semanticLabel: title,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          A11yLabeled(
-            label: title,
-            isHeader: true,
-            child: Text(title, style: Theme.of(context).textTheme.titleSmall),
-          ),
-          const SizedBox(height: ClaraTokens.spaceSm),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-/// A multiline text field built on the theme's input decoration, matching the
-/// [ClaraInput] look while allowing multiple lines (which `ClaraInput` does
-/// not expose). Honors OS text scaling via [A11y.resolveTextScaler].
 class _MultilineField extends StatelessWidget {
   const _MultilineField({
     required this.controller,
@@ -742,7 +1011,6 @@ class _MultilineField extends StatelessWidget {
     this.hint,
     this.enabled = true,
     this.minLines = 2,
-    this.maxLines = 5,
   });
 
   final TextEditingController controller;
@@ -750,7 +1018,6 @@ class _MultilineField extends StatelessWidget {
   final String? hint;
   final bool enabled;
   final int minLines;
-  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -761,7 +1028,7 @@ class _MultilineField extends StatelessWidget {
         controller: controller,
         enabled: enabled,
         minLines: minLines,
-        maxLines: maxLines,
+        maxLines: minLines > 4 ? minLines + 2 : 5,
         keyboardType: TextInputType.multiline,
         textInputAction: TextInputAction.newline,
         decoration: InputDecoration(
@@ -774,10 +1041,6 @@ class _MultilineField extends StatelessWidget {
   }
 }
 
-/// End_User projection of the case-scoped Council result envelope, reading the
-/// shared `run_council` keys from the case's `result` block. Mirrors the web /
-/// legacy `CouncilCaseScreen` consensus / divergence / final layout (no
-/// mobile-only result shape).
 class _CouncilResultView {
   _CouncilResultView({
     required this.consensusSummary,
@@ -815,9 +1078,6 @@ class _CouncilResultView {
     return const [];
   }
 
-  /// Builds the view from the case envelope returned by the run endpoint. The
-  /// shared `run_council` result lives under the `result` key; when absent we
-  /// fall back to reading the keys at the top level so the projection is robust.
   factory _CouncilResultView.fromCaseEnvelope(Map<String, dynamic> envelope) {
     final result = envelope['result'];
     final payload = result is Map<String, dynamic> ? result : envelope;

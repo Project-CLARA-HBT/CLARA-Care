@@ -18,11 +18,15 @@ export const resolveTheme = (preference: ThemePreference, prefersDark: boolean):
 };
 
 export const getSystemTheme = (): ResolvedTheme => {
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
     return "dark";
   }
 
-  return window.matchMedia(THEME_QUERY).matches ? "dark" : "light";
+  try {
+    return window.matchMedia(THEME_QUERY)?.matches ? "dark" : "light";
+  } catch {
+    return "dark";
+  }
 };
 
 export const getStoredThemePreference = (): ThemePreference => {

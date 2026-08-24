@@ -84,7 +84,13 @@ export type ConsentPurpose =
   | "research"
   | "cross_border_processing"
   | "sharing"
-  | "ai_transparency";
+  | "ai_transparency"
+  | "medical_ai_reasoning"
+  | "emergency_escalation"
+  | "prescription_ocr"
+  | "scribe_ambient"
+  | "family_sharing"
+  | "research_deidentification";
 
 export type ConsentRecord = {
   purpose: ConsentPurpose;

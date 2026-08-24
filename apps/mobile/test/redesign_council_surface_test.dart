@@ -57,8 +57,8 @@ void main() {
     });
 
     testWidgets(
-        'progresses intake → specialists → result and shows the '
-        'clinician directive on the result (INV-7)', (tester) async {
+        'progresses 6-step workflow: case -> question -> context -> review -> run -> result and shows clinician directive (INV-7)',
+        (tester) async {
       final api = FakeApiClient()
         ..stub('createCouncilCase', response: {'id': 42})
         ..stub('submitCouncilCaseIntake', response: {'intake': {}})
@@ -74,7 +74,7 @@ void main() {
       await tester.pumpWidget(_host(await build(api)));
       await tester.pumpAndSettle();
 
-      // Step 1: enter symptoms and continue.
+      // Step 1 (Case): enter symptoms and continue.
       await tester.enterText(
         find.byType(TextFormField).first,
         'Ca thử nghiệm',
@@ -85,17 +85,35 @@ void main() {
       await tester.tap(find.text('Tiếp tục'));
       await tester.pumpAndSettle();
 
-      // Step 2: specialists — the run action appears.
-      expect(find.text('Bắt đầu hội chẩn'), findsOneWidget);
       expect(api.wasCalled('createCouncilCase'), isTrue);
 
+      // Step 2 (Question): continue to context/specialists
+      expect(find.text('Tiếp tục chọn chuyên khoa'), findsOneWidget);
+      await tester.tap(find.text('Tiếp tục chọn chuyên khoa'));
+      await tester.pumpAndSettle();
+
+      // Step 3 (Context): continue to review
+      expect(find.text('Tiếp tục rà soát'), findsOneWidget);
+      await tester.tap(find.text('Tiếp tục rà soát'));
+      await tester.pumpAndSettle();
+
+      // Step 4 (Review): proceed to council run
+      expect(find.text('Tiến hành hội đồng'), findsOneWidget);
+      await tester.tap(find.text('Tiến hành hội đồng'));
+      await tester.pumpAndSettle();
+
+      // Step 5 (Run): execute the council run
+      expect(find.text('Bắt đầu hội chẩn'), findsOneWidget);
       await tester.tap(find.text('Bắt đầu hội chẩn'));
       await tester.pumpAndSettle();
 
-      // Step 3: result — the clinician-review directive is always present.
+      // Step 6 (Result): 7-tier review with mandatory clinician directive (INV-7)
       expect(api.wasCalled('runCouncilCase'), isTrue);
       expect(find.text(kCouncilClinicianDirective), findsOneWidget);
       expect(find.text('Đồng thuận theo dõi ngoại trú.'), findsOneWidget);
+      expect(find.textContaining('1. Cảnh báo khẩn'), findsOneWidget);
+      expect(find.textContaining('2. Khuyến nghị lâm sàng'), findsOneWidget);
+      expect(find.textContaining('3. Đồng thuận đa chuyên khoa'), findsOneWidget);
     });
 
     testWidgets('case creation transmits only a no-PII has_transcript flag',

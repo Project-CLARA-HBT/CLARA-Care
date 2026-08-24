@@ -27,8 +27,13 @@ import {
 } from "@/lib/navigation.config";
 import { getPhrOnboarding } from "@/lib/phr-onboarding";
 
+export type AdminPreviewMode = "clinical" | "research" | "personal";
+
 export type SessionContextValue = {
   role: UserRole;
+  effectiveRole: UserRole;
+  adminPreviewMode: AdminPreviewMode | null;
+  setAdminPreviewMode: (mode: AdminPreviewMode | null) => void;
   setRole: (role: UserRole) => void;
   isRoleHydrated: boolean;
   isSessionChecked: boolean;
@@ -38,14 +43,37 @@ export type SessionContextValue = {
 
 export const SessionContext = createContext<SessionContextValue | null>(null);
 
-export function SessionBoundary({ children }: { children: ReactNode }) {
+export function SessionBoundary({
+  children,
+  initialPreviewMode = null,
+}: {
+  children: ReactNode;
+  initialPreviewMode?: AdminPreviewMode | null;
+}) {
   const pathname = usePathname();
   const router = useRouter();
 
   const [role, setRoleState] = useState<UserRole>("normal");
+  const [adminPreviewMode, setAdminPreviewMode] = useState<AdminPreviewMode | null>(
+    initialPreviewMode,
+  );
   const [isRoleHydrated, setIsRoleHydrated] = useState(false);
   const [isSessionChecked, setIsSessionChecked] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const effectiveRole = useMemo<UserRole>(() => {
+    if (role !== "admin" || !adminPreviewMode) return role;
+    switch (adminPreviewMode) {
+      case "clinical":
+        return "doctor";
+      case "research":
+        return "researcher";
+      case "personal":
+        return "normal";
+      default:
+        return role;
+    }
+  }, [role, adminPreviewMode]);
 
   useEffect(() => {
     let active = true;
@@ -154,6 +182,9 @@ export function SessionBoundary({ children }: { children: ReactNode }) {
   const value = useMemo<SessionContextValue>(
     () => ({
       role,
+      effectiveRole,
+      adminPreviewMode,
+      setAdminPreviewMode,
       setRole,
       isRoleHydrated,
       isSessionChecked,
@@ -162,6 +193,9 @@ export function SessionBoundary({ children }: { children: ReactNode }) {
     }),
     [
       role,
+      effectiveRole,
+      adminPreviewMode,
+      setAdminPreviewMode,
       setRole,
       isRoleHydrated,
       isSessionChecked,

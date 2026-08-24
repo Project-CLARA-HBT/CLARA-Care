@@ -34,6 +34,9 @@ describe("ProfessionalLayout", () => {
 
   const defaultSession = {
     role: "doctor" as const,
+    effectiveRole: "doctor" as const,
+    adminPreviewMode: null,
+    setAdminPreviewMode: vi.fn(),
     setRole: vi.fn(),
     isRoleHydrated: true,
     isSessionChecked: true,

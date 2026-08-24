@@ -110,4 +110,43 @@ describe("AdminDsarQueuePage RBAC (Property P7)", () => {
     });
     expect(mockListAdminDsarQueue).not.toHaveBeenCalled();
   });
+
+  it("opens request inspector drawer and updates status when admin selects a row", async () => {
+    roleState.role = "admin";
+    mockListAdminDsarQueue.mockResolvedValue({
+      enabled: true,
+      requests: [
+        {
+          id: 42,
+          kind: "export",
+          status: "received",
+          created_at: "2026-04-01T10:00:00Z",
+          due_at: "2026-04-30T10:00:00Z",
+          overdue: false,
+        },
+      ],
+      overdue_count: 0,
+    });
+    mockUpdateDsarStatus.mockResolvedValue({
+      id: 42,
+      kind: "export",
+      status: "in_progress",
+    });
+
+    render(<AdminDsarQueuePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("#42")).toBeInTheDocument();
+    });
+
+    // Click inspect button
+    const inspectBtn = screen.getByRole("button", { name: /inspect/i });
+    inspectBtn.click();
+
+    // Drawer opens with details
+    await waitFor(() => {
+      expect(screen.getByText(/action timeline/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/statutory response window/i).length).toBeGreaterThan(0);
+    });
+  });
 });

@@ -253,26 +253,13 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
-    // Visit preparation is intentionally a two-step, review-only flow. The
-    // generated draft and cited source records remain immutable; the only
-    // editable field is client-memory notes that are neither persisted nor
-    // submitted to LifeMap.
+    // /lifemap/visit-prep is an ALIAS_CONTEXT canonical redirect to /care/prepare (Spec v5 Section 6.19).
     path: "app/lifemap/visit-prep/page.tsx",
     required: [
-      "@/lib/i18n/catalog",
-      "StepProgress",
-      "visitPrep.step.scope",
-      "visitPrep.step.review",
-      "visitPrep.localNotes.label",
-      "setNotes",
-      "onNotesChange",
+      "redirect",
+      "/care/prepare",
     ],
-    forbidden: [
-      "Your notes or questions",
-      "Ghi chú hoặc câu hỏi của bạn",
-      "localStorage",
-      "sessionStorage",
-    ],
+    forbidden: [],
   },
   {
     path: "app/chat/_v2/components/ChatWelcome.tsx",
@@ -620,7 +607,7 @@ for (const surface of MIGRATED_SURFACES) {
   for (const token of surface.required) {
     if (!content.includes(token)) fail(`${surface.path} must reference ${token}`);
   }
-  for (const literal of surface.forbidden) {
+  for (const literal of surface.forbidden ?? []) {
     if (content.includes(literal)) fail(`${surface.path} contains migrated literal: ${literal}`);
   }
 }

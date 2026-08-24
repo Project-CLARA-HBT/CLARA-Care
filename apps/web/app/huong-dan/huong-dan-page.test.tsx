@@ -1,25 +1,38 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import GuidePage from "./page";
 
 afterEach(cleanup);
 
-describe("GuidePage (/huong-dan)", () => {
+describe("GuidePage (/huong-dan - Spec v5 Section 6.73 Help Library Archetype)", () => {
   beforeEach(() => {
     cleanup();
   });
 
-  it("renders the help center hero, omni-search, quick start bento cards, and mode glossary", () => {
+  it("renders the Help Library with omni-search hero, role selectors, topic list, selected guide reader, and mode glossary", () => {
     render(<GuidePage />);
 
+    // Header & Omni-search
     expect(screen.getByText("Trung tâm hướng dẫn")).toBeInTheDocument();
     expect(screen.getByTestId("omni-guide-search-input")).toBeInTheDocument();
-    expect(screen.getByText("Bắt đầu nhanh")).toBeInTheDocument();
-    expect(screen.getByText("Hỏi CLARA")).toBeInTheDocument();
-    expect(screen.getByText("Hội chẩn đa chuyên khoa")).toBeInTheDocument();
-    expect(screen.getByText("Ghi chép y khoa (Scribe)")).toBeInTheDocument();
-    expect(screen.getAllByText("Kiểm tra tương tác thuốc").length).toBeGreaterThan(0);
+
+    // Role category selectors
+    expect(screen.getByRole("button", { name: "Tất cả" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Người dùng" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Lâm sàng" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Nghiên cứu" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Quản trị" })).toBeInTheDocument();
+
+    // Default Selected Guide Reader (Chat / Hỏi CLARA)
+    expect(screen.getByRole("heading", { name: /Tôi muốn hỏi CLARA về triệu chứng hoặc thuốc/i })).toBeInTheDocument();
+    expect(screen.getByText(/Quy trình thực hiện từng bước/i)).toBeInTheDocument();
+    expect(screen.getByText("Mở hỏi CLARA")).toBeInTheDocument();
+
+    // Mode glossary
     expect(screen.getByText("Các nhãn trong ô chat nghĩa là gì?")).toBeInTheDocument();
+    expect(screen.getByText("Nhanh")).toBeInTheDocument();
+    expect(screen.getByText("Tư duy")).toBeInTheDocument();
+    expect(screen.getByText("Pro")).toBeInTheDocument();
   });
 
   it("filters task guides dynamically when typing into omni search input", () => {
@@ -28,12 +41,13 @@ describe("GuidePage (/huong-dan)", () => {
     const searchInput = screen.getByTestId("omni-guide-search-input");
     fireEvent.change(searchInput, { target: { value: "hội chẩn" } });
 
-    expect(screen.getByText("Tôi là bác sĩ và cần hội chẩn ca khó")).toBeInTheDocument();
-    expect(screen.queryByText("Tôi muốn hỏi CLARA về triệu chứng hoặc thuốc")).not.toBeInTheDocument();
+    // Council AI task appears in both heading and list
+    expect(screen.getAllByText("Tôi là bác sĩ và cần hội chẩn ca khó").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Tôi muốn lưu thuốc đang dùng")).not.toBeInTheDocument();
 
     // Reset search
     fireEvent.change(searchInput, { target: { value: "" } });
-    expect(screen.getByText("Tôi muốn hỏi CLARA về triệu chứng hoặc thuốc")).toBeInTheDocument();
+    expect(screen.getAllByText("Tôi muốn hỏi CLARA về triệu chứng hoặc thuốc").length).toBeGreaterThan(0);
   });
 
   it("populates search query when clicking suggestion pills", () => {
@@ -43,34 +57,65 @@ describe("GuidePage (/huong-dan)", () => {
     fireEvent.click(pill);
 
     expect(screen.getByDisplayValue("Ghi âm buổi khám")).toBeInTheDocument();
-    expect(screen.getByText("Tôi muốn ghi lại buổi khám")).toBeInTheDocument();
+    expect(screen.getAllByText("Tôi muốn ghi lại buổi khám").length).toBeGreaterThan(0);
   });
 
-  it("filters tasks by role scope using role filter buttons", () => {
+  it("filters tasks by role scope (Personal, Clinical, Research, Admin)", () => {
     render(<GuidePage />);
 
+    // 1. Personal / Consumer role filter
     const personalBtn = screen.getByRole("button", { name: "Người dùng" });
     fireEvent.click(personalBtn);
 
-    // Personal role includes cabinet
-    expect(screen.getByText("Tôi muốn lưu thuốc đang dùng")).toBeInTheDocument();
+    expect(screen.getAllByText("Tôi muốn lưu thuốc đang dùng").length).toBeGreaterThan(0);
     expect(screen.queryByText("Tôi muốn ghi lại buổi khám")).not.toBeInTheDocument();
+    expect(screen.queryByText("Truy xuất y văn & Tổng hợp bằng chứng lâm sàng")).not.toBeInTheDocument();
 
+    // 2. Clinical role filter
+    const clinicalBtn = screen.getByRole("button", { name: "Lâm sàng" });
+    fireEvent.click(clinicalBtn);
+
+    expect(screen.getAllByText("Tôi là bác sĩ và cần hội chẩn ca khó").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Tôi muốn ghi lại buổi khám").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Tôi muốn lưu thuốc đang dùng")).not.toBeInTheDocument();
+
+    // 3. Research role filter
+    const researchBtn = screen.getByRole("button", { name: "Nghiên cứu" });
+    fireEvent.click(researchBtn);
+
+    expect(screen.getAllByText(/Truy xuất y văn/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Tôi muốn lưu thuốc đang dùng")).not.toBeInTheDocument();
+
+    // 4. Admin role filter
+    const adminBtn = screen.getByRole("button", { name: "Quản trị" });
+    fireEvent.click(adminBtn);
+
+    expect(screen.getAllByText(/CÔNG CỤ QUẢN TRỊ: GIÁM SÁT HỆ THỐNG/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Tôi muốn lưu thuốc đang dùng")).not.toBeInTheDocument();
+
+    // 5. Reset to All
     const allBtn = screen.getByRole("button", { name: "Tất cả" });
     fireEvent.click(allBtn);
-    expect(screen.getByText("Tôi muốn ghi lại buổi khám")).toBeInTheDocument();
+    expect(screen.getAllByText("Tôi muốn hỏi CLARA về triệu chứng hoặc thuốc").length).toBeGreaterThan(0);
   });
 
-  it("toggles task accordion expanding and collapsing steps", () => {
+  it("selects a different guide from the topic list and updates the Guide Reader with illustrations", () => {
     render(<GuidePage />);
 
-    // Step by step list is expanded for chat by default
-    expect(screen.getByText("Nhập câu hỏi bằng ngôn ngữ bình thường.")).toBeInTheDocument();
-
-    // Click to collapse
-    const chatAccordionHeader = screen.getByText("Tôi muốn hỏi CLARA về triệu chứng hoặc thuốc").closest("div");
-    if (chatAccordionHeader) {
-      fireEvent.click(chatAccordionHeader);
+    // Click on Medicine Cabinet task in the list
+    const cabinetButtons = screen.getAllByText("Tôi muốn lưu thuốc đang dùng");
+    const listButton = cabinetButtons[0].closest("button");
+    if (listButton) {
+      fireEvent.click(listButton);
     }
+
+    // Selected guide heading should update
+    expect(screen.getByRole("heading", { name: /Tôi muốn lưu thuốc đang dùng/i })).toBeInTheDocument();
+    expect(screen.getByText("CÔNG CỤ KHUYÊN DÙNG: TỦ THUỐC")).toBeInTheDocument();
+    expect(screen.getByText("Mở tủ thuốc")).toBeInTheDocument();
+
+    // Illustrated mock snippet should be visible
+    expect(screen.getByText(/Thêm thuốc hoặc quét ảnh đơn thuốc/i)).toBeInTheDocument();
+    expect(screen.getByText("Báo cáo an toàn tủ thuốc")).toBeInTheDocument();
   });
 });

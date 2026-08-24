@@ -24,11 +24,11 @@ import Icon from "@/components/ui/icon";
  * Modernized answer renderer for CLARA Chat with Answer-First Structure:
  * Aligned with Stitch template h_i_clara_active_conversation_refined.
  *
- * 1. Warning alert box: Cảnh báo an toàn / Safety Caveat / Degraded notice / Release boundary
- * 2. Structured answer: Tóm tắt & Phân tích / Short answer & Markdown clinical content
- * 3. Next Action steps: Bạn có thể làm gì tiếp theo / Management recommendations & Actions
- * 4. Citations tags: Bằng chứng & Nguồn tham khảo (Guideline, Alert, Pharmacopeia tags)
- * 5. Evidence synthesis: Bằng chứng chi tiết / Evidence ledger & Integrity diagnostics
+ * 1. Warning alert box: Safety Caveat / Degraded notice / Release boundary
+ * 2. Structured answer: Short answer & Markdown clinical content
+ * 3. Next Action steps: Management recommendations & Actions
+ * 4. Citations tags: Evidence & Verified Badges (Guideline, Alert, Pharmacopeia tags)
+ * 5. Evidence synthesis: Evidence ledger & Integrity diagnostics
  */
 
 export type AnswerRendererProps = {
@@ -203,7 +203,44 @@ function AnswerRenderer({
         </div>
       </section>
 
-      {/* 3. NEXT ACTION STEPS SECTION */}
+      {/* 3. NEXT ACTION STEPS & SAFETY CARDS SECTION */}
+      {result.tier === "tier2" && result.verificationStatus ? (
+        <section
+          className="rounded-2xl border border-[color:var(--shell-border)]/80 bg-[var(--surface-muted)]/50 p-4 sm:p-5 shadow-xs space-y-3"
+          aria-label={uiLanguage === "vi" ? "Thẻ an toàn DrugBank & FIDES" : "DrugBank & FIDES Safety Card"}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)]/50 pb-2.5">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+                <Icon name="medication" size={15} />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                  {uiLanguage === "vi" ? "Kiểm tra Dược lý & An toàn FIDES" : "FIDES Clinical Safety & Pharmacology"}
+                </h4>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--brand-500)]/60 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--text-brand)]">
+                <Icon name="check" size={11} />
+                {result.verificationStatus.verdict ?? (uiLanguage === "vi" ? "ĐÃ KIỂM CHỨNG" : "VERIFIED")}
+              </span>
+              {result.policyAction ? (
+                <Badge tone={result.policyAction === "allow" ? "ok" : "warn"}>
+                  {result.policyAction.toUpperCase()}
+                </Badge>
+              ) : null}
+            </div>
+          </div>
+
+          {result.verificationStatus.note ? (
+            <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+              {result.verificationStatus.note}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
       {clinicalAnswer ? (
         <MedicalAnswerCanvas
           answer={clinicalAnswer}

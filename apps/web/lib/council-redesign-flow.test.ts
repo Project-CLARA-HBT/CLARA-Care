@@ -38,13 +38,13 @@ describe("Council Redesign Flow and Result Hierarchy", () => {
     expect(resultSource).toContain("hierarchy-uncertainty-heading");
     expect(resultSource).toContain("council.result.hierarchy.uncertainty");
 
-    // 5. Evidence
-    expect(resultSource).toContain("hierarchy-evidence-heading");
-    expect(resultSource).toContain("council.result.hierarchy.evidence");
-
-    // 6. Clinician Action
+    // 5. Clinician Action
     expect(resultSource).toContain("hierarchy-action-heading");
     expect(resultSource).toContain("council.result.hierarchy.clinicianAction");
+
+    // 6. Evidence
+    expect(resultSource).toContain("hierarchy-evidence-heading");
+    expect(resultSource).toContain("council.result.hierarchy.evidence");
 
     // 7. Technical Details
     expect(resultSource).toContain("council.result.hierarchy.technicalDetails");
@@ -54,8 +54,8 @@ describe("Council Redesign Flow and Result Hierarchy", () => {
     const pos2 = resultSource.indexOf("hierarchy-recommendation-heading");
     const pos3 = resultSource.indexOf("hierarchy-consensus-heading");
     const pos4 = resultSource.indexOf("hierarchy-uncertainty-heading");
-    const pos5 = resultSource.indexOf("hierarchy-evidence-heading");
-    const pos6 = resultSource.indexOf("hierarchy-action-heading");
+    const pos5 = resultSource.indexOf("hierarchy-action-heading");
+    const pos6 = resultSource.indexOf("hierarchy-evidence-heading");
     const pos7 = resultSource.indexOf("council.result.hierarchy.technicalDetails");
 
     expect(pos1).toBeLessThan(pos2);

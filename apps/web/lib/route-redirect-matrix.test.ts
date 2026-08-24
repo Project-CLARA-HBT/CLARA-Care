@@ -90,6 +90,7 @@ describe("Route Capability and Redirect Matrix", () => {
       expect(isPublicRoute("/register")).toBe(true);
       expect(isPublicRoute("/legal")).toBe(true);
       expect(isPublicRoute("/share/some-token-123")).toBe(true);
+      expect(isPublicRoute("/chat/share/some-chat-token-789")).toBe(true);
       expect(isPublicRoute("/phr/shared/some-phr-token-456")).toBe(true);
 
       expect(isPublicRoute("/home")).toBe(false);

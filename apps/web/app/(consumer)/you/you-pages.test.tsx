@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ConsumerYouPage from "./page";
 import YouProfilePage from "./profile/page";
@@ -6,6 +6,7 @@ import YouSharingPage from "./sharing/page";
 import YouPrivacyPage from "./privacy/page";
 import YouIntegrationsPage from "./integrations/page";
 import YouNotificationsPage from "./notifications/page";
+import YouSettingsPage from "./settings/page";
 import { v2Client } from "@/lib/api/v2-client";
 
 const mockRouter = {
@@ -78,8 +79,8 @@ const mockYouOverview = {
 };
 
 describe("You & Privacy Route Pages", () => {
-  describe("You Overview Page (/you)", () => {
-    it("renders profile summary, emergency card card, family sharing, AI privacy, connected sources, and professional mode switcher", async () => {
+  describe("You Overview Page (/you — Spec v5 Section 6.74 Account & Preferences Hub)", () => {
+    it("renders Identity & Profile card, all 8 categorized vertical list rows, emergency alerts, and quick QR modal", async () => {
       vi.spyOn(v2Client, "getYouOverview").mockResolvedValueOnce(mockYouOverview as any);
 
       render(<ConsumerYouPage />);
@@ -89,14 +90,54 @@ describe("You & Privacy Route Pages", () => {
       });
 
       expect(screen.getByText("Cá nhân & Quyền riêng tư")).toBeInTheDocument();
+
+      // 1. Identity & Profile card
       expect(screen.getByTestId("profile-summary-card")).toBeInTheDocument();
       expect(screen.getByTestId("emergency-card-summary")).toBeInTheDocument();
-      expect(screen.getByTestId("family-sharing-summary")).toBeInTheDocument();
-      expect(screen.getByTestId("privacy-ai-summary")).toBeInTheDocument();
-      expect(screen.getByTestId("integrations-summary")).toBeInTheDocument();
-      expect(screen.getByTestId("notifications-summary")).toBeInTheDocument();
-      expect(screen.getByTestId("professional-mode-card")).toBeInTheDocument();
+      expect(screen.getByTestId("edit-profile-btn")).toHaveAttribute("href", "/you/profile");
       expect(screen.getByText("Dị ứng nặng Penicillin")).toBeInTheDocument();
+
+      // 2. Categorized vertical list rows (Spec v5 Section 6.74)
+      expect(screen.getByTestId("categorized-account-rows")).toBeInTheDocument();
+
+      // Row 1: Health Record (PHR)
+      expect(screen.getByTestId("phr-summary")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Hồ sơ Sức khỏe Cá nhân \(PHR\)|Health Record \(PHR\)/i })).toHaveAttribute("href", "/phr");
+
+      // Row 2: Family & Care Sharing
+      expect(screen.getByTestId("family-sharing-summary")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Chia sẻ Người thân & Người chăm sóc|Family & Care Sharing/i })).toHaveAttribute("href", "/you/sharing");
+
+      // Row 3: Connected Health Devices
+      expect(screen.getByTestId("integrations-summary")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Thiết bị & Nguồn kết nối|Connected Health Devices/i })).toHaveAttribute("href", "/you/integrations");
+
+      // Row 4: Privacy & Medical Consent
+      expect(screen.getByTestId("privacy-ai-summary")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Quyền riêng tư & Đồng thuận Y tế|Privacy & Medical Consent/i })).toHaveAttribute("href", "/you/privacy");
+
+      // Row 5: Data Rights (Decree 13 / GDPR)
+      expect(screen.getByTestId("data-rights-summary")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Quyền Dữ liệu \(Nghị định 13 \/ GDPR\)|Data Rights \(Decree 13 \/ GDPR\)/i })).toHaveAttribute("href", "/account/data");
+
+      // Row 6: Notifications
+      expect(screen.getByTestId("notifications-summary")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Cài đặt Thông báo & Nhắc nhở|Notifications/i })).toHaveAttribute("href", "/you/notifications");
+
+      // Row 7: Security & Preferences (Settings & Security)
+      const secSummary = screen.getByTestId("security-preferences-summary");
+      expect(secSummary).toBeInTheDocument();
+      expect(within(secSummary).getByRole("link")).toHaveAttribute("href", "/you/settings");
+
+      // Row 8: Help & Guides
+      expect(screen.getByTestId("help-guide-summary")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Hướng dẫn & Trợ giúp|Help & Guides/i })).toHaveAttribute("href", "/huong-dan");
+
+      // 3. Professional Mode Card
+      expect(screen.getByTestId("professional-mode-card")).toBeInTheDocument();
+
+      // 4. Sign out button
+      expect(screen.getByTestId("you-sign-out-btn")).toBeInTheDocument();
 
       // Trigger Quick Emergency QR Modal
       const openQrBtn = screen.getByTestId("open-emergency-qr-btn");
@@ -368,7 +409,14 @@ describe("You & Privacy Route Pages", () => {
   describe("You Notifications Page (/you/notifications)", () => {
     it("renders notification categories, quiet hours schedule, and delivery channels", async () => {
       vi.spyOn(v2Client, "getNotificationPreferences").mockResolvedValueOnce({
-        categories: { medications: true, visits: true, review_items: true, safety_alerts: true },
+        categories: {
+          medications: true,
+          visits: true,
+          review_items: true,
+          safety_alerts: true,
+          journey_milestones: true,
+          family_activity: true,
+        },
         channels: { push: true, email: true, in_app: true },
         quiet_hours: { enabled: true, start_time: "22:00", end_time: "07:00" },
       } as any);
@@ -379,6 +427,8 @@ describe("You & Privacy Route Pages", () => {
         expect(screen.getByTestId("you-notifications-page")).toBeInTheDocument();
       });
 
+      expect(screen.getByTestId("notification-feed-section")).toBeInTheDocument();
+      expect(screen.getByTestId("notification-filter-tabs")).toBeInTheDocument();
       expect(screen.getByTestId("notification-categories-section")).toBeInTheDocument();
       expect(screen.getByTestId("quiet-hours-section")).toBeInTheDocument();
       expect(screen.getByTestId("notification-channels-section")).toBeInTheDocument();
@@ -394,6 +444,265 @@ describe("You & Privacy Route Pages", () => {
       await waitFor(() => {
         expect(screen.getByTestId("notifications-save-success")).toBeInTheDocument();
       });
+    });
+
+    it("supports filtering notification categories and taking interactive actions", async () => {
+      vi.spyOn(v2Client, "getNotificationPreferences").mockResolvedValueOnce({
+        categories: { medications: true, visits: true, review_items: true, safety_alerts: true },
+        channels: { push: true, email: true, in_app: true },
+        quiet_hours: { enabled: true, start_time: "22:00", end_time: "07:00" },
+      } as any);
+
+      render(<YouNotificationsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("you-notifications-page")).toBeInTheDocument();
+      });
+
+      // Filter by medications tab
+      const medTab = screen.getByTestId("tab-filter-medications");
+      fireEvent.click(medTab);
+      expect(screen.getByTestId("notif-card-notif-med-1")).toBeInTheDocument();
+
+      // Mark medication as taken
+      const actionBtn = screen.getByTestId("action-btn-notif-med-1");
+      fireEvent.click(actionBtn);
+      expect(screen.getByText("Đã uống")).toBeInTheDocument();
+
+      // Toggle read state
+      const toggleReadBtn = screen.getByTestId("toggle-read-btn-notif-med-1");
+      fireEvent.click(toggleReadBtn);
+      expect(screen.getByText("Đánh dấu đã đọc")).toBeInTheDocument();
+
+      // Filter by safety tab
+      const safetyTab = screen.getByTestId("tab-filter-safety");
+      fireEvent.click(safetyTab);
+      expect(screen.getByTestId("notif-card-notif-safe-1")).toBeInTheDocument();
+
+      // Return to all
+      const allTab = screen.getByTestId("tab-filter-all");
+      fireEvent.click(allTab);
+      expect(screen.getByTestId("notif-card-notif-mile-1")).toBeInTheDocument();
+
+      // Mark all as read
+      const markAllBtn = screen.getByTestId("mark-all-read-btn");
+      fireEvent.click(markAllBtn);
+      expect(screen.queryByTestId("unread-count-badge")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("You Settings & Security Page (/you/settings)", () => {
+    it("renders appearance (theme/language), MFA management, active logins, and session policies", async () => {
+      vi.spyOn(v2Client, "getSecuritySettings").mockResolvedValueOnce({
+        mfa_enabled: false,
+        mfa_method: "totp",
+        mfa_configured_at: null,
+        inactivity_timeout_minutes: 30,
+        new_login_alerts: true,
+        reauth_for_sensitive: true,
+        active_sessions: [
+          {
+            id: "sess-current",
+            device_name: "Chrome 127 • Windows 11",
+            device_type: "desktop",
+            platform: "Windows 11",
+            browser: "Chrome 127",
+            ip_address: "118.69.182.45",
+            location: "Hà Nội, Việt Nam",
+            last_active_at: new Date().toISOString(),
+            is_current: true,
+          },
+          {
+            id: "sess-mobile-1",
+            device_name: "CLARA Mobile App • iOS 18 (iPhone 15 Pro)",
+            device_type: "mobile",
+            platform: "iOS 18",
+            browser: "CLARA App 2.1",
+            ip_address: "14.161.34.12",
+            location: "TP. Hồ Chí Minh, Việt Nam",
+            last_active_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+            is_current: false,
+          },
+        ],
+      } as any);
+
+      render(<YouSettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("you-settings-page")).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId("appearance-language-section")).toBeInTheDocument();
+      expect(screen.getByTestId("mfa-management-section")).toBeInTheDocument();
+      expect(screen.getByTestId("active-logins-section")).toBeInTheDocument();
+      expect(screen.getByTestId("session-security-section")).toBeInTheDocument();
+
+      // Theme toggle
+      const lightOption = screen.getByRole("tab", { name: /Sáng/i });
+      fireEvent.click(lightOption);
+
+      // Inactivity timeout select
+      const timeoutSelect = screen.getByTestId("inactivity-timeout-select");
+      fireEvent.change(timeoutSelect, { target: { value: "60" } });
+
+      // Save settings
+      vi.spyOn(v2Client, "updateSecuritySettings").mockResolvedValueOnce({} as any);
+      fireEvent.click(screen.getByRole("button", { name: /Lưu thay đổi/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("settings-save-success")).toBeInTheDocument();
+      });
+    });
+
+    it("steps through MFA 2FA setup wizard, generates backup codes, and allows disabling MFA", async () => {
+      vi.spyOn(v2Client, "getSecuritySettings").mockResolvedValueOnce({
+        mfa_enabled: false,
+        mfa_method: "totp",
+        mfa_configured_at: null,
+        inactivity_timeout_minutes: 30,
+        new_login_alerts: true,
+        reauth_for_sensitive: true,
+        active_sessions: [],
+      } as any);
+
+      render(<YouSettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("you-settings-page")).toBeInTheDocument();
+      });
+
+      // Launch 2FA Setup
+      const setupMfaBtn = screen.getByTestId("setup-mfa-btn");
+      fireEvent.click(setupMfaBtn);
+
+      expect(screen.getByTestId("mfa-setup-modal")).toBeInTheDocument();
+      expect(screen.getByTestId("mfa-secret-display")).toHaveTextContent("CLARA-SEC-8894-K9VT-2026");
+
+      // Next step
+      fireEvent.click(screen.getByTestId("mfa-next-step-btn"));
+
+      // Enter code (invalid first)
+      const codeInput = screen.getByTestId("mfa-verification-code-input");
+      fireEvent.change(codeInput, { target: { value: "123" } });
+      fireEvent.click(screen.getByTestId("mfa-verify-code-btn"));
+      expect(screen.getByText("Vui lòng nhập mã gồm đúng 6 chữ số.")).toBeInTheDocument();
+
+      // Enter valid 6-digit code
+      fireEvent.change(codeInput, { target: { value: "654321" } });
+      fireEvent.click(screen.getByTestId("mfa-verify-code-btn"));
+
+      // Step 3: Backup codes
+      expect(screen.getByTestId("backup-codes-grid")).toBeInTheDocument();
+      expect(screen.getByText("A7X9-K2M4")).toBeInTheDocument();
+
+      // Copy backup codes
+      const copyBtn = screen.getByTestId("copy-backup-codes-btn");
+      Object.assign(navigator, {
+        clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+      });
+      fireEvent.click(copyBtn);
+
+      // Finish setup
+      vi.spyOn(v2Client, "updateSecuritySettings").mockResolvedValueOnce({} as any);
+      fireEvent.click(screen.getByTestId("mfa-finish-setup-btn"));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("mfa-setup-modal")).not.toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId("mfa-status-badge")).toHaveTextContent("Đang Bật (Bảo vệ cao)");
+
+      // Disable MFA
+      const disableBtn = screen.getByTestId("disable-mfa-btn");
+      fireEvent.click(disableBtn);
+      expect(screen.getByTestId("disable-mfa-modal")).toBeInTheDocument();
+
+      vi.spyOn(v2Client, "updateSecuritySettings").mockResolvedValueOnce({} as any);
+      fireEvent.click(screen.getByTestId("confirm-disable-mfa-btn"));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("disable-mfa-modal")).not.toBeInTheDocument();
+      });
+      expect(screen.getByTestId("mfa-status-badge")).toHaveTextContent("Chưa Kích Hoạt");
+    });
+
+    it("revokes individual sessions and terminates all other active sessions", async () => {
+      vi.spyOn(v2Client, "getSecuritySettings").mockResolvedValueOnce({
+        mfa_enabled: true,
+        mfa_method: "totp",
+        mfa_configured_at: "2026-08-01T00:00:00Z",
+        inactivity_timeout_minutes: 30,
+        new_login_alerts: true,
+        reauth_for_sensitive: true,
+        active_sessions: [
+          {
+            id: "sess-current",
+            device_name: "Chrome 127 • Windows 11",
+            device_type: "desktop",
+            platform: "Windows 11",
+            browser: "Chrome 127",
+            ip_address: "118.69.182.45",
+            location: "Hà Nội, Việt Nam",
+            last_active_at: new Date().toISOString(),
+            is_current: true,
+          },
+          {
+            id: "sess-mobile-1",
+            device_name: "CLARA Mobile App • iOS 18 (iPhone 15 Pro)",
+            device_type: "mobile",
+            platform: "iOS 18",
+            browser: "CLARA App 2.1",
+            ip_address: "14.161.34.12",
+            location: "TP. Hồ Chí Minh, Việt Nam",
+            last_active_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+            is_current: false,
+          },
+          {
+            id: "sess-tablet-1",
+            device_name: "Safari 17 • iPadOS 17.5 (iPad Air)",
+            device_type: "tablet",
+            platform: "iPadOS 17.5",
+            browser: "Safari 17",
+            ip_address: "113.190.23.88",
+            location: "Đà Nẵng, Việt Nam",
+            last_active_at: new Date(Date.now() - 3 * 86400 * 1000).toISOString(),
+            is_current: false,
+          },
+        ],
+      } as any);
+
+      render(<YouSettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("you-settings-page")).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId("session-card-sess-mobile-1")).toBeInTheDocument();
+      expect(screen.getByTestId("session-card-sess-tablet-1")).toBeInTheDocument();
+
+      // Revoke single session
+      vi.spyOn(v2Client, "revokeSession").mockResolvedValueOnce({ success: true, revoked_id: "sess-mobile-1" });
+      const revokeMobileBtn = screen.getByTestId("revoke-session-btn-sess-mobile-1");
+      fireEvent.click(revokeMobileBtn);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("session-card-sess-mobile-1")).not.toBeInTheDocument();
+        expect(screen.getByTestId("session-revoke-notice")).toBeInTheDocument();
+      });
+
+      // Terminate all other sessions
+      const revokeAllBtn = screen.getByTestId("revoke-all-others-btn");
+      fireEvent.click(revokeAllBtn);
+      expect(screen.getByTestId("revoke-all-sessions-modal")).toBeInTheDocument();
+
+      vi.spyOn(v2Client, "revokeAllOtherSessions").mockResolvedValueOnce({ success: true, revoked_count: 1 });
+      fireEvent.click(screen.getByTestId("confirm-revoke-all-btn"));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("revoke-all-sessions-modal")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("session-card-sess-tablet-1")).not.toBeInTheDocument();
+      });
+      expect(screen.getByTestId("session-card-sess-current")).toBeInTheDocument();
     });
   });
 });

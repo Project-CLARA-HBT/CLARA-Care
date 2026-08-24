@@ -1,8 +1,10 @@
-"use client";
+import { redirect } from "next/navigation";
 
 /**
- * Historical bookmark alias. New navigation must use
- * `/medicines/cabinet/add`; both URLs deliberately render the same consent-
- * gated Medicines component so this route cannot become a second workflow.
+ * Historical alias (Spec v5 Section 6.31).
+ * Transition directly to the canonical destination `/medicines/cabinet/add`.
  */
-export { default } from "@/components/medicines/cabinet-add-page";
+export default function SelfMedAddPage() {
+  redirect("/medicines/cabinet/add");
+}
+

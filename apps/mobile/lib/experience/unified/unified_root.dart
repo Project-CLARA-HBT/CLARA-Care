@@ -38,13 +38,13 @@ import '../language_controller.dart';
 import '../presentation_mode.dart';
 import '../redesign/chat_surface_v3.dart' show ChatSurfaceV3;
 import '../redesign/council_surface_v3.dart' show CouncilSurfaceV3;
-import '../redesign/home_screen_v3.dart' show HomeScreenV3;
 import '../redesign/more_screen_v3.dart' show MoreScreenV3;
 import '../redesign/phr_surface_v3.dart' show PhrSurfaceV3;
 import '../redesign/scribe_surface_v3.dart' show ScribeSurfaceV3;
 import '../redesign_shell.dart';
 import '../spatial/adaptive_clara_shell.dart';
 import '../theme_controller.dart';
+import 'clinical_overview_surface.dart';
 import 'lifemap_surface.dart';
 import 'living_evidence_surface.dart';
 import 'medicines_hub.dart';
@@ -222,7 +222,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
             icon: Icons.dashboard_outlined,
             selectedIcon: Icons.dashboard,
             label: isEnglish ? 'Overview' : 'Tổng quan',
-            body: HomeScreenV3(
+            body: ClinicalOverviewSurface(
               apiClient: widget.apiClient,
               sessionStore: widget.sessionStore,
               resolver: resolver,

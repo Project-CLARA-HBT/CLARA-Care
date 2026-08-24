@@ -1,12 +1,14 @@
 // Today agenda surface for the CLARA_Mobile unified experience
 // (clara-mobile-unified).
 //
-// Consumes the /api/v2/home read model:
-//   * Priority 1: Top next-action card (severity-based).
-//   * Priority 2: Full-width Ask CLARA entry card with text/camera/voice affordances.
-//   * Priority 3: Today's schedule (medications, visits, care tasks).
-//   * Priority 4: Recent changes (real source records only; no fake activity).
-//   * Priority 5: Calm caught-up state when all tasks are complete.
+// Spec v5 Section 7.1 Recomposition:
+//   1. Date & Context greeting header (`Hôm nay, [Date]`).
+//   2. Next accepted task as dominant `HeroObject` (title, due time, severity badge, complete action).
+//   3. Upcoming accepted tasks timeline.
+//   4. Pending confirmations row.
+//   5. Active LifeMap journey preview.
+//   6. Secondary utility actions (`Hỏi CLARA`, `Tủ thuốc`, `Chuẩn bị khám`).
+//   7. Progress / recent authentic source changes.
 //
 // Gated on PHR profile (409 returns onboarding). Supports offline caching.
 
@@ -29,34 +31,88 @@ import '../states/skeleton.dart';
 
 String _str(Object? value) => value == null ? '' : value.toString();
 
+String _severityBadgeLabel(String severity, ConsumerTerminology copy) {
+  final norm = severity.toLowerCase();
+  if (norm == 'critical') return copy[ConsumerTerm.homeSeverityCritical];
+  if (norm == 'urgent' || norm == 'high') {
+    return copy[ConsumerTerm.homeSeverityUrgent];
+  }
+  if (norm == 'attention' || norm == 'warning' || norm == 'soon') {
+    return copy[ConsumerTerm.homeSeverityAttention];
+  }
+  if (norm == 'routine') return copy[ConsumerTerm.homeSeverityRoutine];
+  return copy[ConsumerTerm.homeSeverityNormal];
+}
+
+String _englishMonth(int month) => const <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ][(month - 1).clamp(0, 11)];
+
 /// A single accepted task rendered on the Today agenda.
 class _TodayTask {
-  const _TodayTask({required this.id, required this.title, this.dueAt, this.completed = false});
+  const _TodayTask({
+    required this.id,
+    required this.title,
+    this.dueAt,
+    this.completed = false,
+    this.severity = 'normal',
+    this.episodeTitle,
+  });
 
   factory _TodayTask.fromJson(Map<String, dynamic> json) => _TodayTask(
         id: _str(json['id']),
-        title: _str(json['title'] ?? json['name']),
-        dueAt: json['due_at'] == null ? null : _str(json['due_at']),
+        title: _str(json['title'] ?? json['name'] ?? json['medication_name']),
+        dueAt: json['due_at'] == null
+            ? (json['time'] == null ? null : _str(json['time']))
+            : _str(json['due_at']),
         completed: json['status'] == 'completed' || json['completed'] == true,
+        severity: _str(json['severity'] ?? json['priority'] ?? 'normal').toLowerCase(),
+        episodeTitle:
+            json['episode_title'] == null ? null : _str(json['episode_title']),
       );
 
   final String id;
   final String title;
   final String? dueAt;
   final bool completed;
+  final String severity;
+  final String? episodeTitle;
+
+  bool get isUrgent =>
+      severity == 'urgent' || severity == 'critical' || severity == 'high';
+  bool get isAttention =>
+      severity == 'attention' || severity == 'warning' || severity == 'soon';
 }
 
 /// A single open care episode summarized on the Today agenda.
 class _TodayEpisode {
-  const _TodayEpisode({required this.id, required this.title});
+  const _TodayEpisode({
+    required this.id,
+    required this.title,
+    this.priority = 'routine',
+  });
 
   factory _TodayEpisode.fromJson(Map<String, dynamic> json) => _TodayEpisode(
         id: _str(json['id']),
         title: _str(json['title']),
+        priority:
+            _str(json['priority']).isEmpty ? 'routine' : _str(json['priority']),
       );
 
   final String id;
   final String title;
+  final String priority;
 }
 
 /// The daily agenda surface: accepted tasks, open journeys, and the pending-
@@ -285,20 +341,14 @@ class _TodaySurfaceState extends State<TodaySurface> {
     return _copy.format(ConsumerTerm.todayDueDate, {'date': date});
   }
 
-  String _englishMonth(int month) => const <String>[
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ][month - 1];
+  String _formatTodayDate(DateTime now, ConsumerTerminology copy) {
+    final local = now.toLocal();
+    String two(int n) => n.toString().padLeft(2, '0');
+    if (copy.locale == 'en') {
+      return '${_englishMonth(local.month)} ${local.day}, ${local.year}';
+    }
+    return '${two(local.day)}/${two(local.month)}/${local.year}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -386,270 +436,187 @@ class _TodaySurfaceState extends State<TodaySurface> {
     final copy = _copy;
     final topAction = _topAction;
     final recentChanges = _recentChanges;
-    final isCaughtUp = _tasks.isNotEmpty && _tasks.every((t) => t.completed);
 
-    final children = <Widget>[
-      if (_offlineCachedAt != null) _buildOfflineNotice(context),
+    final uncompletedTasks = _tasks.where((t) => !t.completed).toList();
+    final completedTasks = _tasks.where((t) => t.completed).toList();
+    final isCaughtUp = _tasks.isNotEmpty && uncompletedTasks.isEmpty;
 
-      // Header row
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
-        child: Row(
-          children: [
-            Expanded(
-              child: SectionHeader(
-                title: copy[ConsumerTerm.todayTitle],
-                emphasize: true,
-              ),
-            ),
-            if (widget.onOpenLifeMap != null)
-              TextButton.icon(
-                onPressed: widget.onOpenLifeMap,
-                icon: const Icon(Icons.map_outlined, size: 18),
-                label: Text(copy[ConsumerTerm.todayOpenLifeMap]),
-              ),
-          ],
-        ),
-      ),
-      const SizedBox(height: ClaraTokens.spaceSm),
+    final nextTask =
+        uncompletedTasks.isNotEmpty ? uncompletedTasks.first : null;
+    final upcomingTasks = uncompletedTasks.isNotEmpty
+        ? uncompletedTasks.skip(1).toList()
+        : const <_TodayTask>[];
 
-      // Priority 1: Top next-action card (severity-based)
-      if (topAction != null) ...[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
-          child: _TopActionBanner(
-            action: topAction,
-            copy: copy,
-            onAction: () {
-              if (topAction.kind == 'medication') {
-                widget.onCheckMedicines?.call();
-              } else if (topAction.kind == 'visit') {
-                widget.onPrepareVisit?.call();
-              } else if (topAction.kind == 'chat' || topAction.kind == 'review') {
-                widget.onAskHealth?.call();
-              } else {
-                widget.onOpenLifeMap?.call();
-              }
-            },
-          ),
-        ),
-        const SizedBox(height: ClaraTokens.spaceMd),
-      ],
-
-      // Stats
-      _buildStats(context),
-      const SizedBox(height: ClaraTokens.spaceLg),
-
-      // Priority 2: Full-width Ask CLARA entry card with text/camera/voice affordances
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
-        child: _AskClaraCard(
-          copy: copy,
-          onText: widget.onAskHealth,
-          onCamera: widget.onCheckMedicines,
-          onVoice: widget.onAskHealth,
-        ),
-      ),
-      const SizedBox(height: ClaraTokens.spaceLg),
-
-      // Task-first entry points (Start Here)
-      _buildStartHere(context),
-      const SizedBox(height: ClaraTokens.spaceLg),
-
-      // Priority 3: Today's schedule (Medications, Visits, Care tasks)
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
-        child: SectionHeader(
-          title: copy[ConsumerTerm.todayAccepted],
-          trailing: _tasks.where((t) => !t.completed).isNotEmpty
-              ? ClaraChip(
-                  label:
-                      '${_tasks.where((t) => !t.completed).length} ${copy[ConsumerTerm.todayPending]}',
-                  selected: true,
-                )
-              : null,
-        ),
-      ),
-      const SizedBox(height: ClaraTokens.spaceSm),
-    ];
-
-    // Priority 5: Calm caught-up state
-    if (isCaughtUp) {
-      children.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
-          child: _CaughtUpBanner(copy: copy),
-        ),
-      );
-      children.add(const SizedBox(height: ClaraTokens.spaceMd));
-    }
-
-    if (_tasks.isEmpty) {
-      children.add(
-        ClaraEmptyState(
-          icon: Icons.task_alt_outlined,
-          title: copy[ConsumerTerm.todayEmptyTitle],
-          message: copy[ConsumerTerm.todayEmptyDescription],
-        ),
-      );
-    } else {
-      if (_loading) {
-        children.add(
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
-            child: LinearProgressIndicator(),
-          ),
-        );
-      }
-      children.addAll(
-        _tasks.map(
-          (task) => Padding(
-            padding: const EdgeInsets.fromLTRB(
-              ClaraTokens.spaceMd,
-              0,
-              ClaraTokens.spaceMd,
-              ClaraTokens.spaceMd,
-            ),
-            child: _buildTaskCard(context, task),
-          ),
-        ),
-      );
-    }
-
-    // Priority 4: Recent changes (real source records only)
-    children.add(const SizedBox(height: ClaraTokens.spaceLg));
-    children.add(
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionHeader(title: copy[ConsumerTerm.homeRecentChangesTitle]),
-            const SizedBox(height: ClaraTokens.spaceXs),
-            Text(
-              copy[ConsumerTerm.homeRecentChangesRealSourceNotice],
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: ClaraTokens.spaceSm),
-            if (recentChanges.isEmpty)
-              ClaraEmptyState(
-                icon: Icons.history,
-                title: copy[ConsumerTerm.homeRecentChangesEmpty],
-                message: copy[ConsumerTerm.homeScreenNoRecentDescription],
-              )
-            else
-              ...recentChanges.map(
-                (change) => Padding(
-                  padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
-                  child: ClaraCard.static_(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.description_outlined,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 22,
-                        ),
-                        const SizedBox(width: ClaraTokens.spaceMd),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                change.title,
-                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                              if (change.summary != null)
-                                Text(
-                                  change.summary!,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                      ),
-                                ),
-                              if (change.source != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: ClaraTokens.spaceXs),
-                                  child: ClaraChip(
-                                    label: change.source!,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
+    final headerGreeting =
+        '${copy[ConsumerTerm.todayTitle]}, ${_formatTodayDate(DateTime.now(), copy)}';
 
     return ListView(
       padding: const EdgeInsets.only(
         top: ClaraTokens.spaceMd,
         bottom: ClaraTokens.spaceXl,
       ),
-      children: children,
-    );
-  }
+      children: [
+        if (_offlineCachedAt != null) ...[
+          _buildOfflineNotice(context),
+          const SizedBox(height: ClaraTokens.spaceSm),
+        ],
 
-  Widget _buildStartHere(BuildContext context) {
-    final actions = <_TodayStartAction>[
-      _TodayStartAction(
-        icon: Icons.forum_outlined,
-        title: _copy[ConsumerTerm.todayAskHealthTitle],
-        description: _copy[ConsumerTerm.todayAskHealthDescription],
-        onTap: widget.onAskHealth,
-      ),
-      _TodayStartAction(
-        icon: Icons.medication_outlined,
-        title: _copy[ConsumerTerm.todayCheckMedicineTitle],
-        description: _copy[ConsumerTerm.todayCheckMedicineDescription],
-        onTap: widget.onCheckMedicines,
-      ),
-      _TodayStartAction(
-        icon: Icons.folder_shared_outlined,
-        title: _copy[ConsumerTerm.todaySaveHealthInfoTitle],
-        description: _copy[ConsumerTerm.todaySaveHealthInfoDescription],
-        onTap: widget.onSaveHealthInfo,
-      ),
-      _TodayStartAction(
-        icon: Icons.event_note_outlined,
-        title: _copy[ConsumerTerm.todayPrepareVisitTitle],
-        description: _copy[ConsumerTerm.todayPrepareVisitDescription],
-        onTap: widget.onPrepareVisit,
-      ),
-    ].where((action) => action.onTap != null).toList(growable: false);
-
-    if (actions.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionHeader(title: _copy[ConsumerTerm.todayStartHereTitle]),
-          const SizedBox(height: ClaraTokens.spaceXs),
-          Text(
-            _copy[ConsumerTerm.todayStartHereDescription],
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+        // 1. Date & Context greeting header (`Hôm nay, [Date]`).
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      headerGreeting,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                    ),
+                    const SizedBox(height: ClaraTokens.spaceXs),
+                    Text(
+                      copy[ConsumerTerm.todayTitle],
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ],
                 ),
+              ),
+              if (widget.onOpenLifeMap != null)
+                TextButton.icon(
+                  onPressed: widget.onOpenLifeMap,
+                  icon: const Icon(Icons.map_outlined, size: 18),
+                  label: Text(copy[ConsumerTerm.todayOpenLifeMap]),
+                ),
+            ],
           ),
-          const SizedBox(height: ClaraTokens.spaceMd),
-          ...actions.map(
-            (action) => Padding(
-              padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
-              child: _TodayStartActionCard(action: action),
+        ),
+        const SizedBox(height: ClaraTokens.spaceMd),
+
+        // 2. Next accepted task as dominant HeroObject (title, due time, severity badge, complete action).
+        if (nextTask != null) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+            child: _NextTaskHeroObject(
+              task: nextTask,
+              copy: copy,
+              onComplete: () => _completeTask(nextTask),
+              onOpen: widget.onOpenLifeMap,
+              isCompleting: _completing.contains(nextTask.id),
+              offline: _offlineCachedAt != null,
+              formattedDue: _formatDue(nextTask.dueAt),
             ),
           ),
+          const SizedBox(height: ClaraTokens.spaceLg),
+        ] else if (isCaughtUp) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+            child: _CaughtUpBanner(copy: copy),
+          ),
+          const SizedBox(height: ClaraTokens.spaceLg),
+        ] else if (topAction != null) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+            child: _TopActionBanner(
+              action: topAction,
+              copy: copy,
+              onAction: () {
+                if (topAction.kind == 'medication') {
+                  widget.onCheckMedicines?.call();
+                } else if (topAction.kind == 'visit') {
+                  widget.onPrepareVisit?.call();
+                } else if (topAction.kind == 'chat' ||
+                    topAction.kind == 'review') {
+                  widget.onAskHealth?.call();
+                } else {
+                  widget.onOpenLifeMap?.call();
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceLg),
+        ] else if (_tasks.isEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+            child: ClaraEmptyState(
+              icon: Icons.task_alt_outlined,
+              title: copy[ConsumerTerm.todayEmptyTitle],
+              message: copy[ConsumerTerm.todayEmptyDescription],
+            ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceLg),
         ],
-      ),
+
+        if (_loading && _tasks.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+            child: LinearProgressIndicator(),
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+        ],
+
+        // 3. Upcoming accepted tasks timeline.
+        if (upcomingTasks.isNotEmpty ||
+            (completedTasks.isNotEmpty && !isCaughtUp)) ...[
+          _UpcomingTimelineSection(
+            tasks: upcomingTasks,
+            completedTasks: completedTasks,
+            copy: copy,
+            onCompleteTask: _completeTask,
+            completingIds: _completing,
+            offline: _offlineCachedAt != null,
+            dueFormatter: _formatDue,
+          ),
+          const SizedBox(height: ClaraTokens.spaceLg),
+        ],
+
+        // 4. Pending confirmations row.
+        if (_pendingConfirmationCount > 0) ...[
+          _PendingConfirmationsRow(
+            count: _pendingConfirmationCount,
+            copy: copy,
+            onTap: widget.onOpenLifeMap,
+          ),
+          const SizedBox(height: ClaraTokens.spaceLg),
+        ],
+
+        // 5. Active LifeMap journey preview.
+        if (_episodes.isNotEmpty) ...[
+          _ActiveJourneyPreviewSection(
+            episodes: _episodes,
+            copy: copy,
+            onOpenLifeMap: widget.onOpenLifeMap,
+          ),
+          const SizedBox(height: ClaraTokens.spaceLg),
+        ],
+
+        // 6. Secondary utility actions (`Hỏi CLARA`, `Tủ thuốc`, `Chuẩn bị khám`).
+        _SecondaryUtilityActions(
+          copy: copy,
+          onAskHealth: widget.onAskHealth,
+          onCheckMedicines: widget.onCheckMedicines,
+          onSaveHealthInfo: widget.onSaveHealthInfo,
+          onPrepareVisit: widget.onPrepareVisit,
+        ),
+        const SizedBox(height: ClaraTokens.spaceLg),
+
+        // 7. Progress / recent authentic source changes.
+        _ProgressAndRecentChangesSection(
+          recentChanges: recentChanges,
+          completedCount: completedTasks.length,
+          pendingCount: uncompletedTasks.length,
+          episodesCount: _episodes.length,
+          pendingConfirmationCount: _pendingConfirmationCount,
+          copy: copy,
+        ),
+      ],
     );
   }
 
@@ -673,12 +640,7 @@ class _TodaySurfaceState extends State<TodaySurface> {
               {'timestamp': timestamp},
             ),
       child: Container(
-        margin: const EdgeInsets.fromLTRB(
-          ClaraTokens.spaceMd,
-          0,
-          ClaraTokens.spaceMd,
-          ClaraTokens.spaceMd,
-        ),
+        margin: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
         padding: const EdgeInsets.all(ClaraTokens.spaceMd),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.secondaryContainer,
@@ -695,37 +657,268 @@ class _TodaySurfaceState extends State<TodaySurface> {
       ),
     );
   }
+}
 
-  Widget _buildStats(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
-      child: Wrap(
-        spacing: ClaraTokens.spaceMd,
-        runSpacing: ClaraTokens.spaceMd,
+/// Dominant HeroObject for the next accepted task (Spec v5 Section 7.1).
+class _NextTaskHeroObject extends StatelessWidget {
+  const _NextTaskHeroObject({
+    required this.task,
+    required this.copy,
+    required this.onComplete,
+    required this.formattedDue,
+    this.onOpen,
+    this.isCompleting = false,
+    this.offline = false,
+  });
+
+  final _TodayTask task;
+  final ConsumerTerminology copy;
+  final VoidCallback onComplete;
+  final VoidCallback? onOpen;
+  final bool isCompleting;
+  final bool offline;
+  final String formattedDue;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isUrgent = task.isUrgent;
+    final isAttention = task.isAttention;
+
+    final accentColor = isUrgent
+        ? const Color(0xFFDC2626)
+        : isAttention
+            ? const Color(0xFFD97706)
+            : scheme.primary;
+
+    final badgeLabel = _severityBadgeLabel(task.severity, copy);
+
+    return Container(
+      padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(ClaraTokens.radiusLg),
+        border: Border.all(
+          color: isUrgent
+              ? const Color(0xFFDC2626)
+              : isAttention
+                  ? const Color(0xFFD97706)
+                  : const Color(0xFF2A3950),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _StatCard(
-            icon: Icons.pending_actions_outlined,
-            label: _copy[ConsumerTerm.todayPending],
-            value: _tasks.where((t) => !t.completed).length,
+          // Overline row: Action icon/label, Due time, Severity badge
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ClaraTokens.spaceSm,
+                  vertical: ClaraTokens.spaceXs,
+                ),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(ClaraTokens.radiusSm),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isUrgent ? Icons.warning_amber_rounded : Icons.task_alt,
+                      color: accentColor,
+                      size: 16,
+                    ),
+                    const SizedBox(width: ClaraTokens.spaceXs),
+                    Text(
+                      copy[ConsumerTerm.homeNextActionTitle],
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: accentColor,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              ClaraChip(
+                label: badgeLabel,
+                selected: isUrgent || isAttention,
+              ),
+            ],
           ),
-          _StatCard(
-            icon: Icons.route_outlined,
-            label: _copy[ConsumerTerm.todayEpisodes],
-            value: _episodes.length,
+          const SizedBox(height: ClaraTokens.spaceMd),
+
+          // Dominant task title
+          Text(
+            task.title.isEmpty ? copy[ConsumerTerm.todayUnnamedTask] : task.title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          _StatCard(
-            icon: Icons.mark_email_unread_outlined,
-            label: _copy[ConsumerTerm.todayConfirmation],
-            value: _pendingConfirmationCount,
+          if (task.episodeTitle != null && task.episodeTitle!.isNotEmpty) ...[
+            const SizedBox(height: ClaraTokens.spaceXs),
+            Text(
+              task.episodeTitle!,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          const SizedBox(height: ClaraTokens.spaceSm),
+
+          // Due date / time
+          Row(
+            children: [
+              Icon(
+                Icons.schedule,
+                size: 16,
+                color: scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: ClaraTokens.spaceXs),
+              Text(
+                formattedDue,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          const Divider(height: 1),
+          const SizedBox(height: ClaraTokens.spaceMd),
+
+          // Action row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (onOpen != null) ...[
+                ClaraButton.secondary(
+                  label: copy[ConsumerTerm.actionOpen],
+                  icon: Icons.arrow_forward_rounded,
+                  onPressed: onOpen,
+                ),
+                const SizedBox(width: ClaraTokens.spaceSm),
+              ],
+              ClaraButton.primary(
+                label: copy[ConsumerTerm.actionComplete],
+                icon: Icons.check,
+                loading: isCompleting,
+                onPressed: offline ? null : onComplete,
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildTaskCard(BuildContext context, _TodayTask task) {
+/// Upcoming accepted tasks timeline section (Spec v5 Section 7.1).
+class _UpcomingTimelineSection extends StatelessWidget {
+  const _UpcomingTimelineSection({
+    required this.tasks,
+    required this.completedTasks,
+    required this.copy,
+    required this.onCompleteTask,
+    required this.completingIds,
+    required this.offline,
+    required this.dueFormatter,
+  });
+
+  final List<_TodayTask> tasks;
+  final List<_TodayTask> completedTasks;
+  final ConsumerTerminology copy;
+  final ValueChanged<_TodayTask> onCompleteTask;
+  final Set<String> completingIds;
+  final bool offline;
+  final String Function(String?) dueFormatter;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tasks.isEmpty && completedTasks.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(
+            title: copy[ConsumerTerm.homeScheduleTitle],
+            trailing: tasks.isNotEmpty
+                ? ClaraChip(
+                    label: '${tasks.length} ${copy[ConsumerTerm.todayPending]}',
+                    selected: true,
+                  )
+                : null,
+          ),
+          const SizedBox(height: ClaraTokens.spaceSm),
+          ...tasks.map(
+            (task) => Padding(
+              padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
+              child: _TaskCard(
+                task: task,
+                copy: copy,
+                formattedDue: dueFormatter(task.dueAt),
+                isCompleting: completingIds.contains(task.id),
+                offline: offline,
+                onComplete: () => onCompleteTask(task),
+              ),
+            ),
+          ),
+          ...completedTasks.map(
+            (task) => Padding(
+              padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
+              child: _TaskCard(
+                task: task,
+                copy: copy,
+                formattedDue: dueFormatter(task.dueAt),
+                isCompleting: false,
+                offline: offline,
+                onComplete: null,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A single task card row.
+class _TaskCard extends StatelessWidget {
+  const _TaskCard({
+    required this.task,
+    required this.copy,
+    required this.formattedDue,
+    required this.isCompleting,
+    required this.offline,
+    required this.onComplete,
+  });
+
+  final _TodayTask task;
+  final ConsumerTerminology copy;
+  final String formattedDue;
+  final bool isCompleting;
+  final bool offline;
+  final VoidCallback? onComplete;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final busy = _completing.contains(task.id);
+    final isUrgent = task.isUrgent;
+    final isAttention = task.isAttention;
+
     return ClaraCard.static_(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -734,19 +927,30 @@ class _TodaySurfaceState extends State<TodaySurface> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  task.title.isEmpty
-                      ? _copy[ConsumerTerm.todayUnnamedTask]
-                      : task.title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    decoration:
-                        task.completed ? TextDecoration.lineThrough : null,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        task.title.isEmpty
+                            ? copy[ConsumerTerm.todayUnnamedTask]
+                            : task.title,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          decoration:
+                              task.completed ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                    ),
+                    if (!task.completed && (isUrgent || isAttention))
+                      ClaraChip(
+                        label: _severityBadgeLabel(task.severity, copy),
+                        selected: true,
+                      ),
+                  ],
                 ),
                 const SizedBox(height: ClaraTokens.spaceXs),
                 Text(
-                  _formatDue(task.dueAt),
+                  formattedDue,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -756,14 +960,375 @@ class _TodaySurfaceState extends State<TodaySurface> {
           ),
           const SizedBox(width: ClaraTokens.spaceSm),
           if (task.completed)
-            const ClaraChip(label: 'Đã xong')
+            ClaraChip(label: copy[ConsumerTerm.actionComplete])
           else
             ClaraButton.primary(
-              label: _copy[ConsumerTerm.actionComplete],
+              label: copy[ConsumerTerm.actionComplete],
               icon: Icons.check,
-              loading: busy,
-              onPressed:
-                  _offlineCachedAt == null ? () => _completeTask(task) : null,
+              loading: isCompleting,
+              onPressed: offline ? null : onComplete,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pending confirmations alert row (Spec v5 Section 7.1).
+class _PendingConfirmationsRow extends StatelessWidget {
+  const _PendingConfirmationsRow({
+    required this.count,
+    required this.copy,
+    this.onTap,
+  });
+
+  final int count;
+  final ConsumerTerminology copy;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+      child: ClaraCard(
+        onTap: onTap,
+        semanticLabel: '$count ${copy[ConsumerTerm.todayConfirmation]}',
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(ClaraTokens.spaceSm),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+              ),
+              child: const Icon(
+                Icons.mark_email_unread_outlined,
+                color: Color(0xFFD97706),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: ClaraTokens.spaceMd),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$count ${copy[ConsumerTerm.todayConfirmation]}',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF92400E),
+                    ),
+                  ),
+                  const SizedBox(height: ClaraTokens.spaceXs),
+                  Text(
+                    copy[ConsumerTerm.todayStartHereDescription],
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (onTap != null)
+              Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Active LifeMap journey preview section (Spec v5 Section 7.1).
+class _ActiveJourneyPreviewSection extends StatelessWidget {
+  const _ActiveJourneyPreviewSection({
+    required this.episodes,
+    required this.copy,
+    this.onOpenLifeMap,
+  });
+
+  final List<_TodayEpisode> episodes;
+  final ConsumerTerminology copy;
+  final VoidCallback? onOpenLifeMap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (episodes.isEmpty) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(
+            title: copy[ConsumerTerm.lifeMapCareJourneys],
+            trailing: onOpenLifeMap != null
+                ? TextButton.icon(
+                    onPressed: onOpenLifeMap,
+                    icon: const Icon(Icons.map_outlined, size: 16),
+                    label: Text(copy[ConsumerTerm.todayOpenLifeMap]),
+                  )
+                : null,
+          ),
+          const SizedBox(height: ClaraTokens.spaceSm),
+          ...episodes.map(
+            (episode) => Padding(
+              padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
+              child: ClaraCard(
+                onTap: onOpenLifeMap,
+                semanticLabel: episode.title,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.route_outlined,
+                      color: theme.colorScheme.primary,
+                      size: 24,
+                    ),
+                    const SizedBox(width: ClaraTokens.spaceMd),
+                    Expanded(
+                      child: Text(
+                        episode.title,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Secondary utility actions: Ask CLARA + Start Here task shortcuts (Spec v5 Section 7.1).
+class _SecondaryUtilityActions extends StatelessWidget {
+  const _SecondaryUtilityActions({
+    required this.copy,
+    this.onAskHealth,
+    this.onCheckMedicines,
+    this.onSaveHealthInfo,
+    this.onPrepareVisit,
+  });
+
+  final ConsumerTerminology copy;
+  final VoidCallback? onAskHealth;
+  final VoidCallback? onCheckMedicines;
+  final VoidCallback? onSaveHealthInfo;
+  final VoidCallback? onPrepareVisit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Ask CLARA entry card
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+          child: _AskClaraCard(
+            copy: copy,
+            onText: onAskHealth,
+            onCamera: onCheckMedicines,
+            onVoice: onAskHealth,
+          ),
+        ),
+        const SizedBox(height: ClaraTokens.spaceLg),
+
+        // Task-first entry points (Start Here)
+        _buildStartHere(context),
+      ],
+    );
+  }
+
+  Widget _buildStartHere(BuildContext context) {
+    final actions = <_TodayStartAction>[
+      _TodayStartAction(
+        icon: Icons.forum_outlined,
+        title: copy[ConsumerTerm.todayAskHealthTitle],
+        description: copy[ConsumerTerm.todayAskHealthDescription],
+        onTap: onAskHealth,
+      ),
+      _TodayStartAction(
+        icon: Icons.medication_outlined,
+        title: copy[ConsumerTerm.todayCheckMedicineTitle],
+        description: copy[ConsumerTerm.todayCheckMedicineDescription],
+        onTap: onCheckMedicines,
+      ),
+      _TodayStartAction(
+        icon: Icons.folder_shared_outlined,
+        title: copy[ConsumerTerm.todaySaveHealthInfoTitle],
+        description: copy[ConsumerTerm.todaySaveHealthInfoDescription],
+        onTap: onSaveHealthInfo,
+      ),
+      _TodayStartAction(
+        icon: Icons.event_note_outlined,
+        title: copy[ConsumerTerm.todayPrepareVisitTitle],
+        description: copy[ConsumerTerm.todayPrepareVisitDescription],
+        onTap: onPrepareVisit,
+      ),
+    ].where((action) => action.onTap != null).toList(growable: false);
+
+    if (actions.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(title: copy[ConsumerTerm.todayStartHereTitle]),
+          const SizedBox(height: ClaraTokens.spaceXs),
+          Text(
+            copy[ConsumerTerm.todayStartHereDescription],
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          ...actions.map(
+            (action) => Padding(
+              padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
+              child: _TodayStartActionCard(action: action),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Progress / non-zero statistics & recent authentic source changes (Spec v5 Section 7.1).
+class _ProgressAndRecentChangesSection extends StatelessWidget {
+  const _ProgressAndRecentChangesSection({
+    required this.recentChanges,
+    required this.completedCount,
+    required this.pendingCount,
+    required this.episodesCount,
+    required this.pendingConfirmationCount,
+    required this.copy,
+  });
+
+  final List<HomeRecentChange> recentChanges;
+  final int completedCount;
+  final int pendingCount;
+  final int episodesCount;
+  final int pendingConfirmationCount;
+  final ConsumerTerminology copy;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    // Suppress 0-count stat cards!
+    final statCards = <Widget>[
+      if (completedCount > 0)
+        _StatCard(
+          icon: Icons.check_circle_outline,
+          label: copy[ConsumerTerm.actionComplete],
+          value: completedCount,
+        ),
+      if (pendingCount > 0)
+        _StatCard(
+          icon: Icons.pending_actions_outlined,
+          label: copy[ConsumerTerm.todayPending],
+          value: pendingCount,
+        ),
+      if (episodesCount > 0)
+        _StatCard(
+          icon: Icons.route_outlined,
+          label: copy[ConsumerTerm.todayEpisodes],
+          value: episodesCount,
+        ),
+      if (pendingConfirmationCount > 0)
+        _StatCard(
+          icon: Icons.mark_email_unread_outlined,
+          label: copy[ConsumerTerm.todayConfirmation],
+          value: pendingConfirmationCount,
+        ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (statCards.isNotEmpty) ...[
+            Wrap(
+              spacing: ClaraTokens.spaceMd,
+              runSpacing: ClaraTokens.spaceMd,
+              children: statCards,
+            ),
+            const SizedBox(height: ClaraTokens.spaceLg),
+          ],
+          SectionHeader(title: copy[ConsumerTerm.homeRecentChangesTitle]),
+          const SizedBox(height: ClaraTokens.spaceXs),
+          Text(
+            copy[ConsumerTerm.homeRecentChangesRealSourceNotice],
+            style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceSm),
+          if (recentChanges.isEmpty)
+            ClaraEmptyState(
+              icon: Icons.history,
+              title: copy[ConsumerTerm.homeRecentChangesEmpty],
+              message: copy[ConsumerTerm.homeScreenNoRecentDescription],
+            )
+          else
+            ...recentChanges.map(
+              (change) => Padding(
+                padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
+                child: ClaraCard.static_(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.description_outlined,
+                        color: theme.colorScheme.primary,
+                        size: 22,
+                      ),
+                      const SizedBox(width: ClaraTokens.spaceMd),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              change.title,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                            if (change.summary != null)
+                              Text(
+                                change.summary!,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                            if (change.source != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: ClaraTokens.spaceXs),
+                                child: ClaraChip(
+                                  label: change.source!,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
         ],
       ),
@@ -795,11 +1360,7 @@ class _TopActionBanner extends StatelessWidget {
             ? const Color(0xFFD97706)
             : scheme.primary;
 
-    final badgeLabel = isUrgent
-        ? copy[ConsumerTerm.homeSeverityUrgent]
-        : isAttention
-            ? copy[ConsumerTerm.homeSeverityAttention]
-            : copy[ConsumerTerm.homeSeverityNormal];
+    final badgeLabel = _severityBadgeLabel(action.severity, copy);
 
     return Container(
       padding: const EdgeInsets.all(ClaraTokens.spaceMd),

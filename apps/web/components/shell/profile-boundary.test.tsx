@@ -115,6 +115,9 @@ describe("ProfileBoundary", () => {
 
   const defaultSessionValue = {
     role: "normal" as const,
+    effectiveRole: "normal" as const,
+    adminPreviewMode: null,
+    setAdminPreviewMode: vi.fn(),
     setRole: vi.fn(),
     isRoleHydrated: true,
     isSessionChecked: true,

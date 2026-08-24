@@ -4,6 +4,7 @@ import { ReactNode, useContext, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
 import TransparencyNoticeGate from "@/components/compliance/transparency-notice-gate";
+import AdminPreviewBanner from "@/components/shell/admin-preview-banner";
 import GlobalContextBar from "@/components/shell/global-context-bar";
 import FloatingPrimaryDock from "@/components/shell/floating-primary-dock";
 import CommandPalette from "@/components/shell/command-palette";
@@ -48,6 +49,8 @@ export default function AppShell({ children }: Props) {
   const [isSessionChecked, setIsSessionChecked] = useState(false);
 
   const role = sessionContext ? sessionContext.role : localRole;
+  const effectiveRole = sessionContext ? sessionContext.effectiveRole : role;
+  const adminPreviewMode = sessionContext ? sessionContext.adminPreviewMode : null;
   const uiLanguage = preferenceContext ? preferenceContext.uiLanguage : "vi";
 
   const hideSidebar =
@@ -56,6 +59,8 @@ export default function AppShell({ children }: Props) {
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
   const isChatLayout = pathname === "/chat" || pathname.startsWith("/chat/");
+  const hideFloatingDock =
+    pathname.startsWith("/admin") && adminPreviewMode === null;
 
   // Fallback hydration if outside SessionBoundary
   useEffect(() => {
@@ -161,7 +166,7 @@ export default function AppShell({ children }: Props) {
         className="min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]"
       >
         {children}
-        <CommandPalette role={role} />
+        <CommandPalette role={effectiveRole} />
       </main>
     );
   }
@@ -172,6 +177,9 @@ export default function AppShell({ children }: Props) {
         {t(uiLanguage, "navigation.skipToContent")}
       </a>
       <TransparencyNoticeGate />
+
+      {/* Top: Admin Preview Banner */}
+      <AdminPreviewBanner />
 
       {/* Top: GlobalContextBar */}
       <GlobalContextBar />
@@ -200,10 +208,10 @@ export default function AppShell({ children }: Props) {
       </main>
 
       {/* Bottom: FloatingPrimaryDock (with CLARA Orb) */}
-      <FloatingPrimaryDock role={role} />
+      {!hideFloatingDock && <FloatingPrimaryDock role={effectiveRole} />}
 
       {/* Universal Command Palette (Cmd+K / Ctrl+K) */}
-      <CommandPalette role={role} />
+      <CommandPalette role={effectiveRole} />
     </div>
   );
 }

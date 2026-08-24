@@ -5,8 +5,7 @@ import { FormEvent, useState } from "react";
 import api from "@/lib/http-client";
 import Button from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { Badge } from "@/components/ui/badge";
-import { SurfaceCard } from "@/components/ui/surface";
+import AuthFormShell from "@/components/auth-form-shell";
 import { t } from "@/lib/i18n/catalog";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 import { useUILanguage } from "@/lib/use-ui-language";
@@ -45,69 +44,79 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] max-w-lg items-center justify-center px-4 py-12 sm:px-6">
-      <SurfaceCard className="w-full p-7 sm:p-9">
-        <Badge tone="brand">{t(language, "auth.brand")}</Badge>
-        <h1 className="mt-4 text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-3xl">
-          {t(language, "auth.passwordRecovery.title")}
-        </h1>
-        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-          {t(language, "auth.passwordRecovery.description")}
-        </p>
+    <AuthFormShell
+      title={t(language, "auth.passwordRecovery.title")}
+      subtitle={t(language, "auth.passwordRecovery.description")}
+      backHref="/login"
+      backLabel={t(language, "auth.passwordRecovery.back")}
+      maxWidth="md"
+    >
+      <form className="space-y-4" onSubmit={onSubmit}>
+        <Field
+          id="forgot-email"
+          label={t(language, "auth.email")}
+          type="email"
+          inputMode="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder={t(language, "auth.emailPlaceholder")}
+          autoComplete="email"
+          required
+        />
 
-        <form className="mt-7 space-y-4" onSubmit={onSubmit}>
-          <Field
-            id="forgot-email"
-            label={t(language, "auth.email")}
-            type="email"
-            inputMode="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder={t(language, "auth.emailPlaceholder")}
-            required
-          />
+        {notice ? (
+          <p
+            role="status"
+            className="rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-ok-text)]"
+          >
+            {notice}
+          </p>
+        ) : null}
 
-          {notice ? (
-            <p
-              role="status"
-              className="rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-ok-text)]"
+        {error ? (
+          <p
+            role="alert"
+            className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-danger-text)]"
+          >
+            {error}
+          </p>
+        ) : null}
+
+        {tokenPreview ? (
+          <div className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 text-xs leading-5 text-[var(--text-secondary)]">
+            <p className="font-semibold text-[var(--text-primary)]">
+              {t(language, "auth.passwordRecovery.previewToken")}
+            </p>
+            <p className="mt-1 font-mono break-all text-[var(--text-brand)]">
+              {tokenPreview}
+            </p>
+            <Link
+              href={`/reset-password?token=${encodeURIComponent(tokenPreview)}`}
+              className="focus-ring mt-2 inline-block font-semibold text-[var(--text-brand)] hover:underline"
             >
-              {notice}
-            </p>
-          ) : null}
-          {error ? (
-            <p
-              role="alert"
-              className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-danger-text)]"
-            >
-              {error}
-            </p>
-          ) : null}
+              {t(language, "auth.passwordRecovery.openReset")} &rarr;
+            </Link>
+          </div>
+        ) : null}
 
-          {tokenPreview ? (
-            <p className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-              {t(language, "auth.passwordRecovery.previewToken")} <code className="font-mono text-xs">{tokenPreview}</code>{" "}
-              <Link
-                href={`/reset-password?token=${encodeURIComponent(tokenPreview)}`}
-                className="focus-ring rounded font-medium text-[var(--text-brand)] hover:underline"
-              >
-                {t(language, "auth.passwordRecovery.openReset")}
-              </Link>
-            </p>
-          ) : null}
+        <Button
+          type="submit"
+          block
+          loading={isSubmitting}
+          loadingLabel={t(language, "auth.passwordRecovery.submitting")}
+        >
+          {t(language, "auth.passwordRecovery.submit")}
+        </Button>
 
-          <Button type="submit" block loading={isSubmitting} loadingLabel={t(language, "auth.passwordRecovery.submitting")}>
-            {t(language, "auth.passwordRecovery.submit")}
-          </Button>
-
+        <div className="pt-2 text-center text-sm">
           <Link
             href="/login"
-            className="focus-ring inline-block rounded text-sm text-[var(--text-secondary)] hover:underline"
+            className="focus-ring rounded font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
           >
-            {t(language, "auth.passwordRecovery.back")}
+            &larr; {t(language, "auth.passwordRecovery.back")}
           </Link>
-        </form>
-      </SurfaceCard>
-    </main>
+        </div>
+      </form>
+    </AuthFormShell>
   );
 }

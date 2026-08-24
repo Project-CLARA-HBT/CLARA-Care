@@ -101,6 +101,8 @@ export type WorkspaceConversationShareListItem = {
   expires_at?: string | null;
   created_at: string;
   updated_at: string;
+  recipient?: string | null;
+  access_count?: number | null;
 };
 
 export type WorkspacePublicConversationMessage = {

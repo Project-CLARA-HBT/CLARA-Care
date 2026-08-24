@@ -242,7 +242,9 @@ const AUTH_FAILURE_REDIRECT_SKIP_PREFIXES = [
   "/forgot-password",
   "/reset-password",
   "/verify-email",
-  "/share/"
+  "/share/",
+  "/chat/share/",
+  "/phr/shared/",
 ];
 
 function redirectToLoginAfterAuthFailure(): void {

@@ -2,7 +2,7 @@
 
 import { forwardRef } from "react";
 import Link from "next/link";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
 import Icon, { type IconName } from "./icon";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -60,26 +60,30 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     loadingLabel?: string;
   };
 
-export type LinkButtonProps = CommonProps & {
-  as: "link";
-  href: string;
-};
+export type LinkButtonProps = CommonProps &
+  AnchorHTMLAttributes<HTMLAnchorElement> & {
+    as: "link";
+    href: string;
+  };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps | LinkButtonProps>(
   function Button(props, ref) {
-    const {
-      variant = "primary",
-      size = "md",
-      block = false,
-      icon,
-      iconTrailing = false,
-      className = "",
-      children,
-    } = props;
-
     if (props.as === "link") {
+      const {
+        as: _as,
+        variant = "primary",
+        size = "md",
+        block = false,
+        icon,
+        iconTrailing = false,
+        className = "",
+        children,
+        href,
+        ...linkRest
+      } = props;
+      void _as;
       return (
-        <Link href={props.href} className={classesFor(variant, size, block, className)}>
+        <Link href={href} className={classesFor(variant, size, block, className)} {...linkRest}>
           {icon && !iconTrailing ? <Glyph glyph={icon} spin={false} /> : null}
           {children ? <span className="truncate">{children}</span> : null}
           {icon && iconTrailing ? <Glyph glyph={icon} spin={false} /> : null}
@@ -89,13 +93,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps | LinkButtonProps>(
 
     const {
       as: _as,
-      variant: _variant,
-      size: _size,
-      block: _block,
-      icon: _icon,
-      iconTrailing: _iconTrailing,
-      className: _className,
-      children: _children,
+      variant = "primary",
+      size = "md",
+      block = false,
+      icon,
+      iconTrailing = false,
+      className = "",
+      children,
       loading = false,
       loadingLabel,
       disabled,
@@ -103,13 +107,6 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps | LinkButtonProps>(
       ...rest
     } = props;
     void _as;
-    void _variant;
-    void _size;
-    void _block;
-    void _icon;
-    void _iconTrailing;
-    void _className;
-    void _children;
 
     const label = loading && loadingLabel ? loadingLabel : children;
     const glyph = loading ? "progress_activity" : icon;

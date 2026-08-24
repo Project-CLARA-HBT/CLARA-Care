@@ -34,4 +34,11 @@ describe("medicines consolidation redirects", () => {
     mod.default();
     expect(redirect).toHaveBeenCalledWith("/medicines?tab=safety");
   });
+
+  it("routes /selfmed/add to the canonical cabinet add wizard", async () => {
+    redirect.mockClear();
+    const mod = await import("./../selfmed/add/page");
+    mod.default();
+    expect(redirect).toHaveBeenCalledWith("/medicines/cabinet/add");
+  });
 });

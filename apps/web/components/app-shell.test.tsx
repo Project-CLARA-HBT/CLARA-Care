@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PreferenceProvider } from "@/components/shell/preference-provider";
-import { SessionBoundary } from "@/components/shell/session-boundary";
+import { SessionBoundary, type AdminPreviewMode } from "@/components/shell/session-boundary";
 import { ProfileBoundary } from "@/components/shell/profile-boundary";
 import { ShellModeProvider } from "@/components/shell/shell-mode-provider";
 import { CommandPaletteProvider } from "@/components/shell/command-palette-provider";
@@ -76,10 +76,13 @@ vi.mock("@/lib/visit-family", () => ({
   listFamilyNotifications: mocks.listFamilyNotifications,
 }));
 
-function renderShell(children: ReactNode) {
+function renderShell(
+  children: ReactNode,
+  initialPreviewMode?: AdminPreviewMode | null,
+) {
   return render(
     <PreferenceProvider initialLanguage="vi">
-      <SessionBoundary>
+      <SessionBoundary initialPreviewMode={initialPreviewMode}>
         <ProfileBoundary>
           <ShellModeProvider>
             <CommandPaletteProvider>
@@ -209,5 +212,46 @@ describe("AppShell Spatial Editorial Architecture", () => {
       expect(screen.getByText("Council workspace")).toBeInTheDocument();
     });
     expect(mocks.routerReplace).not.toHaveBeenCalledWith("/welcome/start");
+  });
+
+  it("hides FloatingPrimaryDock on /admin routes when adminPreviewMode is null", async () => {
+    mocks.pathname = "/admin/flow-debugger";
+    mocks.apiGet.mockResolvedValue({ data: { role: "admin" } });
+
+    renderShell(<div>Admin Flow Debugger</div>);
+
+    await waitFor(() => {
+      expect(screen.getByText("Admin Flow Debugger")).toBeInTheDocument();
+    });
+
+    // On /admin without preview mode, dock is completely hidden (no clutter)
+    expect(
+      screen.queryByRole("navigation", { name: "Thanh điều hướng chính" }),
+    ).not.toBeInTheDocument();
+    // Banner is not shown
+    expect(screen.queryByTestId("admin-preview-banner")).not.toBeInTheDocument();
+  });
+
+  it("shows FloatingPrimaryDock with doctor dock and AdminPreviewBanner when clinical preview is active on /admin", async () => {
+    mocks.pathname = "/admin/flow-debugger";
+    mocks.apiGet.mockResolvedValue({ data: { role: "admin" } });
+
+    renderShell(<div>Admin Flow Debugger</div>, "clinical");
+
+    await waitFor(() => {
+      expect(screen.getByText("Admin Flow Debugger")).toBeInTheDocument();
+    });
+
+    // In clinical preview, dock is visible
+    expect(
+      screen.getByRole("navigation", { name: "Thanh điều hướng chính" }),
+    ).toBeInTheDocument();
+    // Doctor dock items (like Scribe) are present
+    expect(screen.getByRole("link", { name: "Scribe" })).toBeInTheDocument();
+
+    // Banner is mounted above top bar
+    const banner = screen.getByTestId("admin-preview-banner");
+    expect(banner).toBeInTheDocument();
+    expect(screen.getByText(/ADMIN PREVIEW · CLINICAL/)).toBeInTheDocument();
   });
 });

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CouncilFlowStepper from "@/components/council/council-flow-stepper";
-import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import { Icon } from "@/components/ui/icon";
 import PageShell from "@/components/ui/page-shell";
 import { t } from "@/lib/i18n/catalog";
@@ -227,15 +226,15 @@ export default function CouncilNewIntakePage() {
       description={t(language, "council.intake.description")}
       variant="plain"
     >
-      <div className="space-y-5">
-        <CouncilWorkspaceNav />
+      <div className="mx-auto max-w-4xl space-y-6">
+        {/* Step Progress */}
         <CouncilFlowStepper currentStep="question" caseId={caseItem?.id} />
 
-        {/* Step 2: Clinical Question Section */}
-        <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+        {/* 2. Central Clinical Question Section */}
+        <section className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm">
           <div className="flex items-center gap-2">
             <span className="rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
-              {language === "vi" ? "Bước 2: Câu hỏi lâm sàng" : "Step 2: Clinical Question"}
+              {language === "vi" ? "Bước 2 / 4 · Câu hỏi lâm sàng" : "Step 2 / 4 · Clinical Question"}
             </span>
           </div>
           <h2 className="mt-2 text-xl font-bold text-[var(--text-primary)]">
@@ -310,11 +309,11 @@ export default function CouncilNewIntakePage() {
           />
         </section>
 
-        {/* Step 3: Clinical Context (Extraction / Input) */}
-        <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+        {/* 3. Clinical Context & Intake Extraction */}
+        <section className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-sm">
           <div className="flex items-center gap-2">
             <span className="rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
-              {language === "vi" ? "Bước 3: Bối cảnh lâm sàng" : "Step 3: Clinical Context"}
+              {language === "vi" ? "Bối cảnh lâm sàng" : "Clinical Context"}
             </span>
           </div>
           <h2 className="mt-2 text-xl font-bold text-[var(--text-primary)]">
@@ -370,32 +369,40 @@ export default function CouncilNewIntakePage() {
                 ? t(language, "council.intake.audioTranscriptPlaceholder")
                 : t(language, "council.intake.transcriptPlaceholder")
             }
-            className="mt-3 min-h-[140px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text-primary)] focus:border-[color:var(--brand-600)] focus:outline-none"
+            className="mt-3 min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text-primary)] focus:border-[color:var(--brand-600)] focus:outline-none"
           />
 
           <button
             type="button"
             onClick={() => void onExtractIntake()}
             disabled={isExtracting || !caseItem}
-            className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-5 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
+            className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-5 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)] disabled:opacity-60"
           >
             <Icon name="clinical-notes" size={16} />
             {isExtracting ? t(language, "council.intake.processing") : t(language, "council.intake.normalize")}
           </button>
 
-          {extractNotice ? <p className="mt-3 text-sm font-semibold text-[var(--text-brand)]">{extractNotice}</p> : null}
+          {/* 3. Red-flag feedback / Warnings */}
+          {extractNotice ? (
+            <p className="mt-3 text-sm font-semibold text-[var(--text-brand)]">{extractNotice}</p>
+          ) : null}
           {extractWarnings.length ? (
-            <ul className="mt-2 list-disc pl-5 text-xs text-[var(--status-warn-text)]">
-              {extractWarnings.map((item, index) => (
-                <li key={`${item}-${index}`}>{item}</li>
-              ))}
-            </ul>
+            <div className="mt-3 rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3.5">
+              <p className="text-xs font-bold text-[var(--status-warn-text)] uppercase tracking-wider mb-1">
+                {language === "vi" ? "Cảnh báo dữ liệu / Điểm cần lưu ý" : "Intake Warnings"}
+              </p>
+              <ul className="list-disc pl-5 text-xs text-[var(--status-warn-text)] space-y-1">
+                {extractWarnings.map((item, index) => (
+                  <li key={`${item}-${index}`}>{item}</li>
+                ))}
+              </ul>
+            </div>
           ) : null}
         </section>
 
-        {/* Clinical Data Fields */}
+        {/* 4. Structured Clinical Data Fields */}
         <section className="grid gap-4 md:grid-cols-2">
-          <label className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <label className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
             <span className="text-sm font-bold text-[var(--text-primary)]">
               {t(language, "council.intake.symptoms")}
             </span>
@@ -403,10 +410,10 @@ export default function CouncilNewIntakePage() {
               value={draft.symptomsInput}
               onChange={(event) => setDraft((current) => ({ ...current, symptomsInput: event.target.value }))}
               placeholder={language === "vi" ? "Mỗi dòng 1 triệu chứng..." : "One symptom per line..."}
-              className="mt-2 min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2.5 text-sm text-[var(--text-primary)]"
+              className="mt-2 min-h-[100px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2.5 text-sm text-[var(--text-primary)]"
             />
           </label>
-          <label className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <label className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
             <span className="text-sm font-bold text-[var(--text-primary)]">
               {t(language, "council.intake.labs")}
             </span>
@@ -414,10 +421,10 @@ export default function CouncilNewIntakePage() {
               value={draft.labsInput}
               onChange={(event) => setDraft((current) => ({ ...current, labsInput: event.target.value }))}
               placeholder="Creatinine=1.8&#10;Troponin_I=0.45&#10;eGFR=42"
-              className="mt-2 min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2.5 text-sm font-mono text-[var(--text-primary)]"
+              className="mt-2 min-h-[100px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2.5 text-sm font-mono text-[var(--text-primary)]"
             />
           </label>
-          <label className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <label className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
             <span className="text-sm font-bold text-[var(--text-primary)]">
               {t(language, "council.intake.medicines")}
             </span>
@@ -425,10 +432,10 @@ export default function CouncilNewIntakePage() {
               value={draft.medicationsInput}
               onChange={(event) => setDraft((current) => ({ ...current, medicationsInput: event.target.value }))}
               placeholder={language === "vi" ? "Aspirin 81mg&#10;Clopidogrel 75mg&#10;Atorvastatin 40mg" : "Aspirin 81mg&#10;Clopidogrel 75mg"}
-              className="mt-2 min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2.5 text-sm text-[var(--text-primary)]"
+              className="mt-2 min-h-[100px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2.5 text-sm text-[var(--text-primary)]"
             />
           </label>
-          <label className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <label className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
             <span className="text-sm font-bold text-[var(--text-primary)]">
               {t(language, "council.intake.history")}
             </span>
@@ -436,14 +443,15 @@ export default function CouncilNewIntakePage() {
               value={draft.historyInput}
               onChange={(event) => setDraft((current) => ({ ...current, historyInput: event.target.value }))}
               placeholder={language === "vi" ? "Tiền sử tăng huyết áp 10 năm, ĐTĐ type 2 5 năm, CKD giai đoạn 3..." : "HTN 10y, T2D 5y, CKD Stage 3..."}
-              className="mt-2 min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2.5 text-sm text-[var(--text-primary)]"
+              className="mt-2 min-h-[100px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2.5 text-sm text-[var(--text-primary)]"
             />
           </label>
         </section>
 
         {error ? <p className="text-sm font-semibold text-[var(--status-danger-text)]">{error}</p> : null}
 
-        <div className="flex flex-wrap justify-between gap-3">
+        {/* 5. Navigation Actions */}
+        <div className="flex flex-wrap justify-between gap-3 pt-2">
           <Link
             href="/council/new"
             className="inline-flex min-h-[44px] items-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-5 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
@@ -454,10 +462,10 @@ export default function CouncilNewIntakePage() {
             type="button"
             onClick={() => void onSaveAndNext()}
             disabled={isSaving || !caseItem}
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-6 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-6 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)] disabled:opacity-60"
           >
+            <span>{isSaving ? t(language, "council.action.saving") : t(language, "council.action.nextStep", { step: 3 })}</span>
             <Icon name="arrow-right" size={16} />
-            {isSaving ? t(language, "council.action.saving") : t(language, "council.action.nextStep", { step: 3 })}
           </button>
         </div>
       </div>

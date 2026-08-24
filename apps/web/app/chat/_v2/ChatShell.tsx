@@ -87,7 +87,11 @@ const COMPOSER_INPUT_ID = "chat-composer-input";
 /** Stable id of the sidebar search field (see `ConversationSidebar.tsx`). */
 const SEARCH_INPUT_ID = "chat-v2-search";
 
-export default function ChatShell() {
+export type ChatShellProps = {
+  initialChatId?: string | number | null;
+};
+
+export default function ChatShell({ initialChatId }: ChatShellProps = {}) {
   const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
   const [role, setRole] = useState<UserRole>("normal");
   const [query, setQuery] = useState("");
@@ -216,6 +220,20 @@ export default function ChatShell() {
     void workspace.loadShares();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!initialChatId) return;
+    const targetId = asConversationId(Number(initialChatId));
+    if (!targetId || targetId === activeConversationId) return;
+    setActiveConversationId(targetId);
+    const cached = turns.cachedTurns(targetId);
+    if (cached.length) turns.setActive(cached);
+    void turns.load(targetId).catch((cause) => {
+      setError(
+        cause instanceof Error ? sanitizeUpstreamError(cause.message) : "",
+      );
+    });
+  }, [initialChatId, activeConversationId, turns]);
 
   useEffect(() => {
     if (!notice) return;
@@ -650,6 +668,8 @@ export default function ChatShell() {
     <div
       data-resolved-theme={resolvedTheme}
       data-reduced-motion={prefersReducedMotion ? "true" : "false"}
+      data-shell-mode="READ_COMPOSE"
+      data-archetype="Spatial Conversation Canvas"
       style={{ fontFamily: "var(--font-chat)" }}
       className="clara-chat-v2 relative flex h-[calc(100dvh-8.2rem)] min-h-[36rem] flex-col bg-[var(--bg-canvas)] text-[var(--text-primary)] motion-reduce:transition-none lg:h-[calc(100dvh-4.5rem)] [&_*]:motion-reduce:!animate-none"
     >
@@ -708,8 +728,74 @@ export default function ChatShell() {
               <h1 className="truncate text-sm font-semibold text-[var(--text-primary)]">
                 {activeMeta?.title?.trim() || "CLARA"}
               </h1>
+              {/* Active patient/profile selector chip */}
+              <button
+                type="button"
+                onClick={togglePersonalMode}
+                aria-pressed={personalMode}
+                title={t(uiLanguage, "chat.composer.context.profile")}
+                className={[
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition border",
+                  personalMode
+                    ? "border-[color:var(--brand-500)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
+                    : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                ].join(" ")}
+              >
+                <Icon name="user-card" size={13} className="text-[var(--text-brand)]" />
+                <span className="hidden sm:inline">
+                  {personalMode ? (uiLanguage === "vi" ? "Hồ sơ cá nhân" : "Personal profile") : (uiLanguage === "vi" ? "Chung" : "General")}
+                </span>
+              </button>
               <Badge tone="info">{activeModeLabel}</Badge>
             </div>
+
+            {/* Reasoning mode switch (Fast, Deep, Research) in header */}
+            <div
+              role="group"
+              aria-label={t(uiLanguage, "chat.composer.mode")}
+              className="hidden lg:inline-flex items-center rounded-full bg-[var(--surface-muted)] p-0.5 border border-[color:var(--shell-border)]/50"
+            >
+              <button
+                type="button"
+                aria-pressed={mode === "fast"}
+                onClick={() => applyMode("fast")}
+                className={[
+                  "rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition",
+                  mode === "fast"
+                    ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)] shadow-xs"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                ].join(" ")}
+              >
+                {t(uiLanguage, "chat.composer.mode.fast")}
+              </button>
+              <button
+                type="button"
+                aria-pressed={mode === "deep"}
+                onClick={() => applyMode("deep")}
+                className={[
+                  "rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition",
+                  mode === "deep"
+                    ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)] shadow-xs"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                ].join(" ")}
+              >
+                {t(uiLanguage, "chat.composer.mode.deep")}
+              </button>
+              <button
+                type="button"
+                aria-pressed={mode === "deep_beta"}
+                onClick={() => applyMode("deep_beta")}
+                className={[
+                  "rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition",
+                  mode === "deep_beta"
+                    ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)] shadow-xs"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                ].join(" ")}
+              >
+                {t(uiLanguage, "chat.composer.mode.research")}
+              </button>
+            </div>
+
             <div className="flex items-center gap-1.5">
               <nav
                 aria-label={t(uiLanguage, "navigation.primary")}

@@ -166,6 +166,8 @@ describe("TanStack Query Key Factory", () => {
     expect(keys.you.privacy.aiTransparency()).toEqual(["profile", "user-profile-99", "you", "privacy", "ai-transparency"]);
     expect(keys.you.integrations()).toEqual(["profile", "user-profile-99", "you", "integrations"]);
     expect(keys.you.notifications()).toEqual(["profile", "user-profile-99", "you", "notifications"]);
+    expect(keys.you.settings()).toEqual(["profile", "user-profile-99", "you", "settings"]);
+    expect(keys.you.security()).toEqual(["profile", "user-profile-99", "you", "security"]);
 
     // Custom
     expect(keys.custom("insights", "weekly")).toEqual([

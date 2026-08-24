@@ -46,13 +46,16 @@ describe("authentication middleware", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
-  it("leaves an opaque public PHR share route reachable without a session", () => {
-    const response = middleware(
-      new NextRequest("https://theclaracare.com/phr/shared/opaque-token"),
-    );
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get("location")).toBeNull();
+  it("leaves opaque public share routes reachable without a session", () => {
+    for (const path of [
+      "https://theclaracare.com/share/opaque-token",
+      "https://theclaracare.com/chat/share/opaque-token",
+      "https://theclaracare.com/phr/shared/opaque-token",
+    ]) {
+      const response = middleware(new NextRequest(path));
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBeNull();
+    }
   });
 
   describe("legacy route compatibility redirects when authenticated", () => {

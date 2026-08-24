@@ -24,6 +24,7 @@ const PUBLIC_PATHS = new Set([
   "/forgot-password",
   "/reset-password",
   "/verify-email",
+  "/auth/callback",
 ]);
 
 export const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
@@ -40,7 +41,11 @@ export const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
 
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
-  if (pathname.startsWith("/share/") || pathname.startsWith("/phr/shared/"))
+  if (
+    pathname.startsWith("/share/") ||
+    pathname.startsWith("/chat/share/") ||
+    pathname.startsWith("/phr/shared/")
+  )
     return true;
   return (
     pathname.startsWith("/_next") ||

@@ -1,132 +1,230 @@
 import Link from "next/link";
 import { ReactNode } from "react";
+import { Icon } from "@/components/ui/icon";
+import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { SectionIndex, type SectionIndexItem, type SectionIndexStatus } from "@/components/ui/section-index";
+import {
+  LEGAL_CONTACT_EMAIL,
+  LEGAL_CONTACT_PHONE,
+  LEGAL_OPERATOR_NAME,
+  LEGAL_POLICY_VERSION,
+  LEGAL_PRIMARY_DOMAIN,
+  LEGAL_UPDATED_AT,
+} from "@/lib/legal";
 
 export type LegalPolicyKey = "hub" | "privacy" | "terms" | "consent" | "cookies";
 
-type LegalNavItem = {
+export interface LegalNavItem {
   key: Exclude<LegalPolicyKey, "hub">;
   href: string;
   shortLabel: string;
   title: string;
-};
+  description: string;
+  badgeTone: BadgeTone;
+}
 
-type LegalPageShellProps = {
+export interface LegalSectionMeta {
+  id: string;
+  title?: string;
+  label?: string;
+  subtitle?: string;
+  badge?: ReactNode;
+  status?: SectionIndexStatus;
+}
+
+export interface LegalPageShellProps {
   title: string;
+  eyebrow?: string;
   summary: string;
-  updatedAt: string;
+  updatedAt?: string;
+  version?: string;
   policyKey: LegalPolicyKey;
-  sections?: Array<{ id: string; label: string }>;
+  sections?: LegalSectionMeta[];
   highlights?: string[];
+  relatedControls?: Array<{
+    href: string;
+    label: string;
+    description?: string;
+    badge?: string;
+  }>;
   children: ReactNode;
-};
+}
 
-type LegalSectionProps = {
+export interface LegalSectionProps {
   id: string;
   title: string;
+  subtitle?: string;
+  badge?: string;
   children: ReactNode;
-};
+}
 
-const POLICY_NAV_ITEMS: LegalNavItem[] = [
+export const POLICY_NAV_ITEMS: LegalNavItem[] = [
   {
     key: "privacy",
     href: "/legal/privacy",
     shortLabel: "Riêng tư",
     title: "Chính sách quyền riêng tư",
+    description: "Bảo vệ dữ liệu, DSAR & chuẩn Zero-CoT (Nghị định 13/2023)",
+    badgeTone: "ok",
   },
   {
     key: "terms",
     href: "/legal/terms",
     shortLabel: "Điều khoản",
     title: "Điều khoản sử dụng",
+    description: "Quy định dịch vụ, thanh toán & ranh giới y tế",
+    badgeTone: "brand",
   },
   {
     key: "consent",
     href: "/legal/consent",
     shortLabel: "Đồng thuận",
     title: "Đồng thuận y tế",
+    description: "Điều khoản bắt buộc trước can thiệp & xác nhận chuyên môn",
+    badgeTone: "warn",
   },
   {
     key: "cookies",
     href: "/legal/cookies",
     shortLabel: "Cookie",
     title: "Chính sách cookie",
+    description: "Phiên đăng nhập an toàn & tùy chọn giao diện",
+    badgeTone: "neutral",
   },
 ];
 
-export function LegalSection({ id, title, children }: LegalSectionProps) {
+export function LegalSection({
+  id,
+  title,
+  subtitle,
+  badge,
+  children,
+}: LegalSectionProps) {
   return (
-    <article id={id} className="chrome-panel rounded-2xl border border-[color:var(--shell-border)] p-5 sm:p-6">
-      <h2 className="text-lg font-extrabold tracking-tight text-[var(--text-primary)] sm:text-xl">{title}</h2>
-      <div className="mt-3 space-y-3 text-sm leading-7 text-[var(--text-secondary)] sm:text-[15px]">{children}</div>
+    <article
+      id={id}
+      aria-labelledby={`${id}-heading`}
+      className="scroll-mt-24 rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-8 space-y-4 shadow-sm"
+    >
+      <div className="space-y-1.5 border-b border-[color:var(--shell-border)]/60 pb-3.5">
+        {badge ? (
+          <div className="mb-1.5">
+            <Badge tone="brand">{badge}</Badge>
+          </div>
+        ) : null}
+        <h2
+          id={`${id}-heading`}
+          className="text-lg sm:text-xl font-bold tracking-tight text-[var(--text-primary)]"
+        >
+          {title}
+        </h2>
+        {subtitle ? (
+          <p className="text-xs text-[var(--text-muted)] font-medium">{subtitle}</p>
+        ) : null}
+      </div>
+      <div className="space-y-4 text-sm sm:text-[15px] leading-7 text-[var(--text-secondary)]">
+        {children}
+      </div>
     </article>
   );
 }
 
 export default function LegalPageShell({
   title,
+  eyebrow = "The Clara Care · Legal Document Reader",
   summary,
-  updatedAt,
+  updatedAt = LEGAL_UPDATED_AT,
+  version = LEGAL_POLICY_VERSION,
   policyKey,
   sections = [],
   highlights = [],
+  relatedControls = [],
   children,
 }: LegalPageShellProps) {
+  const sectionIndexItems: SectionIndexItem[] = sections.map((s) => ({
+    id: s.id,
+    title: s.title || s.label || "",
+    subtitle: s.subtitle,
+    badge: s.badge,
+    status: s.status,
+  }));
+
   return (
-    <main className="chrome-shell min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-10 pt-8 sm:px-6 lg:px-8">
-        <section className="chrome-panel rounded-[1.9rem] border border-[color:var(--shell-border)] p-6 sm:p-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">The Clara Care · User Agreement</p>
-              <p className="mt-2 text-sm text-[var(--text-muted)]">Bộ chính sách vận hành và bảo vệ dữ liệu cho toàn bộ hệ thống.</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href="/"
-                className="inline-flex min-h-[44px] items-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-xs font-bold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)]"
-              >
-                Về trang chủ
-              </Link>
+    <div className="min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pb-16 pt-8 sm:px-6 sm:pb-20 sm:pt-10 lg:px-8">
+        {/* 1. Header & Navigation */}
+        <header className="space-y-6 border-b border-[color:var(--shell-border)]/70 pb-8 sm:pb-10">
+          <nav className="flex flex-wrap items-center justify-between gap-3 text-xs font-semibold">
+            <div className="flex items-center gap-2">
               <Link
                 href="/legal"
-                className="inline-flex min-h-[44px] items-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-xs font-bold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)]"
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
               >
-                Thỏa thuận người dùng
+                <Icon name="arrow-left" size="1rem" />
+                <span>Trung tâm pháp lý</span>
+              </Link>
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[var(--text-muted)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] hidden sm:inline-flex"
+              >
+                <span>Trang chủ</span>
               </Link>
             </div>
-          </div>
-
-          <div className="mt-6 space-y-3">
-            <h1 className="text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-[2rem]">{title}</h1>
-            <p className="max-w-[86ch] text-sm leading-7 text-[var(--text-secondary)] sm:text-base">{summary}</p>
-          </div>
-
-          <div className="mt-5 flex flex-wrap gap-2">
-            <span className="rounded-full border border-[color:var(--brand-primary)]/35 bg-[var(--surface-brand-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--text-brand)]">
-              Branding: The Clara Care
-            </span>
-            <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-              Cập nhật: {updatedAt}
-            </span>
-            <span className="rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--status-ok-text)]">
-              Hiệu lực toàn hệ thống
-            </span>
-          </div>
-
-          {highlights.length > 0 ? (
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {highlights.slice(0, 6).map((item) => (
-                <div
-                  key={item}
-                  className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-3 text-xs font-semibold leading-6 text-[var(--text-secondary)]"
-                >
-                  {item}
-                </div>
-              ))}
+            <div className="flex items-center gap-2">
+              <Link
+                href="/huong-dan"
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+              >
+                <Icon name="help" size="1rem" />
+                <span>Trung tâm hướng dẫn</span>
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--surface-muted)] px-3 py-1.5 text-[var(--text-primary)] transition hover:bg-[var(--surface-panel)] border border-[color:var(--shell-border)]"
+              >
+                <span>Đăng nhập</span>
+              </Link>
             </div>
-          ) : null}
+          </nav>
 
-          <nav className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-3">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">
+              {eyebrow}
+            </p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[var(--text-primary)] sm:text-3xl lg:text-4xl">
+              {title}
+            </h1>
+            <div className="rounded-[var(--radius-xl)] border border-[color:var(--brand-500)]/25 bg-[var(--surface-brand-soft)]/50 p-4 sm:p-5">
+              <p className="max-w-4xl text-sm leading-relaxed text-[var(--text-primary)] sm:text-[15px]">
+                {summary}
+              </p>
+            </div>
+          </div>
+
+          {/* Revision Metadata & Statutory Badges */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Badge tone="brand" icon="clinical-notes">
+              Phiên bản: {version}
+            </Badge>
+            <Badge tone="ok" icon="calendar">
+              Cập nhật: {updatedAt}
+            </Badge>
+            <Badge tone="neutral" icon="check">
+              Luật Khám bệnh 2023 · NĐ 13/2023 · Luật AI 134/2025
+            </Badge>
+            <Badge tone="neutral" icon="warning">
+              Bảo đảm Zero-CoT · Zero-PII Telemetry
+            </Badge>
+            <Badge tone="neutral" icon="folder">
+              {LEGAL_PRIMARY_DOMAIN}
+            </Badge>
+          </div>
+
+          {/* Quick Policy Switcher Tabs */}
+          <nav
+            aria-label="Điều hướng danh mục văn bản pháp lý"
+            className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4 pt-2"
+          >
             {POLICY_NAV_ITEMS.map((item) => {
               const active = policyKey === item.key;
               return (
@@ -134,55 +232,181 @@ export default function LegalPageShell({
                   key={item.key}
                   href={item.href}
                   className={[
-                    "rounded-xl border px-3 py-3 transition",
+                    "flex flex-col justify-between rounded-[var(--radius-xl)] border p-3.5 transition-all",
                     active
-                      ? "border-[color:var(--brand-primary)]/45 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
-                      : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]",
+                      ? "border-[color:var(--brand-500)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)] shadow-sm"
+                      : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] hover:border-[color:var(--shell-border)]/80 hover:bg-[var(--surface-muted)]",
                   ].join(" ")}
                 >
-                  <p className="text-[10px] font-black uppercase tracking-[0.14em]">{item.shortLabel}</p>
-                  <p className="mt-1 text-sm font-bold leading-6">{item.title}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.14em]">
+                      {item.shortLabel}
+                    </span>
+                    <Badge tone={active ? "brand" : item.badgeTone}>
+                      {active ? "Đang đọc" : "Chính thức"}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-xs sm:text-sm font-bold text-[var(--text-primary)]">
+                    {item.title}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-normal text-[var(--text-muted)] line-clamp-1">
+                    {item.description}
+                  </p>
                 </Link>
               );
             })}
           </nav>
-        </section>
 
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <div className="space-y-4">{children}</div>
-
-          <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-            <div className="chrome-panel rounded-2xl border border-[color:var(--shell-border)] p-5">
-              <p className="text-[11px] font-black uppercase tracking-[0.15em] text-[var(--text-brand)]">Mục lục nhanh</p>
-              {sections.length ? (
-                <div className="mt-3 space-y-2">
-                  {sections.map((item, index) => (
-                    <a
-                      key={item.id}
-                      href={`#${item.id}`}
-                      className="block rounded-lg border border-transparent px-2 py-2 text-sm font-semibold text-[var(--text-secondary)] transition hover:border-[color:var(--shell-border)] hover:bg-[var(--surface-muted)]"
-                    >
-                      <span className="mr-2 text-xs font-black text-[var(--text-muted)]">{String(index + 1).padStart(2, "0")}</span>
-                      {item.label}
-                    </a>
-                  ))}
+          {/* Key Highlights / Editorial Guarantees */}
+          {highlights.length > 0 ? (
+            <div className="grid gap-3 pt-2 sm:grid-cols-2 lg:grid-cols-4">
+              {highlights.map((highlight, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-2.5 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3.5 text-xs font-semibold leading-relaxed text-[var(--text-secondary)] shadow-sm"
+                >
+                  <div className="mt-0.5 shrink-0 text-[var(--status-ok-text)]">
+                    <Icon name="check" size="0.95rem" />
+                  </div>
+                  <span>{highlight}</span>
                 </div>
-              ) : (
-                <p className="mt-3 text-sm text-[var(--text-muted)]">Trang này chưa có mục lục chi tiết.</p>
-              )}
+              ))}
             </div>
+          ) : null}
+        </header>
 
-            <div className="chrome-panel rounded-2xl border border-[color:var(--shell-border)] p-5">
-              <p className="text-[11px] font-black uppercase tracking-[0.15em] text-[var(--text-brand)]">Ghi chú tuân thủ</p>
-              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-[var(--text-secondary)]">
-                <li>Chính sách này áp dụng cho tất cả module thuộc The Clara Care.</li>
-                <li>Trong xung đột văn bản, ưu tiên phiên bản cập nhật mới nhất tại mục Thỏa thuận người dùng.</li>
-                <li>Dữ liệu lâm sàng luôn cần xác nhận bởi chuyên môn y tế trước khi hành động.</li>
+        {/* 2. Main Content Grid: Constrained Editorial Reader + Sticky Sidebar */}
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] items-start">
+          {/* Main Legal Body: Constrained editorial width (max-w-3xl) */}
+          <main className="w-full max-w-3xl space-y-6 sm:space-y-8">
+            {children}
+          </main>
+
+          {/* Sticky Sidebar: SectionIndex + Legal Citations & Contacts */}
+          <aside className="space-y-6 lg:sticky lg:top-6 lg:self-start w-full">
+            {/* Table of Contents / Section Index */}
+            {sectionIndexItems.length > 0 ? (
+              <SectionIndex
+                items={sectionIndexItems}
+                title="Mục lục điều khoản"
+                description="Nhấp để chuyển nhanh đến điều khoản tương ứng"
+                autoScrollSpy={true}
+                density="compact"
+                sticky={false}
+              />
+            ) : null}
+
+            {/* Vietnamese Legal Citations & Guarantees Card */}
+            <div className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 space-y-4 shadow-sm">
+              <div className="flex items-center gap-2 text-[var(--text-brand)]">
+                <Icon name="clinical-notes" size="1.1rem" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                  Căn cứ pháp lý & Chuẩn an toàn
+                </h3>
+              </div>
+              <ul className="space-y-2.5 text-xs leading-relaxed text-[var(--text-secondary)] list-none p-0 m-0">
+                <li className="flex items-start gap-2 border-b border-[color:var(--shell-border)]/50 pb-2">
+                  <span className="font-bold text-[var(--text-primary)] shrink-0">•</span>
+                  <span>
+                    <strong>Luật Khám bệnh 2023 (15/2023/QH15):</strong> Trợ lý thông tin, không thay thế bác sĩ khám chữa bệnh.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2 border-b border-[color:var(--shell-border)]/50 pb-2">
+                  <span className="font-bold text-[var(--text-primary)] shrink-0">•</span>
+                  <span>
+                    <strong>Nghị định 13/2023/NĐ-CP (PDPD):</strong> Bảo vệ dữ liệu nhạy cảm & 11 quyền chủ thể dữ liệu (DSAR).
+                  </span>
+                </li>
+                <li className="flex items-start gap-2 border-b border-[color:var(--shell-border)]/50 pb-2">
+                  <span className="font-bold text-[var(--text-primary)] shrink-0">•</span>
+                  <span>
+                    <strong>Luật AI 134/2025/QH15:</strong> Phân loại AI rủi ro cao trong y tế, giám sát con người liên tục.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-[var(--status-ok-text)] shrink-0">✓</span>
+                  <span>
+                    <strong>Zero-CoT & Zero-PII:</strong> Tuyệt đối không lưu vết chuỗi suy luận và không thu thập PII telemetry.
+                  </span>
+                </li>
               </ul>
             </div>
+
+            {/* DPO & Compliance Contact */}
+            <div className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 space-y-3 shadow-sm text-xs">
+              <div className="flex items-center gap-2 text-[var(--text-brand)]">
+                <Icon name="contact" size="1.1rem" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                  Cán bộ bảo vệ dữ liệu (DPO)
+                </h3>
+              </div>
+              <div className="space-y-2 pt-1 text-[var(--text-secondary)]">
+                <div className="flex items-center justify-between border-b border-[color:var(--shell-border)]/50 pb-1.5">
+                  <span className="text-[var(--text-muted)]">Email DPO:</span>
+                  <a
+                    href={`mailto:${LEGAL_CONTACT_EMAIL}`}
+                    className="font-bold text-[var(--text-brand)] hover:underline"
+                  >
+                    {LEGAL_CONTACT_EMAIL}
+                  </a>
+                </div>
+                <div className="flex items-center justify-between border-b border-[color:var(--shell-border)]/50 pb-1.5">
+                  <span className="text-[var(--text-muted)]">Hotline:</span>
+                  <a
+                    href={`tel:${LEGAL_CONTACT_PHONE.replace(/\s+/g, "")}`}
+                    className="font-bold text-[var(--text-primary)] hover:underline"
+                  >
+                    {LEGAL_CONTACT_PHONE}
+                  </a>
+                </div>
+                <div className="flex items-center justify-between border-b border-[color:var(--shell-border)]/50 pb-1.5">
+                  <span className="text-[var(--text-muted)]">Chủ thể:</span>
+                  <span className="font-semibold text-[var(--text-primary)]">{LEGAL_OPERATOR_NAME}</span>
+                </div>
+                <div className="flex items-center justify-between pt-0.5">
+                  <span className="text-[var(--text-muted)]">SLA xử lý DSAR:</span>
+                  <span className="font-semibold text-[var(--status-ok-text)]">Trong 72h làm việc</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Related Controls Link */}
+            {relatedControls.length > 0 ? (
+              <div className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-4 space-y-2.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                  Công cụ & Kiểm soát liên quan
+                </p>
+                <div className="space-y-2">
+                  {relatedControls.map((ctrl) => (
+                    <Link
+                      key={ctrl.href}
+                      href={ctrl.href}
+                      className="group flex items-center justify-between rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 text-xs font-semibold transition hover:border-[color:var(--brand-500)]/60 hover:bg-[var(--surface-hover)]"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <p className="text-[var(--text-primary)] group-hover:text-[var(--text-brand)] transition-colors">
+                          {ctrl.label}
+                        </p>
+                        {ctrl.description ? (
+                          <p className="text-[11px] text-[var(--text-muted)] truncate">
+                            {ctrl.description}
+                          </p>
+                        ) : null}
+                      </div>
+                      <Icon
+                        name="arrow-right"
+                        size="0.9rem"
+                        className="text-[var(--text-muted)] group-hover:text-[var(--text-brand)] group-hover:translate-x-0.5 transition-all shrink-0"
+                      />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </aside>
-        </section>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
+

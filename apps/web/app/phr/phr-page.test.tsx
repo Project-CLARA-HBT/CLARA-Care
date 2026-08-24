@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { forwardRef, type ReactNode } from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,13 +14,23 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   usePathname: () => mocks.pathname,
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: { href: string; children: ReactNode }) => (
-    <a href={href} {...props}>{children}</a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const React = await import("react");
+  const LinkMock = React.forwardRef(function LinkMock(
+    { href, children, ...props }: { href: string; children: React.ReactNode },
+    ref: React.Ref<HTMLAnchorElement>,
+  ) {
+    return (
+      <a href={href} ref={ref} {...props}>
+        {children}
+      </a>
+    );
+  });
+  return { default: LinkMock };
+});
 
 vi.mock("@/lib/phr", () => ({
   DEFAULT_PHR_CAPABILITIES: {

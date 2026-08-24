@@ -14,7 +14,7 @@ import { getRoleHomePath, type UserRole } from "@/lib/navigation.config";
 import { t } from "@/lib/i18n/catalog";
 import { usePreferences } from "./preference-provider";
 import { useProfileContext } from "./profile-boundary";
-import { useSession } from "./session-boundary";
+import { useSession, type AdminPreviewMode } from "./session-boundary";
 import { ClaraOrb } from "./clara-orb";
 import {
   useShellMode,
@@ -23,6 +23,65 @@ import {
   type ShellDisplayMode,
   type ShellActiveEntity,
 } from "./shell-mode-provider";
+
+interface AdminPreviewOption {
+  key: string;
+  value: AdminPreviewMode | null;
+  labelVi: string;
+  labelEn: string;
+  shortLabelVi: string;
+  shortLabelEn: string;
+  descVi: string;
+  descEn: string;
+  icon: IconName;
+}
+
+const ADMIN_PREVIEW_OPTIONS: AdminPreviewOption[] = [
+  {
+    key: "admin",
+    value: null,
+    labelVi: "Quản trị viên (Administration)",
+    labelEn: "Administration",
+    shortLabelVi: "Quản trị",
+    shortLabelEn: "Administration",
+    descVi: "Bàn làm việc quản trị & điều phối gốc",
+    descEn: "Standard administration workbench",
+    icon: "settings",
+  },
+  {
+    key: "clinical",
+    value: "clinical",
+    labelVi: "Lâm sàng (Clinical)",
+    labelEn: "Clinical",
+    shortLabelVi: "Lâm sàng",
+    shortLabelEn: "Clinical",
+    descVi: "Trải nghiệm bác sĩ, Scribe & Council",
+    descEn: "Doctor, Scribe & Council workspace",
+    icon: "clinical-notes",
+  },
+  {
+    key: "research",
+    value: "research",
+    labelVi: "Nghiên cứu (Research)",
+    labelEn: "Research",
+    shortLabelVi: "Nghiên cứu",
+    shortLabelEn: "Research",
+    descVi: "Trải nghiệm tra cứu y văn & bằng chứng",
+    descEn: "Living evidence & research workspace",
+    icon: "search",
+  },
+  {
+    key: "personal",
+    value: "personal",
+    labelVi: "Cá nhân (Personal)",
+    labelEn: "Personal",
+    shortLabelVi: "Cá nhân",
+    shortLabelEn: "Personal",
+    descVi: "Trải nghiệm người dùng cá nhân & LifeMap",
+    descEn: "Consumer health & LifeMap workspace",
+    icon: "user-card",
+  },
+];
 
 export interface GlobalContextBarProps {
   className?: string;
@@ -54,7 +113,8 @@ export function GlobalContextBar({
 
   const { themePreference, handleThemeChange, uiLanguage, handleLanguageChange } =
     usePreferences();
-  const { role, isLoggingOut, handleLogout } = useSession();
+  const { role, isLoggingOut, handleLogout, adminPreviewMode, setAdminPreviewMode } =
+    useSession();
   const {
     profileContext,
     activeProfile,
@@ -70,6 +130,26 @@ export function GlobalContextBar({
   const currentModeMeta = SHELL_MODES_CONFIG[shell.mode] ?? SHELL_MODES_CONFIG.explore;
   const isProfessionalRole =
     role === "doctor" || role === "researcher" || role === "admin";
+
+  const activePreviewOption = useMemo(() => {
+    if (role !== "admin" || !adminPreviewMode) return null;
+    return ADMIN_PREVIEW_OPTIONS.find((opt) => opt.value === adminPreviewMode) ?? null;
+  }, [role, adminPreviewMode]);
+
+  const activePillIcon = activePreviewOption ? activePreviewOption.icon : currentModeMeta.icon;
+  const activePillLabel = activePreviewOption
+    ? uiLanguage === "vi"
+      ? `Xem trước: ${activePreviewOption.shortLabelVi}`
+      : `Preview: ${activePreviewOption.shortLabelEn}`
+    : uiLanguage === "vi"
+      ? currentModeMeta.labelVi
+      : currentModeMeta.labelEn;
+
+  const activePillAriaLabel = activePreviewOption
+    ? uiLanguage === "vi"
+      ? `Chế độ xem trước: ${activePreviewOption.labelVi}`
+      : `Admin preview mode: ${activePreviewOption.labelEn}`
+    : `Chế độ hiển thị: ${uiLanguage === "vi" ? currentModeMeta.labelVi : currentModeMeta.labelEn}`;
 
   const nextTheme = themePreference === "dark" ? "light" : "dark";
   const themeLabel =
@@ -130,12 +210,22 @@ export function GlobalContextBar({
         {showModeSwitcher && (
           <details className="group relative">
             <summary
-              className="flex items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] cursor-pointer list-none hover:bg-[var(--surface-muted)] transition focus-visible:ring-2 focus-visible:ring-[var(--brand-500)]"
-              aria-label={`Chế độ hiển thị: ${currentModeMeta.labelVi}`}
+              className={[
+                "flex items-center gap-2 rounded-xl border px-2.5 py-1 text-xs font-semibold cursor-pointer list-none transition focus-visible:ring-2 focus-visible:ring-[var(--brand-500)]",
+                activePreviewOption
+                  ? "border-amber-500/50 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
+                  : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-primary)] hover:bg-[var(--surface-muted)]",
+              ].join(" ")}
+              aria-label={activePillAriaLabel}
             >
-              <Icon name={currentModeMeta.icon} size={15} className="text-[var(--text-brand)]" aria-hidden="true" />
+              <Icon
+                name={activePillIcon}
+                size={15}
+                className={activePreviewOption ? "text-amber-400" : "text-[var(--text-brand)]"}
+                aria-hidden="true"
+              />
               <span className="hidden md:inline-block">
-                {uiLanguage === "vi" ? currentModeMeta.labelVi : currentModeMeta.labelEn}
+                {activePillLabel}
               </span>
               <Icon
                 name="chevron-down"
@@ -196,6 +286,68 @@ export function GlobalContextBar({
                   );
                 })}
               </div>
+
+              {/* Admin Preview Experience Switcher Section */}
+              {role === "admin" && (
+                <div className="mt-2 border-t border-[color:var(--shell-border)]/60 pt-1">
+                  <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)] mb-1">
+                    {uiLanguage === "vi"
+                      ? "Chế độ xem trước (Admin Preview)"
+                      : "Admin Preview"}
+                  </div>
+
+                  <div className="space-y-1">
+                    {ADMIN_PREVIEW_OPTIONS.map((opt) => {
+                      const isSelected = adminPreviewMode === opt.value;
+
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => {
+                            setAdminPreviewMode(opt.value);
+                            const detailsEl = document.activeElement?.closest("details");
+                            if (detailsEl) detailsEl.open = false;
+                          }}
+                          className={[
+                            "flex w-full items-start gap-2.5 rounded-lg p-2 text-left text-xs transition",
+                            isSelected
+                              ? "bg-[var(--surface-active)] text-[var(--text-brand)] font-semibold"
+                              : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]",
+                          ].join(" ")}
+                        >
+                          <Icon
+                            name={opt.icon}
+                            size={16}
+                            className={
+                              isSelected
+                                ? "text-[var(--text-brand)] mt-0.5"
+                                : "text-[var(--text-muted)] mt-0.5"
+                            }
+                            aria-hidden="true"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-[var(--text-primary)]">
+                                {uiLanguage === "vi" ? opt.labelVi : opt.labelEn}
+                              </span>
+                              {isSelected && (
+                                <span
+                                  className="h-1.5 w-1.5 rounded-full bg-[var(--brand-500)]"
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </div>
+                            <p className="text-[11px] text-[var(--text-muted)] font-normal mt-0.5 line-clamp-1">
+                              {uiLanguage === "vi" ? opt.descVi : opt.descEn}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </details>
         )}

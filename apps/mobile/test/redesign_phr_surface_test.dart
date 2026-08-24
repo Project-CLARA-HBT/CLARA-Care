@@ -116,5 +116,73 @@ void main() {
       // AND a record is loaded.
       expect(find.byIcon(Icons.emergency_outlined), findsOneWidget);
     });
+
+    testWidgets(
+        'Spec v5 Section 7.5: Hub lists 6 sections and opens full-screen section editors',
+        (tester) async {
+      await pump(tester, enhanced: false);
+
+      // Verify Hub renders all 6 sections.
+      expect(find.text('Thông tin cá nhân'), findsWidgets);
+      expect(find.text('Dị ứng'), findsWidgets);
+      expect(find.text('Bệnh lý'), findsWidgets);
+      expect(find.text('Thuốc'), findsWidgets);
+      expect(find.text('Chỉ số sinh hiệu'), findsWidgets);
+      expect(find.text('Tài liệu & Ghi chú'), findsWidgets);
+
+      // 1. Demographics editor
+      await tester.tap(find.text('Thông tin cá nhân').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(PhrDemographicsScreen), findsOneWidget);
+      await tester.tap(find.text('Xong'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PhrDemographicsScreen), findsNothing);
+
+      // 2. Allergies editor
+      await tester.tap(find.text('Dị ứng').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(PhrAllergiesScreen), findsOneWidget);
+      expect(find.text('Penicillin'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      // 3. Conditions editor
+      await tester.tap(find.text('Bệnh lý').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(PhrConditionsScreen), findsOneWidget);
+      expect(find.text('Hen suyễn'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      // 4. Medications editor
+      await tester.tap(find.text('Thuốc').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(PhrMedicationsScreen), findsOneWidget);
+      expect(find.text('Salbutamol'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      // 5. Measurements editor
+      final measurementsFinder = find.text('Chỉ số sinh hiệu').first;
+      await tester.ensureVisible(measurementsFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(measurementsFinder);
+      await tester.pumpAndSettle();
+      expect(find.byType(PhrMeasurementsScreen), findsOneWidget);
+      await tester.tap(find.text('Xong'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PhrMeasurementsScreen), findsNothing);
+
+      // 6. Documents editor
+      final documentsFinder = find.text('Tài liệu & Ghi chú').first;
+      await tester.ensureVisible(documentsFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(documentsFinder);
+      await tester.pumpAndSettle();
+      expect(find.byType(PhrDocumentsScreen), findsOneWidget);
+      await tester.tap(find.text('Xong'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PhrDocumentsScreen), findsNothing);
+    });
   });
 }

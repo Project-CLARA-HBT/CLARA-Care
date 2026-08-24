@@ -1,12 +1,20 @@
 "use client";
 
-import { DragEvent, FormEvent, useMemo, useState } from "react";
-import PageShell from "@/components/ui/page-shell";
+import { DragEvent, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Field, Textarea } from "@/components/ui/field";
 import Icon from "@/components/ui/icon";
 import MedicalConsentGate from "@/components/medicines/medical-consent-gate";
+import {
+  ErrorSummary,
+  GuidedFlowShell,
+  ReviewSection,
+  StepActions,
+  type GuidedFlowError,
+  type GuidedFlowSaveState,
+} from "@/components/guided-flow";
 import { t } from "@/lib/i18n/catalog";
 import {
   AddCabinetItemPayload,
@@ -15,10 +23,13 @@ import {
   importDetections,
   isLowConfidenceDetection,
   scanReceiptFile,
-  scanReceiptText
+  scanReceiptText,
 } from "@/lib/selfmed";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
+
+type Step = "scan" | "verify" | "review";
+type InputMode = "file" | "text" | "manual";
 
 function confidenceTone(value: number): BadgeTone {
   if (value >= 0.85) return "ok";
@@ -30,7 +41,10 @@ function getDetectionKey(item: ScanDetection, index: number): string {
   return `${item.normalized_name}-${item.evidence}-${index}`;
 }
 
-function normalizationLabel(source: string | null | undefined, language: ReturnType<typeof useUILanguage>): string {
+function normalizationLabel(
+  source: string | null | undefined,
+  language: ReturnType<typeof useUILanguage>,
+): string {
   if (source === "db") return t(language, "medicines.cabinet.guided.normalization.matched");
   if (source === "candidate") return t(language, "medicines.cabinet.guided.normalization.candidate");
   if (source === "fallback") return t(language, "medicines.cabinet.guided.normalization.fallback");
@@ -44,28 +58,72 @@ function normalizationTone(source: string | null | undefined): BadgeTone {
   return "neutral";
 }
 
-const cardClass = "rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-[var(--shadow-sm)] sm:p-6";
-const helperTextClass = "mt-2 text-sm font-medium text-[color:var(--text-muted)]";
-
 export default function CabinetAddPage() {
+  const router = useRouter();
   const language = useUILanguage();
+
+  const [step, setStep] = useState<Step>("scan");
+  const [inputMode, setInputMode] = useState<InputMode>("file");
+
+  // Step 1: Inputs
   const [scanFile, setScanFile] = useState<File | null>(null);
   const [scanText, setScanText] = useState("");
-  const [detections, setDetections] = useState<ScanDetection[]>([]);
-  const [selectedKeys, setSelectedKeys] = useState<Record<string, boolean>>({});
-  const [confirmedLowConfidenceKeys, setConfirmedLowConfidenceKeys] = useState<Record<string, boolean>>({});
-  const [scanNotice, setScanNotice] = useState("");
-  const [isScanningFile, setIsScanningFile] = useState(false);
-  const [isScanningText, setIsScanningText] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-
   const [manualDrugName, setManualDrugName] = useState("");
   const [manualBrandName, setManualBrandName] = useState("");
   const [manualManufacturer, setManualManufacturer] = useState("");
   const [manualDosage, setManualDosage] = useState("");
   const [manualQuantity, setManualQuantity] = useState("1");
-  const [manualNotice, setManualNotice] = useState("");
-  const [isAddingManual, setIsAddingManual] = useState(false);
+
+  // Detections & selections
+  const [detections, setDetections] = useState<ScanDetection[]>([]);
+  const [selectedKeys, setSelectedKeys] = useState<Record<string, boolean>>({});
+  const [confirmedLowConfidenceKeys, setConfirmedLowConfidenceKeys] = useState<Record<string, boolean>>({});
+
+  // Loading & statuses
+  const [isScanningFile, setIsScanningFile] = useState(false);
+  const [isScanningText, setIsScanningText] = useState(false);
+  const [scanNotice, setScanNotice] = useState("");
+  const [validationErrors, setValidationErrors] = useState<GuidedFlowError[]>([]);
+  const [saveState, setSaveState] = useState<GuidedFlowSaveState>({ kind: "idle" });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
+  const manualNameRef = useRef<HTMLInputElement>(null);
+
+  const steps = [
+    { id: "scan" as const, label: t(language, "medicines.cabinet.wizard.step.scan") },
+    { id: "verify" as const, label: t(language, "medicines.cabinet.wizard.step.verify") },
+    { id: "review" as const, label: t(language, "medicines.cabinet.wizard.step.review") },
+  ];
+
+  const titleByStep: Record<Step, string> = {
+    scan: t(language, "medicines.cabinet.guided.file.title"),
+    verify: t(language, "medicines.cabinet.wizard.step.verify"),
+    review: t(language, "medicines.cabinet.wizard.step.review"),
+  };
+
+  const descriptionByStep: Record<Step, string> = {
+    scan: t(language, "medicines.cabinet.guided.page.description"),
+    verify: t(language, "medicines.cabinet.guided.detections.title"),
+    review: t(language, "medicines.cabinet.wizard.safetyNote"),
+  };
+
+  const resetSelection = (items: ScanDetection[]) => {
+    const nextSelected: Record<string, boolean> = {};
+    const nextConfirmed: Record<string, boolean> = {};
+    items.forEach((item, index) => {
+      const key = getDetectionKey(item, index);
+      if (isLowConfidenceDetection(item)) {
+        nextSelected[key] = false;
+        nextConfirmed[key] = false;
+      } else {
+        nextSelected[key] = true;
+        nextConfirmed[key] = true;
+      }
+    });
+    setSelectedKeys(nextSelected);
+    setConfirmedLowConfidenceKeys(nextConfirmed);
+  };
 
   const selectedDetections = useMemo(
     () =>
@@ -94,77 +152,32 @@ export default function CabinetAddPage() {
     () => detections.filter((item) => isLowConfidenceDetection(item)).length,
     [detections]
   );
-  const selectedLowConfidenceTotal = useMemo(
-    () => selectedDetections.filter((item) => isLowConfidenceDetection(item)).length,
-    [selectedDetections]
-  );
-  const canScanFile = Boolean(scanFile) && !isScanningFile;
-  const canScanText = Boolean(scanText.trim()) && !isScanningText;
-  const canImportSelected =
-    selectedDetections.length > 0 && pendingLowConfidenceSelections.length === 0 && !isImporting;
-  const canAddManual =
-    Boolean(manualDrugName.trim()) && Boolean(manualDosage.trim()) && !isAddingManual;
-  const parsedQuantity = Math.max(1, Number.isFinite(Number(manualQuantity)) ? Math.floor(Number(manualQuantity)) : 1);
-  const stepItems = [
-    {
-      title: t(language, "medicines.cabinet.guided.step.upload.title"),
-      status: scanFile ? t(language, "medicines.cabinet.guided.step.upload.selected") : t(language, "medicines.cabinet.guided.step.upload.pending"),
-      completed: Boolean(scanFile),
-      active: !scanFile,
-      optional: false
-    },
-    {
-      title: t(language, "medicines.cabinet.guided.step.paste.title"),
-      status: detections.length
-        ? t(language, "medicines.cabinet.guided.step.paste.ready")
-        : scanText.trim()
-          ? t(language, "medicines.cabinet.guided.step.paste.entering")
-          : t(language, "medicines.cabinet.guided.step.paste.pending"),
-      completed: detections.length > 0,
-      active: Boolean(scanFile || scanText.trim()) && detections.length === 0,
-      optional: false
-    },
-    {
-      title: t(language, "medicines.cabinet.guided.step.manual.title"),
-      status: t(language, "medicines.cabinet.guided.step.manual.status"),
-      completed: false,
-      active: Boolean(manualDrugName.trim() || manualDosage.trim()),
-      optional: true
-    }
-  ];
 
-  const resetSelection = (items: ScanDetection[]) => {
-    const nextSelected: Record<string, boolean> = {};
-    const nextConfirmed: Record<string, boolean> = {};
-    items.forEach((item, index) => {
-      const key = getDetectionKey(item, index);
-      if (isLowConfidenceDetection(item)) {
-        nextSelected[key] = false;
-        nextConfirmed[key] = false;
-      } else {
-        nextSelected[key] = true;
-        nextConfirmed[key] = true;
-      }
-    });
-    setSelectedKeys(nextSelected);
-    setConfirmedLowConfidenceKeys(nextConfirmed);
-  };
-
+  // Trigger file scan
   const onScanFile = async () => {
     if (!scanFile) {
-      setScanNotice(t(language, "medicines.cabinet.guided.notice.fileRequired"));
+      setValidationErrors([
+        {
+          id: "scan-file-required",
+          fieldLabel: t(language, "medicines.cabinet.guided.file.title"),
+          message: t(language, "medicines.cabinet.guided.notice.fileRequired"),
+        },
+      ]);
       return;
     }
 
     setIsScanningFile(true);
     setScanNotice("");
+    setValidationErrors([]);
     try {
       const found = await scanReceiptFile(scanFile);
-      setDetections(found);
-      resetSelection(found);
-      setScanNotice(found.length
-        ? t(language, "medicines.cabinet.guided.notice.fileDetected", { count: found.length })
-        : t(language, "medicines.cabinet.guided.notice.fileNotDetected"));
+      if (found.length === 0) {
+        setScanNotice(t(language, "medicines.cabinet.guided.notice.fileNotDetected"));
+      } else {
+        setDetections(found);
+        resetSelection(found);
+        setStep("verify");
+      }
     } catch (cause) {
       setScanNotice(safeUserFacingError(cause, t(language, "medicines.cabinet.guided.notice.fileScanError")));
     } finally {
@@ -172,30 +185,32 @@ export default function CabinetAddPage() {
     }
   };
 
-  const onDropScanFile = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const file = event.dataTransfer.files?.[0] ?? null;
-    if (file) {
-      setScanFile(file);
-    }
-  };
-
+  // Trigger text scan
   const onScanText = async () => {
     const text = scanText.trim();
     if (!text) {
-      setScanNotice(t(language, "medicines.cabinet.guided.notice.textRequired"));
+      setValidationErrors([
+        {
+          id: "scan-text-required",
+          fieldLabel: t(language, "medicines.cabinet.guided.paste.title"),
+          message: t(language, "medicines.cabinet.guided.notice.textRequired"),
+        },
+      ]);
       return;
     }
 
     setIsScanningText(true);
     setScanNotice("");
+    setValidationErrors([]);
     try {
       const found = await scanReceiptText(text);
-      setDetections(found);
-      resetSelection(found);
-      setScanNotice(found.length
-        ? t(language, "medicines.cabinet.guided.notice.textDetected", { count: found.length })
-        : t(language, "medicines.cabinet.guided.notice.textNotDetected"));
+      if (found.length === 0) {
+        setScanNotice(t(language, "medicines.cabinet.guided.notice.textNotDetected"));
+      } else {
+        setDetections(found);
+        resetSelection(found);
+        setStep("verify");
+      }
     } catch (cause) {
       setScanNotice(safeUserFacingError(cause, t(language, "medicines.cabinet.guided.notice.textScanError")));
     } finally {
@@ -203,21 +218,44 @@ export default function CabinetAddPage() {
     }
   };
 
-  const onImportSelected = async () => {
-    if (!selectedDetections.length) return;
-    if (pendingLowConfidenceSelections.length) {
-      setScanNotice(t(language, "medicines.cabinet.guided.notice.confirmBeforeImport"));
+  // Prepare manual entry
+  const onProceedManual = () => {
+    if (!manualDrugName.trim()) {
+      setValidationErrors([
+        {
+          id: "manual-name-required",
+          fieldId: "manual-drug-name",
+          fieldLabel: t(language, "medicines.cabinet.addManual.name"),
+          message: t(language, "medicines.cabinet.addManual.requirements"),
+        },
+      ]);
+      manualNameRef.current?.focus();
       return;
     }
-    setIsImporting(true);
-    setScanNotice("");
-    try {
-      const inserted = await importDetections(selectedDetections);
-      setScanNotice(t(language, "medicines.cabinet.guided.notice.imported", { count: inserted }));
-    } catch (cause) {
-      setScanNotice(safeUserFacingError(cause, t(language, "medicines.cabinet.guided.notice.importError")));
-    } finally {
-      setIsImporting(false);
+
+    const singleDetection: ScanDetection = {
+      drug_name: manualDrugName.trim(),
+      normalized_name: manualDrugName.trim(),
+      dosage: manualDosage.trim() || null,
+      brand_name: manualBrandName.trim() || null,
+      manufacturer: manualManufacturer.trim() || null,
+      confidence: 1.0,
+      evidence: "Manual entry",
+      mapping_source: "fallback",
+    };
+
+    setDetections([singleDetection]);
+    resetSelection([singleDetection]);
+    setValidationErrors([]);
+    setStep("verify");
+  };
+
+  const onDropScanFile = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0] ?? null;
+    if (file) {
+      setScanFile(file);
+      setValidationErrors([]);
     }
   };
 
@@ -252,401 +290,473 @@ export default function CabinetAddPage() {
     setConfirmedLowConfidenceKeys(nextConfirmed);
   };
 
-  const onAddManual = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setManualNotice("");
-    if (!manualDrugName.trim() || !manualDosage.trim()) {
-      setManualNotice("Nhập ít nhất tên thuốc và liều dùng để thêm vào tủ.");
+  const validateAndProceedToReview = () => {
+    if (selectedDetections.length === 0) {
+      setValidationErrors([
+        {
+          id: "no-detections-selected",
+          message: t(language, "medicines.cabinet.guided.detections.selectRequired"),
+        },
+      ]);
       return;
     }
-    setIsAddingManual(true);
+    if (pendingLowConfidenceSelections.length > 0) {
+      setValidationErrors([
+        {
+          id: "unconfirmed-low-confidence",
+          message: t(language, "medicines.cabinet.guided.detections.confirmRequired"),
+        },
+      ]);
+      return;
+    }
+    setValidationErrors([]);
+    setStep("review");
+  };
 
-    const payload: AddCabinetItemPayload = {
-      drug_name: manualDrugName.trim(),
-      brand_name: manualBrandName.trim(),
-      manufacturer: manualManufacturer.trim(),
-      dosage: manualDosage.trim(),
-      quantity: parsedQuantity,
-      source: "manual"
-    };
+  const commitToCabinet = async () => {
+    setValidationErrors([]);
+    setSaveState({
+      kind: "saving",
+      message: t(language, "medicines.cabinet.guided.detections.importing"),
+    });
 
     try {
-      await addCabinetItem(payload);
-      setManualDrugName("");
-      setManualBrandName("");
-      setManualManufacturer("");
-      setManualDosage("");
-      setManualQuantity("1");
-      setManualNotice("Đã thêm thuốc thủ công vào tủ thuốc.");
+      if (inputMode === "manual" && detections.length === 1 && detections[0].evidence === "Manual entry") {
+        const parsedQuantity = Math.max(1, Math.floor(Number(manualQuantity)) || 1);
+        const payload: AddCabinetItemPayload = {
+          drug_name: manualDrugName.trim(),
+          brand_name: manualBrandName.trim() || undefined,
+          manufacturer: manualManufacturer.trim() || undefined,
+          dosage: manualDosage.trim() || undefined,
+          quantity: parsedQuantity,
+          source: "manual",
+        };
+        await addCabinetItem(payload);
+      } else {
+        await importDetections(selectedDetections);
+      }
+
+      setSaveState({ kind: "saved" });
+      router.replace("/medicines?tab=cabinet");
+      router.refresh();
     } catch (cause) {
-      setManualNotice(safeUserFacingError(cause, "Không thể thêm thuốc thủ công."));
-    } finally {
-      setIsAddingManual(false);
+      setSaveState({
+        kind: "error",
+        message: safeUserFacingError(cause, t(language, "medicines.cabinet.guided.notice.importError")),
+      });
     }
   };
 
-  const adjustManualQuantity = (delta: number) => {
-    setManualQuantity((current) => String(Math.max(1, Math.floor(Number(current) || 1) + delta)));
-  };
+  const stepIndex = steps.findIndex((candidate) => candidate.id === step);
 
-  return (
-    <PageShell
-      title={t(language, "medicines.cabinet.guided.page.title")}
-      description={t(language, "medicines.cabinet.guided.page.description")}
-    >
-      <MedicalConsentGate>
-        <div className="space-y-5">
-          <section className="grid gap-3 md:grid-cols-3">
-            {stepItems.map((step, index) => (
-              <article
-                key={step.title}
-                className={[
-                  "rounded-2xl border p-4 transition",
-                  step.active
-                    ? "border-[color:var(--brand-600)] bg-[color:var(--surface-muted)] shadow-[var(--shadow-sm)]"
-                    : step.completed
-                      ? "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)]"
-                      : "border-[color:var(--shell-border)] bg-[var(--surface-panel)]",
-                ].join(" ")}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.step.number", { number: index + 1 })}</p>
-                    <h2 className="mt-1 text-base font-bold text-[color:var(--text-primary)]">{step.title}</h2>
-                  </div>
-                  <span
-                    className={[
-                      "inline-flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-xs font-bold",
-                      step.completed
-                        ? "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
-                        : step.active
-                          ? "border-[color:var(--brand-600)] bg-[var(--surface-panel)] text-[color:var(--brand-600)]"
-                          : "border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] text-[color:var(--text-muted)]",
-                    ].join(" ")}
-                  >
-                    {step.completed ? <Icon name="check" size={16} aria-hidden="true" /> : step.optional ? t(language, "medicines.cabinet.guided.optional") : index + 1}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm font-medium text-[color:var(--text-muted)]">{step.status}</p>
-              </article>
-            ))}
-          </section>
+  let content;
 
-          <section className={cardClass}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.step.number", { number: 1 })}</p>
-                <h2 className="mt-2 text-2xl font-bold text-[color:var(--text-primary)]">{t(language, "medicines.cabinet.guided.file.title")}</h2>
-                <p className="mt-2 text-base font-medium text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.file.description")}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button as="link" href="/medicines?tab=cabinet" variant="secondary">
-                  {t(language, "medicines.cabinet.guided.file.back")}
-                </Button>
-                <Button as="link" href="/medicines?tab=safety" variant="secondary">
-                  {t(language, "medicines.cabinet.guided.file.openSafety")}
-                </Button>
-              </div>
+  if (step === "scan") {
+    content = (
+      <div className="space-y-6">
+        <ErrorSummary errors={validationErrors} />
+
+        {/* Input Mode Selector */}
+        <div className="grid grid-cols-3 gap-2 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1">
+          <button
+            type="button"
+            onClick={() => {
+              setInputMode("file");
+              setValidationErrors([]);
+            }}
+            className={`flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-semibold transition ${
+              inputMode === "file"
+                ? "bg-[var(--surface-panel)] text-[var(--text-primary)] shadow-sm"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            <Icon name="scan" size={16} />
+            <span>{t(language, "medicines.cabinet.guided.step.upload.title")}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setInputMode("text");
+              setValidationErrors([]);
+            }}
+            className={`flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-semibold transition ${
+              inputMode === "text"
+                ? "bg-[var(--surface-panel)] text-[var(--text-primary)] shadow-sm"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            <Icon name="clinical-notes" size={16} />
+            <span>{t(language, "medicines.cabinet.guided.step.paste.title")}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setInputMode("manual");
+              setValidationErrors([]);
+            }}
+            className={`flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-semibold transition ${
+              inputMode === "manual"
+                ? "bg-[var(--surface-panel)] text-[var(--text-primary)] shadow-sm"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            <Icon name="edit" size={16} />
+            <span>{t(language, "medicines.cabinet.guided.step.manual.title")}</span>
+          </button>
+        </div>
+
+        {/* Option A: File Upload */}
+        {inputMode === "file" && (
+          <div
+            onDrop={onDropScanFile}
+            onDragOver={(event) => event.preventDefault()}
+            className="rounded-[var(--radius-xl)] border-2 border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)]/60 p-6 text-center sm:p-8"
+          >
+            <input
+              ref={fileInputRef}
+              id="cabinet-scan-file-input"
+              type="file"
+              accept="image/*,.pdf"
+              onChange={(event) => {
+                setScanFile(event.target.files?.[0] ?? null);
+                setValidationErrors([]);
+              }}
+              className="sr-only"
+            />
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+              <Icon name="scan" size={24} />
             </div>
-
-            <div
-              onDrop={onDropScanFile}
-              onDragOver={(event) => event.preventDefault()}
-              className="mt-5 rounded-[1.4rem] border-2 border-dashed border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-6 sm:p-8"
-            >
-              <input
-                id="scan-file-input"
-                type="file"
-                accept="image/*,.pdf"
-                onChange={(event) => setScanFile(event.target.files?.[0] ?? null)}
-                className="sr-only"
-              />
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-lg font-bold text-[color:var(--text-primary)]">{t(language, "medicines.cabinet.guided.file.dropTitle")}</p>
-                  <p className="mt-2 text-sm font-medium text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.file.fileTypes")}</p>
-                  {scanFile ? (
-                    <p className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-2 text-sm font-semibold text-[var(--status-ok-text)]">
-                      {t(language, "medicines.cabinet.guided.file.selected", { filename: scanFile.name })}
-                    </p>
-                  ) : (
-                    <p className={helperTextClass}>{t(language, "medicines.cabinet.guided.file.required")}</p>
-                  )}
-                </div>
-                <label
-                  htmlFor="scan-file-input"
-                  className="inline-flex min-h-[var(--touch-target-min)] cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-4 py-2.5 text-sm font-semibold text-[var(--button-primary-text)] transition hover:bg-[var(--brand-700)]"
-                >
-                  {t(language, "medicines.cabinet.guided.file.choose")}
-                </label>
-              </div>
-
-              <div className="mt-5 flex flex-wrap items-center gap-3">
-                <Button
-                  onClick={() => void onScanFile()}
-                  disabled={!canScanFile}
-                  loading={isScanningFile}
-                  loadingLabel={t(language, "medicines.cabinet.guided.scanning")}
-                >
-                  {t(language, "medicines.cabinet.guided.file.scan")}
-                </Button>
-                {!scanFile ? <span className="text-sm font-medium text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.file.required")}</span> : null}
-              </div>
-            </div>
-          </section>
-
-          <section className={cardClass}>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.step.number", { number: 2 })}</p>
-            <h3 className="mt-2 text-2xl font-bold text-[color:var(--text-primary)]">{t(language, "medicines.cabinet.guided.paste.title")}</h3>
-            <p className="mt-2 text-base font-medium text-[color:var(--text-muted)]">
-              {t(language, "medicines.cabinet.guided.paste.description")}
+            <h3 className="mt-3 text-base font-semibold text-[var(--text-primary)]">
+              {t(language, "medicines.cabinet.guided.file.dropTitle")}
+            </h3>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              {t(language, "medicines.cabinet.guided.file.fileTypes")}
             </p>
 
-            <Textarea
-              value={scanText}
-              onChange={(event) => setScanText(event.target.value)}
-              placeholder={t(language, "medicines.cabinet.guided.paste.placeholder")}
-              wrapperClassName="mt-4"
-              className="min-h-[220px]"
-            />
+            {scanFile ? (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-2 text-sm font-semibold text-[var(--status-ok-text)]">
+                <Icon name="check" size={16} />
+                <span>{t(language, "medicines.cabinet.guided.file.selected", { filename: scanFile.name })}</span>
+              </div>
+            ) : null}
 
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+              <label
+                htmlFor="cabinet-scan-file-input"
+                className="cursor-pointer rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-2.5 text-xs font-semibold text-[var(--text-primary)] shadow-sm hover:bg-[var(--surface-muted)]"
+              >
+                {t(language, "medicines.cabinet.guided.file.choose")}
+              </label>
+              <Button
+                onClick={() => void onScanFile()}
+                disabled={!scanFile || isScanningFile}
+                loading={isScanningFile}
+                loadingLabel={t(language, "medicines.cabinet.guided.scanning")}
+                icon="scan"
+              >
+                {t(language, "medicines.cabinet.guided.file.scan")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Option B: Paste text */}
+        {inputMode === "text" && (
+          <div className="space-y-4">
+            <Textarea
+              ref={textInputRef}
+              value={scanText}
+              onChange={(event) => {
+                setScanText(event.target.value);
+                setValidationErrors([]);
+              }}
+              label={t(language, "medicines.cabinet.guided.paste.title")}
+              hint={t(language, "medicines.cabinet.guided.paste.description")}
+              placeholder={t(language, "medicines.cabinet.guided.paste.placeholder")}
+              className="min-h-[160px]"
+            />
             <Button
               onClick={() => void onScanText()}
-              disabled={!canScanText}
+              disabled={!scanText.trim() || isScanningText}
               loading={isScanningText}
               loadingLabel={t(language, "medicines.cabinet.guided.scanning")}
-              className="mt-4"
+              icon="scan"
             >
               {t(language, "medicines.cabinet.guided.paste.scan")}
             </Button>
-            {!scanText.trim() ? <p className={helperTextClass}>{t(language, "medicines.cabinet.guided.paste.required")}</p> : null}
+          </div>
+        )}
 
-            {scanNotice ? (
-              <p className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm font-semibold text-[color:var(--text-muted)]">
-                {scanNotice}
-              </p>
-            ) : null}
-
-            {detections.length ? (
-              <div className="mt-4 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-base font-bold text-[color:var(--text-primary)]">{t(language, "medicines.cabinet.guided.detections.title")}</p>
-                  <Badge tone="neutral">
-                    {t(language, "medicines.cabinet.guided.detections.selected", { selected: selectedDetections.length, total: detections.length })}
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="secondary" onClick={() => onSelectAllDetections(true)}>
-                    {t(language, "medicines.cabinet.guided.detections.selectAll")}
-                  </Button>
-                  <Button variant="secondary" onClick={() => onSelectAllDetections(false)}>
-                    {t(language, "medicines.cabinet.guided.detections.clearAll")}
-                  </Button>
-                  <Button
-                    onClick={() => onConfirmAllLowConfidence(true)}
-                    disabled={!lowConfidenceTotal}
-                    className="border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)] hover:bg-[var(--status-warn-bg)]"
-                  >
-                    {t(language, "medicines.cabinet.guided.detections.confirmAll")}
-                  </Button>
-                </div>
-                {!lowConfidenceTotal ? (
-                  <p className={helperTextClass}>{t(language, "medicines.cabinet.guided.detections.noReview")}</p>
-                ) : null}
-                {pendingLowConfidenceSelections.length ? (
-                  <p className="rounded-[var(--radius-md)] border-2 border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2 text-sm font-semibold text-[var(--status-warn-text)]">
-                    {t(language, "medicines.cabinet.guided.detections.reviewRemaining", { pending: pendingLowConfidenceSelections.length, total: selectedLowConfidenceTotal })}
-                  </p>
-                ) : null}
-
-                <ul className="grid gap-2 lg:grid-cols-2">
-                  {detections.map((item, index) => {
-                    const key = getDetectionKey(item, index);
-                    const checked = Boolean(selectedKeys[key]);
-                    const isLowConfidence = isLowConfidenceDetection(item);
-                    const isLowConfidenceConfirmed = Boolean(confirmedLowConfidenceKeys[key]);
-                    return (
-                      <li
-                        key={key}
-                        className={`rounded-2xl border p-4 transition ${
-                          checked
-                            ? isLowConfidence
-                              ? "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] shadow-sm"
-                              : "border-[color:var(--brand-600)] bg-[color:var(--surface-muted)] shadow-sm"
-                            : "border-[color:var(--shell-border)] bg-[var(--surface-panel)]"
-                        }`}
-                      >
-                        <label className="flex min-h-11 cursor-pointer items-start gap-3">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => onToggleDetection(key)}
-                            className="mt-1 h-6 w-6 rounded border-[color:var(--brand-600)] text-[color:var(--brand-600)] focus:ring-[color:var(--shell-border)]"
-                          />
-                          <div>
-                            <p className="text-lg font-bold text-[color:var(--text-primary)]">{item.drug_name}</p>
-                            {(item.dosage || item.brand_name || item.manufacturer) ? (
-                              <p className="mt-1 text-sm font-medium text-[color:var(--text-muted)]">
-                                {t(language, "medicines.cabinet.guided.detections.dose", { dose: item.dosage || t(language, "medicines.cabinet.guided.notAvailable") })}
-                                {" · "}
-                                {t(language, "medicines.cabinet.guided.detections.brand", { brand: item.brand_name || t(language, "medicines.cabinet.guided.notAvailable") })}
-                                {" · "}
-                                {t(language, "medicines.cabinet.guided.detections.manufacturer", { manufacturer: item.manufacturer || t(language, "medicines.cabinet.guided.notAvailable") })}
-                              </p>
-                            ) : null}
-                            <p className="mt-1 text-sm font-medium text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.detections.evidence", { evidence: item.evidence })}</p>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              <Badge tone={confidenceTone(item.confidence)}>
-                                {t(language, "medicines.cabinet.guided.detections.ocr")}
-                              </Badge>
-                              {item.mapping_source ? (
-                                <Badge tone={normalizationTone(item.mapping_source)}>
-                                  {normalizationLabel(item.mapping_source, language)}
-                                </Badge>
-                              ) : null}
-                            </div>
-                          </div>
-                        </label>
-                        {isLowConfidence && checked ? (
-                          <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2">
-                            <input
-                              type="checkbox"
-                              checked={isLowConfidenceConfirmed}
-                              onChange={() => onToggleLowConfidenceConfirm(key)}
-                              className="h-6 w-6 rounded border-[color:var(--status-warn-border)] text-[var(--warn-500)] focus:ring-[color:var(--status-warn-border)]"
-                            />
-                            <span className="text-sm font-semibold text-[var(--status-warn-text)]">
-                              {t(language, "medicines.cabinet.guided.detections.confirmOne")}
-                            </span>
-                          </label>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
-
-                <Button
-                  onClick={() => void onImportSelected()}
-                  disabled={!canImportSelected}
-                  loading={isImporting}
-                  loadingLabel={t(language, "medicines.cabinet.guided.detections.importing")}
-                >
-                  {t(language, "medicines.cabinet.guided.detections.import", { count: selectedDetections.length })}
-                </Button>
-                {!canImportSelected ? (
-                  <p className={helperTextClass}>
-                    {selectedDetections.length === 0
-                      ? t(language, "medicines.cabinet.guided.detections.selectRequired")
-                      : pendingLowConfidenceSelections.length > 0
-                        ? t(language, "medicines.cabinet.guided.detections.confirmRequired")
-                        : t(language, "medicines.cabinet.guided.detections.processing")}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-          </section>
-
-          <section className={cardClass}>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.addManual.step")}</p>
-                <h3 className="mt-2 text-2xl font-bold text-[color:var(--text-primary)]">{t(language, "medicines.cabinet.addManual.title")}</h3>
-                <p className="mt-2 text-base font-medium text-[color:var(--text-muted)]">
-                  {t(language, "medicines.cabinet.addManual.description")}
-                </p>
-              </div>
-              <Badge tone="neutral">{t(language, "medicines.cabinet.addManual.optional")}</Badge>
-            </div>
-
-            <form onSubmit={onAddManual} className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {/* Option C: Manual Entry */}
+        {inputMode === "manual" && (
+          <div className="space-y-4">
+            <Field
+              ref={manualNameRef}
+              id="manual-drug-name"
+              label={t(language, "medicines.cabinet.addManual.name")}
+              value={manualDrugName}
+              onChange={(event) => {
+                setManualDrugName(event.target.value);
+                setValidationErrors([]);
+              }}
+              required
+              placeholder={t(language, "medicines.cabinet.addManual.namePlaceholder")}
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
               <Field
-                label={t(language, "medicines.cabinet.addManual.name")}
-                value={manualDrugName}
-                onChange={(event) => setManualDrugName(event.target.value)}
-                required
-                placeholder={t(language, "medicines.cabinet.addManual.namePlaceholder")}
+                id="manual-dosage"
+                label={t(language, "medicines.cabinet.addManual.dose")}
+                value={manualDosage}
+                onChange={(event) => setManualDosage(event.target.value)}
+                placeholder={t(language, "medicines.cabinet.addManual.dosePlaceholder")}
               />
-
               <Field
+                id="manual-quantity"
+                label={t(language, "medicines.cabinet.addManual.quantity")}
+                value={manualQuantity}
+                onChange={(event) => setManualQuantity(event.target.value)}
+                inputMode="numeric"
+                placeholder="1"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                id="manual-brand"
                 label={t(language, "medicines.cabinet.addManual.brand")}
                 optional
                 value={manualBrandName}
                 onChange={(event) => setManualBrandName(event.target.value)}
                 placeholder={t(language, "medicines.cabinet.addManual.brandPlaceholder")}
               />
-
               <Field
+                id="manual-manufacturer"
                 label={t(language, "medicines.cabinet.addManual.manufacturer")}
                 optional
                 value={manualManufacturer}
                 onChange={(event) => setManualManufacturer(event.target.value)}
                 placeholder={t(language, "medicines.cabinet.addManual.manufacturerPlaceholder")}
               />
+            </div>
+            <Button onClick={onProceedManual} icon="arrow-right">
+              {t(language, "medicines.cabinet.wizard.step.verify")}
+            </Button>
+          </div>
+        )}
 
-              <Field
-                label={t(language, "medicines.cabinet.addManual.dose")}
-                value={manualDosage}
-                onChange={(event) => setManualDosage(event.target.value)}
-                placeholder={t(language, "medicines.cabinet.addManual.dosePlaceholder")}
-                required
-              />
+        {scanNotice ? (
+          <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 text-xs text-[var(--text-secondary)]">
+            {scanNotice}
+          </div>
+        ) : null}
 
-              <div>
-                <label
-                  htmlFor="manual-quantity"
-                  className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
-                >
-                  {t(language, "medicines.cabinet.addManual.quantity")}
-                </label>
-                <div className="flex h-14 overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] focus-within:border-[color:var(--brand-500)] focus-within:shadow-[var(--shadow-focus)]">
-                  <button
-                    type="button"
-                    onClick={() => adjustManualQuantity(-1)}
-                    className="flex w-14 items-center justify-center border-r border-[color:var(--shell-border)] text-xl font-bold text-[color:var(--text-primary)] hover:bg-[var(--surface-muted)]"
-                    aria-label={t(language, "medicines.cabinet.addManual.decreaseQuantity")}
-                  >
-                    -
-                  </button>
-                  <input
-                    id="manual-quantity"
-                    value={manualQuantity}
-                    onChange={(event) => setManualQuantity(event.target.value)}
-                    inputMode="numeric"
-                    aria-label={t(language, "medicines.cabinet.addManual.quantityInput")}
-                    className="min-w-0 flex-1 bg-transparent px-4 text-center text-base font-semibold text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => adjustManualQuantity(1)}
-                    className="flex w-14 items-center justify-center border-l border-[color:var(--shell-border)] text-xl font-bold text-[color:var(--text-primary)] hover:bg-[var(--surface-muted)]"
-                    aria-label={t(language, "medicines.cabinet.addManual.increaseQuantity")}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
+        <StepActions
+          back={{
+            label: t(language, "medicines.cabinet.guided.file.back"),
+            href: "/medicines?tab=cabinet",
+          }}
+        />
+      </div>
+    );
+  } else if (step === "verify") {
+    content = (
+      <div className="space-y-6">
+        <ErrorSummary errors={validationErrors} />
 
-              <div className="md:col-span-3">
-                <Button
-                  type="submit"
-                  disabled={!canAddManual}
-                  loading={isAddingManual}
-                  loadingLabel={t(language, "medicines.cabinet.addManual.saving")}
-                >
-                  {t(language, "medicines.cabinet.addManual.submit")}
-                </Button>
-                {!canAddManual ? <p className={helperTextClass}>{t(language, "medicines.cabinet.addManual.requirements")}</p> : null}
-              </div>
-            </form>
-
-            {manualNotice ? (
-              <p className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm font-semibold text-[color:var(--text-muted)]">
-                {manualNotice}
-              </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--shell-border)] pb-4">
+          <div>
+            <h3 className="text-base font-semibold text-[var(--text-primary)]">
+              {t(language, "medicines.cabinet.guided.detections.title")}
+            </h3>
+            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+              {t(language, "medicines.cabinet.guided.detections.selected", {
+                selected: selectedDetections.length,
+                total: detections.length,
+              })}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" onClick={() => onSelectAllDetections(true)}>
+              {t(language, "medicines.cabinet.guided.detections.selectAll")}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onSelectAllDetections(false)}>
+              {t(language, "medicines.cabinet.guided.detections.clearAll")}
+            </Button>
+            {lowConfidenceTotal > 0 ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => onConfirmAllLowConfidence(true)}
+              >
+                {t(language, "medicines.cabinet.guided.detections.confirmAll")}
+              </Button>
             ) : null}
-          </section>
+          </div>
         </div>
-      </MedicalConsentGate>
-    </PageShell>
+
+        {pendingLowConfidenceSelections.length > 0 ? (
+          <div className="rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3.5 text-xs font-semibold text-[var(--status-warn-text)]">
+            {t(language, "medicines.cabinet.guided.detections.reviewRemaining", {
+              pending: pendingLowConfidenceSelections.length,
+              total: lowConfidenceTotal,
+            })}
+          </div>
+        ) : null}
+
+        <ul className="space-y-3">
+          {detections.map((item, index) => {
+            const key = getDetectionKey(item, index);
+            const checked = Boolean(selectedKeys[key]);
+            const isLow = isLowConfidenceDetection(item);
+            const isConfirmed = Boolean(confirmedLowConfidenceKeys[key]);
+
+            return (
+              <li
+                key={key}
+                className={`rounded-[var(--radius-lg)] border p-4 transition ${
+                  checked
+                    ? isLow
+                      ? "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)]/40"
+                      : "border-[color:var(--brand-500)] bg-[var(--surface-brand-soft)]/40"
+                    : "border-[color:var(--shell-border)] bg-[var(--surface-panel)]"
+                }`}
+              >
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => onToggleDetection(key)}
+                    className="mt-1 h-5 w-5 rounded border-[color:var(--shell-border)] text-[var(--text-brand)] focus:ring-[var(--focus-ring-color)]"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-[var(--text-primary)]">{item.drug_name}</span>
+                      <Badge tone={confidenceTone(item.confidence)}>
+                        {t(language, "medicines.cabinet.guided.detections.ocr")}
+                      </Badge>
+                      {item.mapping_source ? (
+                        <Badge tone={normalizationTone(item.mapping_source)}>
+                          {normalizationLabel(item.mapping_source, language)}
+                        </Badge>
+                      ) : null}
+                    </div>
+
+                    {(item.dosage || item.brand_name || item.manufacturer) && (
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                        {[
+                          item.dosage ? t(language, "medicines.cabinet.guided.detections.dose", { dose: item.dosage }) : null,
+                          item.brand_name ? t(language, "medicines.cabinet.guided.detections.brand", { brand: item.brand_name }) : null,
+                          item.manufacturer ? t(language, "medicines.cabinet.guided.detections.manufacturer", { manufacturer: item.manufacturer }) : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
+
+                    {item.evidence && (
+                      <p className="mt-1 text-xs italic text-[var(--text-muted)]">
+                        {t(language, "medicines.cabinet.guided.detections.evidence", { evidence: item.evidence })}
+                      </p>
+                    )}
+                  </div>
+                </label>
+
+                {isLow && checked ? (
+                  <label className="mt-3 flex cursor-pointer items-center gap-2.5 rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={isConfirmed}
+                      onChange={() => onToggleLowConfidenceConfirm(key)}
+                      className="h-4 w-4 rounded border-[color:var(--status-warn-border)] text-[var(--warn-500)] focus:ring-[var(--status-warn-border)]"
+                    />
+                    <span className="text-xs font-semibold text-[var(--status-warn-text)]">
+                      {t(language, "medicines.cabinet.guided.detections.confirmOne")}
+                    </span>
+                  </label>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+
+        <StepActions
+          nextType="button"
+          nextLabel={t(language, "medicines.cabinet.wizard.step.review")}
+          onNext={validateAndProceedToReview}
+          back={{
+            label: t(language, "medicines.cabinet.wizard.step.scan"),
+            onClick: () => setStep("scan"),
+          }}
+        />
+      </div>
+    );
+  } else {
+    content = (
+      <div className="space-y-6">
+        <ErrorSummary errors={validationErrors} />
+
+        {/* Safety Disclaimer Callout */}
+        <div className="rounded-[var(--radius-xl)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <span className="shrink-0 text-[var(--status-warn-text)]">
+              <Icon name="warning" size={20} />
+            </span>
+            <div className="text-xs leading-relaxed text-[var(--status-warn-text)]">
+              <p className="font-bold">{t(language, "medicines.workspace.cabinet.title")}</p>
+              <p className="mt-1">{t(language, "medicines.cabinet.wizard.safetyNote")}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Review list */}
+        <ReviewSection
+          title={t(language, "medicines.cabinet.wizard.step.review")}
+          description={t(language, "medicines.workspace.cabinet.desc")}
+          edit={{
+            label: t(language, "medicines.cabinet.wizard.step.verify"),
+            onClick: () => setStep("verify"),
+          }}
+          items={selectedDetections.map((item) => ({
+            label: item.drug_name,
+            value: (
+              <div className="text-xs text-[var(--text-secondary)]">
+                <span>{item.dosage || t(language, "medicines.cabinet.notAvailable")}</span>
+                {item.brand_name ? <span> · {item.brand_name}</span> : null}
+                {item.manufacturer ? <span> ({item.manufacturer})</span> : null}
+              </div>
+            ),
+          }))}
+        />
+
+        <StepActions
+          nextLabel={t(language, "medicines.cabinet.guided.detections.import", {
+            count: selectedDetections.length,
+          })}
+          nextType="button"
+          onNext={() => void commitToCabinet()}
+          saving={saveState.kind === "saving"}
+          savingLabel={t(language, "medicines.cabinet.guided.detections.importing")}
+          back={{
+            label: t(language, "medicines.cabinet.wizard.step.verify"),
+            onClick: () => setStep("verify"),
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <MedicalConsentGate>
+      <GuidedFlowShell
+        eyebrow={t(language, "medicines.cabinet.defaultLabel")}
+        title={titleByStep[step]}
+        description={descriptionByStep[step]}
+        steps={steps}
+        currentStep={stepIndex}
+        saveState={saveState}
+        aside={t(language, "medicines.cabinet.wizard.aside")}
+      >
+        {content}
+      </GuidedFlowShell>
+    </MedicalConsentGate>
   );
 }

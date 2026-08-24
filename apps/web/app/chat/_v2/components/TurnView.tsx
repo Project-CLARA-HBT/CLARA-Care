@@ -112,11 +112,17 @@ function TurnView({
                   role={role}
                   onSaveNote={onSaveNote}
                 />
-                <details className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-2.5">
-                  <summary className="cursor-pointer text-xs sm:text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                    {t(uiLanguage, "chat.turnView.explain")}
+                <details className="group rounded-xl border border-[color:var(--shell-border)]/80 bg-[var(--surface-muted)]/70 px-4 py-3 transition-colors">
+                  <summary className="cursor-pointer text-xs sm:text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2">
+                      <Icon name="clinical-notes" size={14} className="text-[var(--text-brand)]" />
+                      <span>{t(uiLanguage, "chat.turnView.explain")}</span>
+                    </span>
+                    <span className="rounded-full bg-[var(--surface-panel)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-brand)] border border-[color:var(--shell-border)]/50">
+                      CoT Trace
+                    </span>
                   </summary>
-                  <div className="mt-3">
+                  <div className="mt-3.5 pt-3 border-t border-[color:var(--shell-border)]/40">
                     <FlowTimeline result={tier2Result} uiLanguage={uiLanguage} />
                   </div>
                 </details>

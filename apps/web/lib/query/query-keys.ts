@@ -179,6 +179,8 @@ export const queryKeys = {
         },
         integrations: () => ["profile", scope, "you", "integrations"] as const,
         notifications: () => ["profile", scope, "you", "notifications"] as const,
+        settings: () => ["profile", scope, "you", "settings"] as const,
+        security: () => ["profile", scope, "you", "security"] as const,
       },
 
       /** Arbitrary custom profile-scoped query key. */

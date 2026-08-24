@@ -1,22 +1,23 @@
-// Server-backed first-run onboarding for CLARA_Mobile (clara-mobile-unified,
-// Requirement 6).
+// Server-backed first-run onboarding for CLARA_Mobile (Spec v5 Section 7.0, 11).
 //
-// Unlike the legacy client-only "seen" carousel, this gate is backed by the
-// durable PHR onboarding state (`GET/PATCH /api/v1/phr/onboarding`), so the
-// first-run decision matches the web `/welcome` flow and is consistent across
-// devices. It applies to EVERY role (Req 6.4).
+// Decoupled into 3 multi-track stages:
+//   1. Stage 1 (Global First-Run): Welcome, terms of use, decision-support
+//      transparency (not a medical device / not a doctor replacement), and
+//      no-PII privacy guarantees for all users.
+//   2. Stage 2 (Professional Orientation vs Decoupled Personal Health Setup):
+//      - Clinicians / Researchers (doctor/researcher/admin): Professional
+//        orientation on AI Council, SOAP Scribe, and Living Evidence.
+//        Unblocked: ZERO personal biometric questions (no height, weight, blood type).
+//      - Consumers (normal): Decoupled personal health basics (self-declared
+//        display name, optional gender, blood type, height, weight).
+//   3. Stage 3 (Confirmation & Completion):
+//      - Clinicians: Clinical governance acknowledgment & direct launch.
+//      - Consumers: Personalization consent toggle & self-declared review.
 //
-// Flow:
-//   * [UnifiedOnboardingGate] loads `getPhrOnboarding` once. While loading it
-//     shows a minimal splash. On `needs_onboarding == false` (or any load
-//     failure — fail-open so the user is never stranded) it renders [child].
-//     Otherwise it renders [OnboardingFlow].
-//   * [OnboardingFlow] is a 3-step, all-optional flow (welcome → basics →
-//     personalization consent) that completes or skips via
-//     `PATCH /phr/onboarding`. No health fact is required; nothing is inferred.
-//
-// Safety: this collects only self-declared, optional profile basics and an
-// explicit personalization-consent choice. It never presents medical advice.
+// Invariants:
+//   * All steps are optional and skippable ("Bỏ qua, để sau").
+//   * Server-backed via `GET/PATCH /api/v1/phr/onboarding`.
+//   * Fail-open: network read errors immediately grant app access.
 
 import 'package:flutter/material.dart';
 
@@ -106,8 +107,8 @@ class _UnifiedOnboardingGateState extends State<UnifiedOnboardingGate> {
   }
 }
 
-/// The 3-step, all-optional first-run flow. Completes/skips via
-/// `PATCH /phr/onboarding`, then calls [onDone].
+/// The 3-stage, multi-track first-run onboarding flow.
+/// Completes/skips via `PATCH /phr/onboarding`, then calls [onDone].
 class OnboardingFlow extends StatefulWidget {
   const OnboardingFlow({
     super.key,
@@ -131,6 +132,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   bool _saving = false;
   bool _saveFailed = false;
   bool _consent = false;
+  bool _clinicalConfirmed = true;
 
   final _fullName = TextEditingController();
   final _heightCm = TextEditingController();
@@ -144,6 +146,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     _heightCm.dispose();
     _weightKg.dispose();
     super.dispose();
+  }
+
+  bool get _isProfessional {
+    final role = (widget.sessionStore.role ?? 'normal').trim().toLowerCase();
+    return role == 'doctor' || role == 'researcher' || role == 'admin';
   }
 
   double? _numeric(String value) {
@@ -162,18 +169,26 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       _saving = true;
       _saveFailed = false;
     });
+
     final payload = skip
         ? <String, dynamic>{'action': 'skip'}
-        : <String, dynamic>{
-            'action': 'complete',
-            'confirm_self_declared': true,
-            'personalization_consent': _consent,
-            'full_name': _fullName.text.trim(),
-            'gender': _gender,
-            'blood_type': _bloodType,
-            'height_cm': _numeric(_heightCm.text),
-            'weight_kg': _numeric(_weightKg.text),
-          };
+        : _isProfessional
+            ? <String, dynamic>{
+                'action': 'complete',
+                'confirm_self_declared': true,
+                'personalization_consent': true,
+              }
+            : <String, dynamic>{
+                'action': 'complete',
+                'confirm_self_declared': true,
+                'personalization_consent': _consent,
+                'full_name': _fullName.text.trim(),
+                'gender': _gender,
+                'blood_type': _bloodType,
+                'height_cm': _numeric(_heightCm.text),
+                'weight_kg': _numeric(_weightKg.text),
+              };
+
     try {
       await widget.apiClient
           .updatePhrOnboarding(accessToken: token, payload: payload);
@@ -203,6 +218,20 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   Widget _buildLocalized(BuildContext context, String languageCode) {
     final copy = ConsumerTerminology.forLocale(languageCode);
+    final isEn = languageCode == 'en';
+
+    final stepperLabels = _isProfessional
+        ? [
+            copy[ConsumerTerm.onboardingStepWelcome],
+            isEn ? 'Professional Tools' : 'Công cụ chuyên môn',
+            isEn ? 'Confirmation' : 'Xác nhận & Bắt đầu',
+          ]
+        : [
+            copy[ConsumerTerm.onboardingStepWelcome],
+            copy[ConsumerTerm.onboardingStepBasics],
+            copy[ConsumerTerm.onboardingStepPersonalization],
+          ];
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -215,11 +244,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                 children: [
                   _Stepper(
                     step: _step,
-                    labels: [
-                      copy[ConsumerTerm.onboardingStepWelcome],
-                      copy[ConsumerTerm.onboardingStepBasics],
-                      copy[ConsumerTerm.onboardingStepPersonalization],
-                    ],
+                    labels: stepperLabels,
                   ),
                   const SizedBox(height: ClaraTokens.spaceLg),
                   if (_saveFailed) ...[
@@ -235,27 +260,43 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                       onSkip: _saving ? null : () => _finish(skip: true),
                     )
                   else if (_step == 1)
-                    _BasicsStep(
-                      copy: copy,
-                      fullName: _fullName,
-                      heightCm: _heightCm,
-                      weightKg: _weightKg,
-                      gender: _gender,
-                      bloodType: _bloodType,
-                      onGender: (v) => setState(() => _gender = v),
-                      onBloodType: (v) => setState(() => _bloodType = v),
-                      onBack: () => setState(() => _step = 0),
-                      onNext: () => setState(() => _step = 2),
-                    )
+                    _isProfessional
+                        ? _ProfessionalOrientationStep(
+                            isEn: isEn,
+                            onBack: () => setState(() => _step = 0),
+                            onNext: () => setState(() => _step = 2),
+                          )
+                        : _BasicsStep(
+                            copy: copy,
+                            fullName: _fullName,
+                            heightCm: _heightCm,
+                            weightKg: _weightKg,
+                            gender: _gender,
+                            bloodType: _bloodType,
+                            onGender: (v) => setState(() => _gender = v),
+                            onBloodType: (v) => setState(() => _bloodType = v),
+                            onBack: () => setState(() => _step = 0),
+                            onNext: () => setState(() => _step = 2),
+                          )
                   else
-                    _ConsentStep(
-                      copy: copy,
-                      consent: _consent,
-                      onConsent: (v) => setState(() => _consent = v),
-                      saving: _saving,
-                      onBack: () => setState(() => _step = 1),
-                      onComplete: () => _finish(skip: false),
-                    ),
+                    _isProfessional
+                        ? _ProfessionalConfirmationStep(
+                            isEn: isEn,
+                            confirmed: _clinicalConfirmed,
+                            saving: _saving,
+                            onConfirmed: (v) =>
+                                setState(() => _clinicalConfirmed = v),
+                            onBack: () => setState(() => _step = 1),
+                            onComplete: () => _finish(skip: false),
+                          )
+                        : _ConsentStep(
+                            copy: copy,
+                            consent: _consent,
+                            onConsent: (v) => setState(() => _consent = v),
+                            saving: _saving,
+                            onBack: () => setState(() => _step = 1),
+                            onComplete: () => _finish(skip: false),
+                          ),
                 ],
               ),
             ),
@@ -347,6 +388,239 @@ class _WelcomeStep extends StatelessWidget {
     );
   }
 }
+
+// --- Professional Orientation Track (Doctor / Researcher / Admin) ------------
+
+class _ProfessionalOrientationStep extends StatelessWidget {
+  const _ProfessionalOrientationStep({
+    required this.isEn,
+    required this.onBack,
+    required this.onNext,
+  });
+
+  final bool isEn;
+  final VoidCallback onBack;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          isEn
+              ? 'CLARA for Clinical & Research'
+              : 'CLARA cho công việc lâm sàng',
+          style: text.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: ClaraTokens.spaceXs),
+        Text(
+          isEn
+              ? 'Specialized decision-support tools designed for clinicians and healthcare professionals.'
+              : 'CLARA là trợ lý AI hỗ trợ ra quyết định lâm sàng và tra cứu y khoa có dẫn chứng. CLARA không thay thế đánh giá chuyên môn của bạn.',
+          style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: ClaraTokens.spaceLg),
+        _buildFeatureItem(
+          context,
+          icon: Icons.groups_outlined,
+          title: isEn ? 'AI Council' : 'Hội đồng Hội chẩn (Council)',
+          description: isEn
+              ? 'Multi-specialty triage, divergence detection, and evidence citations.'
+              : 'Hội chẩn đa góc nhìn chuyên khoa, phân tích bất đồng lâm sàng với trích dẫn y văn đối chứng.',
+        ),
+        const SizedBox(height: ClaraTokens.spaceMd),
+        _buildFeatureItem(
+          context,
+          icon: Icons.mic_none_outlined,
+          title: isEn ? 'SOAP Scribe' : 'Ghi chép lâm sàng (Scribe)',
+          description: isEn
+              ? 'Real-time patient dialogue transcription to structured SOAP notes.'
+              : 'Soạn thảo hồ sơ bệnh án cấu trúc SOAP tự động từ buổi khám. Luôn yêu cầu sự đồng thuận của người bệnh.',
+        ),
+        const SizedBox(height: ClaraTokens.spaceMd),
+        _buildFeatureItem(
+          context,
+          icon: Icons.fact_check_outlined,
+          title: isEn ? 'Living Evidence' : 'Bằng chứng sống (Living Evidence)',
+          description: isEn
+              ? 'MoH guidelines, GLHS knowledge graph, and DrugBank verification.'
+              : 'Phác đồ Bộ Y tế, đồ thị tri thức GLHS và kiểm tra tương tác thuốc DrugBank theo thời gian thực.',
+        ),
+        const SizedBox(height: ClaraTokens.spaceLg),
+        Container(
+          padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer.withValues(alpha: 0.25),
+            borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+            border: Border.all(color: scheme.primary.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.shield_outlined, color: scheme.primary, size: 20),
+              const SizedBox(width: ClaraTokens.spaceSm),
+              Expanded(
+                child: Text(
+                  isEn
+                      ? 'No personal biometric or health questionnaire required for professional accounts.'
+                      : 'Tài khoản chuyên môn được miễn toàn bộ biểu mẫu khai báo sinh trắc học cá nhân.',
+                  style: text.bodySmall?.copyWith(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: ClaraTokens.spaceLg),
+        ClaraButton(
+          label: isEn ? 'Continue' : 'Tiếp tục',
+          onPressed: onNext,
+        ),
+        const SizedBox(height: ClaraTokens.spaceSm),
+        ClaraButton(
+          label: isEn ? 'Back' : 'Quay lại',
+          variant: ClaraButtonVariant.secondary,
+          onPressed: onBack,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(ClaraTokens.radiusSm),
+            ),
+            child: Icon(icon, color: scheme.primary, size: 20),
+          ),
+          const SizedBox(width: ClaraTokens.spaceMd),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfessionalConfirmationStep extends StatelessWidget {
+  const _ProfessionalConfirmationStep({
+    required this.isEn,
+    required this.confirmed,
+    required this.saving,
+    required this.onConfirmed,
+    required this.onBack,
+    required this.onComplete,
+  });
+
+  final bool isEn;
+  final bool confirmed;
+  final bool saving;
+  final ValueChanged<bool> onConfirmed;
+  final VoidCallback onBack;
+  final VoidCallback onComplete;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          isEn ? 'Ready to Start' : 'Sẵn sàng làm việc',
+          style: text.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: ClaraTokens.spaceXs),
+        Text(
+          isEn
+              ? 'Clinical governance and patient consent confirmation before using professional tools.'
+              : 'Xác nhận quy tắc an toàn lâm sàng trước khi bắt đầu sử dụng các công cụ chuyên môn.',
+          style: text.bodyMedium,
+        ),
+        const SizedBox(height: ClaraTokens.spaceLg),
+        SwitchListTile(
+          value: confirmed,
+          onChanged: saving ? null : onConfirmed,
+          title: Text(
+            isEn
+                ? 'Clinical decision-support acknowledgment'
+                : 'Xác nhận vai trò trợ lý hỗ trợ quyết định',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            isEn
+                ? 'I acknowledge that CLARA provides AI clinical decision support and does not substitute professional medical judgment.'
+                : 'Tôi xác nhận CLARA là công cụ hỗ trợ và luôn đối chiếu chuyên môn trước khi ra quyết định lâm sàng.',
+          ),
+        ),
+        const SizedBox(height: ClaraTokens.spaceMd),
+        Text(
+          isEn
+              ? 'Audio recordings in Scribe require explicit patient consent prior to session activation.'
+              : 'Quy tắc bắt buộc: Luôn xin ý kiến đồng thuận của người bệnh trước khi bật tính năng ghi âm trong Scribe.',
+          style: text.bodySmall,
+        ),
+        const SizedBox(height: ClaraTokens.spaceLg),
+        ClaraButton(
+          label: isEn ? 'Complete Setup' : 'Hoàn tất & Bắt đầu',
+          loading: saving,
+          onPressed: (saving || !confirmed) ? null : onComplete,
+        ),
+        const SizedBox(height: ClaraTokens.spaceSm),
+        ClaraButton(
+          label: isEn ? 'Back' : 'Quay lại',
+          variant: ClaraButtonVariant.secondary,
+          onPressed: saving ? null : onBack,
+        ),
+      ],
+    );
+  }
+}
+
+// --- Consumer Track (Personal Health Profile) ---------------------------------
 
 class _BasicsStep extends StatelessWidget {
   const _BasicsStep({
