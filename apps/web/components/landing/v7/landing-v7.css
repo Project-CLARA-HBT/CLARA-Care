@@ -1,0 +1,250 @@
+/* CLARA Care Landing Page v7 — Scoped Spatial Art & Editorial Tokens */
+
+.clara-landing-v7 {
+  /* Surface & Palette Root Tokens */
+  --v7-canvas: #f7f9fc;
+  --v7-canvas-soft: #f1f5f9;
+  --v7-surface: #ffffff;
+  --v7-surface-hover: #f8fafc;
+  --v7-surface-active: #f1f5f9;
+
+  --v7-text: #162033;
+  --v7-text-secondary: #48566a;
+  --v7-muted: #6d7a8e;
+
+  --v7-border: #e3e8ef;
+  --v7-border-strong: #d5dde7;
+  --v7-border-subtle: #edf2f7;
+
+  --v7-azure: #0b6fd8;
+  --v7-azure-bright: #1a86f5;
+  --v7-azure-soft: #eff7ff;
+  --v7-azure-subtle: rgba(11, 111, 216, 0.08);
+
+  --v7-mint: #14a88d;
+  --v7-mint-soft: #ecfdf8;
+  --v7-mint-subtle: rgba(20, 168, 141, 0.08);
+
+  --v7-iris: #8b7cf6;
+  --v7-iris-soft: #f5f3ff;
+  --v7-iris-subtle: rgba(139, 124, 246, 0.08);
+
+  /* Motion Tokens */
+  --v7-motion-fast: 120ms;
+  --v7-motion-standard: 200ms;
+  --v7-motion-emphasis: 340ms;
+  --v7-motion-scene: 500ms;
+  --v7-motion-long: 720ms;
+
+  --v7-ease-standard: cubic-bezier(.2, .8, .2, 1);
+  --v7-ease-emphasis: cubic-bezier(.16, 1, .3, 1);
+  --v7-ease-inout: cubic-bezier(.65, 0, .35, 1);
+
+  background-color: var(--v7-canvas);
+  color: var(--v7-text);
+  font-family: var(--font-be-vietnam-pro, system-ui, -apple-system, sans-serif);
+  position: relative;
+  overflow-x: clip;
+  width: 100%;
+}
+
+/* Material Class: Editorial Canvas */
+.clara-editorial-canvas {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+/* Material Class: Product Surface */
+.clara-product-surface {
+  background-color: var(--v7-surface);
+  border: 1px solid var(--v7-border);
+  border-radius: 1.5rem;
+  box-shadow: 0 20px 40px -15px rgba(22, 32, 51, 0.06), 0 0 1px 1px rgba(22, 32, 51, 0.02);
+  transition: border-color var(--v7-motion-fast) var(--v7-ease-standard),
+              box-shadow var(--v7-motion-fast) var(--v7-ease-standard);
+}
+
+.clara-product-surface:hover {
+  border-color: var(--v7-border-strong);
+}
+
+/* Material Class: Floating Chrome (Liquid Glass for chrome ONLY) */
+.clara-floating-chrome {
+  background-color: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(227, 232, 239, 0.85);
+  box-shadow: 0 12px 32px -8px rgba(22, 32, 51, 0.08), 0 0 1px rgba(22, 32, 51, 0.04);
+}
+
+/* Spatial 3D Perspective Stage */
+.clara-spatial-stage {
+  perspective: 1400px;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Ambient Lighting Fields (Subtle light-first fields) */
+.clara-ambient-azure {
+  background: radial-gradient(circle 500px at 50% 40%, rgba(11, 111, 216, 0.06), transparent 70%);
+}
+
+.clara-ambient-mint {
+  background: radial-gradient(circle 500px at 50% 40%, rgba(20, 168, 141, 0.06), transparent 70%);
+}
+
+.clara-ambient-iris {
+  background: radial-gradient(circle 500px at 50% 40%, rgba(139, 124, 246, 0.06), transparent 70%);
+}
+
+.clara-ambient-multi {
+  background: radial-gradient(circle 600px at 25% 35%, rgba(11, 111, 216, 0.06), transparent 65%),
+              radial-gradient(circle 550px at 75% 65%, rgba(20, 168, 141, 0.06), transparent 65%),
+              radial-gradient(circle 500px at 50% 85%, rgba(139, 124, 246, 0.04), transparent 60%);
+}
+
+/* Grid Break Container for Signature Scenes */
+.clara-grid-break {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  max-width: 100vw;
+}
+
+/* Artwork Animations: Orb Subtle Glow */
+@keyframes clara-orb-glow {
+  0%, 100% {
+    opacity: 0.85;
+    transform: scale(1);
+    filter: drop-shadow(0 0 16px rgba(11, 111, 216, 0.25));
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+    filter: drop-shadow(0 0 24px rgba(11, 111, 216, 0.4));
+  }
+}
+
+.clara-orb-glow {
+  animation: clara-orb-glow 5s var(--v7-ease-inout) infinite;
+}
+
+/* Artwork Animations: Ribbon Path Pulse */
+@keyframes clara-ribbon-pulse {
+  0%, 100% {
+    stroke-opacity: 0.4;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-opacity: 0.9;
+    stroke-dashoffset: -20;
+  }
+}
+
+.clara-ribbon-path {
+  stroke-dasharray: 8 8;
+  animation: clara-ribbon-pulse 5s ease-in-out infinite;
+}
+
+/* Artwork Animations: Constellation Dashed Connectors */
+@keyframes clara-constellation-pulse {
+  0%, 100% {
+    stroke-opacity: 0.35;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-opacity: 0.85;
+    stroke-dashoffset: -12;
+  }
+}
+
+.clara-constellation-line {
+  stroke-dasharray: 6 6;
+  animation: clara-constellation-pulse 4s ease-in-out infinite;
+}
+
+/* Artwork Animations: Scribe Wave Bars */
+@keyframes clara-wave-bar {
+  0%, 100% {
+    height: 6px;
+  }
+  50% {
+    height: 24px;
+  }
+}
+
+.clara-wave-1 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.1s; }
+.clara-wave-2 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.3s; }
+.clara-wave-3 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.2s; }
+.clara-wave-4 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.5s; }
+.clara-wave-5 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.4s; }
+.clara-wave-6 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.25s; }
+.clara-wave-7 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.45s; }
+.clara-wave-8 { animation: clara-wave-bar 1.2s ease-in-out infinite 0.15s; }
+
+/* Artwork Animations: Scenario Path Flow */
+@keyframes clara-path-flow {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -128;
+  }
+}
+
+/* Focus Ring Utility */
+.clara-focus-ring:focus-visible {
+  outline: 2px solid var(--v7-azure);
+  outline-offset: 2px;
+}
+
+/* Reduced Motion Overrides: Complete Neutralization of Continuous Animations */
+@media (prefers-reduced-motion: reduce) {
+  .clara-landing-v7,
+  .clara-landing-v7 *,
+  .clara-landing-v7 *::before,
+  .clara-landing-v7 *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .clara-spatial-stage {
+    perspective: none !important;
+    transform: none !important;
+  }
+
+  .clara-orb-glow {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .clara-ribbon-path {
+    animation: none !important;
+    stroke-dasharray: none !important;
+    stroke-opacity: 0.7 !important;
+  }
+
+  .clara-constellation-line {
+    animation: none !important;
+    stroke-dasharray: none !important;
+    stroke-opacity: 0.6 !important;
+  }
+
+  .clara-wave-1,
+  .clara-wave-2,
+  .clara-wave-3,
+  .clara-wave-4,
+  .clara-wave-5,
+  .clara-wave-6,
+  .clara-wave-7,
+  .clara-wave-8 {
+    animation: none !important;
+    height: 14px !important;
+  }
+}
