@@ -442,7 +442,7 @@ export default function AdminAnalyticsDashboardPage() {
                   onClick={() => setActiveTab(tab.key)}
                   className={`inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border px-3 py-1.5 text-xs font-semibold transition ${
                     active
-                      ? "border-[color:var(--brand-600)] bg-[var(--brand-600)] text-[#cdd7ff] shadow-xs"
+                      ? "border-[color:var(--brand-600)] bg-[var(--brand-600)] text-white shadow-xs"
                       : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
                   }`}
                 >

@@ -21,6 +21,8 @@ import {
   getStoredAdminPreviewMode,
   setStoredAdminPreviewMode,
 } from "@/lib/auth-store";
+import { SessionContext as ShellSessionContext } from "@/components/shell/session-boundary";
+import { SessionContext as ServerSessionContext } from "@/lib/session/session-provider";
 import {
   WORKSPACE_STORAGE_KEY,
   type AdminPreviewPersona,
@@ -33,11 +35,19 @@ export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null
 
 export function WorkspaceProvider({
   children,
-  serverRole = "normal",
+  serverRole: propServerRole,
   initialWorkspace,
   initialAdminPreviewPersona,
   pathname: propPathname,
 }: WorkspaceProviderProps) {
+  const shellSession = useContext(ShellSessionContext);
+  const serverSession = useContext(ServerSessionContext);
+  const serverRole =
+    propServerRole ??
+    (serverSession?.serverRole as any) ??
+    shellSession?.role ??
+    "normal";
+
   const hookPathname = usePathname();
   const currentPathname = propPathname ?? hookPathname ?? "";
 

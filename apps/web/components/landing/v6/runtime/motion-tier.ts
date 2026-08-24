@@ -10,7 +10,7 @@ export interface MotionTierSignals {
 }
 
 export function getDeviceMotionSignals(): MotionTierSignals {
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
     return {
       prefersReducedMotion: false,
       saveData: false,
@@ -19,8 +19,8 @@ export function getDeviceMotionSignals(): MotionTierSignals {
     };
   }
 
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const pointerFine = window.matchMedia("(pointer: fine)").matches;
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)")?.matches ?? false;
+  const pointerFine = window.matchMedia("(pointer: fine)")?.matches ?? true;
 
   // Safe access to experimental/non-standard navigator properties
   const nav = navigator as unknown as {

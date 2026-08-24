@@ -182,11 +182,12 @@ export default function CouncilResultPage() {
 
   return (
     <PageShell
+      data-workspace="clinical"
       title={t(language, "council.result.title")}
       description={t(language, "council.result.description")}
       variant="plain"
     >
-      <div className="space-y-6">
+      <div className="space-y-6" data-workspace="clinical">
         {/* Step Progress */}
         <CouncilFlowStepper currentStep="result" caseId={caseItem?.id} />
 

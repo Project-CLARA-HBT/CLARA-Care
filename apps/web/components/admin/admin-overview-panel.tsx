@@ -6,6 +6,12 @@ import Icon from "@/components/ui/icon";
 import { StatusChip, type StatusTone } from "@/components/ui/status-chip";
 import useControlTowerConfig from "@/components/admin/use-control-tower-config";
 import { FLOW_FLAG_META } from "@/components/admin/admin-config-meta";
+import AdminAppLauncherModal from "@/components/admin/admin-app-launcher-modal";
+import {
+  ADMIN_CATEGORIES,
+  ADMIN_CATEGORY_ORDER,
+  ADMIN_TOOLS,
+} from "@/components/admin/admin-tools-registry";
 import { getAdminAuditLog, type AdminAuditRecord } from "@/lib/admin-audit";
 import { trackAdminSurfaceViewed } from "@/lib/analytics/events";
 import { sanitizeUpstreamError } from "@/lib/user-facing-text";
@@ -72,6 +78,7 @@ export function AdminOverviewPanel() {
   const [apiHealth, setApiHealth] = useState<ApiHealthSnapshot | null>(null);
   const [dependencies, setDependencies] = useState<SystemDependenciesSnapshot | null>(null);
   const [auditLogs, setAuditLogs] = useState<AdminAuditRecord[]>([]);
+  const [isLauncherOpen, setIsLauncherOpen] = useState(false);
 
   const [isLoadingExtra, setIsLoadingExtra] = useState(true);
   const [extraError, setExtraError] = useState("");
@@ -674,6 +681,110 @@ export function AdminOverviewPanel() {
           </div>
         )}
       </section>
+
+      {/* 5. All Tools Launcher */}
+      <section
+        aria-labelledby="overview-all-tools-title"
+        className="rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 space-y-4 shadow-sm"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2
+                id="overview-all-tools-title"
+                className="flex items-center gap-2 text-xl font-bold text-[var(--text-primary)]"
+              >
+                <Icon name="settings" className="text-[var(--text-brand)]" />
+                Trình Khởi chạy Toàn bộ Công cụ (All Tools Launcher)
+              </h2>
+              <span className="inline-flex items-center rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2 py-0.5 text-[10px] font-mono font-bold text-[var(--text-brand)]">
+                14 Modules
+              </span>
+            </div>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Truy cập nhanh 4 nhóm năng lực điều hành: Nền tảng, Tri thức RAG, Hệ thống AI & Giám sát, Quản trị & Tuân thủ.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsLauncherOpen(true)}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[var(--brand-600)] px-4 text-xs font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-primary)]"
+          >
+            <Icon name="search" size={14} />
+            <span>Mở Trình khởi chạy Nhanh (⌘K)</span>
+          </button>
+        </div>
+
+        {/* Categories Grid */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 pt-1">
+          {ADMIN_CATEGORY_ORDER.map((catKey) => {
+            const catMeta = ADMIN_CATEGORIES[catKey];
+            const catTools = ADMIN_TOOLS.filter((t) => t.category === catKey);
+
+            return (
+              <div
+                key={catKey}
+                className="flex flex-col justify-between rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-4 transition hover:border-[color:var(--shell-border-strong)] hover:bg-[var(--surface-muted)]"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+                      <Icon name={catMeta.icon} size={16} />
+                    </span>
+                    <span className="rounded-md bg-[var(--surface-panel)] px-2 py-0.5 text-[10px] font-mono font-bold text-[var(--text-muted)] border border-[color:var(--shell-border)]">
+                      {catTools.length} công cụ
+                    </span>
+                  </div>
+
+                  <h3 className="mt-3 text-sm font-bold text-[var(--text-primary)]">
+                    {catMeta.label}
+                  </h3>
+                  <p className="mt-1 text-xs text-[var(--text-secondary)] line-clamp-2">
+                    {catMeta.description}
+                  </p>
+
+                  <ul className="mt-3 space-y-1.5 border-t border-[color:var(--shell-border)]/60 pt-2.5">
+                    {catTools.slice(0, 3).map((tool) => (
+                      <li key={tool.id}>
+                        <Link
+                          href={tool.href}
+                          className="group flex items-center justify-between text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition"
+                        >
+                          <span className="truncate group-hover:text-[var(--text-brand)] font-medium">
+                            {tool.title}
+                          </span>
+                          <span className="shrink-0 font-mono text-[10px] text-[var(--text-muted)]">
+                            {tool.code}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-3 pt-2 border-t border-[color:var(--shell-border)]/40">
+                  <button
+                    type="button"
+                    onClick={() => setIsLauncherOpen(true)}
+                    className="flex w-full items-center justify-between text-xs font-semibold text-[var(--text-brand)] hover:underline"
+                  >
+                    <span>Xem tất cả ({catTools.length})</span>
+                    <Icon name="arrow-right" size={12} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* App Launcher Modal Dialog */}
+      <AdminAppLauncherModal
+        isOpen={isLauncherOpen}
+        onClose={() => setIsLauncherOpen(false)}
+        activeTab="overview"
+      />
     </div>
   );
 }

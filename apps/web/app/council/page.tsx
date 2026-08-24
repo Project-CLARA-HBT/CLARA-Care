@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import CouncilEmptyState from "@/components/council/council-empty-state";
+import { ListDetailLayout } from "@/components/page/list-detail-layout";
+import { HeroObject } from "@/components/ui/hero-object";
 import { Icon, type IconName } from "@/components/ui/icon";
-import PageShell from "@/components/ui/page-shell";
+import { SurfaceCard } from "@/components/ui/surface";
 import { trackCouncilViewed } from "@/lib/analytics/events";
 import { formatLocaleDate, t } from "@/lib/i18n/catalog";
 import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-text";
@@ -176,149 +178,124 @@ export default function CouncilPage() {
     router.push(href);
   };
 
+  const activeCaseMeta = activeCase ? getCaseStatusMeta(language, activeCase.status) : null;
+  const activeCaseSpecialists = activeCase ? getSpecialists(activeCase) : [];
+
   return (
-    <PageShell
-      title={t(language, "navigation.item.council.title")}
-      description={t(language, "navigation.item.council.subtitle")}
-      variant="plain"
-    >
-      <div className="space-y-6">
-        {/* 1. Clinical Heading & New Council CTA */}
-        <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[color:var(--shell-border)] pb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="rounded-md border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
-                {language === "vi" ? "Hội đồng Chuyên khoa" : "Clinical Council Library"}
-              </span>
-              <span className="text-xs font-medium text-[var(--text-muted)]">
-                {cases.length > 0 ? `${cases.length} ${language === "vi" ? "ca bệnh" : "cases"}` : ""}
-              </span>
-            </div>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-              {language === "vi" ? "Thư viện ca hội chẩn" : "Case Library"}
-            </h1>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              {language === "vi"
-                ? "Quản lý danh sách ca bệnh lâm sàng, tiếp tục ca đang thực hiện hoặc khởi tạo phiên hội chẩn mới."
-                : "Manage clinical cases, resume active deliberation, or create a new multi-specialty council."}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <Link
-              href="/council/new"
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-5 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)]"
-            >
-              <Icon name="progress" size={16} />
-              <span>+ {language === "vi" ? "Tạo ca mới" : "New Council"}</span>
-            </Link>
-          </div>
-        </section>
-
-        {error ? (
-          <div className="rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-4 text-sm font-semibold text-[var(--status-danger-text)]">
-            {error}
-          </div>
-        ) : null}
-
-        {/* 2. Resumable Active Case HeroObject */}
-        {activeCase ? (
-          <section
-            aria-label="Active resumable case"
-            className="rounded-[1.55rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] border-l-4 border-l-[color:var(--brand-600)] bg-[var(--surface-panel)] p-6 shadow-sm"
+    <ListDetailLayout
+      data-workspace="clinical"
+      workspace="clinical"
+      eyebrow={language === "vi" ? "Hội đồng Chuyên khoa" : "Clinical Council Library"}
+      title={language === "vi" ? "Thư viện ca hội chẩn" : "Case Library"}
+      subtitle={
+        language === "vi"
+          ? "Quản lý danh sách ca bệnh lâm sàng, tiếp tục ca đang thực hiện hoặc khởi tạo phiên hội chẩn mới."
+          : "Manage clinical cases, resume active deliberation, or create a new multi-specialty council."
+      }
+      badges={
+        cases.length > 0 ? (
+          <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-muted)]">
+            {cases.length} {language === "vi" ? "ca bệnh" : "cases"}
+          </span>
+        ) : null
+      }
+      headerActions={
+        <div className="flex items-center gap-3 shrink-0">
+          <Link
+            href="/council/new"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-5 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)]"
           >
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-2.5 w-2.5 rounded-full bg-[var(--brand-600)] animate-pulse" />
-                <span className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
-                  {language === "vi" ? "Ca đang thực hiện" : "Active Case"}
-                </span>
-                <span className="font-mono text-xs font-bold text-[var(--text-muted)]">
-                  #{activeCase.id}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {(() => {
-                  const meta = getCaseStatusMeta(language, activeCase.status);
-                  return (
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${meta.className}`}
-                    >
-                      <Icon name={meta.icon} size={12} />
-                      {meta.label}
-                    </span>
-                  );
-                })()}
-                <span className="font-mono text-xs text-[var(--text-muted)]">
-                  {formatLocaleDate(language, activeCase.updated_at, {
-                    day: "2-digit",
-                    month: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
+            <Icon name="progress" size={16} />
+            <span>+ {language === "vi" ? "Tạo ca mới" : "New Council"}</span>
+          </Link>
+        </div>
+      }
+      toolbar={
+        <div className="space-y-4">
+          {error ? (
+            <div className="rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-4 text-sm font-semibold text-[var(--status-danger-text)]">
+              {error}
             </div>
+          ) : null}
 
-            <div className="mt-2">
-              <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
-                {activeCase.title || t(language, "council.new.caseFallback", { id: activeCase.id })}
-              </h2>
-              {getCaseSnippet(activeCase) ? (
-                <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)] line-clamp-2">
-                  {getCaseSnippet(activeCase)}
-                </p>
-              ) : null}
-            </div>
-
-            {getSpecialists(activeCase).length > 0 ? (
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold text-[var(--text-muted)]">
-                  {language === "vi" ? "Chuyên khoa:" : "Specialists:"}
-                </span>
-                {getSpecialists(activeCase).map((s) => (
-                  <span
-                    key={s}
-                    className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-primary)]"
-                  >
-                    {s}
+          {/* Active Case Hero Object */}
+          {activeCase ? (
+            <div aria-label="Active resumable case">
+              <HeroObject
+                variant="clinical"
+                contextTag={language === "vi" ? "Ca đang thực hiện" : "Active Case"}
+                supportingMeta={
+                  <span className="font-mono text-xs text-[var(--text-muted)]">
+                    {formatLocaleDate(language, activeCase.updated_at, {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </span>
-                ))}
-              </div>
-            ) : null}
-
-            {activeCase.oversight_state === "paused" ? (
-              <div className="mt-4 rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-xs font-semibold text-[var(--status-warn-text)]">
-                {language === "vi"
-                  ? "Quy trình hội chẩn ca này đang tạm dừng để bác sĩ đối chiếu chuyên môn."
-                  : "Council process is currently paused for clinician review."}
-              </div>
-            ) : null}
-
-            <div className="mt-6 flex flex-wrap items-center gap-3 pt-4 border-t border-[color:var(--shell-border)]">
-              <button
-                type="button"
-                onClick={() => onSelectCase(activeCase)}
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-6 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)]"
+                }
+                status={
+                  activeCaseMeta ? (
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-xs font-bold ${activeCaseMeta.className}`}
+                    >
+                      <Icon name={activeCaseMeta.icon} size={12} />
+                      {activeCaseMeta.label}
+                    </span>
+                  ) : null
+                }
+                title={
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-base font-bold text-[var(--text-brand)]">
+                      #{activeCase.id}
+                    </span>
+                    <span>{activeCase.title || t(language, "council.new.caseFallback", { id: activeCase.id })}</span>
+                  </div>
+                }
+                description={getCaseSnippet(activeCase)}
+                primaryAction={{
+                  label: resolveActionLabel(language, activeCase.status),
+                  onClick: () => onSelectCase(activeCase),
+                  icon: "arrow-right",
+                  tone: "primary",
+                }}
+                secondaryAction={{
+                  label: language === "vi" ? "Khởi tạo ca khác" : "Create another case",
+                  href: "/council/new",
+                  tone: "secondary",
+                }}
               >
-                <span>{resolveActionLabel(language, activeCase.status)}</span>
-                <Icon name="arrow-right" size={16} />
-              </button>
+                <div className="mt-3 space-y-2">
+                  {activeCaseSpecialists.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-xs font-bold text-[var(--text-muted)]">
+                        {language === "vi" ? "Chuyên khoa:" : "Specialists:"}
+                      </span>
+                      {activeCaseSpecialists.map((s) => (
+                        <span
+                          key={s}
+                          className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-primary)]"
+                        >
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
 
-              <Link
-                href="/council/new"
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 text-sm font-semibold text-[var(--text-primary)] hover:border-[color:var(--brand-600)] hover:bg-[var(--surface-panel)]"
-              >
-                {language === "vi" ? "Khởi tạo ca khác" : "Create another case"}
-              </Link>
+                  {activeCase.oversight_state === "paused" ? (
+                    <div className="rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-xs font-semibold text-[var(--status-warn-text)]">
+                      {language === "vi"
+                        ? "Quy trình hội chẩn ca này đang tạm dừng để bác sĩ đối chiếu chuyên môn."
+                        : "Council process is currently paused for clinician review."}
+                    </div>
+                  ) : null}
+                </div>
+              </HeroObject>
             </div>
-          </section>
-        ) : null}
+          ) : null}
 
-        {/* 3. Recent Cases List as Rows */}
-        <section className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {/* Filter & Search Bar */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-2">
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold text-[var(--text-primary)]">
                 {language === "vi" ? "Danh sách ca gần đây" : "Recent Cases"}
@@ -328,7 +305,6 @@ export default function CouncilPage() {
               </span>
             </div>
 
-            {/* Filter Tabs & Search */}
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1">
                 <button
@@ -377,7 +353,12 @@ export default function CouncilPage() {
               </div>
             </div>
           </div>
-
+        </div>
+      }
+      splitRatio="65/35"
+      selectedId={activeCase?.id}
+      list={
+        <div className="space-y-3">
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
@@ -389,7 +370,6 @@ export default function CouncilPage() {
             </div>
           ) : null}
 
-          {/* 5. Empty State */}
           {!isLoading && filteredCases.length === 0 ? (
             <CouncilEmptyState
               title={t(language, "council.empty.title")}
@@ -403,21 +383,20 @@ export default function CouncilPage() {
             />
           ) : null}
 
-          {/* List Rows */}
           {!isLoading && filteredCases.length > 0 ? (
             <div className="divide-y divide-[color:var(--shell-border)] rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] overflow-hidden shadow-sm">
               {filteredCases.map((item) => {
                 const meta = getCaseStatusMeta(language, item.status);
                 const snippet = getCaseSnippet(item);
                 const specialists = getSpecialists(item);
-                const isActive = activeCase?.id === item.id;
+                const isSelected = activeCase?.id === item.id;
 
                 return (
                   <article
                     key={item.id}
                     onClick={() => onSelectCase(item)}
                     className={`cursor-pointer p-4 sm:p-5 transition-colors hover:bg-[var(--surface-muted)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                      isActive ? "bg-[var(--surface-brand-soft)]/30" : ""
+                      isSelected ? "bg-[var(--surface-brand-soft)]/40 border-l-4 border-l-[color:var(--brand-600)]" : ""
                     }`}
                   >
                     <div className="min-w-0 flex-1">
@@ -487,8 +466,67 @@ export default function CouncilPage() {
               })}
             </div>
           ) : null}
-        </section>
-      </div>
-    </PageShell>
+        </div>
+      }
+      detail={
+        activeCase ? (
+          <SurfaceCard className="p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] pb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
+                {language === "vi" ? "Thông tin ca hội chẩn" : "Case Quick Inspector"}
+              </span>
+              <span className="font-mono text-xs font-bold text-[var(--text-muted)]">
+                #{activeCase.id}
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-base font-bold text-[var(--text-primary)]">
+                {activeCase.title || t(language, "council.new.caseFallback", { id: activeCase.id })}
+              </h3>
+              <p className="mt-1 text-xs text-[var(--text-secondary)] leading-relaxed">
+                {getCaseSnippet(activeCase) || (language === "vi" ? "Chưa có tóm tắt lâm sàng" : "No clinical summary")}
+              </p>
+            </div>
+
+            {activeCaseSpecialists.length > 0 ? (
+              <div>
+                <p className="text-xs font-bold text-[var(--text-muted)] mb-1.5">
+                  {language === "vi" ? "Hội đồng chuyên khoa tham gia:" : "Consulting Specialists:"}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {activeCaseSpecialists.map((s) => (
+                    <span
+                      key={s}
+                      className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)]"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="pt-3 border-t border-[color:var(--shell-border)] space-y-2">
+              <button
+                type="button"
+                onClick={() => onSelectCase(activeCase)}
+                className="w-full inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-4 text-sm font-bold text-[var(--on-secondary-container)] shadow-sm transition hover:bg-[var(--brand-700)]"
+              >
+                <span>{resolveActionLabel(language, activeCase.status)}</span>
+                <Icon name="arrow-right" size={16} />
+              </button>
+
+              <Link
+                href="/council/new"
+                className="w-full inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-panel)]"
+              >
+                {language === "vi" ? "Tạo ca hội chẩn mới" : "Start New Council Case"}
+              </Link>
+            </div>
+          </SurfaceCard>
+        ) : null
+      }
+    />
   );
 }

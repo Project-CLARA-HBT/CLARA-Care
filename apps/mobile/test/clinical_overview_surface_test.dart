@@ -1,7 +1,6 @@
 import 'package:clara_mobile/core/analytics.dart';
 import 'package:clara_mobile/core/api_client.dart';
 import 'package:clara_mobile/core/feature_flags.dart';
-import 'package:clara_mobile/experience/language_controller.dart';
 import 'package:clara_mobile/experience/states/empty_state.dart';
 import 'package:clara_mobile/experience/unified/clinical_overview_surface.dart';
 import 'package:clara_mobile/widgets/error_retry_view.dart';

@@ -82,7 +82,7 @@ describe("AdminPreviewBanner", () => {
 
       const badge = screen.getByTestId("preview-badge-clinical");
       expect(badge).toBeInTheDocument();
-      expect(badge.className).toContain("bg-teal-950");
+      expect(badge.className).toContain("bg-emerald-950");
     });
 
     it("renders distinct badge for Research mode (Nghiên cứu)", () => {

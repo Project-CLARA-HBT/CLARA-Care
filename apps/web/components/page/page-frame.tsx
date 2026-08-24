@@ -45,6 +45,8 @@ export interface PageFrameProps extends HTMLAttributes<HTMLElement> {
   bg?: PageCanvasBg;
   /** Layout archetype identifier for styling and telemetry inspection */
   archetype?: string;
+  /** Active workspace context (e.g. 'personal', 'clinical', 'research', 'admin') */
+  workspace?: string;
   /** Additional class names for outer container */
   className?: string;
   /** Additional class names for inner constrained content wrapper */
@@ -107,6 +109,7 @@ export const PageFrame = forwardRef<HTMLElement, PageFrameProps>(
       gutter = "default",
       bg = "canvas",
       archetype,
+      workspace,
       className = "",
       containerClassName = "",
       contentClassName = "",
@@ -125,6 +128,7 @@ export const PageFrame = forwardRef<HTMLElement, PageFrameProps>(
       <Component
         ref={ref}
         data-archetype={archetype}
+        data-workspace={workspace}
         className={`relative min-h-full w-full ${bgClass} ${className}`}
         {...rest}
       >

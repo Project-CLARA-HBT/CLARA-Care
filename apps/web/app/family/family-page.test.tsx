@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FamilyPage from "./page";
+import InviteFamilyFlow from "./invite/invite-family-flow";
+import AcceptFamilyFlow from "./accept/accept-family-flow";
 import * as visitFamilyModule from "@/lib/visit-family";
 
 const mockRouter = {
@@ -8,6 +10,7 @@ const mockRouter = {
   replace: vi.fn(),
   prefetch: vi.fn(),
   back: vi.fn(),
+  refresh: vi.fn(),
 };
 
 vi.mock("next/navigation", () => ({
@@ -106,6 +109,12 @@ describe("Family Sharing Hub (/family) - Spec v5 Section 6.22", () => {
     },
   ];
 
+  const mockShareOptions: visitFamilyModule.FamilyShareOptions = {
+    episodes: [{ id: "ep-101", label: "Điều trị Tăng huyết áp vô căn" }],
+    visits: [{ id: "vis-202", label: "Tái khám Tim mạch 15/08" }],
+    care_tasks: [{ id: "task-303", label: "Nhắc đo huyết áp sáng chiều" }],
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(visitFamilyModule, "listFamilyGrants").mockResolvedValue(mockGrants);
@@ -119,16 +128,41 @@ describe("Family Sharing Hub (/family) - Spec v5 Section 6.22", () => {
       expires_at: new Date().toISOString(),
     });
     vi.spyOn(visitFamilyModule, "acknowledgeFamilyNotification").mockResolvedValue(undefined);
+    vi.spyOn(visitFamilyModule, "getFamilyShareOptions").mockResolvedValue(mockShareOptions);
+    vi.spyOn(visitFamilyModule, "createFamilyInvitation").mockResolvedValue({
+      id: "inv-1",
+      token: "tok-invitation-secure-key-32chars-long-123456",
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    vi.spyOn(visitFamilyModule, "previewFamilyInvitation").mockResolvedValue({
+      object_type: "episode",
+      allowed_actions: ["view", "add_observation"],
+      purpose: "care_coordination",
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    vi.spyOn(visitFamilyModule, "acceptFamilyInvitation").mockResolvedValue({
+      id: "grant-accepted-1",
+      object_type: "episode",
+      object_id: "ep-101",
+      allowed_actions: ["view", "add_observation"],
+      purpose: "care_coordination",
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      status: "active",
+    });
   });
 
   afterEach(cleanup);
 
-  it("renders layout section 1: Header with Invite & Accept CTAs", async () => {
+  it("renders layout section 1: Header with Invite & Accept CTAs within HubLayout (workspace=personal)", async () => {
     render(<FamilyPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId("family-sharing-hub")).toBeInTheDocument();
     });
+
+    const hubRoot = screen.getByTestId("family-sharing-hub");
+    expect(hubRoot).toHaveAttribute("data-workspace", "personal");
+    expect(hubRoot).toHaveAttribute("data-archetype", "hub");
 
     // Check title and subtitle
     expect(screen.getByText("Vòng tròn gia đình")).toBeInTheDocument();
@@ -283,6 +317,145 @@ describe("Family Sharing Hub (/family) - Spec v5 Section 6.22", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Bạn chưa chia sẻ dữ liệu nào")).toBeInTheDocument();
+    });
+  });
+
+  describe("Focused Invite Creation Wizard (/family/invite)", () => {
+    it("completes full invite creation workflow with category scopes selection", async () => {
+      render(<InviteFamilyFlow />);
+
+      // Verify workspace archetype
+      const wizardStep = screen.getByTestId("invite-wizard-step");
+      expect(wizardStep).toBeInTheDocument();
+      expect(document.querySelector("[data-workspace='personal']")).toBeInTheDocument();
+      expect(document.querySelector("[data-archetype='workflow']")).toBeInTheDocument();
+
+      // Step 1: Recipient email
+      const emailInput = screen.getByLabelText(/Email người nhận/i);
+      fireEvent.change(emailInput, { target: { value: "bacsi.nam@gmail.com" } });
+      fireEvent.click(screen.getByRole("button", { name: /Tiếp tục/i }));
+
+      // Step 2: Scope Category Selection
+      await waitFor(() => {
+        expect(screen.getByText(/Chọn danh mục chia sẻ/i)).toBeInTheDocument();
+      });
+
+      // Categories should be visible: episode, visit, care_task
+      expect(screen.getByText("Hành trình sức khỏe")).toBeInTheDocument();
+      expect(screen.getByText("Buổi khám bệnh")).toBeInTheDocument();
+      expect(screen.getByText("Nhiệm vụ chăm sóc")).toBeInTheDocument();
+
+      // Select Health Journey (Episode)
+      fireEvent.click(screen.getByText("Hành trình sức khỏe"));
+
+      // Select specific episode item
+      await waitFor(() => {
+        expect(screen.getByText("Điều trị Tăng huyết áp vô căn")).toBeInTheDocument();
+      });
+      const itemSelect = screen.getByLabelText(/Nội dung được chia sẻ/i);
+      fireEvent.change(itemSelect, { target: { value: "ep-101" } });
+
+      fireEvent.click(screen.getByRole("button", { name: /Tiếp tục/i }));
+
+      // Step 3: Purpose & Permissions
+      await waitFor(() => {
+        expect(screen.getByLabelText(/Mục đích hỗ trợ/i)).toBeInTheDocument();
+      });
+      expect(screen.getByText(/Tóm tắt quyền hạn được cấp/i)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /Kiểm tra thông tin/i }));
+
+      // Step 4: Review & Create
+      await waitFor(() => {
+        expect(screen.getByText(/Kiểm tra trước khi tạo mã mời/i)).toBeInTheDocument();
+      });
+      expect(screen.getByText("bacsi.nam@gmail.com")).toBeInTheDocument();
+      expect(screen.getByText("Điều trị Tăng huyết áp vô căn")).toBeInTheDocument();
+
+      // Submit invitation
+      fireEvent.click(screen.getByRole("button", { name: /Tạo mã mời/i }));
+
+      // Success view with created token
+      await waitFor(() => {
+        expect(screen.getByTestId("invite-created-view")).toBeInTheDocument();
+      });
+      expect(screen.getByText("tok-invitation-secure-key-32chars-long-123456")).toBeInTheDocument();
+      expect(visitFamilyModule.createFamilyInvitation).toHaveBeenCalledWith({
+        recipient_email: "bacsi.nam@gmail.com",
+        scope: {
+          object_type: "episode",
+          object_id: "ep-101",
+          allowed_actions: ["view", "add_observation"],
+        },
+        purpose: "care_coordination",
+        expires_at: expect.any(String),
+      });
+    });
+
+    it("validates email before proceeding from step 1", async () => {
+      render(<InviteFamilyFlow />);
+
+      const emailInput = screen.getByLabelText(/Email người nhận/i);
+      fireEvent.change(emailInput, { target: { value: "invalid-email" } });
+      fireEvent.click(screen.getByRole("button", { name: /Tiếp tục/i }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Nhập một địa chỉ email hợp lệ/i).length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe("Focused Invitation Code Redemption Canvas (/family/accept)", () => {
+    it("completes code redemption preview and acceptance", async () => {
+      render(<AcceptFamilyFlow />);
+
+      // Verify workspace archetype
+      const canvas = screen.getByTestId("accept-redemption-canvas");
+      expect(canvas).toBeInTheDocument();
+      expect(document.querySelector("[data-workspace='personal']")).toBeInTheDocument();
+      expect(document.querySelector("[data-archetype='workflow']")).toBeInTheDocument();
+
+      // Step 1: Enter code
+      const tokenInput = screen.getByPlaceholderText(/mã mời/i);
+      fireEvent.change(tokenInput, {
+        target: { value: "tok-invitation-secure-key-32chars-long-123456" },
+      });
+
+      // Preview button
+      const previewBtn = screen.getByRole("button", { name: /Xem phạm vi/i });
+      fireEvent.click(previewBtn);
+
+      // Step 2: Review previewed permissions
+      await waitFor(() => {
+        expect(screen.getByText(/Đây là quyền bạn sắp nhận/i)).toBeInTheDocument();
+      });
+      expect(screen.getByText("Một hành trình sức khỏe")).toBeInTheDocument();
+      expect(screen.getAllByText(/Phối hợp chăm sóc/i).length).toBeGreaterThan(0);
+
+      // Accept button
+      const acceptBtn = screen.getByRole("button", { name: /Chấp nhận/i });
+      fireEvent.click(acceptBtn);
+
+      await waitFor(() => {
+        expect(visitFamilyModule.acceptFamilyInvitation).toHaveBeenCalledWith(
+          "tok-invitation-secure-key-32chars-long-123456",
+        );
+        expect(mockRouter.replace).toHaveBeenCalledWith("/family");
+      });
+    });
+
+    it("validates minimum code length in redemption canvas", async () => {
+      render(<AcceptFamilyFlow />);
+
+      const tokenInput = screen.getByPlaceholderText(/mã mời/i);
+      fireEvent.change(tokenInput, { target: { value: "short-token" } });
+
+      // Click preview button
+      const previewBtn = screen.getByRole("button", { name: /Xem phạm vi/i });
+      fireEvent.click(previewBtn);
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Nhập mã mời đầy đủ để tiếp tục/i).length).toBeGreaterThan(0);
+      });
     });
   });
 });

@@ -54,6 +54,8 @@ export interface HubLayoutProps extends Omit<HTMLAttributes<HTMLElement>, "title
   domainSections?: HubSection[];
   /** Optional side rail */
   aside?: ReactNode;
+  /** Workspace context (e.g. 'personal', 'clinical', 'admin') */
+  workspace?: string;
   /** Additional body children */
   children?: ReactNode;
   /** Number of grid columns for quick action tiles */
@@ -94,6 +96,7 @@ export const HubLayout = forwardRef<HTMLElement, HubLayoutProps>(
       quickActions,
       domainSections,
       aside,
+      workspace,
       children,
       actionColumns = 3,
       maxWidth = "default",
@@ -261,6 +264,7 @@ export const HubLayout = forwardRef<HTMLElement, HubLayoutProps>(
       <PageFrame
         ref={ref}
         archetype="hub"
+        workspace={workspace}
         header={renderedHeader}
         aside={aside}
         maxWidth={maxWidth}

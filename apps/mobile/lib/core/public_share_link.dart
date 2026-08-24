@@ -5,6 +5,8 @@
 /// memory, and never logs, persists, or places it in analytics. The viewer and
 /// API remain responsible for feature gating, expiry, revocation and strict
 /// content projection.
+library;
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';

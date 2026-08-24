@@ -40,6 +40,8 @@ export interface CommandCenterLayoutProps extends Omit<HTMLAttributes<HTMLElemen
   commandStrip?: ReactNode;
   /** Alias for commandStrip */
   navStrip?: ReactNode;
+  /** Active workspace context (e.g. 'personal', 'clinical', 'research', 'admin') */
+  workspace?: string;
   /** Top KPI summary metrics */
   metrics?: CommandCenterMetric[] | ReactNode;
   /** Alias for metrics */
@@ -113,6 +115,7 @@ export const CommandCenterLayout = forwardRef<HTMLElement, CommandCenterLayoutPr
       backAction,
       commandStrip,
       navStrip,
+      workspace,
       metrics,
       kpiGrid,
       liveStream,
@@ -240,6 +243,7 @@ export const CommandCenterLayout = forwardRef<HTMLElement, CommandCenterLayoutPr
       <PageFrame
         ref={ref}
         archetype="command-center"
+        workspace={workspace}
         header={
           renderedHeader || resolvedStrip ? (
             <div className="space-y-4">

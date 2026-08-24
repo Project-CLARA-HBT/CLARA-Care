@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { HealthPageHeader } from "@/components/consumer/health-page-header";
+import { SettingsLayout } from "@/components/page/settings-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineError } from "@/components/shared/inline-error";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Modal } from "@/components/ui/modal";
-import { ListRow } from "@/components/ui/list-row";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { saveUILanguage, type UILanguage } from "@/lib/ui-language";
 import {
@@ -300,30 +299,42 @@ export default function YouSettingsPage() {
   const otherSessionsCount = activeSessions.filter((s) => !s.is_current).length;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto" data-testid="you-settings-page">
-      <HealthPageHeader
-        title={isEn ? "Settings & Security" : "Cài đặt & Bảo mật"}
-        subtitle={
-          isEn
-            ? "Manage display theme, interface language, multi-factor authentication (MFA), active logins, and session timeouts."
-            : "Tùy chỉnh giao diện, ngôn ngữ hiển thị, xác thực 2 yếu tố (MFA), phiên đăng nhập và thời gian khóa an toàn."
-        }
-        backHref="/you"
-        backLabel={isEn ? "Back to You" : "Quay lại Cá nhân"}
-        primaryAction={{
-          label: saving
-            ? isEn
-              ? "Saving..."
-              : "Đang lưu..."
-            : isEn
-              ? "Save Settings"
-              : "Lưu thay đổi",
-          icon: "check",
-          onClick: () => void handleSavePreferences(),
-          loading: saving,
-        }}
-      />
-
+    <SettingsLayout
+      workspace="personal"
+      title={isEn ? "Settings & Security" : "Cài đặt & Bảo mật"}
+      subtitle={
+        isEn
+          ? "Manage display theme, interface language, multi-factor authentication (MFA), active logins, and session timeouts."
+          : "Tùy chỉnh giao diện, ngôn ngữ hiển thị, xác thực 2 yếu tố (MFA), phiên đăng nhập và thời gian khóa an toàn."
+      }
+      backAction={{
+        href: "/you",
+        label: isEn ? "Back to You" : "Quay lại Cá nhân",
+      }}
+      headerActions={
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          disabled={saving}
+          onClick={() => void handleSavePreferences()}
+          data-testid="save-settings-btn"
+        >
+          <Icon name="check" size="1rem" />
+          <span>
+            {saving
+              ? isEn
+                ? "Saving..."
+                : "Đang lưu..."
+              : isEn
+                ? "Save Settings"
+                : "Lưu thay đổi"}
+          </span>
+        </Button>
+      }
+      maxWidth="prose"
+      data-testid="you-settings-page"
+    >
       {error ? (
         <InlineError
           message={isEn ? "Unable to load settings" : "Không thể tải cấu hình cài đặt"}
@@ -521,6 +532,7 @@ export default function YouSettingsPage() {
                 <div>
                   {mfaEnabled ? (
                     <Button
+                      type="button"
                       variant="secondary"
                       size="sm"
                       onClick={() => setShowDisableMfaModal(true)}
@@ -530,6 +542,7 @@ export default function YouSettingsPage() {
                     </Button>
                   ) : (
                     <Button
+                      type="button"
                       variant="primary"
                       size="sm"
                       onClick={() => {
@@ -659,6 +672,7 @@ export default function YouSettingsPage() {
                       </span>
                     ) : (
                       <Button
+                        type="button"
                         variant="secondary"
                         size="sm"
                         onClick={() => void handleRevokeSession(session.id)}
@@ -675,6 +689,7 @@ export default function YouSettingsPage() {
             {otherSessionsCount > 0 ? (
               <div className="pt-2 flex justify-end">
                 <Button
+                  type="button"
                   variant="secondary"
                   size="sm"
                   onClick={() => setShowRevokeAllModal(true)}
@@ -814,10 +829,11 @@ export default function YouSettingsPage() {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="secondary" size="sm" onClick={() => setShowMfaSetupModal(false)}>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setShowMfaSetupModal(false)}>
                     {isEn ? "Cancel" : "Hủy"}
                   </Button>
                   <Button
+                    type="button"
                     variant="primary"
                     size="sm"
                     onClick={() => setMfaSetupStep(2)}
@@ -857,10 +873,11 @@ export default function YouSettingsPage() {
                 </div>
 
                 <div className="flex justify-between gap-2 pt-2">
-                  <Button variant="secondary" size="sm" onClick={() => setMfaSetupStep(1)}>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setMfaSetupStep(1)}>
                     {isEn ? "Back" : "Quay lại"}
                   </Button>
                   <Button
+                    type="button"
                     variant="primary"
                     size="sm"
                     onClick={handleVerifyMfaCode}
@@ -900,6 +917,7 @@ export default function YouSettingsPage() {
 
                 <div className="flex justify-between items-center gap-2 pt-2">
                   <Button
+                    type="button"
                     variant="secondary"
                     size="sm"
                     onClick={() => {
@@ -922,6 +940,7 @@ export default function YouSettingsPage() {
                   </Button>
 
                   <Button
+                    type="button"
                     variant="primary"
                     size="sm"
                     onClick={() => void handleFinishMfaSetup()}
@@ -950,10 +969,11 @@ export default function YouSettingsPage() {
                 : "Tắt 2FA sẽ giảm mức độ bảo vệ cho hồ sơ bệnh án và lịch sử trao đổi y tế của bạn. Bạn có chắc chắn muốn tắt không?"}
             </p>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="secondary" size="sm" onClick={() => setShowDisableMfaModal(false)}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => setShowDisableMfaModal(false)}>
                 {isEn ? "Keep 2FA" : "Giữ 2FA"}
               </Button>
               <Button
+                type="button"
                 variant="primary"
                 size="sm"
                 onClick={() => void handleDisableMfa()}
@@ -980,10 +1000,11 @@ export default function YouSettingsPage() {
                 : `Thao tác này sẽ chấm dứt ${otherSessionsCount} phiên đăng nhập khác trên điện thoại, máy tính bảng hoặc trình duyệt khác. Phiên hiện tại trên thiết bị này vẫn được giữ.`}
             </p>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="secondary" size="sm" onClick={() => setShowRevokeAllModal(false)}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => setShowRevokeAllModal(false)}>
                 {isEn ? "Cancel" : "Hủy"}
               </Button>
               <Button
+                type="button"
                 variant="primary"
                 size="sm"
                 onClick={() => void handleRevokeAllOtherSessions()}
@@ -995,6 +1016,6 @@ export default function YouSettingsPage() {
           </div>
         </Modal>
       ) : null}
-    </div>
+    </SettingsLayout>
   );
 }

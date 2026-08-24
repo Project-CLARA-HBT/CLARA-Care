@@ -63,11 +63,17 @@ export function MotionProvider({ children, initialLanguage = "vi" }: MotionProvi
     });
 
     // Listen for reduced motion preference changes
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const handlePrefChange = (e: MediaQueryListEvent) => {
-      setSignals((prev) => ({ ...prev, prefersReducedMotion: e.matches }));
-    };
-    mediaQuery.addEventListener("change", handlePrefChange);
+    let cleanupMediaQuery: (() => void) | undefined;
+    if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const handlePrefChange = (e: MediaQueryListEvent) => {
+        setSignals((prev) => ({ ...prev, prefersReducedMotion: e.matches }));
+      };
+      mediaQuery.addEventListener?.("change", handlePrefChange);
+      cleanupMediaQuery = () => {
+        mediaQuery.removeEventListener?.("change", handlePrefChange);
+      };
+    }
 
     // Run short frame-health probe after 400ms to avoid checking during initial paint
     const probeTimer = setTimeout(() => {
@@ -84,7 +90,7 @@ export function MotionProvider({ children, initialLanguage = "vi" }: MotionProvi
 
     return () => {
       clearTimeout(probeTimer);
-      mediaQuery.removeEventListener("change", handlePrefChange);
+      cleanupMediaQuery?.();
       unsubScene();
       scrollCoordinator.stop();
     };

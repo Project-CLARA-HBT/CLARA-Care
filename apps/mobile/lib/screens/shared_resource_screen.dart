@@ -334,12 +334,11 @@ class _SharedResourceScreenState extends State<SharedResourceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        final onClose = widget.onClose;
-        if (onClose == null) return true;
-        onClose();
-        return false;
+    return PopScope(
+      canPop: widget.onClose == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        widget.onClose?.call();
       },
       child: Scaffold(
         appBar: AppBar(

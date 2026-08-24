@@ -3,7 +3,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import PageShell from "@/components/ui/page-shell";
+import { PageFrame } from "@/components/page/page-frame";
+import { PageHeader } from "@/components/page/page-header";
 import { Badge } from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -203,7 +204,11 @@ function VisitDetailReaderStream() {
   };
 
   return (
-    <div
+    <PageFrame
+      archetype="workflow"
+      workspace="personal"
+      maxWidth="prose"
+      gutter="default"
       data-testid="visit-detail-reader"
       data-shell-mode="READ"
       data-layout-archetype="Visit Detail Reader"
@@ -800,21 +805,14 @@ function VisitDetailReaderStream() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageFrame>
   );
 }
 
 export default function VisitDetailPage() {
-  const language = useUILanguage();
   return (
-    <PageShell
-      variant="plain"
-      title={t(language, "visitDetail.eyebrow")}
-      description={t(language, "visitDetail.backToVisits")}
-    >
-      <Suspense fallback={<LoadingCards count={2} />}>
-        <VisitDetailReaderStream />
-      </Suspense>
-    </PageShell>
+    <Suspense fallback={<LoadingCards count={2} />}>
+      <VisitDetailReaderStream />
+    </Suspense>
   );
 }

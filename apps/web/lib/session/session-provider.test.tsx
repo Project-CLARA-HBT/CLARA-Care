@@ -1,5 +1,4 @@
 import { render, renderHook, screen, waitFor, act } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
 import {
@@ -214,11 +213,11 @@ describe("SessionProvider — Read-Only Role & Immutability Invariant", () => {
     authStore.clearTokens();
   });
 
-  it("strictly exposes no setRole method on ServerSessionState", () => {
+  it("strictly exposes no setRole method on ServerSessionState", async () => {
     let capturedSession: ServerSessionState | null = null;
     function Inspector() {
       capturedSession = useSession();
-      return null;
+      return <div>hydrating: {String(capturedSession.isHydrating)}</div>;
     }
 
     vi.mocked(api.get).mockResolvedValueOnce({
@@ -230,6 +229,10 @@ describe("SessionProvider — Read-Only Role & Immutability Invariant", () => {
         <Inspector />
       </SessionProvider>,
     );
+
+    await waitFor(() => {
+      expect(capturedSession?.isHydrating).toBe(false);
+    });
 
     expect(capturedSession).toBeDefined();
     // Verify no setRole property exists on production session state

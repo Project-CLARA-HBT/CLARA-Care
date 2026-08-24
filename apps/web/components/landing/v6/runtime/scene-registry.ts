@@ -16,7 +16,13 @@ class SceneRegistry {
   private activeSceneId: string | null = null;
 
   private initObserver() {
-    if (typeof window === "undefined" || this.observer) return;
+    if (
+      typeof window === "undefined" ||
+      typeof IntersectionObserver === "undefined" ||
+      this.observer
+    ) {
+      return;
+    }
 
     this.observer = new IntersectionObserver(
       (entries) => {

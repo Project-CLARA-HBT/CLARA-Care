@@ -3,8 +3,10 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PageShell from "@/components/ui/page-shell";
+import { ListDetailLayout } from "@/components/page/list-detail-layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { HeroObject } from "@/components/ui/hero-object";
 import { Field, Select, Textarea } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
 import { Icon } from "@/components/ui/icon";

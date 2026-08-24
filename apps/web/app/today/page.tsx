@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { HubLayout } from "@/components/page/hub-layout";
 import PageShell from "@/components/ui/page-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { HeroObject } from "@/components/ui/hero-object";
 import Icon, { type IconName } from "@/components/ui/icon";
 import { InlineError, LoadingCards } from "@/components/ui/surface";
 import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
@@ -159,10 +161,13 @@ export default function TodayPage() {
   };
 
   return (
-    <PageShell
-      variant="plain"
+    <HubLayout
+      workspace="personal"
       title={t(language, "today.title")}
       description={t(language, "today.description")}
+      maxWidth="default"
+      gutter="default"
+      canvasBg="canvas"
     >
       {error ? (
         <InlineError message={error} onRetry={() => void load()} />
@@ -272,7 +277,7 @@ export default function TodayPage() {
           )}
         </div>
       ) : null}
-    </PageShell>
+    </HubLayout>
   );
 }
 
@@ -311,107 +316,63 @@ function ActiveToday({
     <div className="grid gap-6 lg:grid-cols-12">
       {/* Main Agenda Column */}
       <div className="space-y-6 lg:col-span-8">
-        {/* 2. Next Task Hero Bento with #2A3950 border & in-situ completion trigger */}
-        <section
-          className="relative overflow-hidden rounded-[var(--radius-xl)] border-2 border-[#2A3950] bg-[var(--surface-panel)] p-6 sm:p-7 shadow-[0_4px_24px_rgba(0,0,0,0.18)]"
-          aria-labelledby="today-next-task-heading"
-        >
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[var(--surface-brand-soft)] blur-3xl opacity-60"
-          />
-          <div className="relative">
-            {/* Top metadata badge row */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-brand-soft)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
-                  <Icon name="progress" size={14} className="text-[var(--status-warn-text)] animate-pulse" />
-                  {t(language, "today.nextTaskLabel")}
-                </span>
-                <span className="text-[var(--text-muted)]">•</span>
-                <time
-                  dateTime={nextTask.due_at ?? undefined}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-secondary)]"
-                >
-                  <Icon name="calendar" size={14} />
-                  {dueLabel(nextTask.due_at, language)}
-                </time>
-              </div>
-
-              {nextTask.status ? (
-                <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
-                  {nextTask.status === "in_progress"
-                    ? t(language, "today.following")
-                    : t(language, "today.taskDetail.acceptedTask")}
-                </span>
-              ) : null}
-            </div>
-
-            {/* Task Card Body */}
-            <div className="mt-5 flex flex-col sm:flex-row items-start gap-4">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[var(--surface-brand-soft)] border border-[color:var(--status-ok-border)] text-[var(--text-brand)]">
-                <Icon name="clinical-notes" size={24} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h2
-                  id="today-next-task-heading"
-                  className="text-xl font-bold text-[var(--text-primary)] sm:text-2xl"
-                >
-                  {nextTask.title}
-                </h2>
-                {nextTask.episode_title ? (
-                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    {nextTask.episode_title}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-
-            {/* Detailed Instructions Bento Panel */}
-            <div className="mt-5 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)]/60 bg-[var(--surface-muted)]/70 p-4 sm:p-5 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-brand)] uppercase tracking-wider">
-                  <Icon name="clinical-notes" size={15} />
-                  <span>{t(language, "today.instructionsTitle")}</span>
-                </div>
-                <span className="text-[11px] text-[var(--text-muted)]">
-                  {t(language, "today.control")}
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
-                {nextTask.episode_title ? `${nextTask.episode_title} · ` : ""}
-                {t(language, "today.taskDetail.completeGuidance")}
-              </p>
-            </div>
-
-            {/* In-situ Completion Trigger & Action Buttons */}
-            <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[color:var(--shell-border)]/60 pt-5">
-              <span className="text-xs text-[var(--text-muted)]">
-                {t(language, "today.next")}
+        {/* 2. Next Task Dominant HeroObject with in-situ completion trigger */}
+        <HeroObject
+          id="today-next-task"
+          variant="primary"
+          icon="clinical-notes"
+          contextTag={t(language, "today.nextTaskLabel")}
+          supportingMeta={
+            <time
+              dateTime={nextTask.due_at ?? undefined}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-secondary)]"
+            >
+              <Icon name="calendar" size={14} />
+              {dueLabel(nextTask.due_at, language)}
+            </time>
+          }
+          status={
+            nextTask.status ? (
+              <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
+                {nextTask.status === "in_progress"
+                  ? t(language, "today.following")
+                  : t(language, "today.taskDetail.acceptedTask")}
               </span>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                <Button
-                  onClick={() => void onCompleteTask(nextTask)}
-                  loading={completingTaskId === nextTask.id}
-                  icon="check"
-                  className="w-full sm:w-auto shadow-[0_4px_14px_rgba(164,201,255,0.15)] font-semibold"
-                >
-                  {t(language, "today.taskDetail.completeAction")}
-                </Button>
-                <Button
-                  as="link"
-                  href={taskHref(nextTask)}
-                  variant="secondary"
-                  icon="arrow_forward"
-                  iconTrailing
-                  className="w-full sm:w-auto font-semibold"
-                >
-                  {t(language, "today.viewTask")}
-                </Button>
+            ) : null
+          }
+          title={nextTask.title}
+          description={nextTask.episode_title || undefined}
+          primaryAction={{
+            label: t(language, "today.taskDetail.completeAction"),
+            icon: "check",
+            onClick: () => void onCompleteTask(nextTask),
+            disabled: completingTaskId === nextTask.id,
+            tone: "primary",
+          }}
+          secondaryAction={{
+            label: t(language, "today.viewTask"),
+            href: taskHref(nextTask),
+            icon: "arrow_forward",
+            tone: "secondary",
+          }}
+        >
+          {/* Detailed Instructions Bento Panel inside HeroObject */}
+          <div className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)]/60 bg-[var(--surface-muted)]/70 p-4 sm:p-5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-brand)] uppercase tracking-wider">
+                <Icon name="clinical-notes" size={15} />
+                <span>{t(language, "today.instructionsTitle")}</span>
               </div>
+              <span className="text-[11px] text-[var(--text-muted)]">
+                {t(language, "today.control")}
+              </span>
             </div>
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+              {nextTask.episode_title ? `${nextTask.episode_title} · ` : ""}
+              {t(language, "today.taskDetail.completeGuidance")}
+            </p>
           </div>
-        </section>
+        </HeroObject>
 
         {/* 3. Upcoming Timeline with Connecting Track */}
         <section aria-labelledby="today-upcoming" className="space-y-4">

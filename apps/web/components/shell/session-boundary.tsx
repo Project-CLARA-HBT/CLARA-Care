@@ -349,4 +349,7 @@ export function useSession(): SessionContextValue {
   return context;
 }
 
+export const ServerSessionProvider = SessionBoundary;
+export const SessionProvider = SessionBoundary;
+
 export default SessionBoundary;

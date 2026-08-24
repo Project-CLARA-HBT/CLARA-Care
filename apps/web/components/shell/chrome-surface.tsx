@@ -1,6 +1,12 @@
 "use client";
 
-import React, { forwardRef } from "react";
+import React, {
+  forwardRef,
+  type ComponentPropsWithoutRef,
+  type ComponentPropsWithRef,
+  type ElementType,
+  type ReactNode,
+} from "react";
 
 export type ChromeSurfaceVariant =
   | "navbar"
@@ -40,17 +46,28 @@ export interface ChromeSurfaceBaseProps {
   /**
    * Content inside the surface.
    */
-  children?: React.ReactNode;
+  children?: ReactNode;
   /**
    * Additional CSS classes.
    */
   className?: string;
 }
 
-export type ChromeSurfaceProps<E extends React.ElementType = "div"> =
+export type ChromeSurfaceProps<E extends ElementType = "div"> =
   ChromeSurfaceBaseProps & {
     as?: E;
-  } & Omit<React.ComponentPropsWithRef<E>, keyof ChromeSurfaceBaseProps | "as">;
+  } & Omit<ComponentPropsWithoutRef<E>, keyof ChromeSurfaceBaseProps | "as">;
+
+export type SurfaceProps<E extends ElementType = "div"> = Omit<
+  ChromeSurfaceBaseProps,
+  "variant" | "blur"
+> & {
+  as?: E;
+  interactive?: boolean;
+} & Omit<
+  ComponentPropsWithoutRef<E>,
+  keyof ChromeSurfaceBaseProps | "as" | "interactive"
+>;
 
 export const VARIANT_DEFAULTS: Record<
   ChromeSurfaceVariant,
@@ -100,8 +117,12 @@ const ELEVATION_CLASSES: Record<ChromeSurfaceElevation, string> = {
   overlay: "shadow-[var(--shadow-overlay,0_16px_36px_-16px_rgba(0,0,0,0.42))]",
 };
 
-type ChromeSurfaceComponent = <E extends React.ElementType = "div">(
-  props: ChromeSurfaceProps<E> & { ref?: React.ComponentPropsWithRef<E>["ref"] }
+type ChromeSurfaceComponent = <E extends ElementType = "div">(
+  props: ChromeSurfaceProps<E> & { ref?: ComponentPropsWithRef<E>["ref"] }
+) => React.ReactElement | null;
+
+type SurfaceComponent = <E extends ElementType = "div">(
+  props: SurfaceProps<E> & { ref?: ComponentPropsWithRef<E>["ref"] }
 ) => React.ReactElement | null;
 
 /**
@@ -112,20 +133,22 @@ type ChromeSurfaceComponent = <E extends React.ElementType = "div">(
  * for medical records, clinical notes, tables, charts, and forms.
  */
 export const ChromeSurface: ChromeSurfaceComponent = forwardRef(
-  <E extends React.ElementType = "div">(
-    {
+  function ChromeSurface(
+    props: ChromeSurfaceProps<ElementType>,
+    ref: React.ForwardedRef<HTMLElement>
+  ) {
+    const {
       variant,
       material,
       blur,
       border,
       elevation,
       className = "",
-      as,
+      as: Component = "div",
       children,
       ...rest
-    }: ChromeSurfaceProps<E>,
-    ref: React.ComponentPropsWithRef<E>["ref"]
-  ) => {
+    } = props;
+
     // Resolve variant with backwards compatibility for material names
     const resolvedVariant: ChromeSurfaceVariant =
       variant ??
@@ -145,8 +168,6 @@ export const ChromeSurface: ChromeSurfaceComponent = forwardRef(
     const resolvedBorder: ChromeSurfaceBorder = border ?? defaults.border;
     const resolvedElevation: ChromeSurfaceElevation =
       elevation ?? defaults.elevation;
-
-    const Component = as || "div";
 
     const computedClasses = [
       "chrome-surface",
@@ -175,39 +196,47 @@ export const ChromeSurface: ChromeSurfaceComponent = forwardRef(
     );
   }
 ) as unknown as ChromeSurfaceComponent;
+(ChromeSurface as unknown as { displayName?: string }).displayName = "ChromeSurface";
 
 /**
  * Opaque Surface primitive for medical records, tables, charts, forms, and clinical notes.
  * Enforces opaque background (`var(--surface-panel)`) and is NEVER blurred.
  */
-export interface SurfaceProps<E extends React.ElementType = "div">
-  extends Omit<ChromeSurfaceProps<E>, "variant" | "blur"> {
-  interactive?: boolean;
-}
+export const Surface: SurfaceComponent = forwardRef(
+  function Surface(
+    props: SurfaceProps<ElementType>,
+    ref: React.ForwardedRef<HTMLElement>
+  ) {
+    const {
+      className = "",
+      interactive = false,
+      border = "default",
+      elevation = "flat",
+      children,
+      as: Component = "div",
+      ...rest
+    } = props;
 
-export const Surface = forwardRef(
-  <E extends React.ElementType = "div">(
-    { className = "", interactive = false, ...rest }: SurfaceProps<E>,
-    ref: React.ComponentPropsWithRef<E>["ref"]
-  ) => {
     return (
       <ChromeSurface
         ref={ref}
+        as={Component}
         variant="opaque"
         blur="none"
-        border={rest.border ?? "default"}
-        elevation={rest.elevation ?? "flat"}
+        border={border}
+        elevation={elevation}
         className={`${
           interactive
             ? "transition-colors hover:border-[color:var(--shell-border-strong)]/60 hover:bg-[var(--surface-muted)]"
             : ""
         } ${className}`.trim()}
         {...rest}
-      />
+      >
+        {children}
+      </ChromeSurface>
     );
   }
-) as unknown as <E extends React.ElementType = "div">(
-  props: SurfaceProps<E> & { ref?: React.ComponentPropsWithRef<E>["ref"] }
-) => React.ReactElement | null;
+) as unknown as SurfaceComponent;
+(Surface as unknown as { displayName?: string }).displayName = "Surface";
 
 export default ChromeSurface;

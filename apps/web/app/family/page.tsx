@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { HealthPageHeader } from "@/components/consumer/health-page-header";
+import { HubLayout } from "@/components/page/hub-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -310,25 +311,32 @@ function FamilyWorkspace() {
   ];
 
   return (
-    <div className="space-y-6" data-testid="family-sharing-hub">
-      {/* 1. Header + CTA */}
-      <HealthPageHeader
-        title={copy("familyCircle.title")}
-        subtitle={copy("familyCircle.description")}
-        backHref="/you"
-        backLabel={isEn ? "Back to You" : "Quay lại Cá nhân"}
-        primaryAction={{
-          label: isEn ? "Invite Caregiver / Doctor" : "Mời người chăm sóc / Bác sĩ",
-          icon: "person_add",
-          href: "/family/invite",
-        }}
-        secondaryAction={{
-          label: copy("familyCircle.accept.start"),
-          icon: "verified_user",
-          href: "/family/accept",
-        }}
-      />
-
+    <HubLayout
+      workspace="personal"
+      maxWidth="default"
+      gutter="default"
+      canvasBg="canvas"
+      className="space-y-6"
+      data-testid="family-sharing-hub"
+      header={
+        <HealthPageHeader
+          title={copy("familyCircle.title")}
+          subtitle={copy("familyCircle.description")}
+          backHref="/you"
+          backLabel={isEn ? "Back to You" : "Quay lại Cá nhân"}
+          primaryAction={{
+            label: isEn ? "Invite Caregiver / Doctor" : "Mời người chăm sóc / Bác sĩ",
+            icon: "person_add",
+            href: "/family/invite",
+          }}
+          secondaryAction={{
+            label: copy("familyCircle.accept.start"),
+            icon: "verified_user",
+            href: "/family/accept",
+          }}
+        />
+      }
+    >
       {error ? <InlineError message={error} onRetry={() => void load()} /> : null}
 
       {/* 2. Explicit Scope Disclosure Banner */}
@@ -945,7 +953,7 @@ function FamilyWorkspace() {
           </div>
         </div>
       ) : null}
-    </div>
+    </HubLayout>
   );
 }
 

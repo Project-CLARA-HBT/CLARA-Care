@@ -1,12 +1,21 @@
-﻿"use client";
+"use client";
 
-import { ReactNode, useContext, useEffect, useState } from "react";
+import {
+  ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
 import TransparencyNoticeGate from "@/components/compliance/transparency-notice-gate";
-import AdminPreviewBanner from "@/components/shell/admin-preview-banner";
-import GlobalContextBar from "@/components/shell/global-context-bar";
-import FloatingPrimaryDock from "@/components/shell/floating-primary-dock";
+import AdminPreviewBanner, {
+  PreviewBanner,
+} from "@/components/shell/admin-preview-banner";
+import ContextHeader from "@/components/shell/context-header";
+import ContentFrame from "@/components/shell/content-frame";
+import FloatingNavbar from "@/components/shell/floating-navbar";
 import CommandPalette from "@/components/shell/command-palette";
 import { PreferenceContext } from "@/components/shell/preference-provider";
 import { SessionContext } from "@/components/shell/session-boundary";
@@ -28,13 +37,13 @@ import {
 import { getPhrOnboarding } from "@/lib/phr-onboarding";
 import { t } from "@/lib/i18n/catalog";
 
-type Props = {
+export interface UnifiedAppShellProps {
   children: ReactNode;
-};
+}
 
 const IMMERSIVE_LAYOUT_PREFIXES = ["/chat", "/research", "/council", "/scribe"];
 
-export function AppShell({ children }: Props) {
+export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -43,7 +52,7 @@ export function AppShell({ children }: Props) {
   const profileBoundaryContext = useContext(ProfileBoundaryContext);
   const shellMode = useShellMode();
 
-  // Fallback state if rendered outside SessionBoundary (e.g. standalone tests)
+  // Fallback state if rendered outside SessionBoundary
   const [localRole, setLocalRole] = useState<UserRole>("normal");
   const [isRoleHydrated, setIsRoleHydrated] = useState(false);
   const [isSessionChecked, setIsSessionChecked] = useState(false);
@@ -53,13 +62,15 @@ export function AppShell({ children }: Props) {
   const adminPreviewMode = sessionContext ? sessionContext.adminPreviewMode : null;
   const uiLanguage = preferenceContext ? preferenceContext.uiLanguage : "vi";
 
-  const hideSidebar =
+  const isPublicOrUtility =
     isPublicRoute(pathname) || isAuthenticatedUtilityRoute(pathname);
-  const isImmersiveLayout = IMMERSIVE_LAYOUT_PREFIXES.some(
+
+  const isImmersivePath = IMMERSIVE_LAYOUT_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
   const isChatLayout = pathname === "/chat" || pathname.startsWith("/chat/");
-  const hideFloatingDock = shellMode.isImmersive;
+  const isImmersive = shellMode.isImmersive || isImmersivePath;
+  const hideFloatingNavbar = shellMode.isImmersive;
 
   // Fallback hydration if outside SessionBoundary
   useEffect(() => {
@@ -158,7 +169,8 @@ export function AppShell({ children }: Props) {
     };
   }, [isRoleHydrated, isSessionChecked, pathname, role, router, sessionContext]);
 
-  if (hideSidebar) {
+  // On public/auth/share routes: suppresses ContextHeader and FloatingNavbar, mounts clean unauthenticated container
+  if (isPublicOrUtility) {
     return (
       <main
         id="main-content"
@@ -170,44 +182,33 @@ export function AppShell({ children }: Props) {
     );
   }
 
+  // On standard/focus/dense/explore/read/immersive routes:
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+    <div
+      data-testid="unified-app-shell"
+      className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]"
+    >
       <a href="#main-content" className="skip-link">
         {t(uiLanguage, "navigation.skipToContent")}
       </a>
       <TransparencyNoticeGate />
 
-      {/* Top: Admin Preview Banner */}
-      <AdminPreviewBanner />
+      {/* Top: PreviewBanner (admin preview only) */}
+      <PreviewBanner />
 
-      {/* Top: GlobalContextBar */}
-      <GlobalContextBar />
+      {/* Top: ContextHeader */}
+      <ContextHeader />
 
-      {/* Main Content Canvas */}
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className={[
-          "app-content-canvas flex-1",
-          isImmersiveLayout
-            ? isChatLayout
-              ? "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] pt-0 sm:px-0 sm:pb-24 sm:pt-0 lg:px-0 lg:pb-0 lg:pt-0"
-              : "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] pt-0 sm:px-0.5 sm:pb-24 sm:pt-0 lg:px-0.5 lg:pb-1 lg:pt-0"
-            : "px-4 pb-[calc(env(safe-area-inset-bottom,0px)+6rem)] pt-5 sm:px-6 sm:pb-28 sm:pt-7 lg:px-12 lg:pb-24 lg:pt-8",
-        ].join(" ")}
+      {/* Main Content Canvas: ContentFrame */}
+      <ContentFrame
+        isImmersive={isImmersive}
+        isChatLayout={isChatLayout}
       >
-        <div
-          className={[
-            "w-full",
-            isImmersiveLayout ? "max-w-none" : "mx-auto max-w-[1120px]",
-          ].join(" ")}
-        >
-          {children}
-        </div>
-      </main>
+        {children}
+      </ContentFrame>
 
-      {/* Bottom: FloatingPrimaryDock (with CLARA Orb) */}
-      {!hideFloatingDock && <FloatingPrimaryDock role={effectiveRole} />}
+      {/* Bottom: FloatingNavbar (smoothly recedes on immersive routes) */}
+      {!hideFloatingNavbar && <FloatingNavbar role={effectiveRole} />}
 
       {/* Universal Command Palette (Cmd+K / Ctrl+K) */}
       <CommandPalette role={effectiveRole} />
@@ -215,5 +216,4 @@ export function AppShell({ children }: Props) {
   );
 }
 
-export const UnifiedAppShell = AppShell;
-export default AppShell;
+export default UnifiedAppShell;

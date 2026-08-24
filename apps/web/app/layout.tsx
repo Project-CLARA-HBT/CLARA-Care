@@ -1,8 +1,9 @@
 import "@/styles/globals.css";
-import AppShell from "@/components/app-shell";
+import UnifiedAppShell from "@/components/shell/unified-app-shell";
 import { PreferenceProvider } from "@/components/shell/preference-provider";
-import { SessionBoundary } from "@/components/shell/session-boundary";
-import { ProfileBoundary } from "@/components/shell/profile-boundary";
+import { ServerSessionProvider } from "@/components/shell/session-boundary";
+import { ProfileProvider } from "@/components/shell/profile-boundary";
+import { WorkspaceProvider } from "@/lib/workspace/workspace-provider";
 import { ShellModeProvider } from "@/components/shell/shell-mode-provider";
 import { CommandPaletteProvider } from "@/components/shell/command-palette-provider";
 import AnalyticsConsentBootstrap from "@/components/analytics/analytics-consent-bootstrap";
@@ -58,15 +59,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <AnalyticsConsentBootstrap />
         <PreferenceProvider initialLanguage={language}>
-          <SessionBoundary>
-            <ProfileBoundary>
-              <ShellModeProvider>
-                <CommandPaletteProvider>
-                  <AppShell>{children}</AppShell>
-                </CommandPaletteProvider>
-              </ShellModeProvider>
-            </ProfileBoundary>
-          </SessionBoundary>
+          <ServerSessionProvider>
+            <ProfileProvider>
+              <WorkspaceProvider>
+                <ShellModeProvider>
+                  <CommandPaletteProvider>
+                    <UnifiedAppShell>{children}</UnifiedAppShell>
+                  </CommandPaletteProvider>
+                </ShellModeProvider>
+              </WorkspaceProvider>
+            </ProfileProvider>
+          </ServerSessionProvider>
         </PreferenceProvider>
       </body>
     </html>

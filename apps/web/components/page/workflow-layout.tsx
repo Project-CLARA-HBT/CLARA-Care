@@ -68,6 +68,8 @@ export interface WorkflowLayoutProps extends Omit<HTMLAttributes<HTMLElement>, "
   orientation?: "horizontal" | "vertical";
   /** Card container styling */
   cardClassName?: string;
+  /** Workspace context (e.g. 'personal', 'clinical', 'admin') */
+  workspace?: string;
   /** Max width */
   maxWidth?: PageMaxWidth;
   /** Gutter padding */
@@ -143,6 +145,7 @@ export const WorkflowLayout = forwardRef<HTMLElement, WorkflowLayoutProps>(
       aside,
       orientation = "horizontal",
       cardClassName = "",
+      workspace,
       maxWidth = "narrow",
       gutter = "default",
       canvasBg = "canvas",
@@ -224,6 +227,7 @@ export const WorkflowLayout = forwardRef<HTMLElement, WorkflowLayoutProps>(
       <PageFrame
         ref={ref}
         archetype="workflow"
+        workspace={workspace}
         header={renderedHeader}
         aside={resolvedAside}
         maxWidth={maxWidth}

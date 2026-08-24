@@ -105,6 +105,9 @@ describe("VisitsPage — Visit Timeline Archetype (Spec v5 Section 6.20)", () =>
       expect(screen.getByTestId("prepare-new-visit-cta")).toBeInTheDocument();
     });
 
+    // ListDetailLayout adopts PageFrame with workspace="personal"
+    expect(document.querySelector('[data-workspace="personal"]')).toBeInTheDocument();
+
     const ctaButton = screen.getByTestId("prepare-new-visit-cta");
     expect(ctaButton).toHaveAttribute("href", "/visits/new");
     expect(ctaButton).toHaveTextContent(/Chuẩn bị lần khám mới/i);
@@ -225,6 +228,7 @@ describe("NewVisitPage — Visit Preparation Wizard Archetype (Spec v5 Section 6
     // Step 1: Reason for visit
     expect(screen.getByTestId("visit-prep-wizard")).toHaveAttribute("data-shell-mode", "FOCUS");
     expect(screen.getByTestId("visit-prep-wizard")).toHaveAttribute("data-layout-archetype", "Visit Prep Wizard");
+    expect(screen.getByTestId("visit-prep-wizard")).toHaveAttribute("data-workspace", "personal");
     expect(screen.getByTestId("wizard-step-reason")).toBeInTheDocument();
 
     const titleInput = screen.getByLabelText(/Tiêu đề buổi khám/i);
@@ -413,6 +417,7 @@ describe("VisitDetailPage — Visit Detail Reader Archetype (Spec v5 Section 5 &
     // 1. Shell and Archetype
     expect(screen.getByTestId("visit-detail-reader")).toHaveAttribute("data-shell-mode", "READ");
     expect(screen.getByTestId("visit-detail-reader")).toHaveAttribute("data-layout-archetype", "Visit Detail Reader");
+    expect(screen.getByTestId("visit-detail-reader")).toHaveAttribute("data-workspace", "personal");
 
     // Back link to /visits
     const backLink = screen.getByTestId("back-to-visits-link");

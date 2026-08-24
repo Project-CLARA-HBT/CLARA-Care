@@ -47,11 +47,12 @@ export interface ListDetailLayoutProps extends Omit<HTMLAttributes<HTMLElement>,
   emptyDetailState?: ReactNode;
   /** Column split ratio in desktop split mode */
   splitRatio?: ListDetailSplitRatio;
+  /** Workspace context (e.g. 'personal', 'clinical', 'admin') */
+  workspace?: string;
   /** Additional body children */
   children?: ReactNode;
   /** Max width */
   maxWidth?: PageMaxWidth;
-  /** Gutter padding */
   gutter?: PageGutter;
   /** Canvas background */
   canvasBg?: PageCanvasBg;
@@ -91,6 +92,7 @@ export const ListDetailLayout = forwardRef<HTMLElement, ListDetailLayoutProps>(
       onInspectorClose,
       emptyDetailState,
       splitRatio = "65/35",
+      workspace,
       children,
       maxWidth = "default",
       gutter = "default",
@@ -167,6 +169,7 @@ export const ListDetailLayout = forwardRef<HTMLElement, ListDetailLayoutProps>(
       <PageFrame
         ref={ref}
         archetype="list-detail"
+        workspace={workspace}
         header={renderedHeader}
         maxWidth={maxWidth}
         gutter={gutter}

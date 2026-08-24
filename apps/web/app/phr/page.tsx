@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import PageShell from "@/components/ui/page-shell";
+import { HubLayout } from "@/components/page/hub-layout";
 import Button from "@/components/ui/button";
 import Icon, { type IconName } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,10 @@ import {
   DEFAULT_PHR_CAPABILITIES,
   getPhrCapabilities,
   getPhrRecord,
+  getPhrCompleteness,
   type PhrCapabilityFlags,
+  type PhrCompleteness,
+  type PhrCompletenessClass,
   type PhrRecord,
 } from "@/lib/phr";
 import {
@@ -23,6 +26,7 @@ import {
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import RecordSectionEditor from "@/components/phr/record-section-editor";
 import {
+  COMPLETENESS_CLASS_LABEL_KEYS,
   EMPTY_RECORD,
   getPhrText,
   normalizeRecord,
@@ -62,6 +66,7 @@ export default function PhrPage() {
   const [capabilities, setCapabilities] = useState<PhrCapabilityFlags>(
     DEFAULT_PHR_CAPABILITIES,
   );
+  const [completeness, setCompleteness] = useState<PhrCompleteness | null>(null);
   const [railCollapsed, setRailCollapsed] = useState(false);
 
   const text: PhrText = useMemo(() => getPhrText(uiLanguage), [uiLanguage]);
@@ -108,6 +113,19 @@ export default function PhrPage() {
       mounted = false;
     };
   }, [text.loadError]);
+
+  useEffect(() => {
+    if (!capabilities.completeness_meter) return;
+    let mounted = true;
+    getPhrCompleteness()
+      .then((data) => {
+        if (mounted) setCompleteness(data);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [capabilities.completeness_meter]);
 
   // If accessed directly with a subpath (e.g. in unit tests rendering PhrPage with mock pathname)
   if (!isHub) {
@@ -357,7 +375,7 @@ export default function PhrPage() {
         as="link"
         href={item.href}
         variant="secondary"
-        className="group relative h-auto min-h-[76px] w-full justify-start whitespace-normal p-4 text-left transition hover:border-[color:var(--brand-500)]/40 hover:bg-[var(--surface-muted)]"
+        className="group relative h-auto min-h-[76px] w-full justify-start whitespace-normal rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-left shadow-sm transition hover:border-[color:var(--brand-500)]/40 hover:bg-[var(--surface-muted)]"
       >
         <span className="flex w-full items-center gap-3">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
@@ -399,8 +417,9 @@ export default function PhrPage() {
     ));
 
   return (
-    <PageShell
-      variant="plain"
+    <HubLayout
+      workspace="personal"
+      data-workspace="personal"
       title={text.title}
       description={text.description}
     >
@@ -449,7 +468,7 @@ export default function PhrPage() {
               as="link"
               href={item.href}
               variant="secondary"
-              className="h-auto min-h-[96px] w-full justify-start whitespace-normal rounded-[var(--radius-xl)] p-5 text-left"
+              className="h-auto min-h-[96px] w-full justify-start whitespace-normal rounded-[var(--radius-xl)] bg-[var(--surface-panel)] border border-[color:var(--shell-border)] p-5 text-left shadow-sm"
             >
               <span className="flex w-full items-center gap-4">
                 <span
@@ -498,6 +517,14 @@ export default function PhrPage() {
             {copy("phr.hub.progress.continue")}
           </Button>
         ) : null}
+
+        {/* Mobile Non-diagnostic disclaimer */}
+        <p
+          role="note"
+          className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-[13px] leading-6 text-[var(--text-secondary)] shadow-sm"
+        >
+          {text.disclaimer}
+        </p>
       </div>
 
       {/* Desktop Layout with LocalRail + Health Record Workbench Canvas */}
@@ -518,7 +545,7 @@ export default function PhrPage() {
         >
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="brand">
                   {record.full_name || text.profile}
                 </Badge>
@@ -579,6 +606,59 @@ export default function PhrPage() {
               />
             ))}
           </div>
+
+          {/* USCDI Completeness Meter Summary Indicator */}
+          <div className="mt-4 rounded-xl border border-[color:var(--shell-border)]/60 bg-[var(--surface-muted)]/60 p-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+                  <Icon name="progress" size={14} />
+                </span>
+                <span className="text-xs font-bold text-[var(--text-primary)]">
+                  {text.completenessTitle} (USCDI v1)
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-[var(--text-brand)]">
+                {completeness
+                  ? `${Math.round(completeness.score * 100)}% hoàn thiện`
+                  : `${Math.round((completed / sections.length) * 100)}% hoàn thiện`}
+              </span>
+            </div>
+
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {(Object.keys(COMPLETENESS_CLASS_LABEL_KEYS) as PhrCompletenessClass[]).map((cls) => {
+                const isPresent = completeness
+                  ? completeness.present.includes(cls)
+                  : sections.some((s) => s.complete);
+                const labelMap: Record<string, string> = {
+                  patient_demographics: copy("phr.completeness.class.patientDemographics"),
+                  allergies: text.allergies,
+                  medications: text.medications,
+                  problems: text.conditions,
+                  immunizations: "Tiêm chủng",
+                  procedures: "Thủ thuật",
+                  labs: "Xét nghiệm",
+                };
+                return (
+                <span
+                  key={cls}
+                  className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                    isPresent
+                      ? "bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
+                      : "bg-[var(--surface-panel)] text-[var(--text-muted)] border border-[color:var(--shell-border)]"
+                  }`}
+                >
+                  {isPresent ? (
+                    <Icon name="check" size={10} />
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-muted)]" aria-hidden="true" />
+                  )}
+                  {labelMap[cls] || cls}
+                </span>
+                );
+              })}
+            </div>
+          </div>
         </section>
 
         {/* Workbench Layout: LocalRail side navigation + Canvas */}
@@ -605,13 +685,17 @@ export default function PhrPage() {
                   <h2 className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     {copy("phr.hub.sections.personal")}
                   </h2>
-                  {renderSectionRows(sections.slice(0, 3))}
+                  <div className="space-y-2.5">
+                    {renderSectionRows(sections.slice(0, 3))}
+                  </div>
                 </section>
                 <section className="space-y-2">
                   <h2 className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     {copy("phr.hub.sections.important")}
                   </h2>
-                  {renderSectionRows(sections.slice(3))}
+                  <div className="space-y-2.5">
+                    {renderSectionRows(sections.slice(3))}
+                  </div>
                 </section>
               </div>
 
@@ -642,7 +726,7 @@ export default function PhrPage() {
 
                 <p
                   role="note"
-                  className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-[13px] leading-6 text-[var(--text-secondary)]"
+                  className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-[13px] leading-6 text-[var(--text-secondary)] shadow-sm"
                 >
                   {text.disclaimer}
                 </p>
@@ -661,7 +745,7 @@ export default function PhrPage() {
                     as="link"
                     href={item.href}
                     variant="ghost"
-                    className="h-auto min-h-28 justify-start whitespace-normal p-4 text-left border border-[color:var(--shell-border)] hover:border-[color:var(--brand-500)]/40 hover:bg-[var(--surface-muted)]"
+                    className="h-auto min-h-28 justify-start whitespace-normal rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-left shadow-sm hover:border-[color:var(--brand-500)]/40 hover:bg-[var(--surface-muted)]"
                   >
                     <span className="flex items-start gap-3">
                       <Icon
@@ -685,6 +769,6 @@ export default function PhrPage() {
           </div>
         </div>
       </div>
-    </PageShell>
+    </HubLayout>
   );
 }

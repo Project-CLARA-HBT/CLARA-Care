@@ -175,5 +175,6 @@ export function useProfileBoundary(): ProfileContextBoundaryValue {
   return context;
 }
 
-export { useProfileBoundary as useProfileContext };
+export const ProfileProvider = ProfileBoundary;
+export { useProfileBoundary as useProfileContext, useProfileBoundary as useProfile };
 export default ProfileBoundary;

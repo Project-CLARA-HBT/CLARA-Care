@@ -92,7 +92,7 @@ class _SettingsSurfaceState extends State<SettingsSurface> {
     });
   }
 
-  Future<void> _purgeOfflineCache(BuildContext context, ConsumerTerminology copy) async {
+  Future<void> _purgeOfflineCache(ConsumerTerminology copy) async {
     final isEnglish = copy.locale == 'en';
     final confirmed = await showDialog<bool>(
       context: context,
@@ -197,7 +197,7 @@ class _SettingsSurfaceState extends State<SettingsSurface> {
     }
   }
 
-  Future<void> _revokeOtherSessions(BuildContext context, ConsumerTerminology copy) async {
+  Future<void> _revokeOtherSessions(ConsumerTerminology copy) async {
     final isEnglish = copy.locale == 'en';
     final confirmed = await showDialog<bool>(
       context: context,
@@ -297,7 +297,7 @@ class _SettingsSurfaceState extends State<SettingsSurface> {
               sessionStore: widget.sessionStore,
               copy: copy,
               onSignOut: () => _confirmSignOut(context, copy),
-              onRevokeOtherSessions: () => _revokeOtherSessions(context, copy),
+              onRevokeOtherSessions: () => _revokeOtherSessions(copy),
               presentationModeController: widget.presentationModeController,
               onOpenModePicker: (modeCtrl) => _openModePicker(context, modeCtrl, copy),
             ),
@@ -314,7 +314,7 @@ class _SettingsSurfaceState extends State<SettingsSurface> {
             // Offline Cache Purge Section (Spec v5 Section 7.9)
             _OfflineCacheSection(
               isPurging: _isPurgingCache,
-              onPurge: () => _purgeOfflineCache(context, copy),
+              onPurge: () => _purgeOfflineCache(copy),
               isEnglish: isEnglish,
             ),
 

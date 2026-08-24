@@ -167,11 +167,20 @@ describe("You & Privacy Route Pages", () => {
         expect(screen.getByTestId("profile-summary-card")).toBeInTheDocument();
       });
 
+      // Verify SettingsLayout adoption with personal workspace
+      const youPage = screen.getByTestId("you-overview-page");
+      expect(youPage).toBeInTheDocument();
+      expect(youPage).toHaveAttribute("data-workspace", "personal");
+      expect(youPage).toHaveAttribute("data-archetype", "settings");
+
       expect(screen.getByText("Cá nhân & Quyền riêng tư")).toBeInTheDocument();
 
       // 1. Identity & Profile card
       expect(screen.getByTestId("profile-summary-card")).toBeInTheDocument();
       expect(screen.getByTestId("emergency-card-summary")).toBeInTheDocument();
+      expect(screen.getByText("O+")).toBeInTheDocument();
+      expect(screen.getByText("Nguyễn Thị B (Vợ)")).toBeInTheDocument();
+      expect(screen.getByText("0901234567")).toBeInTheDocument();
       expect(screen.getByTestId("edit-profile-btn")).toHaveAttribute("href", "/you/profile");
       expect(screen.getByText("Dị ứng nặng Penicillin")).toBeInTheDocument();
 
@@ -666,6 +675,11 @@ describe("You & Privacy Route Pages", () => {
       await waitFor(() => {
         expect(screen.getByTestId("you-settings-page")).toBeInTheDocument();
       });
+
+      // Verify SettingsLayout adoption with personal workspace
+      const settingsPage = screen.getByTestId("you-settings-page");
+      expect(settingsPage).toHaveAttribute("data-workspace", "personal");
+      expect(settingsPage).toHaveAttribute("data-archetype", "settings");
 
       expect(screen.getByTestId("appearance-language-section")).toBeInTheDocument();
       expect(screen.getByTestId("mfa-management-section")).toBeInTheDocument();

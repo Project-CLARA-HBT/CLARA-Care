@@ -9,7 +9,7 @@ import { SceneHeader } from "../primitives/scene-header";
 export function FaqScene() {
   const { language } = useMotionTier();
   const copy = LANDING_COPY_V6[language].faq;
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggleItem = (index: number) => {
     setOpenIndex((prev) => (prev === index ? null : index));

@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 
 import {
   ErrorSummary,
-  GuidedFlowShell,
   ReviewSection,
   StepActions,
   type GuidedFlowError,
   type GuidedFlowSaveState,
 } from "@/components/guided-flow";
+import { WorkflowLayout } from "@/components/page/workflow-layout";
 import { Badge } from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import { Field, Select, Textarea } from "@/components/ui/field";
@@ -885,22 +885,21 @@ export default function NewVisitFlow() {
   }
 
   return (
-    <div
+    <WorkflowLayout
+      workspace="personal"
+      maxWidth="narrow"
       data-testid="visit-prep-wizard"
       data-shell-mode="FOCUS"
       data-layout-archetype="Visit Prep Wizard"
+      eyebrow={t(language, "visitWizard.eyebrow")}
+      title={titleByStep[step]}
+      description={descriptionByStep[step]}
+      steps={steps}
+      currentStep={stepIndex}
+      saveState={saveState}
+      aside={t(language, "visitCreate.safetyNote")}
     >
-      <GuidedFlowShell
-        eyebrow={t(language, "visitWizard.eyebrow")}
-        title={titleByStep[step]}
-        description={descriptionByStep[step]}
-        steps={steps}
-        currentStep={stepIndex}
-        saveState={saveState}
-        aside={t(language, "visitCreate.safetyNote")}
-      >
-        {stepContent}
-      </GuidedFlowShell>
-    </div>
+      {stepContent}
+    </WorkflowLayout>
   );
 }

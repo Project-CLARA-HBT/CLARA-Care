@@ -10,6 +10,8 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { type PageCanvasBg, type PageMaxWidth } from "./page-frame";
 
+export type WorkspaceAdaptiveContext = "personal" | "clinical" | "research";
+
 export interface ConversationLayoutProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
   /** Top conversation bar / custom header */
   header?: ReactNode;
@@ -48,6 +50,18 @@ export interface ConversationLayoutProps extends Omit<HTMLAttributes<HTMLElement
   maxWidth?: PageMaxWidth;
   /** Background canvas */
   canvasBg?: PageCanvasBg;
+  /** Active workspace context: personal / clinical / research */
+  workspace?: WorkspaceAdaptiveContext | string;
+  /** Accessible id for main landmark */
+  mainId?: string;
+  /** Accessible label for main landmark */
+  mainAriaLabel?: string;
+  /** Optional accessible skip link element */
+  skipLink?: ReactNode;
+  /** Whether to wrap messages in default scroll container or allow custom scroll/virtualizer */
+  feedScrollable?: boolean;
+  /** Whether to wrap composer in standard border/background wrapper */
+  composerWrapper?: boolean;
 }
 
 const BG_MAP: Record<PageCanvasBg, string> = {
@@ -102,6 +116,12 @@ export const ConversationLayout = forwardRef<HTMLElement, ConversationLayoutProp
       fullHeight = true,
       maxWidth = "default",
       canvasBg = "canvas",
+      workspace,
+      mainId,
+      mainAriaLabel,
+      skipLink,
+      feedScrollable = true,
+      composerWrapper = true,
       className = "",
       ...rest
     },
@@ -140,11 +160,14 @@ export const ConversationLayout = forwardRef<HTMLElement, ConversationLayoutProp
       <div
         ref={ref as React.Ref<HTMLDivElement>}
         data-archetype="conversation"
+        data-workspace={workspace}
         className={`relative flex w-full overflow-hidden ${
           fullHeight ? "h-full min-h-[500px]" : "min-h-screen"
         } ${bgClass} ${className}`}
         {...rest}
       >
+        {skipLink}
+
         {/* Left History Sidebar */}
         {resolvedSidebar ? (
           <aside
@@ -159,7 +182,11 @@ export const ConversationLayout = forwardRef<HTMLElement, ConversationLayoutProp
         ) : null}
 
         {/* Central Chat Canvas */}
-        <main className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
+        <main
+          id={mainId}
+          aria-label={mainAriaLabel}
+          className="flex flex-1 flex-col min-w-0 h-full overflow-hidden"
+        >
           {/* Header */}
           {header ? (
             <div className="shrink-0 border-b border-[color:var(--shell-border)] bg-[var(--surface-header)]/90 backdrop-blur-md">
@@ -214,17 +241,27 @@ export const ConversationLayout = forwardRef<HTMLElement, ConversationLayoutProp
           ) : null}
 
           {/* Scrollable Messages Stream */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6 sm:px-6">
-            <div className={`mx-auto w-full ${maxWClass} space-y-6`}>
+          {feedScrollable ? (
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6 sm:px-6">
+              <div className={`mx-auto w-full ${maxWClass} space-y-6`}>
+                {feedContent}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
               {feedContent}
             </div>
-          </div>
+          )}
 
           {/* Bottom Prompt Composer */}
           {composer ? (
-            <div className="shrink-0 border-t border-[color:var(--shell-border)] bg-[var(--surface-header)]/95 px-4 py-3 sm:px-6 sm:py-4 backdrop-blur-md">
-              <div className={`mx-auto w-full ${maxWClass}`}>{composer}</div>
-            </div>
+            composerWrapper ? (
+              <div className="shrink-0 border-t border-[color:var(--shell-border)] bg-[var(--surface-header)]/95 px-4 py-3 sm:px-6 sm:py-4 backdrop-blur-md">
+                <div className={`mx-auto w-full ${maxWClass}`}>{composer}</div>
+              </div>
+            ) : (
+              <div className="shrink-0">{composer}</div>
+            )
           ) : null}
         </main>
 

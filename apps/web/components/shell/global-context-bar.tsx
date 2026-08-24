@@ -103,9 +103,6 @@ export const CORE_WORKSPACES: CoreWorkspaceOption[] = [
   },
 ];
 
-export const ADMIN_PREVIEW_OPTIONS = CORE_WORKSPACES;
-export type AdminPreviewOption = CoreWorkspaceOption;
-
 export interface GlobalContextBarProps {
   className?: string;
   onOpenCommandPalette?: () => void;

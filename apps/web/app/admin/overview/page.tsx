@@ -1,14 +1,18 @@
+"use client";
+
 import AdminOverviewPanel from "@/components/admin/admin-overview-panel";
-import AdminShell from "@/components/admin/admin-shell";
+import AdminCommandStrip from "@/components/admin/admin-command-strip";
+import CommandCenterLayout from "@/components/page/command-center-layout";
 
 export default function AdminOverviewPage() {
   return (
-    <AdminShell
-      activeTab="overview"
-      title="Admin Overview"
-      description="Tổng quan điều phối cấu hình RAG và answer flow theo phong cách technical dashboard."
+    <CommandCenterLayout
+      workspace="admin"
+      commandStrip={<AdminCommandStrip activeTab="overview" />}
+      maxWidth="dense"
+      density="dense"
     >
       <AdminOverviewPanel />
-    </AdminShell>
+    </CommandCenterLayout>
   );
 }

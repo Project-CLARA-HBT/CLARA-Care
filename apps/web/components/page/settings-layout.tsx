@@ -22,6 +22,8 @@ export interface SettingsCategory {
 }
 
 export interface SettingsLayoutProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
+  /** Active workspace context (e.g. 'personal', 'clinical', 'research', 'admin') */
+  workspace?: string;
   /** Page header slot or uses PageHeader props below */
   header?: ReactNode;
   eyebrow?: ReactNode;
@@ -67,6 +69,7 @@ export interface SettingsLayoutProps extends Omit<HTMLAttributes<HTMLElement>, "
 export const SettingsLayout = forwardRef<HTMLElement, SettingsLayoutProps>(
   (
     {
+      workspace,
       header,
       eyebrow,
       title,
@@ -231,6 +234,7 @@ export const SettingsLayout = forwardRef<HTMLElement, SettingsLayoutProps>(
       <PageFrame
         ref={ref}
         archetype="settings"
+        workspace={workspace}
         header={renderedHeader}
         maxWidth={maxWidth}
         gutter={gutter}

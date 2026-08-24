@@ -46,8 +46,12 @@ describe("AdminOverviewPage", () => {
     window.localStorage.clear();
   });
 
-  it("renders AdminShell with overview active tab and AdminOverviewPanel", async () => {
+  it("renders CommandCenterLayout with admin workspace and AdminOverviewPanel", async () => {
     render(<AdminOverviewPage />);
+
+    const commandCenter = document.querySelector('[data-archetype="command-center"]');
+    expect(commandCenter).toBeInTheDocument();
+    expect(commandCenter).toHaveAttribute("data-workspace", "admin");
 
     expect(screen.getByRole("navigation", { name: /Admin command strip/i })).toBeInTheDocument();
 
@@ -58,5 +62,6 @@ describe("AdminOverviewPage", () => {
     expect(screen.getByText("4 Phân hệ Trọng yếu (Systems Status Stream)")).toBeInTheDocument();
     expect(screen.getByText("Knowledge Core")).toBeInTheDocument();
     expect(screen.getByText("Answer Flow")).toBeInTheDocument();
+    expect(screen.getByText(/Trình Khởi chạy Toàn bộ Công cụ/i)).toBeInTheDocument();
   });
 });

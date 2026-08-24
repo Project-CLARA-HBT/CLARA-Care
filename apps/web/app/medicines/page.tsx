@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import PageShell from "@/components/ui/page-shell";
+import { HubLayout } from "@/components/page/hub-layout";
 import { Tabs, TabPanel, type TabItem } from "@/components/ui/tabs";
 import { t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
@@ -50,8 +50,9 @@ function MedicinesHub() {
   );
 
   return (
-    <PageShell
-      variant="plain"
+    <HubLayout
+      workspace="personal"
+      data-workspace="personal"
       title={t(language, "medicines.title")}
       description={t(language, "medicines.description")}
     >
@@ -74,7 +75,7 @@ function MedicinesHub() {
           <MedicinesSafetyTab />
         </TabPanel>
       </div>
-    </PageShell>
+    </HubLayout>
   );
 }
 

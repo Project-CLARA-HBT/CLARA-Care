@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { HealthPageHeader } from "@/components/consumer/health-page-header";
+import { SettingsLayout } from "@/components/page/settings-layout";
 import { EmergencyQrModal } from "@/components/consumer/emergency-qr-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,32 +106,30 @@ function YouOverviewContent() {
   const medicalAlerts = overview?.emergency_card?.medical_alerts || [];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6" data-testid="you-overview-page">
-      {/* 0. Header with profile context */}
-      <HealthPageHeader
-        title={isEn ? "Account & Preferences" : "Cá nhân & Quyền riêng tư"}
-        subtitle={
-          isEn
-            ? "Unified personal health hub, privacy controls, caregiver sharing, connected devices, and data rights."
-            : "Trung tâm quản lý hồ sơ cá nhân, bảo mật quyền riêng tư, chia sẻ người thân và nguồn dữ liệu sức khỏe."
-        }
-        activeProfile={
-          activeProfile
-            ? {
-                name: activeProfile.display_name,
-                relationship:
-                  activeProfile.kind === "shared"
-                    ? isEn
-                      ? "Shared profile"
-                      : "Hồ sơ chia sẻ"
-                    : isEn
-                      ? "Primary"
-                      : "Chính",
-              }
-            : null
-        }
-      />
-
+    <SettingsLayout
+      workspace="personal"
+      title={isEn ? "Account & Preferences" : "Cá nhân & Quyền riêng tư"}
+      subtitle={
+        isEn
+          ? "Unified personal health hub, privacy controls, caregiver sharing, connected devices, and data rights."
+          : "Trung tâm quản lý hồ sơ cá nhân, bảo mật quyền riêng tư, chia sẻ người thân và nguồn dữ liệu sức khỏe."
+      }
+      badges={
+        activeProfile ? (
+          <Badge tone="brand">
+            {activeProfile.kind === "shared"
+              ? isEn
+                ? "Shared profile"
+                : "Hồ sơ chia sẻ"
+              : isEn
+                ? "Primary"
+                : "Chính"}
+          </Badge>
+        ) : undefined
+      }
+      maxWidth="prose"
+      data-testid="you-overview-page"
+    >
       {error && overview ? (
         <InlineError
           message={isEn ? "Unable to load personal overview" : "Không thể tải tổng quan cá nhân"}
@@ -693,7 +691,7 @@ function YouOverviewContent() {
         medicalAlerts={medicalAlerts}
         isEn={isEn}
       />
-    </div>
+    </SettingsLayout>
   );
 }
 

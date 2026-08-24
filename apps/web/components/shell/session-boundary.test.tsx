@@ -52,7 +52,7 @@ vi.mock("@/lib/http-client", () => ({
 vi.mock("@/lib/auth-store", () => ({
   clearTokens: mocks.clearTokens,
   getRole: () => mocks.getStoredRole(),
-  setRole: mocks.setStoredRole,
+  setAuthoritativeServerRole: mocks.setStoredRole,
   getStoredAdminPreviewMode: mocks.getStoredAdminPreviewMode,
   setStoredAdminPreviewMode: mocks.setStoredAdminPreviewMode,
   ADMIN_PREVIEW_STORAGE_KEY: "clara_admin_preview_mode",

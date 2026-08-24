@@ -149,7 +149,7 @@ class _NotificationsSurfaceState extends State<NotificationsSurface> {
     }
   }
 
-  Future<void> _savePreferences(BuildContext context, bool isEnglish) async {
+  Future<void> _savePreferences(bool isEnglish) async {
     setState(() {
       _isSaving = true;
     });
@@ -225,7 +225,7 @@ class _NotificationsSurfaceState extends State<NotificationsSurface> {
                 label: isEnglish ? 'Save Preferences' : 'Lưu tùy chọn thông báo',
                 icon: Icons.check_circle_outline,
                 loading: _isSaving,
-                onPressed: () => _savePreferences(context, isEnglish),
+                onPressed: () => _savePreferences(isEnglish),
               ),
             ),
           ],

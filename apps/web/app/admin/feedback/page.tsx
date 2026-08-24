@@ -514,7 +514,7 @@ export default function ClinicalFeedbackTriagePage() {
                     className={[
                       "inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border px-2.5 py-1 text-xs font-semibold transition-all",
                       isActive
-                        ? "border-[color:var(--brand-600)] bg-[var(--brand-600)] text-[#cdd7ff] shadow-xs"
+                        ? "border-[color:var(--brand-600)] bg-[var(--brand-600)] text-white shadow-xs"
                         : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:bg-[var(--surface-panel)] hover:text-[var(--text-primary)]",
                     ].join(" ")}
                   >
@@ -523,7 +523,7 @@ export default function ClinicalFeedbackTriagePage() {
                       className={[
                         "rounded px-1 text-[10px] font-mono",
                         isActive
-                          ? "bg-[#00174b]/40 text-[#cdd7ff]"
+                          ? "bg-black/20 text-white"
                           : "bg-[var(--surface-panel)] text-[var(--text-muted)]",
                       ].join(" ")}
                     >

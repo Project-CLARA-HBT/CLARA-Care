@@ -373,20 +373,34 @@ class _ClarificationChoices extends StatelessWidget {
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 4),
-        ...clarification.candidates.map(
-          (candidate) => RadioListTile<String>(
-            contentPadding: EdgeInsets.zero,
-            value: candidate.drugbankId,
-            groupValue: selected?.drugbankId,
-            onChanged: (_) => onSelected(clarification, candidate),
-            title: Text(candidate.normalizedName),
-            subtitle: Text(
-              [
-                if (candidate.activeIngredients.isNotEmpty)
-                  candidate.activeIngredients.join(', '),
-                '$sourceLabel: ${candidate.sourceVersion}',
-              ].join('\n'),
-            ),
+        RadioGroup<String>(
+          groupValue: selected?.drugbankId,
+          onChanged: (val) {
+            if (val == null) return;
+            for (final candidate in clarification.candidates) {
+              if (candidate.drugbankId == val) {
+                onSelected(clarification, candidate);
+                break;
+              }
+            }
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final candidate in clarification.candidates)
+                RadioListTile<String>(
+                  contentPadding: EdgeInsets.zero,
+                  value: candidate.drugbankId,
+                  title: Text(candidate.normalizedName),
+                  subtitle: Text(
+                    [
+                      if (candidate.activeIngredients.isNotEmpty)
+                        candidate.activeIngredients.join(', '),
+                      '$sourceLabel: ${candidate.sourceVersion}',
+                    ].join('\n'),
+                  ),
+                ),
+            ],
           ),
         ),
       ],

@@ -63,22 +63,13 @@ describe("FaqScene (Landing v6 FAQ Accordion Scene)", () => {
     renderFaqScene("vi");
     const copy = LANDING_COPY_V6.vi.faq;
 
-    // All questions should have button triggers
+    // All questions should have button triggers and start collapsed
     copy.items.forEach((item, index) => {
       const button = screen.getByRole("button", { name: new RegExp(item.question, "i") });
       expect(button).toBeInTheDocument();
       expect(button).toHaveAttribute("id", `faq-header-${index}`);
       expect(button).toHaveAttribute("aria-controls", `faq-panel-${index}`);
-
-      if (index === 0) {
-        expect(button).toHaveAttribute("aria-expanded", "true");
-        const panel = screen.getByRole("region");
-        expect(panel).toHaveAttribute("id", `faq-panel-${index}`);
-        expect(panel).toHaveAttribute("aria-labelledby", `faq-header-${index}`);
-        expect(panel).toHaveTextContent(item.answer);
-      } else {
-        expect(button).toHaveAttribute("aria-expanded", "false");
-      }
+      expect(button).toHaveAttribute("aria-expanded", "false");
     });
   });
 
@@ -89,9 +80,13 @@ describe("FaqScene (Landing v6 FAQ Accordion Scene)", () => {
     const firstBtn = screen.getByRole("button", { name: new RegExp(copy.items[0].question, "i") });
     const secondBtn = screen.getByRole("button", { name: new RegExp(copy.items[1].question, "i") });
 
-    // Initially first is open
-    expect(firstBtn).toHaveAttribute("aria-expanded", "true");
+    // Initially collapsed
+    expect(firstBtn).toHaveAttribute("aria-expanded", "false");
     expect(secondBtn).toHaveAttribute("aria-expanded", "false");
+
+    // Click first item -> opens first item
+    fireEvent.click(firstBtn);
+    expect(firstBtn).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText(copy.items[0].answer)).toBeInTheDocument();
 
     // Click second item -> opens second item, closes first item
@@ -115,6 +110,10 @@ describe("FaqScene (Landing v6 FAQ Accordion Scene)", () => {
     expect(screen.getByRole("heading", { name: copy.title, level: 2 })).toBeInTheDocument();
     expect(screen.getByText(copy.description)).toBeInTheDocument();
     expect(screen.getByText(copy.items[0].question)).toBeInTheDocument();
+
+    // Open first item and verify answer
+    const firstBtn = screen.getByRole("button", { name: new RegExp(copy.items[0].question, "i") });
+    fireEvent.click(firstBtn);
     expect(screen.getByText(copy.items[0].answer)).toBeInTheDocument();
   });
 });
