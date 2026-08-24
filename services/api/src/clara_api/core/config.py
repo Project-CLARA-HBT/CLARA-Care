@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -222,7 +222,7 @@ class Settings(BaseSettings):
     smtp_host: str = Field(default="smtp.gmail.com", validation_alias="SMTP_HOST")
     smtp_port: int = Field(default=587, validation_alias="SMTP_PORT", gt=0)
     smtp_username: str = Field(default="noreply@theclaracare.com", validation_alias="SMTP_USERNAME")
-    smtp_password: str = Field(default="pyjqhbubsdzegqoo", validation_alias="SMTP_PASSWORD")
+    smtp_password: SecretStr = Field(default=SecretStr(""), validation_alias="SMTP_PASSWORD")
     smtp_from_email: str = Field(default="noreply@theclaracare.com", validation_alias="SMTP_FROM_EMAIL")
     smtp_use_tls: bool = Field(default=True, validation_alias="SMTP_USE_TLS")
     smtp_use_ssl: bool = Field(default=False, validation_alias="SMTP_USE_SSL")

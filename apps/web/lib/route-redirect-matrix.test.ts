@@ -20,7 +20,6 @@ describe("Route Capability and Redirect Matrix", () => {
       ["/admin/rag-sources", "/admin/knowledge-sources"],
       ["/admin/source-hub", "/admin/knowledge-sources"],
       ["/lifemap/visit-prep", "/care/prepare"],
-      ["/role-select", "/dashboard"],
     ];
 
     for (const [legacyRoute, canonicalRoute] of requiredRedirects) {

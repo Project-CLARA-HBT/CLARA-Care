@@ -46,6 +46,7 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(String(255), default="")
     is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     status: Mapped[str] = mapped_column(String(32), default="active", index=True)
+    resource_version: Mapped[str] = mapped_column(String(64), default="1")
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -4385,6 +4386,106 @@ class GovernancePolicyEpoch(Base):
     version: Mapped[str] = mapped_column(String(64), index=True)
     active_from: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     canonical_digest: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class Experiment(Base):
+    __tablename__ = "experiments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(128))
+    description: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="draft", index=True)
+    rollout_basis_points: Mapped[int] = mapped_column(Integer, default=0)
+    target_rules_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    safety_owner: Mapped[str] = mapped_column(String(128), default="clara-safety")
+    resource_version: Mapped[str] = mapped_column(String(64), default="1")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ExperimentAudit(Base):
+    __tablename__ = "experiment_audits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    experiment_id: Mapped[int] = mapped_column(
+        ForeignKey("experiments.id", ondelete="CASCADE"), index=True
+    )
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    action: Mapped[str] = mapped_column(String(32), index=True)
+    previous_state_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    new_state_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    reason_code: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class ClinicalFeedback(Base):
+    __tablename__ = "clinical_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(64), default=_public_id, unique=True, index=True)
+    source_workflow: Mapped[str] = mapped_column(String(64), default="chat", index=True)
+    target_id: Mapped[str] = mapped_column(String(128), default="", index=True)
+    reporter_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    assigned_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(String(32), default="open", index=True)
+    category: Mapped[str] = mapped_column(String(64), default="general")
+    clinical_severity: Mapped[str] = mapped_column(String(32), default="routine", index=True)
+    free_text_redacted: Mapped[str] = mapped_column(Text, default="")
+    metadata_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    resolution_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    resource_version: Mapped[str] = mapped_column(String(64), default="1")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ClinicalFeedbackAction(Base):
+    __tablename__ = "clinical_feedback_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    feedback_id: Mapped[int] = mapped_column(
+        ForeignKey("clinical_feedback.id", ondelete="CASCADE"), index=True
+    )
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    action: Mapped[str] = mapped_column(String(32), index=True)
+    from_status: Mapped[str] = mapped_column(String(32), default="")
+    to_status: Mapped[str] = mapped_column(String(32), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class PrivacyAuditReceipt(Base):
+    __tablename__ = "privacy_audit_receipts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    audit_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    scanner_version: Mapped[str] = mapped_column(String(32))
+    scope_digest: Mapped[str] = mapped_column(String(128))
+    result: Mapped[str] = mapped_column(String(32), default="pass", index=True)
+    finding_count: Mapped[int] = mapped_column(Integer, default=0)
+    artifact_digest: Mapped[str] = mapped_column(String(128))
+    executed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

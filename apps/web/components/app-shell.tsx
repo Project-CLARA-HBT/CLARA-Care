@@ -59,8 +59,7 @@ export default function AppShell({ children }: Props) {
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
   const isChatLayout = pathname === "/chat" || pathname.startsWith("/chat/");
-  const hideFloatingDock =
-    pathname.startsWith("/admin") && adminPreviewMode === null;
+  const hideFloatingDock = shellMode.isImmersive;
 
   // Fallback hydration if outside SessionBoundary
   useEffect(() => {

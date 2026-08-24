@@ -38,7 +38,6 @@ export const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
   "/admin/rag-sources": "/admin/knowledge-sources",
   "/admin/source-hub": "/admin/knowledge-sources",
   "/lifemap/visit-prep": "/care/prepare",
-  "/role-select": "/dashboard",
 };
 
 function isPublicPath(pathname: string): boolean {

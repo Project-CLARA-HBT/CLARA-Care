@@ -70,7 +70,6 @@ describe("authentication middleware", () => {
       ["/admin/rag-sources", "/admin/knowledge-sources"],
       ["/admin/source-hub", "/admin/knowledge-sources"],
       ["/lifemap/visit-prep", "/care/prepare"],
-      ["/role-select", "/dashboard"],
     ];
 
     for (const [legacyPath, canonicalPath] of testCases) {
@@ -102,7 +101,6 @@ describe("authentication middleware", () => {
         "/admin/rag-sources": "/admin/knowledge-sources",
         "/admin/source-hub": "/admin/knowledge-sources",
         "/lifemap/visit-prep": "/care/prepare",
-        "/role-select": "/dashboard",
       });
     });
   });

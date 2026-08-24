@@ -47,11 +47,15 @@ vi.mock("@/components/compliance/transparency-notice-gate", () => ({
   default: () => null,
 }));
 
-vi.mock("@/lib/auth-store", () => ({
-  clearTokens: vi.fn(),
-  getRole: () => "normal",
-  setRole: vi.fn(),
-}));
+vi.mock("@/lib/auth-store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/auth-store")>();
+  return {
+    ...actual,
+    clearTokens: vi.fn(),
+    getRole: () => "normal",
+    setRole: vi.fn(),
+  };
+});
 
 vi.mock("@/lib/http-client", () => ({
   default: {
@@ -79,12 +83,13 @@ vi.mock("@/lib/visit-family", () => ({
 function renderShell(
   children: ReactNode,
   initialPreviewMode?: AdminPreviewMode | null,
+  initialShellMode?: "explore" | "focus" | "immersive" | "read" | "dense",
 ) {
   return render(
     <PreferenceProvider initialLanguage="vi">
       <SessionBoundary initialPreviewMode={initialPreviewMode}>
         <ProfileBoundary>
-          <ShellModeProvider>
+          <ShellModeProvider initialMode={initialShellMode}>
             <CommandPaletteProvider>
               <AppShell>{children}</AppShell>
             </CommandPaletteProvider>
@@ -214,7 +219,7 @@ describe("AppShell Spatial Editorial Architecture", () => {
     expect(mocks.routerReplace).not.toHaveBeenCalledWith("/welcome/start");
   });
 
-  it("hides FloatingPrimaryDock on /admin routes when adminPreviewMode is null", async () => {
+  it("renders FloatingPrimaryDock on /admin routes for admin users", async () => {
     mocks.pathname = "/admin/flow-debugger";
     mocks.apiGet.mockResolvedValue({ data: { role: "admin" } });
 
@@ -224,12 +229,47 @@ describe("AppShell Spatial Editorial Architecture", () => {
       expect(screen.getByText("Admin Flow Debugger")).toBeInTheDocument();
     });
 
-    // On /admin without preview mode, dock is completely hidden (no clutter)
+    // FloatingPrimaryDock is NEVER hidden on /admin for admin users
+    expect(
+      screen.getByRole("navigation", { name: "Thanh điều hướng chính" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Tổng quan" })).toHaveAttribute(
+      "href",
+      "/admin/overview",
+    );
+    expect(screen.getByRole("link", { name: "Người dùng" })).toHaveAttribute(
+      "href",
+      "/admin/users",
+    );
+    expect(screen.getByRole("link", { name: "Hỏi CLARA" })).toHaveAttribute(
+      "href",
+      "/chat",
+    );
+    expect(screen.getByRole("link", { name: "Hệ thống" })).toHaveAttribute(
+      "href",
+      "/admin/system",
+    );
+    expect(screen.getByRole("link", { name: "Nhật ký" })).toHaveAttribute(
+      "href",
+      "/admin/audit",
+    );
+    // Banner is not shown in standard admin mode
+    expect(screen.queryByTestId("admin-preview-banner")).not.toBeInTheDocument();
+  });
+
+  it("hides FloatingPrimaryDock when explicitly in fullscreen/immersive mode", async () => {
+    mocks.pathname = "/admin/flow-debugger";
+    mocks.apiGet.mockResolvedValue({ data: { role: "admin" } });
+
+    renderShell(<div>Admin Flow Debugger</div>, null, "immersive");
+
+    await waitFor(() => {
+      expect(screen.getByText("Admin Flow Debugger")).toBeInTheDocument();
+    });
+
     expect(
       screen.queryByRole("navigation", { name: "Thanh điều hướng chính" }),
     ).not.toBeInTheDocument();
-    // Banner is not shown
-    expect(screen.queryByTestId("admin-preview-banner")).not.toBeInTheDocument();
   });
 
   it("shows FloatingPrimaryDock with doctor dock and AdminPreviewBanner when clinical preview is active on /admin", async () => {

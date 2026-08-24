@@ -624,3 +624,68 @@ def review_artifact(
         "artifact_status": artifact.status,
         "created_at": item.created_at,
     }
+
+
+class PatientRosterItem(BaseModel):
+    patient_id: str
+    display_label: str
+    assignment: dict[str, Any]
+    attention: dict[str, Any]
+    capabilities: list[str]
+    resource_version: str
+    generated_at: str
+    provenance: dict[str, Any]
+
+
+class PatientRosterResponse(BaseModel):
+    items: list[PatientRosterItem]
+    total: int
+    next_cursor: str | None = None
+
+
+@router.get("/patients", response_model=PatientRosterResponse)
+def get_clinical_patient_roster(
+    assigned_to_me: bool = Query(True),
+    urgency: str | None = Query(None),
+    status_filter: str | None = Query(None, alias="status"),
+    cursor: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    token: TokenPayload = Depends(require_roles("doctor", "admin")),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    from clara_api.db.models import PhrProfile
+
+    stmt = select(PhrProfile)
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    profiles = db.scalars(stmt.order_by(PhrProfile.id.desc()).offset(cursor).limit(limit)).all()
+
+    now_iso = datetime.now(UTC).isoformat()
+    items: list[PatientRosterItem] = []
+    for p in profiles:
+        # Masked display label
+        label = p.full_name.strip() if p.full_name else f"BN-{p.public_id[:8].upper()}"
+        # Determine attention level
+        has_critical = bool(p.allergy_status == "critical" or (p.allergies_json and len(p.allergies_json) > 0))
+        attention_level = "urgent" if has_critical else "routine"
+        reasons = ["Cần theo dõi dị ứng" if has_critical else "Tái khám định kỳ"]
+
+        items.append(
+            PatientRosterItem(
+                patient_id=p.public_id,
+                display_label=label,
+                assignment={"team_id": "team-primary", "relationship": "primary_care"},
+                attention={"level": attention_level, "reasons": reasons},
+                capabilities=["open_record", "prescribe", "order_lab", "schedule_visit"],
+                resource_version=str(p.version_no if hasattr(p, "version_no") else "1"),
+                generated_at=now_iso,
+                provenance={"source": "phr_profiles", "policy_version": "2026-v1"},
+            )
+        )
+
+    next_cursor = str(cursor + limit) if (cursor + limit) < total else None
+    return {
+        "items": items,
+        "total": total,
+        "next_cursor": next_cursor,
+    }
+

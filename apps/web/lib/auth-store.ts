@@ -1,6 +1,12 @@
 export type UserRole = "normal" | "researcher" | "doctor" | "admin";
+export type AdminPreviewMode = "clinical" | "research" | "personal";
 
-const ROLE_KEY = "clara_role";
+export const ROLE_KEY = "clara_role";
+export const ADMIN_PREVIEW_STORAGE_KEY = "clara_admin_preview_mode";
+export const ADMIN_PREVIEW_COOKIE_NAME = "clara_admin_preview_mode";
+export const ADMIN_PREVIEW_CHANGE_EVENT = "clara:admin-preview-change";
+export const ROLE_CHANGE_EVENT = "clara:role-change";
+export const SESSION_CHANGE_EVENT = "clara:session-change";
 const ACCESS_TOKEN_SESSION_KEY = "clara_access_token_session";
 const REFRESH_TOKEN_SESSION_KEY = "clara_refresh_token_session";
 const CLIENT_SESSION_COOKIE =
@@ -12,6 +18,13 @@ const PROFILE_CACHE_PREFIX = "clara_profile_cache:";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
+}
+
+function normalizeAdminPreviewMode(value: unknown): AdminPreviewMode | null {
+  if (value === "clinical" || value === "research" || value === "personal") {
+    return value;
+  }
+  return null;
 }
 
 function tryGetStorageItem(storage: Storage, key: string): string | null {
@@ -48,6 +61,53 @@ function setClientSessionCookie(enabled: boolean): void {
   document.cookie = `${CLIENT_SESSION_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
 }
 
+export function setAdminPreviewCookie(mode: AdminPreviewMode | null): void {
+  if (!isBrowser()) return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const validMode = normalizeAdminPreviewMode(mode);
+  if (validMode) {
+    document.cookie = `${ADMIN_PREVIEW_COOKIE_NAME}=${encodeURIComponent(validMode)}; Path=/; Max-Age=${60 * 60 * 24 * 7}; SameSite=Lax${secure}`;
+    return;
+  }
+  document.cookie = `${ADMIN_PREVIEW_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+}
+
+function getAdminPreviewCookie(): AdminPreviewMode | null {
+  if (!isBrowser()) return null;
+  try {
+    const cookies = document.cookie ? document.cookie.split(";") : [];
+    for (const chunk of cookies) {
+      const [rawKey, ...rest] = chunk.trim().split("=");
+      if (rawKey !== ADMIN_PREVIEW_COOKIE_NAME) continue;
+      const value = rest.join("=");
+      if (!value) continue;
+      return normalizeAdminPreviewMode(decodeURIComponent(value));
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export function getStoredAdminPreviewMode(): AdminPreviewMode | null {
+  if (!isBrowser()) return null;
+  const fromStorage = tryGetStorageItem(window.localStorage, ADMIN_PREVIEW_STORAGE_KEY);
+  const normalized = normalizeAdminPreviewMode(fromStorage);
+  if (normalized) return normalized;
+  return getAdminPreviewCookie();
+}
+
+export function setStoredAdminPreviewMode(mode: AdminPreviewMode | null): void {
+  if (!isBrowser()) return;
+  const normalized = normalizeAdminPreviewMode(mode);
+  if (normalized) {
+    trySetStorageItem(window.localStorage, ADMIN_PREVIEW_STORAGE_KEY, normalized);
+  } else {
+    tryRemoveStorageItem(window.localStorage, ADMIN_PREVIEW_STORAGE_KEY);
+  }
+  setAdminPreviewCookie(normalized);
+}
+
 function purgeLegacySessionTokens(): void {
   if (!isBrowser()) return;
   // Earlier builds wrote bearer credentials to sessionStorage. Remove them on
@@ -67,6 +127,8 @@ export function clearTokens(): void {
   if (!isBrowser()) return;
   purgeLegacySessionTokens();
   tryRemoveStorageItem(window.localStorage, ROLE_KEY);
+  tryRemoveStorageItem(window.localStorage, ADMIN_PREVIEW_STORAGE_KEY);
+  setAdminPreviewCookie(null);
   tryRemoveStorageItem(window.localStorage, ACTIVE_PROFILE_STORAGE_KEY);
   for (const storage of [window.sessionStorage, window.localStorage]) {
     try {
@@ -92,7 +154,9 @@ export function getRole(): UserRole {
 
 export function setRole(role: UserRole): void {
   if (!isBrowser()) return;
-  trySetStorageItem(window.localStorage, ROLE_KEY, role);
+  if (role === "researcher" || role === "doctor" || role === "admin" || role === "normal") {
+    trySetStorageItem(window.localStorage, ROLE_KEY, role);
+  }
 }
 
 export function getCsrfToken(): string | null {

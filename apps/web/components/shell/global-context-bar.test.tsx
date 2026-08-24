@@ -1,14 +1,17 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GlobalContextBar } from "./global-context-bar";
+import { GlobalContextBar, CORE_WORKSPACES } from "./global-context-bar";
 import { PreferenceContext } from "./preference-provider";
 import { ProfileBoundaryContext } from "./profile-boundary";
 import { SessionContext } from "./session-boundary";
 import { ShellModeProvider } from "./shell-mode-provider";
 
+const mockPush = vi.fn();
+const mockRefresh = vi.fn();
+
 vi.mock("next/navigation", () => ({
   usePathname: () => "/home",
-  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+  useRouter: () => ({ refresh: mockRefresh, push: mockPush }),
 }));
 
 describe("GlobalContextBar", () => {
@@ -138,9 +141,10 @@ describe("GlobalContextBar", () => {
     renderBar({}, { role: "normal" });
 
     expect(screen.queryByText(/Chế độ xem trước \(Admin Preview\)/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Không gian làm việc \(Workspaces\)/)).toBeInTheDocument();
   });
 
-  it("renders 4 admin preview mode options when role is admin and invokes setAdminPreviewMode on selection", () => {
+  it("renders 4 workspace options when role is admin and invokes setAdminPreviewMode & router.push on selection", () => {
     const setAdminPreviewMode = vi.fn();
     renderBar(
       {},
@@ -155,11 +159,11 @@ describe("GlobalContextBar", () => {
     // Section header
     expect(screen.getByText(/Chế độ xem trước \(Admin Preview\)/)).toBeInTheDocument();
 
-    // 4 Workspace Options
-    const adminOpt = screen.getByRole("button", { name: /Quản trị viên \(Administration\)/ });
-    const clinicalOpt = screen.getByRole("button", { name: /Lâm sàng \(Clinical\)/ });
-    const researchOpt = screen.getByRole("button", { name: /Nghiên cứu \(Research\)/ });
-    const personalOpt = screen.getByRole("button", { name: /Cá nhân \(Personal\)/ });
+    // 4 Workspace Options in main switcher dropdown
+    const adminOpt = screen.getByRole("button", { name: /^Quản trị viên \(Admin\)/ });
+    const clinicalOpt = screen.getByRole("button", { name: /^Bác sĩ Lâm sàng \(Doctor \/ Clinical\)/ });
+    const researchOpt = screen.getByRole("button", { name: /^Nhà nghiên cứu \(Researcher \/ Evidence\)/ });
+    const personalOpt = screen.getByRole("button", { name: /^Người dùng Cá nhân \(Personal \/ Consumer\)/ });
 
     expect(adminOpt).toBeInTheDocument();
     expect(clinicalOpt).toBeInTheDocument();
@@ -169,18 +173,22 @@ describe("GlobalContextBar", () => {
     // Select Clinical Preview
     fireEvent.click(clinicalOpt);
     expect(setAdminPreviewMode).toHaveBeenCalledWith("clinical");
+    expect(mockPush).toHaveBeenCalledWith("/dashboard");
 
     // Select Research Preview
     fireEvent.click(researchOpt);
     expect(setAdminPreviewMode).toHaveBeenCalledWith("research");
+    expect(mockPush).toHaveBeenCalledWith("/evidence");
 
     // Select Personal Preview
     fireEvent.click(personalOpt);
     expect(setAdminPreviewMode).toHaveBeenCalledWith("personal");
+    expect(mockPush).toHaveBeenCalledWith("/today");
 
     // Select Administration (reset)
     fireEvent.click(adminOpt);
     expect(setAdminPreviewMode).toHaveBeenCalledWith(null);
+    expect(mockPush).toHaveBeenCalledWith("/admin/overview");
   });
 
   it("updates the active pill label and styling in ContextBar when adminPreviewMode is active", () => {
@@ -196,5 +204,54 @@ describe("GlobalContextBar", () => {
     // Context bar summary button should reflect clinical preview
     expect(screen.getByLabelText(/Chế độ xem trước: Lâm sàng/)).toBeInTheDocument();
     expect(screen.getByText("Xem trước: Lâm sàng")).toBeInTheDocument();
+    expect(screen.getAllByText("Preview · Clinical").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders all 5 shell display modes and switches mode on click", () => {
+    renderBar();
+
+    expect(screen.getByText(/Chế độ giao diện \(5 Shell Modes\)/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Khám phá/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Tập trung/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Toàn màn hình/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Đọc tài liệu/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Dữ liệu cô đọng/ })).toBeInTheDocument();
+
+    const focusModeBtn = screen.getByRole("button", { name: /Tập trung/ });
+    fireEvent.click(focusModeBtn);
+  });
+
+  it("surfaces active role and quick workspace switch shortcuts in user profile dropdown menu", () => {
+    const setAdminPreviewMode = vi.fn();
+    renderBar(
+      {},
+      {
+        role: "admin",
+        effectiveRole: "doctor",
+        adminPreviewMode: "clinical",
+        setAdminPreviewMode,
+      },
+    );
+
+    // Active role in profile header
+    expect(screen.getByText("Admin (Xem trước: Lâm sàng)")).toBeInTheDocument();
+
+    // Quick workspace shortcuts section
+    expect(screen.getByText("Chuyển không gian")).toBeInTheDocument();
+
+    const quickAdmin = screen.getByRole("button", { name: "Chuyển tới Quản trị viên (Admin)" });
+    const quickClinical = screen.getByRole("button", { name: "Chuyển tới Bác sĩ Lâm sàng (Doctor / Clinical)" });
+    const quickResearch = screen.getByRole("button", { name: "Chuyển tới Nhà nghiên cứu (Researcher / Evidence)" });
+    const quickPersonal = screen.getByRole("button", { name: "Chuyển tới Người dùng Cá nhân (Personal / Consumer)" });
+
+    expect(quickAdmin).toBeInTheDocument();
+    expect(quickClinical).toBeInTheDocument();
+    expect(quickResearch).toBeInTheDocument();
+    expect(quickPersonal).toBeInTheDocument();
+
+    // Click quick shortcut
+    fireEvent.click(quickPersonal);
+    expect(setAdminPreviewMode).toHaveBeenCalledWith("personal");
+    expect(mockPush).toHaveBeenCalledWith("/today");
   });
 });

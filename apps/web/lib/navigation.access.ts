@@ -84,23 +84,33 @@ function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
-export function isPublicRoute(pathname: string): boolean {
+function cleanPathname(pathname?: string | null): string {
+  if (typeof pathname !== "string") return "/";
+  const trimmed = pathname.trim();
+  if (!trimmed) return "/";
+  return trimmed.split("?")[0].split("#")[0].trim() || "/";
+}
+
+export function isPublicRoute(pathname?: string | null): boolean {
+  const clean = cleanPathname(pathname);
   return (
-    PUBLIC_ROUTES.has(pathname) ||
-    pathname.startsWith("/share/") ||
-    pathname.startsWith("/chat/share/") ||
-    pathname.startsWith("/phr/shared/")
+    PUBLIC_ROUTES.has(clean) ||
+    clean.startsWith("/share/") ||
+    clean.startsWith("/chat/share/") ||
+    clean.startsWith("/phr/shared/")
   );
 }
 
-export function isAuthenticatedUtilityRoute(pathname: string): boolean {
+export function isAuthenticatedUtilityRoute(pathname?: string | null): boolean {
+  const clean = cleanPathname(pathname);
   return (
-    AUTHENTICATED_UTILITY_ROUTES.has(pathname) ||
-    AUTHENTICATED_UTILITY_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+    AUTHENTICATED_UTILITY_ROUTES.has(clean) ||
+    AUTHENTICATED_UTILITY_PREFIXES.some((prefix) => clean.startsWith(prefix))
   );
 }
 
-export function getRoleHomePath(role: UserRole = "normal"): string {
+export function getRoleHomePath(role?: UserRole | null): string {
+  if (!role) return DEFAULT_POST_LOGIN_PATH;
   return ROLE_HOME_PATHS[role] ?? DEFAULT_POST_LOGIN_PATH;
 }
 
@@ -125,26 +135,34 @@ export function resolvePostLoginPath(options: {
   return sanitizeNextPath(options.nextPath) ?? getRoleHomePath(options.role ?? "normal");
 }
 
-export function isRouteAllowedForRole(pathname: string, role: UserRole): boolean {
-  // Invariant: Admin role has full implicit access to all features across the platform
+export function isRouteAllowedForRole(
+  pathname?: string | null,
+  role: UserRole = "normal",
+): boolean {
+  // Invariant: Admin role has full implicit access to all features across the platform in any workspace view
   if (role === "admin") {
     return true;
   }
 
-  if (pathname === "/community" || pathname.startsWith("/community/")) {
+  const clean = cleanPathname(pathname);
+  if (!clean || clean === "/") {
+    return false;
+  }
+
+  if (clean === "/community" || clean.startsWith("/community/")) {
     return isFlagOn(process.env.NEXT_PUBLIC_SOCIAL_PLATFORM_ENABLED);
   }
-  if (pathname === "/account/consent" || pathname.startsWith("/account/consent/")) {
+  if (clean === "/account/consent" || clean.startsWith("/account/consent/")) {
     return isFlagOn(process.env.NEXT_PUBLIC_COMPLIANCE_GRANULAR_CONSENT_ENABLED);
   }
-  if (pathname === "/account/data" || pathname.startsWith("/account/data/")) {
+  if (clean === "/account/data" || clean.startsWith("/account/data/")) {
     return isFlagOn(process.env.NEXT_PUBLIC_COMPLIANCE_DSAR_ENABLED);
   }
-  if (pathname === "/admin/dsar" || pathname.startsWith("/admin/dsar/")) {
+  if (clean === "/admin/dsar" || clean.startsWith("/admin/dsar/")) {
     return isFlagOn(process.env.NEXT_PUBLIC_COMPLIANCE_DSAR_ENABLED);
   }
 
   return ROUTE_ACCESS.some(
-    (entry) => entry.roles.includes(role) && matchesPrefix(pathname, entry.prefix),
+    (entry) => entry.roles.includes(role) && matchesPrefix(clean, entry.prefix),
   );
 }

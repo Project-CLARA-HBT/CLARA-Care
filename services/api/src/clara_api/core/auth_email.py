@@ -281,6 +281,11 @@ def _send_via_smtp(
     msg.add_alternative(html_body, subtype="html")
 
     try:
+        raw_password = (
+            settings.smtp_password.get_secret_value()
+            if hasattr(settings.smtp_password, "get_secret_value")
+            else str(settings.smtp_password or "")
+        )
         if settings.smtp_use_ssl:
             with smtplib.SMTP_SSL(
                 host=settings.smtp_host,
@@ -288,7 +293,7 @@ def _send_via_smtp(
                 timeout=settings.smtp_timeout_seconds,
             ) as smtp:
                 if settings.smtp_username:
-                    smtp.login(settings.smtp_username, settings.smtp_password)
+                    smtp.login(settings.smtp_username, raw_password)
                 smtp.send_message(msg)
         else:
             with smtplib.SMTP(
@@ -299,7 +304,7 @@ def _send_via_smtp(
                 if settings.smtp_use_tls:
                     smtp.starttls()
                 if settings.smtp_username:
-                    smtp.login(settings.smtp_username, settings.smtp_password)
+                    smtp.login(settings.smtp_username, raw_password)
                 smtp.send_message(msg)
     except smtplib.SMTPAuthenticationError as exc:
         logger.warning(

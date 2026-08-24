@@ -48,46 +48,46 @@ export interface FloatingPrimaryDockProps {
   className?: string;
 }
 
-const CONSUMER_DOCK_ITEMS: DockNavItem[] = [
+export const CONSUMER_DOCK_ITEMS: DockNavItem[] = [
   {
-    id: "home",
-    href: "/home",
+    id: "today",
+    href: "/today",
     label: "Hôm nay",
     icon: "calendar",
-    activeMatchPrefix: ["/home", "/today"],
+    activeMatchPrefix: ["/today", "/home"],
   },
   {
-    id: "health",
-    href: "/health",
-    label: "Sức khỏe",
+    id: "lifemap",
+    href: "/lifemap",
+    label: "Hành trình",
     icon: "body",
-    activeMatchPrefix: ["/health", "/phr", "/medicines", "/lifemap"],
+    activeMatchPrefix: ["/lifemap", "/phr"],
   },
   {
-    id: "ask",
-    href: "/ask",
+    id: "chat",
+    href: "/chat",
     label: "Hỏi CLARA",
     icon: "chat",
     isCenterHighlight: true,
-    activeMatchPrefix: ["/ask", "/chat"],
+    activeMatchPrefix: ["/chat", "/ask"],
   },
   {
-    id: "care",
-    href: "/care",
-    label: "Chăm sóc",
-    icon: "clinical-notes",
-    activeMatchPrefix: ["/care", "/visits"],
+    id: "medicines",
+    href: "/medicines",
+    label: "Thuốc men",
+    icon: "medication",
+    activeMatchPrefix: ["/medicines", "/health/medications"],
   },
   {
     id: "you",
     href: "/you",
     label: "Cá nhân",
     icon: "user-card",
-    activeMatchPrefix: ["/you", "/family", "/account"],
+    activeMatchPrefix: ["/you", "/family", "/visits"],
   },
 ];
 
-const DOCTOR_DOCK_ITEMS: DockNavItem[] = [
+export const DOCTOR_DOCK_ITEMS: DockNavItem[] = [
   {
     id: "dashboard",
     href: "/dashboard",
@@ -96,26 +96,26 @@ const DOCTOR_DOCK_ITEMS: DockNavItem[] = [
     activeMatchPrefix: ["/dashboard"],
   },
   {
-    id: "scribe",
-    href: "/scribe",
-    label: "Scribe",
-    icon: "mic",
-    isCenterHighlight: true,
-    activeMatchPrefix: ["/scribe"],
-  },
-  {
     id: "council",
     href: "/council",
-    label: "Council",
+    label: "Hội chẩn",
     icon: "contact",
     activeMatchPrefix: ["/council"],
   },
   {
-    id: "clinical",
-    href: "/care",
-    label: "Lâm sàng",
-    icon: "clinical-notes",
-    activeMatchPrefix: ["/care", "/clinical", "/visits"],
+    id: "chat",
+    href: "/chat",
+    label: "Hỏi CLARA",
+    icon: "chat",
+    isCenterHighlight: true,
+    activeMatchPrefix: ["/chat", "/ask"],
+  },
+  {
+    id: "scribe",
+    href: "/scribe",
+    label: "Scribe",
+    icon: "mic",
+    activeMatchPrefix: ["/scribe"],
   },
   {
     id: "evidence",
@@ -126,74 +126,81 @@ const DOCTOR_DOCK_ITEMS: DockNavItem[] = [
   },
 ];
 
-const RESEARCHER_DOCK_ITEMS: DockNavItem[] = [
-  {
-    id: "research",
-    href: "/research",
-    label: "Tra cứu",
-    icon: "search",
-    activeMatchPrefix: ["/research"],
-  },
+export const RESEARCHER_DOCK_ITEMS: DockNavItem[] = [
   {
     id: "evidence",
     href: "/evidence",
     label: "Bằng chứng",
     icon: "scan",
-    isCenterHighlight: true,
-    activeMatchPrefix: ["/evidence"],
+    activeMatchPrefix: ["/evidence", "/research/evidence"],
   },
   {
-    id: "ask",
-    href: "/ask",
-    label: "Hỏi đáp",
+    id: "source-hub",
+    href: "/research/source-hub",
+    label: "Nguồn Y văn",
+    icon: "folder",
+    activeMatchPrefix: ["/research/source-hub", "/research/sources", "/research"],
+  },
+  {
+    id: "chat",
+    href: "/chat",
+    label: "Hỏi CLARA",
     icon: "chat",
-    activeMatchPrefix: ["/ask", "/chat"],
+    isCenterHighlight: true,
+    activeMatchPrefix: ["/chat", "/ask"],
   },
   {
     id: "dashboard",
     href: "/dashboard",
-    label: "Hệ thống",
+    label: "Tổng quan",
     icon: "calendar",
     activeMatchPrefix: ["/dashboard"],
+  },
+  {
+    id: "you",
+    href: "/you",
+    label: "Cá nhân",
+    icon: "user-card",
+    activeMatchPrefix: ["/you", "/account"],
   },
 ];
 
-const ADMIN_DOCK_ITEMS: DockNavItem[] = [
+export const ADMIN_DOCK_ITEMS: DockNavItem[] = [
   {
-    id: "control-tower",
-    href: "/admin",
-    label: "Điều phối",
-    icon: "settings",
-    activeMatchPrefix: ["/admin"],
-  },
-  {
-    id: "observability",
-    href: "/admin/observability",
-    label: "Giám sát",
-    icon: "progress",
-    isCenterHighlight: true,
-    activeMatchPrefix: ["/admin/observability"],
-  },
-  {
-    id: "flow-debugger",
-    href: "/admin/flow-debugger",
-    label: "Luồng RAG",
-    icon: "scan",
-    activeMatchPrefix: ["/admin/flow-debugger"],
-  },
-  {
-    id: "dsar",
-    href: "/admin/dsar",
-    label: "Kiểm toán",
-    icon: "clinical-notes",
-    activeMatchPrefix: ["/admin/dsar"],
-  },
-  {
-    id: "dashboard",
-    href: "/dashboard",
-    label: "Hệ thống",
+    id: "overview",
+    href: "/admin/overview",
+    label: "Tổng quan",
     icon: "calendar",
-    activeMatchPrefix: ["/dashboard"],
+    activeMatchPrefix: ["/admin/overview", "/admin"],
+  },
+  {
+    id: "users",
+    href: "/admin/users",
+    label: "Người dùng",
+    icon: "user-card",
+    activeMatchPrefix: ["/admin/users"],
+  },
+  {
+    id: "chat",
+    href: "/chat",
+    label: "Hỏi CLARA",
+    icon: "chat",
+    isCenterHighlight: true,
+    activeMatchPrefix: ["/chat", "/ask"],
+  },
+  {
+    id: "system",
+    href: "/admin/system",
+    label: "Hệ thống",
+    icon: "settings",
+    activeMatchPrefix: ["/admin/system", "/admin/observability", "/admin/flow-debugger"],
+  },
+  {
+    id: "audit",
+    href: "/admin/audit",
+    label: "Nhật ký",
+    icon: "clinical-notes",
+    activeMatchPrefix: ["/admin/audit", "/admin/audit-log", "/admin/dsar"],
   },
 ];
 
@@ -276,6 +283,7 @@ export function FloatingPrimaryDock({
   if (dockState === "HIDDEN_WITH_ESCAPE") {
     return (
       <div
+        data-testid="floating-primary-dock"
         className={[
           "fixed bottom-3 left-1/2 -translate-x-1/2 z-50 transition-all duration-300",
           className,
@@ -302,6 +310,7 @@ export function FloatingPrimaryDock({
   if (dockState === "ORB_ONLY") {
     return (
       <div
+        data-testid="floating-primary-dock"
         className={[
           "fixed bottom-5 right-5 z-50 flex items-center gap-3 transition-all duration-300",
           className,
@@ -333,6 +342,7 @@ export function FloatingPrimaryDock({
     return (
       <div
         ref={dockNavRef}
+        data-testid="floating-primary-dock"
         className={[
           "fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(94vw,680px)]",
           "rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-header)]/90 backdrop-blur-xl",
@@ -418,6 +428,7 @@ export function FloatingPrimaryDock({
     return (
       <nav
         ref={dockNavRef}
+        data-testid="floating-primary-dock"
         className={[
           "fixed bottom-4 left-1/2 -translate-x-1/2 z-50",
           "flex items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-header)]/90 backdrop-blur-xl",
@@ -488,6 +499,7 @@ export function FloatingPrimaryDock({
   return (
     <nav
       ref={dockNavRef}
+      data-testid="floating-primary-dock"
       className={[
         "fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(96vw,840px)]",
         "rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-header)]/92 backdrop-blur-2xl",
@@ -539,10 +551,16 @@ export function FloatingPrimaryDock({
                       ? "bg-[var(--brand-600)] text-white ring-2 ring-[var(--brand-500)]/40"
                       : "bg-[var(--interactive-primary-idle)] text-[var(--on-primary)] hover:bg-[var(--interactive-primary-hover)]",
                   ].join(" ")}
+                  aria-label={item.label}
                   aria-current={active ? "page" : undefined}
                   title={item.label}
                 >
-                  <Icon name={item.icon} size={16} aria-hidden="true" />
+                  <ClaraOrb
+                    size="sm"
+                    state={orbState}
+                    interactive={false}
+                    showTooltip={false}
+                  />
                   <span className="whitespace-nowrap">{item.label}</span>
                 </Link>
               );

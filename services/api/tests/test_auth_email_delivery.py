@@ -126,7 +126,7 @@ def test_default_smtp_settings() -> None:
     assert settings.smtp_host == "smtp.gmail.com"
     assert settings.smtp_port == 587
     assert settings.smtp_username == "noreply@theclaracare.com"
-    assert settings.smtp_password == "pyjqhbubsdzegqoo"
+    assert settings.smtp_password.get_secret_value() == ""
     assert settings.smtp_from_email == "noreply@theclaracare.com"
     assert settings.smtp_use_tls is True
     assert settings.smtp_use_ssl is False
@@ -169,6 +169,7 @@ def test_register_smtp_auth_error_safety_and_clean_logging(monkeypatch, caplog) 
     monkeypatch.setenv("AUTH_REQUIRE_EMAIL_VERIFICATION", "true")
     monkeypatch.setenv("AUTH_EMAIL_DELIVERY_MODE", "smtp")
     monkeypatch.setenv("AUTH_EXPOSE_ACTION_TOKEN_PREVIEW", "false")
+    monkeypatch.setenv("SMTP_PASSWORD", "test-ephemeral-pass")
     _clear_settings_cache()
 
     class MockSMTP:

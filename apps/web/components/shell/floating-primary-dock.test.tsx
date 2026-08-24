@@ -26,10 +26,10 @@ describe("FloatingPrimaryDock", () => {
     );
 
     expect(screen.getByRole("navigation", { name: "Thanh điều hướng chính" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Hôm nay" })).toHaveAttribute("href", "/home");
-    expect(screen.getByRole("link", { name: "Sức khỏe" })).toHaveAttribute("href", "/health");
-    expect(screen.getByRole("link", { name: "Hỏi CLARA" })).toHaveAttribute("href", "/ask");
-    expect(screen.getByRole("link", { name: "Chăm sóc" })).toHaveAttribute("href", "/care");
+    expect(screen.getByRole("link", { name: "Hôm nay" })).toHaveAttribute("href", "/today");
+    expect(screen.getByRole("link", { name: "Hành trình" })).toHaveAttribute("href", "/lifemap");
+    expect(screen.getByRole("link", { name: "Hỏi CLARA" })).toHaveAttribute("href", "/chat");
+    expect(screen.getByRole("link", { name: "Thuốc men" })).toHaveAttribute("href", "/medicines");
     expect(screen.getByRole("link", { name: "Cá nhân" })).toHaveAttribute("href", "/you");
   });
 
@@ -42,9 +42,9 @@ describe("FloatingPrimaryDock", () => {
     );
 
     expect(screen.getByRole("link", { name: "Tổng quan" })).toHaveAttribute("href", "/dashboard");
+    expect(screen.getByRole("link", { name: "Hội chẩn" })).toHaveAttribute("href", "/council");
+    expect(screen.getByRole("link", { name: "Hỏi CLARA" })).toHaveAttribute("href", "/chat");
     expect(screen.getByRole("link", { name: "Scribe" })).toHaveAttribute("href", "/scribe");
-    expect(screen.getByRole("link", { name: "Council" })).toHaveAttribute("href", "/council");
-    expect(screen.getByRole("link", { name: "Lâm sàng" })).toHaveAttribute("href", "/care");
     expect(screen.getByRole("link", { name: "Bằng chứng" })).toHaveAttribute("href", "/evidence");
   });
 
@@ -55,8 +55,11 @@ describe("FloatingPrimaryDock", () => {
       </ShellModeProvider>,
     );
 
-    expect(screen.getByRole("link", { name: "Tra cứu" })).toHaveAttribute("href", "/research");
     expect(screen.getByRole("link", { name: "Bằng chứng" })).toHaveAttribute("href", "/evidence");
+    expect(screen.getByRole("link", { name: "Nguồn Y văn" })).toHaveAttribute("href", "/research/source-hub");
+    expect(screen.getByRole("link", { name: "Hỏi CLARA" })).toHaveAttribute("href", "/chat");
+    expect(screen.getByRole("link", { name: "Tổng quan" })).toHaveAttribute("href", "/dashboard");
+    expect(screen.getByRole("link", { name: "Cá nhân" })).toHaveAttribute("href", "/you");
   });
 
   it("renders admin items for admin role", () => {
@@ -66,8 +69,11 @@ describe("FloatingPrimaryDock", () => {
       </ShellModeProvider>,
     );
 
-    expect(screen.getByRole("link", { name: "Điều phối" })).toHaveAttribute("href", "/admin");
-    expect(screen.getByRole("link", { name: "Giám sát" })).toHaveAttribute("href", "/admin/observability");
+    expect(screen.getByRole("link", { name: "Tổng quan" })).toHaveAttribute("href", "/admin/overview");
+    expect(screen.getByRole("link", { name: "Người dùng" })).toHaveAttribute("href", "/admin/users");
+    expect(screen.getByRole("link", { name: "Hỏi CLARA" })).toHaveAttribute("href", "/chat");
+    expect(screen.getByRole("link", { name: "Hệ thống" })).toHaveAttribute("href", "/admin/system");
+    expect(screen.getByRole("link", { name: "Nhật ký" })).toHaveAttribute("href", "/admin/audit");
   });
 
   it("morphs into COMPACT state", () => {
