@@ -72,7 +72,7 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
   );
   const isChatLayout = pathname === "/chat" || pathname.startsWith("/chat/");
   const isImmersive = shellMode.isImmersive || isImmersivePath;
-  const hideBottomDock = shellMode.isImmersive;
+  const hideBottomDock = isImmersive;
 
   // Fallback hydration if outside SessionBoundary
   useEffect(() => {

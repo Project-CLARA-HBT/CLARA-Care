@@ -145,7 +145,7 @@ function Composer(props: ComposerProps) {
   return (
     <form
       onSubmit={onSubmit}
-      className="sticky bottom-0 z-20 w-full bg-gradient-to-t from-[var(--bg-canvas)] via-[var(--bg-canvas)]/95 to-transparent px-3 pb-3 pt-2 sm:px-6 sm:pb-4"
+      className="sticky bottom-0 z-30 w-full bg-gradient-to-t from-[var(--bg-canvas)] via-[var(--bg-canvas)]/95 to-transparent px-3 pb-4 pt-2 sm:px-6 sm:pb-6"
       aria-label={t(uiLanguage, "chat.composer.aria")}
     >
       <div className="mx-auto w-full max-w-3xl">
@@ -168,7 +168,7 @@ function Composer(props: ComposerProps) {
         </div>
 
         {/* Floating Composer Container with Glow & Glass-Panel Shadow */}
-        <div className="rounded-2xl border border-[color:var(--shell-border)]/80 dark:border-[#2A3950] bg-[var(--surface-panel)]/95 dark:bg-[#111C29]/95 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition focus-within:border-[color:var(--brand-500)]/60 focus-within:ring-1 focus-within:ring-[color:var(--brand-500)]/30">
+        <div className="rounded-2xl border border-[color:var(--shell-border)]/90 bg-[var(--surface-panel)]/95 p-3.5 shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl transition focus-within:border-[color:var(--brand-500)] focus-within:ring-2 focus-within:ring-[color:var(--brand-500)]/20">
           {/* Medical prompt suggestions row */}
           {!isRunning ? (
             <div className="mb-2.5 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
@@ -283,7 +283,7 @@ function Composer(props: ComposerProps) {
                       className={[
                         "min-h-[28px] rounded-full px-2.5 sm:px-3 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]",
                         active
-                          ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)] shadow-xs"
+                          ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)] shadow-xs font-bold"
                           : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
                     >
@@ -343,35 +343,46 @@ function Composer(props: ComposerProps) {
                     <select
                       id="chat-source-depth"
                       value={retrievalStackMode}
-                      onChange={(event) =>
+                      onChange={(e) =>
                         onChangeRetrievalStackMode(
-                          event.target.value as ResearchRetrievalStackMode,
+                          e.target.value as ResearchRetrievalStackMode,
                         )
                       }
-                      className="min-h-[34px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[color:var(--brand-500)]"
+                      className="mb-2 w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1 text-xs text-[var(--text-primary)]"
                     >
                       <option value="auto">
                         {t(uiLanguage, "chat.composer.bestAvailable")}
                       </option>
-                      <option value="full">
+                      <option value="guidelines_first">
+                        {uiLanguage === "vi" ? "Ưu tiên Hướng dẫn lâm sàng" : "Guidelines First"}
+                      </option>
+                      <option value="clinical_trials">
+                        {uiLanguage === "vi" ? "Thử nghiệm lâm sàng" : "Clinical Trials"}
+                      </option>
+                      <option value="full_stack">
                         {t(uiLanguage, "chat.composer.allSources")}
                       </option>
                     </select>
+
                     {outputModesEnabled && canUseProfessionalOutput ? (
-                      <label className="mt-2 block px-0.5 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-                        {t(uiLanguage, "chat.composer.outputMode")}
+                      <label className="block pt-1">
+                        <span className="block px-0.5 pb-1.5 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
+                          {uiLanguage === "vi" ? "Phong cách đầu ra" : "Output Style"}
+                        </span>
                         <select
                           value={outputMode}
-                          onChange={(event) =>
-                            onChangeOutputMode(event.target.value as ResearchOutputMode)
+                          onChange={(e) =>
+                            onChangeOutputMode(
+                              e.target.value as ResearchOutputMode,
+                            )
                           }
-                          className="mt-1 min-h-[34px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[color:var(--brand-500)]"
+                          className="w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1 text-xs text-[var(--text-primary)]"
                         >
                           <option value="plain_language">
-                            {t(uiLanguage, "chat.composer.outputMode.plainLanguage")}
+                            {uiLanguage === "vi" ? "Ngôn ngữ phổ thông" : "Plain Language"}
                           </option>
                           <option value="professional">
-                            {t(uiLanguage, "chat.composer.outputMode.professional")}
+                            {uiLanguage === "vi" ? "Chuyên môn y khoa" : "Professional"}
                           </option>
                         </select>
                       </label>
@@ -392,7 +403,7 @@ function Composer(props: ComposerProps) {
             ) : (
               <IconButton
                 label={t(uiLanguage, "chat.composer.send")}
-                icon="arrow_upward"
+                icon="send"
                 variant="primary"
                 type="submit"
                 disabled={!query.trim()}
