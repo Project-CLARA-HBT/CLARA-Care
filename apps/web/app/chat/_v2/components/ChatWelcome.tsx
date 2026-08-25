@@ -151,7 +151,7 @@ export default function ChatWelcome({
       : specialistWelcomeContent(experience, uiLanguage);
 
   return (
-    <div className="clara-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-6 sm:py-12">
+    <div className="clara-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-8 pb-32 sm:px-6 sm:pt-12 sm:pb-40">
       {/* Centered reading column (760-900px) */}
       <section
         data-testid="chat-welcome"

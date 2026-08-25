@@ -145,10 +145,10 @@ function Composer(props: ComposerProps) {
   return (
     <form
       onSubmit={onSubmit}
-      className="sticky bottom-0 z-30 w-full bg-gradient-to-t from-[var(--bg-canvas)] via-[var(--bg-canvas)]/95 to-transparent px-3 pb-4 pt-2 sm:px-6 sm:pb-6"
+      className="sticky bottom-0 z-20 w-full bg-gradient-to-t from-[var(--bg-canvas)] via-[var(--bg-canvas)]/95 to-transparent px-3 pt-2 pb-20 sm:pb-24 sm:px-6 pointer-events-none"
       aria-label={t(uiLanguage, "chat.composer.aria")}
     >
-      <div className="mx-auto w-full max-w-3xl">
+      <div className="mx-auto w-full max-w-3xl pointer-events-auto">
         {/* Live region: streaming status updates (Req 5.2). */}
         <div
           role="status"

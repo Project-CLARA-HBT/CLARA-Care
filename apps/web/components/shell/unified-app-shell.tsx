@@ -71,8 +71,9 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
   const isChatLayout = pathname === "/chat" || pathname.startsWith("/chat/");
-  const isImmersive = shellMode.isImmersive || isImmersivePath;
-  const hideBottomDock = isImmersive;
+  const isImmersive = shellMode.isImmersive;
+  // Spec v8 §4.5 & §5.3: WorkspaceDock is active on Personal, Clinical, Research (including /chat); suppressed only on /admin/*
+  const hideBottomDock = pathname.startsWith("/admin/") || shellMode.isImmersive;
 
   // Fallback hydration if outside SessionBoundary
   useEffect(() => {

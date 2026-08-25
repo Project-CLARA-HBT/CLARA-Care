@@ -5,8 +5,9 @@ import "./landing-v7.css";
 import { MotionProvider } from "./runtime/motion-provider";
 import { LandingNav } from "./landing-nav";
 
-// All 20 Scenes in canonical storyboard chapter order
+// All Scenes in canonical storyboard chapter order
 import { HeroScene } from "./scenes/hero";
+import { SponsorsScene } from "./scenes/sponsors";
 import { TrustScene } from "./scenes/trust";
 import { ManifestoScene } from "./scenes/manifesto";
 import { HowScene } from "./scenes/how";
@@ -46,6 +47,9 @@ export function LandingV7() {
         <main id="main-content" role="main" className="relative flex flex-col w-full">
           {/* 1. Hero — Spatial Product Reveal (Peak 1) */}
           <HeroScene />
+
+          {/* 1.5. Institutional Partners & Infrastructure Sponsors */}
+          <SponsorsScene />
 
           {/* 2. Trust Transition */}
           <TrustScene />

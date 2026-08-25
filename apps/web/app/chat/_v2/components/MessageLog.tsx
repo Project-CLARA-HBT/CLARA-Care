@@ -65,10 +65,10 @@ function MessageLog({
       aria-relevant="additions text"
       aria-label={t(uiLanguage, "chat.messageLog.aria")}
     >
-      {/* Centered reading column (760–900px) */}
+      {/* Centered reading column (760–900px) with bottom clearance for Composer & Dock */}
       <div
         style={{ height: `${virtualizer.getTotalSize()}px` }}
-        className="relative mx-auto w-full max-w-[860px] px-4 sm:px-6 py-4"
+        className="relative mx-auto w-full max-w-[860px] px-4 sm:px-6 pt-4 pb-48 sm:pb-56"
       >
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const turn = turns[virtualRow.index];
