@@ -36,6 +36,7 @@ from clara_api.glhs.lock_hierarchy import (
     get_or_create_entity_partition,
     increment_partition_versions,
     is_postgres,
+    key_to_advisory_lock_pair,
     resolve_lock_class,
     resolve_lock_mode,
 )
@@ -306,25 +307,46 @@ def test_acquire_governance_anchor_sqlite_runs_safely(db: Session) -> None:
     acquire_advisory_xact_lock_shared(db, "test_shared")
 
 
+def test_key_to_advisory_lock_pair_64bit_sha256() -> None:
+    """Verify 64-bit SHA-256 pair derivation produces two 32-bit signed ints without collisions."""
+    k1, k2 = key_to_advisory_lock_pair("policy_epoch:__global__")
+    assert isinstance(k1, int)
+    assert isinstance(k2, int)
+    assert -2147483648 <= k1 <= 2147483647
+    assert -2147483648 <= k2 <= 2147483647
+
+    # Determinism
+    k1_b, k2_b = key_to_advisory_lock_pair("policy_epoch:__global__")
+    assert (k1, k2) == (k1_b, k2_b)
+
+    # Distinct keys produce distinct pairs
+    k1_med, k2_med = key_to_advisory_lock_pair("policy_epoch:medications")
+    assert (k1, k2) != (k1_med, k2_med)
+
+
 def test_acquire_governance_anchor_postgres_mocked() -> None:
     mock_db = MagicMock(spec=Session)
     mock_bind = MagicMock()
     mock_bind.dialect.name = "postgresql"
     mock_db.get_bind.return_value = mock_bind
 
+    k1, k2 = key_to_advisory_lock_pair("policy_epoch:__global__")
+
     # SHARED mode
     acquire_governance_anchor(mock_db, "policy_epoch:__global__", mode="SHARED")
     mock_db.execute.assert_called_once()
     sql_text = str(mock_db.execute.call_args[0][0])
-    assert "pg_advisory_xact_lock_shared" in sql_text
+    assert "pg_advisory_xact_lock_shared(:k1, :k2)" in sql_text
+    assert mock_db.execute.call_args[0][1] == {"k1": k1, "k2": k2}
 
     # EXCLUSIVE mode
     mock_db.reset_mock()
     acquire_governance_anchor(mock_db, "policy_epoch:__global__", mode="EXCLUSIVE")
     mock_db.execute.assert_called_once()
     sql_text = str(mock_db.execute.call_args[0][0])
-    assert "pg_advisory_xact_lock(" in sql_text
+    assert "pg_advisory_xact_lock(:k1, :k2)" in sql_text
     assert "pg_advisory_xact_lock_shared" not in sql_text
+    assert mock_db.execute.call_args[0][1] == {"k1": k1, "k2": k2}
 
 
 def test_acquire_policy_lock_anchor_canonical_sequence() -> None:
@@ -340,8 +362,10 @@ def test_acquire_policy_lock_anchor_canonical_sequence() -> None:
     assert mock_db.execute.call_count == 2
     first_call_params = mock_db.execute.call_args_list[0][0][1]
     second_call_params = mock_db.execute.call_args_list[1][0][1]
-    assert first_call_params == {"key": "policy_epoch:__global__"}
-    assert second_call_params == {"key": "policy_epoch:medications"}
+    k1_global, k2_global = key_to_advisory_lock_pair("policy_epoch:__global__")
+    k1_med, k2_med = key_to_advisory_lock_pair("policy_epoch:medications")
+    assert first_call_params == {"k1": k1_global, "k2": k2_global}
+    assert second_call_params == {"k1": k1_med, "k2": k2_med}
 
 
 def test_acquire_policy_lock_anchor_runs_safely_on_sqlite(db: Session) -> None:

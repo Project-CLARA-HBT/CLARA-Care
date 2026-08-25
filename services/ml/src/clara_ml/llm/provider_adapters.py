@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import re
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -112,6 +113,66 @@ class ModelResponse:
     usage: dict[str, int] | None = None
     raw_response: dict[str, Any] | None = None
     latency_ms: float = 0.0
+    reasoning_content: str = ""
+
+
+def sanitize_cot_content(raw_content: str, existing_reasoning: str = "") -> tuple[str, str]:
+    """Strip <think>...</think> tags and extract reasoning_content."""
+    if not raw_content:
+        return "", existing_reasoning
+
+    think_pattern = re.compile(r"<think>(.*?)(?:</think>|$)", flags=re.DOTALL)
+    extracted_reasoning = [
+        m.group(1).strip()
+        for m in think_pattern.finditer(raw_content)
+        if m.group(1).strip()
+    ]
+    clean_content = think_pattern.sub("", raw_content).strip()
+
+    combined_reasoning = existing_reasoning
+    if extracted_reasoning:
+        cot_text = "\n\n".join(extracted_reasoning)
+        if combined_reasoning:
+            combined_reasoning = f"{combined_reasoning}\n\n{cot_text}"
+        else:
+            combined_reasoning = cot_text
+
+    return clean_content, combined_reasoning
+
+
+def filter_cot_stream(chunks: Iterator[str]) -> Iterator[str]:
+    """Filter out <think>...</think> tokens from a streaming token generator."""
+    in_think = False
+    buffer = ""
+    for chunk in chunks:
+        buffer += chunk
+        while buffer:
+            if not in_think:
+                if "<think>" in buffer:
+                    prefix, _, remainder = buffer.partition("<think>")
+                    if prefix:
+                        yield prefix
+                    buffer = remainder
+                    in_think = True
+                elif "<" in buffer and "<think>".startswith(buffer[buffer.rfind("<") :]):
+                    break
+                else:
+                    yield buffer
+                    buffer = ""
+            else:
+                if "</think>" in buffer:
+                    _, _, remainder = buffer.partition("</think>")
+                    buffer = remainder
+                    in_think = False
+                else:
+                    last_less = buffer.rfind("<")
+                    if last_less != -1 and "</think>".startswith(buffer[last_less:]):
+                        buffer = buffer[last_less:]
+                    else:
+                        buffer = ""
+                    break
+    if not in_think and buffer:
+        yield buffer
 
 
 @dataclass(frozen=True)
@@ -201,6 +262,7 @@ class DeepSeekAdapter:
                 model=raw_response.model,
                 provider=self.provider_id,
                 latency_ms=latency_ms,
+                reasoning_content=getattr(raw_response, "reasoning_content", ""),
             )
         except CircuitBreakerOpenError as exc:
             raise GatewayServiceUnavailableError("DeepSeek circuit breaker open") from exc
@@ -227,7 +289,9 @@ class DeepSeekAdapter:
     def stream(self, request: ModelRequest) -> Iterator[str]:
         # For DeepSeekAdapter, fallback to generate content chunks
         response = self.generate(request)
-        yield response.content
+        for chunk in filter_cot_stream(iter([response.content])):
+            if chunk:
+                yield chunk
 
     def health_probe(self, route: ResolvedRoute | None = None) -> ProbeResult:
         start_time = time.monotonic()
@@ -378,43 +442,64 @@ class UnofficialGeminiGatewayAdapter:
             payload["response_format"] = {"type": "json_object"}
         return payload
 
-    def _extract_content(self, data: dict[str, Any]) -> str:
+    def _extract_content(self, data: dict[str, Any]) -> tuple[str, str]:
         choices = data.get("choices")
+        reasoning = ""
+        raw_content = ""
         if isinstance(choices, list) and choices:
             first_choice = choices[0]
             if isinstance(first_choice, dict):
                 message = first_choice.get("message")
                 if isinstance(message, dict):
+                    reasoning_parts = message.get("reasoning_content")
+                    if isinstance(reasoning_parts, str):
+                        reasoning = reasoning_parts.strip()
                     content = message.get("content")
                     if isinstance(content, str):
-                        return content.strip()
-                    if isinstance(content, list):
+                        raw_content = content.strip()
+                    elif isinstance(content, list):
                         parts_list: list[str] = []
                         for p in content:
                             if isinstance(p, dict):
-                                parts_list.append(str(p.get("text", "")))
+                                if not p.get("thought"):
+                                    parts_list.append(str(p.get("text", "")))
+                                else:
+                                    reasoning = str(p.get("text", "")).strip()
                             elif p:
                                 parts_list.append(str(p))
-                        return "\n".join(parts_list).strip()
+                        raw_content = "\n".join(parts_list).strip()
         candidates = data.get("candidates")
-        if isinstance(candidates, list) and candidates:
+        if isinstance(candidates, list) and candidates and not raw_content:
             first = candidates[0]
             if isinstance(first, dict):
                 content_obj = first.get("content")
                 if isinstance(content_obj, dict):
                     cand_parts = content_obj.get("parts")
                     if isinstance(cand_parts, list) and cand_parts:
-                        text_parts = [str(p.get("text", "")) for p in cand_parts if isinstance(p, dict)]
-                        return "".join(text_parts).strip()
-        return ""
+                        text_parts = [
+                            str(p.get("text", ""))
+                            for p in cand_parts
+                            if isinstance(p, dict) and not p.get("thought")
+                        ]
+                        thought_parts = [
+                            str(p.get("text", ""))
+                            for p in cand_parts
+                            if isinstance(p, dict) and p.get("thought")
+                        ]
+                        raw_content = "".join(text_parts).strip()
+                        if thought_parts and not reasoning:
+                            reasoning = "\n".join(thought_parts).strip()
+        clean_content, clean_reasoning = sanitize_cot_content(raw_content, existing_reasoning=reasoning)
+        return clean_content, clean_reasoning
 
     def _parse_response_body(
         self, response: httpx.Response, fallback_model: str
-    ) -> tuple[str, str, dict[str, int] | None, dict[str, Any]]:
+    ) -> tuple[str, str, dict[str, int] | None, dict[str, Any], str]:
         raw_text = response.text.strip()
         content_type = response.headers.get("content-type", "")
         if "text/event-stream" in content_type or raw_text.startswith("data:"):
             content_parts: list[str] = []
+            reasoning_parts: list[str] = []
             res_model = fallback_model
             usage: dict[str, int] | None = None
             raw_data: dict[str, Any] = {"stream_events": []}
@@ -437,22 +522,29 @@ class UnofficialGeminiGatewayAdapter:
                         first = choices[0]
                         if isinstance(first, dict):
                             delta = first.get("delta")
-                            if isinstance(delta, dict) and "content" in delta and delta["content"]:
-                                content_parts.append(str(delta["content"]))
+                            if isinstance(delta, dict):
+                                if "content" in delta and delta["content"]:
+                                    content_parts.append(str(delta["content"]))
+                                if "reasoning_content" in delta and delta["reasoning_content"]:
+                                    reasoning_parts.append(str(delta["reasoning_content"]))
                             elif "text" in first and first["text"]:
                                 content_parts.append(str(first["text"]))
                 except Exception:
                     continue
-            content = "".join(content_parts).strip()
-            return content, res_model, usage, raw_data
+            full_content = "".join(content_parts).strip()
+            full_reasoning = "".join(reasoning_parts).strip()
+            clean_content, clean_reasoning = sanitize_cot_content(
+                full_content, existing_reasoning=full_reasoning
+            )
+            return clean_content, res_model, usage, raw_data, clean_reasoning
 
         data = response.json()
         if not isinstance(data, dict):
             raise GatewayInvalidResponseError("Gemini gateway returned non-dict JSON")
-        content = self._extract_content(data)
+        content, reasoning = self._extract_content(data)
         res_model = str(data.get("model") or fallback_model)
         usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
-        return content, res_model, usage, data
+        return content, res_model, usage, data, reasoning
 
     def generate(self, request: ModelRequest) -> ModelResponse:
         model = request.model or self._default_model
@@ -473,7 +565,9 @@ class UnofficialGeminiGatewayAdapter:
                 with httpx.Client(timeout=timeout) as client:
                     response = client.post(url, headers=headers, json=payload)
                     response.raise_for_status()
-                    content, res_model, usage, data = self._parse_response_body(response, model)
+                    content, res_model, usage, data, reasoning = self._parse_response_body(
+                        response, model
+                    )
 
                 if not content:
                     raise GatewayInvalidResponseError("Gemini gateway response content was empty")
@@ -487,6 +581,7 @@ class UnofficialGeminiGatewayAdapter:
                     usage=usage,
                     raw_response=data,
                     latency_ms=latency_ms,
+                    reasoning_content=reasoning,
                 )
             except httpx.TimeoutException as exc:
                 if attempt == attempts - 1:
@@ -533,38 +628,43 @@ class UnofficialGeminiGatewayAdapter:
             headers["Authorization"] = f"Bearer {self._api_key}"
             headers["x-goog-api-key"] = self._api_key
 
-        try:
-            with (
-                httpx.Client(timeout=timeout) as client,
-                client.stream("POST", url, headers=headers, json=payload) as response,
-            ):
-                response.raise_for_status()
-                for raw_line in response.iter_lines():
-                    line = str(raw_line).strip()
-                    if not line or not line.startswith("data:"):
-                        continue
-                    chunk_raw = line[5:].strip()
-                    if not chunk_raw or chunk_raw == "[DONE]":
-                        if chunk_raw == "[DONE]":
-                            break
-                        continue
-                    try:
-                        chunk_data = json.loads(chunk_raw)
-                        if isinstance(chunk_data, dict):
-                            choices = chunk_data.get("choices")
-                            if isinstance(choices, list) and choices:
-                                delta = choices[0].get("delta", {})
-                                delta_content = delta.get("content", "")
-                                if delta_content:
-                                    yield delta_content
-                    except json.JSONDecodeError:
-                        continue
-        except httpx.TimeoutException as exc:
-            raise GatewayTimeoutError("Gemini gateway stream timed out") from exc
-        except httpx.HTTPStatusError as exc:
-            raise GatewayError(f"Gemini gateway stream error (HTTP {exc.response.status_code})") from exc
-        except httpx.HTTPError as exc:
-            raise GatewayError(f"Gemini gateway stream transport failure: {exc}") from exc
+        def _raw_chunks() -> Iterator[str]:
+            try:
+                with (
+                    httpx.Client(timeout=timeout) as client,
+                    client.stream("POST", url, headers=headers, json=payload) as response,
+                ):
+                    response.raise_for_status()
+                    for raw_line in response.iter_lines():
+                        line = str(raw_line).strip()
+                        if not line or not line.startswith("data:"):
+                            continue
+                        chunk_raw = line[5:].strip()
+                        if not chunk_raw or chunk_raw == "[DONE]":
+                            if chunk_raw == "[DONE]":
+                                break
+                            continue
+                        try:
+                            chunk_data = json.loads(chunk_raw)
+                            if isinstance(chunk_data, dict):
+                                choices = chunk_data.get("choices")
+                                if isinstance(choices, list) and choices:
+                                    delta = choices[0].get("delta", {})
+                                    delta_content = delta.get("content", "")
+                                    if delta_content:
+                                        yield str(delta_content)
+                        except json.JSONDecodeError:
+                            continue
+            except httpx.TimeoutException as exc:
+                raise GatewayTimeoutError("Gemini gateway stream timed out") from exc
+            except httpx.HTTPStatusError as exc:
+                raise GatewayError(
+                    f"Gemini gateway stream error (HTTP {exc.response.status_code})"
+                ) from exc
+            except httpx.HTTPError as exc:
+                raise GatewayError(f"Gemini gateway stream transport failure: {exc}") from exc
+
+        yield from filter_cot_stream(_raw_chunks())
 
     def health_probe(self, route: ResolvedRoute | None = None) -> ProbeResult:
         start_time = time.monotonic()

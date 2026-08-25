@@ -5,9 +5,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 from evaluation.contract_clause_ablation.engine import VARIANTS, ContractCase, evaluate
 
@@ -85,10 +90,30 @@ def run(output: Path) -> dict[str, object]:
     return payload
 
 
+def freeze(root: Path | None = None) -> dict[str, object]:
+    contract_root = root or Path(__file__).resolve().parent
+    manifest_path = contract_root / "experiment_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    files_sha256 = {}
+    for filename in sorted(manifest.get("files_sha256", {}).keys() or ["engine.py", "run.py"]):
+        target = contract_root / filename
+        files_sha256[filename] = hashlib.sha256(target.read_bytes()).hexdigest()
+    manifest["files_sha256"] = files_sha256
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    return manifest
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--freeze", action="store_true", help="Freeze contract manifest checksums")
     args = parser.parse_args()
+    if args.freeze:
+        frozen = freeze()
+        print(json.dumps({"status": frozen["status"], "files_sha256": frozen["files_sha256"]}, sort_keys=True))
+        return 0
+    if args.output is None:
+        parser.error("--output is required when not using --freeze")
     result = run(args.output)
     print(json.dumps({"status": result["status"], "external_calls": 0}, sort_keys=True))
     return 0

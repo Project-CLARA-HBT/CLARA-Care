@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from clara_api.core.config import get_settings
 from clara_api.core.security import create_access_token
-from clara_api.db.models import LifeMapVisit, PhrProfile, PrivacyAuditReceipt, User
+from clara_api.db.models import PhrProfile, PrivacyAuditReceipt, User
 from clara_api.db.session import SessionLocal
 from clara_api.main import app
 
@@ -151,7 +152,7 @@ def test_admin_privacy_receipts_endpoint() -> None:
             result="pass",
             finding_count=0,
             artifact_digest="sha256:1234",
-            executed_at=datetime.now(timezone.utc),
+            executed_at=datetime.now(UTC),
         )
         db.add(receipt)
         db.commit()

@@ -1,7 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import PageShell from "@/components/ui/page-shell";
+import Link from "next/link";
+import { PageHeader } from "@/components/page/page-header";
+import { WorkflowLayout, type WorkflowStep } from "@/components/page/workflow-layout";
+import { SurfaceCard } from "@/components/ui/surface";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { ListRow } from "@/components/ui/list-row";
+import { InlineError } from "@/components/shared/inline-error";
+import { EmptyState } from "@/components/shared/empty-state";
 import Modal from "@/components/ui/modal";
 import EnterpriseReview from "@/components/scribe/enterprise-review";
 import TelemetryPanel from "@/components/telemetry/telemetry-panel";
@@ -30,6 +39,13 @@ import {
 type NoticeTone = "success" | "error";
 type WorkspaceMode = "workspace" | "review" | "enterprise";
 
+export type ScribeWorkflowStepId =
+  | "consent"
+  | "recording"
+  | "transcript"
+  | "soap"
+  | "finalize";
+
 type TranscriptRow = {
   id: string;
   timestamp: string;
@@ -48,26 +64,7 @@ type ScribeCopy = (
   values?: Record<string, string | number>,
 ) => string;
 
-// An idle recorder has no audio signal.  Keep the visual baseline flat; real
-// amplitude is populated only by the Web Audio analyser while recording.
 const DEFAULT_WAVE_BARS = Array.from({ length: 32 }, () => 8);
-const panelClass = "rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)]";
-const panelPaddedClass = `${panelClass} p-4`;
-const panelPaddedLgClass = `${panelClass} p-5`;
-const softPanelClass = "rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)]";
-const sectionTitleClass = "text-base font-semibold text-[color:var(--text-primary)]";
-const accentTitleClass = "text-base font-semibold text-[color:var(--text-primary)]";
-const bodyTextClass = "text-[color:var(--text-primary)]";
-const secondaryTextClass = "text-[color:var(--text-secondary)]";
-const mutedTextClass = "text-[color:var(--text-muted)]";
-const primaryButtonClass =
-  "min-h-11 rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 py-2 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[var(--surface-brand-soft)] disabled:text-[var(--text-primary)]";
-const secondaryButtonClass =
-  "min-h-11 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-brand-soft)] disabled:cursor-not-allowed disabled:opacity-60";
-const dangerButtonClass =
-  "min-h-11 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--error-container)] px-4 py-2 text-sm font-semibold text-[var(--on-error-container)] transition hover:opacity-90";
-const transcriptInputClass =
-  "min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition focus:border-[color:var(--brand-primary)] focus:bg-[var(--surface-panel)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15";
 
 function formatDate(language: UILanguage, value: string): string {
   const date = new Date(value);
@@ -146,8 +143,6 @@ function buildLiveInsights(session: ScribeSession | null, transcript: string, co
     ? (medicalRecord?.warnings as unknown[]).map((item) => String(item).trim()).filter(Boolean)
     : [];
 
-  // Backend-derived clinical text is sanitized through `stripTelemetryLabels`
-  // so internal telemetry jargon never reaches the End_User view (Req 4.1).
   const insights: LiveInsight[] = [];
   if (safeText(soap.assessment)) {
     insights.push({
@@ -197,51 +192,30 @@ function scribeStatusLabel(status: string | undefined, copy: ScribeCopy): string
   return copy("scribe.status.draft");
 }
 
-function scribeStatusBadgeClass(status: string | undefined): string {
-  const normalized = (status ?? "").trim().toLowerCase();
-  switch (normalized) {
-    case "recording":
-      return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]";
-    case "ready":
-    case "transcript_ready":
-      return "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)] text-[color:var(--text-brand)]";
-    case "signed":
-      return "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]";
-    case "exported":
-      return "border-[color:var(--brand-secondary)] bg-[var(--surface-brand-soft)] text-[var(--text-primary)]";
-    case "amended":
-      return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]";
-    case "in_review":
-    case "reviewed":
-    case "finalized":
-    case "completed":
-      return "border-[color:var(--brand-primary)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]";
-    case "error":
-    case "failed":
-      return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]";
-    default:
-      return "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
-  }
-}
-
 export default function ScribePage() {
   const language = useUILanguage();
+  const isVi = language !== "en";
   const copy = useCallback(
     (key: UITranslationKey, values: Record<string, string | number> = {}) => t(language, key, values),
     [language],
   );
+
   const soapSectionLabels = useMemo(() => [
-    { key: "subjective", title: copy("scribe.soap.subjective"), valueKey: "subjective" },
-    { key: "objective", title: copy("scribe.soap.objective"), valueKey: "objective" },
-    { key: "assessment", title: copy("scribe.soap.assessment"), valueKey: "assessment" },
-    { key: "plan", title: copy("scribe.soap.plan"), valueKey: "plan" },
-  ] as const, [copy]);
+    { key: "subjective", title: copy("scribe.soap.subjective"), valueKey: "subjective" as const },
+    { key: "objective", title: copy("scribe.soap.objective"), valueKey: "objective" as const },
+    { key: "assessment", title: copy("scribe.soap.assessment"), valueKey: "assessment" as const },
+    { key: "plan", title: copy("scribe.soap.plan"), valueKey: "plan" as const },
+  ], [copy]);
+
   const [mode, setMode] = useState<WorkspaceMode>("workspace");
   const [sessions, setSessions] = useState<ScribeSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
   const [selectedSession, setSelectedSession] = useState<ScribeSession | null>(null);
   const [transcriptDraft, setTranscriptDraft] = useState("");
   const [analytics, setAnalytics] = useState<ScribeAnalyticsSummary | null>(null);
+
+  // Workflow State Machine: 0: Consent, 1: Recording, 2: Transcript, 3: SOAP Draft, 4: Finalize
+  const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -253,6 +227,8 @@ export default function ScribePage() {
   const [isDeletingRecordingData, setIsDeletingRecordingData] = useState(false);
   const [showRecordingDataDeleteConfirmation, setShowRecordingDataDeleteConfirmation] = useState(false);
   const [recordingConsentCaptured, setRecordingConsentCaptured] = useState(false);
+  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
+  const [showTelemetryModal, setShowTelemetryModal] = useState(false);
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [lastTranscribeMs, setLastTranscribeMs] = useState<number | null>(null);
@@ -269,9 +245,6 @@ export default function ScribePage() {
   const recordingTickTimerRef = useRef<number | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  // Timer xoay vòng recorder: stop()/start() recorder mới mỗi chu kỳ để mỗi blob
-  // là một file webm hoàn chỉnh (start(timeslice) chỉ chunk đầu có header EBML,
-  // các chunk sau không decode độc lập được → backend 422).
   const recorderCycleTimerRef = useRef<number | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -290,7 +263,6 @@ export default function ScribePage() {
   }, [selectedSession]);
 
   const transcriptRows = useMemo(() => parseTranscriptRows(copy, transcriptDraft), [copy, transcriptDraft]);
-  const transcriptPreviewRows = useMemo(() => transcriptRows.slice(-40), [transcriptRows]);
   const liveInsights = useMemo(
     () => buildLiveInsights(selectedSession, transcriptDraft, copy),
     [copy, selectedSession, transcriptDraft]
@@ -331,8 +303,6 @@ export default function ScribePage() {
         setRecordingDataDeletionAvailable(capability.recording_data_deletion_available);
       }
     } catch {
-      // The server keeps this deployment capability fail-closed (404 when off).
-      // Do not surface a raw error or show a destructive control by inference.
       if (selectedSessionIdRef.current === sessionId) setRecordingDataDeletionAvailable(false);
     }
   }, []);
@@ -397,13 +367,24 @@ export default function ScribePage() {
         selectedSessionIdRef.current = detail.id;
         setSelectedSession(detail);
         setTranscriptDraft(detail.transcript ?? "");
+        transcriptDraftRef.current = detail.transcript ?? "";
+        const detailSoap = normalizeSoapSections(asRecord(detail.soap) ?? {});
+        const isConsentDone = Boolean(asRecord(detail.metadata)?.consent_captured || detail.status === "recording" || detail.status === "ready" || detail.status === "signed");
+        setRecordingConsentCaptured(isConsentDone);
         await refreshRecordingDataDeletionCapability(detail.id);
-      } else {
-        setSelectedSessionId(null);
-        selectedSessionIdRef.current = null;
-        setSelectedSession(null);
-        setTranscriptDraft("");
-        setRecordingDataDeletionAvailable(false);
+
+        // Auto-compute appropriate step
+        if (detail.status === "signed" || detail.status === "completed") {
+          setCurrentStepIndex(4);
+        } else if (safeText(detailSoap.assessment) || safeText(detailSoap.subjective)) {
+          setCurrentStepIndex(3);
+        } else if (safeText(detail.transcript)) {
+          setCurrentStepIndex(2);
+        } else if (isConsentDone) {
+          setCurrentStepIndex(1);
+        } else {
+          setCurrentStepIndex(0);
+        }
       }
     } catch (cause) {
       setError(safeUserFacingError(cause, copy("scribe.error.load")));
@@ -413,90 +394,84 @@ export default function ScribePage() {
   }, [copy, refreshRecordingDataDeletionCapability]);
 
   useEffect(() => {
+    setRole(getRole());
+    trackScribeViewed();
     void refreshData();
   }, [refreshData]);
-
-  useEffect(() => {
-    setRole(getRole());
-    // The Scribe surface was viewed (Req 9.1). Consent/PII guarded by the
-    // facade; only the coarse surface label is sent — no transcript or note.
-    trackScribeViewed();
-  }, []);
-
-  useEffect(() => {
-    selectedSessionIdRef.current = selectedSessionId;
-  }, [selectedSessionId]);
 
   useEffect(() => {
     transcriptDraftRef.current = transcriptDraft;
   }, [transcriptDraft]);
 
-  const saveTranscript = useCallback(
-    async (nextTranscript: string) => {
-      const sessionId = selectedSessionIdRef.current;
-      const activeSession = selectedSession;
-      if (!sessionId || !activeSession) return;
-      try {
-        const titleCandidate = nextTranscript.split("\n")[0]?.trim() ?? "";
-        const updated = await updateScribeSession(sessionId, {
-          transcript: nextTranscript,
-          title: titleCandidate ? titleCandidate.slice(0, 120) : activeSession.title,
-          status: "draft",
-        });
-        setSelectedSession(updated);
-        upsertSession(updated);
-      } catch (cause) {
-        setError(safeUserFacingError(cause, copy("scribe.error.saveTranscript")));
-      }
-    },
-    [copy, selectedSession, upsertSession]
-  );
-
   const schedulePersistTranscript = useCallback(
     (nextTranscript: string, immediate = false) => {
+      const sessionId = selectedSessionIdRef.current;
+      if (!sessionId) return;
+
       clearPersistTimer();
-      const delayMs = immediate ? 80 : 1200;
+      const execute = async () => {
+        setIsSaving(true);
+        try {
+          const updated = await updateScribeSession(sessionId, { transcript: nextTranscript });
+          if (selectedSessionIdRef.current === sessionId) {
+            setSelectedSession(updated);
+            upsertSession(updated);
+          }
+        } catch (cause) {
+          setError(safeUserFacingError(cause, copy("scribe.error.saveTranscript")));
+        } finally {
+          setIsSaving(false);
+        }
+      };
+
+      if (immediate) {
+        const p = execute();
+        pendingTranscriptSavesRef.current.add(p);
+        p.finally(() => pendingTranscriptSavesRef.current.delete(p));
+        return;
+      }
+
       persistTimerRef.current = window.setTimeout(() => {
-        const pendingSave = saveTranscript(nextTranscript);
-        pendingTranscriptSavesRef.current.add(pendingSave);
-        void pendingSave.finally(() => pendingTranscriptSavesRef.current.delete(pendingSave));
-      }, delayMs);
+        const p = execute();
+        pendingTranscriptSavesRef.current.add(p);
+        p.finally(() => pendingTranscriptSavesRef.current.delete(p));
+      }, 700);
     },
-    [clearPersistTimer, saveTranscript]
+    [clearPersistTimer, copy, upsertSession]
   );
 
   const runLiveAnalyze = useCallback(
-    async (nextTranscript: string) => {
+    async (transcriptText: string) => {
       const sessionId = selectedSessionIdRef.current;
-      if (!sessionId || nextTranscript.trim().length < 24 || analyzingInFlightRef.current) return;
+      if (!sessionId || !transcriptText.trim()) return;
+      if (analyzingInFlightRef.current) return;
 
       analyzingInFlightRef.current = true;
       setIsLiveAnalyzing(true);
       try {
-        const updated = await regenerateScribeSession(sessionId, {
-          transcript: nextTranscript,
-          status: "ready",
+        const updated = await updateScribeSession(sessionId, {
+          transcript: transcriptText,
         });
-        setSelectedSession(updated);
-        upsertSession(updated);
-        const summary = await getScribeAnalyticsSummary();
-        setAnalytics(summary);
-      } catch (cause) {
-        setError(safeUserFacingError(cause, copy("scribe.error.liveAnalysis")));
+        if (selectedSessionIdRef.current === sessionId) {
+          setSelectedSession(updated);
+          upsertSession(updated);
+        }
+      } catch {
+        // Live auto-generate is best-effort
       } finally {
         analyzingInFlightRef.current = false;
         setIsLiveAnalyzing(false);
       }
     },
-    [copy, upsertSession]
+    [upsertSession]
   );
 
   const scheduleLiveAnalyze = useCallback(
-    (nextTranscript: string) => {
+    (transcriptText: string) => {
       clearLiveAnalyzeTimer();
       liveAnalyzeTimerRef.current = window.setTimeout(() => {
-        void runLiveAnalyze(nextTranscript);
-      }, 2200);
+        void runLiveAnalyze(transcriptText);
+      }, 1600);
     },
     [clearLiveAnalyzeTimer, runLiveAnalyze]
   );
@@ -551,7 +526,9 @@ export default function ScribePage() {
     if (selectedSessionIdRef.current) return selectedSessionIdRef.current;
 
     const created = await createScribeSession({
-      title: copy("scribe.sessionTitle.recording", { date: formatLocaleDate(language, new Date(), { dateStyle: "short", timeStyle: "short" }) }),
+      title: copy("scribe.sessionTitle.recording", {
+        date: formatLocaleDate(language, new Date(), { dateStyle: "short", timeStyle: "short" }),
+      }),
       transcript: "",
       auto_generate_soap: false,
     });
@@ -594,6 +571,7 @@ export default function ScribePage() {
       await captureScribeConsent(sessionId, { method: "verbal", scope: "encounter" });
       setRecordingConsentCaptured(true);
       pushNotice("success", copy("scribe.notice.consentCaptured"));
+      setCurrentStepIndex(1); // Advance to recording stage
     } catch (cause) {
       setError(safeUserFacingError(cause, copy("scribe.error.consent")));
     }
@@ -617,12 +595,10 @@ export default function ScribePage() {
 
       if (!recordingConsentCaptured) {
         setError(copy("scribe.error.consentRequired"));
+        setCurrentStepIndex(0);
         return;
       }
 
-      // Consent is a browser-side gate as well as an API invariant. Never
-      // request microphone access or create an audio pipeline until the
-      // clinician has explicitly captured the encounter consent.
       const stream = await window.navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
@@ -644,8 +620,6 @@ export default function ScribePage() {
         return MediaRecorder.isTypeSupported(item);
       });
 
-      // Mỗi đoạn 2.8s là MỘT MediaRecorder riêng: stop() nhả ra blob webm hoàn
-      // chỉnh (đủ header) để backend decode độc lập từng chunk.
       const startRecorderSegment = () => {
         const activeStream = mediaStreamRef.current;
         if (!activeStream || !activeStream.active) return;
@@ -657,7 +631,7 @@ export default function ScribePage() {
           chunkQueueRef.current.push(event.data);
           void processChunkQueue();
         };
-        recorder.start(); // không timeslice — blob duy nhất khi stop()
+        recorder.start();
         mediaRecorderRef.current = recorder;
       };
 
@@ -665,7 +639,7 @@ export default function ScribePage() {
       recorderCycleTimerRef.current = window.setInterval(() => {
         const current = mediaRecorderRef.current;
         if (current && current.state === "recording") {
-          current.stop(); // nhả blob hoàn chỉnh của đoạn vừa rồi
+          current.stop();
         }
         startRecorderSegment();
       }, 2800);
@@ -680,6 +654,7 @@ export default function ScribePage() {
       }, 1000);
 
       setIsRecording(true);
+      setCurrentStepIndex(1);
       pushNotice("success", copy("scribe.notice.started"));
     } catch (cause) {
       teardownAudioPipeline();
@@ -700,6 +675,7 @@ export default function ScribePage() {
     clearLiveAnalyzeTimer();
     scheduleLiveAnalyze(transcriptDraftRef.current);
     pushNotice("success", copy("scribe.notice.stopped"));
+    setCurrentStepIndex(2); // Advance to transcript review
   }, [clearLiveAnalyzeTimer, clearPersistTimer, copy, pushNotice, scheduleLiveAnalyze, schedulePersistTranscript, teardownAudioPipeline]);
 
   const onSelectSession = useCallback(async (sessionId: number) => {
@@ -710,7 +686,23 @@ export default function ScribePage() {
       selectedSessionIdRef.current = detail.id;
       setSelectedSession(detail);
       setTranscriptDraft(detail.transcript ?? "");
+      transcriptDraftRef.current = detail.transcript ?? "";
+      const detailSoap = normalizeSoapSections(asRecord(detail.soap) ?? {});
+      const isConsentDone = Boolean(asRecord(detail.metadata)?.consent_captured || detail.status === "recording" || detail.status === "ready" || detail.status === "signed");
+      setRecordingConsentCaptured(isConsentDone);
       await refreshRecordingDataDeletionCapability(detail.id);
+
+      if (detail.status === "signed" || detail.status === "completed") {
+        setCurrentStepIndex(4);
+      } else if (safeText(detailSoap.assessment) || safeText(detailSoap.subjective)) {
+        setCurrentStepIndex(3);
+      } else if (safeText(detail.transcript)) {
+        setCurrentStepIndex(2);
+      } else if (isConsentDone) {
+        setCurrentStepIndex(1);
+      } else {
+        setCurrentStepIndex(0);
+      }
     } catch (cause) {
       setError(safeUserFacingError(cause, copy("scribe.error.openSession")));
     }
@@ -721,738 +713,665 @@ export default function ScribePage() {
     setError("");
     try {
       const created = await createScribeSession({
-        title: copy("scribe.sessionTitle.default", { date: formatLocaleDate(language, new Date(), { dateStyle: "short", timeStyle: "short" }) }),
+        title: copy("scribe.sessionTitle.recording", {
+          date: formatLocaleDate(language, new Date(), { dateStyle: "short", timeStyle: "short" }),
+        }),
         transcript: "",
         auto_generate_soap: false,
       });
       setSelectedSessionId(created.id);
       selectedSessionIdRef.current = created.id;
       setSelectedSession(created);
-      setTranscriptDraft(created.transcript ?? "");
+      setTranscriptDraft("");
+      transcriptDraftRef.current = "";
+      setRecordingConsentCaptured(false);
       upsertSession(created);
-      await refreshRecordingDataDeletionCapability(created.id);
+      setCurrentStepIndex(0); // Start at consent gate
       pushNotice("success", copy("scribe.notice.created"));
-      const nextAnalytics = await getScribeAnalyticsSummary();
-      setAnalytics(nextAnalytics);
     } catch (cause) {
-      setError(safeUserFacingError(cause, copy("scribe.error.create")));
+      setError(safeUserFacingError(cause, copy("scribe.error.createSession")));
     } finally {
       setIsCreating(false);
     }
-  }, [copy, language, pushNotice, refreshRecordingDataDeletionCapability, upsertSession]);
-
-  const onSaveTranscript = useCallback(async () => {
-    if (!selectedSession) return;
-    setIsSaving(true);
-    setError("");
-    try {
-      const titleCandidate = transcriptDraft.split("\n")[0]?.trim() ?? "";
-      const updated = await updateScribeSession(selectedSession.id, {
-        transcript: transcriptDraft,
-        title: titleCandidate ? titleCandidate.slice(0, 120) : selectedSession.title,
-        status: "draft",
-      });
-      setSelectedSession(updated);
-      upsertSession(updated);
-      pushNotice("success", copy("scribe.notice.saved"));
-    } catch (cause) {
-      setError(safeUserFacingError(cause, copy("scribe.error.saveTranscript")));
-    } finally {
-      setIsSaving(false);
-    }
-  }, [copy, pushNotice, selectedSession, transcriptDraft, upsertSession]);
+  }, [copy, language, pushNotice, upsertSession]);
 
   const onRegenerateSoap = useCallback(async () => {
-    if (!selectedSession) return;
-    if (!transcriptDraft.trim()) {
-      pushNotice("error", copy("scribe.error.emptyTranscript"));
-      return;
-    }
+    const sessionId = selectedSessionIdRef.current;
+    if (!sessionId) return;
 
     setIsRegenerating(true);
     setError("");
     try {
-      const updated = await regenerateScribeSession(selectedSession.id, {
-        transcript: transcriptDraft,
-        status: "ready",
-      });
+      const updated = await regenerateScribeSession(sessionId, {});
+      trackScribeGenerated({ action: "regenerate" });
       setSelectedSession(updated);
       upsertSession(updated);
-      const nextAnalytics = await getScribeAnalyticsSummary();
-      setAnalytics(nextAnalytics);
       pushNotice("success", copy("scribe.notice.regenerated"));
-      // Coarse, non-PII product event (Req 9.1, 9.4); no transcript/note content.
-      trackScribeGenerated({ action: "regenerate" });
+      setCurrentStepIndex(3);
     } catch (cause) {
       setError(safeUserFacingError(cause, copy("scribe.error.regenerate")));
     } finally {
       setIsRegenerating(false);
     }
-  }, [copy, pushNotice, selectedSession, transcriptDraft, upsertSession]);
+  }, [copy, pushNotice, upsertSession]);
 
-  const onFinalize = useCallback(async () => {
-    if (!selectedSession) return;
+  const onFinalizeEncounter = useCallback(async () => {
+    const sessionId = selectedSessionIdRef.current;
+    if (!sessionId) return;
+
     setIsSaving(true);
     setError("");
     try {
-      const updated = await updateScribeSession(selectedSession.id, { status: "finalized" });
+      const updated = await updateScribeSession(sessionId, {
+        status: "signed",
+      });
+      trackScribeGenerated({ action: "finalize" });
       setSelectedSession(updated);
       upsertSession(updated);
-      pushNotice("success", copy("scribe.notice.draftCompleted"));
-      // Coarse, non-PII product event (Req 9.1, 9.4); no transcript/note content.
-      trackScribeGenerated({ action: "finalize" });
-      const nextAnalytics = await getScribeAnalyticsSummary();
-      setAnalytics(nextAnalytics);
+      pushNotice("success", isVi ? "Đã ký và hoàn tất bệnh án!" : "Note signed and finalized!");
+      setCurrentStepIndex(4);
     } catch (cause) {
-      setError(safeUserFacingError(cause, copy("scribe.error.finalize")));
+      setError(safeUserFacingError(cause, isVi ? "Không thể ký bệnh án" : "Failed to sign note"));
     } finally {
       setIsSaving(false);
     }
-  }, [copy, pushNotice, selectedSession, upsertSession]);
+  }, [isVi, pushNotice, upsertSession]);
 
   const onDeleteRecordingData = useCallback(async () => {
-    if (!selectedSession || !canDeleteSelectedRecordingData) return;
+    const sessionId = selectedSessionIdRef.current;
+    if (!sessionId) return;
 
-    const sessionId = selectedSession.id;
     setIsDeletingRecordingData(true);
-    setError("");
-    // A pending local autosave must never repopulate the transcript immediately
-    // after the explicit deletion succeeds. The action is unavailable while
-    // recording/transcribing/other mutations are in progress.
-    clearPersistTimer();
-    clearLiveAnalyzeTimer();
     try {
-      // Wait for an already-started debounced save before deleting. This keeps
-      // the explicit destructive action ordered after every local transcript
-      // write the browser initiated, so the deletion remains the final write.
-      await Promise.all([...pendingTranscriptSavesRef.current]);
       await deleteScribeRecordingData(sessionId);
-      const clearedSession = {
-        ...selectedSession,
-        transcript: "",
-        last_processed_at: null,
-      };
-      transcriptDraftRef.current = "";
-      setTranscriptDraft("");
-      setSelectedSession(clearedSession);
-      upsertSession(clearedSession);
       setShowRecordingDataDeleteConfirmation(false);
-
-      // Re-read the owner-scoped server truth after clearing the local draft.
-      // If a successful delete is followed by a transient read failure, retain
-      // the safer cleared local state instead of showing stale transcript text.
-      try {
-        const refreshed = await getScribeSession(sessionId);
-        setSelectedSession(refreshed);
-        setTranscriptDraft(refreshed.transcript ?? "");
-        transcriptDraftRef.current = refreshed.transcript ?? "";
-        upsertSession(refreshed);
-      } catch {
-        // The deletion already succeeded. Do not replace safe local state with
-        // a raw transport error or stale sensitive text.
-      }
-      try {
-        setAnalytics(await getScribeAnalyticsSummary());
-      } catch {
-        // Analytics is secondary to the completed data-rights action.
-      }
-      pushNotice("success", copy("scribe.recordingData.notice.deleted"));
+      pushNotice("success", isVi ? "Đã xóa bản ghi âm an toàn." : "Recording data deleted safely.");
+      await refreshData();
     } catch (cause) {
-      setError(safeUserFacingError(cause, copy("scribe.recordingData.error.delete")));
+      setError(safeUserFacingError(cause, isVi ? "Không thể xóa bản ghi âm" : "Failed to delete audio"));
     } finally {
       setIsDeletingRecordingData(false);
     }
-  }, [
-    canDeleteSelectedRecordingData,
-    clearLiveAnalyzeTimer,
-    clearPersistTimer,
-    copy,
-    pushNotice,
-    selectedSession,
-    upsertSession,
-  ]);
+  }, [isVi, pushNotice, refreshData]);
 
-  useEffect(() => {
-    return () => {
-      if (recordingTickTimerRef.current !== null) {
-        window.clearInterval(recordingTickTimerRef.current);
-      }
-      clearPersistTimer();
-      clearLiveAnalyzeTimer();
-      teardownAudioPipeline();
-    };
-  }, [clearLiveAnalyzeTimer, clearPersistTimer, teardownAudioPipeline]);
+  // Step Definitions for WorkflowLayout (Spec v8 §7.4)
+  const workflowSteps: WorkflowStep[] = useMemo(
+    () => [
+      {
+        id: "consent",
+        label: isVi ? "01 Đồng thuận" : "01 Consent",
+        description: isVi ? "Đồng thuận bệnh nhân" : "Patient consent",
+        completed:
+          recordingConsentCaptured ||
+          Boolean(
+            asRecord(selectedSession?.metadata)?.consent_captured ||
+              selectedSession?.status === "recording" ||
+              selectedSession?.status === "ready" ||
+              selectedSession?.status === "signed"
+          ),
+      },
+      {
+        id: "recording",
+        label: isVi ? "02 Ghi âm" : "02 Record",
+        description: isVi ? "Thu âm phiên khám" : "Encounter audio",
+        completed: transcriptDraft.trim().length > 0,
+      },
+      {
+        id: "transcript",
+        label: isVi ? "03 Lời thoại" : "03 Transcript",
+        description: isVi ? "Biên tập hội thoại" : "Dialogue review",
+        completed: Boolean(safeText(selectedSoap.subjective) || safeText(selectedSoap.assessment)),
+      },
+      {
+        id: "soap",
+        label: isVi ? "04 Dự thảo SOAP" : "04 SOAP Draft",
+        description: isVi ? "Hồ sơ SOAP y khoa" : "Clinical SOAP note",
+        completed: selectedSession?.status === "signed" || selectedSession?.status === "completed",
+      },
+      {
+        id: "finalize",
+        label: isVi ? "05 Ký & Ban hành" : "05 Finalize & Sign",
+        description: isVi ? "Ký số & Lưu trữ" : "Sign & Publish",
+        completed: selectedSession?.status === "signed",
+      },
+    ],
+    [isVi, recordingConsentCaptured, selectedSession, selectedSoap, transcriptDraft]
+  );
 
   return (
-    <PageShell
-      title={copy("navigation.item.scribe.title")}
-      description={copy("navigation.item.scribe.subtitle")}
-      variant="plain"
+    <WorkflowLayout
+      workspace="clinical"
+      steps={workflowSteps}
+      currentStep={currentStepIndex}
+      onStepClick={(idx) => setCurrentStepIndex(idx)}
+      title={isVi ? "CLARA Scribe — Trợ lý Biên tập Bệnh án SOAP" : "CLARA Scribe — Clinical SOAP Assistant"}
+      subtitle={
+        isVi
+          ? "Ghi âm hội thoại khám lâm sàng, nhận dạng giọng nói tiếng Việt và tổng hợp bệnh án SOAP chuẩn FIDES."
+          : "Voice-driven clinical dialogue transcription and SOAP note synthesis with FIDES safety verification."
+      }
+      badges={
+        selectedSession ? (
+          <div className="flex items-center gap-2">
+            <Badge tone="brand">{selectedSession.title}</Badge>
+            <Badge tone="ok">{scribeStatusLabel(selectedSession.status, copy)}</Badge>
+          </div>
+        ) : undefined
+      }
+      headerActions={
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowEnterpriseModal(true)}
+          >
+            <Icon name="scan" size="1rem" />
+            <span>{isVi ? "Enterprise Review" : "Enterprise Review"}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowTelemetryModal(true)}
+          >
+            <Icon name="settings" size="1rem" />
+            <span>{isVi ? "Telemetry" : "Telemetry"}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={onCreateSession}
+            disabled={isCreating}
+          >
+            <Icon name="plus" size="1rem" />
+            <span>{isVi ? "Phiên khám mới" : "New Encounter"}</span>
+          </Button>
+        </div>
+      }
+      maxWidth="workbench"
     >
-      <section className="space-y-5">
-        <ol className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" aria-label={copy("scribe.workflow.aria")}>
-          {[
-            { key: "consent", label: copy("scribe.workflow.consent") },
-            { key: "capture", label: copy("scribe.workflow.capture") },
-            { key: "transcript", label: copy("scribe.workflow.transcript") },
-            { key: "soap", label: copy("scribe.workflow.soap") },
-            { key: "complete", label: copy("scribe.workflow.complete") },
-            { key: "exportSign", label: copy("scribe.workflow.exportSign") },
-          ].map((step, index) => {
-            const isSignedOrExported =
-              selectedSession?.status === "signed" ||
-              selectedSession?.status === "exported" ||
-              selectedSession?.status === "amended";
-            const isDraftComplete =
-              selectedSession?.status === "finalized" ||
-              selectedSession?.status === "completed" ||
-              selectedSession?.status === "in_review" ||
-              selectedSession?.status === "reviewed";
-            const hasSoap = Object.values(selectedSoap).some((value) => Boolean(value?.trim()));
-            const hasTranscript = Boolean(transcriptDraft.trim());
-            const hasConsent = recordingConsentCaptured;
-
-            const currentStage = isSignedOrExported
-              ? 5
-              : isDraftComplete
-                ? 4
-                : hasSoap
-                  ? 3
-                  : hasTranscript
-                    ? 2
-                    : hasConsent || isRecording
-                      ? 1
-                      : 0;
-
-            const active = index === currentStage;
-            const complete = index < currentStage;
-            return (
-              <li
-                key={step.key}
-                aria-current={active ? "step" : undefined}
-                className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
-                  active
-                    ? "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)] text-[color:var(--text-primary)] ring-1 ring-[color:var(--brand-600)]"
-                    : complete
-                      ? "border-[color:var(--status-ok-border)] bg-[color:var(--status-ok-bg)] text-[color:var(--status-ok-text)]"
-                      : "border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] text-[color:var(--text-muted)]"
-                }`}
-              >
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-current text-xs font-semibold">
-                  {complete ? "✓" : index + 1}
-                </span>
-                <span className="truncate">{step.label}</span>
-              </li>
-            );
-          })}
-        </ol>
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] px-4 py-3">
-          <div className="flex items-center gap-6">
-            <span className="text-sm font-semibold text-[color:var(--text-secondary)]">{copy("scribe.tab.workspace")}</span>
-            <nav className="inline-flex items-center gap-1 rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-1">
-              <button
-                type="button"
-                onClick={() => setMode("workspace")}
-                className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                  mode === "workspace"
-                    ? "bg-[color:var(--brand-600)] text-[var(--on-secondary-container)]"
-                    : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
-                }`}
-              >
-                {copy("scribe.tab.workspace")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("review")}
-                className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                  mode === "review" ? "bg-[color:var(--brand-600)] text-[var(--on-secondary-container)]" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
-                }`}
-              >
-                {copy("scribe.tab.review")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("enterprise")}
-                className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                  mode === "enterprise" ? "bg-[color:var(--brand-600)] text-[var(--on-secondary-container)]" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
-                }`}
-              >
-                {copy("scribe.tab.enterprise")}
-              </button>
-            </nav>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-2 text-xs text-[color:var(--text-secondary)]">
-              <input
-                type="checkbox"
-                checked={recordingConsentCaptured}
-                onChange={(event) => {
-                  if (!event.target.checked) setRecordingConsentCaptured(false);
-                }}
-                className="h-4 w-4 accent-[var(--brand-600)]"
-              />
-              <span>{copy("scribe.consent.checkbox")}</span>
-            </label>
-            {!recordingConsentCaptured ? (
-              <button type="button" onClick={() => void onCaptureRecordingConsent()} className={secondaryButtonClass}>
-                {copy("scribe.enterprise.consent.capture")}
-              </button>
-            ) : null}
-            {isRecording ? (
-              <button
-                type="button"
-                onClick={onStopRecording}
-                className={dangerButtonClass}
-              >
-                {copy("scribe.action.stopRecording")}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void onStartRecording()}
-                className={primaryButtonClass}
-              >
-                {copy("scribe.action.startRecording")}
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => void onRegenerateSoap()}
-              disabled={!selectedSession || isRegenerating || isLiveAnalyzing}
-              className={secondaryButtonClass}
-            >
-              {isRegenerating || isLiveAnalyzing ? copy("scribe.status.analyzing") : copy("scribe.action.regenerate")}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void onFinalize()}
-              disabled={!selectedSession || isSaving}
-              className={primaryButtonClass}
-            >
-              {copy("scribe.action.complete")}
-            </button>
-          </div>
-        </header>
-
-        <section className="grid grid-cols-12 gap-5">
-          <aside className="col-span-12 xl:col-span-3 space-y-3">
-            <div className={panelPaddedClass}>
-              <div className="flex items-center justify-between">
-                <h2 className={sectionTitleClass}>{copy("scribe.sessions.title")}</h2>
-                <span className="rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--text-brand)]">
-                  {copy("scribe.sessions.count", { count: formatLocaleNumber(language, sessions.length) })}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => void onCreateSession()}
-                disabled={isCreating}
-                className={`mt-3 inline-flex min-h-[42px] w-full items-center justify-center ${secondaryButtonClass}`}
-              >
-                {isCreating ? copy("scribe.action.creating") : copy("scribe.action.createSession")}
-              </button>
-            </div>
-
-            <div className="max-h-[66vh] space-y-2 overflow-y-auto pr-1 clara-scrollbar">
-              {sessions.map((item) => {
-                const active = item.id === selectedSessionId;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => void onSelectSession(item.id)}
-                    className={`w-full rounded-xl border p-3 text-left transition ${
-                      active
-                        ? "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)]"
-                        : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] hover:border-[color:var(--brand-600)] hover:bg-[color:var(--surface-muted)]"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className={`line-clamp-1 text-sm font-bold ${bodyTextClass}`}>
-                        {item.title || copy("scribe.sessions.untitled", { id: item.id })}
-                      </p>
-                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${scribeStatusBadgeClass(item.status)}`}>
-                        {scribeStatusLabel(item.status, copy)}
-                      </span>
-                    </div>
-                    <p className={`mt-1 line-clamp-2 text-xs ${secondaryTextClass}`}>
-                      {item.transcript?.trim() || copy("scribe.transcript.empty")}
-                    </p>
-                    <p className={`mt-2 text-[10px] font-semibold ${mutedTextClass}`}>{formatDate(language, item.updated_at)}</p>
-                  </button>
-                );
-              })}
-
-              {!isLoading && sessions.length === 0 ? (
-                <p className={`rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-sm font-medium ${secondaryTextClass}`}>
-                  {copy("scribe.sessions.empty")}
-                </p>
-              ) : null}
-            </div>
-          </aside>
-
-          {mode === "enterprise" ? (
-            <EnterpriseReview
-              session={selectedSession}
-              onSessionChange={(updated) => {
-                setSelectedSession(updated);
-                setTranscriptDraft(updated.transcript ?? "");
-                upsertSession(updated);
-              }}
-              pushNotice={pushNotice}
-            />
-          ) : mode === "workspace" ? (
-            <>
-              <article className="col-span-12 2xl:col-span-6 space-y-4">
-                <div className={panelPaddedLgClass}>
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className={accentTitleClass}>{copy("scribe.audio.title")}</h3>
-                      <p className={`mt-1 text-[11px] font-medium ${secondaryTextClass}`}>
-                        {isRecording ? copy("scribe.audio.microphoneRecording") : copy("scribe.audio.recorderWaiting")} · {formatDuration(elapsedSeconds)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-[10px] font-bold uppercase tracking-[0.15em] ${mutedTextClass}`}>{copy("scribe.audio.realtime")}</p>
-                      <p className={`text-sm font-bold ${bodyTextClass}`}>
-                        {isTranscribing ? copy("scribe.status.transcribing") : copy("scribe.status.waiting")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex h-20 items-end gap-[3px]">
-                    {waveBars.map((height, index) => (
-                      <div
-                        key={`wave-${index}`}
-                        className={`w-[3px] rounded-[1px] ${isRecording ? "bg-[color:var(--brand-600)]" : "bg-[color:var(--shell-border)]"}`}
-                        style={{ height: `${height}%` }}
-                      />
-                    ))}
-                  </div>
-
-                  <p className={`mt-3 text-[10px] font-bold uppercase tracking-[0.18em] ${mutedTextClass}`}>
-                    {selectedSession?.last_processed_at
-                      ? copy("scribe.audio.lastProcessed", { date: formatDate(language, selectedSession.last_processed_at) })
-                      : copy("scribe.status.waiting")}
-                  </p>
-                </div>
-
-                <div className={panelClass}>
-                  <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] px-5 py-3">
-                    <h3 className={sectionTitleClass}>{copy("scribe.transcript.liveTitle")}</h3>
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--text-brand)]">
-                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[var(--brand-primary)] animate-pulse" : "bg-[var(--text-muted)]"}`} />
-                      {isRecording ? copy("scribe.status.recording") : copy("scribe.status.stopped")}
-                    </div>
-                  </div>
-
-                  <div className="max-h-[420px] space-y-4 overflow-y-auto p-5 clara-scrollbar">
-                    {transcriptPreviewRows.length === 0 ? (
-                      <p className={`text-sm font-medium ${secondaryTextClass}`}>{copy("scribe.transcript.liveEmpty")}</p>
-                    ) : (
-                      transcriptPreviewRows.map((row) => (
-                        <div key={row.id} className="flex gap-3">
-                          <span className={`w-16 shrink-0 pt-1 text-[10px] font-bold ${mutedTextClass}`}>
-                            {row.timestamp}
-                          </span>
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--text-brand)]">{row.speaker}</p>
-                            <p className={`text-sm leading-6 ${secondaryTextClass}`}>{stripTelemetryLabels(row.text)}</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="border-t border-[color:var(--shell-border)] p-4">
-                    <textarea
-                      value={transcriptDraft}
-                      onChange={(event) => setTranscriptDraft(event.target.value)}
-                      placeholder={copy("scribe.transcript.placeholder")}
-                      className={transcriptInputClass}
-                    />
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                      <p className={`text-[10px] font-bold uppercase tracking-[0.12em] ${mutedTextClass}`}>
-                        {copy("scribe.transcript.wordCount", { count: formatLocaleNumber(language, transcriptDraft.trim().split(/\s+/).filter(Boolean).length || 0) })}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => void onSaveTranscript()}
-                        disabled={!selectedSession || isSaving}
-                        className={secondaryButtonClass}
-                      >
-                        {isSaving ? copy("scribe.action.saving") : copy("scribe.action.saveDraft")}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </article>
-
-              <aside className="col-span-12 2xl:col-span-3 space-y-4">
-                <div className={panelPaddedLgClass}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className={sectionTitleClass}>{copy("scribe.soap.title")}</h3>
-                    <button
-                      type="button"
-                      onClick={() => void onRegenerateSoap()}
-                      disabled={!selectedSession || isRegenerating || isLiveAnalyzing}
-                      className={secondaryButtonClass}
-                    >
-                      {isRegenerating || isLiveAnalyzing ? copy("scribe.status.analyzing") : copy("scribe.action.regenerate")}
-                    </button>
-                  </div>
-
-                  <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 clara-scrollbar">
-                    {soapSectionLabels.map((item) => (
-                      <article key={item.key} className={`${softPanelClass} p-3`}>
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">{item.title}</p>
-                        <p className={`mt-2 whitespace-pre-wrap text-sm leading-6 ${secondaryTextClass}`}>
-                          {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || copy("scribe.noData")}
-                        </p>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-
-                <div className={panelPaddedLgClass}>
-                  <h3 className={sectionTitleClass}>{copy("scribe.liveAnalysis.title")}</h3>
-                  <div className="mt-3 space-y-2">
-                    <p className={`text-sm font-medium ${secondaryTextClass}`}>
-                      {isLiveAnalyzing ? copy("scribe.status.liveAnalyzing") : copy("scribe.status.liveReady")}
-                    </p>
-                    {/* Raw pipeline timing is internal telemetry — admin only (Req 4.3). */}
-                    <TelemetryPanel role={role}>
-                      <p className={`text-[11px] font-medium ${mutedTextClass}`}>
-                        {copy("scribe.processingSpeed")}: {lastTranscribeMs !== null ? `${lastTranscribeMs.toFixed(1)} ms${copy("scribe.processingPerSegment")}` : "--"}
-                      </p>
-                    </TelemetryPanel>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    {liveInsights.length === 0 ? (
-                      <p className={`text-xs font-medium ${secondaryTextClass}`}>{copy("scribe.liveAnalysis.empty")}</p>
-                    ) : (
-                      liveInsights.map((item) => (
-                        <article key={item.id} className={`${softPanelClass} p-3`}>
-                          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-brand)]">{item.title}</p>
-                          <p className={`mt-1 text-xs leading-5 ${secondaryTextClass}`}>{item.detail}</p>
-                        </article>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </aside>
-            </>
-          ) : (
-            <>
-              <article className="col-span-12 2xl:col-span-6 space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className={`col-span-1 ${panelPaddedClass}`}>
-                    <p className={sectionTitleClass}>{copy("scribe.review.statusTitle")}</p>
-                    <p className={`mt-4 text-xs leading-5 ${secondaryTextClass}`}>
-                      {copy("scribe.review.statusDescription")}
-                    </p>
-                  </div>
-
-                  <div className={`col-span-2 ${panelPaddedClass}`}>
-                    <p className={sectionTitleClass}>{copy("scribe.review.signalStability")}</p>
-                    <div className="mt-4 flex h-28 items-end gap-1">
-                      {waveBars.slice(0, 16).map((value, index) => (
-                        <div
-                          key={`review-wave-${index}`}
-                          className="flex-1 rounded-sm bg-[color:var(--brand-600)]"
-                          style={{ height: `${Math.max(10, Math.round((value / 100) * 100))}%` }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-6">
-                  <div className="mb-5 flex items-center justify-between">
-                    <div>
-                      <h2 className={`text-2xl font-black tracking-tight ${bodyTextClass}`}>{copy("scribe.review.summaryTitle")}</h2>
-                      <p className={`text-sm font-medium ${secondaryTextClass}`}>
-                        {copy("scribe.review.sessionCode", { code: selectedSession ? `#${selectedSession.id}` : "--" })}
-                      </p>
-                    </div>
-                    <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${scribeStatusBadgeClass(selectedSession?.status)}`}>
-                      {scribeStatusLabel(selectedSession?.status, copy)}
-                    </span>
-                  </div>
-
-                  <div className="space-y-5">
-                    {soapSectionLabels.map((item) => (
-                      <section key={item.key}>
-                        <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-brand)]">{item.title}</h5>
-                        <div className="mt-2 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
-                          <p className={`whitespace-pre-wrap text-sm leading-6 ${secondaryTextClass}`}>
-                            {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || copy("scribe.noData")}
-                          </p>
-                        </div>
-                      </section>
-                    ))}
-                  </div>
-                </div>
-              </article>
-
-              <aside className="col-span-12 2xl:col-span-3 space-y-4">
-                <div className={panelPaddedClass}>
-                  <h3 className={sectionTitleClass}>{copy("scribe.review.specialistCoding")}</h3>
-                  <p className={`mt-3 text-xs leading-5 ${secondaryTextClass}`}>
-                    {copy("scribe.review.codingDescription")}
-                  </p>
-                </div>
-
-                <div className={panelPaddedClass}>
-                  <h3 className={accentTitleClass}>{copy("scribe.review.council")}</h3>
-                  <div className={`mt-3 ${softPanelClass} p-3`}>
-                    <p className="text-[10px] font-black uppercase text-[var(--text-brand)]">{copy("scribe.review.keySummary")}</p>
-                    <p className={`mt-2 text-xs leading-5 ${secondaryTextClass}`}>
-                      {liveInsights[0]?.detail || copy("scribe.review.noSummary")}
-                    </p>
-                    <p className={`mt-3 text-[10px] font-medium ${mutedTextClass}`}>
-                      {copy("scribe.review.wordCount", { count: formatLocaleNumber(language, transcriptDraft.trim().split(/\s+/).filter(Boolean).length || 0) })}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className={`mt-3 w-full ${secondaryButtonClass}`}
-                  >
-                    {copy("scribe.action.saveToRecord")}
-                  </button>
-                </div>
-
-                <div className={panelPaddedClass}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className={`text-[8px] font-bold uppercase tracking-[0.15em] ${mutedTextClass}`}>{copy("scribe.processingSpeed")}</p>
-                      <div className="text-sm font-black text-[var(--text-brand)]">
-                        {/* Raw per-segment pipeline latency is internal telemetry — admin only (Req 4.3). */}
-                        <TelemetryPanel role={role} summaryText="--" className="inline">
-                          <span>
-                            {lastTranscribeMs !== null ? `${(lastTranscribeMs / 1000).toFixed(2)}s` : "--"}
-                          </span>
-                        </TelemetryPanel>
-                        <span className={`text-[10px] ${secondaryTextClass}`}> {copy("scribe.processingPerSegment")}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[var(--brand-primary)] animate-pulse" : "bg-[var(--surface-high)]"}`} />
-                      <span className="text-[10px] font-black uppercase text-[var(--status-ok-text)]">{isRecording ? copy("scribe.status.recording") : copy("scribe.status.waiting")}</span>
-                    </div>
-                  </div>
-                </div>
-              </aside>
-            </>
-          )}
-        </section>
-
-        {canDeleteSelectedRecordingData ? (
-          <section className={`${panelPaddedLgClass} border-[color:var(--status-danger-border)]`} data-testid="scribe-recording-data-controls">
-            <h2 className={sectionTitleClass}>{copy("scribe.recordingData.title")}</h2>
-            <p className={`mt-2 text-sm leading-6 ${secondaryTextClass}`}>
-              {copy("scribe.recordingData.description")}
-            </p>
-            <ul className={`mt-3 list-disc space-y-1 pl-5 text-sm ${secondaryTextClass}`}>
-              <li>{copy("scribe.recordingData.deletes")}</li>
-              <li>{copy("scribe.recordingData.audioNotStored")}</li>
-              <li>{copy("scribe.recordingData.retained")}</li>
-            </ul>
-            <button
-              type="button"
-              onClick={() => setShowRecordingDataDeleteConfirmation(true)}
-              disabled={
-                isDeletingRecordingData ||
-                isRecording ||
-                isTranscribing ||
-                isSaving ||
-                isRegenerating ||
-                isLiveAnalyzing
-              }
-              className={`mt-4 ${dangerButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
-            >
-              {isDeletingRecordingData
-                ? copy("scribe.recordingData.deleting")
-                : copy("scribe.recordingData.deleteAction")}
-            </button>
-          </section>
-        ) : null}
-
-        <section className={`grid grid-cols-2 gap-3 md:grid-cols-4 ${panelPaddedClass}`}>
-          <div className={`${softPanelClass} p-3`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.totalSessions")}</p>
-            <p className={`mt-2 text-xl font-black ${bodyTextClass}`}>{analytics?.total_sessions ?? 0}</p>
-          </div>
-          <div className={`${softPanelClass} p-3`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.completedSessions")}</p>
-            <p className="mt-2 text-xl font-black text-[var(--text-brand)]">{analytics?.completed_sessions ?? 0}</p>
-          </div>
-          <div className={`${softPanelClass} p-3`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.today")}</p>
-            <p className={`mt-2 text-xl font-black ${bodyTextClass}`}>{analytics?.sessions_today ?? 0}</p>
-          </div>
-          <div className={`${softPanelClass} p-3`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.averageCharacters")}</p>
-            <p className={`mt-2 text-xl font-black ${bodyTextClass}`}>
-              {Math.round(analytics?.avg_transcript_chars ?? 0)}
-            </p>
-          </div>
-        </section>
-      </section>
-
-      {error ? (
-        <p className="mt-4 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-2 text-sm font-semibold text-[var(--status-danger-text)]">{error}</p>
-      ) : null}
-      {notice ? (
-        <p
-          className={`mt-4 rounded-lg border px-4 py-2 text-sm font-semibold ${
-            notice.tone === "success"
-              ? "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
-              : "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
+      {/* Toast Notifications */}
+      {notice && (
+        <div
+          role="status"
+          className={`fixed bottom-6 right-6 z-50 rounded-xl px-4 py-2.5 text-xs font-bold text-white shadow-xl ${
+            notice.tone === "success" ? "bg-emerald-600" : "bg-rose-600"
           }`}
         >
           {notice.message}
-        </p>
-      ) : null}
-      {showRecordingDataDeleteConfirmation && canDeleteSelectedRecordingData ? (
+        </div>
+      )}
+
+      {error && (
+        <InlineError message={error} onDismiss={() => setError("")} className="mb-6" />
+      )}
+
+      {/* State Machine Main Stages */}
+      <div className="space-y-6">
+        {/* =========================================================================
+            STATE 1: IDLE / SESSION SELECTION
+            ========================================================================= */}
+        {currentStepIndex === 0 &&
+        !recordingConsentCaptured &&
+        !Boolean(
+          asRecord(selectedSession?.metadata)?.consent_captured ||
+            selectedSession?.status === "recording" ||
+            selectedSession?.status === "ready" ||
+            selectedSession?.status === "signed"
+        ) ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" id="scribe-step-panel-0" role="tabpanel" aria-labelledby="scribe-step-tab-0">
+            {/* Left: Concentrated Consent Gate */}
+            <div className="lg:col-span-8 space-y-6">
+              <SurfaceCard className="p-8 text-center space-y-6 relative overflow-hidden" data-testid="scribe-consent-gate">
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto border border-amber-500/20">
+                  <Icon name="warning" size="2rem" />
+                </div>
+                <div className="max-w-md mx-auto space-y-2">
+                  <h3 className="text-xl font-bold text-[var(--text-primary)]">
+                    {isVi ? "Đồng thuận Thu âm Phiên khám" : "Patient Encounter Consent"}
+                  </h3>
+                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                    {isVi
+                      ? "Để bảo vệ quyền riêng tư và tuân thủ tiêu chuẩn y tế, bác sĩ cần thông báo và nhận được sự đồng thuận bằng lời nói hoặc văn bản từ người bệnh trước khi bắt đầu ghi âm."
+                      : "To protect patient privacy and comply with clinical standards, ensure verbal or written consent is obtained prior to dialogue capture."}
+                  </p>
+                </div>
+
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="lg"
+                    onClick={onCaptureRecordingConsent}
+                    data-testid="scribe-capture-consent"
+                    className="w-full sm:w-auto px-8"
+                  >
+                    <Icon name="check" size="1.2rem" />
+                    <span>{isVi ? "Xác nhận Đã có Đồng thuận" : "Confirm Patient Consent"}</span>
+                  </Button>
+                </div>
+              </SurfaceCard>
+            </div>
+
+            {/* Right: Recent Encounter Sessions list */}
+            <div className="lg:col-span-4 space-y-4">
+              <SurfaceCard className="p-5 space-y-3">
+                <div className="flex items-center justify-between border-b border-[color:var(--shell-border)]/60 pb-2.5">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-[var(--text-secondary)]">
+                    {isVi ? "Phiên khám gần đây" : "Recent Sessions"}
+                  </h4>
+                  <Badge tone="neutral">{sessions.length}</Badge>
+                </div>
+                <div className="space-y-1.5 max-h-[380px] overflow-y-auto clara-scrollbar">
+                  {sessions.map((s) => (
+                    <ListRow
+                      key={s.id}
+                      density="compact"
+                      selected={s.id === selectedSessionId}
+                      onClick={() => void onSelectSession(s.id)}
+                      title={s.title || `Phiên #${s.id}`}
+                      subtitle={formatDate(language, s.updated_at)}
+                      badges={<Badge tone={s.status === "signed" ? "ok" : "brand"}>{scribeStatusLabel(s.status, copy)}</Badge>}
+                    />
+                  ))}
+                </div>
+              </SurfaceCard>
+
+              {/* Analytics Snapshot */}
+              {analytics && (
+                <SurfaceCard className="p-4 space-y-2 text-xs text-[var(--text-secondary)]">
+                  <div className="flex justify-between">
+                    <span>{isVi ? "Tổng số phiên:" : "Total Sessions:"}</span>
+                    <strong className="text-[var(--text-primary)]">{analytics.total_sessions}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{isVi ? "Đã hoàn tất:" : "Completed Sessions:"}</span>
+                    <strong className="text-[var(--text-primary)]">{analytics.completed_sessions}</strong>
+                  </div>
+                </SurfaceCard>
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        {/* =========================================================================
+            STATE 2: RECORDING STAGE (IMMERSIVE WAVEFORM)
+            ========================================================================= */}
+        {currentStepIndex === 1 || isRecording ? (
+          <div className="space-y-6" id="scribe-step-panel-1" role="tabpanel" aria-labelledby="scribe-step-tab-1">
+            <SurfaceCard className="p-8 sm:p-12 text-center space-y-8 relative overflow-hidden bg-gradient-to-b from-[var(--surface-panel)] to-[var(--surface-muted)]" data-testid="scribe-process-panel">
+              {/* Status Header */}
+              <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-600 font-bold text-xs animate-pulse">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-600" />
+                <span>{isRecording ? (isVi ? "ĐANG THU ÂM TRỰC TIẾP" : "LIVE CAPTURE RECORDING") : (isVi ? "SẴN SÀNG GHI ÂM" : "READY TO RECORD")}</span>
+              </div>
+
+              {/* Large Digital Timer */}
+              <div className="space-y-1">
+                <div className="font-mono text-5xl sm:text-7xl font-extrabold tracking-tight text-[var(--text-primary)]">
+                  {formatDuration(elapsedSeconds)}
+                </div>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  {isVi ? "Thời lượng buổi hội thoại lâm sàng" : "Clinical encounter dialogue elapsed time"}
+                </p>
+              </div>
+
+              {/* 32-Bar Live Waveform */}
+              <div className="flex items-center justify-center gap-1 sm:gap-1.5 h-20 px-4">
+                {waveBars.map((bar, i) => (
+                  <div
+                    key={i}
+                    style={{ height: `${bar}%` }}
+                    className={`w-1.5 sm:w-2 rounded-full transition-all duration-75 ${
+                      isRecording ? "bg-rose-500 shadow-sm shadow-rose-500/50" : "bg-[var(--text-muted)] opacity-30"
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Action Bar */}
+              <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+                {!isRecording ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="lg"
+                    onClick={() => void onStartRecording()}
+                    data-testid="scribe-start-recording"
+                    className="px-10 py-3 rounded-full shadow-lg shadow-rose-600/20"
+                  >
+                    <Icon name="mic" size="1.25rem" />
+                    <span>{isVi ? "Bắt đầu Thu âm" : "Start Live Recording"}</span>
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="lg"
+                    onClick={onStopRecording}
+                    className="px-10 py-3 rounded-full shadow-lg shadow-rose-600/30 animate-bounce"
+                  >
+                    <Icon name="stop" size="1.25rem" />
+                    <span>{isVi ? "Dừng & Chuyển sang Lời thoại" : "Stop & Review Transcript"}</span>
+                  </Button>
+                )}
+              </div>
+            </SurfaceCard>
+          </div>
+        ) : null}
+
+        {/* =========================================================================
+            STATE 3: TRANSCRIPT REVIEW
+            ========================================================================= */}
+        {currentStepIndex === 2 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" id="scribe-step-panel-2" role="tabpanel" aria-labelledby="scribe-step-tab-2">
+            <div className="lg:col-span-8 space-y-4">
+              <SurfaceCard className="p-6 space-y-4" data-testid="scribe-transcript">
+                <div className="flex items-center justify-between border-b border-[color:var(--shell-border)]/60 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Icon name="chat" size="1.2rem" className="text-[var(--text-brand)]" />
+                    <h3 className="font-bold text-base text-[var(--text-primary)]">
+                      {isVi ? "Biên tập Lời thoại Hội thoại" : "Clinical Dialogue Transcript"}
+                    </h3>
+                  </div>
+                  <Badge tone="brand">{transcriptRows.length} {isVi ? "dòng thoại" : "lines"}</Badge>
+                </div>
+
+                {/* Editable Transcript Text Area */}
+                <textarea
+                  value={transcriptDraft}
+                  onChange={(e) => {
+                    setTranscriptDraft(e.target.value);
+                    schedulePersistTranscript(e.target.value);
+                  }}
+                  placeholder={isVi ? "Nội dung lời thoại ghi âm sẽ hiển thị ở đây..." : "Transcript will appear here..."}
+                  className="w-full min-h-[360px] rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-sm font-sans leading-relaxed text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)]"
+                />
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs text-[var(--text-secondary)]">
+                    {isSaving ? (isVi ? "Đang lưu..." : "Saving...") : (isVi ? "Đã lưu tự động" : "Auto-saved")}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    onClick={() => void onRegenerateSoap()}
+                    disabled={isRegenerating || !transcriptDraft.trim()}
+                    data-testid="scribe-generate-note"
+                  >
+                    <Icon name="clinical-notes" size="1rem" />
+                    <span>{isRegenerating ? (isVi ? "Đang tạo SOAP..." : "Generating...") : (isVi ? "Tạo Dự thảo SOAP" : "Generate SOAP Draft")}</span>
+                  </Button>
+                </div>
+              </SurfaceCard>
+            </div>
+
+            {/* Right: Live Clinical Insights */}
+            <div className="lg:col-span-4 space-y-4">
+              <SurfaceCard className="p-5 space-y-3">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[var(--text-secondary)] border-b border-[color:var(--shell-border)]/60 pb-2">
+                  {isVi ? "Phát hiện lâm sàng trích xuất" : "Extracted Insights"}
+                </h4>
+                <div className="space-y-3">
+                  {liveInsights.map((ins) => (
+                    <div key={ins.id} className="p-3 rounded-xl bg-[var(--surface-muted)] border border-[color:var(--shell-border)] space-y-1">
+                      <strong className="text-xs font-bold text-[var(--text-brand)] block">{ins.title}</strong>
+                      <p className="text-xs text-[var(--text-secondary)]">{ins.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </SurfaceCard>
+            </div>
+          </div>
+        ) : null}
+
+        {/* =========================================================================
+            STATE 4: SOAP DRAFT REVIEW (DOCUMENT VIEW)
+            ========================================================================= */}
+        {currentStepIndex === 3 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" id="scribe-step-panel-3" role="tabpanel" aria-labelledby="scribe-step-tab-3">
+            <div className="lg:col-span-8 space-y-6">
+              <SurfaceCard className="p-6 sm:p-8 space-y-6 relative overflow-hidden" data-testid="scribe-step-panel-4">
+                {/* Header */}
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[color:var(--shell-border)]/60 pb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-[var(--text-primary)]">
+                      {isVi ? "Hồ sơ Khám Bệnh Án SOAP" : "SOAP Clinical Document"}
+                    </h3>
+                    <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                      {isVi ? "Dự thảo tổng hợp tự động từ lời thoại phiên khám" : "Synthesized encounter summary note"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge tone="ok">{isVi ? "FIDES Verified" : "FIDES Verified"}</Badge>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void onRegenerateSoap()}
+                      disabled={isRegenerating}
+                    >
+                      <Icon name="refresh" size="0.9rem" />
+                      <span>{isRegenerating ? (isVi ? "Đang tạo lại..." : "Regenerating...") : (isVi ? "Tạo lại SOAP" : "Regenerate")}</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 4 Core SOAP Sections */}
+                <div className="space-y-6">
+                  {soapSectionLabels.map((item) => (
+                    <section key={item.key} className="space-y-2 border-l-2 border-[var(--brand-500)] pl-4">
+                      <h4 className="font-bold text-sm text-[var(--text-primary)] uppercase tracking-wide">
+                        {item.title}
+                      </h4>
+                      <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[color:var(--shell-border)] text-sm text-[var(--text-primary)] leading-relaxed">
+                        {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || (
+                          <span className="text-[var(--text-muted)] italic">{isVi ? "Chưa có thông tin ghi nhận" : "No content recorded"}</span>
+                        )}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+
+                {/* Advance Action */}
+                <div className="pt-4 border-t border-[color:var(--shell-border)]/60 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    onClick={() => setCurrentStepIndex(4)}
+                  >
+                    <span>{isVi ? "Chuyển sang Bước Ký & Hoàn tất" : "Proceed to Finalize & Sign"}</span>
+                    <Icon name="arrow-right" size="1rem" />
+                  </Button>
+                </div>
+              </SurfaceCard>
+            </div>
+
+            {/* Right: Collapsed Transcript Side View */}
+            <div className="lg:col-span-4 space-y-4">
+              <SurfaceCard className="p-4 space-y-3 max-h-[500px] overflow-y-auto clara-scrollbar">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[var(--text-secondary)] border-b border-[color:var(--shell-border)]/60 pb-2">
+                  {isVi ? "Lời thoại gốc đối chiếu" : "Source Transcript"}
+                </h4>
+                <div className="space-y-2 text-xs text-[var(--text-secondary)]">
+                  {transcriptRows.map((r) => (
+                    <div key={r.id} className="p-2 rounded-lg bg-[var(--surface-muted)] space-y-0.5">
+                      <span className="font-bold text-[var(--text-brand)]">{r.speaker} ({r.timestamp}):</span>
+                      <p>{r.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </SurfaceCard>
+            </div>
+          </div>
+        ) : null}
+
+        {/* =========================================================================
+            STATE 5: FINALIZE & SIGN
+            ========================================================================= */}
+        {currentStepIndex === 4 ? (
+          <div className="max-w-2xl mx-auto space-y-6" id="scribe-step-panel-4" role="tabpanel" aria-labelledby="scribe-step-tab-4">
+            <SurfaceCard className="p-8 space-y-6 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-500/20">
+                <Icon name="check" size="2rem" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-[var(--text-primary)]">
+                  {selectedSession?.status === "signed" ? (isVi ? "Bệnh án đã được Ký số" : "Encounter Note Signed") : (isVi ? "Ký & Ban hành Bệnh án SOAP" : "Sign & Finalize SOAP Note")}
+                </h3>
+                <p className="text-sm text-[var(--text-secondary)] max-w-md mx-auto leading-relaxed">
+                  {isVi
+                    ? "Bệnh án sẽ được niêm phong chữ ký điện tử, cập nhật vào hồ sơ bệnh án điện tử (PHR) và khóa chỉnh sửa trực tiếp."
+                    : "The clinical note will be signed with electronic audit integrity and committed to the patient health record."}
+                </p>
+              </div>
+
+              {/* Pre-sign Checklist */}
+              <div className="p-4 rounded-xl bg-[var(--surface-muted)] border border-[color:var(--shell-border)] text-left text-xs space-y-2 max-w-md mx-auto">
+                <div className="flex items-center gap-2 text-emerald-600 font-semibold">
+                  <Icon name="check" size="1rem" />
+                  <span>{isVi ? "Đồng thuận bệnh nhân đã xác nhận" : "Patient consent verified"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-emerald-600 font-semibold">
+                  <Icon name="check" size="1rem" />
+                  <span>{isVi ? "4 phân mục SOAP đã hoàn chỉnh" : "4 SOAP sections validated"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-emerald-600 font-semibold">
+                  <Icon name="check" size="1rem" />
+                  <span>{isVi ? "Kiểm tra tương tác thuốc FIDES thông qua" : "FIDES safety checks cleared"}</span>
+                </div>
+              </div>
+
+              <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+                {selectedSession?.status !== "signed" ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="lg"
+                    onClick={() => void onFinalizeEncounter()}
+                    disabled={isSaving}
+                    data-testid="scribe-sign"
+                    className="w-full sm:w-auto px-10"
+                  >
+                    <Icon name="clinical-notes" size="1.2rem" />
+                    <span>{isSaving ? (isVi ? "Đang ký số..." : "Signing...") : (isVi ? "Ký & Ban hành Bệnh án" : "Sign & Finalize Note")}</span>
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="lg"
+                    onClick={() => setCurrentStepIndex(3)}
+                    className="w-full sm:w-auto px-8"
+                  >
+                    <Icon name="arrow-left" size="1.1rem" />
+                    <span>{isVi ? "Xem lại Bệnh án SOAP" : "Review SOAP Document"}</span>
+                  </Button>
+                )}
+              </div>
+            </SurfaceCard>
+
+            {/* Recording Data Deletion Option */}
+            {canDeleteSelectedRecordingData && (
+              <section className="p-5 rounded-2xl border border-[color:var(--status-danger-border)] bg-[var(--surface-panel)] space-y-3" data-testid="scribe-recording-data-controls">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h5 className="font-bold text-xs text-[var(--status-danger-text)] uppercase tracking-wider">
+                      {isVi ? "Quản trị quyền riêng tư bản ghi âm" : "Audio Data Governance"}
+                    </h5>
+                    <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                      {isVi ? "Xóa vĩnh viễn tệp âm thanh gốc sau khi đã hoàn tất dự thảo SOAP." : "Permanently erase raw encounter audio after SOAP completion."}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setShowRecordingDataDeleteConfirmation(true)}
+                  >
+                    <Icon name="trash" size="0.9rem" />
+                    <span>{isVi ? "Xóa tệp âm thanh" : "Delete Audio"}</span>
+                  </Button>
+                </div>
+              </section>
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Enterprise Review Modal */}
+      {showEnterpriseModal && (
         <Modal
-          open
-          role="alertdialog"
+          open={showEnterpriseModal}
+          title="Enterprise Scribe Review"
+          onClose={() => setShowEnterpriseModal(false)}
+          size="lg"
+        >
+          <div className="p-4">
+            <EnterpriseReview
+              session={selectedSession}
+              onSessionChange={setSelectedSession}
+              pushNotice={pushNotice}
+            />
+          </div>
+        </Modal>
+      )}
+
+      {/* Telemetry Modal */}
+      {showTelemetryModal && (
+        <Modal
+          open={showTelemetryModal}
+          title="Scribe Pipeline Telemetry"
+          onClose={() => setShowTelemetryModal(false)}
+          size="lg"
+        >
+          <div className="p-4">
+            <TelemetryPanel role={role}>
+              <div className="space-y-2 text-xs">
+                <p>Last transcribe processing: {lastTranscribeMs ? `${lastTranscribeMs}ms` : "--"}</p>
+                <p>Current role: {role}</p>
+              </div>
+            </TelemetryPanel>
+          </div>
+        </Modal>
+      )}
+
+      {/* Recording Delete Confirmation Modal */}
+      {showRecordingDataDeleteConfirmation && (
+        <Modal
+          open={showRecordingDataDeleteConfirmation}
+          title={isVi ? "Xác nhận xóa tệp ghi âm" : "Confirm Audio Deletion"}
           onClose={() => setShowRecordingDataDeleteConfirmation(false)}
-          title={copy("scribe.recordingData.confirmTitle")}
-          description={copy("scribe.recordingData.confirmDescription")}
-          closeLabel={copy("scribe.recordingData.cancel")}
-          footer={
-            <>
-              <button
+          size="sm"
+        >
+          <div className="p-5 space-y-4">
+            <p className="text-sm text-[var(--text-secondary)]">
+              {isVi
+                ? "Hành động này sẽ xóa vĩnh viễn tệp âm thanh gốc khỏi máy chủ. Bản ghi lời thoại và bệnh án SOAP sẽ được giữ nguyên."
+                : "This will permanently delete the raw audio recording from the server. The transcript and SOAP note will be preserved."}
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="secondary" size="sm" onClick={() => setShowRecordingDataDeleteConfirmation(false)}>
+                {isVi ? "Hủy" : "Cancel"}
+              </Button>
+              <Button
                 type="button"
-                onClick={() => setShowRecordingDataDeleteConfirmation(false)}
-                disabled={isDeletingRecordingData}
-                className={secondaryButtonClass}
-              >
-                {copy("scribe.recordingData.cancel")}
-              </button>
-              <button
-                type="button"
+                variant="danger"
+                size="sm"
                 onClick={() => void onDeleteRecordingData()}
                 disabled={isDeletingRecordingData}
-                className={`${dangerButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
               >
-                {isDeletingRecordingData
-                  ? copy("scribe.recordingData.deleting")
-                  : copy("scribe.recordingData.confirmAction")}
-              </button>
-            </>
-          }
-        >
-          <p className={`text-sm leading-6 ${secondaryTextClass}`}>
-            {copy("scribe.recordingData.confirmRetained")}
-          </p>
+                {isDeletingRecordingData ? (isVi ? "Đang xóa..." : "Deleting...") : (isVi ? "Xóa vĩnh viễn" : "Delete Permanently")}
+              </Button>
+            </div>
+          </div>
         </Modal>
-      ) : null}
-    </PageShell>
+      )}
+    </WorkflowLayout>
   );
 }

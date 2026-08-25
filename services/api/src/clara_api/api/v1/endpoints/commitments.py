@@ -16,13 +16,17 @@ from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
     GlhsClinicalCommitment,
     GlhsClinicalCommitmentProposal,
+    GlhsClinicalCommitmentTransition,
+    GlhsClinicalCommitmentVersion,
     GlhsEvidence,
 )
 from clara_api.db.session import get_db
 from clara_api.glhs.commitment_gateway import (
     DOMAINS,
     CommitmentVersionInput,
+    acquire_dynamic_dag_lease,
     apply_commitment_transition,
+    get_dag_lock_manager,
     get_or_create_commitment,
     propose_bound_commitment_transition,
     reconstruct_commitment_decision,
@@ -30,9 +34,12 @@ from clara_api.glhs.commitment_gateway import (
 )
 from clara_api.glhs.commitment_thss import compile_commitment_thss
 from clara_api.glhs.domain import GlhsInvariantError
+from clara_api.glhs.lock_hierarchy import current_state_version
 from clara_api.lifemap.profile_scope import ProfileScope, resolve_profile_scope
 
 router = APIRouter()
+lease_router = APIRouter()
+leases_router = lease_router
 USER = Depends(require_roles("normal", "researcher", "doctor", "admin"))
 
 
@@ -121,6 +128,28 @@ class SnapshotRequest(_Strict):
         normalized = _aware_utc(value)
         assert normalized is not None
         return normalized
+
+
+class AcquireLeaseRequest(_Strict):
+    domain: str | None = None
+    partitions: list[str] = Field(default_factory=list, max_length=64)
+    timeout_seconds: float = Field(default=5.0, ge=0.1, le=60.0)
+    epoch: int = Field(default=1, ge=1)
+
+
+class RenewLeaseRequest(_Strict):
+    epoch: int | None = Field(default=None, ge=1)
+    extend_seconds: float = Field(default=5.0, ge=0.1, le=60.0)
+    validate_snapshots: bool = True
+
+
+class CancelCommitmentRequest(_Strict):
+    domain: str
+    proposal_id: str | None = None
+    reason_code: str = Field(default="cancelled_by_user", min_length=1, max_length=96)
+    expected_state_version: int | None = Field(default=None, ge=0)
+    evidence_ids: list[str] = Field(default_factory=list, max_length=64)
+    cancellation_predicate: dict[str, object] | None = None
 
 
 def _scope(
@@ -392,3 +421,314 @@ def decision(
     if result["commitment_id"] != commitment.public_id:
         raise HTTPException(status_code=404, detail={"code": "commitment_decision_not_found"})
     return result
+
+
+def _parse_lease_partitions(
+    partitions: list[str], default_domain: str | None
+) -> list[tuple[str, str]]:
+    coords: list[tuple[str, str]] = []
+    for p in partitions:
+        p_str = str(p).strip()
+        if not p_str:
+            continue
+        if ":" in p_str:
+            d, k = p_str.split(":", 1)
+            coords.append((d.strip(), k.strip()))
+        elif default_domain:
+            coords.append((default_domain.strip(), p_str))
+        else:
+            coords.append(("general", p_str))
+    return coords
+
+
+@lease_router.post("/acquire", status_code=status.HTTP_201_CREATED)
+def acquire_lease(
+    request: AcquireLeaseRequest | None = None,
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict[str, Any]:
+    req = request or AcquireLeaseRequest()
+    domain = req.domain or "medications"
+    if domain not in DOMAINS:
+        domain = "medications"
+    scope = resolve_profile_scope(
+        db,
+        token,
+        requested_profile=x_profile,
+        action="create",
+        data_class=domain,
+        purpose="self_care",
+    )
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+
+    parsed_partitions = _parse_lease_partitions(req.partitions, req.domain)
+    try:
+        if parsed_partitions:
+            txn_context, _ = acquire_dynamic_dag_lease(
+                db,
+                profile_id=scope.profile.id,
+                partitions=parsed_partitions,
+                epoch=req.epoch,
+                timeout=req.timeout_seconds,
+            )
+        else:
+            lock_mgr = get_dag_lock_manager()
+            txn_context = lock_mgr.begin_transaction(
+                profile_id=scope.profile.id,
+                epoch=req.epoch,
+            )
+        db.commit()
+    except GlhsInvariantError as exc:
+        db.rollback()
+        _raise_invariant(exc)
+
+    return {
+        "lease_id": txn_context.txn_id,
+        "profile_id": txn_context.profile_id,
+        "epoch": txn_context.epoch,
+        "state": (
+            txn_context.state.value
+            if hasattr(txn_context.state, "value")
+            else str(txn_context.state)
+        ),
+        "held_coordinates": [
+            {"domain": c.domain, "semantic_key": c.semantic_key}
+            for c in sorted(txn_context.held_coordinates, key=lambda c: c.canonical_tuple)
+        ],
+        "created_at": (
+            txn_context.created_at.isoformat()
+            if hasattr(txn_context, "created_at")
+            else datetime.now(UTC).isoformat()
+        ),
+    }
+
+
+@lease_router.post("/{lease_id}/renew", status_code=status.HTTP_200_OK)
+def renew_lease(
+    lease_id: str,
+    request: RenewLeaseRequest | None = None,
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict[str, Any]:
+    lock_mgr = get_dag_lock_manager()
+    txn = lock_mgr.get_transaction(lease_id)
+    if txn is None:
+        raise HTTPException(status_code=404, detail={"code": "lease_not_found"})
+
+    scope = resolve_profile_scope(
+        db,
+        token,
+        requested_profile=x_profile or str(txn.profile_id),
+        action="correct",
+        data_class="medications",
+        purpose="self_care",
+    )
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+
+    if txn.profile_id != scope.profile.id:
+        raise HTTPException(status_code=403, detail={"code": "lease_profile_forbidden"})
+
+    try:
+        txn.check_not_wounded()
+        if request and request.epoch is not None:
+            txn.epoch = request.epoch
+        else:
+            txn.epoch += 1
+
+        if request and request.validate_snapshots:
+            lock_mgr.validate_snapshot_invariance(txn, db)
+        db.commit()
+    except GlhsInvariantError as exc:
+        db.rollback()
+        _raise_invariant(exc)
+
+    return {
+        "lease_id": txn.txn_id,
+        "profile_id": txn.profile_id,
+        "epoch": txn.epoch,
+        "state": (
+            txn.state.value if hasattr(txn.state, "value") else str(txn.state)
+        ),
+        "held_coordinates": [
+            {"domain": c.domain, "semantic_key": c.semantic_key}
+            for c in sorted(txn.held_coordinates, key=lambda c: c.canonical_tuple)
+        ],
+        "renewed_at": datetime.now(UTC).isoformat(),
+    }
+
+
+router.include_router(lease_router, prefix="/leases")
+
+
+@router.post("/{commitment_id}/cancel", status_code=status.HTTP_201_CREATED)
+def cancel_commitment(
+    commitment_id: str,
+    request: CancelCommitmentRequest,
+    idempotency_key: str = Header(min_length=1, max_length=128, alias="Idempotency-Key"),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict[str, object]:
+    scope = _scope(db, token, x_profile, action="correct", domain=request.domain)
+    commitment = db.execute(
+        select(GlhsClinicalCommitment).where(
+            GlhsClinicalCommitment.public_id == commitment_id,
+            GlhsClinicalCommitment.profile_id == scope.profile.id,
+            GlhsClinicalCommitment.domain == request.domain,
+        )
+    ).scalar_one_or_none()
+    if commitment is None:
+        raise HTTPException(status_code=404, detail={"code": "commitment_not_found"})
+
+    prior = db.execute(
+        select(GlhsClinicalCommitmentVersion)
+        .where(GlhsClinicalCommitmentVersion.commitment_id == commitment.id)
+        .order_by(GlhsClinicalCommitmentVersion.version_no.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    if prior is None:
+        raise HTTPException(status_code=404, detail={"code": "commitment_version_not_found"})
+
+    if prior.lifecycle_state == "CANCELLED":
+        raise HTTPException(status_code=409, detail={"code": "commitment_already_cancelled"})
+
+    latest_trans = db.execute(
+        select(GlhsClinicalCommitmentTransition)
+        .where(GlhsClinicalCommitmentTransition.commitment_id == commitment.id)
+        .order_by(GlhsClinicalCommitmentTransition.resulting_state_version.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+
+    evidence_rows: tuple[GlhsEvidence, ...] = ()
+    if request.evidence_ids:
+        evidence_rows = _evidence(db, scope, request.evidence_ids)
+    elif latest_trans and isinstance(latest_trans.evidence_ids_json, list):
+        evidence_rows = _evidence(db, scope, [str(x) for x in latest_trans.evidence_ids_json])
+
+    if not evidence_rows:
+        raise HTTPException(status_code=422, detail={"code": "commitment_evidence_required"})
+
+    def _ensure_utc(dt: datetime | None) -> datetime | None:
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=UTC)
+        return dt.astimezone(UTC)
+
+    now = datetime.now(UTC)
+    anchor_time = _ensure_utc(prior.anchor_valid_time) or now
+    current_version = current_state_version(db, profile_id=scope.profile.id)
+
+    proposal = None
+    if request.proposal_id:
+        proposal = db.execute(
+            select(GlhsClinicalCommitmentProposal).where(
+                GlhsClinicalCommitmentProposal.public_id == request.proposal_id,
+                GlhsClinicalCommitmentProposal.commitment_id == commitment.id,
+            )
+        ).scalar_one_or_none()
+        if proposal is None:
+            raise HTTPException(status_code=404, detail={"code": "commitment_proposal_not_found"})
+    else:
+        proposal = db.execute(
+            select(GlhsClinicalCommitmentProposal)
+            .where(
+                GlhsClinicalCommitmentProposal.commitment_id == commitment.id,
+                GlhsClinicalCommitmentProposal.proposed_transition == "CANCELLED",
+            )
+            .order_by(GlhsClinicalCommitmentProposal.id.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+
+    if proposal is None:
+        origin = {"owner": "user", "clinician": "clinician", "caregiver": "caregiver"}.get(
+            scope.actor_role, "user"
+        )
+        try:
+            snapshot = compile_commitment_thss(
+                db,
+                scope=scope,
+                task="commitment_cancellation",
+                purpose="self_care",
+                valid_at=anchor_time,
+                known_at=now,
+                allowed_domains=frozenset({request.domain}),
+                strict=True,
+                expires_in=timedelta(seconds=300),
+                disclosed_evidence=evidence_rows,
+            )
+            db.flush()
+            proposal = propose_bound_commitment_transition(
+                db,
+                scope=scope,
+                commitment=commitment,
+                observed_evidence=evidence_rows,
+                proposed_transition="CANCELLED",
+                origin=origin,
+                observed_base_state_version=current_version,
+                task="commitment_cancellation",
+                source_snapshot_id=snapshot.snapshot_id,
+                source_snapshot_digest=snapshot.manifest_digest,
+            )
+            db.flush()
+        except GlhsInvariantError as exc:
+            db.rollback()
+            _raise_invariant(exc)
+
+    data = CommitmentVersionInput(
+        action=prior.action,
+        target=prior.target_json,
+        anchor_valid_time=anchor_time,
+        anchor_known_time=now,
+        authority_class=prior.authority_class,
+        lifecycle_state="CANCELLED",
+        evidence_state=prior.evidence_state,
+        timeliness_state=prior.timeliness_state,
+        dependencies=tuple(prior.dependencies_json or []),
+        state_effective_at=_ensure_utc(prior.state_effective_at),
+        earliest_valid_time=_ensure_utc(prior.earliest_valid_time),
+        due_time=_ensure_utc(prior.due_time),
+        grace_end=_ensure_utc(prior.grace_end),
+        conditional_trigger=prior.conditional_trigger_json,
+        fulfillment_predicate=prior.fulfillment_predicate_json,
+        cancellation_predicate=request.cancellation_predicate or prior.cancellation_predicate_json,
+        supersession_predicate=prior.supersession_predicate_json,
+        partial_predicate=prior.partial_predicate_json,
+    )
+    expected_version = (
+        request.expected_state_version
+        if request.expected_state_version is not None
+        else current_version
+    )
+
+    if proposal is None:
+        raise HTTPException(status_code=404, detail={"code": "commitment_proposal_not_found"})
+
+    try:
+        transition = apply_commitment_transition(
+            db,
+            scope=scope,
+            commitment=commitment,
+            proposal=proposal,
+            evidence=evidence_rows,
+            data=data,
+            expected_state_version=expected_version,
+            idempotency_key=idempotency_key,
+            transition_kind="cancellation",
+            reason_code=request.reason_code,
+        )
+        db.commit()
+    except GlhsInvariantError as exc:
+        db.rollback()
+        _raise_invariant(exc)
+
+    return {
+        "decision_id": transition.public_id,
+        "commitment_id": commitment.public_id,
+        "lifecycle_state": "CANCELLED",
+        "resulting_state_version": transition.resulting_state_version,
+        "origin": transition.origin,
+        "reason_code": transition.reason_code,
+    }

@@ -59,6 +59,7 @@ api_router.include_router(medications.router, prefix="/medication-courses", tags
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(mobile.router, prefix="/mobile", tags=["mobile"])
 api_router.include_router(commitments.router, prefix="/commitments", tags=["commitments"])
+api_router.include_router(commitments.lease_router, prefix="/leases", tags=["leases"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(
     clinical_workbench.router, prefix="/clinical-workbench", tags=["clinical-workbench"]

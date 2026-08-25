@@ -900,15 +900,6 @@ def get_you_overview(
             a.get("name", "") for a in allergies if isinstance(a, dict) and a.get("name")
         ][:2]
 
-    allergies_summary = (
-        f"{len(allergies)} dị ứng đã ghi nhận" if allergies else "Chưa ghi nhận dị ứng"
-    )
-    medications_summary = (
-        f"{len(medications)} thuốc đang sử dụng"
-        if medications
-        else "Không có thuốc thường xuyên"
-    )
-
     emergency_card_summary = YouEmergencyCardSummaryDto(
         id=profile.public_id,
         blood_type=profile.blood_type or "Chưa rõ",

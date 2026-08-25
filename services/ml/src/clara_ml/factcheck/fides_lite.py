@@ -10,10 +10,11 @@ from .nli_verifier import (
     build_contradiction_summary as build_nli_contradiction_summary,
 )
 from .nli_verifier import (
-    summarize_verification_matrix as summarize_nli_matrix,
+    has_hard_veto_violation,
+    verify_claims,
 )
 from .nli_verifier import (
-    verify_claims,
+    summarize_verification_matrix as summarize_nli_matrix,
 )
 
 
@@ -29,6 +30,7 @@ class FactCheckResult:
     evidence_count: int
     severity: str
     note: str
+    policy_action: str = "allow"
     fide_report: dict[str, Any] = field(default_factory=dict)
     verification_matrix: list[dict[str, Any]] = field(default_factory=list)
     contradiction_summary: dict[str, Any] = field(default_factory=dict)
@@ -38,6 +40,7 @@ class FactCheckResult:
             "enabled": self.enabled,
             "stage": self.stage,
             "verdict": self.verdict,
+            "policy_action": self.policy_action,
             "confidence": round(self.confidence, 4),
             "supported_claims": self.supported_claims,
             "total_claims": self.total_claims,
@@ -274,6 +277,7 @@ def _build_fide_report(
     contradiction_summary: dict[str, Any],
     citation_present: bool,
     mode: str,
+    policy_action: str = "allow",
 ) -> dict[str, Any]:
     coverage = supported_claims / max(claims_count, 1) if claims_count > 0 else 0.0
     contradiction_count = int(verification_matrix_summary.get("contradicted_claims", 0))
@@ -300,6 +304,7 @@ def _build_fide_report(
                 "id": "decision",
                 "status": verdict,
                 "severity": severity,
+                "policy_action": policy_action,
                 "confidence": round(float(confidence), 4),
             },
             {
@@ -319,6 +324,7 @@ def _build_fide_report(
             "citation_present": citation_present,
             "verdict": verdict,
             "severity": severity,
+            "policy_action": policy_action,
             "confidence": round(float(confidence), 4),
         },
         "verification_matrix": {
@@ -381,6 +387,7 @@ def run_fides_lite(
             evidence_count=len(evidence_rows),
             severity="low",
             note="Không có mệnh đề trọng yếu để kiểm chứng.",
+            policy_action="allow",
             verification_matrix=verification_matrix,
             contradiction_summary=contradiction_summary,
             fide_report=_build_fide_report(
@@ -397,6 +404,7 @@ def run_fides_lite(
                 contradiction_summary=contradiction_summary,
                 citation_present=_has_citations(answer, context_ids),
                 mode=normalized_mode,
+                policy_action="allow",
             ),
         )
 
@@ -418,33 +426,49 @@ def run_fides_lite(
             total_claims=len(claims),
         )
         contradiction_summary = build_nli_contradiction_summary(verification_matrix)
+        hard_veto, _ = has_hard_veto_violation(verification_matrix)
+        if hard_veto:
+            verdict = "fail"
+            severity = "high"
+            policy_action = "block"
+            confidence = 0.25
+            note = "Hard-Veto: Phát hiện mệnh đề an toàn y khoa (liều dùng / tương tác / chống chỉ định) chưa đủ bằng chứng (insufficient evidence)."
+        else:
+            verdict = "warn"
+            severity = "high"
+            policy_action = "warn"
+            confidence = 0.35
+            note = "Không có bằng chứng truy xuất để fact-check (insufficient evidence)."
+
         return FactCheckResult(
             enabled=True,
             stage="fides-lite-v1.2",
-            verdict="warn",
-            confidence=0.35,
+            verdict=verdict,
+            confidence=confidence,
             supported_claims=0,
             total_claims=len(claims),
             unsupported_claims=claims[:3],
             evidence_count=0,
-            severity="high",
-            note="Không có bằng chứng truy xuất để fact-check (insufficient evidence).",
+            severity=severity,
+            note=note,
+            policy_action=policy_action,
             verification_matrix=verification_matrix,
             contradiction_summary=contradiction_summary,
             fide_report=_build_fide_report(
                 claims_count=len(claims),
                 evidence_count=0,
                 supported_claims=0,
-                verdict="warn",
-                severity="high",
-                confidence=0.35,
-                note="Không có bằng chứng truy xuất để fact-check (insufficient evidence).",
+                verdict=verdict,
+                severity=severity,
+                confidence=confidence,
+                note=note,
                 unsupported_claims=claims[:3],
                 verification_matrix=verification_matrix,
                 verification_matrix_summary=verification_matrix_summary,
                 contradiction_summary=contradiction_summary,
                 citation_present=_has_citations(answer, context_ids),
                 mode=normalized_mode,
+                policy_action=policy_action,
             ),
         )
 
@@ -489,13 +513,22 @@ def run_fides_lite(
     pass_threshold = 0.8 if normalized_mode == "strict" else 0.75
     warn_threshold = 0.55 if normalized_mode == "strict" else 0.4
 
-    if contradicted_claims:
+    hard_veto, _ = has_hard_veto_violation(verification_matrix)
+    if hard_veto:
         verdict = "fail"
         severity = "high"
+        policy_action = "block"
+        confidence = min(confidence, 0.35)
+        note = "Hard-Veto: Phát hiện mệnh đề an toàn y khoa (liều dùng / tương tác / chống chỉ định) chưa đủ bằng chứng hoặc bị mâu thuẫn."
+    elif contradicted_claims:
+        verdict = "fail"
+        severity = "high"
+        policy_action = "block"
         note = "Phát hiện claim có dấu hiệu mâu thuẫn với bằng chứng truy xuất."
     elif support_ratio >= pass_threshold:
         verdict = "pass"
         severity = "low"
+        policy_action = "allow"
         if citation_present:
             note = "Đã đối chiếu với evidence retrieval và đạt ngưỡng hỗ trợ cao."
         else:
@@ -503,10 +536,12 @@ def run_fides_lite(
     elif support_ratio >= warn_threshold:
         verdict = "warn"
         severity = "medium"
+        policy_action = "warn"
         note = "Một phần claim ở trạng thái insufficient evidence, cần hiển thị cảnh báo."
     else:
         verdict = "warn"
         severity = "high"
+        policy_action = "warn"
         note = "Đa số claim ở trạng thái insufficient evidence."
 
     unsupported_bundle = insufficient_claims + [
@@ -524,6 +559,7 @@ def run_fides_lite(
         evidence_count=len(evidence_rows),
         severity=severity,
         note=note,
+        policy_action=policy_action,
         verification_matrix=verification_matrix,
         contradiction_summary=contradiction_summary,
         fide_report=_build_fide_report(
@@ -540,5 +576,6 @@ def run_fides_lite(
             contradiction_summary=contradiction_summary,
             citation_present=citation_present,
             mode=normalized_mode,
+            policy_action=policy_action,
         ),
     )

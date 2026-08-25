@@ -44,6 +44,30 @@ _DEFAULT_TOKEN_DELAY = 0.018
 _DEFAULT_STEP_DELAY = 0.04
 
 
+def sanitize_cot_content(raw_content: str, existing_reasoning: str = "") -> tuple[str, str]:
+    """Strip <think>...</think> tags and extract reasoning_content."""
+    if not raw_content:
+        return "", existing_reasoning
+
+    think_pattern = re.compile(r"<think>(.*?)(?:</think>|$)", flags=re.DOTALL)
+    extracted_reasoning = [
+        m.group(1).strip()
+        for m in think_pattern.finditer(raw_content)
+        if m.group(1).strip()
+    ]
+    clean_content = think_pattern.sub("", raw_content).strip()
+
+    combined_reasoning = existing_reasoning
+    if extracted_reasoning:
+        cot_text = "\n\n".join(extracted_reasoning)
+        if combined_reasoning:
+            combined_reasoning = f"{combined_reasoning}\n\n{cot_text}"
+        else:
+            combined_reasoning = cot_text
+
+    return clean_content, combined_reasoning
+
+
 def sse_event(event: str, data: Any) -> str:
     """Format one SSE frame: ``event: <name>\\ndata: <json>\\n\\n``."""
 
@@ -60,7 +84,10 @@ def iter_answer_chunks(answer: str) -> Iterator[str]:
 
     if not answer:
         return
-    for match in _CHUNK_RE.finditer(answer):
+    clean_answer, _ = sanitize_cot_content(answer)
+    if not clean_answer:
+        return
+    for match in _CHUNK_RE.finditer(clean_answer):
         chunk = match.group(0)
         if chunk:
             yield chunk
@@ -113,7 +140,14 @@ def stream_chat_sse(
     # (3) Answer — typewriter token stream.
     answer = result.get("answer")
     answer_text = answer if isinstance(answer, str) else ""
-    for chunk in iter_answer_chunks(answer_text):
+    clean_answer, extracted_reasoning = sanitize_cot_content(
+        answer_text,
+        existing_reasoning=str(result.get("reasoning_content") or ""),
+    )
+    result["answer"] = clean_answer
+    if extracted_reasoning:
+        result["reasoning_content"] = extracted_reasoning
+    for chunk in iter_answer_chunks(clean_answer):
         yield sse_event("token", {"text": chunk})
         if token_delay > 0:
             sleep(token_delay)

@@ -297,3 +297,129 @@ def test_cookie_authenticated_commitment_mutation_requires_csrf_header() -> None
     )
     assert response.status_code == 403
     assert response.json() == {"detail": "CSRF validation failed"}
+
+
+def test_lease_acquire_and_renew_endpoints() -> None:
+    headers = _account("lease-test")
+    # Acquire lease
+    acquire_resp = client.post(
+        "/api/v1/leases/acquire",
+        headers=headers,
+        json={
+            "domain": "medications",
+            "partitions": ["medications:rx-test-1", "medications:rx-test-2"],
+            "timeout_seconds": 5.0,
+            "epoch": 1,
+        },
+    )
+    assert acquire_resp.status_code == 201, acquire_resp.text
+    lease_data = acquire_resp.json()
+    assert "lease_id" in lease_data
+    assert lease_data["epoch"] == 1
+    assert lease_data["state"] == "active"
+    assert len(lease_data["held_coordinates"]) == 2
+    lease_id = lease_data["lease_id"]
+
+    # Renew lease
+    renew_resp = client.post(
+        f"/api/v1/leases/{lease_id}/renew",
+        headers=headers,
+        json={"epoch": 2, "validate_snapshots": True},
+    )
+    assert renew_resp.status_code == 200, renew_resp.text
+    renew_data = renew_resp.json()
+    assert renew_data["lease_id"] == lease_id
+    assert renew_data["epoch"] == 2
+    assert renew_data["state"] == "active"
+
+
+def test_lease_renew_wounded_fails_closed() -> None:
+    from clara_api.glhs.commitment_gateway import get_dag_lock_manager
+    headers = _account("lease-wounded")
+    acquire_resp = client.post(
+        "/api/v1/leases/acquire",
+        headers=headers,
+        json={"domain": "medications", "partitions": ["medications:rx-wounded-1"]},
+    )
+    assert acquire_resp.status_code == 201, acquire_resp.text
+    lease_id = acquire_resp.json()["lease_id"]
+
+    # Mark wounded
+    lock_mgr = get_dag_lock_manager()
+    txn = lock_mgr.get_transaction(lease_id)
+    assert txn is not None
+    txn.mark_wounded("preempted_by_higher_priority")
+
+    renew_resp = client.post(
+        f"/api/v1/leases/{lease_id}/renew",
+        headers=headers,
+        json={"validate_snapshots": False},
+    )
+    assert renew_resp.status_code == 409, renew_resp.text
+    assert "wound_wait_preempted" in renew_resp.json()["detail"]["code"]
+
+
+def test_commitment_cancel_endpoint() -> None:
+    headers = _account("cancel-test")
+    evidence_id = _evidence(headers)
+    proposal_snapshot = _proposal_snapshot(headers, evidence_id)
+    proposal = client.post(
+        "/api/v1/commitments/proposals",
+        headers=headers,
+        json=_proposal_payload(evidence_id, proposal_snapshot),
+    )
+    assert proposal.status_code == 201, proposal.text
+    commitment_id = proposal.json()["commitment_id"]
+
+    transition_payload = {
+        "domain": "observations",
+        "proposal_id": proposal.json()["proposal_id"],
+        "evidence_ids": [evidence_id],
+        "expected_state_version": 0,
+        "action": "repeat_measurement",
+        "target": {"system": "http://loinc.org", "code": "integration"},
+        "anchor_valid_time": "2026-01-01T00:00:00Z",
+        "anchor_known_time": "2026-01-01T00:00:00Z",
+        "authority_class": "patient_report",
+        "fulfillment_predicate": {
+            "op": "event",
+            "equals": {
+                "resource_type": "Observation",
+                "system": "http://loinc.org",
+                "code": "integration",
+                "status": "final",
+            },
+        },
+        "transition_kind": "commitment_opened",
+        "reason_code": "source_grounded_intent",
+    }
+    transition = client.post(
+        f"/api/v1/commitments/{commitment_id}/transitions",
+        headers={**headers, "Idempotency-Key": uuid4().hex},
+        json=transition_payload,
+    )
+    assert transition.status_code == 201, transition.text
+
+    # Cancel commitment
+    cancel_resp = client.post(
+        f"/api/v1/commitments/{commitment_id}/cancel",
+        headers={**headers, "Idempotency-Key": uuid4().hex},
+        json={
+            "domain": "observations",
+            "reason_code": "patient_requested_cancellation",
+            "evidence_ids": [evidence_id],
+        },
+    )
+    assert cancel_resp.status_code == 201, cancel_resp.text
+    cancel_data = cancel_resp.json()
+    assert cancel_data["commitment_id"] == commitment_id
+    assert cancel_data["lifecycle_state"] == "CANCELLED"
+    assert cancel_data["resulting_state_version"] == transition.json()["resulting_state_version"] + 1
+
+    # Cancelling again fails with 409
+    cancel_again = client.post(
+        f"/api/v1/commitments/{commitment_id}/cancel",
+        headers={**headers, "Idempotency-Key": uuid4().hex},
+        json={"domain": "observations", "reason_code": "retry"},
+    )
+    assert cancel_again.status_code == 409, cancel_again.text

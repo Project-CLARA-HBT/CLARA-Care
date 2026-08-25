@@ -1,21 +1,37 @@
 from clara_ml.factcheck import run_fides_lite
 
 
-def test_fides_lite_warns_when_no_evidence() -> None:
+def test_fides_lite_warns_when_no_evidence_for_general_claim() -> None:
     result = run_fides_lite(
-        answer="Paracetamol co the lam tang nguy co chay mau khi dung cung warfarin.",
+        answer="Tap the duc buoi sang giup cai thien suc khoe tim mach va tinh than.",
         retrieved_context=[],
     )
     assert result.verdict == "warn"
     assert result.severity == "high"
+    assert result.policy_action == "warn"
     assert result.evidence_count == 0
     assert len(result.verification_matrix) >= 1
     first_row = result.verification_matrix[0]
     assert first_row["support_status"] == "insufficient"
-    assert first_row["claim_type"] in {"interaction", "general", "dosage", "contraindication"}
+    assert first_row["claim_type"] == "general"
     assert first_row["evidence_ref"] is None
     assert result.contradiction_summary["has_contradiction"] is False
     assert result.fide_report["verification_matrix"]["summary"]["version"] == "claim-v2-nli"
+
+
+def test_fides_lite_hard_veto_on_ungrounded_critical_claim() -> None:
+    result = run_fides_lite(
+        answer="Paracetamol co the lam tang nguy co chay mau khi dung cung warfarin.",
+        retrieved_context=[],
+    )
+    assert result.verdict == "fail"
+    assert result.severity == "high"
+    assert result.policy_action == "block"
+    assert result.evidence_count == 0
+    assert len(result.verification_matrix) >= 1
+    first_row = result.verification_matrix[0]
+    assert first_row["support_status"] == "insufficient"
+    assert first_row["claim_type"] in {"interaction", "dosage", "contraindication"}
 
 
 def test_fides_lite_passes_when_claim_matches_evidence() -> None:

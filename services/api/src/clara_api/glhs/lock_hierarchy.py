@@ -24,6 +24,8 @@ Solves the Phantom Problem on append-only ledgers (``user_consents`` and
 
 from __future__ import annotations
 
+import hashlib
+import struct
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -318,10 +320,22 @@ def is_postgres(db: Session) -> bool:
         return False
 
 
+def key_to_advisory_lock_pair(key: str | int) -> tuple[int, int]:
+    """Derive two 32-bit signed integers (int4, int4) from the first 8 bytes of SHA-256 digest.
+
+    Upgrades 32-bit hashtext(key) to 64-bit SHA-256 integer pairs for pg_advisory_xact_lock(int4, int4)
+    to eliminate false hash collisions (P <= 2.7e-10).
+    """
+    key_bytes = str(key).encode("utf-8")
+    digest = hashlib.sha256(key_bytes).digest()
+    k1, k2 = struct.unpack("!ii", digest[:8])
+    return k1, k2
+
+
 def acquire_advisory_xact_lock(db: Session, key: str | int) -> None:
     """Acquire a transaction-scoped exclusive advisory lock in PostgreSQL.
 
-    In PostgreSQL, uses pg_advisory_xact_lock(hashtext(:key)), which is
+    In PostgreSQL, uses pg_advisory_xact_lock(int4, int4), which is
     automatically released at the end of the transaction (commit or rollback).
     In SQLite/other non-PostgreSQL dialects, this is a safe no-op.
     """
@@ -343,34 +357,24 @@ def acquire_governance_anchor(
 ) -> None:
     """Acquire a governance anchor PostgreSQL transactional advisory lock.
 
-    In PostgreSQL, uses pg_advisory_xact_lock_shared for SHARED mode
-    and pg_advisory_xact_lock for EXCLUSIVE mode.
+    In PostgreSQL, uses pg_advisory_xact_lock_shared(int4, int4) for SHARED mode
+    and pg_advisory_xact_lock(int4, int4) for EXCLUSIVE mode, passing two 32-bit
+    signed integers derived from the first 8 bytes of the SHA-256 digest.
     In SQLite/other non-PostgreSQL dialects, this is a safe no-op.
     """
     resolved_mode = resolve_lock_mode(mode)
     if is_postgres(db):
-        if isinstance(key, int):
-            if resolved_mode == LockMode.EXCLUSIVE:
-                db.execute(
-                    text("SELECT pg_advisory_xact_lock(:key)"),
-                    {"key": key},
-                )
-            else:
-                db.execute(
-                    text("SELECT pg_advisory_xact_lock_shared(:key)"),
-                    {"key": key},
-                )
+        k1, k2 = key_to_advisory_lock_pair(key)
+        if resolved_mode == LockMode.EXCLUSIVE:
+            db.execute(
+                text("SELECT pg_advisory_xact_lock(:k1, :k2)"),
+                {"k1": k1, "k2": k2},
+            )
         else:
-            if resolved_mode == LockMode.EXCLUSIVE:
-                db.execute(
-                    text("SELECT pg_advisory_xact_lock(hashtext(:key))"),
-                    {"key": str(key)},
-                )
-            else:
-                db.execute(
-                    text("SELECT pg_advisory_xact_lock_shared(hashtext(:key))"),
-                    {"key": str(key)},
-                )
+            db.execute(
+                text("SELECT pg_advisory_xact_lock_shared(:k1, :k2)"),
+                {"k1": k1, "k2": k2},
+            )
 
 
 # --- Policy Lock Anchor -------------------------------------------------------

@@ -1742,7 +1742,7 @@ def test_run_research_tier2_emits_contradiction_miner_and_verification_matrix(mo
     assert "summary" in matrix_event["payload"]
 
 
-def test_run_research_tier2_applies_safety_override_warn_for_insufficient(monkeypatch):
+def test_run_research_tier2_applies_safety_override_block_for_insufficient_critical_claim(monkeypatch):
     def _fake_pipeline_run(self, query: str, **kwargs) -> RagResult:  # pragma: no cover - helper
         return RagResult(
             query=query,
@@ -1809,7 +1809,7 @@ def test_run_research_tier2_applies_safety_override_warn_for_insufficient(monkey
         }
     )
 
-    assert result.get("policy_action") == "warn"
+    assert result.get("policy_action") == "block"
     matrix = result.get("verification_matrix", {})
     assert isinstance(matrix, dict)
     override = matrix.get("safety_override", {})
@@ -1817,7 +1817,7 @@ def test_run_research_tier2_applies_safety_override_warn_for_insufficient(monkey
     assert override.get("applied") is True
     assert override.get("reason") == "safety_critical_insufficient"
     assert any(
-        event.get("stage") == "safety_override" and event.get("status") == "warning"
+        event.get("stage") == "safety_override" and event.get("status") == "blocked"
         for event in result.get("flow_events", [])
     )
 

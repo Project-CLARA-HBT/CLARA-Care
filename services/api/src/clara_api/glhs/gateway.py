@@ -1781,6 +1781,7 @@ def apply_transition(
             purpose=scope.purpose,
             dependencies=resolved_dependencies,
             write_partitions=target_partitions,
+            expected_base_state_version=expected_state_version if revalidate_state else None,
             expected_policy_version=assertion.policy_version if revalidate_governance else None,
             expected_consent_version=assertion.consent_version if revalidate_governance else None,
             canonicalization_profile=CANONICALIZATION_PROFILE,

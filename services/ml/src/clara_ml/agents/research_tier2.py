@@ -5577,7 +5577,7 @@ def _build_contradiction_summary(
     }
 
 
-_SAFETY_CRITICAL_CLAIM_TYPES = {"dosage", "contraindication"}
+_SAFETY_CRITICAL_CLAIM_TYPES = {"dosage", "interaction", "contraindication"}
 _SAFETY_CRITICAL_RISK_STATUSES = {"insufficient", "unsupported", "contradicted"}
 
 
@@ -5616,14 +5616,14 @@ def _evaluate_safety_critical_override(
         "affected_claim_count": len(critical_rows),
         "claims": top_claims,
     }
-    if contradicted_rows:
+    if contradicted_rows or insufficient_rows:
         return {
             **base_payload,
             "policy_action": "block",
             "verification_state": "warning",
             "severity_override": "high",
-            "reason": "safety_critical_contradicted",
-            "note": "Safety override: claim safety-critical bị contradicted, policy chuyển block.",
+            "reason": "safety_critical_contradicted" if contradicted_rows else "safety_critical_insufficient",
+            "note": "Safety override: claim safety-critical bị mâu thuẫn hoặc chưa đủ bằng chứng, policy chuyển block.",
             "status": "blocked",
         }
     return {
@@ -11135,7 +11135,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 answer=answer_markdown,
                 retrieved_context=effective_context,
             )
-        policy_action = "allow" if factcheck_result.verdict == "pass" else "warn"
+        if hasattr(factcheck_result, "policy_action") and factcheck_result.policy_action:
+            policy_action = str(factcheck_result.policy_action)
+        else:
+            policy_action = "allow" if factcheck_result.verdict == "pass" else ("block" if factcheck_result.verdict == "fail" else "warn")
         verification_state = "verified" if policy_action == "allow" else "warning"
     else:
         factcheck_result = FactCheckResult(
@@ -11258,6 +11261,12 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     # Keep the release-gate contract aligned with the final deterministic policy.
     verification_matrix_payload["state"] = verification_state
     verification_matrix_payload["safety_override"] = safety_override
+    if policy_action == "block" or factcheck_result.verdict == "fail":
+        answer_markdown = (
+            "Nội dung câu trả lời có chứa thông tin y khoa chưa được kiểm chứng đầy đủ "
+            "hoặc có mâu thuẫn với tài liệu y khoa chính thống. Vì an toàn, hệ thống không thể "
+            "cung cấp hướng dẫn trực tiếp. Vui lòng tham vấn trực tiếp bác sĩ hoặc dược sĩ chuyên khoa."
+        )
     if research_mode == "deep_beta":
         quality_gate_started = perf_counter()
         flow_events.append(

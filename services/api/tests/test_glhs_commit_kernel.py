@@ -700,6 +700,45 @@ def test_phase3_lease_dependency_validation(db: Session) -> None:
             ],
         )
 
+    # Not-yet-valid lease dependency
+    with pytest.raises(GlhsInvariantError, match="lease_not_yet_valid"):
+        execute_atomic_glhs_commit(
+            db,
+            profile_id=profile.id,
+            idempotency_key=f"idemp_{uuid4().hex}",
+            operation_kind="APPLY_TRANSITION",
+            dependencies=[
+                DependencySpec(
+                    dependency_kind="LEASE",
+                    dependency_key="lease:agent_future_123",
+                    access_mode="READ",
+                    valid_from=datetime.now(UTC) + timedelta(minutes=10),
+                )
+            ],
+        )
+
+    # Wounded lease fails closed under INV-001
+    from clara_api.glhs.commitment_gateway import get_dag_lock_manager, reset_dag_lock_manager
+    reset_dag_lock_manager()
+    lock_mgr = get_dag_lock_manager()
+    txn = lock_mgr.begin_transaction(profile_id=profile.id, txn_id="wounded_lease_test")
+    txn.mark_wounded("preempted_by_higher_priority")
+
+    with pytest.raises(GlhsInvariantError, match="lease_invalid_or_wounded"):
+        execute_atomic_glhs_commit(
+            db,
+            profile_id=profile.id,
+            idempotency_key=f"idemp_{uuid4().hex}",
+            operation_kind="APPLY_TRANSITION",
+            dependencies=[
+                DependencySpec(
+                    dependency_kind="LEASE",
+                    dependency_key="lease:wounded_lease_test",
+                    access_mode="READ",
+                )
+            ],
+        )
+
 
 def test_disjoint_partition_writes_no_global_version_conflict(db: Session) -> None:
     """Disjoint partition writes must NEVER fail due to global base_state_version."""

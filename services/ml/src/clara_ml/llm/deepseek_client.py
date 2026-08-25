@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 from contextlib import contextmanager
 from dataclasses import dataclass
 from threading import BoundedSemaphore, Lock
@@ -16,6 +17,31 @@ from clara_ml.llm.circuit_breaker import get_llm_circuit_breaker
 class DeepSeekResponse:
     content: str
     model: str
+    reasoning_content: str = ""
+
+
+def sanitize_cot_content(raw_content: str, existing_reasoning: str = "") -> tuple[str, str]:
+    """Strip <think>...</think> tags and extract reasoning_content."""
+    if not raw_content:
+        return "", existing_reasoning
+
+    think_pattern = re.compile(r"<think>(.*?)(?:</think>|$)", flags=re.DOTALL)
+    extracted_reasoning = [
+        m.group(1).strip()
+        for m in think_pattern.finditer(raw_content)
+        if m.group(1).strip()
+    ]
+    clean_content = think_pattern.sub("", raw_content).strip()
+
+    combined_reasoning = existing_reasoning
+    if extracted_reasoning:
+        cot_text = "\n\n".join(extracted_reasoning)
+        if combined_reasoning:
+            combined_reasoning = f"{combined_reasoning}\n\n{cot_text}"
+        else:
+            combined_reasoning = cot_text
+
+    return clean_content, combined_reasoning
 
 
 class DeepSeekClient:
@@ -188,11 +214,14 @@ class DeepSeekClient:
                             getattr(response, "headers", {}).get("content-type", "")
                         ).lower()
                         if "text/event-stream" in content_type:
-                            content, response_model = self._consume_chat_stream(response)
+                            content, response_model, response_reasoning = self._consume_chat_stream(response)
                             if not content:
                                 raise RuntimeError("DeepSeek SSE response content is empty")
+                            message_dict: dict[str, object] = {"content": content}
+                            if response_reasoning:
+                                message_dict["reasoning_content"] = response_reasoning
                             data: dict[str, object] = {
-                                "choices": [{"message": {"content": content}}],
+                                "choices": [{"message": message_dict}],
                                 "model": response_model or model,
                             }
                         else:
@@ -240,12 +269,17 @@ class DeepSeekClient:
         return []
 
     @classmethod
-    def _extract_content_from_payload(cls, payload: dict[str, object]) -> str:
+    def _extract_content_and_reasoning_from_payload(
+        cls, payload: dict[str, object]
+    ) -> tuple[str, str]:
         response_obj = payload.get("response")
         if isinstance(response_obj, dict):
-            nested = cls._extract_content_from_payload(response_obj)
-            if nested:
-                return nested
+            nested_c, nested_r = cls._extract_content_and_reasoning_from_payload(response_obj)
+            if nested_c or nested_r:
+                return nested_c, nested_r
+
+        reasoning = ""
+        raw_content = ""
 
         choices = payload.get("choices")
         if isinstance(choices, list) and choices:
@@ -253,32 +287,54 @@ class DeepSeekClient:
             if isinstance(first_choice, dict):
                 message = first_choice.get("message")
                 if isinstance(message, dict):
-                    content = cls._extract_text_parts(message.get("content"))
-                    if content:
-                        return "\n".join(content).strip()
+                    reasoning_parts = cls._extract_text_parts(message.get("reasoning_content"))
+                    if reasoning_parts:
+                        reasoning = "\n".join(reasoning_parts).strip()
+                    content_parts = cls._extract_text_parts(message.get("content"))
+                    if content_parts:
+                        raw_content = "\n".join(content_parts).strip()
                 delta = first_choice.get("delta")
                 if isinstance(delta, dict):
-                    content = cls._extract_text_parts(delta.get("content"))
-                    if content:
-                        return "".join(content).strip()
+                    reasoning_parts = cls._extract_text_parts(delta.get("reasoning_content"))
+                    if reasoning_parts:
+                        reasoning = "".join(reasoning_parts).strip()
+                    content_parts = cls._extract_text_parts(delta.get("content"))
+                    if content_parts:
+                        raw_content = "".join(content_parts).strip()
 
-        output = payload.get("output")
-        if isinstance(output, list) and output:
-            content = cls._extract_text_parts(output)
-            if content:
-                return "\n".join(content).strip()
+        if not raw_content:
+            output = payload.get("output")
+            if isinstance(output, list) and output:
+                content_parts = cls._extract_text_parts(output)
+                if content_parts:
+                    raw_content = "\n".join(content_parts).strip()
 
-        for key in ("output_text", "text", "content"):
-            content = cls._extract_text_parts(payload.get(key))
-            if content:
-                return "\n".join(content).strip()
+        if not raw_content:
+            for key in ("output_text", "text", "content"):
+                content_parts = cls._extract_text_parts(payload.get(key))
+                if content_parts:
+                    raw_content = "\n".join(content_parts).strip()
+                    break
 
-        return ""
+        if not reasoning:
+            for key in ("reasoning_content", "reasoning", "thought"):
+                reasoning_parts = cls._extract_text_parts(payload.get(key))
+                if reasoning_parts:
+                    reasoning = "\n".join(reasoning_parts).strip()
+                    break
+
+        clean_content, clean_reasoning = sanitize_cot_content(raw_content, existing_reasoning=reasoning)
+        return clean_content, clean_reasoning
+
+    @classmethod
+    def _extract_content_from_payload(cls, payload: dict[str, object]) -> str:
+        content, _ = cls._extract_content_and_reasoning_from_payload(payload)
+        return content
 
     def _stream_chat_content_with_failover(
         self,
         payload: dict[str, object],
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, str]:
         # Mirror _post_json_with_failover: sweep bases with the primary model,
         # then once more with the fallback model when configured.
         models = [self._model]
@@ -304,9 +360,9 @@ class DeepSeekClient:
                                     json=stream_payload,
                                 ) as response:
                                     response.raise_for_status()
-                                    content, resp_model = self._consume_chat_stream(response)
+                                    content, resp_model, resp_reasoning = self._consume_chat_stream(response)
                         if content:
-                            return content, resp_model or model
+                            return content, resp_model or model, resp_reasoning
                         raise RuntimeError("DeepSeek stream content is empty")
                     except httpx.TimeoutException as exc:
                         errors.append(f"timeout:{model}:{base}:#{attempt + 1}:{exc.__class__.__name__}")
@@ -326,8 +382,9 @@ class DeepSeekClient:
         raise RuntimeError("deepseek_stream_failed|" + "|".join(errors[:8]))
 
     @classmethod
-    def _consume_chat_stream(cls, response: httpx.Response) -> tuple[str, str]:
+    def _consume_chat_stream(cls, response: httpx.Response) -> tuple[str, str, str]:
         fragments: list[str] = []
+        reasoning_fragments: list[str] = []
         model = ""
 
         for raw_line in response.iter_lines():
@@ -362,8 +419,17 @@ class DeepSeekClient:
                 if not isinstance(delta, dict):
                     continue
                 fragments.extend(cls._extract_text_parts(delta.get("content"), trim_strings=False))
+                if "reasoning_content" in delta:
+                    reasoning_fragments.extend(
+                        cls._extract_text_parts(delta.get("reasoning_content"), trim_strings=False)
+                    )
 
-        return "".join(fragments).strip(), model
+        full_content = "".join(fragments).strip()
+        full_reasoning = "".join(reasoning_fragments).strip()
+        clean_content, clean_reasoning = sanitize_cot_content(
+            full_content, existing_reasoning=full_reasoning
+        )
+        return clean_content, model, clean_reasoning
 
     def generate(
         self,
@@ -407,16 +473,16 @@ class DeepSeekClient:
         if not choices:
             raise RuntimeError("DeepSeek response has no choices")
 
-        content = self._extract_content_from_payload(data)
+        content, reasoning = self._extract_content_and_reasoning_from_payload(data)
         if not content:
-            content, streamed_model = self._stream_chat_content_with_failover(payload)
+            content, streamed_model, streamed_reasoning = self._stream_chat_content_with_failover(payload)
             if not content:
                 raise RuntimeError("DeepSeek response content is empty")
             model = streamed_model or str(data.get("model", self._model))
-            return DeepSeekResponse(content=content, model=model)
+            return DeepSeekResponse(content=content, model=model, reasoning_content=streamed_reasoning)
 
         model = str(data.get("model", self._model))
-        return DeepSeekResponse(content=content, model=model)
+        return DeepSeekResponse(content=content, model=model, reasoning_content=reasoning)
 
     def transcribe_audio(
         self,

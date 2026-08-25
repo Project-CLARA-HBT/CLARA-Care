@@ -92,6 +92,7 @@ def _baseline(engine: sa.Engine) -> None:
         sa.Column("full_name", sa.String(255), nullable=True, server_default=""),
         sa.Column("is_email_verified", sa.Boolean(), nullable=True, server_default=sa.text("0")),
         sa.Column("status", sa.String(32), nullable=True, server_default="active"),
+        sa.Column("resource_version", sa.String(64), nullable=True, server_default="1"),
         sa.Column("last_login_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )

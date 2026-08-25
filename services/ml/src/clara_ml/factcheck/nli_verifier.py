@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -24,16 +25,73 @@ _NEGATION_TERMS = {
 }
 _INCREASE_TERMS = {"tang", "tăng", "increase", "increased", "higher", "cao"}
 _DECREASE_TERMS = {"giam", "giảm", "decrease", "reduced", "lower", "thap"}
-_DOSAGE_TERMS = {"liều", "lieu", "dose", "dosage", "mg", "viên", "vien", "uống", "uong"}
-_INTERACTION_TERMS = {"tương", "tac", "interaction", "ddi", "dùng", "cùng", "warfarin", "aspirin"}
+_DOSAGE_TERMS = {"liều", "lieu", "dose", "dosage", "mg", "viên", "vien", "uống", "uong", "g", "mcg", "ml"}
+_INTERACTION_TERMS = {
+    "tương",
+    "tuong",
+    "tac",
+    "tác",
+    "interaction",
+    "ddi",
+    "dùng",
+    "dung",
+    "cùng",
+    "cung",
+    "warfarin",
+    "aspirin",
+    "phối",
+    "phoi",
+    "hợp",
+    "hop",
+}
 _CONTRAINDICATION_TERMS = {
     "chống",
     "chong",
+    "chỉ",
+    "chi",
+    "định",
+    "dinh",
     "contraindication",
     "contraindicated",
     "không nên",
+    "khong nen",
     "avoid",
+    "tránh",
+    "tranh",
+    "cấm",
+    "cam",
 }
+
+SAFETY_CRITICAL_CLAIM_TYPES = frozenset({"dosage", "interaction", "contraindication"})
+
+
+def is_safety_critical_claim_type(claim_type: str) -> bool:
+    return str(claim_type or "").strip().lower() in SAFETY_CRITICAL_CLAIM_TYPES
+
+
+def has_hard_veto_violation(
+    rows: Sequence[ClaimVerdict | dict[str, Any]],
+) -> tuple[bool, list[str]]:
+    """Return whether any critical claim is ungrounded (insufficient/unsupported) or contradicted."""
+    violating_claims: list[str] = []
+    for row in rows:
+        if isinstance(row, ClaimVerdict):
+            c_type = row.claim_type
+            s_status = row.support_status
+            claim_text = row.claim
+        elif isinstance(row, dict):
+            c_type = str(row.get("claim_type") or "")
+            s_status = str(row.get("support_status") or "")
+            claim_text = str(row.get("claim") or "")
+        else:
+            continue
+        if is_safety_critical_claim_type(c_type) and s_status.lower() in {
+            "insufficient",
+            "unsupported",
+            "contradicted",
+        }:
+            violating_claims.append(claim_text)
+    return bool(violating_claims), violating_claims
 
 
 @dataclass
@@ -81,12 +139,33 @@ def _compact_snippet(text: str, *, max_len: int = 180) -> str:
 
 def infer_claim_type(claim: str) -> str:
     claim_tokens = _tokenize(claim)
-    if claim_tokens.intersection(_DOSAGE_TERMS):
-        return "dosage"
-    if claim_tokens.intersection(_CONTRAINDICATION_TERMS):
+    lowered = str(claim or "").lower()
+    if (
+        "chống chỉ định" in lowered
+        or "chong chi dinh" in lowered
+        or "contraindication" in lowered
+        or "contraindicated" in lowered
+        or "không nên dùng" in lowered
+        or "khong nen dung" in lowered
+        or claim_tokens.intersection(_CONTRAINDICATION_TERMS)
+    ):
         return "contraindication"
-    if claim_tokens.intersection(_INTERACTION_TERMS):
+    if (
+        "tương tác" in lowered
+        or "tuong tac" in lowered
+        or "drug interaction" in lowered
+        or "ddi" in lowered
+        or claim_tokens.intersection(_INTERACTION_TERMS)
+    ):
         return "interaction"
+    if (
+        "liều dùng" in lowered
+        or "lieu dung" in lowered
+        or "dosage" in lowered
+        or "dose" in lowered
+        or claim_tokens.intersection(_DOSAGE_TERMS)
+    ):
+        return "dosage"
     return "general"
 
 

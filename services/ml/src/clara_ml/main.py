@@ -1538,7 +1538,13 @@ def routed_chat_infer(payload: dict) -> dict:
                 retrieved_context=rag_result.retrieved_context,
             )
     answer = rag_result.answer
-    if factcheck and factcheck.severity == "high":
+    if factcheck and (factcheck.verdict == "fail" or getattr(factcheck, "policy_action", "") == "block"):
+        answer = (
+            "Nội dung câu trả lời có chứa thông tin y khoa chưa được kiểm chứng đầy đủ "
+            "hoặc có mâu thuẫn với tài liệu y khoa chính thống. Vì an toàn, hệ thống không thể "
+            "cung cấp hướng dẫn trực tiếp. Vui lòng tham vấn trực tiếp bác sĩ hoặc dược sĩ chuyên khoa."
+        )
+    elif factcheck and factcheck.severity == "high":
         answer = (
             f"{rag_result.answer}\n\n"
             "Lưu ý an toàn: một số nội dung chưa đủ bằng chứng từ tài liệu truy xuất. "
@@ -1601,7 +1607,9 @@ def routed_chat_infer(payload: dict) -> dict:
     default_action = "allow"
     if degraded_mode or rag_result.model_used.startswith("local-synth"):
         default_action = "warn"
-    if factcheck and factcheck.severity == "high":
+    if factcheck and (factcheck.verdict == "fail" or getattr(factcheck, "policy_action", "") == "block"):
+        default_action = "block"
+    elif factcheck and factcheck.severity == "high":
         default_action = "warn"
 
     response_payload: dict[str, object] = {

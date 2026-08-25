@@ -33,7 +33,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from clara_api.compliance.consent import PURPOSE_SHARING
@@ -1447,11 +1447,11 @@ def issue_signed_emergency_card(
     # Generate a cryptographic share token for emergency card
     from secrets import token_urlsafe
     raw_token = token_urlsafe(32)
-    token_hash = sha256(raw_token.encode("utf-8")).hexdigest()
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
     expires_at = datetime.now(UTC) + timedelta(days=30)
 
     share = PhrShare(
-        profile_id=profile.id,
+        user_id=user.id,
         token_hash=token_hash,
         scope="emergency_card",
         is_active=True,
@@ -1482,7 +1482,7 @@ def revoke_emergency_card_tokens(
     if profile is not None:
         db.execute(
             update(PhrShare)
-            .where(PhrShare.profile_id == profile.id, PhrShare.scope == "emergency_card")
+            .where(PhrShare.user_id == user.id, PhrShare.scope == "emergency_card")
             .values(is_active=False)
         )
         audit_svc.record_access(

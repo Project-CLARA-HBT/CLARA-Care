@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from itertools import combinations
@@ -1339,10 +1340,18 @@ def run_council(payload: dict) -> dict:
     history = _normalize_history(payload.get("history"))
     specialists = _resolve_specialists(payload.get("specialists"))
 
-    assessments = [
-        _SPECIALIST_EVALUATORS[specialist](symptoms, labs, medications, history)
-        for specialist in specialists
-    ]
+    with ThreadPoolExecutor(max_workers=max(1, min(len(specialists), 5))) as executor:
+        futures = [
+            executor.submit(
+                _SPECIALIST_EVALUATORS[specialist],
+                symptoms,
+                labs,
+                medications,
+                history,
+            )
+            for specialist in specialists
+        ]
+        assessments = [future.result() for future in futures]
     # Do not serialize the internal rule trace.  The response carries only
     # structured clinician-facing findings and recommendation fields.
     assessments_payload = [_public_specialist_assessment(item) for item in assessments]

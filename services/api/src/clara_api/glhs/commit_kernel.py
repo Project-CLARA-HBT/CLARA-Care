@@ -600,9 +600,6 @@ def execute_atomic_glhs_commit(
     # =========================================================================
     # Phase 3: Freshness & per-partition dependency revalidation under locks
     # =========================================================================
-    if expected_base_state_version is not None and expected_base_state_version != base_state_version:
-        raise GlhsInvariantError("stale_base_state_version")
-
     if expected_policy_version is not None and expected_policy_version != current_policy_version:
         raise GlhsInvariantError(
             f"stale_policy_version: expected {expected_policy_version}, got {current_policy_version}"
@@ -612,6 +609,9 @@ def execute_atomic_glhs_commit(
         raise GlhsInvariantError(
             f"stale_consent_version: expected {expected_consent_version}, got {current_consent_version}"
         )
+
+    if expected_base_state_version is not None and expected_base_state_version != base_state_version:
+        raise GlhsInvariantError("stale_base_state_version")
 
     now = datetime.now(UTC)
 
@@ -700,16 +700,14 @@ def execute_atomic_glhs_commit(
                 if dep_vt < now:
                     raise GlhsInvariantError(f"lease_expired: {dep.dependency_key}")
 
-            try:
-                from clara_api.glhs.commitment_gateway import get_dag_lock_manager
-                lock_mgr = get_dag_lock_manager()
-                lease_key = dep.dependency_key.removeprefix("lease:").strip()
-                txn = lock_mgr.get_transaction(lease_key)
-                if txn is not None:
-                    if not txn.is_active or txn.is_wounded:
-                        raise GlhsInvariantError(f"lease_invalid_or_wounded: {dep.dependency_key}")
-            except Exception:
-                pass
+            from clara_api.glhs.commitment_gateway import get_dag_lock_manager
+
+            lock_mgr = get_dag_lock_manager()
+            lease_key = dep.dependency_key.removeprefix("lease:").strip()
+            txn = lock_mgr.get_transaction(lease_key)
+            if txn is not None:
+                if not txn.is_active or txn.is_wounded:
+                    raise GlhsInvariantError(f"lease_invalid_or_wounded: {dep.dependency_key}")
 
     # =========================================================================
     # Phase 4: Domain mutation callback execution
