@@ -16,6 +16,14 @@ This manifest is the pre-M2 reachability gate. Every `apps/web/app/**/page.tsx` 
 | `/legal/cookies` | public | — | Public legal | public E2E |
 | `/legal/privacy` | public | — | Public legal | public E2E |
 | `/legal/terms` | public | — | Public legal | public E2E |
+| `/consent` | public | — | Public legal | public E2E |
+| `/contact` | public | — | Public legal | public E2E |
+| `/cookies` | public | — | Public legal | public E2E |
+| `/privacy` | public | — | Public legal | public E2E |
+| `/safety` | public | — | Public legal | public E2E |
+| `/sources` | public | — | Public sources | public E2E |
+| `/terms` | public | — | Public legal | public E2E |
+| `/clinical-standards` | public | — | Public clinical standards | public E2E |
 | `/share/[token]` | public capability | — | Public share; shell-free | public-share E2E |
 | `/chat/share/[token]` | public capability | — | Public share; shell-free | public-share E2E |
 | `/phr/shared/[token]` | public capability | — | Public PHR share; shell-free | public-share E2E |
@@ -69,6 +77,7 @@ This manifest is the pre-M2 reachability gate. Every `apps/web/app/**/page.tsx` 
 | `/clinical` | authenticated doctor/admin | clinical | Primary Clinical | clinical E2E |
 | `/clinical/overview` | authenticated doctor/admin | clinical | More Clinical | clinical E2E |
 | `/clinical/patients` | authenticated doctor/admin | clinical | More Clinical | clinical E2E |
+| `/clinical/standards` | authenticated doctor/admin | clinical | More Clinical | clinical E2E |
 | `/dashboard` | authenticated researcher/doctor/admin (client may allow legacy; server authoritative) | clinical/admin/research context | Primary Clinical/Admin home by role | role E2E |
 | `/dashboard/control-tower` | authenticated admin | admin | More Admin | admin E2E |
 | `/dashboard/ecosystem` | authenticated admin | admin | More Admin | admin E2E |

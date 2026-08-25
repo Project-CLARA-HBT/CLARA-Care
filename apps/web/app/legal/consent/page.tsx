@@ -47,6 +47,21 @@ export default function MedicalConsentPage() {
       ]}
       relatedControls={[
         {
+          href: "/account/consent",
+          label: "Sổ cái đồng thuận cá nhân",
+          description: "Quản lý và cấp/rút quyền các tính năng chuyên môn trực tiếp",
+        },
+        {
+          href: "/safety",
+          label: "Tuyên ngôn an toàn lâm sàng",
+          description: "Chi tiết xác thực FIDES & 5 tầng an toàn",
+        },
+        {
+          href: "/sources",
+          label: "Danh mục nguồn y văn",
+          description: "Dược thư Quốc gia, DrugBank & Hướng dẫn Bộ Y Tế",
+        },
+        {
           href: "/legal/privacy",
           label: "Chính sách quyền riêng tư",
           description: "Quản trị dữ liệu y tế nhạy cảm & DSAR",
@@ -55,11 +70,6 @@ export default function MedicalConsentPage() {
           href: "/legal/terms",
           label: "Điều khoản sử dụng",
           description: "Ranh giới trách nhiệm & thỏa thuận dịch vụ",
-        },
-        {
-          href: "/legal",
-          label: "Trung tâm pháp lý",
-          description: "Mục lục chính sách chính thức của hệ thống",
         },
       ]}
     >

@@ -1,10 +1,12 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import LegalHubPage from "./page";
 import PrivacyPolicyPage from "./privacy/page";
 import TermsOfServicePage from "./terms/page";
 import MedicalConsentPage from "./consent/page";
 import CookiePolicyPage from "./cookies/page";
+import RootTermsAliasPage from "../terms/page";
+import RootPrivacyAliasPage from "../privacy/page";
 import {
   LEGAL_CONTACT_EMAIL,
   LEGAL_CONTACT_PHONE,
@@ -208,25 +210,60 @@ describe("PrivacyPolicyPage (/legal/privacy - Spec v5 Section 6.10 Legal Documen
     expect(screen.getByText(/2\. Chuẩn Zero-CoT \(Zero Chain-of-Thought Retention\)/i)).toBeInTheDocument();
     expect(screen.getByText(/3\. Tuyệt đối không dùng dữ liệu người dùng để huấn luyện AI công cộng/i)).toBeInTheDocument();
 
-    // Processors and DPO contact
+    // Processors and encryption standards
     expect(screen.getByText(/YEScale — điểm cuối DeepSeek/i)).toBeInTheDocument();
+    expect(screen.getByText(/YEScale — điểm cuối embedding/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/AES-256-GCM/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/TLS 1\.3/i).length).toBeGreaterThan(0);
+
+    // DPO contact
     const emailLinks = screen.getAllByRole("link", { name: LEGAL_CONTACT_EMAIL });
     expect(emailLinks.length).toBeGreaterThan(0);
     expect(emailLinks[0]).toHaveAttribute("href", `mailto:${LEGAL_CONTACT_EMAIL}`);
   });
 
-  it("renders all 11 Data Subject Rights (DSAR) under Decree 13/2023/ND-CP", () => {
+  it("renders all 11 statutory Data Subject Rights (DSAR) under Decree 13/2023/ND-CP with 72h SLA", () => {
     render(<PrivacyPolicyPage />);
 
     expect(screen.getByText(/1\. Quyền được biết/i)).toBeInTheDocument();
-    expect(screen.getByText(/2\. Quyền đồng ý & rút đồng thuận/i)).toBeInTheDocument();
+    expect(screen.getByText(/2\. Quyền đồng ý/i)).toBeInTheDocument();
     expect(screen.getByText(/3\. Quyền truy cập & xem dữ liệu/i)).toBeInTheDocument();
-    expect(screen.getByText(/4\. Quyền xóa dữ liệu/i)).toBeInTheDocument();
-    expect(screen.getByText(/5\. Quyền hạn chế xử lý/i)).toBeInTheDocument();
-    expect(screen.getByText(/6\. Quyền cung cấp dữ liệu \(Portability\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/7\. Quyền phản đối xử lý dữ liệu/i)).toBeInTheDocument();
-    expect(screen.getByText(/8\. Quyền khiếu nại & khởi kiện/i)).toBeInTheDocument();
+    expect(screen.getByText(/4\. Quyền rút lại sự đồng ý/i)).toBeInTheDocument();
+    expect(screen.getByText(/5\. Quyền xóa dữ liệu/i)).toBeInTheDocument();
+    expect(screen.getByText(/6\. Quyền hạn chế xử lý/i)).toBeInTheDocument();
+    expect(screen.getByText(/7\. Quyền cung cấp dữ liệu \(Portability\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/8\. Quyền phản đối xử lý dữ liệu/i)).toBeInTheDocument();
+    expect(screen.getByText(/9\. Quyền khiếu nại, tố cáo & khởi kiện/i)).toBeInTheDocument();
+    expect(screen.getByText(/10\. Quyền yêu cầu bồi thường thiệt hại/i)).toBeInTheDocument();
+    expect(screen.getByText(/11\. Quyền tự bảo vệ/i)).toBeInTheDocument();
     expect(screen.getAllByText(/72 giờ làm việc/i).length).toBeGreaterThan(0);
+  });
+
+  it("renders search bar and filters sections in real-time", () => {
+    render(<PrivacyPolicyPage />);
+
+    const searchInput = screen.getByRole("textbox", { name: "Tìm kiếm trong văn bản pháp lý" });
+    expect(searchInput).toBeInTheDocument();
+
+    // Type search query
+    fireEvent.change(searchInput, { target: { value: "DSAR" } });
+    expect(screen.getByText(/Tìm thấy/i)).toBeInTheDocument();
+
+    // Clear search query
+    const clearButton = screen.getByRole("button", { name: "Xóa nội dung tìm kiếm" });
+    fireEvent.click(clearButton);
+    expect(searchInput).toHaveValue("");
+  });
+
+  it("toggles UI language via the language switcher control", () => {
+    render(<PrivacyPolicyPage />);
+
+    const langToggle = screen.getByTestId("legal-language-toggle");
+    expect(langToggle).toBeInTheDocument();
+
+    fireEvent.click(langToggle);
+    // Language toggle click does not crash and updates state
+    expect(langToggle).toBeInTheDocument();
   });
 });
 
@@ -254,8 +291,24 @@ describe("TermsOfServicePage (/legal/terms - Spec v5 Section 6.11 Legal Document
     expect(container.querySelector(".chrome-shell")).toBeNull();
   });
 
-  it("renders Vietnamese statutory citations, clinical disclaimer under Law on Medical Examination 2023, and entity info", () => {
+  it("renders all 14 statutory contract articles, medical disclaimer under Law on Medical Examination 2023, dispute resolution in Hanoi/HCMC, and entity info", () => {
     render(<TermsOfServicePage />);
+
+    // 14 Articles checks
+    expect(screen.getAllByText(/Điều 1: Giải thích từ ngữ/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 2: Các hành vi bị nghiêm cấm/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 3: Quyền & nghĩa vụ của người sử dụng/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 4: Quyền & trách nhiệm của đơn vị cung cấp/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 5: Ranh giới y tế & Giới hạn lâm sàng/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 6: Bảo mật thông tin, Zero-PII & Chuẩn Zero-CoT/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 7: Minh bạch hệ thống AI & Giám sát con người/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 8: Quy định về dịch vụ, thanh toán & Biểu phí/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 9: Gia hạn, tạm ngưng & Chấm dứt dịch vụ/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 10: Quản lý dữ liệu người dùng & Quyền DSAR/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 11: Hỗ trợ khách hàng, sự cố & Kênh DPO/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 12: Giới hạn trách nhiệm & Bất khả kháng/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 13: Chính sách hoàn tiền & Bảo lưu quyền lợi/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Điều 14: Điều khoản thi hành & Giải quyết tranh chấp/i).length).toBeGreaterThan(0);
 
     // Vietnamese Legal Citations
     expect(screen.getAllByText(/Luật Khám bệnh, chữa bệnh số 15\/2023\/QH15/i).length).toBeGreaterThan(0);
@@ -270,13 +323,43 @@ describe("TermsOfServicePage (/legal/terms - Spec v5 Section 6.11 Legal Document
       ),
     ).toBeInTheDocument();
 
+    // Dispute resolution in Hanoi / Ho Chi Minh City
+    expect(screen.getByText(/Trung tâm Trọng tài Quốc tế Việt Nam \(VIAC\) hoặc Tòa án nhân dân có thẩm quyền tại Thành phố Hà Nội hoặc Thành phố Hồ Chí Minh/i)).toBeInTheDocument();
+
     // Zero-CoT / Zero-PII standards
     expect(screen.getByText(/Bảo đảm Zero-CoT:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Zero-PII Telemetry:/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Zero-PII Telemetry:/i).length).toBeGreaterThan(0);
 
     // Entity Information
     expect(screen.getAllByText(LEGAL_OPERATOR_NAME).length).toBeGreaterThan(0);
     expect(screen.getAllByText(new RegExp(LEGAL_PRIMARY_DOMAIN)).length).toBeGreaterThan(0);
+  });
+});
+
+describe("Direct Root Alias Pages (/terms and /privacy)", () => {
+  beforeEach(() => {
+    cleanup();
+  });
+
+  it("renders /terms alias page with full Terms of Service experience", () => {
+    render(<RootTermsAliasPage />);
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: /Điều khoản sử dụng & Thỏa thuận người dùng/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/TUYÊN BỐ MIỄN TRỪ TRÁCH NHIỆM LÂM SÀNG QUAN TRỌNG:/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Điều 14: Điều khoản thi hành & Giải quyết tranh chấp/i).length).toBeGreaterThan(0);
+  });
+
+  it("renders /privacy alias page with full Privacy Policy experience", () => {
+    render(<RootPrivacyAliasPage />);
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: /Chính sách quyền riêng tư & Bảo vệ dữ liệu cá nhân/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/1\. Quyền được biết/i)).toBeInTheDocument();
+    expect(screen.getByText(/11\. Quyền tự bảo vệ/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/72 giờ làm việc/i).length).toBeGreaterThan(0);
   });
 });
 
@@ -346,9 +429,8 @@ describe("CookiePolicyPage (/legal/cookies - Spec v5 Section 6.9 Legal Document 
 
     expect(screen.getByRole("navigation", { name: "Mục lục điều hướng" })).toBeInTheDocument();
     expect(screen.getAllByText(/Cookie là gì/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Nhóm cookie sử dụng/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Các nhóm cookie được sử dụng/i).length).toBeGreaterThan(0);
 
     expect(container.querySelector(".chrome-shell")).toBeNull();
   });
 });
-

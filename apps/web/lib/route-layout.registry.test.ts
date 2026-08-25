@@ -305,7 +305,7 @@ describe("RouteLayoutRegistry", () => {
   describe("Filtering & categorization helpers", () => {
     it("identifies alias routes correctly", () => {
       const aliasRoutes = ROUTE_LAYOUT_REGISTRY.filter(isAliasRoute);
-      expect(aliasRoutes.length).toBe(14); // 13 ALIAS_REDIRECT + 1 ALIAS_CONTEXT
+      expect(aliasRoutes.length).toBe(16); // 15 ALIAS_REDIRECT + 1 ALIAS_CONTEXT
       for (const route of aliasRoutes) {
         expect(route.targetPath).toBeDefined();
         expect(route.targetPath?.length).toBeGreaterThan(0);
@@ -329,9 +329,9 @@ describe("RouteLayoutRegistry", () => {
         utilityRoutes.length;
 
       expect(totalGrouped).toBe(ROUTE_LAYOUT_REGISTRY.length);
-      expect(publicRoutes).toHaveLength(15);
+      expect(publicRoutes).toHaveLength(23);
       expect(personalRoutes).toHaveLength(49);
-      expect(clinicalRoutes).toHaveLength(16);
+      expect(clinicalRoutes).toHaveLength(17);
       expect(researchRoutes).toHaveLength(7);
       expect(adminRoutes).toHaveLength(21);
       expect(utilityRoutes).toHaveLength(6);
@@ -353,13 +353,13 @@ describe("RouteLayoutRegistry", () => {
 
     it("filters routes by access category", () => {
       const publicAccess = getRoutesByAccess("public");
-      expect(publicAccess).toHaveLength(15);
+      expect(publicAccess).toHaveLength(23);
 
       const personalAccess = getRoutesByAccess("personal");
       expect(personalAccess).toHaveLength(49);
 
       const clinicalAccess = getRoutesByAccess("clinical");
-      expect(clinicalAccess).toHaveLength(16);
+      expect(clinicalAccess).toHaveLength(17);
 
       const researchAccess = getRoutesByAccess("research");
       expect(researchAccess).toHaveLength(7);

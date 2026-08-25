@@ -72,8 +72,11 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
   );
   const isChatLayout = pathname === "/chat" || pathname.startsWith("/chat/");
   const isImmersive = shellMode.isImmersive;
-  // Spec v8 §4.5 & §5.3: WorkspaceDock is active on Personal, Clinical, Research (including /chat); suppressed only on /admin/*
-  const hideBottomDock = pathname.startsWith("/admin/") || shellMode.isImmersive;
+  // FloatingNavbar / WorkspaceDock is active on Personal, Clinical, Research (including /chat);
+  // suppressed only on /admin/* or when explicit immersive display mode is active
+  const hideBottomDock =
+    (pathname.startsWith("/admin/") && !adminPreviewMode) ||
+    shellMode.isImmersive;
 
   // Fallback hydration if outside SessionBoundary
   useEffect(() => {
@@ -179,7 +182,9 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
         id="public-shell-root"
         className="min-h-[100dvh] bg-[var(--bg-canvas)] text-[var(--text-primary)]"
       >
-        {children}
+        <main id="main-content" tabIndex={-1}>
+          {children}
+        </main>
         <CommandPalette role={effectiveRole} />
       </div>
     );

@@ -29,6 +29,7 @@ const PUBLIC_PATHS = new Set([
   "/safety",
   "/sources",
   "/clinical-standards",
+  "/clinical/standards",
   "/login",
   "/register",
   "/logout",
@@ -39,14 +40,6 @@ const PUBLIC_PATHS = new Set([
 ]);
 
 export const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
-  "/terms": "/legal/terms",
-  "/privacy": "/legal/privacy",
-  "/consent": "/legal/consent",
-  "/cookies": "/legal/cookies",
-  "/safety": "/legal/consent",
-  "/sources": "/research/source-hub",
-  "/clinical-standards": "/legal/consent",
-  "/contact": "/legal#contact-dpo",
   "/ask": "/chat",
   "/health/medications": "/medicines",
   "/care/visits": "/visits",

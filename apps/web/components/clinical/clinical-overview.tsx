@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import Icon, { type IconName } from "@/components/ui/icon";
 import { StatusChip, type StatusTone } from "@/components/ui/status-chip";
+import { Badge } from "@/components/ui/badge";
 import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import {
@@ -119,10 +120,34 @@ export function ClinicalOverview({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  // Quick interactive calculation demo state
+  const [demoEgfrCreatinine, setDemoEgfrCreatinine] = useState("1.2");
+  const [demoEgfrAge, setDemoEgfrAge] = useState("65");
+  const [demoEgfrGender, setDemoEgfrGender] = useState<"M" | "F">("M");
+
   const copy = useCallback(
     (vi: string, en: string) => (language === "vi" ? vi : en),
     [language],
   );
+
+  // Simple CKD-EPI quick reference calculation
+  const calculatedEgfr = (() => {
+    const scr = parseFloat(demoEgfrCreatinine) || 1.0;
+    const age = parseFloat(demoEgfrAge) || 60;
+    const isFemale = demoEgfrGender === "F";
+    const kappa = isFemale ? 0.7 : 0.9;
+    const alpha = isFemale ? -0.241 : -0.302;
+    const minRatio = Math.min(scr / kappa, 1);
+    const maxRatio = Math.max(scr / kappa, 1);
+    const genderFactor = isFemale ? 1.012 : 1.0;
+    const egfr =
+      142 *
+      Math.pow(minRatio, alpha) *
+      Math.pow(maxRatio, -1.2) *
+      Math.pow(0.9938, age) *
+      genderFactor;
+    return Math.round(egfr);
+  })();
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -201,18 +226,6 @@ export function ClinicalOverview({
 
   const needsAttention = ready && (alerts.length > 0 || (expiringCount ?? 0) > 0 || isDegraded);
 
-  const statusText = loading
-    ? copy("Đang cập nhật", "Updating")
-    : error || !dashboard
-      ? copy("Chưa xác định", "Unknown")
-      : isOffline
-        ? copy("Ngoại tuyến", "Offline")
-        : isDegraded || !isVerified
-          ? copy("Chưa xác thực", "Unverified")
-          : needsAttention
-            ? copy("Có mục cần xem lại", "Items need review")
-            : copy("Hoạt động bình thường", "Operational");
-
   const activeCaseHref = activeCase
     ? activeCase.status === "completed" || activeCase.status === "ready"
       ? `/council/result?caseId=${activeCase.id}`
@@ -230,7 +243,6 @@ export function ClinicalOverview({
   if (loading) {
     return (
       <div className={`space-y-6 ${className}`.trim()} aria-busy="true">
-        {/* Structural Skeleton matching final operational rows */}
         <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] pb-4">
           <div className="space-y-2">
             <div className="h-4 w-40 animate-pulse rounded bg-[color:var(--surface-muted)]" />
@@ -251,8 +263,8 @@ export function ClinicalOverview({
   }
 
   return (
-    <div className={`space-y-6 ${className}`.trim()} data-role-view="doctor">
-      {/* 1. Contextual Header (Spec v8 §7.1: No giant hero banner; next action is first) */}
+    <div className={`space-y-8 ${className}`.trim()} data-role-view="doctor" data-testid="clinical-overview">
+      {/* 1. Contextual Header */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[color:var(--shell-border)] pb-4">
         <div>
           <div className="flex items-center gap-2">
@@ -288,6 +300,14 @@ export function ClinicalOverview({
           )}
 
           <Link
+            href="/clinical/standards"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[color:var(--surface-panel)] transition"
+          >
+            <Icon name="clinical-notes" size={13} />
+            <span>{copy("Tiêu chuẩn Lâm sàng", "Clinical Standards")}</span>
+          </Link>
+
+          <Link
             href="/council/new"
             className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-600)] px-3 py-1.5 text-xs font-semibold text-[var(--on-secondary-container)] shadow-xs transition hover:bg-[var(--brand-700)] active:scale-95"
           >
@@ -320,7 +340,7 @@ export function ClinicalOverview({
         </section>
       )}
 
-      {/* 3. Attention Queue (Spec v8 §7.1: Attention Queue appears above routine work when issues require action) */}
+      {/* 3. Attention Queue */}
       {needsAttention && (
         <section
           aria-label={copy("Hàng đợi cần chú ý", "Attention Queue")}
@@ -393,7 +413,7 @@ export function ClinicalOverview({
         </section>
       )}
 
-      {/* 4. Priority Next Action (Spec v8 §7.1: Active Case / Recording-in-progress is FIRST) */}
+      {/* 4. Priority Next Action (Active Case) */}
       <section
         aria-label={copy("Công việc lâm sàng đang thực hiện", "Active Clinical Work")}
         className="rounded-2xl border border-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] p-5 shadow-xs"
@@ -468,7 +488,7 @@ export function ClinicalOverview({
               </h3>
             </div>
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-              {copy("Chuyển âm hội thoại và lập bệnh án chuẩn SOAP.", "Real-time voice scribe & structured notes.")}
+              {copy("Chuyển âm hội thoại và lập bệnh án chuẩn SOAP kèm ký số SHA-256.", "Real-time voice scribe & structured SOAP notes with SHA-256 e-signature.")}
             </p>
           </div>
           <div className="mt-4 pt-3 border-t border-[color:var(--shell-border)]/40 flex items-center justify-between">
@@ -491,7 +511,7 @@ export function ClinicalOverview({
               </h3>
             </div>
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-              {copy("Phác đồ Bộ Y tế và mạng lưới tri thức GLHS.", "MoH guidelines & GLHS knowledge graph.")}
+              {copy("Phác đồ Bộ Y tế, Dược thư Quốc gia và mạng lưới tri thức GLHS.", "MoH guidelines, National Pharmacopoeia & GLHS knowledge graph.")}
             </p>
           </div>
           <div className="mt-4 pt-3 border-t border-[color:var(--shell-border)]/40 flex items-center justify-between">
@@ -547,6 +567,191 @@ export function ClinicalOverview({
           {copy("Tra cứu lâm sàng →", "Clinical Chat →")}
         </Link>
       </div>
+
+      {/* 6. Comprehensive Clinical Architecture & Standards Showcase Section */}
+      <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] p-6 shadow-xs space-y-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[color:var(--shell-border)] pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Badge tone="brand">{copy("ĐẶC TẢ KIẾN TRÚC LÂM SÀNG", "CLINICAL ARCHITECTURE")}</Badge>
+              <span className="text-xs font-mono text-[var(--text-muted)]">Luật KBCB 2023 & FIDES v1.2</span>
+            </div>
+            <h2 className="mt-1 text-lg font-bold text-[var(--text-primary)]">
+              {copy("Khung Năng lực Lâm sàng & Giao thức An toàn Y tế", "Clinical Capability Framework & Safety Protocols")}
+            </h2>
+          </div>
+
+          <Link
+            href="/clinical/standards"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--brand-primary)]/40 bg-[var(--surface-brand-soft)] px-3.5 py-1.5 text-xs font-bold text-[var(--text-brand)] hover:bg-[var(--surface-brand-soft)]/80 transition"
+          >
+            <span>{copy("Xem toàn bộ Tiêu chuẩn Y khoa →", "View Full Medical Standards →")}</span>
+          </Link>
+        </div>
+
+        {/* 4 Architectural Pillars Grid */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-xs">
+          {/* Pillar 1: Multi-Specialist Council */}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/40 p-4 space-y-2">
+            <div className="flex items-center gap-2 text-purple-400 font-bold uppercase tracking-wider">
+              <Icon name="progress" size={15} />
+              <span>AI Council • 5 Chuyên khoa</span>
+            </div>
+            <p className="text-[var(--text-secondary)] leading-relaxed">
+              {copy(
+                "Điều phối song song Tim mạch, Thần kinh, Thận học, Dược lý và Nội tiết. Tự động phát hiện bất đồng thuận và tổng hợp khuyến nghị.",
+                "Parallel orchestration across Cardiology, Neurology, Nephrology, Pharmacology, and Endocrinology with divergence detection.",
+              )}
+            </p>
+            <div className="pt-2 border-t border-[color:var(--shell-border)]/50">
+              <Link href="/council" className="font-semibold text-[var(--text-brand)] hover:underline">
+                {copy("Khám phá Hội đồng AI →", "Explore AI Council →")}
+              </Link>
+            </div>
+          </div>
+
+          {/* Pillar 2: Ambient Scribe & SOAP */}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/40 p-4 space-y-2">
+            <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-wider">
+              <Icon name="clinical-notes" size={15} />
+              <span>SOAP & Ký số Điện tử</span>
+            </div>
+            <p className="text-[var(--text-secondary)] leading-relaxed">
+              {copy(
+                "Chuyển âm hội thoại tiếng Việt y khoa (Whisper), tự động lập bệnh án SOAP 4 phần và ký số SHA-256 bảo đảm tính pháp lý.",
+                "Vietnamese biomedical ASR (Whisper), 4-part SOAP structuring, and tamper-evident SHA-256 e-signatures.",
+              )}
+            </p>
+            <div className="pt-2 border-t border-[color:var(--shell-border)]/50">
+              <Link href="/scribe" className="font-semibold text-[var(--text-brand)] hover:underline">
+                {copy("Phiên Scribe trực tiếp →", "Live Scribe Session →")}
+              </Link>
+            </div>
+          </div>
+
+          {/* Pillar 3: FIDES Hard-Veto */}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/40 p-4 space-y-2">
+            <div className="flex items-center gap-2 text-red-400 font-bold uppercase tracking-wider">
+              <Icon name="warning" size={15} />
+              <span>FIDES Hard-Veto Invariant</span>
+            </div>
+            <p className="text-[var(--text-secondary)] leading-relaxed">
+              {copy(
+                "Phủ quyết tuyệt đối: Bất kỳ liều dùng hoặc chống chỉ định nào thiếu căn cứ đều bị CHẶN NGAY, bất kể các câu khác đều đúng.",
+                "Absolute Hard-Veto: Ungrounded dosage, contraindications, or DDI conflicts are blocked unconditionally.",
+              )}
+            </p>
+            <div className="pt-2 border-t border-[color:var(--shell-border)]/50">
+              <Link href="/clinical/standards#fides-verification" className="font-semibold text-[var(--text-brand)] hover:underline">
+                {copy("Xem Ma trận FIDES →", "View FIDES Matrix →")}
+              </Link>
+            </div>
+          </div>
+
+          {/* Pillar 4: Zero-CoT Privacy */}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/40 p-4 space-y-2">
+            <div className="flex items-center gap-2 text-sky-400 font-bold uppercase tracking-wider">
+              <Icon name="check" size={15} />
+              <span>Zero-CoT & Zero-PII</span>
+            </div>
+            <p className="text-[var(--text-secondary)] leading-relaxed">
+              {copy(
+                "Triệt tiêu 100% thẻ suy luận <think> thô trước khi stream về trình duyệt. Không lưu vết PII trong logs theo Nghị định 13/2023.",
+                "100% <think> reasoning token suppression before SSE stream delivery. Zero-PII logging under Decree 13/2023.",
+              )}
+            </p>
+            <div className="pt-2 border-t border-[color:var(--shell-border)]/50">
+              <Link href="/clinical/standards#zero-cot-privacy" className="font-semibold text-[var(--text-brand)] hover:underline">
+                {copy("Chuẩn bảo mật Zero-CoT →", "Zero-CoT Standards →")}
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Interactive Clinical Calculator & Pharmacology Widget Preview */}
+        <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/60 p-5 space-y-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <Icon name="medication" size={16} className="text-[var(--text-brand)]" />
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                {copy("Công cụ Tính toán Nhanh eGFR CKD-EPI (2021) & An toàn Thận", "Quick eGFR CKD-EPI (2021) & Renal Clearance Calculator")}
+              </h3>
+            </div>
+            <span className="text-[11px] font-mono text-[var(--text-muted)]">Equation: 142 × min(Scr/κ, 1)^α × max(Scr/κ, 1)^-1.2 × 0.9938^Age</span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-4 items-end text-xs">
+            <div>
+              <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">
+                {copy("Serum Creatinine (mg/dL)", "Serum Creatinine (mg/dL)")}
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0.2"
+                max="15"
+                value={demoEgfrCreatinine}
+                onChange={(e) => setDemoEgfrCreatinine(e.target.value)}
+                className="w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 font-mono text-[var(--text-primary)] focus-ring outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">
+                {copy("Tuổi bệnh nhân (Năm)", "Patient Age (Years)")}
+              </label>
+              <input
+                type="number"
+                min="18"
+                max="110"
+                value={demoEgfrAge}
+                onChange={(e) => setDemoEgfrAge(e.target.value)}
+                className="w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 font-mono text-[var(--text-primary)] focus-ring outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-[var(--text-secondary)] mb-1">
+                {copy("Giới tính sinh học", "Biological Sex")}
+              </label>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => setDemoEgfrGender("M")}
+                  className={`flex-1 py-1.5 rounded-lg border text-xs font-bold transition ${
+                    demoEgfrGender === "M"
+                      ? "bg-[var(--surface-brand-soft)] border-[color:var(--brand-primary)] text-[var(--text-brand)]"
+                      : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)]"
+                  }`}
+                >
+                  {copy("Nam (M)", "Male (M)")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDemoEgfrGender("F")}
+                  className={`flex-1 py-1.5 rounded-lg border text-xs font-bold transition ${
+                    demoEgfrGender === "F"
+                      ? "bg-[var(--surface-brand-soft)] border-[color:var(--brand-primary)] text-[var(--text-brand)]"
+                      : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)]"
+                  }`}
+                >
+                  {copy("Nữ (F)", "Female (F)")}
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 text-center">
+              <div className="text-[10px] uppercase font-bold text-[var(--text-muted)]">eGFR Kết quả</div>
+              <div className="flex items-baseline justify-center gap-1">
+                <span className={`text-xl font-black ${calculatedEgfr < 30 ? "text-red-400" : calculatedEgfr < 60 ? "text-amber-300" : "text-emerald-400"}`}>
+                  {calculatedEgfr}
+                </span>
+                <span className="text-[10px] text-[var(--text-secondary)] font-mono">mL/min/1.73m²</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
-import { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Icon } from "@/components/ui/icon";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { SectionIndex, type SectionIndexItem, type SectionIndexStatus } from "@/components/ui/section-index";
+import { useUILanguage } from "@/lib/use-ui-language";
+import { saveUILanguage } from "@/lib/ui-language";
 import {
   LEGAL_CONTACT_EMAIL,
   LEGAL_CONTACT_PHONE,
@@ -141,13 +145,33 @@ export default function LegalPageShell({
   relatedControls = [],
   children,
 }: LegalPageShellProps) {
-  const sectionIndexItems: SectionIndexItem[] = sections.map((s) => ({
-    id: s.id,
-    title: s.title || s.label || "",
-    subtitle: s.subtitle,
-    badge: s.badge,
-    status: s.status,
-  }));
+  const uiLanguage = useUILanguage();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredSections = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return sections;
+    return sections.filter((s) => {
+      const t = (s.title || s.label || "").toLowerCase();
+      const sub = (s.subtitle || "").toLowerCase();
+      return t.includes(q) || sub.includes(q);
+    });
+  }, [sections, searchQuery]);
+
+  const sectionIndexItems: SectionIndexItem[] = useMemo(() => {
+    return filteredSections.map((s) => ({
+      id: s.id,
+      title: s.title || s.label || "",
+      subtitle: s.subtitle,
+      badge: s.badge,
+      status: s.status,
+    }));
+  }, [filteredSections]);
+
+  const handleToggleLanguage = () => {
+    const nextLang = uiLanguage === "vi" ? "en" : "vi";
+    saveUILanguage(nextLang);
+  };
 
   return (
     <div
@@ -175,6 +199,23 @@ export default function LegalPageShell({
               </Link>
             </div>
             <div className="flex items-center gap-2">
+              {/* Language Switcher Toggle */}
+              <button
+                type="button"
+                onClick={handleToggleLanguage}
+                data-testid="legal-language-toggle"
+                aria-label={uiLanguage === "vi" ? "Chuyển sang tiếng Anh" : "Switch to Vietnamese"}
+                className="inline-flex items-center gap-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--text-secondary)] transition hover:border-[color:var(--brand-500)]/60 hover:text-[var(--text-primary)]"
+              >
+                <span className={uiLanguage === "vi" ? "text-[var(--text-brand)] font-extrabold" : "text-[var(--text-muted)]"}>
+                  VI
+                </span>
+                <span className="text-[var(--text-muted)] font-normal">/</span>
+                <span className={uiLanguage === "en" ? "text-[var(--text-brand)] font-extrabold" : "text-[var(--text-muted)]"}>
+                  EN
+                </span>
+              </button>
+
               <Link
                 href="/huong-dan"
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
@@ -261,6 +302,43 @@ export default function LegalPageShell({
             })}
           </nav>
 
+          {/* Interactive Search Bar & Controls */}
+          {sections.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3 shadow-sm">
+              <div className="relative flex-1">
+                <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[var(--text-muted)]">
+                  <Icon name="search" size="1rem" />
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm kiếm trong mục lục và điều khoản pháp lý..."
+                  aria-label="Tìm kiếm trong văn bản pháp lý"
+                  className="w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] py-2 pl-9 pr-8 text-xs sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[color:var(--brand-500)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-500)] transition"
+                />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    aria-label="Xóa nội dung tìm kiếm"
+                    className="absolute inset-y-0 right-2.5 flex items-center text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  >
+                    <Icon name="close" size="0.9rem" />
+                  </button>
+                ) : null}
+              </div>
+
+              {searchQuery && (
+                <div className="flex items-center gap-2 px-1 text-xs text-[var(--text-muted)] shrink-0">
+                  <span>
+                    Tìm thấy <strong className="text-[var(--text-primary)]">{filteredSections.length}</strong> / {sections.length} mục
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Key Highlights / Editorial Guarantees */}
           {highlights.length > 0 ? (
             <div className="grid gap-3 pt-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -293,7 +371,11 @@ export default function LegalPageShell({
               <SectionIndex
                 items={sectionIndexItems}
                 title="Mục lục điều khoản"
-                description="Nhấp để chuyển nhanh đến điều khoản tương ứng"
+                description={
+                  searchQuery
+                    ? `Kết quả lọc theo từ khóa: "${searchQuery}"`
+                    : "Nhấp để chuyển nhanh đến điều khoản tương ứng"
+                }
                 autoScrollSpy={true}
                 density="compact"
                 sticky={false}
@@ -413,4 +495,3 @@ export default function LegalPageShell({
     </div>
   );
 }
-

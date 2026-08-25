@@ -11,9 +11,7 @@ import {
   LEGAL_UPDATED_AT,
 } from "@/lib/legal";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
-import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
   title: "Chính sách quyền riêng tư & Bảo vệ dữ liệu cá nhân | The Clara Care",
@@ -30,7 +28,7 @@ const PRIVACY_SECTIONS: LegalSectionMeta[] = [
   { id: "sharing-policy", title: "6. Chia sẻ dữ liệu & Cam kết không bán thông tin" },
   { id: "processors", title: "7. Danh sách bên xử lý dữ liệu (NĐ 13/2023)" },
   { id: "security-measures", title: "8. Biện pháp an toàn thông tin & Mã hóa" },
-  { id: "user-rights", title: "9. Quyền của chủ thể dữ liệu (DSAR)" },
+  { id: "user-rights", title: "9. Quyền của chủ thể dữ liệu (11 quyền DSAR)" },
   { id: "dsar-process", title: "10. Quy trình thực hiện DSAR & SLA tiếp nhận" },
   { id: "cross-border", title: "11. Chuyển dữ liệu xuyên biên giới & TIA" },
   { id: "ai-transparency", title: "12. Minh bạch AI (Luật 134/2025 & Luật Khám bệnh 2023)" },
@@ -58,14 +56,21 @@ const THIRD_PARTY_PROCESSORS = [
       "Tạo vector embedding phục vụ truy xuất ngữ nghĩa y văn (RAG Living Evidence)",
     jurisdiction: "Ngoài lãnh thổ Việt Nam (offshore / non-VN)",
     data: "Đoạn văn bản y khoa cần lập chỉ mục/truy xuất, đã khử định danh",
-    safeguards: "Đánh giá TIA, mã hóa kênh truyền, không lưu nội dung",
+    safeguards: "Đánh giá TIA, mã hóa kênh truyền TLS 1.3, không lưu nội dung",
   },
   {
     name: "Hạ tầng máy chủ lưu trữ và vận hành cơ sở dữ liệu",
     purpose: "Lưu trữ dữ liệu PHR, tài khoản, xác thực và vận hành dịch vụ",
     jurisdiction: "Việt Nam / Vùng dữ liệu chỉ định theo cấu hình triển khai",
     data: "Dữ liệu tài khoản, hồ sơ sức khỏe cá nhân (PHR) và audit log vận hành",
-    safeguards: "Mã hóa AES-256 at-rest, sao lưu định kỳ, kiểm soát phân quyền RBAC",
+    safeguards: "Mã hóa AES-256-GCM at-rest, sao lưu định kỳ, kiểm soát phân quyền RBAC",
+  },
+  {
+    name: "Sidecar OCR & ASR (Nhận dạng văn bản đơn thuốc & giọng nói y khoa)",
+    purpose: "Bóc tách dữ liệu đơn thuốc hình ảnh và ghi chú hội thoại lâm sàng",
+    jurisdiction: "Việt Nam / Cụm dịch vụ nội bộ (Isolated microservices)",
+    data: "Hình ảnh đơn thuốc và âm thanh phiên hội thoại được người dùng chủ động tải lên",
+    safeguards: "Xử lý trong bộ nhớ tạm thời (in-memory ephemeral), không lưu bản ghi âm thô sau xử lý",
   },
 ] as const;
 
@@ -224,8 +229,8 @@ export default function PrivacyPolicyPage() {
               văn, các bước suy luận trung gian (chuỗi logic nội bộ - Chain-of-Thought) chỉ tồn tại trong
               bộ nhớ tạm thời (ephemeral memory) trong thời gian tính toán request. Sau khi câu trả lời
               tổng hợp được kiểm duyệt an toàn, <strong>toàn bộ chuỗi suy luận CoT lập tức bị hủy bỏ</strong>.
-              Hệ thống tuyệt đối không lưu trữ CoT vào cơ sở dữ liệu dài hạn và không để lộ CoT qua API công
-              khai.
+              Hệ thống tuyệt đối không lưu trữ CoT vào cơ sở dữ liệu dài hạn và không để lộ CoT qua luồng streaming
+              hay API công khai.
             </p>
           </div>
 
@@ -386,8 +391,9 @@ export default function PrivacyPolicyPage() {
         </p>
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            <strong>Mã hóa đầu cuối:</strong> Dữ liệu lưu trữ (at-rest) được mã hóa bằng chuẩn AES-256; dữ
-            liệu truyền tải (in-transit) sử dụng TLS 1.3 với chuẩn mã hóa cấp cao.
+            <strong>Mã hóa đầu cuối:</strong> Dữ liệu lưu trữ (at-rest) được mã hóa bằng thuật toán cấp quân sự
+            <strong> AES-256-GCM</strong>; dữ liệu truyền tải (in-transit) sử dụng giao thức bảo mật <strong>TLS 1.3</strong> với
+            các bộ mật mã hóa mạnh mẽ nhất.
           </li>
           <li>
             <strong>Bảo vệ phiên & Chống tấn công:</strong> Áp dụng cơ chế CSRF token cho toàn bộ các yêu
@@ -408,60 +414,88 @@ export default function PrivacyPolicyPage() {
       {/* 9. Quyền của chủ thể dữ liệu */}
       <LegalSection
         id="user-rights"
-        title="9. Quyền của chủ thể dữ liệu theo Nghị định 13/2023/NĐ-CP"
+        title="9. Quyền của chủ thể dữ liệu theo Nghị định 13/2023/NĐ-CP (11 quyền DSAR)"
         badge="Quyền của bạn"
       >
         <p>
-          Theo quy định tại <strong>Điều 9 và Điều 14–16 Nghị định 13/2023/NĐ-CP</strong>, bạn có đầy đủ
-          11 quyền hợp pháp đối với dữ liệu cá nhân của mình:
+          Căn cứ theo <strong>Điều 9 và Điều 14–16 Nghị định 13/2023/NĐ-CP</strong>, bạn có đầy đủ 11 quyền
+          luật định đối với dữ liệu cá nhân của mình:
         </p>
         <div className="grid gap-3 sm:grid-cols-2 pt-2">
           <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/30 p-3.5 space-y-1">
             <span className="text-xs font-bold text-[var(--text-brand)]">1. Quyền được biết</span>
             <p className="text-xs text-[var(--text-secondary)]">
-              Được thông báo rõ ràng về các hoạt động xử lý dữ liệu cá nhân của mình.
+              Được thông báo minh bạch về các hoạt động xử lý, mục đích, loại dữ liệu thu thập và danh sách các bên liên quan.
             </p>
           </div>
+
           <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/30 p-3.5 space-y-1">
-            <span className="text-xs font-bold text-[var(--text-brand)]">2. Quyền đồng ý & rút đồng thuận</span>
+            <span className="text-xs font-bold text-[var(--text-brand)]">2. Quyền đồng ý</span>
             <p className="text-xs text-[var(--text-secondary)]">
-              Tự do cấp hoặc rút lại sự đồng ý đối với từng mục đích xử lý bất kỳ lúc nào.
+              Được tự do quyết định cấp hoặc từ chối sự đồng ý đối với từng mục đích xử lý dữ liệu cá nhân nhạy cảm.
             </p>
           </div>
+
           <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/30 p-3.5 space-y-1">
             <span className="text-xs font-bold text-[var(--text-brand)]">3. Quyền truy cập & xem dữ liệu</span>
             <p className="text-xs text-[var(--text-secondary)]">
-              Xem trực tiếp và yêu cầu cung cấp bản sao hồ sơ sức khỏe và thông tin cá nhân.
+              Xem trực tiếp, tra cứu và yêu cầu trích xuất toàn bộ hồ sơ sức khỏe cá nhân (PHR) và lịch sử tương tác.
             </p>
           </div>
+
           <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/30 p-3.5 space-y-1">
-            <span className="text-xs font-bold text-[var(--text-brand)]">4. Quyền xóa dữ liệu</span>
+            <span className="text-xs font-bold text-[var(--text-brand)]">4. Quyền rút lại sự đồng ý</span>
             <p className="text-xs text-[var(--text-secondary)]">
-              Yêu cầu xóa vĩnh viễn hoặc ẩn danh hóa thông tin cá nhân khi không còn nhu cầu.
+              Rút lại sự đồng thuận đối với việc xử lý dữ liệu nhạy cảm bất kỳ lúc nào tại Trung tâm Đồng thuận mà không phải chịu chi phí.
             </p>
           </div>
+
           <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/30 p-3.5 space-y-1">
-            <span className="text-xs font-bold text-[var(--text-brand)]">5. Quyền hạn chế xử lý</span>
+            <span className="text-xs font-bold text-[var(--text-brand)]">5. Quyền xóa dữ liệu</span>
             <p className="text-xs text-[var(--text-secondary)]">
-              Yêu cầu tạm ngưng hoặc hạn chế phạm vi xử lý dữ liệu trong các trường hợp tranh chấp.
+              Yêu cầu xóa vĩnh viễn thông tin cá nhân và dữ liệu y tế khi không còn nhu cầu sử dụng (Right to Erasure / Forgotten).
             </p>
           </div>
+
           <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/30 p-3.5 space-y-1">
-            <span className="text-xs font-bold text-[var(--text-brand)]">6. Quyền cung cấp dữ liệu (Portability)</span>
+            <span className="text-xs font-bold text-[var(--text-brand)]">6. Quyền hạn chế xử lý</span>
             <p className="text-xs text-[var(--text-secondary)]">
-              Trích xuất toàn bộ dữ liệu PHR dưới định dạng chuẩn máy đọc được (JSON/CSV).
+              Yêu cầu tạm ngưng hoặc giới hạn phạm vi xử lý dữ liệu cá nhân trong các trường hợp tranh chấp hoặc kiểm tra tính chính xác.
             </p>
           </div>
+
           <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/30 p-3.5 space-y-1">
-            <span className="text-xs font-bold text-[var(--text-brand)]">7. Quyền phản đối xử lý dữ liệu</span>
+            <span className="text-xs font-bold text-[var(--text-brand)]">7. Quyền cung cấp dữ liệu (Portability)</span>
             <p className="text-xs text-[var(--text-secondary)]">
-              Phản đối việc xử lý dữ liệu nhằm mục đích quảng cáo, tiếp thị hoặc phân tích tự động.
+              Yêu cầu cung cấp toàn bộ dữ liệu PHR dưới định dạng chuẩn máy đọc được (JSON/CSV) để chuyển giao sang hệ thống khác.
             </p>
           </div>
+
           <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/30 p-3.5 space-y-1">
-            <span className="text-xs font-bold text-[var(--text-brand)]">8. Quyền khiếu nại & khởi kiện</span>
+            <span className="text-xs font-bold text-[var(--text-brand)]">8. Quyền phản đối xử lý dữ liệu</span>
             <p className="text-xs text-[var(--text-secondary)]">
-              Khiếu nại tới Cục An ninh mạng và phòng, chống tội phạm công nghệ cao hoặc cơ quan có thẩm quyền.
+              Phản đối việc xử lý dữ liệu cá nhân nhằm mục đích phân tích tự động, quảng cáo hoặc tiếp thị không mong muốn.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/30 p-3.5 space-y-1">
+            <span className="text-xs font-bold text-[var(--text-brand)]">9. Quyền khiếu nại, tố cáo & khởi kiện</span>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Khiếu nại, tố cáo hành vi vi phạm tới Cục An ninh mạng (A05) hoặc khởi kiện ra Tòa án có thẩm quyền theo quy định.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/30 p-3.5 space-y-1">
+            <span className="text-xs font-bold text-[var(--text-brand)]">10. Quyền yêu cầu bồi thường thiệt hại</span>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Yêu cầu bồi thường theo quy định của pháp luật khi có thiệt hại xảy ra do hành vi vi phạm bảo vệ dữ liệu cá nhân.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/30 p-3.5 space-y-1 sm:col-span-2">
+            <span className="text-xs font-bold text-[var(--text-brand)]">11. Quyền tự bảo vệ</span>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Tự bảo vệ dữ liệu theo quy định của Bộ luật Dân sự, hoặc yêu cầu cơ quan, tổ chức có thẩm quyền thực hiện các biện pháp bảo vệ quyền dân sự của mình.
             </p>
           </div>
         </div>
@@ -613,4 +647,3 @@ export default function PrivacyPolicyPage() {
     </LegalPageShell>
   );
 }
-

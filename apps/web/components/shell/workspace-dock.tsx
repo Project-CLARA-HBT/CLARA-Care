@@ -338,6 +338,7 @@ export function WorkspaceDock({
       <nav
         aria-label={ariaLabel}
         data-testid="workspace-dock"
+        data-floating-navbar="true"
         data-workspace={resolvedWorkspace}
         className={[
           "fixed bottom-3 sm:bottom-4 md:bottom-5 left-1/2 -translate-x-1/2 z-50",

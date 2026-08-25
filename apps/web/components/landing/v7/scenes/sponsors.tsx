@@ -66,7 +66,7 @@ export function SponsorsScene() {
     <LandingScene
       id="sponsors"
       scale="transition"
-      tone="subtle"
+      tone="neutral"
       className="py-12 sm:py-16 border-y border-[#E3E8EF] bg-[#F8FAFD]/90 relative overflow-hidden"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8 relative z-10">
