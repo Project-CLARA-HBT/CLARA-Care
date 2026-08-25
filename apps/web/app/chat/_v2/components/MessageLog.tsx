@@ -14,6 +14,7 @@ import type { SourceInspectionItem } from "@/components/shell/inspector-drawer";
 /**
  * Virtualized message log for CLARA Chat (CHAT_V2 / Spec v8 READ_COMPOSE).
  * Constrains the main reading column to 760-900px centered canvas.
+ * Action buttons: Copy answer, Save to notebook, Voice read aloud, Related questions.
  */
 
 export type MessageLogProps = {
@@ -25,6 +26,7 @@ export type MessageLogProps = {
   onSaveNote?: (answerText: string) => void;
   onInspectSource?: (source: SourceInspectionItem) => void;
   onInspectAllSources?: (sources: SourceInspectionItem[]) => void;
+  onAskFollowUp?: (question: string) => void;
 };
 
 function MessageLog({
@@ -36,6 +38,7 @@ function MessageLog({
   onSaveNote,
   onInspectSource,
   onInspectAllSources,
+  onAskFollowUp,
 }: MessageLogProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -95,6 +98,7 @@ function MessageLog({
                 onSaveNote={onSaveNote}
                 onInspectSource={onInspectSource}
                 onInspectAllSources={onInspectAllSources}
+                onAskFollowUp={onAskFollowUp}
               />
             </div>
           );

@@ -158,6 +158,50 @@
               radial-gradient(circle 550px at 50% 85%, rgba(139, 124, 246, 0.06), transparent 60%);
 }
 
+/* Atmospheric Scene Gradient Transitions (Awwwards-grade seamless flow) */
+.clara-transition-hero-sponsors {
+  background: linear-gradient(180deg, rgba(239, 247, 255, 0.7) 0%, rgba(248, 250, 253, 0.95) 45%, #F8FAFD 100%);
+}
+
+.clara-transition-sponsors-trust {
+  background: linear-gradient(180deg, #F8FAFD 0%, #FFFFFF 50%, rgba(247, 249, 252, 0.85) 100%);
+}
+
+.clara-transition-trust-manifesto {
+  background: linear-gradient(180deg, rgba(247, 249, 252, 0.85) 0%, rgba(239, 247, 255, 0.4) 45%, rgba(239, 247, 255, 0.7) 100%);
+}
+
+.clara-transition-manifesto-how {
+  background: linear-gradient(180deg, rgba(239, 247, 255, 0.7) 0%, #FFFFFF 50%, var(--v7-canvas) 100%);
+}
+
+.clara-transition-how-chat {
+  background: linear-gradient(180deg, var(--v7-canvas) 0%, rgba(239, 247, 255, 0.5) 40%, var(--v7-canvas) 100%);
+}
+
+.clara-transition-chat-lifemap {
+  background: linear-gradient(180deg, var(--v7-canvas) 0%, rgba(239, 247, 255, 0.6) 30%, rgba(236, 253, 248, 0.4) 75%, var(--v7-canvas) 100%);
+}
+
+.clara-transition-lifemap-medicines {
+  background: linear-gradient(180deg, var(--v7-canvas) 0%, rgba(236, 253, 248, 0.6) 45%, #FFFFFF 100%);
+}
+
+/* Atmospheric Ribbon Connector Handoff Bridge */
+.clara-ribbon-handoff-bridge {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 64rem;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Grid Break Container for Signature Scenes */
 .clara-grid-break {
   width: 100vw;

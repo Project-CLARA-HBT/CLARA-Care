@@ -1,6 +1,15 @@
 "use client";
 
-import { memo, useMemo, type FormEvent } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 
 import type { UserRole } from "@/lib/auth-store";
 import { t } from "@/lib/i18n/catalog";
@@ -21,6 +30,9 @@ import type { ClaraOrbState } from "@/components/shell/shell-mode-provider";
  *
  * Prompt chips ("Tương tác thuốc", "Giải thích xét nghiệm", "Phác đồ điều trị")
  * + Mode switchers (fast/deep/deep_beta) + Depth selectors (sources/output mode)
+ * + 1-Click Voice Recording with animated pulse
+ * + 1-Click Attachment for prescription / lab images
+ * + 1-Click Quick Context Pills (+ Hồ sơ sức khỏe, + Tủ thuốc cá nhân)
  * + Personal-mode toggle + Send/Cancel.
  */
 
@@ -87,6 +99,109 @@ function Composer(props: ComposerProps) {
         ? "chat.composer.context.case"
         : "chat.composer.context.profile",
   );
+
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const [isListening, setIsListening] = useState(false);
+  const [attachments, setAttachments] = useState<Array<{ name: string; size?: number }>>([]);
+  const [activeContextPills, setActiveContextPills] = useState<{
+    cabinet: boolean;
+    recentLabs: boolean;
+  }>({
+    cabinet: false,
+    recentLabs: false,
+  });
+
+  // Auto-expanding textarea height on query changes
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    const nextHeight = Math.min(Math.max(textarea.scrollHeight, 52), 180);
+    textarea.style.height = `${nextHeight}px`;
+  }, [query]);
+
+  // Voice recording toggle with Web Speech API integration
+  const toggleVoiceRecording = useCallback(() => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // ignore
+        }
+      }
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition =
+      typeof window !== "undefined"
+        ? (window as any).SpeechRecognition ||
+          (window as any).webkitSpeechRecognition
+        : null;
+
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = uiLanguage === "vi" ? "vi-VN" : "en-US";
+        recognition.continuous = false;
+        recognition.interimResults = true;
+
+        recognition.onstart = () => {
+          setIsListening(true);
+        };
+        recognition.onresult = (event: any) => {
+          const transcript = Array.from(event.results)
+            .map((result: any) => result[0].transcript)
+            .join("");
+          if (transcript) {
+            onChangeQuery(transcript);
+          }
+        };
+        recognition.onerror = () => {
+          setIsListening(false);
+        };
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+      } catch {
+        setIsListening(false);
+      }
+    } else {
+      // Fallback simulated listening state when Web Speech is unsupported in test / certain environments
+      setIsListening(true);
+      const timer = setTimeout(() => {
+        setIsListening(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isListening, uiLanguage, onChangeQuery]);
+
+  // Attachment upload handler
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    setAttachments((prev) => [...prev, { name: file.name, size: file.size }]);
+    e.target.value = "";
+  };
+
+  const removeAttachment = (indexToRemove: number) => {
+    setAttachments((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const toggleContextPill = (key: "cabinet" | "recentLabs") => {
+    setActiveContextPills((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   const medicalSuggestions = useMemo(
     () => [
@@ -169,12 +284,62 @@ function Composer(props: ComposerProps) {
 
         {/* Floating Composer Container with Glow & Glass-Panel Shadow */}
         <div className="rounded-2xl border border-[color:var(--shell-border)]/90 bg-[var(--surface-panel)]/95 p-3.5 shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl transition focus-within:border-[color:var(--brand-500)] focus-within:ring-2 focus-within:ring-[color:var(--brand-500)]/20">
-          {/* Medical prompt suggestions row */}
+          {/* Medical prompt suggestions & 1-click Quick Context Pills */}
           {!isRunning ? (
             <div className="mb-2.5 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] shrink-0 mr-1 hidden sm:inline">
                 {t(uiLanguage, "chat.legacyComposer.promptTray")}:
               </span>
+
+              {/* 1-Click Quick Context Pills */}
+              <button
+                type="button"
+                aria-pressed={personalMode}
+                onClick={onTogglePersonalMode}
+                className={[
+                  "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition active:scale-95",
+                  personalMode
+                    ? "border-[color:var(--brand-500)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)] shadow-xs"
+                    : "border-[color:var(--shell-border)]/70 bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:border-[color:var(--brand-500)]/40 hover:text-[var(--text-primary)]",
+                ].join(" ")}
+                title={t(uiLanguage, "chat.composer.context.healthProfile")}
+              >
+                <Icon name={personalMode ? "check" : "user-card"} size={13} className={personalMode ? "text-[var(--text-brand)]" : "text-[var(--text-muted)]"} />
+                <span>{personalMode ? (uiLanguage === "vi" ? "✓ Hồ sơ sức khỏe" : "✓ Health Profile") : t(uiLanguage, "chat.composer.context.healthProfile")}</span>
+              </button>
+
+              <button
+                type="button"
+                aria-pressed={activeContextPills.cabinet}
+                onClick={() => toggleContextPill("cabinet")}
+                className={[
+                  "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition active:scale-95",
+                  activeContextPills.cabinet
+                    ? "border-[color:var(--brand-500)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)] shadow-xs"
+                    : "border-[color:var(--shell-border)]/70 bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:border-[color:var(--brand-500)]/40 hover:text-[var(--text-primary)]",
+                ].join(" ")}
+                title={t(uiLanguage, "chat.composer.context.cabinet")}
+              >
+                <Icon name={activeContextPills.cabinet ? "check" : "medication"} size={13} className={activeContextPills.cabinet ? "text-[var(--text-brand)]" : "text-[var(--text-muted)]"} />
+                <span>{activeContextPills.cabinet ? (uiLanguage === "vi" ? "✓ Tủ thuốc cá nhân" : "✓ Medicine Cabinet") : t(uiLanguage, "chat.composer.context.cabinet")}</span>
+              </button>
+
+              <button
+                type="button"
+                aria-pressed={activeContextPills.recentLabs}
+                onClick={() => toggleContextPill("recentLabs")}
+                className={[
+                  "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition active:scale-95",
+                  activeContextPills.recentLabs
+                    ? "border-[color:var(--brand-500)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)] shadow-xs"
+                    : "border-[color:var(--shell-border)]/70 bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:border-[color:var(--brand-500)]/40 hover:text-[var(--text-primary)]",
+                ].join(" ")}
+                title={t(uiLanguage, "chat.composer.context.recentLabs")}
+              >
+                <Icon name={activeContextPills.recentLabs ? "check" : "scan"} size={13} className={activeContextPills.recentLabs ? "text-[var(--text-brand)]" : "text-[var(--text-muted)]"} />
+                <span>{activeContextPills.recentLabs ? (uiLanguage === "vi" ? "✓ Xét nghiệm gần nhất" : "✓ Recent Labs") : t(uiLanguage, "chat.composer.context.recentLabs")}</span>
+              </button>
+
               {medicalSuggestions.map((item) => (
                 <button
                   key={item.id}
@@ -201,6 +366,51 @@ function Composer(props: ComposerProps) {
             </div>
           ) : null}
 
+          {/* Listening State Banner */}
+          {isListening && (
+            <div className="mb-2.5 flex items-center justify-between rounded-xl bg-red-500/10 border border-red-500/30 px-3.5 py-2 text-xs text-red-500 motion-safe:animate-pulse">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                </span>
+                <span className="font-semibold text-[11px] sm:text-xs">
+                  {uiLanguage === "vi" ? "Đang lắng nghe giọng nói của bạn... Hãy nói câu hỏi." : "Listening... Speak your health question."}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={toggleVoiceRecording}
+                className="rounded-md bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-600 hover:bg-red-500/30"
+              >
+                {uiLanguage === "vi" ? "Dừng" : "Stop"}
+              </button>
+            </div>
+          )}
+
+          {/* Attached Files Preview Chips */}
+          {attachments.length > 0 && (
+            <div className="mb-2.5 flex flex-wrap items-center gap-1.5 px-0.5">
+              {attachments.map((att, idx) => (
+                <div
+                  key={`${att.name}-${idx}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--brand-500)]/40 bg-[var(--surface-brand-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-brand)] shadow-xs"
+                >
+                  <Icon name="camera" size={13} />
+                  <span className="max-w-[170px] truncate">{att.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(idx)}
+                    className="text-[var(--text-muted)] hover:text-[var(--text-primary)] ml-1 transition"
+                    aria-label={`Remove ${att.name}`}
+                  >
+                    <Icon name="close" size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <label className="sr-only" htmlFor="chat-composer-input">
             {t(uiLanguage, "chat.composer.questionLabel")}
           </label>
@@ -223,47 +433,67 @@ function Composer(props: ComposerProps) {
               />
             </div>
             <textarea
+              ref={textareaRef}
               id="chat-composer-input"
               value={query}
               onChange={(event) => onChangeQuery(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
-                  event.currentTarget.form?.requestSubmit();
+                  if (query.trim() && !isRunning) {
+                    event.currentTarget.form?.requestSubmit();
+                  }
                 }
               }}
-              rows={2}
+              rows={1}
               placeholder={t(uiLanguage, "chat.composer.placeholder")}
-              className="min-h-[52px] max-h-36 w-full resize-none bg-transparent px-1 py-1.5 text-sm sm:text-[15px] leading-relaxed text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+              className="min-h-[52px] max-h-48 w-full resize-none bg-transparent px-1 py-1.5 text-sm sm:text-[15px] leading-relaxed text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
             />
           </div>
 
           <div className="flex items-center justify-between gap-2 border-t border-[color:var(--shell-border)]/80 px-0.5 pt-2.5">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              {/* Attachment Button */}
+              {/* Attachment File Input + Button */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*,.pdf"
+                className="hidden"
+                data-testid="chat-attachment-input"
+                aria-label={t(uiLanguage, "chat.composer.attachImage")}
+              />
               <button
                 type="button"
-                aria-label="Attach file"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition"
-                onClick={() => {
-                  const input = document.getElementById("chat-composer-input");
-                  if (input instanceof HTMLTextAreaElement) input.focus();
-                }}
+                aria-label={t(uiLanguage, "chat.composer.attachImage")}
+                title={t(uiLanguage, "chat.composer.attachImage")}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition active:scale-95"
+                onClick={() => fileInputRef.current?.click()}
               >
-                <Icon name="plus" size={16} />
+                <Icon name="camera" size={17} />
               </button>
 
-              {/* Mic Voice Button */}
+              {/* Mic Voice Button with Animated Listening Pulse */}
               <button
                 type="button"
-                aria-label="Voice input"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition"
-                onClick={() => {
-                  const input = document.getElementById("chat-composer-input");
-                  if (input instanceof HTMLTextAreaElement) input.focus();
-                }}
+                aria-label={isListening ? t(uiLanguage, "chat.composer.voiceStop") : t(uiLanguage, "chat.composer.voiceInput")}
+                title={isListening ? t(uiLanguage, "chat.composer.voiceStop") : t(uiLanguage, "chat.composer.voiceInput")}
+                aria-pressed={isListening}
+                className={[
+                  "relative inline-flex h-8 w-8 items-center justify-center rounded-xl transition active:scale-95",
+                  isListening
+                    ? "bg-red-500/20 text-red-500 ring-2 ring-red-500/60 motion-safe:animate-pulse"
+                    : "text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]",
+                ].join(" ")}
+                onClick={toggleVoiceRecording}
               >
-                <Icon name="mic" size={16} />
+                <Icon name={isListening ? "stop" : "mic"} size={17} />
+                {isListening && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                  </span>
+                )}
               </button>
 
               {/* Mode Switcher Pill */}

@@ -39,12 +39,12 @@ export function LifeMapScene() {
       id="lifemap"
       scale="signature"
       tone="azure"
-      className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-36"
+      className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-36 clara-transition-chat-lifemap"
     >
       {/* Background Top Transition Ribbon (Handoff from Chat scene) */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-16 opacity-30 flex items-center justify-center overflow-hidden"
+        className="clara-ribbon-handoff-bridge top-0 h-16 opacity-35"
       >
         <EvidenceRibbon variant="horizontal" tone="azure" active={true} className="w-full max-w-6xl" />
       </div>

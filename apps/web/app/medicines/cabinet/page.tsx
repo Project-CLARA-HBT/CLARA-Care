@@ -22,6 +22,7 @@ import {
 } from "@/lib/selfmed";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
+import { DrugAutocompleteSearch } from "@/components/medicines/drug-autocomplete-search";
 
 type FilterTab = "all" | "valid" | "expiring" | "expired" | "missingDose";
 
@@ -356,6 +357,26 @@ export default function MedicineCabinetInventoryPage() {
               <Icon name="progress" size={14} aria-hidden="true" /> {t(language, "medicines.cabinet.updateAnytime")}
             </span>
           </div>
+        </SurfaceCard>
+
+        {/* 1-Click Vietnamese Trade Name Quick Add to Cabinet */}
+        <SurfaceCard className="p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+              {isEn ? "1-Click Quick Add to Cabinet (Vietnamese Trade Names):" : "Thêm nhanh thuốc vào Tủ thuốc (Tìm theo tên biệt dược):"}
+            </h2>
+            <span className="text-[11px] text-[var(--text-muted)]">
+              Panadol, Glucophage, Coversyl, Augmentin, Lipitor...
+            </span>
+          </div>
+          <DrugAutocompleteSearch
+            onAddedToCabinet={() => void refreshCabinet()}
+            placeholder={
+              isEn
+                ? "Search Vietnamese brand names to 1-click add to cabinet..."
+                : "Tìm kiếm thuốc biệt dược để thêm nhanh 1-chạm vào tủ thuốc..."
+            }
+          />
         </SurfaceCard>
 
         {notice ? (

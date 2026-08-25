@@ -9,6 +9,7 @@ import { RevealGroup } from "../primitives/reveal-group";
 import { Reveal } from "../primitives/reveal";
 import { ContextConstellation } from "../artwork/context-constellation";
 import { ClaraOrb } from "../artwork/clara-orb";
+import { EvidenceRibbon } from "../artwork/evidence-ribbon";
 
 export function ManifestoScene() {
   const { language, isReducedMotion } = useMotionTier();
@@ -36,9 +37,17 @@ export function ManifestoScene() {
         ];
 
   return (
-    <LandingScene id="manifesto" scale="signature" tone="azure" className="overflow-hidden relative py-20 md:py-28">
+    <LandingScene id="manifesto" scale="signature" tone="azure" className="overflow-hidden relative py-20 md:py-28 clara-transition-trust-manifesto">
       {/* Ambient Lighting Field */}
       <AmbientField tone="azure" />
+
+      {/* Top Transition Ribbon from Trust */}
+      <div
+        aria-hidden="true"
+        className="clara-ribbon-handoff-bridge top-0 h-14 opacity-35"
+      >
+        <EvidenceRibbon variant="curved" tone="iris" active={true} className="w-full max-w-5xl" />
+      </div>
 
       {/* Editorial Header Section */}
       <div className="text-center max-w-4xl mx-auto mb-10 px-4">
@@ -107,7 +116,7 @@ export function ManifestoScene() {
 
       {/* Resolving Statement with Glowing ClaraOrb Anchor */}
       <Reveal delayMs={240} direction="up">
-        <div className="text-center mt-12 px-4">
+        <div className="text-center mt-12 px-4 relative z-10">
           <div className="inline-flex flex-wrap items-center justify-center gap-3 rounded-2xl bg-[#EFF7FF] px-6 py-3.5 border border-[#0B6FD8]/20 shadow-md backdrop-blur-xs hover:border-[#0B6FD8]/35 transition-all">
             <ClaraOrb size="sm" tone="azure" pulse={!isReducedMotion} />
             <span className="text-sm sm:text-base font-bold text-[#0B6FD8]">
@@ -116,6 +125,14 @@ export function ManifestoScene() {
           </div>
         </div>
       </Reveal>
+
+      {/* Downward Transition Ribbon Towards How-it-Works Pipeline */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-6 left-1/3 w-80 opacity-45 hidden md:block"
+      >
+        <EvidenceRibbon variant="curved" tone="azure" active={true} className="h-14 w-full" />
+      </div>
     </LandingScene>
   );
 }

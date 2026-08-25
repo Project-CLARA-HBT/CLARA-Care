@@ -12,6 +12,7 @@ import { trackCareguardViewed } from "@/lib/analytics/events";
 import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
+import { DrugAutocompleteSearch } from "@/components/medicines/drug-autocomplete-search";
 
 type TimelineEntry = {
   id: number;
@@ -251,6 +252,26 @@ export default function MedicinesCabinetTab() {
             <span className="inline-flex items-center gap-1"><Icon name="folder" size={14} aria-hidden="true" /> {t(language, "medicines.cabinet.accountData")}</span>
             <span className="inline-flex items-center gap-1"><Icon name="progress" size={14} aria-hidden="true" /> {t(language, "medicines.cabinet.updateAnytime")}</span>
           </div>
+        </SurfaceCard>
+
+        {/* 1-Click Vietnamese Trade Name Search & Quick Add to Cabinet */}
+        <SurfaceCard className="p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+              {language === "en" ? "1-Click Quick Add to Cabinet:" : "Thêm nhanh thuốc vào Tủ thuốc (Tìm theo tên biệt dược):"}
+            </h3>
+            <span className="text-[11px] text-[var(--text-muted)]">
+              {language === "en" ? "Panadol, Glucophage, Coversyl, Augmentin, Lipitor..." : "Panadol, Glucophage, Coversyl, Augmentin, Lipitor..."}
+            </span>
+          </div>
+          <DrugAutocompleteSearch
+            onAddedToCabinet={() => void refreshCabinet()}
+            placeholder={
+              language === "en"
+                ? "Search Vietnamese brand names to 1-click add to cabinet..."
+                : "Tìm kiếm thuốc biệt dược để thêm nhanh 1-chạm vào tủ thuốc..."
+            }
+          />
         </SurfaceCard>
 
         <section className="grid grid-cols-12 gap-6">

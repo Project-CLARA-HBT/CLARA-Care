@@ -107,24 +107,34 @@ function normalWelcomeContent(locale: UILanguage): WelcomeContent {
     description: t(locale, "chat.welcome.normal.description"),
     prompts: [
       {
-        icon: "body",
-        label: t(locale, "chat.welcome.normal.symptoms.label"),
-        prompt: t(locale, "chat.welcome.normal.symptoms.prompt"),
-      },
-      {
         icon: "medication",
-        label: t(locale, "chat.welcome.normal.medicine.label"),
-        prompt: t(locale, "chat.welcome.normal.medicine.prompt"),
+        label: t(locale, "chat.welcome.normal.interactions.label"),
+        prompt: t(locale, "chat.welcome.normal.interactions.prompt"),
       },
       {
-        icon: "scan",
-        label: t(locale, "chat.welcome.normal.lab.label"),
-        prompt: t(locale, "chat.welcome.normal.lab.prompt"),
+        icon: "clinical-notes",
+        label: t(locale, "chat.welcome.normal.labs.label"),
+        prompt: t(locale, "chat.welcome.normal.labs.prompt"),
+      },
+      {
+        icon: "progress",
+        label: t(locale, "chat.welcome.normal.timing.label"),
+        prompt: t(locale, "chat.welcome.normal.timing.prompt"),
       },
       {
         icon: "warning",
-        label: t(locale, "chat.welcome.normal.safety.label"),
-        prompt: t(locale, "chat.welcome.normal.safety.prompt"),
+        label: t(locale, "chat.welcome.normal.emergency.label"),
+        prompt: t(locale, "chat.welcome.normal.emergency.prompt"),
+      },
+      {
+        icon: "user-card",
+        label: t(locale, "chat.welcome.normal.pediatric.label"),
+        prompt: t(locale, "chat.welcome.normal.pediatric.prompt"),
+      },
+      {
+        icon: "body",
+        label: t(locale, "chat.welcome.normal.diet.label"),
+        prompt: t(locale, "chat.welcome.normal.diet.prompt"),
       },
     ],
   };
@@ -178,19 +188,25 @@ export default function ChatWelcome({
           <span>{t(uiLanguage, "chat.welcome.promise")}</span>
         </div>
 
-        {/* 3–4 Starter Chips (Spec v8 §7.2: Calm starter chips, no 4 large shortcut cards) */}
-        <div className="mt-6 flex flex-wrap justify-center gap-2 max-w-2xl">
-          {content.prompts.slice(0, 4).map((item) => (
+        {/* Starter Chips */}
+        <div className="mt-6 flex flex-wrap justify-center gap-2.5 max-w-2xl">
+          {content.prompts.map((item) => (
             <button
               key={item.label}
               type="button"
               onClick={() => onChoosePrompt(item.prompt)}
-              className="inline-flex items-center gap-2 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] shadow-xs transition hover:border-[color:var(--brand-500)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] active:scale-95"
+              className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3.5 py-2 text-xs font-medium text-[var(--text-secondary)] shadow-xs transition hover:border-[color:var(--brand-500)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] active:scale-95 text-left"
             >
-              <Icon name={item.icon as any} size={14} className="text-[var(--text-brand)] shrink-0" />
+              <Icon name={item.icon as any} size={15} className="text-[var(--text-brand)] shrink-0" />
               <span>{item.label}</span>
             </button>
           ))}
+        </div>
+
+        {/* Quick Helper Tip */}
+        <div className="mt-5 inline-flex items-center gap-2 rounded-xl border border-[color:var(--shell-border)]/70 bg-[var(--surface-muted)]/70 px-4 py-2 text-xs text-[var(--text-secondary)] shadow-xs">
+          <span className="shrink-0 text-base" aria-hidden="true">💡</span>
+          <span>{t(uiLanguage, "chat.welcome.quickTip")}</span>
         </div>
       </section>
     </div>

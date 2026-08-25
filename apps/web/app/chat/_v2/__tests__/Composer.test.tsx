@@ -149,4 +149,30 @@ describe("Composer", () => {
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
     expect(onSubmit).toHaveBeenCalled();
   });
+
+  it("toggles 1-click quick context pills and mic voice recording", () => {
+    const onTogglePersonalMode = vi.fn();
+    setup({ onTogglePersonalMode, uiLanguage: "vi" });
+
+    // 1-Click Quick Context Pills
+    const healthProfilePill = screen.getByTitle("+ Hồ sơ sức khỏe");
+    expect(healthProfilePill).toBeInTheDocument();
+    fireEvent.click(healthProfilePill);
+    expect(onTogglePersonalMode).toHaveBeenCalledTimes(1);
+
+    const cabinetPill = screen.getByTitle("+ Tủ thuốc cá nhân");
+    expect(cabinetPill).toBeInTheDocument();
+    fireEvent.click(cabinetPill);
+    expect(screen.getByText("✓ Tủ thuốc cá nhân")).toBeInTheDocument();
+
+    // 1-Click Mic Voice Button
+    const micButton = screen.getByRole("button", { name: /Nói bằng giọng nói/i });
+    expect(micButton).toBeInTheDocument();
+    fireEvent.click(micButton);
+    expect(screen.getByText(/Đang lắng nghe giọng nói/i)).toBeInTheDocument();
+
+    // 1-Click Attachment Button
+    const attachButton = screen.getByRole("button", { name: /Đính kèm ảnh đơn thuốc/i });
+    expect(attachButton).toBeInTheDocument();
+  });
 });

@@ -26,6 +26,7 @@ import { CabinetItem, getCabinet, runCabinetAutoDdi } from "@/lib/selfmed";
 import { trackCareguardDdiChecked, trackCareguardViewed } from "@/lib/analytics/events";
 import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
+import QuickInteractionChecker from "@/components/medicines/quick-interaction-checker";
 
 function formatOfflineCachedAt(language: "vi" | "en", cachedAt: string): string | null {
   const parsed = new Date(cachedAt);
@@ -269,6 +270,9 @@ export default function MedicinesSafetyTab() {
             </div>
           </div>
         </section>
+
+        {/* Instant 1-Click Interaction Checker Workspace with Traffic-Light Indicator */}
+        <QuickInteractionChecker onCabinetUpdated={() => void refreshCabinet()} />
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
           <section className="chrome-panel rounded-[1.35rem] p-5 sm:p-6">

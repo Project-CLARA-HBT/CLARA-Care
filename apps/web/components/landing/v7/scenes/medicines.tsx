@@ -38,12 +38,12 @@ export function MedicinesScene() {
       id="medicines"
       scale="standard"
       tone="mint"
-      className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-36"
+      className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-36 clara-transition-lifemap-medicines"
     >
       {/* Background Top Transition Ribbon (Handoff from LifeMap) */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-16 opacity-30 flex items-center justify-center overflow-hidden"
+        className="clara-ribbon-handoff-bridge top-0 h-16 opacity-35"
       >
         <EvidenceRibbon variant="horizontal" tone="mint" active={true} className="w-full max-w-6xl" />
       </div>

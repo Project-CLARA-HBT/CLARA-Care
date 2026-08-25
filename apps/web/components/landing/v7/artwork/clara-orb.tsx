@@ -182,8 +182,8 @@ export function ClaraOrb({
   }, [pulse]);
 
   const interactiveClasses = interactive
-    ? "cursor-pointer transition-transform duration-300 ease-out hover:scale-105 active:scale-95 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sky-500"
-    : "";
+    ? "cursor-pointer pointer-events-auto transition-all duration-300 ease-out hover:scale-105 active:scale-95 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sky-500"
+    : "pointer-events-none";
 
   return (
     <div
@@ -192,7 +192,7 @@ export function ClaraOrb({
       data-size={size}
       data-tone={tone}
       data-pulse={pulse}
-      className={`relative inline-flex items-center justify-center select-none pointer-events-none ${currentSize.container} ${interactiveClasses} ${className}`}
+      className={`relative inline-flex items-center justify-center select-none ${currentSize.container} ${interactiveClasses} ${className}`}
       style={style}
     >
       {/* Layer 1: Atmospheric Outer Glow (CSS Radial Gradient) */}

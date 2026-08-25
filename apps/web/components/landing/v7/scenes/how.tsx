@@ -5,6 +5,7 @@ import { useMotionTier } from "../runtime/motion-provider";
 import { LANDING_COPY_V7 } from "../landing-copy-v7";
 import { LandingScene } from "../primitives/landing-scene";
 import { SceneHeader } from "../primitives/scene-header";
+import { EvidenceRibbon } from "../artwork/evidence-ribbon";
 
 export function HowScene() {
   const { language } = useMotionTier();
@@ -48,7 +49,15 @@ export function HowScene() {
   ];
 
   return (
-    <LandingScene id="how-it-works" scale="signature" tone="canvas">
+    <LandingScene id="how-it-works" scale="signature" tone="canvas" className="relative overflow-hidden clara-transition-manifesto-how">
+      {/* Top Transition Ribbon from Manifesto */}
+      <div
+        aria-hidden="true"
+        className="clara-ribbon-handoff-bridge top-0 h-14 opacity-35"
+      >
+        <EvidenceRibbon variant="horizontal" tone="azure" active={true} className="w-full max-w-5xl" />
+      </div>
+
       <SceneHeader
         eyebrow={copy.eyebrow}
         title={copy.title}
@@ -57,7 +66,7 @@ export function HowScene() {
         tone="azure"
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10">
         {/* Left Column (5 cols): Step Selector List */}
         <div className="lg:col-span-5 space-y-3" role="list">
           {copy.steps.map((step, idx) => {
@@ -125,6 +134,14 @@ export function HowScene() {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Downward Transition Ribbon Towards Chat Scene (Peak 2) */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-8 right-1/4 w-80 opacity-40 hidden md:block"
+      >
+        <EvidenceRibbon variant="curved" tone="azure" active={true} className="h-16 w-full" />
       </div>
     </LandingScene>
   );

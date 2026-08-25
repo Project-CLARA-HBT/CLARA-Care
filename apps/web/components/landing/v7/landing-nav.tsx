@@ -126,7 +126,7 @@ export function LandingNav() {
               : "py-3 px-4 sm:px-6 shadow-xl"
           }`}
         >
-          {/* Brand Logo + Tag */}
+          {/* Brand Logo */}
           <Link
             href="/"
             className="flex items-center gap-2.5 group focus:outline-none rounded-full"
@@ -139,7 +139,7 @@ export function LandingNav() {
               <span className="font-bold text-sm sm:text-base text-[#162033] tracking-tight group-hover:text-[#0B6FD8] transition-colors leading-tight">
                 {copy.brand}
               </span>
-              <span className="text-[10px] text-[#6D7A8E] font-medium leading-none hidden sm:block">
+              <span className="text-[10px] text-[#6D7A8E] hidden lg:block leading-none">
                 {copy.brandTag}
               </span>
             </div>

@@ -970,6 +970,7 @@ export default function ChatShell({ initialChatId }: ChatShellProps = {}) {
               onSaveNote={handleSaveNote}
               onInspectSource={handleInspectSource}
               onInspectAllSources={handleInspectAllSources}
+              onAskFollowUp={chooseStarterPrompt}
             />
           ) : (
             <ChatWelcome

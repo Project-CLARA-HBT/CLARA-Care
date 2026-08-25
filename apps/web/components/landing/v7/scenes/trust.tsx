@@ -15,12 +15,12 @@ export function TrustScene() {
       id="trust"
       scale="transition"
       tone="canvas"
-      className="border-y border-[#E3E8EF]/60 relative overflow-hidden"
+      className="border-y border-[#E3E8EF]/60 clara-transition-sponsors-trust relative overflow-hidden"
     >
       {/* EvidenceRibbon Background Handoff Across Rail */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-12 opacity-30 flex items-center justify-center overflow-hidden"
+        className="clara-ribbon-handoff-bridge top-0 h-12 opacity-40"
       >
         <EvidenceRibbon variant="horizontal" tone="azure" active={true} className="w-full max-w-5xl" />
       </div>

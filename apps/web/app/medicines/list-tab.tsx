@@ -20,6 +20,14 @@ import {
 } from "@/lib/medication-courses";
 import { CabinetItem, getCabinet } from "@/lib/selfmed";
 import { requiresTwoMedicines } from "@/lib/careguard";
+import { DrugAutocompleteSearch } from "@/components/medicines/drug-autocomplete-search";
+import { TrafficLightSafetyIndicator } from "@/components/medicines/traffic-light-safety-indicator";
+import {
+  checkInstantDrugInteractions,
+  type DrugInteractionAlert,
+  type TrafficLightLevel,
+  type VietnameseDrug,
+} from "@/lib/vietnamese-drugs";
 
 const FIRST_RUN_ICON: Record<string, IconName> = {
   add_circle: "plus",
@@ -42,6 +50,41 @@ export default function MedicinesListTab() {
   const [route, setRoute] = useState("");
   const [form, setForm] = useState("");
   const [editing, setEditing] = useState<MedicationCourse | null>(null);
+
+  // Quick Interaction Check state for Domain 3
+  const [quickTestedDrugs, setQuickTestedDrugs] = useState<VietnameseDrug[]>([]);
+  const [quickCheckLevel, setQuickCheckLevel] = useState<TrafficLightLevel | null>(null);
+  const [quickCheckAlerts, setQuickCheckAlerts] = useState<DrugInteractionAlert[]>([]);
+  const [quickCheckSummary, setQuickCheckSummary] = useState<string>("");
+
+  const handleQuickAddTestedDrug = (drug: VietnameseDrug) => {
+    if (quickTestedDrugs.some((d) => d.id === drug.id || d.tradeName.toLowerCase() === drug.tradeName.toLowerCase())) {
+      return;
+    }
+    const nextList = [...quickTestedDrugs, drug];
+    setQuickTestedDrugs(nextList);
+    if (nextList.length >= 2) {
+      const res = checkInstantDrugInteractions(nextList.map((d) => d.tradeName));
+      setQuickCheckLevel(res.level);
+      setQuickCheckAlerts(res.alerts);
+      setQuickCheckSummary(res.summary);
+    }
+  };
+
+  const handleRemoveQuickTestedDrug = (id: string) => {
+    const nextList = quickTestedDrugs.filter((d) => d.id !== id);
+    setQuickTestedDrugs(nextList);
+    if (nextList.length >= 2) {
+      const res = checkInstantDrugInteractions(nextList.map((d) => d.tradeName));
+      setQuickCheckLevel(res.level);
+      setQuickCheckAlerts(res.alerts);
+      setQuickCheckSummary(res.summary);
+    } else {
+      setQuickCheckLevel(null);
+      setQuickCheckAlerts([]);
+      setQuickCheckSummary("");
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -463,6 +506,89 @@ export default function MedicinesListTab() {
                   )}
                 </div>
               </ActionObject>
+
+              {/* Instant 1-Click Autocomplete Drug Search & Quick Safety Indicator */}
+              <div className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 sm:p-5 space-y-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                    {language === "en"
+                      ? "Instant Drug Interaction & Cabinet Quick-Add:"
+                      : "Kiểm tra nhanh tương tác & Thêm nhanh vào tủ thuốc:"}
+                  </span>
+                  <Link
+                    href="/medicines?tab=safety"
+                    className="text-xs font-semibold text-[var(--text-brand)] hover:underline"
+                  >
+                    {language === "en" ? "Full Safety Workspace →" : "Mở phòng lab an toàn đầy đủ →"}
+                  </Link>
+                </div>
+
+                <DrugAutocompleteSearch
+                  onSelectDrug={handleQuickAddTestedDrug}
+                  onAddedToCabinet={() => void load()}
+                  placeholder={
+                    language === "en"
+                      ? "Search trade name (Panadol, Glucophage, Coversyl, Augmentin, Lipitor...)"
+                      : "Tìm thuốc biệt dược (Panadol, Glucophage, Coversyl, Augmentin, Lipitor...)"
+                  }
+                />
+
+                {quickTestedDrugs.length > 0 && (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                        {language === "en"
+                          ? `Testing ${quickTestedDrugs.length} medication(s):`
+                          : `Đang đối chiếu ${quickTestedDrugs.length} thuốc:`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuickTestedDrugs([]);
+                          setQuickCheckLevel(null);
+                          setQuickCheckAlerts([]);
+                          setQuickCheckSummary("");
+                        }}
+                        className="text-xs text-[var(--text-muted)] hover:text-[var(--status-danger-text)]"
+                      >
+                        {language === "en" ? "Clear" : "Xóa"}
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {quickTestedDrugs.map((drug) => (
+                        <div
+                          key={drug.id}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] shadow-sm"
+                        >
+                          <span>{drug.tradeName}</span>
+                          <span className="text-[11px] font-normal text-[var(--text-muted)]">
+                            ({drug.defaultDosage})
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveQuickTestedDrug(drug.id)}
+                            className="ml-1 text-[var(--text-muted)] hover:text-[var(--status-danger-text)]"
+                            aria-label={`Remove ${drug.tradeName}`}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {quickCheckLevel && (
+                      <TrafficLightSafetyIndicator
+                        level={quickCheckLevel}
+                        summary={quickCheckSummary}
+                        alerts={quickCheckAlerts}
+                        medications={quickTestedDrugs.map((d) => d.tradeName)}
+                        checkedCount={quickTestedDrugs.length}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* ================================================================= */}

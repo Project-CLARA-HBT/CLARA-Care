@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import AnswerRenderer from "@/app/chat/_v2/components/AnswerRenderer";
 import FlowTimeline from "@/app/chat/_v2/components/FlowTimeline";
@@ -292,6 +292,84 @@ describe("TurnView", () => {
       /could not be displayed/i,
     );
     errorSpy.mockRestore();
+  });
+
+  it("renders 1-click action buttons: Copy, Save to Notebook, Voice Read-Aloud, and Related Questions", async () => {
+    const onSaveNote = vi.fn();
+    const onAskFollowUp = vi.fn();
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: { writeText: writeTextMock },
+    });
+
+    const speakMock = vi.fn();
+    const cancelMock = vi.fn();
+    (window as any).speechSynthesis = {
+      speak: speakMock,
+      cancel: cancelMock,
+    };
+    (window as any).SpeechSynthesisUtterance = class {
+      text: string;
+      lang = "";
+      constructor(text: string) {
+        this.text = text;
+      }
+    };
+
+    const turn: ConversationItem = {
+      id: "t-actions",
+      query: "Uống Metformin khi nào?",
+      result: makeTier1("Uống Metformin cùng hoặc ngay sau bữa ăn để giảm tác dụng phụ đường tiêu hóa."),
+      createdAt: Date.now(),
+    };
+
+    render(
+      <TurnView
+        turn={turn}
+        uiLanguage="vi"
+        onSaveNote={onSaveNote}
+        onAskFollowUp={onAskFollowUp}
+      />,
+    );
+
+    // 1. Copy answer button
+    const copyBtn = screen.getByRole("button", { name: /Sao chép câu trả lời/i });
+    expect(copyBtn).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(copyBtn);
+    });
+    expect(writeTextMock).toHaveBeenCalledWith("Uống Metformin cùng hoặc ngay sau bữa ăn để giảm tác dụng phụ đường tiêu hóa.");
+
+    // 2. Save to notebook button
+    const saveBtn = screen.getByRole("button", { name: /Lưu vào Sổ tay/i });
+    expect(saveBtn).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+    expect(onSaveNote).toHaveBeenCalledWith("Uống Metformin cùng hoặc ngay sau bữa ăn để giảm tác dụng phụ đường tiêu hóa.");
+
+    // 3. Voice read-aloud button
+    const voiceBtn = screen.getByRole("button", { name: /Đọc to \(Voice\)/i });
+    expect(voiceBtn).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(voiceBtn);
+    });
+    expect(speakMock).toHaveBeenCalled();
+
+    // 4. Related questions button
+    const relatedBtn = screen.getByRole("button", { name: /Hỏi thêm câu liên quan/i });
+    expect(relatedBtn).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(relatedBtn);
+    });
+    expect(screen.getByText(/Gợi ý câu hỏi đào sâu tiếp theo:/i)).toBeInTheDocument();
+
+    const followUpChoice = screen.getByRole("button", { name: /Tác dụng phụ thường gặp nhất/i });
+    expect(followUpChoice).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(followUpChoice);
+    });
+    expect(onAskFollowUp).toHaveBeenCalledWith(expect.stringContaining("Tác dụng phụ"));
   });
 });
 
