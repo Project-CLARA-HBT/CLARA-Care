@@ -577,6 +577,63 @@ describe("Spec v8 Section 7.15: Consumer You Architecture Verification", () => {
       expect(screen.getByTestId("session-card-sess-current")).toBeInTheDocument();
     });
 
+    it("changes password with input validation and server sync", async () => {
+      vi.spyOn(v2Client, "getSecuritySettings").mockResolvedValueOnce(mockSecuritySettingsData as any);
+      const postSpy = vi.spyOn(api, "post").mockResolvedValueOnce({ data: { message: "Password updated successfully." } });
+
+      render(<YouSettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("change-password-section")).toBeInTheDocument();
+      });
+
+      const currentInput = screen.getByTestId("current-password-input");
+      const newInput = screen.getByTestId("new-password-input");
+      const confirmInput = screen.getByTestId("confirm-password-input");
+      const submitBtn = screen.getByTestId("submit-change-password-btn");
+
+      // Test short password
+      fireEvent.change(currentInput, { target: { value: "oldPassword123" } });
+      fireEvent.change(newInput, { target: { value: "short" } });
+      fireEvent.change(confirmInput, { target: { value: "short" } });
+      fireEvent.click(submitBtn);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("password-change-error")).toHaveTextContent("Mật khẩu mới phải có ít nhất 8 ký tự.");
+      });
+
+      // Test password without numbers
+      fireEvent.change(newInput, { target: { value: "allletterspass" } });
+      fireEvent.change(confirmInput, { target: { value: "allletterspass" } });
+      fireEvent.click(submitBtn);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("password-change-error")).toHaveTextContent("Mật khẩu mới phải chứa cả chữ cái và chữ số.");
+      });
+
+      // Test password mismatch
+      fireEvent.change(newInput, { target: { value: "newPassword123" } });
+      fireEvent.change(confirmInput, { target: { value: "different123" } });
+      fireEvent.click(submitBtn);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("password-change-error")).toHaveTextContent("Mật khẩu xác nhận không khớp.");
+      });
+
+      // Test valid password change
+      fireEvent.change(newInput, { target: { value: "newSecurePass123" } });
+      fireEvent.change(confirmInput, { target: { value: "newSecurePass123" } });
+      fireEvent.click(submitBtn);
+
+      await waitFor(() => {
+        expect(postSpy).toHaveBeenCalledWith("/auth/change-password", {
+          current_password: "oldPassword123",
+          new_password: "newSecurePass123",
+        });
+        expect(screen.getByTestId("password-change-success")).toHaveTextContent("Đổi mật khẩu thành công.");
+      });
+    });
+
     it("configures inactivity auto-lock window and policy toggles, saving changes successfully", async () => {
       vi.spyOn(v2Client, "getSecuritySettings").mockResolvedValueOnce(mockSecuritySettingsData as any);
       const updateSecuritySpy = vi

@@ -337,4 +337,55 @@ describe("LivingEvidencePage (/evidence)", () => {
       expect(markEvidenceChangeNotificationRead).toHaveBeenCalledWith("notif-1");
     });
   });
+
+  it("filters evidence matrix records interactively by search query and category filter", async () => {
+    vi.mocked(createEvidenceQuestion).mockResolvedValue({ ...mockQuestion, confirmed: true });
+    vi.mocked(runEvidenceQuestion).mockResolvedValue(mockRun);
+    vi.mocked(getEvidenceDetails).mockResolvedValue({
+      matrix: mockMatrix,
+      applicability: mockApplicability,
+      contradictions: mockContradictions,
+    });
+
+    render(<LivingEvidencePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Theo dõi Tăng huyết áp & Đái tháo đường")).toBeInTheDocument();
+    });
+
+    const questionInput = screen.getByLabelText(/Điều bạn muốn biết/i);
+    fireEvent.change(questionInput, { target: { value: "SGLT2i HFpEF" } });
+    fireEvent.click(screen.getByRole("button", { name: /Lưu để xem lại/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Tìm bằng chứng/i })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Tìm bằng chứng/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Khuyến cáo điều trị Suy tim ESC 2023")).toBeInTheDocument();
+    });
+
+    // Search for ESC
+    const searchInput = screen.getByLabelText("Tìm kiếm trong ma trận bằng chứng");
+    fireEvent.change(searchInput, { target: { value: "ESC" } });
+    expect(screen.getByText("Khuyến cáo điều trị Suy tim ESC 2023")).toBeInTheDocument();
+
+    // Search for non-matching query
+    fireEvent.change(searchInput, { target: { value: "thuoc_khong_ton_tai" } });
+    await waitFor(() => {
+      expect(screen.getByText("Không tìm thấy nguồn bằng chứng phù hợp")).toBeInTheDocument();
+    });
+
+    // Reset filter button
+    fireEvent.click(screen.getByRole("button", { name: "Đặt lại bộ lọc" }));
+    await waitFor(() => {
+      expect(screen.getByText("Khuyến cáo điều trị Suy tim ESC 2023")).toBeInTheDocument();
+    });
+
+    // Filter by Category tab
+    const categoryTab = screen.getByRole("tab", { name: /Hướng dẫn \/ đồng thuận/i });
+    fireEvent.click(categoryTab);
+    expect(screen.getByText("Khuyến cáo điều trị Suy tim ESC 2023")).toBeInTheDocument();
+  });
 });

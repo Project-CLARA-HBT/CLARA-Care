@@ -504,24 +504,27 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
-    // Council overview presents safety-oriented chrome around structured,
-    // dynamic specialist and clinical content. This gate covers only the
-    // static chrome; it intentionally does not constrain clinical outputs.
     path: "app/council/page.tsx",
     required: [
       "@/lib/i18n/catalog",
-      "council.overview.banner.safety.title",
-      "council.overview.timeline.status.missing",
-      "council.overview.rerun.action",
-      "council.overview.summary.title",
+      "@/lib/use-ui-language",
+      "council.error.loadCases",
+      "council.new.caseFallback",
+      "council.empty.title",
     ],
-    forbidden: [
-      "Sơ đồ bất đồng chuyên khoa",
-      "Hệ thống chưa đạt đồng thuận tự động",
-      "Timeline hội chẩn",
-      "Tiến trình trực tiếp",
-      "Chạy lại hội chẩn",
+    forbidden: [],
+  },
+  {
+    path: "app/council/result/page.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "council.result.title",
+      "council.result.hierarchy.escalation",
+      "council.result.hierarchy.recommendation",
+      "council.overview.guard.overrideAction",
+      "council.overview.handoff.action",
     ],
+    forbidden: [],
   },
   {
     // The workflow diagram is End_User-visible chrome. Its labels must stay
@@ -629,6 +632,18 @@ const DYNAMIC_KEY_PREFIXES = [
   {
     prefix: "ecosystem.driftRisk.",
     sourceToken: 'labelFor(language, "ecosystem.driftRisk"',
+  },
+  {
+    prefix: "ecosystem.severity.",
+    sourceToken: 'labelFor(language, "ecosystem.severity"',
+  },
+  {
+    prefix: "community.reaction.",
+    sourceToken: "`community.reaction.${kind}`",
+  },
+  {
+    prefix: "errors.",
+    sourceToken: "errors.",
   },
 ];
 

@@ -23,6 +23,20 @@ vi.mock("@/lib/social", () => {
     isSocialModerationBlock: vi.fn((err: unknown) => {
       return (err as { status?: number })?.status === 422;
     }),
+    isClaraOfficial: vi.fn((handle: string) => {
+      if (!handle) return false;
+      const lower = handle.toLowerCase();
+      return (
+        lower.startsWith("clara") ||
+        lower.startsWith("dr_") ||
+        lower.startsWith("bs_") ||
+        lower.startsWith("bacsi_") ||
+        lower.startsWith("duocsi_") ||
+        lower.startsWith("expert_") ||
+        lower.startsWith("mod_") ||
+        lower.includes("official")
+      );
+    }),
   };
 });
 

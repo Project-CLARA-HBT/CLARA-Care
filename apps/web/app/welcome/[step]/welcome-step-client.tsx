@@ -270,6 +270,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
         <Field
           label={t(language, "welcome.name.label")}
           optional
+          maxLength={100}
           value={fullName}
           onChange={(event) => setFullName(event.target.value)}
           placeholder={t(language, "welcome.name.placeholder")}
@@ -285,6 +286,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
           label={t(language, "welcome.birth.label")}
           optional
           type="date"
+          max={new Date().toISOString().split("T")[0]}
           value={dob}
           onChange={(event) => setDob(event.target.value)}
         />

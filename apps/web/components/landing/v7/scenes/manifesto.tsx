@@ -11,6 +11,18 @@ import { ContextConstellation } from "../artwork/context-constellation";
 import { ClaraOrb } from "../artwork/clara-orb";
 import { EvidenceRibbon } from "../artwork/evidence-ribbon";
 
+/**
+ * ManifestoScene (Spatial Longitudinal Context Constellation)
+ *
+ * Demonstrates how 5 independent clinical context streams converge:
+ * - Active Medications (Thuốc đang dùng)
+ * - Recent Changes (Thay đổi gần đây)
+ * - Health Record (Hồ sơ sức khỏe)
+ * - Prior Questions (Câu hỏi trước đây)
+ * - Evidence Sources (Nguồn y văn đối chiếu)
+ *
+ * Connected via animated vector energy splines to the central ClaraOrb Core hub.
+ */
 export function ManifestoScene() {
   const { language, isReducedMotion } = useMotionTier();
   const lang = language === "en" ? "en" : "vi";
@@ -37,20 +49,25 @@ export function ManifestoScene() {
         ];
 
   return (
-    <LandingScene id="manifesto" scale="signature" tone="azure" className="overflow-hidden relative py-20 md:py-28 clara-transition-trust-manifesto">
+    <LandingScene
+      id="manifesto"
+      scale="signature"
+      tone="azure"
+      className="overflow-hidden relative py-20 md:py-28 clara-transition-trust-manifesto"
+    >
       {/* Ambient Lighting Field */}
       <AmbientField tone="azure" />
 
-      {/* Top Transition Ribbon from Trust */}
+      {/* Top Transition Ribbon from Trust Scene */}
       <div
         aria-hidden="true"
         className="clara-ribbon-handoff-bridge top-0 h-14 opacity-35"
       >
-        <EvidenceRibbon variant="curved" tone="iris" active={true} className="w-full max-w-5xl" />
+        <EvidenceRibbon variant="curved" tone="iris" active={!isReducedMotion} className="w-full max-w-6xl" />
       </div>
 
       {/* Editorial Header Section */}
-      <div className="text-center max-w-4xl mx-auto mb-10 px-4">
+      <div className="text-center max-w-4xl mx-auto mb-10 px-4 relative z-10">
         <RevealGroup staggerMs={80}>
           <Reveal delayMs={0} direction="up">
             <span className="inline-flex items-center gap-2 rounded-full bg-[#EFF7FF] px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-[#0B6FD8] border border-[#0B6FD8]/20 shadow-xs">
@@ -74,7 +91,7 @@ export function ManifestoScene() {
       </div>
 
       {/* Quick Stream Inspector Navigation Filter */}
-      <div className="flex justify-center mb-6 px-4">
+      <div className="flex justify-center mb-6 px-4 relative z-10">
         <div
           role="tablist"
           aria-label={lang === "vi" ? "Bộ chọn bối cảnh hội tụ" : "Context Stream Selector"}
@@ -89,7 +106,7 @@ export function ManifestoScene() {
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setActiveNode(node.id)}
-                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all clara-focus-ring ${
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all clara-focus-ring cursor-pointer ${
                   isSelected
                     ? "bg-[#0B6FD8] text-white shadow-xs scale-102"
                     : "text-[#48566A] hover:text-[#162033] hover:bg-[#F8FAFD]"
@@ -103,9 +120,9 @@ export function ManifestoScene() {
         </div>
       </div>
 
-      {/* Spatial Constellation Canvas with Central ClaraOrb and Animated Connectors */}
+      {/* Spatial Constellation Canvas with Central ClaraOrb and Animated Energy Connectors */}
       <Reveal delayMs={120} direction="scale">
-        <div className="relative mx-auto max-w-5xl px-2 sm:px-4">
+        <div className="relative mx-auto max-w-5xl px-2 sm:px-4 z-10">
           <ContextConstellation
             language={lang}
             activeNodeId={activeNode}
@@ -129,12 +146,13 @@ export function ManifestoScene() {
       {/* Downward Transition Ribbon Towards How-it-Works Pipeline */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -bottom-6 left-1/3 w-80 opacity-45 hidden md:block"
+        className="pointer-events-none absolute -bottom-8 left-1/3 w-80 opacity-45 hidden md:block"
       >
-        <EvidenceRibbon variant="curved" tone="azure" active={true} className="h-14 w-full" />
+        <EvidenceRibbon variant="curved" tone="azure" active={!isReducedMotion} className="h-16 w-full" />
       </div>
     </LandingScene>
   );
 }
 
 export default ManifestoScene;
+

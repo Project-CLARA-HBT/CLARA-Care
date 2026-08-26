@@ -13,6 +13,15 @@ import { RevealGroup } from "../primitives/reveal-group";
 import { Reveal } from "../primitives/reveal";
 import { AmbientField } from "../primitives/ambient-field";
 
+/**
+ * HeroScene (Spatial Peak 1)
+ *
+ * Spatial product reveal featuring:
+ * - Glowing ClaraOrb anchor beacon in header with multi-layer breathing halo
+ * - Large product surface with 3D perspective hover and responsive chrome
+ * - Floating contextual metadata chips with 3D elevation and tone styling
+ * - Downward EvidenceRibbon handoff leading into subsequent trust and partner rails
+ */
 export function HeroScene() {
   const { language, isEnhanced, isReducedMotion } = useMotionTier();
   const copy = LANDING_COPY_V7[language]?.hero ?? LANDING_COPY_V7.vi.hero;
@@ -43,10 +52,10 @@ export function HeroScene() {
       tone="azure"
       className="pt-32 sm:pt-36 md:pt-44 pb-20 overflow-hidden relative"
     >
-      {/* Ambient Azure Field */}
+      {/* Ambient Azure Lighting Field */}
       <AmbientField tone="azure" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center relative z-10">
         {/* Left Column (42-45% Desktop): Smooth Entrance Cascade */}
         <div className="lg:col-span-5 space-y-6 text-left relative">
           {/* Subtle Ambient Beacon Background Halo */}
@@ -59,7 +68,7 @@ export function HeroScene() {
             {/* Eyebrow Badge & Interactive Floating ClaraOrb Beacon */}
             <Reveal delayMs={0} direction="up">
               <div className="inline-flex items-center gap-3 relative z-10">
-                {/* Interactive Floating ClaraOrb Beacon */}
+                {/* Interactive Floating ClaraOrb Beacon Anchor */}
                 <div
                   className="relative group cursor-pointer flex items-center justify-center pointer-events-auto"
                   title="CLARA Interactive AI Beacon"
@@ -151,9 +160,9 @@ export function HeroScene() {
                 className="absolute -inset-6 rounded-3xl bg-gradient-to-r from-[#0B6FD8]/15 via-[#38BDF8]/12 to-[#14A88D]/12 blur-2xl opacity-75 pointer-events-none clara-aura-breathe"
               />
 
-              {/* Main Opaque Product Surface */}
+              {/* Main Opaque Product Surface with 3D Perspective Hover */}
               <div className="clara-product-surface relative p-6 sm:p-8 bg-white border border-[#E3E8EF] shadow-2xl transition-all duration-300">
-                {/* Product Header Chrome with Dynamic Responsive ClaraOrb */}
+                {/* Product Header Chrome with Glowing ClaraOrb Anchor */}
                 <div className="flex items-center justify-between border-b border-[#E3E8EF] pb-4 mb-5">
                   <div className="flex items-center gap-3.5">
                     <div className="relative flex items-center justify-center group cursor-pointer pointer-events-auto">
@@ -229,7 +238,7 @@ export function HeroScene() {
                 </div>
               </div>
 
-              {/* Floating Contextual Metadata 1 (Top Left / Overflow) with 3D hover response */}
+              {/* Floating Contextual Metadata 1 (Top Left / Overflow) with 3D elevation */}
               <FloatingMetadata
                 label={copy.floatingContext1.label}
                 value={copy.floatingContext1.value}
@@ -238,7 +247,7 @@ export function HeroScene() {
                 className="absolute -top-5 -left-4 sm:-left-6 hidden sm:inline-flex transform-gpu transition-all duration-300 hover:scale-105 hover:-translate-y-1.5 hover:shadow-xl hover:border-[#0B6FD8]/40 cursor-default"
               />
 
-              {/* Floating Contextual Metadata 2 (Bottom Right / Overflow) with 3D hover response */}
+              {/* Floating Contextual Metadata 2 (Bottom Right / Overflow) with 3D elevation */}
               <FloatingMetadata
                 label={copy.floatingContext2.label}
                 value={copy.floatingContext2.value}
@@ -260,3 +269,4 @@ export function HeroScene() {
 }
 
 export default HeroScene;
+

@@ -797,9 +797,14 @@ export default function LifeMapPage() {
                       </h2>
                     </div>
                   </div>
-                  <Button as="link" href="/lifemap/new" size="sm" icon="add">
-                    {copy("lifemap.create.start")}
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button as="link" href="/lifemap/timeline" variant="secondary" size="sm" icon="history">
+                      {copy("lifemap.timeline.actions.viewTimeline")}
+                    </Button>
+                    <Button as="link" href="/lifemap/new" size="sm" icon="add">
+                      {copy("lifemap.create.start")}
+                    </Button>
+                  </div>
                 </div>
                 {data?.episodes.length ? (
                   <div className="p-4 sm:p-5">

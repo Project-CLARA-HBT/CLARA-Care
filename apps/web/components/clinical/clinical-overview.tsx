@@ -300,6 +300,14 @@ export function ClinicalOverview({
           )}
 
           <Link
+            href="/clinical/patients"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[color:var(--surface-panel)] transition"
+          >
+            <Icon name="contact" size={13} />
+            <span>{copy("Danh sách bệnh nhân", "Patient Roster")}</span>
+          </Link>
+
+          <Link
             href="/clinical/standards"
             className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:bg-[color:var(--surface-panel)] transition"
           >

@@ -189,4 +189,54 @@ describe("ResearchSourceHubPage (/research/source-hub)", () => {
       expect(screen.getByText(/openfda http_400 non-critical/i)).toBeInTheDocument();
     });
   });
+
+  it("filters records by source category chips and distribution bars", async () => {
+    render(<ResearchSourceHubPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("ADA Standards of Care in Diabetes 2024")).toBeInTheDocument();
+    });
+
+    // Click on PubMed category chip
+    const pubmedTab = screen.getByRole("tab", { name: /PubMed/i });
+    fireEvent.click(pubmedTab);
+
+    await waitFor(() => {
+      expect(listSourceHubRecords).toHaveBeenCalledWith({
+        source: "pubmed",
+        query: undefined,
+        limit: 80,
+      });
+    });
+
+    // Click on VN MOH from distribution
+    const vnMohBar = screen.getByTitle(/Lọc theo Bộ Y tế Việt Nam/i);
+    fireEvent.click(vnMohBar);
+
+    await waitFor(() => {
+      expect(listSourceHubRecords).toHaveBeenCalledWith({
+        source: "vn_moh",
+        query: undefined,
+        limit: 80,
+      });
+    });
+  });
+
+  it("toggles between Provenance Cards and Table view modes", async () => {
+    render(<ResearchSourceHubPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("ADA Standards of Care in Diabetes 2024")).toBeInTheDocument();
+    });
+
+    // Default is cards mode
+    expect(screen.getByRole("button", { name: /Thẻ nguồn/i })).toHaveAttribute("aria-pressed", "true");
+
+    // Switch to table mode
+    const tableToggle = screen.getByRole("button", { name: /Bảng dữ liệu/i });
+    fireEvent.click(tableToggle);
+
+    expect(tableToggle).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("table")).toBeInTheDocument();
+  });
 });

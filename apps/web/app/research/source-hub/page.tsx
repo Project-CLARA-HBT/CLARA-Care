@@ -54,6 +54,8 @@ export default function ResearchSourceHubPage() {
   const [catalog, setCatalog] = useState<SourceHubCatalogEntry[]>([]);
   const [records, setRecords] = useState<SourceHubRecord[]>([]);
   const [activeSource, setActiveSource] = useState<SourceHubSourceKey>("pubmed");
+  const [selectedCategory, setSelectedCategory] = useState<SourceHubSourceKey | "all">("all");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [filterText, setFilterText] = useState("");
   const [syncQuery, setSyncQuery] = useState("diabetes type 2 guideline");
   const [syncLimit, setSyncLimit] = useState("12");
@@ -83,12 +85,12 @@ export default function ResearchSourceHubPage() {
     }
   }, []);
 
-  const loadRecords = useCallback(async (query?: string) => {
+  const loadRecords = useCallback(async (query?: string, sourceCategory?: SourceHubSourceKey | "all") => {
     setIsLoading(true);
     setError("");
     try {
       const items = await listSourceHubRecords({
-        source: "all",
+        source: sourceCategory ?? "all",
         query: query?.trim() || undefined,
         limit: 80,
       });
@@ -105,8 +107,7 @@ export default function ResearchSourceHubPage() {
       setIsLoading(true);
       setError("");
       try {
-        await loadCatalog();
-        await loadRecords();
+        await Promise.all([loadCatalog(), loadRecords()]);
       } catch (cause) {
         setError(safeUserFacingError(cause, t(language, "research.sourceHub.error.loadHub")));
         setIsLoading(false);
@@ -135,7 +136,12 @@ export default function ResearchSourceHubPage() {
 
   const onFilter = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await loadRecords(filterText);
+    await loadRecords(filterText, selectedCategory);
+  };
+
+  const handleCategorySelect = async (category: SourceHubSourceKey | "all") => {
+    setSelectedCategory(category);
+    await loadRecords(filterText, category);
   };
 
   const onSync = async (event: FormEvent<HTMLFormElement>) => {
@@ -154,7 +160,7 @@ export default function ResearchSourceHubPage() {
     setSyncWarnings([]);
     try {
       const result = await syncSourceHub({ source: activeSource, query, limit: safeLimit });
-      await loadRecords(filterText);
+      await loadRecords(filterText, selectedCategory);
       // Clean, End_User-safe success summary only — no raw connector strings.
       setMessage(
         stripTelemetryLabels(
@@ -281,18 +287,26 @@ export default function ResearchSourceHubPage() {
             <div className="mt-4 space-y-3">
               {recordDistribution.length ? (
                 recordDistribution.map(([source, count]) => (
-                  <div key={source}>
+                  <button
+                    key={source}
+                    type="button"
+                    onClick={() => void handleCategorySelect(selectedCategory === source ? "all" : source)}
+                    className="w-full text-left transition hover:opacity-80 focus-ring rounded-lg p-1 -m-1"
+                    title={language === "vi" ? `Lọc theo ${sourceLabel(language, source)}` : `Filter by ${sourceLabel(language, source)}`}
+                  >
                     <div className="mb-1 flex items-center justify-between gap-2 text-sm">
-                      <span className="truncate font-semibold text-[var(--text-primary)]">{sourceLabel(language, source)}</span>
-                      <span className="font-mono text-[var(--text-secondary)]">{count}</span>
+                      <span className={`truncate font-semibold ${selectedCategory === source ? "text-[var(--text-brand)] underline" : "text-[var(--text-primary)]"}`}>
+                        {sourceLabel(language, source)}
+                      </span>
+                      <span className="font-mono text-xs text-[var(--text-secondary)]">{count}</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]">
                       <div
-                        className="h-full rounded-full bg-[var(--brand-600)]"
+                        className={`h-full rounded-full ${selectedCategory === source ? "bg-[var(--brand-500)]" : "bg-[var(--brand-600)]"}`}
                         style={{ width: `${Math.max(8, Math.round((count / maxRecordCount) * 100))}%` }}
                       />
                     </div>
-                  </div>
+                  </button>
                 ))
               ) : (
                 <p className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
@@ -303,26 +317,109 @@ export default function ResearchSourceHubPage() {
           </article>
         </section>
 
-        <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.records.eyebrow")}</p>
               <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">{t(language, "research.sourceHub.records.title")}</h2>
             </div>
-            <form onSubmit={onFilter} className="flex flex-wrap items-center gap-2">
-              <input
-                value={filterText}
-                onChange={(event) => setFilterText(event.target.value)}
-                placeholder={t(language, "research.sourceHub.records.filterPlaceholder")}
-                className="min-h-10 w-72 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
-              />
-              <button
-                type="submit"
-                className="min-h-10 rounded-lg border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)] px-4 text-sm font-bold text-[var(--text-brand)]"
-              >
-                {t(language, "research.sourceHub.records.filter")}
-              </button>
-            </form>
+            <div className="flex flex-wrap items-center gap-2">
+              <form onSubmit={onFilter} className="flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <input
+                    value={filterText}
+                    onChange={(event) => setFilterText(event.target.value)}
+                    placeholder={t(language, "research.sourceHub.records.filterPlaceholder")}
+                    className="min-h-10 w-72 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 pr-8 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
+                  />
+                  {filterText ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilterText("");
+                        void loadRecords("", selectedCategory);
+                      }}
+                      className="absolute right-2.5 top-2.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                      aria-label={language === "vi" ? "Xóa tìm kiếm" : "Clear search"}
+                    >
+                      ✕
+                    </button>
+                  ) : null}
+                </div>
+                <button
+                  type="submit"
+                  className="min-h-10 rounded-lg border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)] px-4 text-sm font-bold text-[var(--text-brand)] hover:bg-[var(--surface-brand-soft)]"
+                >
+                  {t(language, "research.sourceHub.records.filter")}
+                </button>
+              </form>
+
+              {/* View Mode Toggle: Cards vs Table */}
+              <div className="inline-flex rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5" role="group" aria-label="Chế độ hiển thị">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("cards")}
+                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                    viewMode === "cards"
+                      ? "bg-[var(--surface-panel)] text-[var(--text-brand)] shadow-xs"
+                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  }`}
+                  aria-pressed={viewMode === "cards"}
+                >
+                  {language === "vi" ? "Thẻ nguồn" : "Cards"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("table")}
+                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                    viewMode === "table"
+                      ? "bg-[var(--surface-panel)] text-[var(--text-brand)] shadow-xs"
+                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  }`}
+                  aria-pressed={viewMode === "table"}
+                >
+                  {language === "vi" ? "Bảng dữ liệu" : "Table"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Category Filter Chips */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1" role="tablist" aria-label="Lọc theo nguồn dữ liệu">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedCategory === "all"}
+              onClick={() => void handleCategorySelect("all")}
+              className={`focus-ring rounded-full px-3 py-1 text-xs font-semibold transition ${
+                selectedCategory === "all"
+                  ? "bg-[var(--brand-600)] text-white shadow-xs"
+                  : "border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:bg-[var(--surface-base)]"
+              }`}
+            >
+              {language === "vi" ? "Tất cả nguồn" : "All Sources"} ({records.length})
+            </button>
+            {catalog.map((item) => {
+              const isSelected = selectedCategory === item.key;
+              const sourceCount = records.filter((r) => r.source === item.key).length;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => void handleCategorySelect(isSelected ? "all" : item.key)}
+                  className={`focus-ring rounded-full px-3 py-1 text-xs font-semibold transition ${
+                    isSelected
+                      ? "bg-[var(--brand-600)] text-white shadow-xs"
+                      : "border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:bg-[var(--surface-base)]"
+                  }`}
+                >
+                  {sourceLabel(language, item.key)}
+                  {sourceCount > 0 ? ` (${sourceCount})` : ""}
+                </button>
+              );
+            })}
           </div>
 
           {error ? (
@@ -353,59 +450,135 @@ export default function ResearchSourceHubPage() {
             </TelemetryPanel>
           ) : null}
 
-          <div className="overflow-x-auto rounded-xl border border-[color:var(--shell-border)]">
-            <table className="min-w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">
-                  <th className="px-3 py-3">{t(language, "research.sourceHub.table.source")}</th>
-                  <th className="px-3 py-3">{t(language, "research.sourceHub.table.title")}</th>
-                  <th className="px-3 py-3">{t(language, "research.sourceHub.table.query")}</th>
-                  <th className="px-3 py-3">{t(language, "research.sourceHub.table.published")}</th>
-                  <th className="px-3 py-3">{t(language, "research.sourceHub.table.synced")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td className="px-3 py-4 text-[var(--text-secondary)]" colSpan={5}>
-                      {t(language, "research.sourceHub.table.loading")}
-                    </td>
-                  </tr>
-                ) : records.length ? (
-                  records.map((record) => (
-                    <tr key={record.id} className="border-b border-[color:var(--shell-border)] align-top last:border-0">
-                      <td className="px-3 py-3">
-                        <span className="rounded-full border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2 py-1 text-xs font-bold text-[var(--text-brand)]">
-                          {sourceLabel(language, record.source)}
-                        </span>
-                      </td>
-                      <td className="max-w-xl px-3 py-3">
+          {/* View Mode: Cards (Provenance Cards) */}
+          {viewMode === "cards" ? (
+            <div className="space-y-4">
+              {isLoading ? (
+                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-8 text-center text-sm text-[var(--text-secondary)]">
+                  {t(language, "research.sourceHub.table.loading")}
+                </div>
+              ) : records.length ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {records.map((record) => (
+                    <article
+                      key={record.id}
+                      className="flex flex-col justify-between rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-base)] p-4 shadow-xs transition hover:border-[color:var(--brand-primary)]/40 hover:shadow-sm"
+                    >
+                      <div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                          <span className="rounded-full border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-bold text-[var(--text-brand)]">
+                            {sourceLabel(language, record.source)}
+                          </span>
+                          {record.published_at ? (
+                            <span className="text-[11px] text-[var(--text-muted)] font-medium">
+                              {formatDate(language, record.published_at)}
+                            </span>
+                          ) : null}
+                        </div>
+
                         {record.url ? (
-                          <a href={record.url} target="_blank" rel="noreferrer" className="font-bold text-[var(--text-brand)] hover:underline">
+                          <a
+                            href={record.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-bold text-[var(--text-primary)] hover:text-[var(--text-brand)] hover:underline leading-snug line-clamp-2"
+                          >
                             {record.title}
                           </a>
                         ) : (
-                          <p className="font-bold text-[var(--text-primary)]">{record.title}</p>
+                          <h3 className="font-bold text-[var(--text-primary)] leading-snug line-clamp-2">{record.title}</h3>
                         )}
+
                         {record.snippet ? (
-                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-secondary)]">{record.snippet}</p>
+                          <blockquote className="mt-2.5 rounded-lg border-l-2 border-[var(--brand-400)] bg-[var(--surface-muted)]/50 p-2.5 text-xs leading-5 text-[var(--text-secondary)] line-clamp-3">
+                            {record.snippet}
+                          </blockquote>
                         ) : null}
-                      </td>
-                      <td className="px-3 py-3 text-[var(--text-secondary)]">{record.query || "-"}</td>
-                      <td className="px-3 py-3 text-[var(--text-secondary)]">{formatDate(language, record.published_at)}</td>
-                      <td className="px-3 py-3 text-[var(--text-secondary)]">{formatDate(language, record.synced_at)}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td className="px-3 py-4 text-[var(--text-secondary)]" colSpan={5}>
-                      {t(language, "research.sourceHub.table.empty")}
-                    </td>
+                      </div>
+
+                      <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 border-t border-[color:var(--shell-border)] pt-2.5 text-[11px] text-[var(--text-muted)]">
+                        <div className="flex items-center gap-1.5 truncate max-w-[200px]">
+                          <span className="font-medium text-[var(--text-secondary)]">Query:</span>
+                          <span className="truncate">{record.query || "-"}</span>
+                        </div>
+                        {record.url ? (
+                          <a
+                            href={record.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-brand)] hover:underline"
+                          >
+                            {language === "vi" ? "Xem nguồn" : "View source"} →
+                          </a>
+                        ) : (
+                          <span>Synced: {formatDate(language, record.synced_at)}</span>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-8 text-center text-sm text-[var(--text-secondary)]">
+                  {t(language, "research.sourceHub.table.empty")}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* View Mode: Data Table */
+            <div className="overflow-x-auto rounded-xl border border-[color:var(--shell-border)]">
+              <table className="min-w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">
+                    <th className="px-3 py-3">{t(language, "research.sourceHub.table.source")}</th>
+                    <th className="px-3 py-3">{t(language, "research.sourceHub.table.title")}</th>
+                    <th className="px-3 py-3">{t(language, "research.sourceHub.table.query")}</th>
+                    <th className="px-3 py-3">{t(language, "research.sourceHub.table.published")}</th>
+                    <th className="px-3 py-3">{t(language, "research.sourceHub.table.synced")}</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td className="px-3 py-4 text-[var(--text-secondary)]" colSpan={5}>
+                        {t(language, "research.sourceHub.table.loading")}
+                      </td>
+                    </tr>
+                  ) : records.length ? (
+                    records.map((record) => (
+                      <tr key={record.id} className="border-b border-[color:var(--shell-border)] align-top last:border-0">
+                        <td className="px-3 py-3">
+                          <span className="rounded-full border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2 py-1 text-xs font-bold text-[var(--text-brand)]">
+                            {sourceLabel(language, record.source)}
+                          </span>
+                        </td>
+                        <td className="max-w-xl px-3 py-3">
+                          {record.url ? (
+                            <a href={record.url} target="_blank" rel="noreferrer" className="font-bold text-[var(--text-brand)] hover:underline">
+                              {record.title}
+                            </a>
+                          ) : (
+                            <p className="font-bold text-[var(--text-primary)]">{record.title}</p>
+                          )}
+                          {record.snippet ? (
+                            <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-secondary)]">{record.snippet}</p>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-3 text-[var(--text-secondary)]">{record.query || "-"}</td>
+                        <td className="px-3 py-3 text-[var(--text-secondary)]">{formatDate(language, record.published_at)}</td>
+                        <td className="px-3 py-3 text-[var(--text-secondary)]">{formatDate(language, record.synced_at)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td className="px-3 py-4 text-[var(--text-secondary)]" colSpan={5}>
+                        {t(language, "research.sourceHub.table.empty")}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </div>
     </PageShell>

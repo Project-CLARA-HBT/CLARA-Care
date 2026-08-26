@@ -204,11 +204,13 @@ const TIER_META: Record<
 };
 
 /**
- * SourceLens Artwork Component
+ * SourceLens Artwork Component (Landing v7)
  *
- * Renders the high-precision Evidence Source Lens artwork highlighting verified clinical
- * authority across 5 foundational tiers: National Pharmacopoeia (DAV), DrugBank 5.1,
- * WHO Guidelines, FDA Safety Alerts, and PubMed RCT Evidence.
+ * Upgraded Features:
+ * 1. 6-Blade Iris Aperture: Precision interlocking logarithmic spiral blades with pivot pins and metallic bevels.
+ * 2. Concentric Optic Calibration Rings: Multi-layer concentric optical rings with etched degree markers and vernier ticks.
+ * 3. Laser Ray Focus: Directional laser focal beam with traveling photon pulses and central 4-point diffraction flare.
+ * 4. Verified Authority Badge: Formal clinical seal with verification tier, citation volume, and compliance indicators.
  */
 export function SourceLens({
   tier = "National",
@@ -230,7 +232,7 @@ export function SourceLens({
   const lensCenterX = 360;
   const lensCenterY = 240;
 
-  // Aperture blade geometries (6 interlocking logarithmic spiral blades)
+  // 6-Blade Iris Aperture with logarithmic spiral geometry and mechanical pivot hinges
   const apertureBlades = useMemo(() => {
     const blades = [];
     const bladeCount = 6;
@@ -246,27 +248,33 @@ export function SourceLens({
       const y1 = lensCenterY + Math.sin(angle) * innerR;
       const x2 = lensCenterX + Math.cos(nextAngle) * outerR;
       const y2 = lensCenterY + Math.sin(nextAngle) * outerR;
-      const x3 = lensCenterX + Math.cos(angle + 0.4) * outerR;
-      const y3 = lensCenterY + Math.sin(angle + 0.4) * outerR;
+      const x3 = lensCenterX + Math.cos(angle + 0.42) * outerR;
+      const y3 = lensCenterY + Math.sin(angle + 0.42) * outerR;
+
+      // Outer pivot hinge pin coordinates
+      const pinX = lensCenterX + Math.cos(angle + 0.22) * (outerR - 6);
+      const pinY = lensCenterY + Math.sin(angle + 0.22) * (outerR - 6);
 
       blades.push({
         d: `M ${x1} ${y1} Q ${lensCenterX + Math.cos(angle + 0.2) * (innerR + 35)} ${
           lensCenterY + Math.sin(angle + 0.2) * (innerR + 35)
         } ${x2} ${y2} L ${x3} ${y3} Z`,
+        pinX,
+        pinY,
         index: i,
       });
     }
     return blades;
   }, [active, activeMeta.apertureBladesAngle]);
 
-  // Calibration tick marks along the 360-degree compass perimeter
+  // Concentric optic calibration tick marks along the 360-degree perimeter
   const calibrationTicks = useMemo(() => {
     const ticks = [];
-    const radius = 142;
+    const radius = 144;
     for (let deg = 0; deg < 360; deg += 10) {
       const isMajor = deg % 30 === 0;
       const isCard = deg % 90 === 0;
-      const length = isCard ? 9 : isMajor ? 6 : 3;
+      const length = isCard ? 10 : isMajor ? 6 : 3.5;
       const rad = (deg * Math.PI) / 180;
       const x1 = lensCenterX + Math.cos(rad) * radius;
       const y1 = lensCenterY + Math.sin(rad) * radius;
@@ -284,6 +292,24 @@ export function SourceLens({
       });
     }
     return ticks;
+  }, []);
+
+  // Degree labels for cardinal/hexagonal calibration rings (0°, 60°, 120°, 180°, 240°, 300°)
+  const calibrationLabels = useMemo(() => {
+    const labels = [];
+    const radius = 158;
+    const angles = [0, 60, 120, 180, 240, 300];
+    for (const deg of angles) {
+      const rad = (deg * Math.PI) / 180;
+      const x = lensCenterX + Math.cos(rad) * radius;
+      const y = lensCenterY + Math.sin(rad) * radius;
+      labels.push({
+        x,
+        y,
+        label: `${deg.toString().padStart(3, "0")}°`,
+      });
+    }
+    return labels;
   }, []);
 
   const accessibleText =
@@ -341,7 +367,7 @@ export function SourceLens({
               </span>
             </div>
             <p className="text-[11px] text-[#6D7A8E]">
-              Hệ thống ống kính phân giải và đối chiếu 5 tầng cơ quan thẩm quyền lâm sàng
+              Hệ thống ống kính phân giải 6 lá khẩu đối chiếu 5 tầng cơ quan thẩm quyền lâm sàng
             </p>
           </div>
         </div>
@@ -402,27 +428,27 @@ export function SourceLens({
               fx="50%"
               fy="50%"
             >
-              <stop offset="0%" stopColor={activeMeta.accentColor} stopOpacity={active ? "0.22" : "0.08"} />
-              <stop offset="45%" stopColor={activeMeta.primaryColor} stopOpacity={active ? "0.10" : "0.03"} />
+              <stop offset="0%" stopColor={activeMeta.accentColor} stopOpacity={active ? "0.25" : "0.08"} />
+              <stop offset="45%" stopColor={activeMeta.primaryColor} stopOpacity={active ? "0.12" : "0.03"} />
               <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
             </radialGradient>
 
-            {/* Lens Core Glass Radial Gradient */}
+            {/* Lens Core Glass Radial Gradient with Anti-reflective Iridescence */}
             <radialGradient
               id={`lens-glass-${uid}`}
-              cx="38%"
-              cy="34%"
-              r="60%"
-              fx="38%"
-              fy="34%"
+              cx="36%"
+              cy="32%"
+              r="62%"
+              fx="36%"
+              fy="32%"
             >
-              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
-              <stop offset="25%" stopColor={activeMeta.secondaryColor} stopOpacity="0.8" />
-              <stop offset="65%" stopColor="#E2E8F0" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#CBD5E1" stopOpacity="0.75" />
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.98" />
+              <stop offset="28%" stopColor={activeMeta.secondaryColor} stopOpacity="0.85" />
+              <stop offset="68%" stopColor="#E2E8F0" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#CBD5E1" stopOpacity="0.8" />
             </radialGradient>
 
-            {/* Aperture Ring Linear Stroke */}
+            {/* Aperture Ring Linear Stroke Gradient */}
             <linearGradient
               id={`aperture-ring-grad-${uid}`}
               x1="0%"
@@ -430,12 +456,12 @@ export function SourceLens({
               x2="100%"
               y2="100%"
             >
-              <stop offset="0%" stopColor={activeMeta.accentColor} stopOpacity="0.8" />
-              <stop offset="50%" stopColor="#94A3B8" stopOpacity="0.4" />
-              <stop offset="100%" stopColor={activeMeta.primaryColor} stopOpacity="0.85" />
+              <stop offset="0%" stopColor={activeMeta.accentColor} stopOpacity="0.9" />
+              <stop offset="50%" stopColor="#94A3B8" stopOpacity="0.45" />
+              <stop offset="100%" stopColor={activeMeta.primaryColor} stopOpacity="0.9" />
             </linearGradient>
 
-            {/* Laser Line Gradient from Sources to Center */}
+            {/* High-intensity Laser Focus Beam Gradient */}
             <linearGradient
               id={`laser-beam-${uid}`}
               x1="0%"
@@ -443,17 +469,40 @@ export function SourceLens({
               x2="100%"
               y2="100%"
             >
-              <stop offset="0%" stopColor={activeMeta.primaryColor} stopOpacity="0.7" />
-              <stop offset="100%" stopColor={activeMeta.accentColor} stopOpacity="0.15" />
+              <stop offset="0%" stopColor={activeMeta.primaryColor} stopOpacity="0.85" />
+              <stop offset="70%" stopColor={activeMeta.accentColor} stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.9" />
             </linearGradient>
 
+            {/* Laser Flare Radial Glow */}
+            <radialGradient id={`laser-flare-${uid}`} cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+              <stop offset="35%" stopColor={activeMeta.accentColor} stopOpacity="0.8" />
+              <stop offset="70%" stopColor={activeMeta.primaryColor} stopOpacity="0.3" />
+              <stop offset="100%" stopColor={activeMeta.primaryColor} stopOpacity="0" />
+            </radialGradient>
+
             {/* Glow Filter */}
-            <filter id={`filter-glow-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
+            <filter id={`filter-glow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
               <feGaussianBlur stdDeviation="6" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
             </filter>
 
-            {/* Soft Shadow for Nodes */}
+            {/* High Intensity Laser Filter */}
+            <filter id={`filter-laser-${uid}`} x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="4" result="blur1" />
+              <feGaussianBlur stdDeviation="8" result="blur2" />
+              <feMerge>
+                <feMergeNode in="blur2" />
+                <feMergeNode in="blur1" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+
+            {/* Soft Drop Shadow for Nodes */}
             <filter id={`node-shadow-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#0F172A" floodOpacity="0.1" />
             </filter>
@@ -463,46 +512,60 @@ export function SourceLens({
           <circle
             cx={lensCenterX}
             cy={lensCenterY}
-            r="190"
+            r="195"
             fill={`url(#lens-glow-${uid})`}
             className="transition-all duration-700"
           />
 
-          {/* 2. Concentric Precision Optics Rings */}
+          {/* 2. Concentric Optic Calibration Rings */}
+          {/* Ring 1: Outer Micrometer Ring */}
           <circle
             cx={lensCenterX}
             cy={lensCenterY}
-            r="170"
+            r="175"
             stroke="#E2E8F0"
             strokeWidth="1"
             strokeDasharray="4 4"
             className="opacity-70"
           />
+          {/* Ring 2: Secondary Precision Guide Ring */}
           <circle
             cx={lensCenterX}
             cy={lensCenterY}
-            r="152"
+            r="156"
             stroke="#CBD5E1"
             strokeWidth="1.5"
             className="opacity-80"
           />
+          {/* Ring 3: Primary Aperture Bezel Ring */}
           <circle
             cx={lensCenterX}
             cy={lensCenterY}
-            r="142"
+            r="144"
             stroke={`url(#aperture-ring-grad-${uid})`}
-            strokeWidth="2"
+            strokeWidth="2.2"
           />
+          {/* Ring 4: Inner Chamfer Ring */}
           <circle
             cx={lensCenterX}
             cy={lensCenterY}
-            r="128"
+            r="130"
             stroke="#E2E8F0"
             strokeWidth="1"
           />
+          {/* Ring 5: Inner Iris Reticle Rail Ring */}
+          <circle
+            cx={lensCenterX}
+            cy={lensCenterY}
+            r="112"
+            stroke="#E2E8F0"
+            strokeWidth="1"
+            strokeDasharray="2 2"
+            className="opacity-60"
+          />
 
-          {/* 3. Perimeter Degree Calibration Ticks */}
-          <g className="opacity-75">
+          {/* 3. Perimeter Degree Calibration Ticks & Angular Readouts */}
+          <g className="opacity-80">
             {calibrationTicks.map((tick) => (
               <line
                 key={`tick-${tick.deg}`}
@@ -521,53 +584,113 @@ export function SourceLens({
                 strokeLinecap="round"
               />
             ))}
+
+            {/* Angular degree readout tags (000°, 060°, 120°, ...) */}
+            {calibrationLabels.map((lbl) => (
+              <text
+                key={`deg-lbl-${lbl.label}`}
+                x={lbl.x}
+                y={lbl.y + 3}
+                textAnchor="middle"
+                fontSize="8"
+                fontWeight="bold"
+                fill="#94A3B8"
+                fontFamily="monospace"
+              >
+                {lbl.label}
+              </text>
+            ))}
           </g>
 
-          {/* 4. Radial Ray Connectors from Sources to Lens Center */}
+          {/* 4. Laser Ray Focus: Concentrated directional laser beam from active sources to Center */}
           <g className="transition-all duration-500">
             {CLINICAL_SOURCES.map((source) => {
               const isSourceInTier = source.tier === tier;
+              const isSelected = isSourceInTier && active;
+
               return (
                 <g key={`ray-${source.id}`}>
-                  {/* Outer connector line */}
+                  {/* Outer connector / laser guide line */}
                   <line
                     x1={source.cx}
                     y1={source.cy}
                     x2={lensCenterX}
                     y2={lensCenterY}
-                    stroke={isSourceInTier ? source.badgeAccent : "#E2E8F0"}
-                    strokeWidth={isSourceInTier ? 2 : 1}
-                    strokeDasharray={isSourceInTier ? "none" : "3 3"}
-                    strokeOpacity={isSourceInTier ? 0.8 : 0.35}
+                    stroke={isSelected ? source.badgeAccent : "#E2E8F0"}
+                    strokeWidth={isSelected ? 2.5 : 1}
+                    strokeDasharray={isSelected ? "none" : "3 3"}
+                    strokeOpacity={isSelected ? 0.9 : 0.35}
                     className="transition-all duration-500"
                   />
-                  {/* In-flight laser pulse dot for active tier */}
-                  {isSourceInTier && active && (
-                    <circle
-                      cx={(source.cx + lensCenterX) / 2}
-                      cy={(source.cy + lensCenterY) / 2}
-                      r="3.5"
-                      fill={source.badgeAccent}
-                      filter={`url(#filter-glow-${uid})`}
-                    />
+
+                  {/* High Intensity Laser Beam Core (Active Focus) */}
+                  {isSelected && (
+                    <>
+                      <line
+                        x1={source.cx}
+                        y1={source.cy}
+                        x2={lensCenterX}
+                        y2={lensCenterY}
+                        stroke={`url(#laser-beam-${uid})`}
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        filter={`url(#filter-laser-${uid})`}
+                      />
+
+                      {/* In-flight traveling laser photon particle 1 */}
+                      <circle
+                        cx={source.cx * 0.6 + lensCenterX * 0.4}
+                        cy={source.cy * 0.6 + lensCenterY * 0.4}
+                        r="4"
+                        fill="#FFFFFF"
+                        stroke={source.badgeAccent}
+                        strokeWidth="1.5"
+                        filter={`url(#filter-glow-${uid})`}
+                      />
+
+                      {/* In-flight traveling laser photon particle 2 */}
+                      <circle
+                        cx={source.cx * 0.25 + lensCenterX * 0.75}
+                        cy={source.cy * 0.25 + lensCenterY * 0.75}
+                        r="3"
+                        fill={source.badgeAccent}
+                        filter={`url(#filter-glow-${uid})`}
+                      />
+                    </>
                   )}
                 </g>
               );
             })}
           </g>
 
-          {/* 5. Aperture Iris Diaphragm (Optical Blades) */}
+          {/* 5. 6-Blade Iris Aperture Diaphragm (Optical Blades) */}
           <g className="transition-transform duration-700 ease-out">
             {apertureBlades.map((blade) => (
-              <path
-                key={`blade-${blade.index}`}
-                d={blade.d}
-                fill="#F8FAFC"
-                fillOpacity="0.88"
-                stroke="#CBD5E1"
-                strokeWidth="1.2"
-                className="transition-all duration-500"
-              />
+              <g key={`blade-group-${blade.index}`}>
+                <path
+                  d={blade.d}
+                  fill="#F8FAFC"
+                  fillOpacity="0.9"
+                  stroke="#CBD5E1"
+                  strokeWidth="1.2"
+                  className="transition-all duration-500"
+                />
+                {/* Mechanical Hinge Pin on Blade */}
+                <circle
+                  cx={blade.pinX}
+                  cy={blade.pinY}
+                  r="2.5"
+                  fill="#E2E8F0"
+                  stroke="#94A3B8"
+                  strokeWidth="1"
+                />
+                <circle
+                  cx={blade.pinX}
+                  cy={blade.pinY}
+                  r="1"
+                  fill="#64748B"
+                />
+              </g>
             ))}
           </g>
 
@@ -587,7 +710,7 @@ export function SourceLens({
           <g className="transition-all duration-500">
             {/* Horizontal & Vertical Crosshairs */}
             <line
-              x1={lensCenterX - 48}
+              x1={lensCenterX - 50}
               y1={lensCenterY}
               x2={lensCenterX - 14}
               y2={lensCenterY}
@@ -598,7 +721,7 @@ export function SourceLens({
             <line
               x1={lensCenterX + 14}
               y1={lensCenterY}
-              x2={lensCenterX + 48}
+              x2={lensCenterX + 50}
               y2={lensCenterY}
               stroke={activeMeta.primaryColor}
               strokeWidth="1.5"
@@ -606,7 +729,7 @@ export function SourceLens({
             />
             <line
               x1={lensCenterX}
-              y1={lensCenterY - 48}
+              y1={lensCenterY - 50}
               x2={lensCenterX}
               y2={lensCenterY - 14}
               stroke={activeMeta.primaryColor}
@@ -617,7 +740,7 @@ export function SourceLens({
               x1={lensCenterX}
               y1={lensCenterY + 14}
               x2={lensCenterX}
-              y2={lensCenterY + 48}
+              y2={lensCenterY + 50}
               stroke={activeMeta.primaryColor}
               strokeWidth="1.5"
               strokeLinecap="round"
@@ -652,6 +775,37 @@ export function SourceLens({
               fill="none"
               strokeLinecap="round"
             />
+
+            {/* Central Laser Focal Point & Diffraction Flare */}
+            {active && (
+              <g id="laser-focal-burst">
+                {/* 4-Point Laser Flare Spikes */}
+                <line
+                  x1={lensCenterX - 22}
+                  y1={lensCenterY}
+                  x2={lensCenterX + 22}
+                  y2={lensCenterY}
+                  stroke={activeMeta.accentColor}
+                  strokeWidth="1.5"
+                  filter={`url(#filter-laser-${uid})`}
+                />
+                <line
+                  x1={lensCenterX}
+                  y1={lensCenterY - 22}
+                  x2={lensCenterX}
+                  y2={lensCenterY + 22}
+                  stroke={activeMeta.accentColor}
+                  strokeWidth="1.5"
+                  filter={`url(#filter-laser-${uid})`}
+                />
+                <circle
+                  cx={lensCenterX}
+                  cy={lensCenterY}
+                  r="14"
+                  fill={`url(#laser-flare-${uid})`}
+                />
+              </g>
+            )}
 
             {/* Focal Point Indicator */}
             <circle
@@ -695,13 +849,14 @@ export function SourceLens({
                   <circle
                     cx={source.cx}
                     cy={source.cy}
-                    r="32"
+                    r="34"
                     fill={source.badgeAccent}
-                    fillOpacity="0.12"
+                    fillOpacity="0.14"
                     stroke={source.badgeAccent}
                     strokeWidth="1.5"
                     strokeOpacity="0.4"
                     strokeDasharray="4 3"
+                    className="motion-safe:animate-pulse"
                   />
                 )}
 
@@ -722,7 +877,7 @@ export function SourceLens({
                 <circle
                   cx={source.cx - 38}
                   cy={source.cy}
-                  r="7"
+                  r="7.5"
                   fill={isSelected ? source.badgeAccent : "#94A3B8"}
                   className="transition-colors duration-300"
                 />
@@ -754,10 +909,10 @@ export function SourceLens({
                   {source.tierRank}
                 </text>
 
-                {/* Verified Authority Checkmark Tag */}
+                {/* Verified Authority Checkmark Badge */}
                 {isSelected && (
                   <g transform={`translate(${source.cx + 38}, ${source.cy - 12})`}>
-                    <circle cx="0" cy="0" r="7" fill={source.badgeAccent} />
+                    <circle cx="0" cy="0" r="7.5" fill={source.badgeAccent} filter={`url(#filter-glow-${uid})`} />
                     <path
                       d="M -3.2 -0.2 L -1 2.2 L 3.2 -2.2"
                       stroke="#FFFFFF"
@@ -773,7 +928,7 @@ export function SourceLens({
         </svg>
       </div>
 
-      {/* Bottom Qualitative Authority Badge Banner */}
+      {/* Bottom Verified Authority Badge Banner */}
       <div
         className="mt-4 rounded-2xl p-4 sm:p-5 border transition-all duration-500"
         style={{
@@ -784,11 +939,12 @@ export function SourceLens({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
+              {/* Verified Authority Shield Badge */}
               <span
-                className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold text-white shadow-xs"
+                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-bold text-white shadow-xs"
                 style={{ backgroundColor: activeMeta.primaryColor }}
               >
-                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2L4 5V11.09C4 16.14 7.41 20.85 12 22C16.59 20.85 20 16.14 20 11.09V5L12 2ZM10 15.5L6.5 12L7.91 10.59L10 12.67L16.09 6.59L17.5 8L10 15.5Z" />
                 </svg>
                 <span>{activeMeta.badgeLabel}</span>

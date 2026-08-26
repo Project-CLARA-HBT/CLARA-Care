@@ -284,7 +284,7 @@ describe("Council Workflows (/council, /council/new/*, /council/result)", () => 
   });
 
   describe("7. /council/analyze Signal Analysis Detail", () => {
-    it("renders signal analysis with key signals and risk drivers", async () => {
+    it("renders signal analysis with key signals, risk drivers, and triage metrics", async () => {
       vi.mocked(getActiveCouncilCaseId).mockReturnValue(201);
       vi.mocked(getCouncilCase).mockResolvedValue(mockCaseAnalyzed as any);
 
@@ -296,13 +296,32 @@ describe("Council Workflows (/council, /council/new/*, /council/result)", () => 
 
       expect(trackCouncilViewed).toHaveBeenCalledWith({ view: "analyze" });
       expect(screen.getByText("Phân tích tín hiệu")).toBeInTheDocument();
+      expect(screen.getByText("Tín hiệu chính")).toBeInTheDocument();
+      expect(screen.getByText("Yếu tố nguy cơ")).toBeInTheDocument();
+      expect(screen.getByText("Việc cần lưu ý")).toBeInTheDocument();
+      expect(screen.getByText("Mức ưu tiên phản hồi")).toBeInTheDocument();
+      expect(screen.getByText("Tỷ lệ đồng thuận")).toBeInTheDocument();
     });
   });
 
   describe("8. /council/citations Citation Details", () => {
-    it("renders citation focus view with literature links", async () => {
+    it("renders citation focus view with literature links, search filter, and FIDES badge", async () => {
+      const mockCaseWithCitation = {
+        ...mockCaseAnalyzed,
+        result: {
+          ...mockCaseAnalyzed.result,
+          citations: [
+            {
+              title: "2023 ESC Guidelines for HF",
+              source: "European Heart Journal",
+              snippet: "SGLT2i and ARNI are recommended as first-line therapy.",
+              url: "https://doi.org/10.1093/eurheartj/ehad195",
+            },
+          ],
+        },
+      };
       vi.mocked(getActiveCouncilCaseId).mockReturnValue(201);
-      vi.mocked(getCouncilCase).mockResolvedValue(mockCaseAnalyzed as any);
+      vi.mocked(getCouncilCase).mockResolvedValue(mockCaseWithCitation as any);
 
       render(<CouncilCitationsPage />);
 
@@ -312,6 +331,19 @@ describe("Council Workflows (/council, /council/new/*, /council/result)", () => 
 
       expect(trackCouncilViewed).toHaveBeenCalledWith({ view: "citations" });
       expect(screen.getByText("Tra cứu trích dẫn")).toBeInTheDocument();
+      expect(screen.getByText(/Chuẩn Y văn FIDES/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/Tìm kiếm tài liệu y văn/i)).toBeInTheDocument();
+      expect(screen.getByText("2023 ESC Guidelines for HF")).toBeInTheDocument();
+      expect(screen.getByText("FIDES Verified")).toBeInTheDocument();
+
+      // Open inspector modal
+      const citationCard = screen.getByText("2023 ESC Guidelines for HF");
+      fireEvent.click(citationCard);
+
+      await waitFor(() => {
+        expect(screen.getByText("Chi tiết nguồn y văn & Phân tích chất lượng")).toBeInTheDocument();
+        expect(screen.getByText("Đã kiểm chứng FIDES")).toBeInTheDocument();
+      });
     });
   });
 
@@ -328,13 +360,30 @@ describe("Council Workflows (/council, /council/new/*, /council/result)", () => 
 
       expect(trackCouncilViewed).toHaveBeenCalledWith({ view: "deepdive" });
       expect(screen.getByText("Đào sâu ca bệnh")).toBeInTheDocument();
+      expect(screen.getByText("Các phần phân tích sâu")).toBeInTheDocument();
     });
   });
 
   describe("10. /council/details Technical Specialist Logs", () => {
-    it("renders specialist detailed deliberation logs", async () => {
+    it("renders specialist detailed deliberation logs and stance badges", async () => {
+      const mockCaseWithSpecialists = {
+        ...mockCaseAnalyzed,
+        result: {
+          ...mockCaseAnalyzed.result,
+          specialists: [
+            {
+              id: "cardiology",
+              name: "Tim mạch",
+              role: "cardiology",
+              stance: "Đồng thuận",
+              recommendation: "Khởi đầu sớm Sacubitril/Valsartan",
+              findings: ["EF giảm 38%", "NT-proBNP tăng cao"],
+            },
+          ],
+        },
+      };
       vi.mocked(getActiveCouncilCaseId).mockReturnValue(201);
-      vi.mocked(getCouncilCase).mockResolvedValue(mockCaseAnalyzed as any);
+      vi.mocked(getCouncilCase).mockResolvedValue(mockCaseWithSpecialists as any);
 
       render(<CouncilDetailsPage />);
 
@@ -344,11 +393,16 @@ describe("Council Workflows (/council, /council/new/*, /council/result)", () => 
 
       expect(trackCouncilViewed).toHaveBeenCalledWith({ view: "details" });
       expect(screen.getByText("Chi tiết chuyên khoa")).toBeInTheDocument();
+      expect(screen.getByText("Hội đồng thẩm định:")).toBeInTheDocument();
+      expect(screen.getByText("Tim mạch")).toBeInTheDocument();
+      expect(screen.getByText("Khởi đầu sớm Sacubitril/Valsartan")).toBeInTheDocument();
+      expect(screen.getByText("EF giảm 38%")).toBeInTheDocument();
+      expect(screen.getByText("FIDES-verified")).toBeInTheDocument();
     });
   });
 
   describe("11. /council/research Evidence Synthesis", () => {
-    it("renders research synthesis and highlights", async () => {
+    it("renders research synthesis, highlights, open questions, and clinical guidelines", async () => {
       vi.mocked(getActiveCouncilCaseId).mockReturnValue(201);
       vi.mocked(getCouncilCase).mockResolvedValue(mockCaseAnalyzed as any);
 
@@ -360,6 +414,11 @@ describe("Council Workflows (/council, /council/new/*, /council/result)", () => 
 
       expect(trackCouncilViewed).toHaveBeenCalledWith({ view: "research" });
       expect(screen.getByText("Tổng hợp nghiên cứu")).toBeInTheDocument();
+      expect(screen.getByText("Điểm nổi bật")).toBeInTheDocument();
+      expect(screen.getByText("Câu hỏi còn mở")).toBeInTheDocument();
+      expect(screen.getByText("Bước tiếp theo")).toBeInTheDocument();
+      expect(screen.getByText("Khung Hướng dẫn Lâm sàng & Phân tầng Chứng cứ")).toBeInTheDocument();
+      expect(screen.getByText("ESC 2023")).toBeInTheDocument();
     });
   });
 });

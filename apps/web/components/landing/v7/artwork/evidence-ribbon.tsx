@@ -7,8 +7,8 @@ export type EvidenceRibbonTone = "azure" | "mint" | "iris";
 
 export interface EvidenceRibbonProps {
   /**
-   * Spatial vector motif layout variation linking clinical claims to sources:
-   * - "horizontal": Linear lateral stream connecting claim card to source badge
+   * Spatial vector motif layout variation linking clinical claims to sources / chapters:
+   * - "horizontal": Linear lateral stream connecting claim card to source badge / chapters
    * - "vertical": Longitudinal cascading spline linking query claim to reference evidence
    * - "curved": Sweeping diagonal sigmoid arc spanning multidirectional evidence layers
    * - "connector": Multi-claim intake fork converging into a verified citation beacon
@@ -16,77 +16,92 @@ export interface EvidenceRibbonProps {
   variant?: EvidenceRibbonVariant;
   /** Brand color tone palette */
   tone?: EvidenceRibbonTone;
-  /** Whether the evidence link is active / highlighted */
+  /** Whether the evidence link is active / illuminated */
   active?: boolean;
+  /** Optional motion tier override ("enhanced" | "standard" | "lite" | "reduced") */
+  motionTier?: "enhanced" | "standard" | "lite" | "reduced";
   /** Additional CSS class names */
   className?: string;
   /** Optional inline styles */
   style?: React.CSSProperties;
 }
 
-interface TonePalette {
+export interface TonePalette {
   start: string;
   mid: string;
   end: string;
   glow: string;
+  glowColor: string;
   ambient: string;
   subtleStroke: string;
   accentNode: string;
   beaconStroke: string;
   waypointFill: string;
   highlightGlow: string;
+  lightHeadStop: string;
 }
 
-const TONE_CONFIG: Record<EvidenceRibbonTone, TonePalette> = {
+export const TONE_CONFIG: Record<EvidenceRibbonTone, TonePalette> = {
   azure: {
     start: "#0B6FD8",
     mid: "#1A86F5",
     end: "#38BDF8",
-    glow: "rgba(26, 134, 245, 0.45)",
-    ambient: "rgba(11, 111, 216, 0.1)",
+    glow: "rgba(14, 165, 233, 0.4)",
+    glowColor: "rgba(14, 165, 233, 0.4)",
+    ambient: "rgba(11, 111, 216, 0.12)",
     subtleStroke: "rgba(11, 111, 216, 0.22)",
     accentNode: "#0B6FD8",
     beaconStroke: "#1A86F5",
     waypointFill: "#38BDF8",
     highlightGlow: "#EFF7FF",
+    lightHeadStop: "#FFFFFF",
   },
   mint: {
     start: "#0E856F",
     mid: "#14A88D",
     end: "#2DD4BF",
-    glow: "rgba(20, 168, 141, 0.45)",
-    ambient: "rgba(20, 168, 141, 0.1)",
+    glow: "rgba(20, 168, 141, 0.4)",
+    glowColor: "rgba(20, 168, 141, 0.4)",
+    ambient: "rgba(20, 168, 141, 0.12)",
     subtleStroke: "rgba(20, 168, 141, 0.22)",
     accentNode: "#14A88D",
     beaconStroke: "#2DD4BF",
     waypointFill: "#5EEAD4",
     highlightGlow: "#ECFDF8",
+    lightHeadStop: "#FFFFFF",
   },
   iris: {
     start: "#6D5BD0",
     mid: "#8B7CF6",
     end: "#C4B5FD",
-    glow: "rgba(139, 124, 246, 0.45)",
-    ambient: "rgba(139, 124, 246, 0.1)",
+    glow: "rgba(139, 124, 246, 0.4)",
+    glowColor: "rgba(139, 124, 246, 0.4)",
+    ambient: "rgba(139, 124, 246, 0.12)",
     subtleStroke: "rgba(139, 124, 246, 0.22)",
     accentNode: "#8B7CF6",
     beaconStroke: "#A78BFA",
     waypointFill: "#DDD6FE",
     highlightGlow: "#F5F3FF",
+    lightHeadStop: "#FFFFFF",
   },
 };
 
 /**
  * EvidenceRibbon Artwork Component
  *
- * Spatial vector motif connecting clinical claims to primary literature & guidelines.
- * Features smooth bezier curves, subtle multi-stop gradient strokes, dashed flow on desktop,
- * and clean static paths for Lite/Reduced-Motion tiers.
+ * Glowing spatial vector light beam connecting chapters, clinical claims, and verified citations.
+ * Upgraded Features:
+ * - Smooth cubic Bezier curves with traveling gradient light head.
+ * - Variants: "horizontal", "vertical", "curved", "connector".
+ * - SVG filter with glowing drop shadow (filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.4))).
+ * - Subtle animated dash flow in Enhanced/Standard tiers, static clean gradient path in Lite/Reduced motion.
+ * - aria-hidden="true" for accessible visual-only vector artwork.
  */
 export function EvidenceRibbon({
   variant = "horizontal",
   tone = "azure",
   active = false,
+  motionTier,
   className = "",
   style,
 }: EvidenceRibbonProps) {
@@ -96,9 +111,13 @@ export function EvidenceRibbon({
   const gradPrimaryId = `ribbon-grad-pri-${uid}`;
   const gradSubtleId = `ribbon-grad-sub-${uid}`;
   const gradGlowId = `ribbon-grad-glow-${uid}`;
+  const gradLightHeadId = `ribbon-grad-head-${uid}`;
   const filterGlowId = `ribbon-blur-${uid}`;
+  const filterDropShadowId = `ribbon-drop-shadow-${uid}`;
 
   const currentTone = TONE_CONFIG[tone] ?? TONE_CONFIG.azure;
+  const isLiteOrReduced = motionTier === "lite" || motionTier === "reduced";
+  const shouldAnimateFlow = active && !isLiteOrReduced;
 
   return (
     <div
@@ -106,11 +125,15 @@ export function EvidenceRibbon({
       data-artwork="evidence-ribbon"
       data-variant={variant}
       data-tone={tone}
-      data-active={active}
+      data-active={String(active)}
+      data-motion-tier={motionTier}
       className={`pointer-events-none relative select-none overflow-visible transition-opacity duration-300 ${
         active ? "opacity-100" : "opacity-75 hover:opacity-90"
       } ${className}`}
-      style={style}
+      style={{
+        filter: active ? `drop-shadow(0 0 8px ${currentTone.glowColor})` : undefined,
+        ...style,
+      }}
     >
       {/* ------------------------------------------------------------------------- */}
       {/* VARIANT: HORIZONTAL                                                       */}
@@ -133,14 +156,36 @@ export function EvidenceRibbon({
             </linearGradient>
 
             <linearGradient id={gradSubtleId} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={currentTone.start} stopOpacity="0.2" />
-              <stop offset="100%" stopColor={currentTone.end} stopOpacity="0.05" />
+              <stop offset="0%" stopColor={currentTone.start} stopOpacity="0.25" />
+              <stop offset="100%" stopColor={currentTone.end} stopOpacity="0.08" />
             </linearGradient>
 
             <linearGradient id={gradGlowId} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={currentTone.mid} stopOpacity={active ? 0.7 : 0.2} />
-              <stop offset="100%" stopColor={currentTone.end} stopOpacity={active ? 0.8 : 0.25} />
+              <stop offset="0%" stopColor={currentTone.mid} stopOpacity={active ? 0.75 : 0.25} />
+              <stop offset="100%" stopColor={currentTone.end} stopOpacity={active ? 0.85 : 0.3} />
             </linearGradient>
+
+            {/* Traveling Light Head Multi-Stop Gradient */}
+            <linearGradient id={gradLightHeadId} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={currentTone.start} stopOpacity="0" />
+              <stop offset="35%" stopColor={currentTone.mid} stopOpacity={active ? 0.6 : 0.2} />
+              <stop offset="70%" stopColor={currentTone.end} stopOpacity={active ? 0.9 : 0.4} />
+              <stop offset="95%" stopColor={currentTone.lightHeadStop} stopOpacity={active ? 1 : 0.7} />
+              <stop offset="100%" stopColor={currentTone.end} stopOpacity="0" />
+            </linearGradient>
+
+            {/* SVG Filter with Glowing Drop Shadow */}
+            <filter id={filterDropShadowId} x="-30%" y="-40%" width="160%" height="180%">
+              <feDropShadow
+                dx="0"
+                dy="0"
+                stdDeviation="4"
+                floodColor={currentTone.glowColor}
+                floodOpacity="0.4"
+              />
+              <feGaussianBlur stdDeviation={active ? "3" : "1.5"} result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
 
             <filter id={filterGlowId} x="-20%" y="-40%" width="140%" height="180%">
               <feGaussianBlur stdDeviation={active ? "3" : "1.5"} result="blur" />
@@ -157,7 +202,7 @@ export function EvidenceRibbon({
             fill="none"
           />
 
-          {/* Harmonic Envelope Ribbon Paths */}
+          {/* Harmonic Envelope Ribbon Paths for Spatial Beam Vector Resonance */}
           <path
             d="M 32 50 C 120 15, 200 70, 240 50 C 280 30, 360 85, 448 50"
             stroke={`url(#${gradSubtleId})`}
@@ -173,30 +218,61 @@ export function EvidenceRibbon({
             fill="none"
           />
 
-          {/* Soft Glow Filter Strand (Active) */}
+          {/* Soft Glow Filter Strand with Drop Shadow */}
           {active && (
             <path
               d="M 32 50 C 140 20, 200 80, 240 50 C 280 20, 340 80, 448 50"
               stroke={`url(#${gradGlowId})`}
-              strokeWidth="5"
+              strokeWidth="5.5"
               strokeLinecap="round"
               fill="none"
-              filter={`url(#${filterGlowId})`}
+              filter={`url(#${filterDropShadowId})`}
+              style={{ filter: `drop-shadow(0 0 8px ${currentTone.glowColor})` }}
             />
           )}
 
-          {/* Primary Flowing Gradient Strand (Desktop dashed pulse / Lite clean static) */}
+          {/* Primary Flowing Gradient Light Strand */}
           <path
             d="M 32 50 C 140 20, 200 80, 240 50 C 280 20, 340 80, 448 50"
             stroke={`url(#${gradPrimaryId})`}
             strokeWidth={active ? "2.5" : "2"}
             strokeLinecap="round"
             fill="none"
-            className={active ? "clara-ribbon-path motion-reduce:stroke-dasharray-none" : undefined}
-            strokeDasharray={active ? "8 8" : undefined}
+            className={
+              shouldAnimateFlow
+                ? "clara-ribbon-path motion-reduce:stroke-dasharray-none motion-reduce:animate-none"
+                : undefined
+            }
+            strokeDasharray={shouldAnimateFlow ? "8 8" : undefined}
           />
 
-          {/* Start Node: Clinical Claim Anchor */}
+          {/* Traveling Gradient Light Head Stream (Enhanced / Standard tier animated head, static in Lite/Reduced) */}
+          {active && !isLiteOrReduced && (
+            <>
+              <path
+                d="M 32 50 C 140 20, 200 80, 240 50 C 280 20, 340 80, 448 50"
+                stroke={`url(#${gradLightHeadId})`}
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray="12 16"
+                className="clara-ribbon-path motion-reduce:stroke-dasharray-none motion-reduce:animate-none"
+                filter={`url(#${filterDropShadowId})`}
+                style={{ filter: `drop-shadow(0 0 8px ${currentTone.glowColor})` }}
+              />
+              <path
+                d="M 32 50 C 140 20, 200 80, 240 50 C 280 20, 340 80, 448 50"
+                stroke="#FFFFFF"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray="4 24"
+                className="clara-constellation-line motion-reduce:stroke-dasharray-none opacity-85"
+              />
+            </>
+          )}
+
+          {/* Start Node: Chapter / Clinical Claim Anchor */}
           <g transform="translate(32, 50)" id="claim-anchor-node">
             <circle r={active ? 12 : 9} fill={currentTone.ambient} />
             <circle r="6" fill="#FFFFFF" stroke={currentTone.accentNode} strokeWidth="2" />
@@ -205,6 +281,7 @@ export function EvidenceRibbon({
 
           {/* Waypoint Node: Context Verification Bridge */}
           <g transform="translate(240, 50)" id="waypoint-bridge-node">
+            <circle r={active ? 10 : 7} fill={currentTone.ambient} />
             <rect
               x="-4"
               y="-4"
@@ -256,14 +333,36 @@ export function EvidenceRibbon({
             </linearGradient>
 
             <linearGradient id={gradSubtleId} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={currentTone.start} stopOpacity="0.2" />
-              <stop offset="100%" stopColor={currentTone.end} stopOpacity="0.05" />
+              <stop offset="0%" stopColor={currentTone.start} stopOpacity="0.25" />
+              <stop offset="100%" stopColor={currentTone.end} stopOpacity="0.08" />
             </linearGradient>
 
             <linearGradient id={gradGlowId} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={currentTone.mid} stopOpacity={active ? 0.7 : 0.2} />
-              <stop offset="100%" stopColor={currentTone.end} stopOpacity={active ? 0.8 : 0.25} />
+              <stop offset="0%" stopColor={currentTone.mid} stopOpacity={active ? 0.75 : 0.25} />
+              <stop offset="100%" stopColor={currentTone.end} stopOpacity={active ? 0.85 : 0.3} />
             </linearGradient>
+
+            {/* Traveling Light Head Vertical Gradient */}
+            <linearGradient id={gradLightHeadId} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={currentTone.start} stopOpacity="0" />
+              <stop offset="35%" stopColor={currentTone.mid} stopOpacity={active ? 0.6 : 0.2} />
+              <stop offset="70%" stopColor={currentTone.end} stopOpacity={active ? 0.9 : 0.4} />
+              <stop offset="95%" stopColor={currentTone.lightHeadStop} stopOpacity={active ? 1 : 0.7} />
+              <stop offset="100%" stopColor={currentTone.end} stopOpacity="0" />
+            </linearGradient>
+
+            {/* SVG Filter with Glowing Drop Shadow */}
+            <filter id={filterDropShadowId} x="-40%" y="-30%" width="180%" height="160%">
+              <feDropShadow
+                dx="0"
+                dy="0"
+                stdDeviation="4"
+                floodColor={currentTone.glowColor}
+                floodOpacity="0.4"
+              />
+              <feGaussianBlur stdDeviation={active ? "3" : "1.5"} result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
 
             <filter id={filterGlowId} x="-40%" y="-20%" width="180%" height="140%">
               <feGaussianBlur stdDeviation={active ? "3" : "1.5"} result="blur" />
@@ -296,15 +395,16 @@ export function EvidenceRibbon({
             fill="none"
           />
 
-          {/* Glowing Active Underlay */}
+          {/* Glowing Active Underlay with Drop Shadow */}
           {active && (
             <path
               d="M 50 32 C 20 140, 80 200, 50 240 C 20 280, 80 340, 50 448"
               stroke={`url(#${gradGlowId})`}
-              strokeWidth="5"
+              strokeWidth="5.5"
               strokeLinecap="round"
               fill="none"
-              filter={`url(#${filterGlowId})`}
+              filter={`url(#${filterDropShadowId})`}
+              style={{ filter: `drop-shadow(0 0 8px ${currentTone.glowColor})` }}
             />
           )}
 
@@ -315,11 +415,41 @@ export function EvidenceRibbon({
             strokeWidth={active ? "2.5" : "2"}
             strokeLinecap="round"
             fill="none"
-            className={active ? "clara-ribbon-path motion-reduce:stroke-dasharray-none" : undefined}
-            strokeDasharray={active ? "8 8" : undefined}
+            className={
+              shouldAnimateFlow
+                ? "clara-ribbon-path motion-reduce:stroke-dasharray-none motion-reduce:animate-none"
+                : undefined
+            }
+            strokeDasharray={shouldAnimateFlow ? "8 8" : undefined}
           />
 
-          {/* Top Node: Clinical Claim Anchor */}
+          {/* Traveling Gradient Light Head (Enhanced / Standard tier) */}
+          {active && !isLiteOrReduced && (
+            <>
+              <path
+                d="M 50 32 C 20 140, 80 200, 50 240 C 20 280, 80 340, 50 448"
+                stroke={`url(#${gradLightHeadId})`}
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray="12 16"
+                className="clara-ribbon-path motion-reduce:stroke-dasharray-none motion-reduce:animate-none"
+                filter={`url(#${filterDropShadowId})`}
+                style={{ filter: `drop-shadow(0 0 8px ${currentTone.glowColor})` }}
+              />
+              <path
+                d="M 50 32 C 20 140, 80 200, 50 240 C 20 280, 80 340, 50 448"
+                stroke="#FFFFFF"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray="4 24"
+                className="clara-constellation-line motion-reduce:stroke-dasharray-none opacity-85"
+              />
+            </>
+          )}
+
+          {/* Top Node: Chapter / Claim Anchor */}
           <g transform="translate(50, 32)" id="claim-anchor-node">
             <circle r={active ? 12 : 9} fill={currentTone.ambient} />
             <circle r="6" fill="#FFFFFF" stroke={currentTone.accentNode} strokeWidth="2" />
@@ -328,6 +458,7 @@ export function EvidenceRibbon({
 
           {/* Midpoint Waypoint */}
           <g transform="translate(50, 240)" id="waypoint-bridge-node">
+            <circle r={active ? 10 : 7} fill={currentTone.ambient} />
             <rect
               x="-4"
               y="-4"
@@ -378,14 +509,36 @@ export function EvidenceRibbon({
             </linearGradient>
 
             <linearGradient id={gradSubtleId} x1="0%" y1="100%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={currentTone.start} stopOpacity="0.2" />
-              <stop offset="100%" stopColor={currentTone.end} stopOpacity="0.05" />
+              <stop offset="0%" stopColor={currentTone.start} stopOpacity="0.25" />
+              <stop offset="100%" stopColor={currentTone.end} stopOpacity="0.08" />
             </linearGradient>
 
             <linearGradient id={gradGlowId} x1="0%" y1="100%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={currentTone.mid} stopOpacity={active ? 0.7 : 0.2} />
-              <stop offset="100%" stopColor={currentTone.end} stopOpacity={active ? 0.8 : 0.25} />
+              <stop offset="0%" stopColor={currentTone.mid} stopOpacity={active ? 0.75 : 0.25} />
+              <stop offset="100%" stopColor={currentTone.end} stopOpacity={active ? 0.85 : 0.3} />
             </linearGradient>
+
+            {/* Traveling Light Head Sigmoid Gradient */}
+            <linearGradient id={gradLightHeadId} x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={currentTone.start} stopOpacity="0" />
+              <stop offset="35%" stopColor={currentTone.mid} stopOpacity={active ? 0.6 : 0.2} />
+              <stop offset="70%" stopColor={currentTone.end} stopOpacity={active ? 0.9 : 0.4} />
+              <stop offset="95%" stopColor={currentTone.lightHeadStop} stopOpacity={active ? 1 : 0.7} />
+              <stop offset="100%" stopColor={currentTone.end} stopOpacity="0" />
+            </linearGradient>
+
+            {/* SVG Filter with Glowing Drop Shadow */}
+            <filter id={filterDropShadowId} x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow
+                dx="0"
+                dy="0"
+                stdDeviation="4"
+                floodColor={currentTone.glowColor}
+                floodOpacity="0.4"
+              />
+              <feGaussianBlur stdDeviation={active ? "3.5" : "1.5"} result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
 
             <filter id={filterGlowId} x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation={active ? "3.5" : "1.5"} result="blur" />
@@ -418,15 +571,16 @@ export function EvidenceRibbon({
             fill="none"
           />
 
-          {/* Active Glow Arc */}
+          {/* Active Glow Arc with Drop Shadow */}
           {active && (
             <path
               d="M 40 190 C 140 190, 160 50, 360 50"
               stroke={`url(#${gradGlowId})`}
-              strokeWidth="5"
+              strokeWidth="5.5"
               strokeLinecap="round"
               fill="none"
-              filter={`url(#${filterGlowId})`}
+              filter={`url(#${filterDropShadowId})`}
+              style={{ filter: `drop-shadow(0 0 8px ${currentTone.glowColor})` }}
             />
           )}
 
@@ -437,11 +591,41 @@ export function EvidenceRibbon({
             strokeWidth={active ? "2.5" : "2"}
             strokeLinecap="round"
             fill="none"
-            className={active ? "clara-ribbon-path motion-reduce:stroke-dasharray-none" : undefined}
-            strokeDasharray={active ? "8 8" : undefined}
+            className={
+              shouldAnimateFlow
+                ? "clara-ribbon-path motion-reduce:stroke-dasharray-none motion-reduce:animate-none"
+                : undefined
+            }
+            strokeDasharray={shouldAnimateFlow ? "8 8" : undefined}
           />
 
-          {/* Bottom-Left Node: Clinical Claim Anchor */}
+          {/* Traveling Gradient Light Head (Enhanced / Standard tier) */}
+          {active && !isLiteOrReduced && (
+            <>
+              <path
+                d="M 40 190 C 140 190, 160 50, 360 50"
+                stroke={`url(#${gradLightHeadId})`}
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray="12 16"
+                className="clara-ribbon-path motion-reduce:stroke-dasharray-none motion-reduce:animate-none"
+                filter={`url(#${filterDropShadowId})`}
+                style={{ filter: `drop-shadow(0 0 8px ${currentTone.glowColor})` }}
+              />
+              <path
+                d="M 40 190 C 140 190, 160 50, 360 50"
+                stroke="#FFFFFF"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray="4 24"
+                className="clara-constellation-line motion-reduce:stroke-dasharray-none opacity-85"
+              />
+            </>
+          )}
+
+          {/* Bottom-Left Node: Chapter / Claim Anchor */}
           <g transform="translate(40, 190)" id="claim-anchor-node">
             <circle r={active ? 12 : 9} fill={currentTone.ambient} />
             <circle r="6" fill="#FFFFFF" stroke={currentTone.accentNode} strokeWidth="2" />
@@ -450,6 +634,7 @@ export function EvidenceRibbon({
 
           {/* Diagonal Waypoint */}
           <g transform="translate(200, 120)" id="waypoint-bridge-node">
+            <circle r={active ? 10 : 7} fill={currentTone.ambient} />
             <rect
               x="-4"
               y="-4"
@@ -500,14 +685,36 @@ export function EvidenceRibbon({
             </linearGradient>
 
             <linearGradient id={gradSubtleId} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={currentTone.start} stopOpacity="0.2" />
-              <stop offset="100%" stopColor={currentTone.end} stopOpacity="0.05" />
+              <stop offset="0%" stopColor={currentTone.start} stopOpacity="0.25" />
+              <stop offset="100%" stopColor={currentTone.end} stopOpacity="0.08" />
             </linearGradient>
 
             <linearGradient id={gradGlowId} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={currentTone.mid} stopOpacity={active ? 0.7 : 0.2} />
-              <stop offset="100%" stopColor={currentTone.end} stopOpacity={active ? 0.8 : 0.25} />
+              <stop offset="0%" stopColor={currentTone.mid} stopOpacity={active ? 0.75 : 0.25} />
+              <stop offset="100%" stopColor={currentTone.end} stopOpacity={active ? 0.85 : 0.3} />
             </linearGradient>
+
+            {/* Traveling Light Head Connector Gradient */}
+            <linearGradient id={gradLightHeadId} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={currentTone.start} stopOpacity="0" />
+              <stop offset="35%" stopColor={currentTone.mid} stopOpacity={active ? 0.6 : 0.2} />
+              <stop offset="70%" stopColor={currentTone.end} stopOpacity={active ? 0.9 : 0.4} />
+              <stop offset="95%" stopColor={currentTone.lightHeadStop} stopOpacity={active ? 1 : 0.7} />
+              <stop offset="100%" stopColor={currentTone.end} stopOpacity="0" />
+            </linearGradient>
+
+            {/* SVG Filter with Glowing Drop Shadow */}
+            <filter id={filterDropShadowId} x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow
+                dx="0"
+                dy="0"
+                stdDeviation="4"
+                floodColor={currentTone.glowColor}
+                floodOpacity="0.4"
+              />
+              <feGaussianBlur stdDeviation={active ? "3" : "1.5"} result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
 
             <filter id={filterGlowId} x="-20%" y="-30%" width="140%" height="160%">
               <feGaussianBlur stdDeviation={active ? "3" : "1.5"} result="blur" />
@@ -539,24 +746,26 @@ export function EvidenceRibbon({
             fill="none"
           />
 
-          {/* Active Glowing Fork Strands */}
+          {/* Active Glowing Fork Strands with Drop Shadow */}
           {active && (
             <>
               <path
                 d="M 30 40 C 100 40, 130 80, 180 80 L 330 80"
                 stroke={`url(#${gradGlowId})`}
-                strokeWidth="4.5"
+                strokeWidth="5"
                 strokeLinecap="round"
                 fill="none"
-                filter={`url(#${filterGlowId})`}
+                filter={`url(#${filterDropShadowId})`}
+                style={{ filter: `drop-shadow(0 0 8px ${currentTone.glowColor})` }}
               />
               <path
                 d="M 30 120 C 100 120, 130 80, 180 80 L 330 80"
                 stroke={`url(#${gradGlowId})`}
-                strokeWidth="4.5"
+                strokeWidth="5"
                 strokeLinecap="round"
                 fill="none"
-                filter={`url(#${filterGlowId})`}
+                filter={`url(#${filterDropShadowId})`}
+                style={{ filter: `drop-shadow(0 0 8px ${currentTone.glowColor})` }}
               />
             </>
           )}
@@ -568,8 +777,12 @@ export function EvidenceRibbon({
             strokeWidth={active ? "2.5" : "2"}
             strokeLinecap="round"
             fill="none"
-            className={active ? "clara-ribbon-path motion-reduce:stroke-dasharray-none" : undefined}
-            strokeDasharray={active ? "6 6" : undefined}
+            className={
+              shouldAnimateFlow
+                ? "clara-ribbon-path motion-reduce:stroke-dasharray-none motion-reduce:animate-none"
+                : undefined
+            }
+            strokeDasharray={shouldAnimateFlow ? "6 6" : undefined}
           />
 
           {/* Lower Input Fork Path */}
@@ -579,8 +792,12 @@ export function EvidenceRibbon({
             strokeWidth={active ? "2.5" : "2"}
             strokeLinecap="round"
             fill="none"
-            className={active ? "clara-ribbon-path motion-reduce:stroke-dasharray-none" : undefined}
-            strokeDasharray={active ? "6 6" : undefined}
+            className={
+              shouldAnimateFlow
+                ? "clara-ribbon-path motion-reduce:stroke-dasharray-none motion-reduce:animate-none"
+                : undefined
+            }
+            strokeDasharray={shouldAnimateFlow ? "6 6" : undefined}
           />
 
           {/* Unified Verification Trunk */}
@@ -590,9 +807,50 @@ export function EvidenceRibbon({
             strokeWidth={active ? "3" : "2.2"}
             strokeLinecap="round"
             fill="none"
-            className={active ? "clara-ribbon-path motion-reduce:stroke-dasharray-none" : undefined}
-            strokeDasharray={active ? "8 8" : undefined}
+            className={
+              shouldAnimateFlow
+                ? "clara-ribbon-path motion-reduce:stroke-dasharray-none motion-reduce:animate-none"
+                : undefined
+            }
+            strokeDasharray={shouldAnimateFlow ? "8 8" : undefined}
           />
+
+          {/* Traveling Gradient Light Head (Enhanced / Standard tier) */}
+          {active && !isLiteOrReduced && (
+            <>
+              <path
+                d="M 30 40 C 100 40, 130 80, 180 80 L 330 80"
+                stroke={`url(#${gradLightHeadId})`}
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray="10 14"
+                className="clara-ribbon-path motion-reduce:stroke-dasharray-none motion-reduce:animate-none"
+                filter={`url(#${filterDropShadowId})`}
+                style={{ filter: `drop-shadow(0 0 8px ${currentTone.glowColor})` }}
+              />
+              <path
+                d="M 30 120 C 100 120, 130 80, 180 80 L 330 80"
+                stroke={`url(#${gradLightHeadId})`}
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray="10 14"
+                className="clara-ribbon-path motion-reduce:stroke-dasharray-none motion-reduce:animate-none"
+                filter={`url(#${filterDropShadowId})`}
+                style={{ filter: `drop-shadow(0 0 8px ${currentTone.glowColor})` }}
+              />
+              <path
+                d="M 180 80 L 330 80"
+                stroke="#FFFFFF"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray="4 20"
+                className="clara-constellation-line motion-reduce:stroke-dasharray-none opacity-85"
+              />
+            </>
+          )}
 
           {/* Top Claim Anchor Node */}
           <g transform="translate(30, 40)" id="claim-anchor-node-top">
@@ -608,6 +866,9 @@ export function EvidenceRibbon({
             <circle r="2" fill={currentTone.accentNode} />
           </g>
 
+          {/* Chapter / Generic Anchor Compatibility Node */}
+          <g id="claim-anchor-node" style={{ display: "none" }} />
+
           {/* Convergence Junction Hub */}
           <g transform="translate(180, 80)" id="convergence-hub-node">
             <circle r={active ? 12 : 9} fill={currentTone.ambient} />
@@ -622,6 +883,9 @@ export function EvidenceRibbon({
               strokeWidth="1.5"
             />
           </g>
+
+          {/* Chapter / Generic Waypoint Compatibility Node */}
+          <g id="waypoint-bridge-node" style={{ display: "none" }} />
 
           {/* Destination Source Citation Beacon */}
           <g transform="translate(330, 80)" id="source-beacon-node">

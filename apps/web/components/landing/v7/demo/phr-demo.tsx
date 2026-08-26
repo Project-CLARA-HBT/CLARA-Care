@@ -8,6 +8,7 @@ import PermissionGate from "../artwork/permission-gate";
 
 export interface PhrDemoProps {
   className?: string;
+  initialRevoked?: boolean;
 }
 
 /**
@@ -18,15 +19,16 @@ export interface PhrDemoProps {
  * 2. Two distinct spatial columns:
  *    - Permitted Fields: Allergies, Active Meds, Vitals crossing the gate into clinical enclave.
  *    - Blocked Fields: Sensitive private notes, Billing/Insurance halted strictly at the boundary.
- * 3. Interactive instant Revoke button toggling dynamic gate state and permissions.
+ * 3. Interactive instant Revoke action toggling dynamic gate state, cryptographic token, and permissions.
  * 4. Embedded PermissionGate spatial boundary artwork with active Laser/Containment beams.
  */
-export function PhrDemo({ className = "" }: PhrDemoProps) {
+export function PhrDemo({ className = "", initialRevoked = false }: PhrDemoProps) {
   const { language } = useMotionTier();
   const lang = language === "en" ? "en" : "vi";
   const copy = LANDING_COPY_V7[lang]?.phr ?? LANDING_COPY_V7.vi.phr;
 
-  const [isRevoked, setIsRevoked] = useState(false);
+  const [isRevoked, setIsRevoked] = useState(initialRevoked);
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
 
   const allowedFields = V7_DEMO_PHR_FIELDS.filter((f) => f.status === "allowed");
   const blockedFields = V7_DEMO_PHR_FIELDS.filter((f) => f.status === "blocked");
@@ -37,42 +39,45 @@ export function PhrDemo({ className = "" }: PhrDemoProps) {
       className={`w-full space-y-6 sm:space-y-8 ${className}`}
     >
       {/* 1. Prominent Editorial Statement Anchor */}
-      <div className="text-center max-w-3xl mx-auto py-2 px-4">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EFF7FF] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#0B6FD8] border border-[#0B6FD8]/20 mb-3">
+      <div className="text-center max-w-3xl mx-auto py-2 px-4 space-y-3">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EFF7FF] px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[#0B6FD8] border border-[#0B6FD8]/20 shadow-2xs">
           ✦ {lang === "vi" ? "Chủ quyền Dữ liệu Cá nhân" : "Patient Data Sovereignty"}
         </span>
         <blockquote className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#162033] tracking-tight leading-snug">
           “{copy.statement}”
         </blockquote>
-        <p className="mt-2 text-xs sm:text-sm text-[#6D7A8E] max-w-2xl mx-auto">
+        <p className="text-xs sm:text-sm text-[#6D7A8E] max-w-2xl mx-auto leading-relaxed">
           {copy.description}
         </p>
       </div>
 
       {/* 2. Main Product Surface Container */}
-      <div className="clara-product-surface relative overflow-hidden p-5 sm:p-7 lg:p-9 shadow-lg">
+      <div className="clara-product-surface relative overflow-hidden p-5 sm:p-7 lg:p-9 shadow-xl">
         {/* Packet Header & Interactive Revoke Controls */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E3E8EF] pb-5">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-[#0B6FD8]">
                 CLARA Bounded Sharing Protocol
               </span>
               <span className="rounded-full bg-[#ECFDF8] px-2 py-0.5 text-[10px] font-bold text-[#14A88D] border border-[#14A88D]/20">
                 Zero-CoT Safe
               </span>
+              <span className="rounded-full bg-[#EFF7FF] px-2 py-0.5 text-[10px] font-bold text-[#0B6FD8] border border-[#0B6FD8]/20">
+                AES-256 GCM
+              </span>
             </div>
             <h3 className="text-lg sm:text-xl font-bold text-[#162033]">
               {copy.sharingTitle}
             </h3>
-            <p className="text-xs text-[#6D7A8E]">
+            <p className="text-xs sm:text-sm text-[#6D7A8E]">
               {lang === "vi" ? "Chủ hồ sơ:" : "Record Holder:"}{" "}
               <strong className="text-[#162033] font-semibold">{copy.patientName}</strong> •{" "}
-              <span className="font-mono text-[#48566A]">{copy.patientMrn}</span>
+              <span className="font-mono text-[#0B6FD8] font-semibold">{copy.patientMrn}</span>
             </p>
           </div>
 
-          <div className="flex items-center gap-3.5">
+          <div className="flex flex-wrap items-center gap-4">
             {/* Validity / Token Expiry Display */}
             <div className="text-right">
               <span className="text-[11px] uppercase tracking-wider text-[#6D7A8E] block font-semibold">
@@ -80,7 +85,7 @@ export function PhrDemo({ className = "" }: PhrDemoProps) {
               </span>
               <span
                 className={`text-xs font-bold transition-colors duration-300 ${
-                  isRevoked ? "text-rose-600" : "text-[#14A88D]"
+                  isRevoked ? "text-rose-600 font-extrabold" : "text-[#14A88D]"
                 }`}
               >
                 {isRevoked
@@ -96,7 +101,7 @@ export function PhrDemo({ className = "" }: PhrDemoProps) {
               type="button"
               data-testid="phr-revoke-btn"
               onClick={() => setIsRevoked((prev) => !prev)}
-              className={`rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200 clara-focus-ring cursor-pointer shadow-xs ${
+              className={`rounded-xl px-4 sm:px-5 py-2.5 text-xs font-bold transition-all duration-200 clara-focus-ring cursor-pointer shadow-sm ${
                 isRevoked
                   ? "bg-[#0B6FD8] text-white hover:bg-[#0855A8] active:scale-95"
                   : "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-95"
@@ -118,7 +123,7 @@ export function PhrDemo({ className = "" }: PhrDemoProps) {
             allowedCount={allowedFields.length}
             blockedCount={blockedFields.length}
             expiryText={copy.expiryValue}
-            className="w-full"
+            className="w-full shadow-sm"
           />
         </div>
 
@@ -177,20 +182,24 @@ export function PhrDemo({ className = "" }: PhrDemoProps) {
                 const label = lang === "vi" ? field.labelVi : field.labelEn;
                 const value = lang === "vi" ? field.valueVi : field.valueEn;
                 const reason = lang === "vi" ? field.reasonVi : field.reasonEn;
+                const isSelected = selectedFieldId === field.id;
 
                 return (
                   <div
                     key={field.id}
                     data-testid={`phr-field-${field.id}`}
-                    className={`rounded-xl bg-white p-4 border transition-all duration-200 ${
+                    onClick={() => setSelectedFieldId(isSelected ? null : field.id)}
+                    className={`rounded-xl bg-white p-4 border transition-all duration-200 cursor-pointer ${
                       isRevoked
                         ? "border-[#E3E8EF] opacity-75"
+                        : isSelected
+                        ? "border-[#14A88D] ring-2 ring-[#14A88D]/20 shadow-xs"
                         : "border-[#14A88D]/20 shadow-2xs hover:border-[#14A88D]/40"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-[#14A88D]" />
+                        <span className={`h-2 w-2 rounded-full ${isRevoked ? "bg-slate-400" : "bg-[#14A88D]"}`} />
                         <span className="text-xs font-bold text-[#162033]">
                           {label}
                         </span>
@@ -199,7 +208,7 @@ export function PhrDemo({ className = "" }: PhrDemoProps) {
                         className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
                           isRevoked
                             ? "bg-slate-100 text-slate-500"
-                            : "bg-[#ECFDF8] text-[#14A88D]"
+                            : "bg-[#ECFDF8] text-[#14A88D] border border-[#14A88D]/20"
                         }`}
                       >
                         {isRevoked
@@ -259,12 +268,18 @@ export function PhrDemo({ className = "" }: PhrDemoProps) {
                 const label = lang === "vi" ? field.labelVi : field.labelEn;
                 const value = lang === "vi" ? field.valueVi : field.valueEn;
                 const reason = lang === "vi" ? field.reasonVi : field.reasonEn;
+                const isSelected = selectedFieldId === field.id;
 
                 return (
                   <div
                     key={field.id}
                     data-testid={`phr-field-${field.id}`}
-                    className="rounded-xl bg-white p-4 border border-rose-200/60 shadow-2xs hover:border-rose-300 transition-all duration-200"
+                    onClick={() => setSelectedFieldId(isSelected ? null : field.id)}
+                    className={`rounded-xl bg-white p-4 border shadow-2xs transition-all duration-200 cursor-pointer ${
+                      isSelected
+                        ? "border-rose-400 ring-2 ring-rose-300/30"
+                        : "border-rose-200/60 hover:border-rose-300"
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2">
@@ -296,14 +311,18 @@ export function PhrDemo({ className = "" }: PhrDemoProps) {
         {/* 5. Security Invariant Audit Footnote */}
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#F8FAFD] p-3.5 border border-[#E3E8EF] text-xs text-[#48566A]">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-[#14A88D]" />
+            <span className={`h-2 w-2 rounded-full ${isRevoked ? "bg-rose-600" : "bg-[#14A88D]"}`} />
             <span className="font-semibold text-[#162033]">
               {lang === "vi"
                 ? "Bất biến An toàn CLARA:"
                 : "CLARA Safety Invariant:"}
             </span>
             <span>
-              {lang === "vi"
+              {isRevoked
+                ? lang === "vi"
+                  ? "Quyền truy cập đã bị thu hồi. Toàn bộ phiên chia sẻ đã lập tức vô hiệu hóa."
+                  : "Share permissions revoked. All recipient reading channels terminated immediately."
+                : lang === "vi"
                 ? "Chỉ truyền dữ liệu theo phạm vi chỉ định. Quyền thu hồi có hiệu lực ngay lập tức."
                 : "Strict scope-bound transmission. Revocation takes effect instantly across all channels."}
             </span>

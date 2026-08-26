@@ -57,10 +57,14 @@ const PATH_VARIANTS: PathConfig[] = [
 ];
 
 /**
- * ScenarioPath Artwork Component
+ * ScenarioPath Artwork Component (Landing v7)
  *
- * Renders the Human Scenario Path connecting everyday patient moments
- * to CLARA's verified clinical resolution with a curving directional SVG spline.
+ * Upgraded Features:
+ * 1. Smooth Curved SVG Path: Mathematical multi-bezier splines connecting human speech/quotes to clinical resolutions.
+ * 2. Traveling Directional Light Beam: High-intensity photon light beam with head flare, trailing comet tail, and dashoffset stream motion.
+ * 3. Human Quote Anchor: Conversational quote mark glyph with acoustic ripple rings.
+ * 4. FIDES Safety Checkpoint: Intermediate verification checkpoint diamond node.
+ * 5. Clinical Resolution Beacon: Radiant 4-point lens flare and emerald clinical resolution seal.
  */
 export function ScenarioPath({
   index = 0,
@@ -69,12 +73,13 @@ export function ScenarioPath({
   style,
 }: ScenarioPathProps) {
   const rawId = useId();
-  // Sanitize useId for SVG ID references
   const uniqueId = rawId.replace(/[^a-zA-Z0-9-_]/g, "");
 
   const gradientId = `scenario-path-grad-${uniqueId}`;
   const activeGlowId = `scenario-path-glow-${uniqueId}`;
+  const lightBeamId = `scenario-path-beam-${uniqueId}`;
   const filterGlowId = `scenario-path-blur-${uniqueId}`;
+  const filterBeamId = `scenario-path-beam-blur-${uniqueId}`;
   const markerArrowId = `scenario-path-arrow-${uniqueId}`;
 
   const variantIndex = Math.abs(Math.floor(index)) % PATH_VARIANTS.length;
@@ -105,10 +110,10 @@ export function ScenarioPath({
             y2="0%"
             gradientUnits="userSpaceOnUse"
           >
-            <stop offset="0%" stopColor="#0B6FD8" stopOpacity={active ? 0.9 : 0.4} />
-            <stop offset="45%" stopColor="#14A88D" stopOpacity={active ? 0.95 : 0.6} />
-            <stop offset="80%" stopColor="#0B6FD8" stopOpacity={active ? 1 : 0.75} />
-            <stop offset="100%" stopColor="#059669" stopOpacity={active ? 1 : 0.85} />
+            <stop offset="0%" stopColor="#0B6FD8" stopOpacity={active ? 0.95 : 0.45} />
+            <stop offset="40%" stopColor="#14A88D" stopOpacity={active ? 0.98 : 0.65} />
+            <stop offset="75%" stopColor="#0B6FD8" stopOpacity={active ? 1 : 0.8} />
+            <stop offset="100%" stopColor="#10B981" stopOpacity={active ? 1 : 0.9} />
           </linearGradient>
 
           {/* Active Highlight Glow Gradient */}
@@ -120,16 +125,42 @@ export function ScenarioPath({
             y2="0%"
             gradientUnits="userSpaceOnUse"
           >
-            <stop offset="0%" stopColor="#38BDF8" stopOpacity={active ? 0.8 : 0.2} />
-            <stop offset="50%" stopColor="#34D399" stopOpacity={active ? 1 : 0.4} />
-            <stop offset="100%" stopColor="#60A5FA" stopOpacity={active ? 0.9 : 0.3} />
+            <stop offset="0%" stopColor="#38BDF8" stopOpacity={active ? 0.85 : 0.25} />
+            <stop offset="50%" stopColor="#34D399" stopOpacity={active ? 1 : 0.45} />
+            <stop offset="100%" stopColor="#60A5FA" stopOpacity={active ? 0.95 : 0.35} />
           </linearGradient>
 
-          {/* Glow Filter */}
+          {/* Traveling Directional Light Beam Gradient */}
+          <linearGradient
+            id={lightBeamId}
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="0%"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0" />
+            <stop offset="60%" stopColor="#38BDF8" stopOpacity="0.8" />
+            <stop offset="90%" stopColor="#34D399" stopOpacity="1" />
+            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="1" />
+          </linearGradient>
+
+          {/* Path Glow Blur Filter */}
           <filter id={filterGlowId} x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation={active ? "3.5" : "1.5"} result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          {/* High-intensity Traveling Light Beam Filter */}
+          <filter id={filterBeamId} x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="3" result="blur1" />
+            <feGaussianBlur stdDeviation="6" result="blur2" />
+            <feMerge>
+              <feMergeNode in="blur2" />
+              <feMergeNode in="blur1" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
@@ -152,7 +183,7 @@ export function ScenarioPath({
           </marker>
         </defs>
 
-        {/* Ambient Subtle Underlay Track */}
+        {/* 1. Ambient Subtle Underlay Guide Track */}
         <path
           d={config.d}
           stroke="#E2E8F0"
@@ -162,19 +193,19 @@ export function ScenarioPath({
           className="opacity-60 dark:opacity-20"
         />
 
-        {/* Ambient Blurred Glow Path (Active Mode) */}
+        {/* 2. Ambient Blurred Glow Path (Active Mode) */}
         {active && (
           <path
             d={config.d}
             stroke={`url(#${activeGlowId})`}
-            strokeWidth="5"
+            strokeWidth="6"
             strokeLinecap="round"
             filter={`url(#${filterGlowId})`}
             className="opacity-70 transition-all duration-500"
           />
         )}
 
-        {/* Primary Curving Directional Path */}
+        {/* 3. Primary Curving Directional Path */}
         <path
           d={config.d}
           stroke={`url(#${gradientId})`}
@@ -188,66 +219,109 @@ export function ScenarioPath({
           }}
         />
 
-        {/* Flow particles / Dynamic stream line when active */}
+        {/* 4. Traveling Directional Light Beam (High-intensity stream packet) */}
         {active && (
-          <path
-            d={config.d}
-            stroke="#FFFFFF"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeDasharray="4 28"
-            className="opacity-80"
-            style={{
-              animation: "clara-path-flow 8s linear infinite",
-            }}
-          />
+          <>
+            {/* Primary traveling light beam stream */}
+            <path
+              d={config.d}
+              stroke={`url(#${lightBeamId})`}
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeDasharray="40 160"
+              filter={`url(#${filterBeamId})`}
+              style={{
+                animation: "clara-path-flow 6s linear infinite",
+              }}
+            />
+
+            {/* Micro photon particle stream */}
+            <path
+              d={config.d}
+              stroke="#FFFFFF"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeDasharray="4 28"
+              className="opacity-90"
+              style={{
+                animation: "clara-path-flow 8s linear infinite",
+              }}
+            />
+          </>
         )}
 
-        {/* --- START NODE: Everyday Patient Moment / Human Question --- */}
+        {/* --- START NODE: Human Quote Anchor (Everyday Patient Moment) --- */}
         <g
           transform={`translate(${config.start.x}, ${config.start.y})`}
           className="transition-transform duration-300"
         >
-          {/* Outer halo */}
+          {/* Outer acoustic ripple ring */}
           <circle
-            r={active ? 14 : 10}
+            r={active ? 16 : 11}
             fill="#0B6FD8"
-            fillOpacity={active ? 0.15 : 0.08}
+            fillOpacity={active ? 0.18 : 0.08}
             className="transition-all duration-300"
           />
-          {/* Inner ring */}
+          {active && (
+            <circle
+              r="22"
+              fill="none"
+              stroke="#0B6FD8"
+              strokeWidth="1"
+              strokeOpacity="0.3"
+              strokeDasharray="2 2"
+              className="motion-safe:animate-ping motion-reduce:animate-none"
+              style={{ animationDuration: "3s" }}
+            />
+          )}
+          {/* Inner ring pill */}
           <circle
-            r="6"
+            r="7"
             fill="#FFFFFF"
             stroke="#0B6FD8"
             strokeWidth="2"
             className="shadow-sm"
           />
-          {/* Center core */}
-          <circle
-            r="2.5"
-            fill={active ? "#0B6FD8" : "#64748B"}
-            className="transition-colors duration-300"
-          />
+          {/* Human Quote mark icon */}
+          <text
+            x="0"
+            y="3"
+            textAnchor="middle"
+            fill="#0B6FD8"
+            fontSize="9"
+            fontWeight="bold"
+            fontFamily="serif"
+          >
+            “
+          </text>
         </g>
 
-        {/* --- MIDPOINT WAYPOINT: Context & Safety Verification --- */}
+        {/* --- MIDPOINT WAYPOINT: Context & Safety Verification (FIDES Gate) --- */}
         <g
           transform={`translate(${config.mid.x}, ${config.mid.y})`}
           className="transition-transform duration-300"
         >
+          {/* Checkpoint subtle halo */}
+          {active && (
+            <circle
+              r="12"
+              fill="#14A88D"
+              fillOpacity="0.15"
+              className="motion-safe:animate-pulse"
+            />
+          )}
           {/* FIDES checkpoint diamond node */}
           <rect
-            x="-4"
-            y="-4"
-            width="8"
-            height="8"
+            x="-4.5"
+            y="-4.5"
+            width="9"
+            height="9"
             transform="rotate(45)"
             fill={active ? "#14A88D" : "#94A3B8"}
-            fillOpacity={active ? 0.9 : 0.5}
+            fillOpacity={active ? 0.95 : 0.5}
             stroke="#FFFFFF"
             strokeWidth="1.5"
-            className="transition-all duration-300"
+            className="transition-all duration-300 shadow-sm"
           />
         </g>
 
@@ -256,25 +330,65 @@ export function ScenarioPath({
           transform={`translate(${config.end.x}, ${config.end.y})`}
           className="transition-transform duration-300"
         >
-          {/* Outer radiating beacon */}
+          {/* Outer radiating beacon halo */}
           <circle
-            r={active ? 16 : 12}
+            r={active ? 18 : 13}
             fill="#10B981"
-            fillOpacity={active ? 0.2 : 0.08}
+            fillOpacity={active ? 0.22 : 0.08}
             className="transition-all duration-300"
           />
+          {active && (
+            <>
+              {/* Radiating beacon sonar ring */}
+              <circle
+                r="24"
+                fill="none"
+                stroke="#10B981"
+                strokeWidth="1.2"
+                strokeOpacity="0.4"
+                className="motion-safe:animate-ping motion-reduce:animate-none"
+                style={{ animationDuration: "2.5s" }}
+              />
+
+              {/* 4-Point Radiant Lens Flare */}
+              <line
+                x1="-10"
+                y1="0"
+                x2="10"
+                y2="0"
+                stroke="#10B981"
+                strokeWidth="1.2"
+                filter={`url(#${filterGlowId})`}
+              />
+              <line
+                x1="0"
+                y1="-10"
+                x2="0"
+                y2="10"
+                stroke="#10B981"
+                strokeWidth="1.2"
+                filter={`url(#${filterGlowId})`}
+              />
+            </>
+          )}
+
           {/* Outer border ring */}
           <circle
-            r={active ? 8 : 6.5}
+            r={active ? 8.5 : 7}
             fill="#FFFFFF"
             stroke={active ? "#10B981" : "#0B6FD8"}
             strokeWidth="2"
             className="transition-colors duration-300"
           />
-          {/* Clinical Spark / Diamond Core */}
+
+          {/* Clinical Verification Checkmark Core */}
           <path
-            d="M 0,-3.5 L 2.5,0 L 0,3.5 L -2.5,0 Z"
-            fill={active ? "#10B981" : "#0B6FD8"}
+            d="M -2.8 -0.2 L -0.8 1.8 L 2.8 -1.8"
+            fill="none"
+            stroke={active ? "#10B981" : "#0B6FD8"}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             className="transition-colors duration-300"
           />
         </g>

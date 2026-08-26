@@ -111,12 +111,52 @@ describe("JourneyTimelinePage (Spec v5 Section 6.18)", () => {
     expect(validTimeBtn).toHaveClass("bg-[var(--surface-panel)]");
   });
 
-  it("filters timeline stream by event type and search query", async () => {
+  it("filters timeline stream by plain-language milestone categories and search query", async () => {
     await act(async () => {
       render(<JourneyTimelinePage />);
     });
 
-    // Filter by Milestones only
+    // 1. Filter by Khám bệnh (Doctor Visits)
+    const encountersFilterBtn = screen.getByRole("button", { name: "Khám bệnh" });
+    fireEvent.click(encountersFilterBtn);
+
+    expect(screen.getByText("Tái khám Tim mạch định kỳ")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Khởi động hành trình Kiểm soát huyết áp"),
+    ).not.toBeInTheDocument();
+
+    // 2. Filter by Đổi đơn thuốc (Medication Changes)
+    const medicationFilterBtn = screen.getByRole("button", { name: "Đổi đơn thuốc" });
+    fireEvent.click(medicationFilterBtn);
+
+    expect(
+      screen.getByText("Đổi đơn thuốc: Chuyển sang Amlodipine 5mg"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Tái khám Tim mạch định kỳ")).not.toBeInTheDocument();
+
+    // 3. Filter by Xét nghiệm máu (Blood Tests / Labs)
+    const labsFilterBtn = screen.getByRole("button", { name: "Xét nghiệm máu" });
+    fireEvent.click(labsFilterBtn);
+
+    expect(
+      screen.getByText("Xét nghiệm máu: Bộ mỡ máu & HbA1c"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Đổi đơn thuốc: Chuyển sang Amlodipine 5mg"),
+    ).not.toBeInTheDocument();
+
+    // 4. Filter by Báo cáo theo dõi (Monitoring Reports)
+    const reportsFilterBtn = screen.getByRole("button", { name: "Báo cáo theo dõi" });
+    fireEvent.click(reportsFilterBtn);
+
+    expect(
+      screen.getByText("Báo cáo theo dõi: Tổng kết huyết áp 7 ngày liên tục"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Xét nghiệm máu: Bộ mỡ máu & HbA1c"),
+    ).not.toBeInTheDocument();
+
+    // 5. Filter by Mốc hành trình (Milestones)
     const milestoneFilterBtn = screen.getByRole("button", { name: "Mốc hành trình" });
     fireEvent.click(milestoneFilterBtn);
 
@@ -125,15 +165,6 @@ describe("JourneyTimelinePage (Spec v5 Section 6.18)", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByText("Ghi nhận chỉ số huyết áp sáng: 128/82 mmHg"),
-    ).not.toBeInTheDocument();
-
-    // Filter by Clinical encounters
-    const encountersFilterBtn = screen.getByRole("button", { name: "Thăm khám lâm sàng" });
-    fireEvent.click(encountersFilterBtn);
-
-    expect(screen.getByText("Tái khám Tim mạch định kỳ")).toBeInTheDocument();
-    expect(
-      screen.queryByText("Khởi động hành trình Kiểm soát huyết áp"),
     ).not.toBeInTheDocument();
 
     // Reset to all and search
@@ -163,8 +194,8 @@ describe("JourneyTimelinePage (Spec v5 Section 6.18)", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("dialog")).toBeInTheDocument();
-      expect(screen.getByText("Valid Time (Occurred):")).toBeInTheDocument();
-      expect(screen.getByText("Transaction Time (Recorded):")).toBeInTheDocument();
+      expect(screen.getByText("Thời gian diễn ra thực tế:")).toBeInTheDocument();
+      expect(screen.getByText("Thời gian hệ thống ghi nhận:")).toBeInTheDocument();
       expect(screen.getByText("Revision #1")).toBeInTheDocument();
     });
 
@@ -213,18 +244,20 @@ describe("JourneyTimelinePage (Spec v5 Section 6.18)", () => {
     fireEvent.click(newJournalBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("Ghi nhật ký sức khỏe mới")).toBeInTheDocument();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Ghi nhật ký sức khỏe mới" })).toBeInTheDocument();
     });
 
-    const titleInput = screen.getByLabelText("Tiêu đề nhật ký");
+    const dialog = screen.getByRole("dialog");
+    const titleInput = within(dialog).getByLabelText("Tiêu đề nhật ký");
     fireEvent.change(titleInput, { target: { value: "Đo nhịp tim sau khi chạy bộ: 88 bpm" } });
 
-    const contentInput = screen.getByLabelText("Nội dung chi tiết");
+    const contentInput = within(dialog).getByLabelText("Nội dung chi tiết");
     fireEvent.change(contentInput, {
       target: { value: "Cảm giác bình thường, không khó thở, uống 500ml nước điện giải." },
     });
 
-    const saveBtn = screen.getByRole("button", { name: "Lưu vào dòng thời gian" });
+    const saveBtn = within(dialog).getByRole("button", { name: "Lưu vào dòng thời gian" });
     fireEvent.click(saveBtn);
 
     await waitFor(() => {

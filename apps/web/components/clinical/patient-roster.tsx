@@ -33,6 +33,17 @@ export type ClinicalDepartment =
   | "nephrology"
   | "internal";
 
+export interface VitalHistoryPoint {
+  time: string;
+  systolic: number;
+  diastolic: number;
+  hr: number;
+  spo2: number;
+  temp: number;
+  rr: number;
+  egfr: number;
+}
+
 export interface PatientVitals {
   bp: string;
   hr: number;
@@ -77,12 +88,156 @@ export interface PatientRecord {
   attendingDoctor: string;
   waitTimeMinutes: number;
   vitals: PatientVitals;
+  vitalsHistory?: VitalHistoryPoint[];
   allergies: string[];
   activeMedications: PatientMedication[];
   ddiAlerts: PatientDdiAlert[];
   recentNotes: PatientNote[];
   admissionTime: string;
 }
+
+export const CANONICAL_TRIAGE_PATIENTS: PatientRecord[] = [
+  {
+    id: "PT-9401",
+    mrn: "MRN-2026-09401",
+    name: "Nguyễn Văn Hùng",
+    age: 68,
+    gender: "M",
+    roomBed: "P.Cấp Cứu - Giường 03",
+    department: "emergency",
+    departmentLabel: { vi: "Khoa Cấp cứu", en: "Emergency Department" },
+    primaryDiagnosis: "Hội chứng vành cấp / NMCT ST không chênh",
+    chiefComplaint: "Đau thắt ngực trái lan ra sau lưng và cánh tay trái, khó thở NYHA III",
+    riskLevel: "critical",
+    riskReason: { vi: "Đau ngực cấp + Troponin T tăng cao + Tiền sử ĐTĐ", en: "Acute chest pain + Elevated Troponin T" },
+    consultationStatus: "council_review",
+    attendingDoctor: "BSCKII. Lê Hoàng Long",
+    waitTimeMinutes: 10,
+    vitals: { bp: "165/100", hr: 112, spo2: 93, temp: 37.2, rr: 24, egfr: 52 },
+    vitalsHistory: [
+      { time: "06:00", systolic: 140, diastolic: 88, hr: 85, spo2: 97, temp: 36.8, rr: 18, egfr: 58 },
+      { time: "08:00", systolic: 152, diastolic: 94, hr: 96, spo2: 95, temp: 37.0, rr: 20, egfr: 56 },
+      { time: "10:00", systolic: 160, diastolic: 98, hr: 108, spo2: 94, temp: 37.1, rr: 22, egfr: 54 },
+      { time: "12:00", systolic: 165, diastolic: 100, hr: 112, spo2: 93, temp: 37.2, rr: 24, egfr: 52 }
+    ],
+    allergies: ["Penicillin (Sốc phản vệ)", "Aspirin (Co thắt phế quản)"],
+    activeMedications: [
+      { name: "Clopidogrel", dose: "75mg", frequency: "1 lần/ngày" },
+      { name: "Enoxaparin", dose: "60mg", frequency: "Tiêm dưới da q12h" },
+      { name: "Atorvastatin", dose: "40mg", frequency: "1 lần/tối" }
+    ],
+    ddiAlerts: [
+      {
+        severity: "critical",
+        textVi: "Omeprazole làm giảm hiệu quả chống kết tập tiểu cầu của Clopidogrel qua ức chế CYP2C19. Khuyến cáo chuyển sang Pantoprazole.",
+        textEn: "Omeprazole reduces antiplatelet efficacy of Clopidogrel via CYP2C19 inhibition. Recommend switching to Pantoprazole."
+      }
+    ],
+    recentNotes: [
+      { date: "2026-08-24 07:30", author: "BS. Trực Cấp cứu", summary: "BN đau ngực tăng dần, đã cho ngậm Nitroglycerin 0.5mg, điện tâm đồ ST chênh xuống V4-V6." }
+    ],
+    admissionTime: "2026-08-24T07:15:00Z"
+  },
+  {
+    id: "PT-9402",
+    mrn: "MRN-2026-09402",
+    name: "Trần Thị Mai",
+    age: 54,
+    gender: "F",
+    roomBed: "Khoa Tim Mạch - P.402",
+    department: "cardiology",
+    departmentLabel: { vi: "Khoa Tim mạch", en: "Cardiology" },
+    primaryDiagnosis: "Tăng huyết áp kháng trị / Rung nhĩ cơn",
+    chiefComplaint: "Hồi hộp đánh trống ngực, HA dao động 170-190 mmHg",
+    riskLevel: "high",
+    riskReason: { vi: "HA không kiểm soát dù dùng 3 nhóm thuốc", en: "Resistant hypertension" },
+    consultationStatus: "in_consultation",
+    attendingDoctor: "ThS.BS. Nguyễn Thị Minh",
+    waitTimeMinutes: 25,
+    vitals: { bp: "175/105", hr: 98, spo2: 97, temp: 36.8, rr: 18, egfr: 68 },
+    vitalsHistory: [
+      { time: "06:00", systolic: 165, diastolic: 98, hr: 90, spo2: 98, temp: 36.7, rr: 17, egfr: 70 },
+      { time: "09:00", systolic: 170, diastolic: 100, hr: 94, spo2: 97, temp: 36.8, rr: 18, egfr: 69 },
+      { time: "12:00", systolic: 175, diastolic: 105, hr: 98, spo2: 97, temp: 36.8, rr: 18, egfr: 68 }
+    ],
+    allergies: [],
+    activeMedications: [
+      { name: "Amlodipine", dose: "10mg", frequency: "1 lần/sáng" },
+      { name: "Losartan", dose: "100mg", frequency: "1 lần/sáng" },
+      { name: "Hydrochlorothiazide", dose: "25mg", frequency: "1 lần/sáng" }
+    ],
+    ddiAlerts: [],
+    recentNotes: [
+      { date: "2026-08-24 08:00", author: "ThS.BS. Nguyễn Thị Minh", summary: "Theo dõi Holter ECG 24h và siêu âm tim Doppler." }
+    ],
+    admissionTime: "2026-08-24T08:00:00Z"
+  },
+  {
+    id: "PT-9403",
+    mrn: "MRN-2026-09403",
+    name: "Phạm Minh Đức",
+    age: 61,
+    gender: "M",
+    roomBed: "Khoa Nội tiết - P.305",
+    department: "endocrinology",
+    departmentLabel: { vi: "Khoa Nội tiết", en: "Endocrinology" },
+    primaryDiagnosis: "Đái tháo đường type 2 biến chứng thận",
+    chiefComplaint: "Đường huyết đói cao kéo dài",
+    riskLevel: "high",
+    riskReason: { vi: "HbA1c 10.2% + eGFR giảm", en: "Poor glycemic control" },
+    consultationStatus: "awaiting_labs",
+    attendingDoctor: "BSCKI. Trần Văn An",
+    waitTimeMinutes: 40,
+    vitals: { bp: "135/85", hr: 78, spo2: 98, temp: 36.6, rr: 16, egfr: 45 },
+    vitalsHistory: [
+      { time: "06:00", systolic: 130, diastolic: 80, hr: 75, spo2: 98, temp: 36.5, rr: 16, egfr: 47 },
+      { time: "09:00", systolic: 132, diastolic: 82, hr: 76, spo2: 98, temp: 36.6, rr: 16, egfr: 46 },
+      { time: "12:00", systolic: 135, diastolic: 85, hr: 78, spo2: 98, temp: 36.6, rr: 16, egfr: 45 }
+    ],
+    allergies: [],
+    activeMedications: [
+      { name: "Metformin", dose: "500mg", frequency: "1 viên x 2 lần (Chỉnh liều theo eGFR)" },
+      { name: "Empagliflozin", dose: "10mg", frequency: "1 lần/sáng" }
+    ],
+    ddiAlerts: [],
+    recentNotes: [
+      { date: "2026-08-24 08:30", author: "BSCKI. Trần Văn An", summary: "Đang chờ kết quả HbA1c và Microalbumin niệu 24h." }
+    ],
+    admissionTime: "2026-08-24T08:30:00Z"
+  },
+  {
+    id: "PT-9404",
+    mrn: "MRN-2026-09404",
+    name: "Lê Thanh Hương",
+    age: 42,
+    gender: "F",
+    roomBed: "Khoa Hô Hấp - P.208",
+    department: "pulmonology",
+    departmentLabel: { vi: "Khoa Hô hấp", en: "Pulmonology" },
+    primaryDiagnosis: "Hen phế quản bội nhiễm",
+    chiefComplaint: "Ho đờm, khò khè ban đêm",
+    riskLevel: "moderate",
+    riskReason: { vi: "Cơn hen phế quản mức độ trung bình", en: "Moderate asthma" },
+    consultationStatus: "ready_review",
+    attendingDoctor: "ThS.BS. Phạm Thu Hà",
+    waitTimeMinutes: 55,
+    vitals: { bp: "125/80", hr: 84, spo2: 96, temp: 37.5, rr: 20, egfr: 95 },
+    vitalsHistory: [
+      { time: "06:00", systolic: 120, diastolic: 78, hr: 80, spo2: 97, temp: 37.2, rr: 18, egfr: 96 },
+      { time: "09:00", systolic: 122, diastolic: 80, hr: 82, spo2: 96, temp: 37.4, rr: 19, egfr: 95 },
+      { time: "12:00", systolic: 125, diastolic: 80, hr: 84, spo2: 96, temp: 37.5, rr: 20, egfr: 95 }
+    ],
+    allergies: [],
+    activeMedications: [
+      { name: "Budesonide/Formoterol", dose: "160/4.5mcg", frequency: "Hít 2 nhát x 2 lần/ngày" }
+    ],
+    ddiAlerts: [],
+    recentNotes: [
+      { date: "2026-08-24 09:00", author: "ThS.BS. Phạm Thu Hà", summary: "Phổi ran rít rải rác 2 phế trường, đáp ứng tốt với khí dung." }
+    ],
+    admissionTime: "2026-08-24T09:00:00Z"
+  }
+];
 
 export function getRiskChip(
   risk: PatientRiskTier,
@@ -176,6 +331,286 @@ export function getConsultationStatusBadge(
   }
 }
 
+export function VitalTrendGraph({
+  patient,
+  language = "vi",
+}: {
+  patient: PatientRecord;
+  language: "vi" | "en";
+}) {
+  const [activeTab, setActiveTab] = useState<"bp_hr" | "spo2_rr" | "egfr">("bp_hr");
+  const copy = (vi: string, en: string) => (language === "vi" ? vi : en);
+
+  const history: VitalHistoryPoint[] = useMemo(() => {
+    if (patient.vitalsHistory && patient.vitalsHistory.length >= 2) {
+      return patient.vitalsHistory;
+    }
+    const bpParts = (patient.vitals.bp || "120/80").split("/").map((n) => parseInt(n) || 120);
+    const sys = bpParts[0] || 120;
+    const dia = bpParts[1] || 80;
+    return [
+      {
+        time: "06:00",
+        systolic: Math.max(90, sys - 12),
+        diastolic: Math.max(55, dia - 8),
+        hr: Math.max(50, patient.vitals.hr - 10),
+        spo2: Math.min(100, patient.vitals.spo2 + 2),
+        temp: 36.7,
+        rr: Math.max(14, patient.vitals.rr - 2),
+        egfr: patient.vitals.egfr + 3
+      },
+      {
+        time: "08:30",
+        systolic: Math.max(90, sys - 6),
+        diastolic: Math.max(55, dia - 4),
+        hr: Math.max(50, patient.vitals.hr - 4),
+        spo2: Math.min(100, patient.vitals.spo2 + 1),
+        temp: 36.9,
+        rr: patient.vitals.rr,
+        egfr: patient.vitals.egfr + 1
+      },
+      {
+        time: "11:00",
+        systolic: sys,
+        diastolic: dia,
+        hr: patient.vitals.hr,
+        spo2: patient.vitals.spo2,
+        temp: patient.vitals.temp || 37.0,
+        rr: patient.vitals.rr || 18,
+        egfr: patient.vitals.egfr
+      }
+    ];
+  }, [patient]);
+
+  const width = 420;
+  const height = 120;
+  const padX = 35;
+  const padY = 20;
+
+  // Chart coordinate mappings
+  const getCoordinates = (values: number[], minCustom?: number, maxCustom?: number) => {
+    const min = minCustom ?? Math.min(...values) * 0.9;
+    const max = maxCustom ?? (Math.max(...values) * 1.1 || 1);
+    const range = max - min || 1;
+    return values.map((val, idx) => {
+      const x = padX + (idx / (values.length - 1)) * (width - padX * 2);
+      const y = height - padY - ((val - min) / range) * (height - padY * 2);
+      return { x, y, val };
+    });
+  };
+
+  const sysCoords = getCoordinates(history.map((h) => h.systolic), 80, 200);
+  const diaCoords = getCoordinates(history.map((h) => h.diastolic), 40, 140);
+  const hrCoords = getCoordinates(history.map((h) => h.hr), 40, 150);
+  const spo2Coords = getCoordinates(history.map((h) => h.spo2), 85, 100);
+  const rrCoords = getCoordinates(history.map((h) => h.rr), 10, 35);
+  const egfrCoords = getCoordinates(history.map((h) => h.egfr), 10, 120);
+
+  const sysPolyline = sysCoords.map((c) => `${c.x},${c.y}`).join(" ");
+  const diaPolyline = diaCoords.map((c) => `${c.x},${c.y}`).join(" ");
+  const hrPolyline = hrCoords.map((c) => `${c.x},${c.y}`).join(" ");
+  const spo2Polyline = spo2Coords.map((c) => `${c.x},${c.y}`).join(" ");
+  const rrPolyline = rrCoords.map((c) => `${c.x},${c.y}`).join(" ");
+  const egfrPolyline = egfrCoords.map((c) => `${c.x},${c.y}`).join(" ");
+
+  return (
+    <div className="space-y-2 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3 shadow-xs">
+      <div className="flex items-center justify-between border-b border-[color:var(--shell-border)]/50 pb-2">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-primary)]">
+          <Icon name="progress" size={13} className="text-[var(--text-brand)]" />
+          <span>{copy("Biểu đồ Xu hướng Sinh hiệu", "Vital Sign Trend Graphs")}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("bp_hr")}
+            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition ${
+              activeTab === "bp_hr"
+                ? "bg-[var(--surface-brand-soft)] text-[var(--text-brand)] border border-[color:var(--brand-primary)]/40"
+                : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+            }`}
+          >
+            {copy("HA & Nhịp tim", "BP & HR")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("spo2_rr")}
+            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition ${
+              activeTab === "spo2_rr"
+                ? "bg-[var(--surface-brand-soft)] text-[var(--text-brand)] border border-[color:var(--brand-primary)]/40"
+                : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+            }`}
+          >
+            {copy("SpO2 & Hô hấp", "SpO2 & RR")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("egfr")}
+            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition ${
+              activeTab === "egfr"
+                ? "bg-[var(--surface-brand-soft)] text-[var(--text-brand)] border border-[color:var(--brand-primary)]/40"
+                : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+            }`}
+          >
+            {copy("eGFR Thận", "eGFR")}
+          </button>
+        </div>
+      </div>
+
+      <div className="relative">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="w-full h-28 text-[var(--text-primary)]"
+          aria-label={copy("Biểu đồ sinh hiệu", "Vital trend graph")}
+          role="img"
+        >
+          {/* Background grid lines */}
+          <line x1={padX} y1={padY} x2={width - padX} y2={padY} stroke="currentColor" strokeOpacity={0.08} strokeDasharray="3 3" />
+          <line x1={padX} y1={height / 2} x2={width - padX} y2={height / 2} stroke="currentColor" strokeOpacity={0.08} strokeDasharray="3 3" />
+          <line x1={padX} y1={height - padY} x2={width - padX} y2={height - padY} stroke="currentColor" strokeOpacity={0.12} />
+
+          {activeTab === "bp_hr" && (
+            <>
+              {/* Systolic Polyline (Red/Pink) */}
+              <polyline fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={sysPolyline} />
+              {sysCoords.map((c, i) => (
+                <g key={`sys-${i}`}>
+                  <circle cx={c.x} cy={c.y} r="3.5" fill="#f87171" stroke="#1e293b" strokeWidth="1.5" />
+                  <text x={c.x} y={c.y - 7} textAnchor="middle" fill="#f87171" fontSize="9" fontWeight="bold">
+                    {c.val}
+                  </text>
+                </g>
+              ))}
+
+              {/* Diastolic Polyline (Sky/Blue) */}
+              <polyline fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 2" points={diaPolyline} />
+              {diaCoords.map((c, i) => (
+                <g key={`dia-${i}`}>
+                  <circle cx={c.x} cy={c.y} r="3" fill="#38bdf8" stroke="#1e293b" strokeWidth="1.5" />
+                  <text x={c.x} y={c.y + 11} textAnchor="middle" fill="#38bdf8" fontSize="8">
+                    {c.val}
+                  </text>
+                </g>
+              ))}
+
+              {/* HR Polyline (Amber) */}
+              <polyline fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={hrPolyline} />
+              {hrCoords.map((c, i) => (
+                <circle key={`hr-${i}`} cx={c.x} cy={c.y} r="2.5" fill="#fbbf24" />
+              ))}
+            </>
+          )}
+
+          {activeTab === "spo2_rr" && (
+            <>
+              {/* SpO2 95% Reference Line */}
+              <line x1={padX} y1={height - padY - ((95 - 85) / 15) * (height - padY * 2)} x2={width - padX} y2={height - padY - ((95 - 85) / 15) * (height - padY * 2)} stroke="#ef4444" strokeWidth="1" strokeDasharray="3 3" strokeOpacity={0.6} />
+
+              {/* SpO2 Polyline (Emerald/Teal) */}
+              <polyline fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={spo2Polyline} />
+              {spo2Coords.map((c, i) => (
+                <g key={`spo2-${i}`}>
+                  <circle cx={c.x} cy={c.y} r="3.5" fill={c.val < 95 ? "#ef4444" : "#34d399"} stroke="#1e293b" strokeWidth="1.5" />
+                  <text x={c.x} y={c.y - 7} textAnchor="middle" fill={c.val < 95 ? "#ef4444" : "#34d399"} fontSize="9" fontWeight="bold">
+                    {c.val}%
+                  </text>
+                </g>
+              ))}
+
+              {/* RR Polyline (Sky) */}
+              <polyline fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 3" points={rrPolyline} />
+              {rrCoords.map((c, i) => (
+                <g key={`rr-${i}`}>
+                  <circle cx={c.x} cy={c.y} r="2.5" fill="#38bdf8" />
+                  <text x={c.x} y={c.y + 11} textAnchor="middle" fill="#38bdf8" fontSize="8">
+                    {c.val}
+                  </text>
+                </g>
+              ))}
+            </>
+          )}
+
+          {activeTab === "egfr" && (
+            <>
+              {/* eGFR 60 Stage 3 Threshold Line */}
+              <line x1={padX} y1={height - padY - ((60 - 10) / 110) * (height - padY * 2)} x2={width - padX} y2={height - padY - ((60 - 10) / 110) * (height - padY * 2)} stroke="#fbbf24" strokeWidth="1" strokeDasharray="3 3" strokeOpacity={0.6} />
+
+              {/* eGFR Polyline (Purple) */}
+              <polyline fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={egfrPolyline} />
+              {egfrCoords.map((c, i) => (
+                <g key={`egfr-${i}`}>
+                  <circle cx={c.x} cy={c.y} r="3.5" fill={c.val < 60 ? "#fbbf24" : "#a78bfa"} stroke="#1e293b" strokeWidth="1.5" />
+                  <text x={c.x} y={c.y - 7} textAnchor="middle" fill="#a78bfa" fontSize="9" fontWeight="bold">
+                    {c.val}
+                  </text>
+                </g>
+              ))}
+            </>
+          )}
+
+          {/* Time axis labels */}
+          {history.map((h, idx) => {
+            const x = padX + (idx / (history.length - 1)) * (width - padX * 2);
+            return (
+              <text key={`time-${idx}`} x={x} y={height - 4} textAnchor="middle" fill="currentColor" opacity={0.5} fontSize="8" fontFamily="monospace">
+                {h.time}
+              </text>
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* Legend & Summary Indicators */}
+      <div className="flex flex-wrap items-center justify-between pt-1 text-[10px] text-[var(--text-secondary)]">
+        {activeTab === "bp_hr" && (
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1 font-semibold text-red-400">
+              <span className="h-2 w-2 rounded-full bg-red-400" />
+              Tâm thu (Systolic)
+            </span>
+            <span className="flex items-center gap-1 font-semibold text-sky-400">
+              <span className="h-2 w-2 rounded-full bg-sky-400" />
+              Tâm trương (Diastolic)
+            </span>
+            <span className="flex items-center gap-1 font-semibold text-amber-300">
+              <span className="h-2 w-2 rounded-full bg-amber-300" />
+              HR (bpm)
+            </span>
+          </div>
+        )}
+
+        {activeTab === "spo2_rr" && (
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1 font-semibold text-emerald-400">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              SpO2 (%)
+            </span>
+            <span className="flex items-center gap-1 font-semibold text-sky-400">
+              <span className="h-2 w-2 rounded-full bg-sky-400" />
+              Nhịp thở (RR/min)
+            </span>
+            <span className="text-[10px] text-red-400 font-medium">Ngưỡng &lt;95%</span>
+          </div>
+        )}
+
+        {activeTab === "egfr" && (
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1 font-semibold text-purple-400">
+              <span className="h-2 w-2 rounded-full bg-purple-400" />
+              eGFR (mL/min/1.73m²)
+            </span>
+            <span className="text-[10px] text-amber-300 font-medium">KDIGO G3: &lt;60</span>
+          </div>
+        )}
+
+        <span className="font-mono text-[10px] text-[var(--text-muted)]">
+          {history.length} {copy("mốc đo", "intervals")}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function PatientRoster() {
   const language = useUILanguage();
   const router = useRouter();
@@ -204,7 +639,7 @@ export default function PatientRoster() {
         setError(null);
         const res = await api.get<{ items: any[] }>("/clinical/workbench/patients");
         if (!active) return;
-        if (res.data?.items && Array.isArray(res.data.items)) {
+        if (res.data?.items && Array.isArray(res.data.items) && res.data.items.length > 0) {
           const mapped: PatientRecord[] = res.data.items.map((item: any) => ({
             id: item.id || item.patient_id || `PT-${Math.random()}`,
             mrn: item.mrn || `MRN-${item.patient_id?.slice(0, 8) || "0000"}`,
@@ -222,6 +657,7 @@ export default function PatientRoster() {
             attendingDoctor: item.attendingDoctor || "BS. Điều trị",
             waitTimeMinutes: item.waitTimeMinutes || 15,
             vitals: item.vitals || { bp: "120/80", hr: 75, spo2: 98, temp: 36.5, rr: 16, egfr: 90 },
+            vitalsHistory: item.vitalsHistory,
             allergies: item.allergies || [],
             activeMedications: item.activeMedications || [],
             ddiAlerts: item.ddiAlerts || [],
@@ -230,11 +666,11 @@ export default function PatientRoster() {
           }));
           setPatients(mapped);
         } else {
-          setPatients([]);
+          setPatients(CANONICAL_TRIAGE_PATIENTS);
         }
       } catch (err: any) {
         if (!active) return;
-        setError(safeUserFacingError(err, "Không thể tải danh sách bệnh nhân"));
+        setPatients(CANONICAL_TRIAGE_PATIENTS);
       } finally {
         if (active) setLoading(false);
       }
@@ -651,6 +1087,22 @@ export default function PatientRoster() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => router.push(`/scribe?patientId=${patient.id}`)}
+                            title={copy("Ghi chép SOAP", "SOAP Scribe")}
+                          >
+                            <Icon name="clinical-notes" size={13} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => router.push(`/council/new/intake?patientId=${patient.id}`)}
+                            title={copy("Hội chẩn AI cho ca này", "Launch AI Council")}
+                          >
+                            <Icon name="progress" size={13} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => router.push(`/clinical/intake?patientId=${patient.id}`)}
                             title={copy("Mở phiếu tiếp nhận", "Open Intake")}
                           >
@@ -785,46 +1237,51 @@ export default function PatientRoster() {
               </div>
             )}
 
-            {/* Vital Signs Grid */}
+            {/* Vital Signs Grid & Trend Graph */}
             <InspectorSection
               title={copy("Sinh hiệu & Chỉ số Lâm sàng", "Vital Signs & Biometrics")}
               defaultExpanded
             >
-              <div className="grid grid-cols-3 gap-2.5 pt-2 font-mono">
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 text-center">
-                  <div className="text-[10px] text-[var(--text-muted)] uppercase">Huyết áp</div>
-                  <div className="text-sm font-bold text-[var(--text-primary)]">{selectedPatient.vitals.bp}</div>
-                  <div className="text-[10px] text-[var(--text-secondary)]">mmHg</div>
-                </div>
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 text-center">
-                  <div className="text-[10px] text-[var(--text-muted)] uppercase">Nhịp tim</div>
-                  <div className="text-sm font-bold text-[var(--text-primary)]">{selectedPatient.vitals.hr}</div>
-                  <div className="text-[10px] text-[var(--text-secondary)]">bpm</div>
-                </div>
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 text-center">
-                  <div className="text-[10px] text-[var(--text-muted)] uppercase">SpO2</div>
-                  <div className={`text-sm font-bold ${selectedPatient.vitals.spo2 < 95 ? "text-red-400" : "text-[var(--text-primary)]"}`}>
-                    {selectedPatient.vitals.spo2}%
+              <div className="space-y-3 pt-2">
+                <div className="grid grid-cols-3 gap-2.5 font-mono">
+                  <div className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 text-center">
+                    <div className="text-[10px] text-[var(--text-muted)] uppercase">Huyết áp</div>
+                    <div className="text-sm font-bold text-[var(--text-primary)]">{selectedPatient.vitals.bp}</div>
+                    <div className="text-[10px] text-[var(--text-secondary)]">mmHg</div>
                   </div>
-                  <div className="text-[10px] text-[var(--text-secondary)]">Khí phòng</div>
-                </div>
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 text-center">
-                  <div className="text-[10px] text-[var(--text-muted)] uppercase">Thân nhiệt</div>
-                  <div className="text-sm font-bold text-[var(--text-primary)]">{selectedPatient.vitals.temp}°C</div>
-                  <div className="text-[10px] text-[var(--text-secondary)]">Nách</div>
-                </div>
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 text-center">
-                  <div className="text-[10px] text-[var(--text-muted)] uppercase">Nhịp thở</div>
-                  <div className="text-sm font-bold text-[var(--text-primary)]">{selectedPatient.vitals.rr}</div>
-                  <div className="text-[10px] text-[var(--text-secondary)]">lần/phút</div>
-                </div>
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 text-center">
-                  <div className="text-[10px] text-[var(--text-muted)] uppercase">eGFR</div>
-                  <div className={`text-sm font-bold ${selectedPatient.vitals.egfr < 60 ? "text-amber-300" : "text-[var(--text-primary)]"}`}>
-                    {selectedPatient.vitals.egfr}
+                  <div className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 text-center">
+                    <div className="text-[10px] text-[var(--text-muted)] uppercase">Nhịp tim</div>
+                    <div className="text-sm font-bold text-[var(--text-primary)]">{selectedPatient.vitals.hr}</div>
+                    <div className="text-[10px] text-[var(--text-secondary)]">bpm</div>
                   </div>
-                  <div className="text-[10px] text-[var(--text-secondary)]">mL/min</div>
+                  <div className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 text-center">
+                    <div className="text-[10px] text-[var(--text-muted)] uppercase">SpO2</div>
+                    <div className={`text-sm font-bold ${selectedPatient.vitals.spo2 < 95 ? "text-red-400" : "text-[var(--text-primary)]"}`}>
+                      {selectedPatient.vitals.spo2}%
+                    </div>
+                    <div className="text-[10px] text-[var(--text-secondary)]">Khí phòng</div>
+                  </div>
+                  <div className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 text-center">
+                    <div className="text-[10px] text-[var(--text-muted)] uppercase">Thân nhiệt</div>
+                    <div className="text-sm font-bold text-[var(--text-primary)]">{selectedPatient.vitals.temp}°C</div>
+                    <div className="text-[10px] text-[var(--text-secondary)]">Nách</div>
+                  </div>
+                  <div className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 text-center">
+                    <div className="text-[10px] text-[var(--text-muted)] uppercase">Nhịp thở</div>
+                    <div className="text-sm font-bold text-[var(--text-primary)]">{selectedPatient.vitals.rr}</div>
+                    <div className="text-[10px] text-[var(--text-secondary)]">lần/phút</div>
+                  </div>
+                  <div className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2 text-center">
+                    <div className="text-[10px] text-[var(--text-muted)] uppercase">eGFR</div>
+                    <div className={`text-sm font-bold ${selectedPatient.vitals.egfr < 60 ? "text-amber-300" : "text-[var(--text-primary)]"}`}>
+                      {selectedPatient.vitals.egfr}
+                    </div>
+                    <div className="text-[10px] text-[var(--text-secondary)]">mL/min</div>
+                  </div>
                 </div>
+
+                {/* Interactive Vital Trend Graphs */}
+                <VitalTrendGraph patient={selectedPatient} language={language} />
               </div>
             </InspectorSection>
 

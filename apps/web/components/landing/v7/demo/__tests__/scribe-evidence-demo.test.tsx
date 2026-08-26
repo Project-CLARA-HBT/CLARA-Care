@@ -66,6 +66,27 @@ describe("ScribeDemo Component (Landing v7)", () => {
     expect(screen.getByText(/Ký số & Đồng bộ EMR/i)).toBeInTheDocument();
   });
 
+  it("handles physician verification sign-off seal interaction in Step 5", () => {
+    const { container } = render(
+      <MotionProvider initialLanguage="vi">
+        <ScribeDemo />
+      </MotionProvider>
+    );
+
+    // Navigate to Step 5
+    const tab5 = container.querySelector("#scribe-step-tab-5") as HTMLElement;
+    fireEvent.click(tab5);
+
+    expect(screen.getByText("BS. CKI Nguyễn Minh Tuấn")).toBeInTheDocument();
+    expect(screen.getByText("CA-MED-9948-VN")).toBeInTheDocument();
+
+    const signBtn = screen.getByText(/Ký số & Đồng bộ EMR/i);
+    fireEvent.click(signBtn);
+
+    expect(screen.getAllByText(/ĐÃ KÝ DUYỆT & ĐỒNG BỘ EMR/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Đã ký duyệt thành công/i)).toBeInTheDocument();
+  });
+
   it("renders correctly in English", () => {
     render(
       <MotionProvider initialLanguage="en">
@@ -115,6 +136,20 @@ describe("EvidenceDemo Component (Landing v7)", () => {
 
     expect(screen.getAllByText(/Tier III: Quản lý Dược/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/US Food and Drug Administration/i).length).toBeGreaterThan(0);
+  });
+
+  it("supports searching and opening FIDES verification coordinates", () => {
+    render(
+      <MotionProvider initialLanguage="vi">
+        <EvidenceDemo />
+      </MotionProvider>
+    );
+
+    const fidesBtn = screen.getByText(/Tra cứu chứng chỉ xác thực FIDES/i);
+    fireEvent.click(fidesBtn);
+
+    expect(screen.getByText(/FIDES CRYPTO WITNESS COORDINATES/i)).toBeInTheDocument();
+    expect(screen.getByText(/AUTH_HASH:/i)).toBeInTheDocument();
   });
 
   it("renders bilingual English copy correctly", () => {

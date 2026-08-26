@@ -35,10 +35,52 @@ export default function DashboardPage() {
           description={t(language, "clinical.overview.subtitle")}
           variant="plain"
         >
+          <ClinicalOverview />
+        </PageShell>
+      );
+    }
+    if (role === "researcher") {
+      return (
+        <PageShell
+          title={t(language, "navigation.item.research.title")}
+          description={t(language, "navigation.item.research.subtitle")}
+          variant="plain"
+        >
+          <ResearchOverview />
+        </PageShell>
+      );
+    }
+    return null;
+  }
+
+  if (role === "admin") {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-[var(--text-muted)]" role="status">
+        {language === "vi" ? "Đang chuyển hướng đến Trung tâm Quản trị…" : "Redirecting to Admin Overview…"}
+      </div>
+    );
+  }
+
+  if (role === "normal") {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-[var(--text-muted)]" role="status">
+        {language === "vi" ? "Đang chuyển hướng đến Trang hôm nay…" : "Redirecting to Today…"}
+      </div>
+    );
+  }
+
+  if (role === "doctor") {
+    return (
+      <PageShell
+        title={t(language, "clinical.overview.title")}
+        description={t(language, "clinical.overview.subtitle")}
+        variant="plain"
+      >
         <ClinicalOverview />
       </PageShell>
     );
   }
+
   if (role === "researcher") {
     return (
       <PageShell
@@ -47,48 +89,6 @@ export default function DashboardPage() {
         variant="plain"
       >
         <ResearchOverview />
-      </PageShell>
-    );
-  }
-  return null;
-}
-
-if (role === "admin") {
-  return (
-    <div className="flex min-h-[40vh] items-center justify-center text-sm text-[var(--text-muted)]" role="status">
-      {language === "vi" ? "Đang chuyển hướng đến Trung tâm Quản trị…" : "Redirecting to Admin Overview…"}
-    </div>
-  );
-}
-
-if (role === "normal") {
-  return (
-    <div className="flex min-h-[40vh] items-center justify-center text-sm text-[var(--text-muted)]" role="status">
-      {language === "vi" ? "Đang chuyển hướng đến Trang hôm nay…" : "Redirecting to Today…"}
-    </div>
-  );
-}
-
-if (role === "doctor") {
-  return (
-    <PageShell
-      title={t(language, "clinical.overview.title")}
-      description={t(language, "clinical.overview.subtitle")}
-      variant="plain"
-    >
-      <ClinicalOverview />
-    </PageShell>
-  );
-}
-
-if (role === "researcher") {
-  return (
-    <PageShell
-      title={t(language, "navigation.item.research.title")}
-      description={t(language, "navigation.item.research.subtitle")}
-      variant="plain"
-    >
-      <ResearchOverview />
       </PageShell>
     );
   }

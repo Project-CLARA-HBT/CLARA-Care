@@ -5,7 +5,9 @@ import AdminShell from "@/components/admin/admin-shell";
 import useControlTowerConfig from "@/components/admin/use-control-tower-config";
 import { PanelCard } from "@/components/admin/analytics-primitives";
 import AsyncSection, { type AsyncState } from "@/components/ui/async-section";
+import Icon from "@/components/ui/icon";
 import { trackAdminSurfaceViewed } from "@/lib/analytics/events";
+import { getRole, type UserRole } from "@/lib/auth-store";
 import api from "@/lib/http-client";
 import { t } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
@@ -161,6 +163,7 @@ async function patchRagRegistrySource(
 
 export default function AdminKnowledgeSourcesPage() {
   const language = useUILanguage();
+  const [role, setRoleState] = useState<UserRole | null>(() => getRole());
   const {
     config,
     isLoading: isLoadingRag,
@@ -207,6 +210,10 @@ export default function AdminKnowledgeSourcesPage() {
   const [ragUpdateNotice, setRagUpdateNotice] = useState("");
   const [ragUpdatingId, setRagUpdatingId] = useState<number | null>(null);
 
+  useEffect(() => {
+    setRoleState(getRole());
+  }, []);
+
   const activeSource = useMemo(
     () => sources.find((source) => source.id === activeSourceId) ?? null,
     [sources, activeSourceId]
@@ -248,8 +255,12 @@ export default function AdminKnowledgeSourcesPage() {
   );
 
   useEffect(() => {
-    void loadSources();
-  }, [loadSources]);
+    if (role === "admin") {
+      void loadSources();
+    } else if (role !== null) {
+      setIsLoadingSources(false);
+    }
+  }, [role, loadSources]);
 
   // Emit a single named product event when the Knowledge Sources surface is
   // opened (Req 9.1). No PII — only the coarse Admin view label.
@@ -258,9 +269,9 @@ export default function AdminKnowledgeSourcesPage() {
   }, []);
 
   useEffect(() => {
-    if (!activeSourceId) return;
+    if (!activeSourceId || role !== "admin") return;
     void loadDocuments(activeSourceId);
-  }, [activeSourceId, loadDocuments]);
+  }, [activeSourceId, role, loadDocuments]);
 
   const onCreateSource = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

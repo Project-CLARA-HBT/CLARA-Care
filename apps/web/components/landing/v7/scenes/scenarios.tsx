@@ -5,7 +5,9 @@ import { useMotionTier } from "../runtime/motion-provider";
 import { LANDING_COPY_V7 } from "../landing-copy-v7";
 import { LandingScene } from "../primitives/landing-scene";
 import { SceneHeader } from "../primitives/scene-header";
+import { AmbientField } from "../primitives/ambient-field";
 import { ScenarioPath } from "../artwork/scenario-path";
+import { EvidenceRibbon } from "../artwork/evidence-ribbon";
 
 const SCENARIO_METADATA = [
   {
@@ -34,6 +36,14 @@ const SCENARIO_METADATA = [
   },
 ];
 
+/**
+ * ScenariosScene (Landing v7)
+ *
+ * Human Everyday Scenario Moments:
+ * - 4 Real-life clinical dialogue moments with alternating quotes & structured CLARA resolutions.
+ * - Dynamic ScenarioPath SVG connectors bridging human questions to clinical answers.
+ * - Category badges and FIDES / LifeMap / CareGuard validation indicators.
+ */
 export function ScenariosScene() {
   const { language, isReducedMotion } = useMotionTier();
   const copy = LANDING_COPY_V7[language]?.scenarios ?? LANDING_COPY_V7.vi.scenarios;
@@ -43,16 +53,37 @@ export function ScenariosScene() {
   const resolutionLabel = language === "vi" ? "Giải pháp từ CLARA" : "CLARA Resolution";
 
   return (
-    <LandingScene id="scenarios" scale="standard" tone="canvas">
-      <SceneHeader
-        eyebrow={copy.eyebrow}
-        title={copy.title}
-        description={copy.description}
-        align="left"
-        tone="azure"
-      />
+    <LandingScene
+      id="scenarios"
+      scale="standard"
+      tone="canvas"
+      className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-36"
+    >
+      {/* Ambient Lighting Field */}
+      <AmbientField tone="azure" />
 
-      <div className="flex flex-col gap-8 max-w-5xl mx-auto">
+      {/* Background Top Transition Ribbon (Handoff from Privacy scene) */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-16 opacity-30 flex items-center justify-center overflow-hidden"
+      >
+        <EvidenceRibbon variant="horizontal" tone="mint" active={true} className="w-full max-w-6xl" />
+      </div>
+
+      {/* Scene Header */}
+      <div className="relative z-10 max-w-4xl mx-auto mb-12 md:mb-16 px-2 sm:px-4">
+        <SceneHeader
+          eyebrow={copy.eyebrow}
+          title={copy.title}
+          description={copy.description}
+          align="left"
+          tone="azure"
+          className="mb-0"
+        />
+      </div>
+
+      {/* Main Scenarios List */}
+      <div className="relative z-10 flex flex-col gap-8 max-w-5xl mx-auto px-2 sm:px-4">
         {copy.items.map((item, index) => {
           const isEven = index % 2 === 0;
           const meta = SCENARIO_METADATA[index] ?? SCENARIO_METADATA[0];
@@ -144,6 +175,14 @@ export function ScenariosScene() {
             </div>
           );
         })}
+      </div>
+
+      {/* Transition Ribbon Flowing toward Comparison Scene */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-10 left-1/2 -translate-x-1/2 w-full max-w-2xl opacity-50 hidden md:block"
+      >
+        <EvidenceRibbon variant="curved" tone="azure" active={true} className="h-20 w-full" />
       </div>
     </LandingScene>
   );

@@ -285,6 +285,39 @@ describe("Clinical Workflows (/clinical, /clinical/overview, /clinical/patients)
 
       expect(screen.getByText("Hội chẩn AI cho ca này")).toBeInTheDocument();
       expect(screen.getAllByText("Ghi chép SOAP").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("Biểu đồ Xu hướng Sinh hiệu")).toBeInTheDocument();
+      expect(screen.getByText("HA & Nhịp tim")).toBeInTheDocument();
+      expect(screen.getByText("SpO2 & Hô hấp")).toBeInTheDocument();
+      expect(screen.getByText("eGFR Thận")).toBeInTheDocument();
+    });
+
+    it("switches vital trend graph tabs to show SpO2 and eGFR trajectory", async () => {
+      render(<ClinicalPatientsPage />);
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Nguyễn Văn Hùng/i).length).toBeGreaterThanOrEqual(1);
+      });
+
+      // Click on patient row
+      const patientRow = screen.getByTestId("patient-row-PT-9401");
+      fireEvent.click(patientRow);
+
+      await waitFor(() => {
+        expect(screen.getByText("Biểu đồ Xu hướng Sinh hiệu")).toBeInTheDocument();
+      });
+
+      // Switch to SpO2 & RR tab
+      const spo2Tab = screen.getByRole("button", { name: /SpO2 & Hô hấp/i });
+      fireEvent.click(spo2Tab);
+
+      expect(screen.getByText(/SpO2 \(%\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Nhịp thở \(RR\/min\)/i)).toBeInTheDocument();
+
+      // Switch to eGFR tab
+      const egfrTab = screen.getByRole("button", { name: /eGFR Thận/i });
+      fireEvent.click(egfrTab);
+
+      expect(screen.getByText(/eGFR \(mL\/min\/1\.73m²\)/i)).toBeInTheDocument();
     });
   });
 });

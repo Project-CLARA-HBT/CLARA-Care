@@ -763,19 +763,19 @@ export default function ScribePage() {
     setError("");
     try {
       const updated = await updateScribeSession(sessionId, {
-        status: "signed",
+        status: "finalized",
       });
       trackScribeGenerated({ action: "finalize" });
       setSelectedSession(updated);
       upsertSession(updated);
-      pushNotice("success", isVi ? "Đã ký và hoàn tất bệnh án!" : "Note signed and finalized!");
+      pushNotice("success", copy("scribe.notice.draftCompleted"));
       setCurrentStepIndex(4);
     } catch (cause) {
       setError(safeUserFacingError(cause, isVi ? "Không thể ký bệnh án" : "Failed to sign note"));
     } finally {
       setIsSaving(false);
     }
-  }, [isVi, pushNotice, upsertSession]);
+  }, [copy, isVi, pushNotice, upsertSession]);
 
   const onDeleteRecordingData = useCallback(async () => {
     const sessionId = selectedSessionIdRef.current;
@@ -785,21 +785,22 @@ export default function ScribePage() {
     try {
       await deleteScribeRecordingData(sessionId);
       setShowRecordingDataDeleteConfirmation(false);
+      setTranscriptDraft("");
       pushNotice("success", isVi ? "Đã xóa bản ghi âm an toàn." : "Recording data deleted safely.");
       await refreshData();
     } catch (cause) {
-      setError(safeUserFacingError(cause, isVi ? "Không thể xóa bản ghi âm" : "Failed to delete audio"));
+      setError(safeUserFacingError(cause, copy("scribe.recordingData.error.delete") || "raw transport error"));
     } finally {
       setIsDeletingRecordingData(false);
     }
-  }, [isVi, pushNotice, refreshData]);
+  }, [copy, isVi, pushNotice, refreshData]);
 
   // Step Definitions for WorkflowLayout (Spec v8 §7.4)
   const workflowSteps: WorkflowStep[] = useMemo(
     () => [
       {
         id: "consent",
-        label: isVi ? "01 Đồng thuận" : "01 Consent",
+        label: copy("scribe.workflow.consent"),
         description: isVi ? "Đồng thuận bệnh nhân" : "Patient consent",
         completed:
           recordingConsentCaptured ||
@@ -807,35 +808,42 @@ export default function ScribePage() {
             asRecord(selectedSession?.metadata)?.consent_captured ||
               selectedSession?.status === "recording" ||
               selectedSession?.status === "ready" ||
-              selectedSession?.status === "signed"
+              selectedSession?.status === "signed" ||
+              selectedSession?.status === "finalized"
           ),
       },
       {
         id: "recording",
-        label: isVi ? "02 Ghi âm" : "02 Record",
+        label: copy("scribe.workflow.capture"),
         description: isVi ? "Thu âm phiên khám" : "Encounter audio",
         completed: transcriptDraft.trim().length > 0,
       },
       {
         id: "transcript",
-        label: isVi ? "03 Lời thoại" : "03 Transcript",
+        label: copy("scribe.workflow.transcript"),
         description: isVi ? "Biên tập hội thoại" : "Dialogue review",
         completed: Boolean(safeText(selectedSoap.subjective) || safeText(selectedSoap.assessment)),
       },
       {
         id: "soap",
-        label: isVi ? "04 Dự thảo SOAP" : "04 SOAP Draft",
+        label: copy("scribe.workflow.soap"),
         description: isVi ? "Hồ sơ SOAP y khoa" : "Clinical SOAP note",
-        completed: selectedSession?.status === "signed" || selectedSession?.status === "completed",
+        completed: selectedSession?.status === "signed" || selectedSession?.status === "finalized" || selectedSession?.status === "completed",
+      },
+      {
+        id: "complete",
+        label: copy("scribe.workflow.complete"),
+        description: isVi ? "Hoàn tất dự thảo" : "Draft complete",
+        completed: selectedSession?.status === "signed" || selectedSession?.status === "finalized",
       },
       {
         id: "finalize",
-        label: isVi ? "05 Ký & Ban hành" : "05 Finalize & Sign",
+        label: copy("scribe.workflow.exportSign"),
         description: isVi ? "Ký số & Lưu trữ" : "Sign & Publish",
-        completed: selectedSession?.status === "signed",
+        completed: selectedSession?.status === "signed" || selectedSession?.status === "finalized",
       },
     ],
-    [isVi, recordingConsentCaptured, selectedSession, selectedSoap, transcriptDraft]
+    [copy, isVi, recordingConsentCaptured, selectedSession, selectedSoap, transcriptDraft]
   );
 
   return (
@@ -1245,6 +1253,9 @@ export default function ScribePage() {
                   <Icon name="check" size="1rem" />
                   <span>{isVi ? "Kiểm tra tương tác thuốc FIDES thông qua" : "FIDES safety checks cleared"}</span>
                 </div>
+                <p className="text-[11px] text-[var(--text-muted)] pt-1 border-t border-[color:var(--shell-border)]/40">
+                  {copy("scribe.review.statusDescription")} · {copy("scribe.review.codingDescription")}
+                </p>
               </div>
 
               <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -1345,7 +1356,7 @@ export default function ScribePage() {
       {showRecordingDataDeleteConfirmation && (
         <Modal
           open={showRecordingDataDeleteConfirmation}
-          title={isVi ? "Xác nhận xóa tệp ghi âm" : "Confirm Audio Deletion"}
+          title={copy("scribe.recordingData.confirmTitle")}
           onClose={() => setShowRecordingDataDeleteConfirmation(false)}
           size="sm"
         >

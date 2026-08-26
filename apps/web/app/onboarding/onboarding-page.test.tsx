@@ -206,6 +206,24 @@ describe("OnboardingPage — Multi-Track Decoupled Onboarding", () => {
       });
     });
 
+    it("validates height and weight bounds before submitting personal profile", async () => {
+      await renderOnboardingPage();
+
+      fireEvent.click(screen.getByRole("tab", { name: /2\. Hồ sơ sức khỏe/i }));
+
+      fireEvent.change(screen.getByLabelText(/Chiều cao/i), { target: { value: "350" } });
+      const confirmCheckbox = screen.getByRole("checkbox", {
+        name: /Tôi xác nhận các thông tin trên là do tôi tự nguyện cung cấp và tự khai/i,
+      });
+      fireEvent.click(confirmCheckbox);
+
+      const saveBtn = screen.getByRole("button", { name: /Lưu và hoàn tất hồ sơ/i });
+      fireEvent.click(saveBtn);
+
+      expect(screen.getByText(/Chiều cao không hợp lệ\. Vui lòng nhập số từ 0 đến 300 cm\./i)).toBeInTheDocument();
+      expect(mocks.updatePhrOnboarding).not.toHaveBeenCalled();
+    });
+
     it("allows skipping personal health profile setup immediately", async () => {
       await renderOnboardingPage();
 

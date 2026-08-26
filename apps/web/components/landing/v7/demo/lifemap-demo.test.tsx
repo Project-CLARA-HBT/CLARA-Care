@@ -123,6 +123,68 @@ describe("LifeMapDemo (Landing v7 Interactive Signature Demo)", () => {
     expect(screen.getAllByText(/Khám tái khám định kỳ/i).length).toBeGreaterThan(0);
   });
 
+  it("supports keyboard navigation and stepper controls", () => {
+    const onMilestoneChange = vi.fn();
+    render(
+      <MotionProvider initialLanguage="vi">
+        <LifeMapDemo onMilestoneChange={onMilestoneChange} />
+      </MotionProvider>
+    );
+
+    // Initial selected is Hôm nay (idx 3)
+    let prevBtn = screen.getByRole("button", { name: /Mốc trước/i });
+    expect(prevBtn).not.toBeDisabled();
+
+    // Click Previous -> selects index 2 (Tháng 6)
+    fireEvent.click(prevBtn);
+    expect(onMilestoneChange).toHaveBeenLastCalledWith(2);
+
+    // Click Previous -> selects index 1 (Tháng 5)
+    prevBtn = screen.getByRole("button", { name: /Mốc trước/i });
+    fireEvent.click(prevBtn);
+    expect(onMilestoneChange).toHaveBeenLastCalledWith(1);
+
+    // Click Previous -> selects index 0 (Tháng 4)
+    prevBtn = screen.getByRole("button", { name: /Mốc trước/i });
+    fireEvent.click(prevBtn);
+    expect(onMilestoneChange).toHaveBeenLastCalledWith(0);
+    expect(screen.getByRole("button", { name: /Mốc trước/i })).toBeDisabled();
+
+    // Next button moves forward
+    let nextBtn = screen.getByRole("button", { name: /Mốc tiếp theo/i });
+    fireEvent.click(nextBtn);
+    expect(onMilestoneChange).toHaveBeenLastCalledWith(1);
+
+    // Keyboard ArrowRight on quick tab
+    const tabMonth5 = screen.getByRole("tab", { name: "Tháng 5" });
+    fireEvent.keyDown(tabMonth5, { key: "ArrowRight" });
+    expect(onMilestoneChange).toHaveBeenLastCalledWith(2);
+
+    // Keyboard ArrowLeft
+    const tabMonth6 = screen.getByRole("tab", { name: "Tháng 6" });
+    fireEvent.keyDown(tabMonth6, { key: "ArrowLeft" });
+    expect(onMilestoneChange).toHaveBeenLastCalledWith(1);
+  });
+
+  it("dismisses insight feedback banner when dismiss button is clicked", () => {
+    render(
+      <MotionProvider initialLanguage="vi">
+        <LifeMapDemo />
+      </MotionProvider>
+    );
+
+    const actionBtn = screen.getByTestId("lifemap-insight-action-btn");
+    fireEvent.click(actionBtn);
+
+    const feedback = screen.getByTestId("lifemap-insight-feedback");
+    expect(feedback).toBeInTheDocument();
+
+    const dismissBtn = screen.getByRole("button", { name: "Đóng" });
+    fireEvent.click(dismissBtn);
+
+    expect(screen.queryByTestId("lifemap-insight-feedback")).not.toBeInTheDocument();
+  });
+
   it("renders correctly in English when language is 'en'", () => {
     render(
       <MotionProvider initialLanguage="en">

@@ -33,7 +33,14 @@ import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 import { listVisits, type Visit } from "@/lib/visit-family";
 
-export type TimelineItemType = "milestone" | "journal" | "encounter";
+export type TimelineItemType =
+  | "encounter"
+  | "medication"
+  | "lab"
+  | "report"
+  | "milestone"
+  | "journal";
+
 export type TruthState =
   | "confirmed"
   | "user_reported"
@@ -83,29 +90,12 @@ const SEED_TIMELINE_EVENTS: BitemporalTimelineEvent[] = [
   },
   {
     id: "evt-002",
-    type: "journal",
-    title: "Ghi nhận chỉ số huyết áp sáng: 128/82 mmHg",
-    description: "Đo sau khi thức dậy 30 phút, trước khi ăn sáng. Nhịp tim 72 bpm, tinh thần thoải mái.",
-    occurred_at: "2026-08-03T07:15:00Z",
-    recorded_at: "2026-08-03T07:22:30Z",
-    revision: 1,
-    truth_state: "user_reported",
-    provenance: {
-      source_kind: "device_reading",
-      attribution: "Máy đo Omron HEM-7120 (Bluetooth)",
-      policy_version: "vitals.v1",
-    },
-    metrics: { BP: "128/82", HR: 72 },
-    associated_journey: "Kiểm soát huyết áp",
-  },
-  {
-    id: "evt-003",
     type: "encounter",
     title: "Tái khám Tim mạch định kỳ",
-    description: "BS. Trần Văn Hoàng khám tim mạch, nghe tim phổi bình thường, duy trì Amlodipine 5mg.",
-    occurred_at: "2026-08-05T09:30:00Z",
-    recorded_at: "2026-08-05T11:00:00Z",
-    revision: 2,
+    description: "BS. Trần Văn Hoàng khám tim mạch, nghe tim phổi bình thường, tư vấn duy trì vận động nhẹ nhàng.",
+    occurred_at: "2026-08-03T09:30:00Z",
+    recorded_at: "2026-08-03T11:00:00Z",
+    revision: 1,
     truth_state: "confirmed",
     provenance: {
       source_kind: "clinical_emr",
@@ -115,45 +105,28 @@ const SEED_TIMELINE_EVENTS: BitemporalTimelineEvent[] = [
     associated_journey: "Kiểm soát huyết áp",
   },
   {
-    id: "evt-004",
-    type: "journal",
-    title: "Cảm giác hồi hộp & chóng mặt nhẹ khi leo cầu thang",
-    description: "Xuất hiện lúc 15:30 chiều sau khi mang vác đồ. Huyết áp đo lại lúc 16:00 là 138/88 mmHg.",
-    occurred_at: "2026-08-07T15:30:00Z",
-    recorded_at: "2026-08-07T16:10:45Z",
-    revision: 1,
-    truth_state: "user_reported",
-    provenance: {
-      source_kind: "patient_log",
-      attribution: "Ứng dụng CLARA Mobile",
-      policy_version: "symptoms.v1",
-    },
-    metrics: { BP: "138/88" },
-  },
-  {
-    id: "evt-005",
-    type: "milestone",
-    title: "Đạt mốc 7 ngày đo huyết áp liên tục",
-    description: "Tuân thủ đo đều đặn mỗi sáng và tối, chỉ số trung bình tuần: 126/81 mmHg.",
-    occurred_at: "2026-08-08T20:00:00Z",
-    recorded_at: "2026-08-08T20:02:18Z",
+    id: "evt-003",
+    type: "medication",
+    title: "Đổi đơn thuốc: Chuyển sang Amlodipine 5mg",
+    description: "Bác sĩ điều chỉnh liều Amlodipine từ 2.5mg lên 5mg uống 1 viên mỗi sáng để kiểm soát huyết áp tối ưu.",
+    occurred_at: "2026-08-03T10:15:00Z",
+    recorded_at: "2026-08-03T11:30:00Z",
     revision: 1,
     truth_state: "confirmed",
     provenance: {
-      source_kind: "adherence_rule",
-      attribution: "CLARA Health Engine",
-      policy_version: "adherence.v1",
+      source_kind: "clinical_emr",
+      attribution: "Đơn thuốc điện tử EMR",
+      policy_version: "prescription.v1",
     },
     associated_journey: "Kiểm soát huyết áp",
-    status: "completed",
   },
   {
-    id: "evt-006",
-    type: "encounter",
-    title: "Đánh giá kết quả xét nghiệm Lipid máu & HbA1c",
-    description: "Cholesterol toàn phần: 4.8 mmol/L, HbA1c: 5.6%. Các chỉ số trong ngưỡng mục tiêu an toàn.",
-    occurred_at: "2026-08-10T14:00:00Z",
-    recorded_at: "2026-08-10T14:45:00Z",
+    id: "evt-004",
+    type: "lab",
+    title: "Xét nghiệm máu: Bộ mỡ máu & HbA1c",
+    description: "Cholesterol toàn phần: 4.8 mmol/L, HbA1c: 5.6%, Triglyceride: 1.6 mmol/L. Các chỉ số đều trong ngưỡng an toàn.",
+    occurred_at: "2026-08-05T08:00:00Z",
+    recorded_at: "2026-08-05T14:45:00Z",
     revision: 1,
     truth_state: "confirmed",
     provenance: {
@@ -161,9 +134,64 @@ const SEED_TIMELINE_EVENTS: BitemporalTimelineEvent[] = [
       attribution: "Trung tâm Xét nghiệm Medlatec",
       policy_version: "lab.v1",
     },
-    metrics: { Chol: "4.8 mmol/L", HbA1c: "5.6%" },
+    metrics: { Cholesterol: "4.8 mmol/L", HbA1c: "5.6%", Triglyceride: "1.6 mmol/L" },
+    associated_journey: "Kiểm soát huyết áp",
+  },
+  {
+    id: "evt-005",
+    type: "report",
+    title: "Báo cáo theo dõi: Tổng kết huyết áp 7 ngày liên tục",
+    description: "Tuân thủ đo đều đặn mỗi sáng và tối, chỉ số trung bình tuần: 126/81 mmHg, nhịp tim trung bình: 74 bpm.",
+    occurred_at: "2026-08-08T20:00:00Z",
+    recorded_at: "2026-08-08T20:02:18Z",
+    revision: 1,
+    truth_state: "confirmed",
+    provenance: {
+      source_kind: "adherence_rule",
+      attribution: "CLARA Health Engine (Tổng hợp tự động)",
+      policy_version: "adherence.v1",
+    },
+    metrics: { "HA trung bình": "126/81", "Nhịp tim TB": "74 bpm", "Tuân thủ": "100%" },
+    associated_journey: "Kiểm soát huyết áp",
+    status: "completed",
+  },
+  {
+    id: "evt-006",
+    type: "journal",
+    title: "Ghi nhận chỉ số huyết áp sáng: 128/82 mmHg",
+    description: "Đo sau khi thức dậy 30 phút, trước khi ăn sáng. Nhịp tim 72 bpm, tinh thần thoải mái.",
+    occurred_at: "2026-08-10T07:15:00Z",
+    recorded_at: "2026-08-10T07:22:30Z",
+    revision: 1,
+    truth_state: "user_reported",
+    provenance: {
+      source_kind: "device_reading",
+      attribution: "Máy đo Omron HEM-7120 (Bluetooth)",
+      policy_version: "vitals.v1",
+    },
+    metrics: { "Huyết áp": "128/82", "Nhịp tim": "72 bpm" },
+    associated_journey: "Kiểm soát huyết áp",
   },
 ];
+
+function formatSourceKind(kind: string): string {
+  const map: Record<string, string> = {
+    clinical_emr: "Hồ sơ bệnh viện điện tử (EMR)",
+    laboratory_pdf: "Kết quả xét nghiệm phòng Lab",
+    device_reading: "Thiết bị y tế cá nhân (Bluetooth/IoT)",
+    user_commitment: "Cam kết của người bệnh",
+    patient_log: "Nhật ký người bệnh tự ghi chép",
+    adherence_rule: "Hệ thống tổng hợp & Nhắc nhở",
+    task_schedule: "Kế hoạch theo dõi định kỳ",
+    visit_record: "Hồ sơ thăm khám bác sĩ",
+    symptom: "Ghi nhận triệu chứng",
+    vitals: "Đo lường chỉ số sinh tồn",
+    medication: "Thông tin dùng thuốc",
+    lifestyle: "Thói quen sinh hoạt",
+    report: "Báo cáo theo dõi",
+  };
+  return map[kind] || kind;
+}
 
 export default function JourneyTimelinePage() {
   const language = useUILanguage();
@@ -275,16 +303,21 @@ export default function JourneyTimelinePage() {
     const now = new Date().toISOString();
     const newEntry: BitemporalTimelineEvent = {
       id: `journal-${Date.now()}`,
-      type: "journal",
+      type:
+        journalType === "medication"
+          ? "medication"
+          : journalType === "report" || journalType === "vitals"
+            ? "report"
+            : "journal",
       title: journalTitle.trim(),
-      description: journalContent.trim() || "Ghi nhận sức khỏe cá nhân",
+      description: journalContent.trim() || copy("lifemap.timeline.journalModal.desc"),
       occurred_at: now,
       recorded_at: now,
       revision: 1,
       truth_state: "user_reported",
       provenance: {
         source_kind: journalType,
-        attribution: "Người dùng tự nhập",
+        attribution: copy("lifemap.truth.userReported"),
         policy_version: "user_journal.v1",
       },
     };
@@ -292,6 +325,7 @@ export default function JourneyTimelinePage() {
     setEvents((prev) => [newEntry, ...prev]);
     setJournalTitle("");
     setJournalContent("");
+    setJournalType("symptom");
     setIsJournalModalOpen(false);
   };
 
@@ -371,24 +405,55 @@ export default function JourneyTimelinePage() {
 
   const typeConfig: Record<
     TimelineItemType,
-    { labelKey: UITranslationKey; icon: string; nodeState: TimelineNodeState }
+    { labelKey: UITranslationKey; icon: string; nodeState: TimelineNodeState; tone: "brand" | "ok" | "warn" | "neutral" }
   > = {
+    encounter: {
+      labelKey: "lifemap.timeline.item.encounter",
+      icon: "stethoscope",
+      nodeState: "completed",
+      tone: "brand",
+    },
+    medication: {
+      labelKey: "lifemap.timeline.item.medication",
+      icon: "medication",
+      nodeState: "active",
+      tone: "warn",
+    },
+    lab: {
+      labelKey: "lifemap.timeline.item.lab",
+      icon: "biotech",
+      nodeState: "completed",
+      tone: "brand",
+    },
+    report: {
+      labelKey: "lifemap.timeline.item.report",
+      icon: "monitoring",
+      nodeState: "active",
+      tone: "ok",
+    },
     milestone: {
       labelKey: "lifemap.timeline.item.milestone",
       icon: "flag",
       nodeState: "completed",
+      tone: "ok",
     },
     journal: {
       labelKey: "lifemap.timeline.item.journal",
       icon: "notes",
       nodeState: "active",
-    },
-    encounter: {
-      labelKey: "lifemap.timeline.item.encounter",
-      icon: "stethoscope",
-      nodeState: "completed",
+      tone: "neutral",
     },
   };
+
+  const filterTabs: Array<{ id: "all" | TimelineItemType; labelKey: UITranslationKey }> = [
+    { id: "all", labelKey: "lifemap.timeline.filter.type.all" },
+    { id: "encounter", labelKey: "lifemap.timeline.filter.type.encounters" },
+    { id: "medication", labelKey: "lifemap.timeline.filter.type.medications" },
+    { id: "lab", labelKey: "lifemap.timeline.filter.type.labs" },
+    { id: "report", labelKey: "lifemap.timeline.filter.type.reports" },
+    { id: "milestone", labelKey: "lifemap.timeline.filter.type.milestones" },
+    { id: "journal", labelKey: "lifemap.timeline.filter.type.journal" },
+  ];
 
   return (
     <PageShell
@@ -410,6 +475,15 @@ export default function JourneyTimelinePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              as="link"
+              href="/lifemap"
+              icon="arrow_back"
+            >
+              {copy("lifemap.timeline.actions.backOverview")}
+            </Button>
             <Button
               size="sm"
               variant="secondary"
@@ -476,14 +550,7 @@ export default function JourneyTimelinePage() {
 
             {/* Event Type Filter Tabs */}
             <div className="flex flex-wrap items-center gap-1.5">
-              {(
-                [
-                  { id: "all", labelKey: "lifemap.timeline.filter.type.all" },
-                  { id: "milestone", labelKey: "lifemap.timeline.filter.type.milestones" },
-                  { id: "journal", labelKey: "lifemap.timeline.filter.type.journal" },
-                  { id: "encounter", labelKey: "lifemap.timeline.filter.type.encounters" },
-                ] as const
-              ).map((tab) => (
+              {filterTabs.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
@@ -556,8 +623,8 @@ export default function JourneyTimelinePage() {
         {!loading && filteredEvents.length > 0 && (
           <Timeline orientation="vertical" className="space-y-4">
             {filteredEvents.map((item) => {
-              const typeInfo = typeConfig[item.type];
-              const stateInfo = truthStateConfig[item.truth_state];
+              const typeInfo = typeConfig[item.type] || typeConfig.journal;
+              const stateInfo = truthStateConfig[item.truth_state] || truthStateConfig.confirmed;
               const displayDate =
                 perspective === "valid_time" ? item.occurred_at : item.recorded_at;
 
@@ -580,7 +647,7 @@ export default function JourneyTimelinePage() {
                       {/* Header row */}
                       <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge tone={typeInfo.nodeState === "active" ? "brand" : "neutral"}>
+                          <Badge tone={typeInfo.tone || "neutral"}>
                             {copy(typeInfo.labelKey)}
                           </Badge>
                           <Badge tone={stateInfo.tone}>
@@ -707,20 +774,30 @@ export default function JourneyTimelinePage() {
           <div className="space-y-4 text-sm text-[var(--text-primary)]">
             <div className="grid grid-cols-2 gap-3 p-3 bg-[var(--surface-muted)] rounded-lg font-mono text-xs">
               <div>
-                <span className="text-[var(--text-secondary)] block">Valid Time (Occurred):</span>
+                <span className="text-[var(--text-secondary)] block">
+                  {copy("lifemap.timeline.inspector.validTime")}
+                </span>
                 <span className="font-semibold">{inspectingEvent.occurred_at}</span>
               </div>
               <div>
-                <span className="text-[var(--text-secondary)] block">Transaction Time (Recorded):</span>
+                <span className="text-[var(--text-secondary)] block">
+                  {copy("lifemap.timeline.inspector.transactionTime")}
+                </span>
                 <span className="font-semibold">{inspectingEvent.recorded_at}</span>
               </div>
               <div>
-                <span className="text-[var(--text-secondary)] block">State Version / Revision:</span>
+                <span className="text-[var(--text-secondary)] block">
+                  {copy("lifemap.timeline.inspector.revision")}
+                </span>
                 <span className="font-semibold">Revision #{inspectingEvent.revision}</span>
               </div>
               <div>
-                <span className="text-[var(--text-secondary)] block">Truth Authority:</span>
-                <span className="font-semibold">{inspectingEvent.truth_state}</span>
+                <span className="text-[var(--text-secondary)] block">
+                  {copy("lifemap.timeline.inspector.truthState")}
+                </span>
+                <span className="font-semibold">
+                  {copy(truthStateConfig[inspectingEvent.truth_state]?.labelKey || "lifemap.truth.confirmed")}
+                </span>
               </div>
             </div>
 
@@ -729,13 +806,13 @@ export default function JourneyTimelinePage() {
                 {copy("lifemap.timeline.item.provenance")}
               </h4>
               <p className="text-sm p-3 bg-[var(--surface-panel)] border border-[var(--shell-border)] rounded-lg">
-                <strong>Attribution:</strong> {inspectingEvent.provenance.attribution}
+                <strong>{copy("lifemap.timeline.inspector.attribution")}</strong> {inspectingEvent.provenance.attribution}
                 <br />
-                <strong>Source Kind:</strong> {inspectingEvent.provenance.source_kind}
+                <strong>{copy("lifemap.timeline.inspector.sourceKind")}</strong> {formatSourceKind(inspectingEvent.provenance.source_kind)}
                 {inspectingEvent.provenance.policy_version && (
                   <>
                     <br />
-                    <strong>Policy Version:</strong> {inspectingEvent.provenance.policy_version}
+                    <strong>{copy("lifemap.timeline.inspector.policyVersion")}</strong> {inspectingEvent.provenance.policy_version}
                   </>
                 )}
               </p>
@@ -769,7 +846,7 @@ export default function JourneyTimelinePage() {
               onChange={(e) => setDisputeReason(e.target.value)}
               rows={3}
               required
-              placeholder="Nhập lý do nghi ngờ số liệu sai lệch hoặc mâu thuẫn..."
+              placeholder={copy("lifemap.timeline.dispute.placeholder")}
             />
             <div className="flex justify-end gap-2 pt-3 border-t border-[var(--shell-border)]">
               <Button
@@ -784,7 +861,9 @@ export default function JourneyTimelinePage() {
                 variant="danger"
                 disabled={disputing || !disputeReason.trim()}
               >
-                {disputing ? "Đang gửi..." : copy("lifemap.timeline.item.dispute")}
+                {disputing
+                  ? copy("lifemap.timeline.dispute.submitting")
+                  : copy("lifemap.timeline.item.dispute")}
               </Button>
             </div>
           </form>
@@ -818,7 +897,9 @@ export default function JourneyTimelinePage() {
             >
               <option value="symptom">{copy("lifemap.timeline.journalModal.typeSymptom")}</option>
               <option value="vitals">{copy("lifemap.timeline.journalModal.typeVitals")}</option>
+              <option value="medication">{copy("lifemap.timeline.journalModal.typeMedication")}</option>
               <option value="lifestyle">{copy("lifemap.timeline.journalModal.typeLifestyle")}</option>
+              <option value="report">{copy("lifemap.timeline.journalModal.typeReport")}</option>
             </Select>
 
             <Textarea

@@ -73,68 +73,219 @@ function toMessage(cause: unknown, fallback: string) {
 }
 
 function EvidenceMatrixView({ matrix, language }: { matrix: EvidenceMatrix; language: UILanguage }) {
-  const groups = Object.entries(matrix.source_classes);
-  if (groups.length === 0) {
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  const allGroups = Object.entries(matrix.source_classes);
+  const totalCount = allGroups.reduce((acc, [, records]) => acc + records.length, 0);
+
+  if (allGroups.length === 0) {
     return (
       <div className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4 text-sm leading-6 text-[var(--text-secondary)]">
         {matrix.unavailable_reason ?? t(language, "evidence.matrix.empty")}
       </div>
     );
   }
+
+  const query = searchQuery.trim().toLowerCase();
+  const filteredGroups = allGroups
+    .filter(([sourceClass]) => selectedCategory === "all" || sourceClass === selectedCategory)
+    .map(([sourceClass, records]) => {
+      if (!query) return [sourceClass, records] as const;
+      const matching = records.filter((rec) => {
+        const titleMatch = rec.title?.toLowerCase().includes(query);
+        const excerptMatch = rec.excerpt?.toLowerCase().includes(query);
+        const providerMatch = rec.provider?.toLowerCase().includes(query);
+        const designMatch = rec.study_design?.toLowerCase().includes(query);
+        const idMatch = Object.entries(rec.identifiers || {}).some(
+          ([k, v]) => k.toLowerCase().includes(query) || v.toLowerCase().includes(query)
+        );
+        return titleMatch || excerptMatch || providerMatch || designMatch || idMatch;
+      });
+      return [sourceClass, matching] as const;
+    })
+    .filter(([, records]) => records.length > 0);
+
+  const matchingCount = filteredGroups.reduce((acc, [, records]) => acc + records.length, 0);
+
   return (
-    <div className="space-y-6">
-      {groups.map(([sourceClass, records]) => (
-        <section
-          key={sourceClass}
-          className="overflow-hidden rounded-[var(--radius-xl)] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)]"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 py-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <Icon
-                name={sourceClass === "guideline" ? "clinical-notes" : "search"}
-                className="text-[var(--text-brand)]"
-                aria-hidden="true"
-              />
-              <h3 className="font-semibold text-[var(--text-primary)]">{labelForSourceClass(language, sourceClass)}</h3>
-            </div>
-            <Badge tone="neutral">{t(language, "evidence.matrix.provenance", { count: records.length })}</Badge>
+    <div className="space-y-4">
+      {/* Interactive Search & Category Filter Toolbar */}
+      <div className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="relative min-w-[240px] flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={language === "vi" ? "Tìm theo tiêu đề, DOI, trích dẫn, nguồn..." : "Search by title, DOI, excerpt, provider..."}
+              aria-label={language === "vi" ? "Tìm kiếm trong ma trận bằng chứng" : "Search evidence matrix"}
+              className="focus-ring w-full rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-base)] py-2 pl-9 pr-8 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+            />
+            <span className="pointer-events-none absolute left-3 top-2.5 text-[var(--text-muted)]">
+              <Icon name="search" size={15} aria-hidden="true" />
+            </span>
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                aria-label={language === "vi" ? "Xóa tìm kiếm" : "Clear search"}
+                className="absolute right-2.5 top-2.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              >
+                ✕
+              </button>
+            ) : null}
           </div>
-          <ul className="divide-y divide-[color:var(--shell-border)]">
-            {records.map((record) => (
-              <li key={record.evidence_id} className="px-5 py-5">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium leading-6 text-[var(--text-primary)]">{record.title}</p>
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">
-                      {[record.provider, record.study_design, record.published_at].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                  {record.url ? (
-                    <a
-                      href={record.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="focus-ring inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-brand)] hover:bg-[var(--surface-brand-soft)]"
-                    >
-                      {t(language, "evidence.matrix.openSource")} <Icon name="arrow-right" size={14} aria-hidden="true" />
-                    </a>
-                  ) : null}
+          <span className="text-xs font-medium text-[var(--text-muted)]">
+            {language === "vi"
+              ? `Hiển thị ${matchingCount} / ${totalCount} nguồn`
+              : `Showing ${matchingCount} / ${totalCount} sources`}
+          </span>
+        </div>
+
+        {/* Category Filter Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1" role="tablist" aria-label={language === "vi" ? "Lọc theo loại nguồn" : "Filter by source category"}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectedCategory === "all"}
+            onClick={() => setSelectedCategory("all")}
+            className={`focus-ring rounded-[var(--radius-full)] px-3 py-1 text-xs font-semibold transition ${
+              selectedCategory === "all"
+                ? "bg-[var(--brand-600)] text-white shadow-xs"
+                : "border border-[color:var(--shell-border)] bg-[var(--surface-base)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+            }`}
+          >
+            {language === "vi" ? "Tất cả" : "All"} ({totalCount})
+          </button>
+          {allGroups.map(([sourceClass, records]) => {
+            const isSelected = selectedCategory === sourceClass;
+            return (
+              <button
+                key={sourceClass}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                onClick={() => setSelectedCategory(isSelected ? "all" : sourceClass)}
+                className={`focus-ring rounded-[var(--radius-full)] px-3 py-1 text-xs font-semibold transition ${
+                  isSelected
+                    ? "bg-[var(--brand-600)] text-white shadow-xs"
+                    : "border border-[color:var(--shell-border)] bg-[var(--surface-base)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+                }`}
+              >
+                {labelForSourceClass(language, sourceClass)} ({records.length})
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Empty Filter State */}
+      {filteredGroups.length === 0 ? (
+        <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)]/30 p-8 text-center">
+          <p className="font-semibold text-[var(--text-primary)]">
+            {language === "vi" ? "Không tìm thấy nguồn bằng chứng phù hợp" : "No matching evidence sources found"}
+          </p>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            {language === "vi" ? "Thử thay đổi từ khóa tìm kiếm hoặc chọn danh mục khác." : "Try changing your search terms or selecting another category."}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery("");
+              setSelectedCategory("all");
+            }}
+            className="focus-ring mt-3 inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--surface-base)] border border-[color:var(--shell-border)] px-3 py-1.5 text-xs font-semibold text-[var(--text-brand)] hover:bg-[var(--surface-brand-soft)]"
+          >
+            {language === "vi" ? "Đặt lại bộ lọc" : "Reset filters"}
+          </button>
+        </div>
+      ) : (
+        /* Source Provenance Groups and Cards */
+        <div className="space-y-6">
+          {filteredGroups.map(([sourceClass, records]) => (
+            <section
+              key={sourceClass}
+              className="overflow-hidden rounded-[var(--radius-xl)] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)]"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 py-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Icon
+                    name={sourceClass === "guideline" ? "clinical-notes" : "search"}
+                    className="text-[var(--text-brand)]"
+                    aria-hidden="true"
+                  />
+                  <h3 className="font-semibold text-[var(--text-primary)]">{labelForSourceClass(language, sourceClass)}</h3>
                 </div>
-                {Object.keys(record.identifiers).length ? (
-                  <p className="mt-2 text-xs text-[var(--text-secondary)]">
-                    {Object.entries(record.identifiers).map(([key, value]) => `${key.toUpperCase()}: ${value}`).join(" · ")}
-                  </p>
-                ) : null}
-                {record.excerpt ? (
-                  <blockquote className="mt-4 rounded-[var(--radius-lg)] border-l-2 border-[var(--brand-400)] bg-[var(--surface-base)] px-4 py-3 text-sm leading-6 text-[var(--text-secondary)]">
-                    {record.excerpt}
-                  </blockquote>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+                <Badge tone="neutral">{t(language, "evidence.matrix.provenance", { count: records.length })}</Badge>
+              </div>
+              <ul className="divide-y divide-[color:var(--shell-border)]">
+                {records.map((record) => (
+                  <li key={record.evidence_id} className="px-5 py-5 transition hover:bg-[var(--surface-muted)]/20">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                          <span className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-brand-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--text-brand)]">
+                            {labelForSourceClass(language, record.source_class || sourceClass)}
+                          </span>
+                          {record.study_design ? (
+                            <span className="rounded-[var(--radius-sm)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
+                              {record.study_design}
+                            </span>
+                          ) : null}
+                          {record.published_at ? (
+                            <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                              {record.published_at}
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="font-medium leading-6 text-[var(--text-primary)]">{record.title}</p>
+                        {record.provider ? (
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">
+                            <span className="font-semibold text-[var(--text-secondary)]">{record.provider}</span>
+                          </p>
+                        ) : null}
+                      </div>
+                      {record.url ? (
+                        <a
+                          href={record.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="focus-ring inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-brand)] hover:bg-[var(--surface-brand-soft)]"
+                        >
+                          {t(language, "evidence.matrix.openSource")} <Icon name="arrow-right" size={14} aria-hidden="true" />
+                        </a>
+                      ) : null}
+                    </div>
+
+                    {Object.keys(record.identifiers).length ? (
+                      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                        {Object.entries(record.identifiers).map(([key, value]) => (
+                          <span
+                            key={key}
+                            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-base)] px-2 py-0.5 font-mono text-[11px] text-[var(--text-secondary)]"
+                          >
+                            <span className="font-semibold text-[var(--text-muted)]">{key.toUpperCase()}:</span>
+                            <span>{value}</span>
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {record.excerpt ? (
+                      <blockquote className="mt-3.5 rounded-[var(--radius-lg)] border-l-2 border-[var(--brand-400)] bg-[var(--surface-base)] px-4 py-3 text-sm leading-6 text-[var(--text-secondary)]">
+                        <span className="font-serif text-lg leading-none text-[var(--brand-500)] mr-1.5" aria-hidden="true">“</span>
+                        {record.excerpt}
+                        <span className="font-serif text-lg leading-none text-[var(--brand-500)] ml-1" aria-hidden="true">”</span>
+                      </blockquote>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

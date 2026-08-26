@@ -454,28 +454,76 @@ export default function CouncilResultPage() {
                   <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
                     {language === "vi" ? "Góc nhìn theo từng chuyên khoa" : "Specialist Findings & Perspectives"}
                   </p>
-                  <div className="divide-y divide-[color:var(--shell-border)] rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] overflow-hidden">
-                    {view.details.specialistLogs.map((log, idx) => (
-                      <div key={`${log.specialist}-${idx}`} className="p-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
-                            {log.specialist}
-                          </span>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {view.details.specialistLogs.map((log, idx) => {
+                      const isDissent = /phản biện|dissent|oppose|không đồng thuận/i.test(log.stance || "");
+                      const isQualified = /có điều kiện|qualified|cân nhắc/i.test(log.stance || "");
+                      const stanceBadgeClass = isDissent
+                        ? "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                        : isQualified
+                          ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                          : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+
+                      return (
+                        <div
+                          key={`${log.specialist}-${idx}`}
+                          className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 flex flex-col justify-between"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2 border-b border-[color:var(--shell-border)] pb-2.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
+                                  {log.specialist}
+                                </span>
+                                {log.role && log.role !== log.specialist ? (
+                                  <span className="rounded bg-[var(--surface-panel)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--text-muted)]">
+                                    {log.role}
+                                  </span>
+                                ) : null}
+                              </div>
+                              {log.stance ? (
+                                <span
+                                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${stanceBadgeClass}`}
+                                >
+                                  {log.stance}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                                  <Icon name="check" size={10} />
+                                  {language === "vi" ? "Đồng thuận" : "Consensus"}
+                                </span>
+                              )}
+                            </div>
+
+                            {log.recommendation ? (
+                              <p className="mt-2.5 text-xs font-semibold leading-relaxed text-[var(--text-primary)] bg-[var(--surface-panel)] p-2.5 rounded-lg border border-[color:var(--shell-border)]">
+                                {stripTelemetryLabels(log.recommendation)}
+                              </p>
+                            ) : null}
+
+                            {log.findings && log.findings.length > 0 ? (
+                              <ul className="mt-2.5 list-disc space-y-1 pl-4 text-xs text-[var(--text-secondary)]">
+                                {log.findings.map((f, i) => (
+                                  <li key={i}>{stripTelemetryLabels(f)}</li>
+                                ))}
+                              </ul>
+                            ) : null}
+                          </div>
+
+                          <div className="mt-3 pt-2 border-t border-[color:var(--shell-border)] flex items-center justify-between text-[10px] text-[var(--text-muted)] font-mono">
+                            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
+                              <Icon name="check" size={10} />
+                              FIDES-grounded
+                            </span>
+                            {log.confidence ? (
+                              <span>{(log.confidence * 100).toFixed(0)}% conf</span>
+                            ) : (
+                              <span>Domain ontology</span>
+                            )}
+                          </div>
                         </div>
-                        {log.recommendation ? (
-                          <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
-                            {log.recommendation}
-                          </p>
-                        ) : null}
-                        {log.findings && log.findings.length > 0 ? (
-                          <ul className="mt-2 list-disc space-y-0.5 pl-4 text-xs text-[var(--text-secondary)]">
-                            {log.findings.map((f, i) => (
-                              <li key={i}>{f}</li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : null}
@@ -497,9 +545,16 @@ export default function CouncilResultPage() {
 
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                    {t(language, "council.result.conflictList")}
-                  </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                      {t(language, "council.result.conflictList")}
+                    </p>
+                    {view.summary.conflicts.length > 0 ? (
+                      <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                        {view.summary.conflicts.length} {language === "vi" ? "xung đột" : "conflicts"}
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="mt-2">
                     <CouncilList
                       items={view.summary.conflicts.map(stripTelemetryLabels)}
@@ -509,9 +564,16 @@ export default function CouncilResultPage() {
                 </div>
 
                 <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                    {t(language, "council.result.divergence")}
-                  </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                      {t(language, "council.result.divergence")}
+                    </p>
+                    {view.summary.divergence.length > 0 ? (
+                      <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
+                        {view.summary.divergence.length} {language === "vi" ? "điểm phân kỳ" : "divergent points"}
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="mt-2">
                     <CouncilList
                       items={view.summary.divergence.map(stripTelemetryLabels)}
@@ -653,11 +715,17 @@ export default function CouncilResultPage() {
                             {cite.title}
                           </h4>
                         </div>
-                        {cite.source ? (
-                          <span className="rounded bg-[var(--surface-panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--text-brand)]">
-                            {cite.source}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                            <Icon name="check" size={10} />
+                            <span>FIDES</span>
                           </span>
-                        ) : null}
+                          {cite.source ? (
+                            <span className="rounded bg-[var(--surface-panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--text-brand)]">
+                              {cite.source}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                       {cite.snippet ? (
                         <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">

@@ -16,14 +16,87 @@ export interface LifeMapDemoProps {
 }
 
 /**
- * LifeMapDemo (Landing v7 Signature Product Surface)
+ * Milestone clinical styling metadata helper
+ */
+function getMilestoneMeta(idx: number, lang: "vi" | "en") {
+  switch (idx) {
+    case 0:
+      return {
+        accentColor: "#B42318",
+        bgSoft: "bg-rose-50/80",
+        borderSoft: "border-rose-200",
+        textColor: "text-rose-700",
+        dotColor: "bg-rose-500",
+        glowShadow: "shadow-[0_0_10px_rgba(244,63,94,0.6)]",
+        badge: "bg-[#FEF3F2] text-[#B42318] border-[#FECDCA]",
+        delta: lang === "vi" ? "Mốc khởi đầu • Tháng 4" : "Baseline Onset • April",
+        metric: lang === "vi" ? "Ghi nhận triệu chứng sớm" : "Early Symptom Baseline",
+        causalNote:
+          lang === "vi"
+            ? "Triệu chứng đau đầu vùng chẩm buổi sáng là căn cứ khởi phát để theo dõi chỉ số huyết áp."
+            : "Morning occipital headache logged as the primary baseline trigger for continuous blood pressure monitoring.",
+      };
+    case 1:
+      return {
+        accentColor: "#6941C6",
+        bgSoft: "bg-purple-50/80",
+        borderSoft: "border-purple-200",
+        textColor: "text-purple-700",
+        dotColor: "bg-purple-500",
+        glowShadow: "shadow-[0_0_10px_rgba(168,85,247,0.6)]",
+        badge: "bg-[#F5F3FF] text-[#6941C6] border-[#DDD6FE]",
+        delta: lang === "vi" ? "+30 ngày • Tháng 5" : "+30 Days • May",
+        metric: lang === "vi" ? "Khởi trị Amlodipine 5mg" : "Amlodipine 5mg Daily",
+        causalNote:
+          lang === "vi"
+            ? "Phác đồ được kích hoạt sau khi chỉ số HA vượt ngưỡng 140/90 mmHg; liên kết với dữ liệu tháng 4."
+            : "Pharmacological regimen initiated following clinical BP threshold breach; causally linked to April onset.",
+      };
+    case 2:
+      return {
+        accentColor: "#0E856F",
+        bgSoft: "bg-emerald-50/80",
+        borderSoft: "border-emerald-200",
+        textColor: "text-emerald-700",
+        dotColor: "bg-[#14A88D]",
+        glowShadow: "shadow-[0_0_10px_rgba(20,168,141,0.6)]",
+        badge: "bg-[#ECFDF8] text-[#0E856F] border-[#A6F4C5]",
+        delta: lang === "vi" ? "+60 ngày • Tháng 6" : "+60 Days • June",
+        metric: lang === "vi" ? "HA 125/80 mmHg • Thận học an toàn" : "BP 125/80 mmHg • Renal Panels Normal",
+        causalNote:
+          lang === "vi"
+            ? "Dữ liệu huyết áp và xét nghiệm chức năng thận khẳng định đáp ứng điều trị thuận lợi."
+            : "Lab investigations and blood pressure panels confirm favorable therapeutic response with zero adverse signals.",
+      };
+    case 3:
+    default:
+      return {
+        accentColor: "#0B6FD8",
+        bgSoft: "bg-[#EFF7FF]/90",
+        borderSoft: "border-[#B2DDFF]",
+        textColor: "text-[#0B6FD8]",
+        dotColor: "bg-[#1A86F5]",
+        glowShadow: "shadow-[0_0_12px_rgba(26,134,245,0.85)]",
+        badge: "bg-[#EFF7FF] text-[#0B6FD8] border-[#B2DDFF]",
+        delta: lang === "vi" ? "+90 ngày • Hiện tại" : "+90 Days • Today",
+        metric: lang === "vi" ? "Tham vấn nhịp sinh học & đổi giờ uống" : "Chronotherapy & Shift Dosing Inquiry",
+        causalNote:
+          lang === "vi"
+            ? "Dữ liệu được kết nối trực tiếp với phiên tham vấn dược lý và nhịp sinh học hôm nay."
+            : "Live data correlated with today's pharmacological consultation and circadian schedule adjustment.",
+      };
+  }
+}
+
+/**
+ * LifeMapDemo (Landing v7 Signature Product Surface Peak)
  *
  * Renders CLARA's signature LifeMap spatial canvas:
- * 1. Longitudinal 4-Month Timeline Continuum (April -> May -> June -> Today / Tháng 4 -> Tháng 5 -> Tháng 6 -> Hôm nay)
+ * 1. 4-month longitudinal timeline milestones (Tháng 4 -> Tháng 5 -> Tháng 6 -> Hôm nay / April -> May -> June -> Today)
  * 2. Embedded TemporalRibbon curved SVG spine with glowing gradient flow & stage cards
- * 3. Interactive milestone selection dynamically updating the active clinical detail card with hover lift & glowing node indicators
+ * 3. Interactive milestone cards with hover elevation, glowing node indicators, and smooth detail card transition
  * 4. Radiant TodayBeacon anchor marking the current temporal moment
- * 5. Luminous Floating Context Insight Callout with pulsing icon and interactive action button
+ * 5. Luminous Floating Context Insight Callout with ambient gradient wash, pulsing sparkle badge, and interactive action button
  * 6. Full WCAG 2.1 AA accessibility, keyboard navigation, bilingual support (vi/en), zero TypeScript errors
  */
 export function LifeMapDemo({
@@ -48,11 +121,13 @@ export function LifeMapDemo({
   const [isInsightActionTriggered, setIsInsightActionTriggered] = useState(false);
 
   const handleSelectMilestone = (idx: number) => {
-    setSelectedMilestone(idx);
-    onMilestoneChange?.(idx);
+    const clamped = Math.max(0, Math.min(copy.timeline.length - 1, idx));
+    setSelectedMilestone(clamped);
+    onMilestoneChange?.(clamped);
   };
 
   const currentEvent = copy.timeline[selectedMilestone] || copy.timeline[0];
+  const currentMeta = getMilestoneMeta(selectedMilestone, lang);
 
   return (
     <div
@@ -131,16 +206,21 @@ export function LifeMapDemo({
                 <span className="absolute -inset-0.5 rounded-xl border border-[#0B6FD8]/40 animate-pulse motion-reduce:animate-none" />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#0B6FD8] block">
-                  {lang === "vi" ? "Mốc Dòng Thời Gian Được Chọn" : "Active Timeline Milestone"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#0B6FD8] block">
+                    {lang === "vi" ? "Mốc Dòng Thời Gian Được Chọn" : "Active Timeline Milestone"}
+                  </span>
+                  <span className={`inline-flex items-center rounded-md border px-2 py-0.2 text-[10px] font-semibold ${currentMeta.badge}`}>
+                    {currentMeta.delta}
+                  </span>
+                </div>
                 <h4 className="text-sm sm:text-base font-bold text-[#162033] tracking-tight">
                   {currentEvent.period} • {currentEvent.title}
                 </h4>
               </div>
             </div>
 
-            {/* Quick Step Switcher Tabs with Hover Lift and Glowing Node Dots */}
+            {/* Quick Step Switcher Tabs with Hover Elevation and Glowing Node Indicators */}
             <div
               className="flex items-center gap-1.5 rounded-2xl bg-[#F8FAFD] p-1.5 border border-[#E3E8EF]"
               role="tablist"
@@ -149,29 +229,43 @@ export function LifeMapDemo({
               {copy.timeline.map((evt, idx) => {
                 const isSelected = selectedMilestone === idx;
                 const isToday = idx === 3;
+                const nodeMeta = getMilestoneMeta(idx, lang);
+
                 return (
                   <button
                     key={`quick-tab-${evt.period}-${idx}`}
                     type="button"
                     role="tab"
+                    id={`quick-milestone-tab-${idx}`}
+                    aria-controls={`lifemap-detail-panel-${selectedMilestone}`}
                     aria-selected={isSelected}
+                    aria-label={evt.period}
                     onClick={() => handleSelectMilestone(idx)}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowRight") {
+                        e.preventDefault();
+                        handleSelectMilestone((idx + 1) % copy.timeline.length);
+                      } else if (e.key === "ArrowLeft") {
+                        e.preventDefault();
+                        handleSelectMilestone(
+                          (idx - 1 + copy.timeline.length) % copy.timeline.length
+                        );
+                      }
+                    }}
                     className={`group relative flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all duration-200 clara-focus-ring cursor-pointer ${
                       isSelected
-                        ? "bg-white text-[#0B6FD8] shadow-sm ring-1 ring-[#0B6FD8]/25 -translate-y-0.5"
-                        : "text-[#6D7A8E] hover:text-[#162033] hover:bg-white/80 hover:-translate-y-0.5"
+                        ? "bg-white text-[#0B6FD8] shadow-sm ring-2 ring-[#0B6FD8]/30 -translate-y-0.5"
+                        : "text-[#6D7A8E] hover:text-[#162033] hover:bg-white hover:-translate-y-0.5 hover:shadow-xs"
                     }`}
                   >
                     {/* Glowing Node Indicator */}
                     <span
                       className={`relative flex h-2 w-2 items-center justify-center rounded-full transition-all ${
                         isSelected
-                          ? isToday
-                            ? "bg-[#1A86F5] shadow-[0_0_8px_rgba(26,134,245,0.8)]"
-                            : "bg-[#0B6FD8] shadow-[0_0_8px_rgba(11,111,216,0.8)]"
+                          ? `${nodeMeta.dotColor} ${nodeMeta.glowShadow}`
                           : isToday
-                          ? "bg-[#1A86F5]/50 group-hover:bg-[#1A86F5]"
-                          : "bg-[#94A3B8] group-hover:bg-[#48566A]"
+                          ? "bg-[#1A86F5]/60 group-hover:bg-[#1A86F5]"
+                          : `${nodeMeta.dotColor} opacity-50 group-hover:opacity-100`
                       }`}
                     >
                       {isSelected && (
@@ -187,46 +281,103 @@ export function LifeMapDemo({
 
           {/* Smooth Transition Detail Container */}
           <div
+            id={`lifemap-detail-panel-${selectedMilestone}`}
             key={`detail-body-${selectedMilestone}`}
-            className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-5 items-center transition-all duration-300 animate-fadeIn"
+            className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch transition-all duration-300 animate-fadeIn"
           >
-            <div className="md:col-span-8 space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-lg bg-[#EFF7FF] px-2.5 py-1 text-xs font-semibold text-[#0B6FD8] border border-[#0B6FD8]/20 shadow-2xs">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#0B6FD8]" />
-                  {currentEvent.category}
-                </span>
-                <span className="text-xs text-[#6D7A8E]">
-                  {lang === "vi" ? "Phân loại lâm sàng" : "Clinical Classification"}
-                </span>
+            {/* Left Column: Clinical Description & Event Details */}
+            <div className="md:col-span-8 flex flex-col justify-between space-y-3.5">
+              <div className="space-y-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold border shadow-2xs ${currentMeta.badge}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${currentMeta.dotColor}`} />
+                    {currentEvent.category}
+                  </span>
+                  <span className="text-xs text-[#6D7A8E]">
+                    {lang === "vi" ? "Phân loại lâm sàng" : "Clinical Classification"}
+                  </span>
+                  <span className="text-xs text-[#94A3B8]">•</span>
+                  <span className="text-xs font-medium text-[#48566A]">
+                    {currentMeta.metric}
+                  </span>
+                </div>
+
+                <div className="rounded-2xl bg-[#F8FAFD] p-4 sm:p-5 border border-[#E3E8EF]/90 space-y-2">
+                  <p className="text-xs sm:text-sm text-[#162033] font-medium leading-relaxed">
+                    {currentEvent.detail}
+                  </p>
+                  <p className="text-[11px] text-[#6D7A8E] leading-relaxed italic border-t border-[#E3E8EF]/60 pt-2">
+                    {currentMeta.causalNote}
+                  </p>
+                </div>
               </div>
 
-              <p className="text-xs sm:text-sm text-[#162033] font-medium leading-relaxed bg-[#F8FAFD] p-4 rounded-2xl border border-[#E3E8EF]/80">
-                {currentEvent.detail}
-              </p>
+              {/* Step Navigation Controls (Previous / Next Milestone) */}
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  disabled={selectedMilestone === 0}
+                  onClick={() => handleSelectMilestone(selectedMilestone - 1)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6D7A8E] hover:text-[#0B6FD8] disabled:opacity-35 disabled:cursor-not-allowed transition-colors"
+                >
+                  <span aria-hidden="true">←</span>
+                  <span>{lang === "vi" ? "Mốc trước" : "Previous Milestone"}</span>
+                </button>
+
+                <div className="text-[11px] font-semibold text-[#94A3B8]">
+                  {selectedMilestone + 1} / {copy.timeline.length}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={selectedMilestone === copy.timeline.length - 1}
+                  onClick={() => handleSelectMilestone(selectedMilestone + 1)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6D7A8E] hover:text-[#0B6FD8] disabled:opacity-35 disabled:cursor-not-allowed transition-colors"
+                >
+                  <span>{lang === "vi" ? "Mốc tiếp theo" : "Next Milestone"}</span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              </div>
             </div>
 
-            <div className="md:col-span-4 rounded-2xl bg-gradient-to-br from-[#F8FAFD] to-[#ECFDF8]/40 p-4 border border-[#E3E8EF] space-y-2 text-xs shadow-xs">
-              <div className="flex items-center justify-between text-[11px] font-bold text-[#14A88D]">
-                <span className="flex items-center gap-1.5">
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#ECFDF8] text-[10px] border border-[#14A88D]/30">
-                    ✓
+            {/* Right Column: FIDES Causal Chain Integrity Box */}
+            <div className="md:col-span-4 rounded-2xl bg-gradient-to-br from-[#F8FAFD] via-white to-[#ECFDF8]/40 p-4 sm:p-5 border border-[#E3E8EF] flex flex-col justify-between space-y-3 text-xs shadow-xs">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-[#14A88D]">
+                  <span className="flex items-center gap-1.5">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#ECFDF8] text-[10px] border border-[#14A88D]/30 font-bold">
+                      ✓
+                    </span>
+                    <span>FIDES Causal Chain</span>
                   </span>
-                  <span>FIDES Causal Chain</span>
-                </span>
-                <span className="rounded-full bg-[#ECFDF8] px-2 py-0.5 text-[10px] font-bold text-[#14A88D] border border-[#14A88D]/25 shadow-2xs">
-                  Verified
-                </span>
+                  <span className="rounded-full bg-[#ECFDF8] px-2 py-0.5 text-[10px] font-bold text-[#14A88D] border border-[#14A88D]/25 shadow-2xs">
+                    Verified
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-[#48566A] leading-relaxed">
+                  {selectedMilestone === 3
+                    ? lang === "vi"
+                      ? "Dữ liệu được kết nối trực tiếp với phiên tham vấn dược lý hôm nay."
+                      : "Live data correlated with today's pharmacological consultation."
+                    : lang === "vi"
+                    ? "Sự kiện được lập chỉ mục trong chuỗi nhân quả hồ sơ bệnh án."
+                    : "Event indexed in longitudinal electronic health record timeline."}
+                </p>
               </div>
-              <p className="text-[11px] text-[#48566A] leading-relaxed">
-                {selectedMilestone === 3
-                  ? lang === "vi"
-                    ? "Dữ liệu được kết nối trực tiếp với phiên tham vấn dược lý hôm nay."
-                    : "Live data correlated with today's pharmacological consultation."
-                  : lang === "vi"
-                  ? "Sự kiện được lập chỉ mục trong chuỗi nhân quả hồ sơ bệnh án."
-                  : "Event indexed in longitudinal electronic health record timeline."}
-              </p>
+
+              <div className="rounded-xl bg-white p-3 border border-[#E3E8EF]/80 space-y-1">
+                <div className="flex items-center justify-between text-[10px] font-bold text-[#6D7A8E]">
+                  <span>{lang === "vi" ? "Trạng thái liên kết" : "Linkage Integrity"}</span>
+                  <span className="text-[#14A88D]">100% Validated</span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-[#E3E8EF] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-[#0B6FD8] to-[#14A88D] transition-all duration-500"
+                    style={{ width: `${((selectedMilestone + 1) / copy.timeline.length) * 100}%` }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -237,7 +388,7 @@ export function LifeMapDemo({
       {/* ------------------------------------------------------------------------- */}
       <div
         data-testid="lifemap-insight-callout"
-        className="clara-floating-chrome relative overflow-hidden rounded-3xl p-6 sm:p-8 lg:p-9 border-2 border-[#0B6FD8]/30 shadow-[0_16px_48px_-12px_rgba(11,111,216,0.22)] bg-gradient-to-r from-[#EFF7FF]/95 via-white/95 to-[#ECFDF8]/90 backdrop-blur-md transition-all duration-300 hover:border-[#0B6FD8]/45"
+        className="clara-floating-chrome relative overflow-hidden rounded-3xl p-6 sm:p-8 lg:p-9 border-2 border-[#0B6FD8]/30 shadow-[0_16px_48px_-12px_rgba(11,111,216,0.22)] bg-gradient-to-r from-[#EFF7FF]/95 via-white/95 to-[#ECFDF8]/90 backdrop-blur-xl transition-all duration-300 hover:border-[#0B6FD8]/45"
       >
         {/* Ambient background light flare with subtle pulse */}
         <div

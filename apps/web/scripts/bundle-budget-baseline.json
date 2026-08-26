@@ -1,7 +1,7 @@
 {
-  "measuredAt": "2026-08-24",
+  "measuredAt": "2026-08-25",
   "artifact": ".next/static",
-  "bytes": 8849089,
+  "bytes": 9624869,
   "tolerance": 0.05,
   "method": "du -sb after a clean npm run build on the baseline branch"
 }

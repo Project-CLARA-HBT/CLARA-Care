@@ -5,28 +5,64 @@ import { useMotionTier } from "../runtime/motion-provider";
 import { LANDING_COPY_V7 } from "../landing-copy-v7";
 import { LandingScene } from "../primitives/landing-scene";
 import { SceneHeader } from "../primitives/scene-header";
+import { AmbientField } from "../primitives/ambient-field";
+import { EvidenceRibbon } from "../artwork/evidence-ribbon";
 
+/**
+ * FaqScene (Landing v7)
+ *
+ * Accessible Accordion Disclosure FAQ:
+ * - Real button elements with aria-expanded, aria-controls, role="region", and aria-labelledby.
+ * - Smooth disclosure mechanics, keyboard focus rings, and high contrast typography.
+ */
 export function FaqScene() {
   const { language } = useMotionTier();
   const lang = language === "en" ? "en" : "vi";
   const copy = LANDING_COPY_V7[lang]?.faq ?? LANDING_COPY_V7.vi.faq;
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
+  const faqBadge =
+    lang === "vi"
+      ? "GIẢI ĐÁP MINH BẠCH • FAQ"
+      : "TRANSPARENT ANSWERS • FAQ";
+
   const toggleItem = (index: number) => {
     setOpenIndex((prev) => (prev === index ? null : index));
   };
 
   return (
-    <LandingScene id="faq" scale="standard" tone="canvas">
-      <SceneHeader
-        eyebrow={copy.eyebrow}
-        title={copy.title}
-        description={copy.description}
-        align="center"
-        tone="neutral"
-      />
+    <LandingScene
+      id="faq"
+      scale="standard"
+      tone="canvas"
+      className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-36"
+    >
+      {/* Ambient Lighting Field */}
+      <AmbientField tone="azure" />
 
-      <div className="mx-auto max-w-3xl space-y-3.5">
+      {/* Background Top Transition Ribbon (Handoff from Comparison scene) */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-16 opacity-30 flex items-center justify-center overflow-hidden"
+      >
+        <EvidenceRibbon variant="horizontal" tone="azure" active={true} className="w-full max-w-6xl" />
+      </div>
+
+      {/* Scene Header */}
+      <div className="relative z-10 max-w-4xl mx-auto mb-12 md:mb-16 px-2 sm:px-4">
+        <SceneHeader
+          eyebrow={copy.eyebrow}
+          badge={faqBadge}
+          title={copy.title}
+          description={copy.description}
+          align="center"
+          tone="neutral"
+          className="mb-0"
+        />
+      </div>
+
+      {/* Accordion FAQ Container */}
+      <div className="relative z-10 mx-auto max-w-3xl px-2 sm:px-4 space-y-3.5">
         {copy.items.map((item, index) => {
           const isOpen = openIndex === index;
           const headerId = `faq-header-${index}`;
@@ -48,7 +84,7 @@ export function FaqScene() {
                   aria-expanded={isOpen}
                   aria-controls={panelId}
                   onClick={() => toggleItem(index)}
-                  className="w-full flex items-center justify-between gap-4 p-5 sm:p-6 text-left rounded-2xl text-[#162033] font-semibold text-base sm:text-lg transition-colors clara-focus-ring focus-visible:outline-none"
+                  className="w-full flex items-center justify-between gap-4 p-5 sm:p-6 text-left rounded-2xl text-[#162033] font-semibold text-base sm:text-lg transition-colors clara-focus-ring focus-visible:outline-none cursor-pointer"
                 >
                   <span className="leading-snug">{item.question}</span>
                   <span
@@ -91,6 +127,14 @@ export function FaqScene() {
             </div>
           );
         })}
+      </div>
+
+      {/* Transition Ribbon Flowing toward CTA Scene */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-10 left-1/2 -translate-x-1/2 w-full max-w-2xl opacity-50 hidden md:block"
+      >
+        <EvidenceRibbon variant="curved" tone="azure" active={true} className="h-20 w-full" />
       </div>
     </LandingScene>
   );

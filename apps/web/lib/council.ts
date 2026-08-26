@@ -42,9 +42,11 @@ export type CouncilIntakeResult = {
   };
 };
 
-/** Clinician-facing specialist conclusion; never a model reasoning trace. */
 export type CouncilSpecialistSummary = {
   specialist: string;
+  role?: string;
+  stance?: string;
+  confidence?: number | null;
   findings: string[];
   recommendation?: string;
 };
@@ -246,10 +248,14 @@ function parseSpecialistSummary(value: unknown, fallbackSpecialist?: string): Co
     fallbackSpecialist ??
     "Specialist";
 
+  const role = asText(record.role) ?? asText(record.id);
+  const stance = asText(record.stance) ?? asText(record.vote) ?? asText(record.agreement) ?? asText(record.status);
+  const confidence = parseNumber(record.confidence);
+
   // Do not accept free-text fields such as `reasoning`, `rationale`, `log`,
   // or legacy `reasoning_log`. Those fields can contain implementation traces
   // or a model's private reasoning. Only render stable, structured findings.
-  const findings = parseTextList(record.key_findings ?? record.supported_findings)
+  const findings = parseTextList(record.key_findings ?? record.supported_findings ?? record.findings)
     .slice(0, 10);
 
   const recommendation =
@@ -262,6 +268,9 @@ function parseSpecialistSummary(value: unknown, fallbackSpecialist?: string): Co
 
   return {
     specialist,
+    role,
+    stance,
+    confidence,
     findings,
     recommendation,
   };

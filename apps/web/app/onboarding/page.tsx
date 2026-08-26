@@ -120,6 +120,21 @@ export default function OnboardingPage() {
       setPhrError("Vui lòng tích xác nhận thông tin sức khỏe là do bạn tự khai.");
       return;
     }
+
+    if (action === "complete") {
+      const parsedHeight = heightCm.trim() ? parseNumber(heightCm) : null;
+      const parsedWeight = weightKg.trim() ? parseNumber(weightKg) : null;
+
+      if (heightCm.trim() && (parsedHeight === null || parsedHeight < 0 || parsedHeight > 300)) {
+        setPhrError("Chiều cao không hợp lệ. Vui lòng nhập số từ 0 đến 300 cm.");
+        return;
+      }
+      if (weightKg.trim() && (parsedWeight === null || parsedWeight < 0 || parsedWeight > 800)) {
+        setPhrError("Cân nặng không hợp lệ. Vui lòng nhập số từ 0 đến 800 kg.");
+        return;
+      }
+    }
+
     setIsPhrSaving(true);
     setPhrError("");
     try {
@@ -141,6 +156,7 @@ export default function OnboardingPage() {
       setPhrOnboarding(result);
       setPersonalSetupSaved(true);
       router.replace(getRoleHomePath(role));
+      router.refresh();
     } catch {
       setPhrError("Không thể lưu thông tin hồ sơ sức khỏe. Vui lòng thử lại.");
     } finally {
@@ -345,6 +361,7 @@ export default function OnboardingPage() {
             <Field
               label="Họ và tên"
               optional
+              maxLength={100}
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="VD: Nguyễn Văn A"
@@ -355,6 +372,7 @@ export default function OnboardingPage() {
                 label="Ngày sinh"
                 optional
                 type="date"
+                max={new Date().toISOString().split("T")[0]}
                 value={dateOfBirth}
                 onChange={(e) => setDateOfBirth(e.target.value)}
               />

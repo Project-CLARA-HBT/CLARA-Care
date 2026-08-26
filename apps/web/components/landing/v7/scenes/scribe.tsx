@@ -6,6 +6,7 @@ import { LANDING_COPY_V7 } from "../landing-copy-v7";
 import { LandingScene } from "../primitives/landing-scene";
 import { SceneHeader } from "../primitives/scene-header";
 import { SpatialStage } from "../primitives/spatial-stage";
+import { AmbientField } from "../primitives/ambient-field";
 import { ScribeDemo } from "../demo/scribe-demo";
 import { EvidenceRibbon } from "../artwork/evidence-ribbon";
 import { FloatingMetadata } from "../primitives/floating-metadata";
@@ -17,7 +18,7 @@ import { FloatingMetadata } from "../primitives/floating-metadata";
  * - 5-Step Pipeline: Consent ➔ Acoustic Capture (CaptureWave) ➔ Clinical NLP ➔ Structured SOAP Note ➔ Physician Sign-Off.
  * - Bilingual Vietnamese-English medical term normalization.
  * - Zero-CoT privacy boundary with end-to-end encryption.
- * - Spatial product stage wrapping ScribeDemo with floating metadata and continuous transitions.
+ * - Ambient lighting field, spatial product stage wrapping ScribeDemo with floating metadata and continuous transitions.
  */
 export function ScribeScene() {
   const { language, isEnhanced } = useMotionTier();
@@ -48,6 +49,9 @@ export function ScribeScene() {
       tone="mint"
       className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-36"
     >
+      {/* Ambient Lighting Field */}
+      <AmbientField tone="mint" />
+
       {/* Background Top Transition Ribbon (Handoff from Council scene) */}
       <div
         aria-hidden="true"

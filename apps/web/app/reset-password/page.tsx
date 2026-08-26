@@ -10,6 +10,21 @@ import { t } from "@/lib/i18n/catalog";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 import { useUILanguage } from "@/lib/use-ui-language";
 
+function getPasswordValidationError(password: string, language: string): string | null {
+  if (password.length < 8) {
+    return t(language as any, "auth.register.passwordTooShort");
+  }
+  if (password !== password.trim()) {
+    return t(language as any, "auth.register.passwordWhitespace");
+  }
+  const hasAlpha = /[A-Za-z]/.test(password);
+  const hasDigit = /\d/.test(password);
+  if (!hasAlpha || !hasDigit) {
+    return t(language as any, "auth.register.passwordRequirements");
+  }
+  return null;
+}
+
 export default function ResetPasswordPage() {
   const language = useUILanguage();
   const [token, setToken] = useState("");
@@ -27,11 +42,24 @@ export default function ResetPasswordPage() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setIsSubmitting(true);
     setNotice("");
     setError("");
+
+    const cleanToken = token.trim();
+    if (!cleanToken) {
+      setError(language === "vi" ? "Vui lòng nhập mã đặt lại mật khẩu." : "Please enter the password reset token.");
+      return;
+    }
+
+    const passwordError = getPasswordValidationError(newPassword, language);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      await api.post("/auth/reset-password", { token, new_password: newPassword });
+      await api.post("/auth/reset-password", { token: cleanToken, new_password: newPassword });
       setNotice(t(language, "auth.passwordReset.success"));
     } catch (cause) {
       setError(safeUserFacingError(cause, t(language, "auth.passwordReset.error")));
@@ -60,17 +88,22 @@ export default function ResetPasswordPage() {
           required
         />
 
-        <Field
-          id="reset-new-password"
-          label={t(language, "auth.passwordReset.newPassword")}
-          type="password"
-          value={newPassword}
-          onChange={(event) => setNewPassword(event.target.value)}
-          placeholder={t(language, "auth.register.passwordPlaceholder")}
-          autoComplete="new-password"
-          minLength={8}
-          required
-        />
+        <div className="space-y-1.5">
+          <Field
+            id="reset-new-password"
+            label={t(language, "auth.passwordReset.newPassword")}
+            type="password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            placeholder={t(language, "auth.register.passwordPlaceholder")}
+            autoComplete="new-password"
+            minLength={8}
+            required
+          />
+          <p className="text-xs text-[var(--text-secondary)]">
+            {t(language, "auth.register.passwordHint")}
+          </p>
+        </div>
 
         {notice ? (
           <p

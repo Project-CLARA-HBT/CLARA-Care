@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import EvidenceRibbonDefault, {
   EvidenceRibbon,
+  TONE_CONFIG,
   type EvidenceRibbonProps,
 } from "./evidence-ribbon";
 
@@ -26,6 +27,7 @@ describe("EvidenceRibbon Artwork Component (Landing v7)", () => {
     const svg = container.querySelector("svg");
     expect(svg).toBeInTheDocument();
     expect(svg).toHaveAttribute("aria-hidden", "true");
+    expect(svg).toHaveAttribute("focusable", "false");
     expect(svg).toHaveAttribute("viewBox", "0 0 480 100");
   });
 
@@ -61,6 +63,10 @@ describe("EvidenceRibbon Artwork Component (Landing v7)", () => {
 
     const linearGradients = container.querySelectorAll("linearGradient");
     expect(linearGradients.length).toBeGreaterThan(0);
+
+    const config = TONE_CONFIG[tone];
+    expect(config.glowColor).toBeTruthy();
+    expect(config.lightHeadStop).toBe("#FFFFFF");
   });
 
   it("handles active state toggle and ribbon path classes", () => {
@@ -78,10 +84,54 @@ describe("EvidenceRibbon Artwork Component (Landing v7)", () => {
     expect(ribbonPaths.length).toBeGreaterThan(0);
   });
 
-  it("contains anchor node and destination source beacon", () => {
+  it("contains anchor node, waypoint bridge, and destination source beacon", () => {
     const { container } = render(<EvidenceRibbon variant="horizontal" active={true} />);
     expect(container.querySelector("#claim-anchor-node")).toBeInTheDocument();
     expect(container.querySelector("#waypoint-bridge-node")).toBeInTheDocument();
+    expect(container.querySelector("#source-beacon-node")).toBeInTheDocument();
+  });
+
+  it("includes SVG filter with glowing drop shadow and feDropShadow primitive", () => {
+    const { container } = render(<EvidenceRibbon active={true} tone="azure" />);
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.style.filter).toContain("drop-shadow(0 0 8px rgba(14, 165, 233, 0.4))");
+
+    const feDropShadow = container.querySelector("feDropShadow");
+    expect(feDropShadow).toBeInTheDocument();
+    expect(feDropShadow?.getAttribute("flood-color")).toBe("rgba(14, 165, 233, 0.4)");
+  });
+
+  it("renders traveling gradient light head in Enhanced and Standard tiers", () => {
+    const { container } = render(
+      <EvidenceRibbon active={true} motionTier="enhanced" variant="horizontal" />
+    );
+    const gradHead = container.querySelector("linearGradient[id^='ribbon-grad-head-']");
+    expect(gradHead).toBeInTheDocument();
+
+    const ribbonPaths = container.querySelectorAll(".clara-ribbon-path");
+    expect(ribbonPaths.length).toBeGreaterThan(0);
+  });
+
+  it("degrades gracefully to static clean gradient path in Lite or Reduced motion tiers", () => {
+    const { container } = render(
+      <EvidenceRibbon active={true} motionTier="lite" variant="horizontal" />
+    );
+    const root = container.firstElementChild as HTMLElement;
+    expect(root).toHaveAttribute("data-motion-tier", "lite");
+
+    // In Lite tier, active animated dash paths are disabled in favor of static clean path
+    const animatedPaths = container.querySelectorAll(".clara-ribbon-path");
+    expect(animatedPaths.length).toBe(0);
+
+    const staticPaths = container.querySelectorAll("path");
+    expect(staticPaths.length).toBeGreaterThan(0);
+  });
+
+  it("renders connector variant with intake nodes and convergence hub", () => {
+    const { container } = render(<EvidenceRibbon variant="connector" active={true} />);
+    expect(container.querySelector("#claim-anchor-node-top")).toBeInTheDocument();
+    expect(container.querySelector("#claim-anchor-node-bottom")).toBeInTheDocument();
+    expect(container.querySelector("#convergence-hub-node")).toBeInTheDocument();
     expect(container.querySelector("#source-beacon-node")).toBeInTheDocument();
   });
 });

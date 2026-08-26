@@ -32,9 +32,16 @@ export default function VerifyEmailPage() {
     event.preventDefault();
     setNotice("");
     setError("");
+
+    const cleanToken = token.trim();
+    if (!cleanToken) {
+      setError(language === "vi" ? "Vui lòng nhập mã xác thực." : "Please enter the verification code.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await api.post("/auth/verify-email", { token });
+      await api.post("/auth/verify-email", { token: cleanToken });
       setNotice(t(language, "auth.verify.success"));
     } catch (cause) {
       setError(safeUserFacingError(cause, t(language, "auth.verify.error")));
@@ -47,9 +54,16 @@ export default function VerifyEmailPage() {
     event.preventDefault();
     setNotice("");
     setError("");
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setError(language === "vi" ? "Vui lòng nhập email tài khoản để gửi lại mã." : "Please enter your account email to resend code.");
+      return;
+    }
+
     setIsResending(true);
     try {
-      const response = await api.post("/auth/resend-verification", { email });
+      const response = await api.post("/auth/resend-verification", { email: cleanEmail });
       const tokenPreview = response.data?.verification_token_preview as string | undefined;
       const deliveryStatus = (response.data?.email_delivery_status as string | undefined) ?? "";
       if (tokenPreview) {

@@ -6,6 +6,7 @@ import { LANDING_COPY_V7 } from "../landing-copy-v7";
 import { LandingScene } from "../primitives/landing-scene";
 import { SceneHeader } from "../primitives/scene-header";
 import { SpatialStage } from "../primitives/spatial-stage";
+import { AmbientField } from "../primitives/ambient-field";
 import { PermissionGate } from "../artwork/permission-gate";
 import { EvidenceRibbon } from "../artwork/evidence-ribbon";
 import { FloatingMetadata } from "../primitives/floating-metadata";
@@ -82,6 +83,9 @@ export function PrivacyScene() {
       tone="canvas"
       className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-36"
     >
+      {/* Ambient Lighting Field */}
+      <AmbientField tone="azure" />
+
       {/* Background Top Transition Ribbon (Handoff from Safety scene) */}
       <div
         aria-hidden="true"
@@ -240,3 +244,4 @@ export function PrivacyScene() {
 }
 
 export default PrivacyScene;
+

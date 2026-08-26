@@ -132,6 +132,7 @@ export default function YouProfilePage() {
       });
 
       setSaveSuccess(true);
+      void refetch();
     } catch {
       setSaveError(
         isEn
@@ -472,6 +473,36 @@ export default function YouProfilePage() {
                 >
                   {isEn ? "Add" : "Thêm"}
                 </Button>
+              </div>
+
+              {/* Quick Suggestion Tags */}
+              <div className="pt-2">
+                <span className="text-[11px] font-semibold text-[var(--text-secondary)] block mb-1.5">
+                  {isEn ? "Suggested Common Alerts:" : "Gợi ý cảnh báo phổ biến:"}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    isEn ? "Severe Penicillin Allergy" : "Dị ứng nặng Penicillin",
+                    isEn ? "Pacemaker Implanted" : "Mang máy tạo nhịp tim",
+                    isEn ? "Type 2 Diabetes" : "Đái tháo đường Type 2",
+                    isEn ? "Severe Asthma" : "Hen suyễn nặng",
+                    isEn ? "Bleeding Disorder" : "Rối loạn đông máu",
+                  ].map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => {
+                        if (!medicalAlerts.includes(suggestion)) {
+                          setMedicalAlerts([...medicalAlerts, suggestion]);
+                        }
+                      }}
+                      className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] hover:bg-[var(--surface-hover)] px-2.5 py-0.5 text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition"
+                      data-testid={`suggested-alert-${suggestion}`}
+                    >
+                      + {suggestion}
+                    </button>
+                  ))}
+                </div>
               </div>
             </section>
           </div>

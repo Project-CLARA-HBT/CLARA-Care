@@ -4,6 +4,8 @@ import React from "react";
 import { useMotionTier } from "../runtime/motion-provider";
 import { LANDING_COPY_V7 } from "../landing-copy-v7";
 import { LandingScene } from "../primitives/landing-scene";
+import { RevealGroup } from "../primitives/reveal-group";
+import { Reveal } from "../primitives/reveal";
 import { ClaraOrb } from "../artwork/clara-orb";
 
 /**
@@ -47,36 +49,46 @@ export function ClinicalTransitionScene() {
       />
 
       <div className="relative z-10 max-w-3xl mx-auto text-center px-4 space-y-6">
-        {/* Soft Eyebrow with Ambient Orb */}
-        <div className="inline-flex items-center gap-2.5 rounded-full bg-white/80 px-4 py-1.5 border border-[#14A88D]/20 shadow-xs backdrop-blur-xs">
-          <ClaraOrb size="sm" tone="mint" pulse={!isReducedMotion} />
-          <span className="text-xs font-extrabold uppercase tracking-widest text-[#0E856F]">
-            {copy.eyebrow}
-          </span>
-        </div>
+        <RevealGroup staggerMs={80}>
+          {/* Soft Eyebrow with Ambient Orb */}
+          <Reveal delayMs={0} direction="up">
+            <div className="inline-flex items-center gap-2.5 rounded-full bg-white/80 px-4 py-1.5 border border-[#14A88D]/20 shadow-xs backdrop-blur-xs">
+              <ClaraOrb size="sm" tone="mint" pulse={!isReducedMotion} />
+              <span className="text-xs font-extrabold uppercase tracking-widest text-[#0E856F]">
+                {copy.eyebrow}
+              </span>
+            </div>
+          </Reveal>
 
-        {/* Intentional Quiet Editorial Headline */}
-        <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-[#162033] leading-[1.15] whitespace-pre-line">
-          {copy.headline}
-        </h2>
+          {/* Intentional Quiet Editorial Headline */}
+          <Reveal delayMs={40} direction="up">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-[#162033] leading-[1.15] whitespace-pre-line">
+              {copy.headline}
+            </h2>
+          </Reveal>
 
-        {/* Subheadline */}
-        <p className="text-base sm:text-lg text-[#48566A] max-w-2xl mx-auto leading-relaxed font-medium">
-          {copy.subheadline}
-        </p>
+          {/* Subheadline */}
+          <Reveal delayMs={80} direction="up">
+            <p className="text-base sm:text-lg text-[#48566A] max-w-2xl mx-auto leading-relaxed font-medium">
+              {copy.subheadline}
+            </p>
+          </Reveal>
 
-        {/* Specialty Thread Origin Indicators */}
-        <div className="flex flex-wrap items-center justify-center gap-4 pt-2 text-xs text-[#6D7A8E]">
-          {specialtyTokens.map((spec) => (
-            <span
-              key={spec.name}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 border border-[#E3E8EF] shadow-2xs font-semibold"
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${spec.dot}`} />
-              <span className="text-[#162033]">{spec.name}</span>
-            </span>
-          ))}
-        </div>
+          {/* Specialty Thread Origin Indicators */}
+          <Reveal delayMs={120} direction="up">
+            <div className="flex flex-wrap items-center justify-center gap-4 pt-2 text-xs text-[#6D7A8E]">
+              {specialtyTokens.map((spec) => (
+                <span
+                  key={spec.name}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 border border-[#E3E8EF] shadow-2xs font-semibold hover:border-[#14A88D]/30 transition-colors"
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${spec.dot}`} />
+                  <span className="text-[#162033]">{spec.name}</span>
+                </span>
+              ))}
+            </div>
+          </Reveal>
+        </RevealGroup>
 
         {/* Beginning of DecisionField Convergence Thread (SVG Spine flowing into Council) */}
         <div className="pt-6 flex justify-center" aria-hidden="true">
@@ -120,5 +132,8 @@ export function ClinicalTransitionScene() {
     </LandingScene>
   );
 }
+
+// Named alias for backward compatibility
+export const ClinicalTransition = ClinicalTransitionScene;
 
 export default ClinicalTransitionScene;

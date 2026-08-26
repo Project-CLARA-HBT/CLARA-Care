@@ -378,7 +378,9 @@
 @keyframes clara-wave-bar-7 { 0%, 100% { height: 24px; transform: scaleY(0.85); } 50% { height: 58px; transform: scaleY(1.3); } }
 @keyframes clara-wave-bar-8 { 0%, 100% { height: 12px; transform: scaleY(0.7); } 50% { height: 36px; transform: scaleY(1.15); } }
 @keyframes clara-wave-bar-9 { 0%, 100% { height: 20px; transform: scaleY(0.8); } 50% { height: 48px; transform: scaleY(1.25); } }
-@keyframes clara-wave-bar-10 { 0%, 100% { height: 8px; transform: scaleY(0.7); } 50% { height: 26px; transform: scaleY(1.1); } }
+@keyframes clara-wave-bar-10 { 0%, 100% { height: 14px; transform: scaleY(0.75); } 50% { height: 38px; transform: scaleY(1.18); } }
+@keyframes clara-wave-bar-11 { 0%, 100% { height: 16px; transform: scaleY(0.8); } 50% { height: 42px; transform: scaleY(1.22); } }
+@keyframes clara-wave-bar-12 { 0%, 100% { height: 8px; transform: scaleY(0.7); } 50% { height: 24px; transform: scaleY(1.1); } }
 
 .clara-wave-equalizer {
   display: flex;
@@ -396,6 +398,8 @@
 .clara-wave-8 { animation: clara-wave-bar-8 1.48s var(--v7-ease-inout) infinite 0.46s; transform-origin: bottom center; will-change: height, transform; }
 .clara-wave-9 { animation: clara-wave-bar-9 1.32s var(--v7-ease-inout) infinite 0.16s; transform-origin: bottom center; will-change: height, transform; }
 .clara-wave-10 { animation: clara-wave-bar-10 1.52s var(--v7-ease-inout) infinite 0.38s; transform-origin: bottom center; will-change: height, transform; }
+.clara-wave-11 { animation: clara-wave-bar-11 1.36s var(--v7-ease-inout) infinite 0.24s; transform-origin: bottom center; will-change: height, transform; }
+.clara-wave-12 { animation: clara-wave-bar-12 1.44s var(--v7-ease-inout) infinite 0.44s; transform-origin: bottom center; will-change: height, transform; }
 
 /* 7. Aura Breathe: Ambient atmospheric aura slow breathe (Azure, Mint, Iris) */
 @keyframes clara-aura-breathe {
@@ -527,7 +531,9 @@
   .clara-wave-7,
   .clara-wave-8,
   .clara-wave-9,
-  .clara-wave-10 {
+  .clara-wave-10,
+  .clara-wave-11,
+  .clara-wave-12 {
     animation: none !important;
     transform: none !important;
     height: 16px !important;

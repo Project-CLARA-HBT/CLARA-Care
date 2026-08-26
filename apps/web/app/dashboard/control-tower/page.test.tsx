@@ -10,6 +10,10 @@ vi.mock("@/lib/use-ui-language", () => ({
 vi.mock("@/lib/system", () => ({
   getControlTowerConfig: vi.fn(),
   updateControlTowerConfig: vi.fn(),
+  getSystemMetrics: vi.fn(async () => ({})),
+  getSystemDependencies: vi.fn(async () => ({})),
+  normalizeSystemMetrics: vi.fn(() => ({ requestCount: 100, avgLatencyMs: 45, errorCount: 0 })),
+  normalizeSystemDependencies: vi.fn(() => ({ mlReachable: true, mlStatus: "reachable" })),
 }));
 
 const mockConfig = {
@@ -82,6 +86,12 @@ describe("ControlTowerPage (/dashboard/control-tower)", () => {
     expect(screen.getByText("Role Router")).toBeInTheDocument();
     expect(screen.getByText("Intent Router")).toBeInTheDocument();
     expect(screen.getByText("Rule Verification")).toBeInTheDocument();
+
+    // Real-time Service Telemetry & Status strip
+    expect(screen.getByText(/ML Service \(DeepSeek\):/i)).toBeInTheDocument();
+    expect(screen.getByText(/Độ trễ trung bình/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tỷ lệ lỗi/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Làm mới/i })).toBeInTheDocument();
   });
 
   it("allows toggling sources and saving updated configuration", async () => {

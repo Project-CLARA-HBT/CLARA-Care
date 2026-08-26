@@ -8,6 +8,8 @@ export type CouncilCitation = {
   url?: string;
   snippet?: string;
   publishedAt?: string;
+  fidesVerified?: boolean;
+  evidenceStrength?: number | null;
 };
 
 export type CouncilDeepDiveSection = {
@@ -201,7 +203,7 @@ function parseCitation(value: unknown): CouncilCitation | null {
   if (typeof value === "string") {
     const text = value.trim();
     if (!text) return null;
-    return { title: text };
+    return { title: text, fidesVerified: true };
   }
 
   const record = asRecord(value);
@@ -232,6 +234,9 @@ function parseCitation(value: unknown): CouncilCitation | null {
     asText(record.publishedAt) ??
     asText(record.date) ??
     asText(record.year);
+  const fidesVerified = record.fides_verified !== false && record.fidesVerified !== false;
+  const rawStrength = record.evidence_strength ?? record.evidenceStrength ?? record.strength;
+  const evidenceStrength = typeof rawStrength === "number" && Number.isFinite(rawStrength) ? rawStrength : null;
 
   return {
     title,
@@ -239,6 +244,8 @@ function parseCitation(value: unknown): CouncilCitation | null {
     url,
     snippet,
     publishedAt,
+    fidesVerified,
+    evidenceStrength,
   };
 }
 

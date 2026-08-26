@@ -5,24 +5,60 @@ import { useMotionTier } from "../runtime/motion-provider";
 import { LANDING_COPY_V7 } from "../landing-copy-v7";
 import { LandingScene } from "../primitives/landing-scene";
 import { SceneHeader } from "../primitives/scene-header";
+import { AmbientField } from "../primitives/ambient-field";
+import { EvidenceRibbon } from "../artwork/evidence-ribbon";
 
+/**
+ * ComparisonScene (Landing v7)
+ *
+ * Multi-Tier Safety & Architectural Comparison:
+ * - Generic AI Chatbot (Ungrounded, direct unverified generation, no clinical constraints).
+ * - CLARA Care Pipeline (7 Governed Multi-Agent Layers: Triage -> PHR Grounding -> RAG -> FIDES DDI Verification -> Synthesis -> LifeMap Commit).
+ */
 export function ComparisonScene() {
   const { language } = useMotionTier();
   const lang = language === "en" ? "en" : "vi";
   const copy = LANDING_COPY_V7[lang]?.comparison ?? LANDING_COPY_V7.vi.comparison;
 
-  return (
-    <LandingScene id="comparison" scale="standard" tone="canvas">
-      <SceneHeader
-        eyebrow={copy.eyebrow}
-        title={copy.title}
-        description={copy.description}
-        align="center"
-        tone="azure"
-      />
+  const comparisonBadge =
+    lang === "vi"
+      ? "KIẾN TRÚC PHÂN TẦNG • FIDES VS GENERIC AI"
+      : "GOVERNED ARCHITECTURE • FIDES VS GENERIC AI";
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch max-w-6xl mx-auto">
-        {/* Left: Generic Chatbot Column */}
+  return (
+    <LandingScene
+      id="comparison"
+      scale="standard"
+      tone="canvas"
+      className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-36"
+    >
+      {/* Ambient Lighting Field */}
+      <AmbientField tone="azure" />
+
+      {/* Background Top Transition Ribbon (Handoff from Scenarios scene) */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-16 opacity-30 flex items-center justify-center overflow-hidden"
+      >
+        <EvidenceRibbon variant="horizontal" tone="azure" active={true} className="w-full max-w-6xl" />
+      </div>
+
+      {/* Scene Header */}
+      <div className="relative z-10 max-w-4xl mx-auto mb-12 md:mb-16 px-2 sm:px-4">
+        <SceneHeader
+          eyebrow={copy.eyebrow}
+          badge={comparisonBadge}
+          title={copy.title}
+          description={copy.description}
+          align="center"
+          tone="azure"
+          className="mb-0"
+        />
+      </div>
+
+      {/* Main Multi-Tier Comparison Grid */}
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch max-w-6xl mx-auto px-2 sm:px-4">
+        {/* Left: Generic Chatbot Column (5 Cols) */}
         <div className="lg:col-span-5 rounded-3xl bg-white border border-[#E3E8EF] p-6 sm:p-8 flex flex-col justify-between shadow-xs text-left">
           <div>
             <div className="flex items-center justify-between border-b border-[#E3E8EF] pb-4 mb-6">
@@ -76,7 +112,7 @@ export function ComparisonScene() {
                     </div>
 
                     {!isLast && (
-                      <div className="flex justify-center py-0.5">
+                      <div className="flex justify-center py-0.5" aria-hidden="true">
                         <span className="text-xs font-bold text-[#CBD5E1]">↓</span>
                       </div>
                     )}
@@ -101,7 +137,7 @@ export function ComparisonScene() {
           </div>
         </div>
 
-        {/* Right: CLARA Care System Column */}
+        {/* Right: CLARA Care System Column (7 Cols) */}
         <div className="lg:col-span-7 rounded-3xl bg-white border-2 border-[#0B6FD8] p-6 sm:p-8 flex flex-col justify-between shadow-xl text-left relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#0B6FD8]/5 rounded-bl-full pointer-events-none" />
 
@@ -163,6 +199,14 @@ export function ComparisonScene() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Transition Ribbon Flowing toward FAQ Scene */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-10 left-1/2 -translate-x-1/2 w-full max-w-2xl opacity-50 hidden md:block"
+      >
+        <EvidenceRibbon variant="curved" tone="azure" active={true} className="h-20 w-full" />
       </div>
     </LandingScene>
   );

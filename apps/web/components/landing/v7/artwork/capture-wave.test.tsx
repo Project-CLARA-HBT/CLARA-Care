@@ -41,27 +41,27 @@ describe("CaptureWave Artwork Component (Landing v7 Scribe Transformation)", () 
     expect(container.firstElementChild).toHaveStyle({ opacity: "0.95" });
   });
 
-  it("renders subtle 8-12 bar audio waveform (10 bars) during recording", () => {
+  it("renders 12-bar acoustic soundwave visualizer with glowing mic aura during recording", () => {
     const { container } = render(<CaptureWave state="recording" isRecording={true} />);
     const spectrumBars = container.querySelector("#acoustic-spectrum-bars");
     expect(spectrumBars).toBeInTheDocument();
 
-    // Verify 10 spectrum bars in SVG
+    // Verify 12 spectrum bars in SVG
     const barNodes = spectrumBars?.querySelectorAll('g[id^="bar-"]');
-    expect(barNodes?.length).toBe(10);
-    expect(barNodes?.length).toBeGreaterThanOrEqual(8);
-    expect(barNodes?.length).toBeLessThanOrEqual(12);
+    expect(barNodes?.length).toBe(12);
 
     // Verify frequency labels
+    expect(screen.getByText("64Hz")).toBeInTheDocument();
     expect(screen.getByText("125Hz")).toBeInTheDocument();
     expect(screen.getByText("1kHz")).toBeInTheDocument();
     expect(screen.getByText("8kHz")).toBeInTheDocument();
     expect(screen.getByText("20kHz")).toBeInTheDocument();
+    expect(screen.getByText("24kHz")).toBeInTheDocument();
 
     // Verify bottom equalizer micro-bars
     const bottomBarContainer = container.querySelector('div[aria-hidden="true"]');
     const bottomBars = bottomBarContainer?.querySelectorAll("span");
-    expect(bottomBars?.length).toBe(10);
+    expect(bottomBars?.length).toBe(12);
   });
 
   it("renders document transformation fold guide during SOAP drafting", () => {

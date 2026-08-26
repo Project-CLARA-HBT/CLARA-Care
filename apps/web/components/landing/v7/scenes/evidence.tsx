@@ -6,6 +6,7 @@ import { LANDING_COPY_V7 } from "../landing-copy-v7";
 import { LandingScene } from "../primitives/landing-scene";
 import { SceneHeader } from "../primitives/scene-header";
 import { SpatialStage } from "../primitives/spatial-stage";
+import { AmbientField } from "../primitives/ambient-field";
 import { EvidenceDemo } from "../demo/evidence-demo";
 import { EvidenceRibbon } from "../artwork/evidence-ribbon";
 import { FloatingMetadata } from "../primitives/floating-metadata";
@@ -19,6 +20,7 @@ import { FloatingMetadata } from "../primitives/floating-metadata";
  * - Optical SourceLens aperture focusing on selected authority weights.
  * - FIDES verified citation grounding with transparent limitation warnings.
  * - Editorial Statement: "Không phải mọi nguồn đều có trọng lượng như nhau."
+ * - Ambient lighting field, spatial product stage with floating metadata and continuous transitions.
  */
 export function EvidenceScene() {
   const { language, isEnhanced } = useMotionTier();
@@ -47,6 +49,9 @@ export function EvidenceScene() {
       tone="iris"
       className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-36"
     >
+      {/* Ambient Lighting Field */}
+      <AmbientField tone="iris" />
+
       {/* Background Top Transition Ribbon (Handoff from Scribe scene) */}
       <div
         aria-hidden="true"

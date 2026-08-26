@@ -853,6 +853,43 @@ describe("You & Privacy Route Pages", () => {
       });
       expect(screen.getByTestId("session-card-sess-current")).toBeInTheDocument();
     });
+
+    it("handles password change submission with validation and server communication", async () => {
+      vi.spyOn(v2Client, "getSecuritySettings").mockResolvedValueOnce({
+        mfa_enabled: false,
+        mfa_method: "totp",
+        inactivity_timeout_minutes: 30,
+        new_login_alerts: true,
+        reauth_for_sensitive: true,
+        active_sessions: [],
+      } as any);
+
+      const postSpy = vi.spyOn(api, "post").mockResolvedValueOnce({ data: { message: "Password updated successfully." } });
+
+      render(<YouSettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("change-password-section")).toBeInTheDocument();
+      });
+
+      const currentInput = screen.getByTestId("current-password-input");
+      const newInput = screen.getByTestId("new-password-input");
+      const confirmInput = screen.getByTestId("confirm-password-input");
+      const submitBtn = screen.getByTestId("submit-change-password-btn");
+
+      fireEvent.change(currentInput, { target: { value: "currentPassword123" } });
+      fireEvent.change(newInput, { target: { value: "newSecurePass456" } });
+      fireEvent.change(confirmInput, { target: { value: "newSecurePass456" } });
+      fireEvent.click(submitBtn);
+
+      await waitFor(() => {
+        expect(postSpy).toHaveBeenCalledWith("/auth/change-password", {
+          current_password: "currentPassword123",
+          new_password: "newSecurePass456",
+        });
+        expect(screen.getByTestId("password-change-success")).toBeInTheDocument();
+      });
+    });
   });
 
   describe("Emergency QR Modal Component (EmergencyQrModal)", () => {

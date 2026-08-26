@@ -20,12 +20,17 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setError(language === "vi" ? "Vui lòng nhập địa chỉ email." : "Please enter your email address.");
+      return;
+    }
     setIsSubmitting(true);
     setError("");
     setNotice("");
     setTokenPreview("");
     try {
-      const response = await api.post("/auth/forgot-password", { email });
+      const response = await api.post("/auth/forgot-password", { email: cleanEmail });
       const token = response.data?.reset_token_preview as string | undefined;
       const deliveryStatus = (response.data?.email_delivery_status as string | undefined) ?? "";
       if (token) {

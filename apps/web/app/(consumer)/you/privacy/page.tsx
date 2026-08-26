@@ -40,6 +40,16 @@ export default function YouPrivacyPage() {
   // Use health profile in AI reasoning
   const [useHealthProfileInAi, setUseHealthProfileInAi] = useState(true);
 
+  // Consent Purposes State
+  const [consentPurposes, setConsentPurposes] = useState<
+    Array<{
+      purpose: string;
+      label: string;
+      granted: boolean;
+      locked?: boolean;
+    }>
+  >([]);
+
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [prefsSuccess, setPrefsSuccess] = useState(false);
   const [prefsError, setPrefsError] = useState("");
@@ -65,8 +75,22 @@ export default function YouPrivacyPage() {
       if (data?.retention_policy?.days) {
         setRetentionDays(data.retention_policy.days);
       }
+      if (data?.consent_status?.purposes) {
+        setConsentPurposes(data.consent_status.purposes);
+      }
     },
   });
+
+  const handleToggleConsentPurpose = (purposeKey: string) => {
+    setConsentPurposes((prev) =>
+      prev.map((p) => {
+        if (p.purpose === purposeKey && !p.locked) {
+          return { ...p, granted: !p.granted };
+        }
+        return p;
+      }),
+    );
+  };
 
   const handleSaveAiPrefs = async () => {
     setSavingPrefs(true);
@@ -663,27 +687,37 @@ export default function YouPrivacyPage() {
                 : "Đồng thuận của bạn tuân thủ các quy định PDPD: có thể rút lại bất cứ lúc nào với sự phân chia quyền theo từng mục đích."}
             </p>
 
-            <div className="space-y-1.5">
-              {aiData?.consent_status?.purposes && aiData.consent_status.purposes.length > 0 ? (
-                aiData.consent_status.purposes.map((p) => (
+            <div className="space-y-1.5" data-testid="consent-purposes-list">
+              {(consentPurposes.length > 0 ? consentPurposes : aiData?.consent_status?.purposes || []).length > 0 ? (
+                (consentPurposes.length > 0 ? consentPurposes : aiData?.consent_status?.purposes || []).map((p) => (
                   <div
                     key={p.purpose}
                     className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--surface-muted)] text-xs"
+                    data-testid={`consent-purpose-${p.purpose}`}
                   >
                     <span className="font-semibold text-[var(--text-primary)] text-[11px]">{p.label}</span>
-                    <Badge tone={p.granted ? "ok" : "neutral"}>
-                      {p.locked
-                        ? isEn
-                          ? "Mandatory"
-                          : "Bắt buộc"
-                        : p.granted
-                          ? isEn
-                            ? "Granted"
-                            : "Đã cấp"
-                          : isEn
-                            ? "Withdrawn"
-                            : "Đã rút"}
-                    </Badge>
+                    {p.locked ? (
+                      <Badge tone="ok">
+                        {isEn ? "Mandatory" : "Bắt buộc"}
+                      </Badge>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleConsentPurpose(p.purpose)}
+                        className="focus:outline-none"
+                        title={isEn ? "Toggle purpose consent" : "Thay đổi trạng thái đồng thuận"}
+                      >
+                        <Badge tone={p.granted ? "ok" : "neutral"}>
+                          {p.granted
+                            ? isEn
+                              ? "Granted"
+                              : "Đã cấp"
+                            : isEn
+                              ? "Withdrawn"
+                              : "Đã rút"}
+                        </Badge>
+                      </button>
+                    )}
                   </div>
                 ))
               ) : (

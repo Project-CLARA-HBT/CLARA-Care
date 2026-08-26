@@ -6,6 +6,7 @@ import { LANDING_COPY_V7 } from "../landing-copy-v7";
 import { LandingScene } from "../primitives/landing-scene";
 import { SceneHeader } from "../primitives/scene-header";
 import { SpatialStage } from "../primitives/spatial-stage";
+import { AmbientField } from "../primitives/ambient-field";
 import { CouncilDemo } from "../demo/council-demo";
 import { DecisionField } from "../artwork/decision-field";
 import { EvidenceRibbon } from "../artwork/evidence-ribbon";
@@ -20,7 +21,7 @@ import { FloatingMetadata } from "../primitives/floating-metadata";
  * - CouncilDemo: Progressive structured clinical triage (1. Recommendations, 2. Disagreements,
  *   3. Uncertainty, 4. Action Plan) under strict Physician Ultimate Authority governance.
  * - Two-way synchronized stage switching between DecisionField and CouncilDemo.
- * - Floating validation metadata and continuous transition ribbons.
+ * - Ambient lighting field, floating validation metadata, and continuous transition ribbons.
  */
 export function CouncilScene() {
   const { language, isEnhanced } = useMotionTier();
@@ -53,6 +54,9 @@ export function CouncilScene() {
       tone="canvas"
       className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-36"
     >
+      {/* Ambient Lighting Field */}
+      <AmbientField tone="mint" />
+
       {/* Background Top Transition Ribbon (Handoff from Clinical Transition scene) */}
       <div
         aria-hidden="true"

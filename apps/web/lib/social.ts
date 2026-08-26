@@ -66,6 +66,22 @@ export function isSocialModerationBlock(error: unknown): boolean {
   return status === 422;
 }
 
+/** Checks if an author handle represents CLARA official or verified clinician. */
+export function isClaraOfficial(handle: string): boolean {
+  if (!handle) return false;
+  const lower = handle.toLowerCase();
+  return (
+    lower.startsWith("clara") ||
+    lower.startsWith("dr_") ||
+    lower.startsWith("bs_") ||
+    lower.startsWith("bacsi_") ||
+    lower.startsWith("duocsi_") ||
+    lower.startsWith("expert_") ||
+    lower.startsWith("mod_") ||
+    lower.includes("official")
+  );
+}
+
 async function guarded<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();

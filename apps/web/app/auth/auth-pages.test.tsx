@@ -392,6 +392,46 @@ describe("Public Auth Pages — Spec v5 Section 6.2, 6.3, 6.4, 6.5 (PUBLIC_AUTH 
       expect(screen.getByRole("button", { name: /Đặt lại mật khẩu/i })).toBeInTheDocument();
     });
 
+    it("validates password format before submitting in ResetPasswordPage", async () => {
+      render(<ResetPasswordPage />);
+
+      fireEvent.change(screen.getByLabelText(/Mã đặt lại mật khẩu/i), {
+        target: { value: "RESET-TOKEN-123" },
+      });
+      fireEvent.change(screen.getByLabelText(/Mật khẩu mới/i), {
+        target: { value: "short" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Đặt lại mật khẩu/i }));
+
+      expect(screen.getByText(/Mật khẩu phải có ít nhất 8 ký tự/i)).toBeInTheDocument();
+      expect(api.post).not.toHaveBeenCalled();
+    });
+
+    it("submits valid reset password and displays success message with login link", async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({
+        data: { message: "Password updated successfully" },
+      });
+
+      render(<ResetPasswordPage />);
+
+      fireEvent.change(screen.getByLabelText(/Mã đặt lại mật khẩu/i), {
+        target: { value: "RESET-TOKEN-123" },
+      });
+      fireEvent.change(screen.getByLabelText(/Mật khẩu mới/i), {
+        target: { value: "ValidPass123!" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Đặt lại mật khẩu/i }));
+
+      await waitFor(() => {
+        expect(api.post).toHaveBeenCalledWith("/auth/reset-password", {
+          token: "RESET-TOKEN-123",
+          new_password: "ValidPass123!",
+        });
+        expect(screen.getByRole("status")).toHaveTextContent(/Đặt lại mật khẩu thành công/i);
+        expect(screen.getByRole("link", { name: /Đi đến đăng nhập/i })).toHaveAttribute("href", "/login");
+      });
+    });
+
     it("renders VerifyEmailPage with token input and resend form", () => {
       render(<VerifyEmailPage />);
       expect(screen.getByRole("heading", { level: 1, name: /Xác thực email/i })).toBeInTheDocument();
@@ -399,6 +439,50 @@ describe("Public Auth Pages — Spec v5 Section 6.2, 6.3, 6.4, 6.5 (PUBLIC_AUTH 
       expect(screen.getByRole("button", { name: /Xác thực email/i })).toBeInTheDocument();
       expect(screen.getByLabelText(/Email tài khoản/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Gửi lại mã xác thực/i })).toBeInTheDocument();
+    });
+
+    it("submits email verification and displays success notification", async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({
+        data: { is_email_verified: true },
+      });
+
+      render(<VerifyEmailPage />);
+
+      fireEvent.change(screen.getByLabelText(/Mã xác thực/i), {
+        target: { value: "VERIFY-TOKEN-789" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Xác thực email/i }));
+
+      await waitFor(() => {
+        expect(api.post).toHaveBeenCalledWith("/auth/verify-email", {
+          token: "VERIFY-TOKEN-789",
+        });
+        expect(screen.getByRole("status")).toHaveTextContent(/Xác thực email thành công/i);
+      });
+    });
+
+    it("resends email verification and pre-fills preview token in dev mode", async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({
+        data: {
+          verification_token_preview: "AUTO-FILLED-PREVIEW-123",
+          email_delivery_status: "sent",
+        },
+      });
+
+      render(<VerifyEmailPage />);
+
+      fireEvent.change(screen.getByLabelText(/Email tài khoản/i), {
+        target: { value: "user@example.com" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Gửi lại mã xác thực/i }));
+
+      await waitFor(() => {
+        expect(api.post).toHaveBeenCalledWith("/auth/resend-verification", {
+          email: "user@example.com",
+        });
+        expect(screen.getByLabelText(/Mã xác thực/i)).toHaveValue("AUTO-FILLED-PREVIEW-123");
+        expect(screen.getByRole("status")).toBeInTheDocument();
+      });
     });
   });
 });

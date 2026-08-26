@@ -19,11 +19,8 @@ import {
 import { getActiveProfileId } from "@/lib/profile-context";
 import { useQuery } from "@/lib/query/use-query";
 import { queryKeys } from "@/lib/query/query-keys";
-import {
-  v2Client,
-  type ActiveSessionDto,
-  type SecuritySettingsDto,
-} from "@/lib/api/v2-client";
+import { v2Client, type ActiveSessionDto, type SecuritySettingsDto } from "@/lib/api/v2-client";
+import api from "@/lib/http-client";
 
 /**
  * YouSettingsPage
@@ -102,6 +99,17 @@ export default function YouSettingsPage() {
   const [saveError, setSaveError] = useState("");
   const [sessionRevokeNotice, setSessionRevokeNotice] = useState("");
   const [showRevokeAllModal, setShowRevokeAllModal] = useState(false);
+
+  // Password Change State
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   // Initialize theme and language on mount
   useEffect(() => {
@@ -263,6 +271,86 @@ export default function YouSettingsPage() {
       await v2Client.updateSecuritySettings({ mfa_enabled: false });
     } catch {
       // Graceful fallback
+    }
+  };
+
+  // Handle Change Password
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (!currentPassword) {
+      setPasswordError(
+        isEn
+          ? "Please enter your current password."
+          : "Vui lòng nhập mật khẩu hiện tại.",
+      );
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError(
+        isEn
+          ? "New password must be at least 8 characters long."
+          : "Mật khẩu mới phải có ít nhất 8 ký tự.",
+      );
+      return;
+    }
+
+    const hasLetter = /[a-zA-Z]/.test(newPassword);
+    const hasDigit = /[0-9]/.test(newPassword);
+    if (!hasLetter || !hasDigit) {
+      setPasswordError(
+        isEn
+          ? "New password must contain both letters and numbers."
+          : "Mật khẩu mới phải chứa cả chữ cái và chữ số.",
+      );
+      return;
+    }
+
+    if (newPassword === currentPassword) {
+      setPasswordError(
+        isEn
+          ? "New password must be different from your current password."
+          : "Mật khẩu mới không được trùng với mật khẩu hiện tại.",
+      );
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError(
+        isEn
+          ? "Password confirmation does not match."
+          : "Mật khẩu xác nhận không khớp.",
+      );
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await api.post("/auth/change-password", {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      setPasswordSuccess(
+        isEn
+          ? "Password updated successfully."
+          : "Đổi mật khẩu thành công.",
+      );
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : isEn
+            ? "Failed to change password. Please check your current password."
+            : "Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu hiện tại.";
+      setPasswordError(message);
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -601,7 +689,206 @@ export default function YouSettingsPage() {
             ) : null}
           </section>
 
-          {/* SECTION 3: Active Logins & Devices */}
+          {/* SECTION 3: Password & Authentication */}
+          <section
+            className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-5"
+            data-testid="change-password-section"
+          >
+            <div className="flex items-center justify-between border-b border-[color:var(--shell-border)]/60 pb-3">
+              <div className="flex items-center gap-2 text-[var(--text-brand)]">
+                <Icon name="user-card" size="1.25rem" />
+                <h2 className="text-base font-bold text-[var(--text-primary)]">
+                  {isEn ? "Password & Authentication" : "Mật khẩu & Đăng nhập"}
+                </h2>
+              </div>
+              <Badge tone="neutral">{isEn ? "Account Security" : "Bảo mật tài khoản"}</Badge>
+            </div>
+
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              {isEn
+                ? "Update your password regularly to protect your personal health records (PHR) and consultation data."
+                : "Cập nhật mật khẩu định kỳ để tăng cường bảo vệ hồ sơ sức khỏe và dữ liệu trao đổi y tế của bạn."}
+            </p>
+
+            {passwordSuccess ? (
+              <div
+                className="rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-3 text-xs font-semibold text-[var(--status-ok-text)] flex items-center justify-between"
+                data-testid="password-change-success"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon name="check" size="1rem" />
+                  <span>{passwordSuccess}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPasswordSuccess("")}
+                  className="text-[var(--status-ok-text)] hover:opacity-75 font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : null}
+
+            {passwordError ? (
+              <div
+                className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-3 text-xs font-semibold text-[var(--status-danger-text)] flex items-center justify-between"
+                data-testid="password-change-error"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon name="warning" size="1rem" />
+                  <span>{passwordError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPasswordError("")}
+                  className="text-[var(--status-danger-text)] hover:opacity-75 font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : null}
+
+            <form onSubmit={handleChangePassword} className="space-y-4" data-testid="change-password-form">
+              <div className="space-y-3">
+                {/* Current Password */}
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
+                    {isEn ? "Current Password *" : "Mật khẩu hiện tại *"}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="fluent-input w-full pr-10"
+                      placeholder={isEn ? "Enter current password" : "Nhập mật khẩu hiện tại"}
+                      data-testid="current-password-input"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
+                      title={showCurrentPassword ? (isEn ? "Hide" : "Ẩn") : (isEn ? "Show" : "Hiện")}
+                      tabIndex={-1}
+                    >
+                      <Icon name={showCurrentPassword ? "eye-off" : "eye"} size="1rem" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* New Password */}
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
+                      {isEn ? "New Password *" : "Mật khẩu mới *"}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="fluent-input w-full pr-10"
+                        placeholder={isEn ? "Minimum 8 characters" : "Tối thiểu 8 ký tự"}
+                        data-testid="new-password-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword((prev) => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
+                        title={showNewPassword ? (isEn ? "Hide" : "Ẩn") : (isEn ? "Show" : "Hiện")}
+                        tabIndex={-1}
+                      >
+                        <Icon name={showNewPassword ? "eye-off" : "eye"} size="1rem" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
+                      {isEn ? "Confirm New Password *" : "Xác nhận mật khẩu mới *"}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="fluent-input w-full pr-10"
+                        placeholder={isEn ? "Re-enter new password" : "Nhập lại mật khẩu mới"}
+                        data-testid="confirm-password-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
+                        title={showConfirmPassword ? (isEn ? "Hide" : "Ẩn") : (isEn ? "Show" : "Hiện")}
+                        tabIndex={-1}
+                      >
+                        <Icon name={showConfirmPassword ? "eye-off" : "eye"} size="1rem" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Password Requirements Checklist */}
+              <div className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3 text-[11px] space-y-1 text-[var(--text-secondary)]">
+                <p className="font-semibold text-[var(--text-primary)] mb-1">
+                  {isEn ? "Password Criteria:" : "Tiêu chí mật khẩu an toàn:"}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <Icon
+                      name="check"
+                      size="0.75rem"
+                      className={newPassword.length >= 8 ? "text-[var(--status-ok-text)]" : "text-[var(--text-muted)] opacity-40"}
+                    />
+                    <span>{isEn ? "At least 8 characters" : "Tối thiểu 8 ký tự"}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Icon
+                      name="check"
+                      size="0.75rem"
+                      className={/[a-zA-Z]/.test(newPassword) ? "text-[var(--status-ok-text)]" : "text-[var(--text-muted)] opacity-40"}
+                    />
+                    <span>{isEn ? "Contains at least 1 letter" : "Chứa ít nhất 1 chữ cái"}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Icon
+                      name="check"
+                      size="0.75rem"
+                      className={/[0-9]/.test(newPassword) ? "text-[var(--status-ok-text)]" : "text-[var(--text-muted)] opacity-40"}
+                    />
+                    <span>{isEn ? "Contains at least 1 number" : "Chứa ít nhất 1 chữ số"}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Icon
+                      name="check"
+                      size="0.75rem"
+                      className={newPassword && confirmPassword && newPassword === confirmPassword ? "text-[var(--status-ok-text)]" : "text-[var(--text-muted)] opacity-40"}
+                    />
+                    <span>{isEn ? "Confirmation matches" : "Mật khẩu xác nhận khớp"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  loading={changingPassword}
+                  disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+                  data-testid="submit-change-password-btn"
+                >
+                  <Icon name="check" size="0.9rem" />
+                  <span>{changingPassword ? (isEn ? "Updating..." : "Đang cập nhật...") : (isEn ? "Update Password" : "Cập nhật Mật khẩu")}</span>
+                </Button>
+              </div>
+            </form>
+          </section>
+
+          {/* SECTION 4: Active Logins & Devices */}
           <section
             className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-5"
             data-testid="active-logins-section"
@@ -712,7 +999,7 @@ export default function YouSettingsPage() {
             ) : null}
           </section>
 
-          {/* SECTION 4: Session Security & Timeout Policies */}
+          {/* SECTION 5: Session Security & Timeout Policies */}
           <section
             className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm space-y-5"
             data-testid="session-security-section"
