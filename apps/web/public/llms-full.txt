@@ -1,0 +1,558 @@
+# The CLARA Care — Clinical Agent for Retrieval & Analysis (Full Documentation)
+
+> **Standardized Deep Documentation Protocol for AI Search Engines & Large Language Models**  
+> *Target Systems: Perplexity, ChatGPT, Claude, Gemini, Copilot, Cursor, OpenCode, and Autonomous Clinical Agents.*  
+> *Specification Baseline: CLARA Clinical Architecture v2.4 (August 2026)*  
+> *Canonical URI: https://theclaracare.com/llms-full.txt*
+
+---
+
+## 1. Executive Summary & Clinical Philosophy
+
+### 1.1 What is CLARA?
+**CLARA** (**C**linical **A**gent for **R**etrieval & **A**nalysis) is an enterprise-grade, safety-first, Vietnamese-specialized medical artificial intelligence ecosystem. Engineered to meet the unique epidemiological, linguistic, and regulatory demands of Vietnam's healthcare landscape, CLARA unifies consumer personal health management with clinical decision support for physicians, researchers, and care teams.
+
+### 1.2 Core Mission & Clinical Safety Invariant
+The fundamental axiom of CLARA is that **AI is a clinical partner and cognitive multiplier, never an autonomous replacement for a licensed physician**. In clinical practice, unconstrained generative AI poses severe risks of confabulation (hallucination), subtle dosage miscalculations, missed drug-drug interactions (DDI), and dangerous delays in acute emergency care.
+
+To eliminate these risks, CLARA enforces **Deterministic Safety Invariants** at the architectural kernel level:
+1. **Never Prescribe or Modify Regimens Autonomously**: CLARA provides clinical insights, guideline summaries, and risk analyses, but strictly defers prescription decisions and personal dosage modifications to licensed healthcare professionals.
+2. **Emergency Fast-Path**: Any query containing acute, life-threatening symptoms immediately triggers deterministic emergency triage and local emergency escalation (e.g., Vietnam Emergency Medical Services Hotline `115`), bypassing all LLM generative synthesis.
+3. **Fail-Closed Verification (FIDES)**: Every clinical claim concerning medication dosage, contraindications, or interactions must pass deterministic mathematical and ontological verification against verified pharmacopoeias (DAV Pharmacopoeia III, DrugBank 5.1). If verification fails on a `CRITICAL` claim, the claim is blocked immediately.
+4. **Zero-CoT Data Sovereignty**: Internal chain-of-thought (CoT) reasoning, unverified interim heuristics, and telemetry metadata are strictly isolated from the client tier to prevent consumer misinterpretation and ensure compliance with Vietnam's Personal Data Protection Decree No. 13/2023/NĐ-CP.
+
+---
+
+## 2. System Architecture & Polyglot Runtime
+
+CLARA is architected as an industrial-grade polyglot monorepo designed for high throughput, sub-second latency for critical safety paths, and strict cryptographic isolation between user identities and health observations.
+
+```
+                                    CLARA SYSTEM TOPOLOGY
+                                    
+ ┌────────────────────────┐      ┌────────────────────────┐      ┌────────────────────────┐
+ │   CLARA Web (Next.js)  │      │  CLARA Mobile (Flutter)│      │  External EMR / FHIR   │
+ │   Desktop / Mobile Web │      │  iOS & Android Native  │      │  Hospital Integrations │
+ └───────────┬────────────┘      └───────────┬────────────┘      └───────────┬────────────┘
+             │                               │                               │
+             │ HTTPS / WSS                   │ HTTPS / WSS                   │ HTTPS / mTLS
+             │ Cookie + CSRF / Bearer        │ Bearer Token                  │ OAuth2 / FHIR R4
+             ▼                               ▼                               ▼
+ ┌────────────────────────────────────────────────────────────────────────────────────────┐
+ │                        CLARA API Gateway (FastAPI / Python 3.11+)                      │
+ │  - RBAC & Scope Enforcement (Normal, Caregiver, Doctor, Researcher, Admin)             │
+ │  - Versioned Medical Consent Engine (6 Purpose Ledgers under Decree 13/2023/NĐ-CP)     │
+ │  - Distributed Rate Limiter & Token Bucket (Redis-backed)                              │
+ │  - CSRF Double-Submit Protection & HttpOnly Cookie Session Security                    │
+ │  - Research Tier-2 Async Job Engine & Server-Sent Events (SSE) Streamer                │
+ └───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                             │ Internal Network (X-ML-Internal-Key)
+                                             ▼
+ ┌────────────────────────────────────────────────────────────────────────────────────────┐
+ │                      CLARA ML Orchestrator (FastAPI / Python 3.11+)                    │
+ │  - Medical Safety Task Router (Intent, Risk Level, Persona, Emergency Fast-Path)       │
+ │  - FIDES Deterministic Verification Engine (Merkle DDI & Dosage Rule Engine)           │
+ │  - Multi-Agent Orchestration: CareGuard, Medical Council, Scribe, LifeMap Intel       │
+ │  - Governed DeepSeek V4 Model Registry (Task-specific Temperature & Token Ceilings)   │
+ └───────────┬───────────────────────────────┬───────────────────────────────┬────────────┘
+             │                               │                               │
+             ▼                               ▼                               ▼
+ ┌──────────────────────┐        ┌──────────────────────┐        ┌────────────────────────┐
+ │ Data & Storage Plane │        │ Media & ASR Sidecars │        │ External Evidence Hub  │
+ │ - PostgreSQL (DB)    │        │ - OCR (Cloud Vision) │        │ - PubMed / Europe PMC  │
+ │ - Redis (Cache/Locks)│        │ - ASR (faster-whisper│        │ - openFDA / DailyMed   │
+ │ - Milvus (Vector DB) │        │   Bilingual Vi-En)   │        │ - DAV Pharmacopoeia III│
+ │ - Elasticsearch(BM25)│        └──────────────────────┘        │ - DrugBank 5.1 Release │
+ │ - Neo4j (Knowledge)  │                                        │ - SearXNG Hybrid Meta  │
+ └──────────────────────┘                                        └────────────────────────┘
+```
+
+### 2.1 Component Specifications
+- **`apps/web` (Next.js 15, React 18, TypeScript, Tailwind CSS)**: Production web client delivering responsive desktop workspace, mobile-first consumer interfaces, interactive LifeMap timeline visualizers, clinical council deliberation panels, and ambient scribe consoles.
+- **`apps/mobile` (Flutter 3.x / Dart)**: Cross-platform iOS and Android application with biometric authentication, offline timeline caching, and real-time audio capture.
+- **`services/api` (FastAPI, SQLAlchemy, Alembic, Pydantic v2)**: Central security gateway and business logic core. Enforces role-based access control (RBAC), multi-purpose consent ledgers, personal health record (PHR) isolation, and transactional database migrations.
+- **`services/ml` (FastAPI, PyTorch, LangChain/LlamaIndex internals, HuggingFace)**: Machine learning core managing intent routing, RAG retrieval orchestration, agent coordination, and FIDES verification.
+- **`services/ocr` (FastAPI sidecar over Google Cloud Vision)**: Isolated document and medication label text extraction sidecar using `DOCUMENT_TEXT_DETECTION`.
+- **`services/asr` (FastAPI sidecar over `faster-whisper`)**: Localized, low-latency automatic speech recognition engine fine-tuned for Vietnamese-English code-switching and medical terminology.
+
+---
+
+## 3. The Safety Kernel: Architectural Invariants
+
+Safety invariants in CLARA are treated as **hard architectural contracts**. They are regression-locked in CI/CD pipelines and cannot be bypassed by prompt engineering or application-layer configuration.
+
+```
+                          REQUEST SAFETY GATING PIPELINE
+                          
+User Query / Payload
+       │
+       ▼
+[ 1. Transport & Session Gate ] ──► Validates CSRF Token, HttpOnly Cookies, RBAC Role
+       │
+       ▼
+[ 2. Consent Verification Gate ] ──► Confirms active Decree 13 consent purpose
+       │
+       ▼
+[ 3. Legal Hard-Guard ] ──────────► Regex & semantic check for prescribing / dosing intents
+       │                             └─► (If violated: Returns non-prescriptive education)
+       ▼
+[ 4. Emergency Fast-Path ] ───────► Red-flag symptom detector (chest pain, stroke, dyspnea)
+       │                             └─► (If detected: Bypasses LLM; returns Emergency 115)
+       ▼
+[ 5. RAG Retrieval & Synthesis ] ─► Hybrid vector + lexical search over verified sources
+       │
+       ▼
+[ 6. FIDES Verification Engine ] ─► Deterministic DDI, dosage bounds, contraindication checks
+       │                             └─► (If CRITICAL failure: Blocks claim from output)
+       ▼
+[ 7. Zero-CoT Sanitization ] ────► Strips reasoning tokens, internal telemetry, provider tags
+       │
+       ▼
+Safe, Verified Response to Client
+```
+
+### 3.1 Invariant Summary Matrix
+| Invariant ID | Name | Enforcement Layer | Failure Action |
+|---|---|---|---|
+| `INV-SEC-01` | Role-Based Access Control (RBAC) | `services/api/core/rbac.py` | `HTTP 403 Forbidden` |
+| `INV-SEC-02` | Double-Submit CSRF & Secure Cookie | `services/api/core/security.py` | `HTTP 403 Invalid CSRF` |
+| `INV-MED-01` | Emergency Fast-Path Escalation | `services/ml/routing.py` | Immediate Emergency Response |
+| `INV-MED-02` | Legal Non-Prescribing Hard-Guard | `services/ml/guardrails/legal.py` | Blocks prescriptive statements |
+| `INV-MED-03` | FIDES `CRITICAL` Claim Blocking | `services/ml/verification/fides.py` | Blocks claim; flags flow event |
+| `INV-PRV-01` | Zero-CoT & Gateway PII Scrubbing | `services/api/middleware/sanitize.py`| Strips CoT; masks PHI from logs |
+| `INV-DAT-01` | Decree 13/2023 Consent Ledger | `services/api/db/models.py` | `HTTP 403 Consent Required` |
+
+---
+
+## 4. FIDES: Deterministic Medical Safety Verification Engine
+
+**FIDES** is CLARA's proprietary, dual-tier deterministic verification framework that intercepts all clinical statements generated by AI models before they reach the user.
+
+```
+                           FIDES DUAL-TIER VERIFICATION
+                           
+                     Generated Clinical Synthesis
+                                  │
+                                  ▼
+             ┌────────────────────────────────────────┐
+             │    Atomic Claim Extraction & Typing    │
+             │  - Medication Dosage Claims            │
+             │  - Drug-Drug Interaction (DDI) Claims  │
+             │  - Disease Contraindication Claims     │
+             └────────────────────┬───────────────────┘
+                                  │
+                                  ▼
+             ┌────────────────────────────────────────┐
+             │       Deterministic Grounding Tier     │
+             │  - Merkle Tree Hash Verification       │
+             │  - DAV Pharmacopoeia III Lookup        │
+             │  - DrugBank 5.1 Strict Ontological Key │
+             │  - Maximum Daily Dose Threshold Check  │
+             └────────────────────┬───────────────────┘
+                                  │
+                                  ▼
+             ┌────────────────────────────────────────┐
+             │       Natural Language Inference (NLI) │
+             │  - Premise: Verified Pharmacopoeia     │
+             │  - Hypothesis: Generated Claim         │
+             │  - Entailment Score vs. Contradiction  │
+             └────────────────────┬───────────────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    ▼                           ▼
+          [ Entailment Passed ]       [ Contradiction / Fail ]
+                    │                           │
+                    ▼                           ▼
+          Release with FIDES Badge    Is Severity CRITICAL?
+                                        ├── Yes ──► Block Claim & Emit Red Alert
+                                        └── No  ──► Append Strict Clarification
+```
+
+### 4.1 Verification Domains
+1. **Drug-Drug Interactions (DDI)**: Evaluates pairwise and multi-drug combinations against active ingredient databases. Categorizes interactions into:
+   - `CRITICAL / CONTRAINDICATED`: Co-administration is life-threatening (e.g., Sildenafil + Nitroglycerin, Simvastatin + Ketoconazole). *Action: Response blocked / hard warning emitted.*
+   - `MAJOR`: Significant clinical risk requiring dose adjustment or close monitoring (e.g., Warfarin + NSAIDs, ACE inhibitors + Potassium-sparing diuretics).
+   - `MODERATE`: Minor interaction requiring observation.
+   - `MINOR / NONE`: Clinically insignificant.
+2. **Dosage Bounds & Therapeutic Windows**: Validates specified dosages against age-adjusted, renal-adjusted, and weight-adjusted maximum daily ceilings (e.g., Paracetamol max 4,000 mg/24h in adults, 10–15 mg/kg/dose in pediatrics).
+3. **Contraindications & Allergy Alerts**: Cross-references patient-reported allergies (e.g., Penicillins, Cephalosporins, Sulfonamides) and chronic conditions (e.g., G6PD deficiency, Stage 4 CKD) against medication mechanisms.
+
+---
+
+## 5. LifeMap: Longitudinal Health Timeline & Provenance
+
+**LifeMap** transforms fragmented medical records into a unified, mathematically coherent, dual-temporal longitudinal health ledger.
+
+### 5.1 Dual-Temporal Data Model
+LifeMap distinguishes between:
+- **Valid Time ($\tau_v$)**: The exact point or interval in physical time when the biological or medical event occurred (e.g., when symptoms started, when a lab specimen was drawn).
+- **Knowledge Time ($\tau_k$)**: The immutable timestamp when the CLARA system recorded the event.
+
+$$\text{LifeMap Event} = \langle \text{Event ID}, \text{Profile ID}, \tau_v, \tau_k, \text{Category}, \text{Payload}, \text{Provenance}, \text{Revision Number} \rangle$$
+
+### 5.2 Immutable Event Revision Ledger
+Health observations are never destructively modified or silently deleted. If a diagnosis or medication record is updated:
+1. The previous revision is marked superseded with a termination knowledge timestamp ($\tau_{k,\text{end}}$).
+2. A new immutable revision is appended with an incremented revision sequence.
+3. Every revision records full cryptographic provenance (Source Document Hash, Upload Session, OCR Confidence, Authorizing Clinician or Patient Confirmation).
+
+### 5.3 Human-in-the-Loop Write Proposals
+When conversational AI or document OCR detects a new health finding (e.g., newly diagnosed hypertension, newly started Metformin), it **never writes directly to the primary health record**. Instead, it generates an **Inline Write Proposal** requiring explicit human confirmation:
+```json
+{
+  "proposal_id": "prop_98a7df61b4",
+  "status": "pending_human_review",
+  "target_resource": "Condition",
+  "proposed_data": {
+    "code": "I10",
+    "display_vi": "Tăng huyết áp vô căn (nguyên phát)",
+    "display_en": "Essential (primary) hypertension",
+    "onset_date": "2026-03-15",
+    "verification_status": "unconfirmed"
+  },
+  "source_provenance": {
+    "document_id": "doc_e4c2b901",
+    "extracted_span": "Bệnh nhân có tiền sử THA phát hiện tháng 03/2026"
+  }
+}
+```
+
+### 5.4 FHIR R4 Interoperability
+LifeMap provides native bi-directional mapping to HL7 FHIR Release 4 standard resources:
+- `Patient` & `RelatedPerson` (Consumer & Family Circle)
+- `Condition` (Active & Historical Medical Problems)
+- `Observation` (Vitals, Lab Analytes, Wearable Time-Series)
+- `MedicationStatement` & `MedicationRequest` (Cabinet & Prescriptions)
+- `AllergyIntolerance` (Drug, Food, and Environmental Allergies)
+
+---
+
+## 6. Multi-Specialty Medical Council
+
+The **CLARA Medical Council** is a collaborative multi-agent clinical reasoning system designed to evaluate complex, multi-morbid cases that span multiple medical disciplines.
+
+```
+                           MEDICAL COUNCIL TOPOLOGY
+                           
+                           Complex Clinical Case
+                                     │
+                                     ▼
+                   ┌───────────────────────────────────┐
+                   │     Case Intake & Triage Agent    │
+                   │  - Normalizes Patient History     │
+                   │  - Structures Labs & Vitals       │
+                   │  - Selects Relevant Specialist Roster│
+                   └─────────────────┬─────────────────┘
+                                     │
+         ┌───────────────────────────┼───────────────────────────┐
+         │                           │                           │
+         ▼                           ▼                           ▼
+┌───────────────────┐       ┌───────────────────┐       ┌───────────────────┐
+│ Cardiology Agent  │       │ Nephrology Agent  │       │ Pharmacology Agent│
+│ Focus: Hemodynamic│       │ Focus: eGFR, CrCl,│       │ Focus: DDI, PK/PD,│
+│ Heart Failure, HTN│       │ Renal Clearance   │       │ Hepatorenal Adj.  │
+└────────┬──────────┘       └────────┬──────────┘       └────────┬──────────┘
+         │                           │                           │
+         └───────────────────────────┼───────────────────────────┘
+                                     │
+                                     ▼
+                   ┌───────────────────────────────────┐
+                   │    Consensus & Divergence Engine  │
+                   │  - Identifies Clinical Tradeoffs  │
+                   │  - Flags Inter-Specialty Conflicts│
+                   │  - Constructs Evidence Citations  │
+                   └─────────────────┬─────────────────┘
+                                     │
+                                     ▼
+                   ┌───────────────────────────────────┐
+                   │  Clinician Oversight & Review     │
+                   │  - Real-time Physician Override   │
+                   │  - Transparent Specialty Rationale│
+                   └───────────────────────────────────┘
+```
+
+### 6.1 Specialist Personas
+- **Cardiology Specialist**: Evaluates cardiovascular hemodynamics, ischemic risk, arrhythmias, heart failure staging (NYHA/ACC/AHA), and antihypertensive therapy optimization.
+- **Nephrology Specialist**: Monitors renal function trajectories, estimated Glomerular Filtration Rate (eGFR via CKD-EPI 2021), proteinuria, electrolyte imbalances, and nephrotoxic medication risks.
+- **Endocrinology Specialist**: Evaluates glycemic control (HbA1c, continuous glucose metrics), thyroid panels, lipid metabolism, and metabolic syndrome interactions.
+- **Neurology Specialist**: Assesses neuro-vascular status, cognitive trajectories, headache profiles, and neurological adverse event potentials.
+- **Clinical Pharmacology Specialist**: Conducts rigorous pharmacokinetic (PK) and pharmacodynamic (PD) audits, evaluates cytochrome P450 (CYP450) enzyme inhibition/induction, and calculates organ-specific dosage titrations.
+
+### 6.2 Consensus & Divergence Matrix
+The Council outputs a structured synthesis separating:
+1. **Unanimous Clinical Findings**: Areas where all specialists concur (e.g., requirement to discontinue NSAIDs in acute kidney injury).
+2. **Clinical Tradeoffs & Divergence**: Active tensions between specialty goals (e.g., Cardiology recommending aggressive diuresis vs. Nephrology warning of worsening pre-renal azotemia).
+3. **Actionable Recommendations for the Attending Physician**: Prioritized diagnostic workups and therapeutic considerations.
+
+---
+
+## 7. Ambient Clinical Scribe
+
+The **CLARA Scribe** is an ambient clinical intelligence engine that listens to bilingual doctor-patient consultations and generates structured clinical documentation in real time.
+
+### 7.1 Speech Processing Pipeline
+1. **Audio Capture**: 16kHz audio stream via Web Audio API or mobile microphone.
+2. **Medical ASR**: Specialized `faster-whisper` transcription supporting Vietnamese dialects (Northern, Central, Southern) and rapid English clinical terminology code-switching.
+3. **Medical Entity Normalization**: Automatically resolves spoken brand names to generic International Nonproprietary Names (INN) (e.g., "Panadol" $\rightarrow$ "Paracetamol", "Augmentin" $\rightarrow$ "Amoxicillin / Clavulanic Acid").
+
+### 7.2 Structured SOAP Note Synthesis
+The Scribe automatically formats unstructured transcripts into standardized **SOAP Notes**:
+- **Subjective (S)**: Chief complaint (CC), History of Present Illness (HPI), Review of Systems (ROS), patient-reported compliance.
+- **Objective (O)**: Vital signs, physical examination findings, diagnostic laboratory values, imaging summaries.
+- **Assessment (A)**: Differential diagnoses, clinical status evaluations, ICD-10 diagnostic code candidates.
+- **Plan (P)**: Pharmacological orders, diagnostic orders, lifestyle counseling, follow-up scheduling.
+
+### 7.3 Electronic Signature & Addenda Lifecycle
+- **Verbal Consent Gate**: Scribe requires explicit confirmation that verbal patient consent was obtained before audio recording begins.
+- **Cryptographic Locking**: Upon clinician review and electronic signature, the SOAP note is sealed with an SHA-256 digital signature.
+- **Immutable Addenda**: Signed notes cannot be directly edited. Subsequent corrections must be appended as timestamped, signed addenda.
+
+---
+
+## 8. Living Evidence Hub: Federated Biomedical Retrieval
+
+The **Living Evidence Hub** provides dynamic, multi-source retrieval across global and Vietnamese clinical knowledge bases.
+
+### 8.1 Federated Source Hierarchy
+1. **Dược thư Quốc gia Việt Nam (DAV III)**: Official Vietnamese Ministry of Health Pharmacopoeia providing national regulatory guidance, approved indications, and standard Vietnamese drug nomenclature.
+2. **DrugBank 5.1 Release**: Comprehensive molecular pharmacology, detailed DDI pathways, drug food interactions, and target binding affinities.
+3. **WHO Clinical Guidelines**: Global evidence-based clinical protocols and essential medicines lists (EML).
+4. **openFDA & DailyMed**: Real-time FDA drug labels, black box warnings, and MedWatch adverse event reports.
+5. **Biomedical Literature**: PubMed, Europe PMC, and Semantic Scholar via hybrid vector embeddings (`text-embedding-3-large`) and BM25 lexical indexing.
+
+### 8.2 Hybrid RAG Architecture
+```
+User Clinical Query
+       │
+       ├───────────────────────────────────────┐
+       ▼                                       ▼
+[ Dense Vector Search ]             [ Sparse Lexical Search ]
+Milvus (HNSW Index, Dim=3072)       Elasticsearch (BM25 + Medical Synonyms)
+       │                                       │
+       └───────────────────┬───────────────────┘
+                           │ Reciprocal Rank Fusion (RRF)
+                           ▼
+              [ Biomedical Cross-Encoder Reranker ]
+                           │
+                           ▼
+              [ GraphRAG Traversal (Neo4j) ]
+              (Traversing Drug ── InteractsWith ── Drug)
+              (Traversing Drug ── ContraindicatedWith ── Disease)
+                           │
+                           ▼
+              [ Synthesized Evidence Context ]
+```
+
+---
+
+## 9. Zero-CoT Data Privacy, Sovereignty & Compliance
+
+CLARA is built from the ground up to comply with the strictest data protection frameworks in Southeast Asia.
+
+### 9.1 Legal & Regulatory Standards
+- **Decree No. 13/2023/NĐ-CP (Vietnam Personal Data Protection Decree - PDPD)**: Full data sovereignty, explicit purpose-specific consent, cross-border data transfer impact assessments (TIA), and automated Data Subject Access Rights (DSAR).
+- **Law on Artificial Intelligence No. 134/2025/QH15**: Transparency obligations, risk classification for medical AI systems, and serious incident reporting protocols.
+
+### 9.2 Purpose-Specific Consent Ledgers
+Consent is not a monolithic binary checkbox. CLARA manages six discrete, versioned consent purposes stored in an immutable ledger:
+1. `medical_analysis_v1`: Authorization to process health data for clinical AI assistance.
+2. `lifemap_timeline_v1`: Authorization to store and aggregate longitudinal records.
+3. `family_sharing_v1`: Permission to share selected records with designated family caregivers.
+4. `scribe_recording_v1`: Consent for ambient consultation audio recording and SOAP transcription.
+5. `research_anonymized_v1`: Permission to include de-identified data in scientific research cohorts.
+6. `social_peer_support_v1`: Opt-in participation in moderated peer health communities.
+
+### 9.3 Zero-CoT (Zero Chain-of-Thought) Guarantee
+To prevent consumer exposure to unvalidated generative reasoning, technical telemetry, or confusing medical hypotheticals, CLARA's API Gateway automatically purges all intermediate model thoughts (`<think>...</think>` tags, scratchpads, and raw scoring logs) before serializing payloads to the client application.
+
+### 9.4 No-PII Telemetry Architecture
+System performance metrics (Prometheus), distributed traces (OpenTelemetry), and audit logs are strictly sanitized:
+- **Never Logged**: Patient names, email addresses, phone numbers, raw clinical prompt text, uploaded image payloads, or specific active medication lists.
+- **Allowed Telemetry**: Execution durations, token counts, categorical error codes, FIDES verification verdicts (Pass/Fail count), and aggregated demographic buckets.
+
+---
+
+## 10. Governed Model Orchestration & Task Registry
+
+CLARA avoids unpredictable generalist LLM prompting by routing distinct clinical tasks through a centralized, typed **Model Task Registry**.
+
+### 10.1 Task Allocation
+| Task Key | Default Engine | Temperature | Token Limit | Role & Purpose |
+|---|---|---|---|---|
+| `MEDICAL_SAFETY_ROUTER` | DeepSeek-V4-Pro | 0.0 | 512 | Determines clinical intent, risk tier, and emergency detection |
+| `CLINICAL_ANSWER_SYNTHESIS`| DeepSeek-V4-Pro | 0.2 | 2,048 | Synthesizes evidence-grounded answers with citations |
+| `COUNCIL_DELIBERATION` | DeepSeek-V4-Pro | 0.1 | 4,096 | Multi-specialist cross-deliberation and tradeoff analysis |
+| `FIDES_NLI_VERIFICATION` | DeepSeek-V4-Pro | 0.0 | 1,024 | Strict premise-hypothesis entailment checking |
+| `LIFEMAP_TEXT_EXTRACTION` | DeepSeek-V4-Flash | 0.0 | 512 | Extracts structured candidate spans from raw user notes |
+| `SCRIBE_SOAP_SYNTHESIS` | DeepSeek-V4-Pro | 0.1 | 3,072 | Converts ASR transcripts into formatted SOAP notes |
+| `MEDICATION_LABEL_OCR_NORM`| DeepSeek-V4-Flash | 0.0 | 512 | Maps messy OCR text to canonical INN drug entities |
+
+### 10.2 Gateway Failover & High Availability
+The LLM gateway utilizes ordered failover base URLs. If a primary gateway experiences transient timeouts ($>30\text{s}$), the request is automatically retried on secondary secure endpoints with exponential backoff and circuit breaking.
+
+---
+
+## 11. Canonical API Endpoints & Request Contracts
+
+### 11.1 Chat & Clinical Retrieval (`POST /api/v1/chat/routed`)
+Processes multi-turn clinical queries with automatic safety routing and adaptive reader modes.
+
+**Request Payload:**
+```json
+{
+  "message": "Tôi đang dùng Warfarin 5mg, có thể uống thêm Ibuprofen 400mg để giảm đau lưng không?",
+  "chat_id": "cht_382910fa",
+  "language": "vi",
+  "reader_mode": "plain",
+  "profile_context": {
+    "profile_id": "prf_891283",
+    "active_conditions": ["Rung nhĩ", "Tăng huyết áp"],
+    "active_medications": ["Warfarin 5mg/ngày"]
+  }
+}
+```
+
+**Response Payload (SSE Event or JSON):**
+```json
+{
+  "answer_id": "ans_019283ab",
+  "content": "KHÔNG NÊN tự ý kết hợp Warfarin và Ibuprofen. Sự kết hợp này làm tăng nguy cơ xuất huyết tiêu hóa và biến chứng chảy máu nghiêm trọng.",
+  "safety_status": "warning",
+  "emergency_escalation": false,
+  "fides_verification": {
+    "status": "passed",
+    "verified_claims_count": 2,
+    "blocked_claims_count": 0,
+    "ddi_severity": "MAJOR",
+    "evidence_sources": [
+      {
+        "source": "DAV Pharmacopoeia III",
+        "entry_id": "DAV-WAR-001",
+        "citation": "Dược thư Quốc gia Việt Nam - Chuyên luận Warfarin & NSAIDs"
+      },
+      {
+        "source": "DrugBank 5.1",
+        "entry_id": "DB00682-DB01050",
+        "citation": "Warfarin interaction with Ibuprofen: Increased risk of bleeding."
+      }
+    ]
+  },
+  "suggested_actions": [
+    "Tham khảo ý kiến bác sĩ để đổi sang thuốc giảm đau an toàn hơn (như Paracetamol đúng liều)",
+    "Theo dõi các dấu hiệu xuất huyết: bầm tím dưới da, chảy máu chân răng, phân đen"
+  ]
+}
+```
+
+### 11.2 Medication Safety & DDI Analysis (`POST /api/v1/careguard/analyze`)
+Performs deterministic multi-medication interaction and dosage safety scanning.
+
+**Request Payload:**
+```json
+{
+  "medications": [
+    { "name": "Simvastatin", "dose_mg": 40, "frequency": "1 viên/tối" },
+    { "name": "Amlodipine", "dose_mg": 10, "frequency": "1 viên/sáng" },
+    { "name": "Clarithromycin", "dose_mg": 500, "frequency": "2 viên/ngày" }
+  ],
+  "patient_factors": {
+    "age": 68,
+    "egfr": 45,
+    "allergies": []
+  }
+}
+```
+
+**Response Payload:**
+```json
+{
+  "analysis_id": "cgd_8912739",
+  "overall_risk": "CRITICAL",
+  "interactions": [
+    {
+      "drugs": ["Simvastatin", "Clarithromycin"],
+      "severity": "CRITICAL",
+      "mechanism": "Clarithromycin ức chế mạnh CYP3A4, làm tăng nồng độ Simvastatin trong huyết tương lên nhiều lần, dẫn đến nguy cơ tiêu cơ vân (rhabdomyolysis) và suy thận cấp.",
+      "clinical_recommendation": "CHỐNG CHỈ ĐỊNH dùng đồng thời. Tạm ngừng Simvastatin trong thời gian điều trị Clarithromycin hoặc chuyển sang kháng sinh khác."
+    },
+    {
+      "drugs": ["Simvastatin", "Amlodipine"],
+      "severity": "MODERATE",
+      "mechanism": "Amlodipine làm tăng nồng độ Simvastatin. Liều Simvastatin không nên vượt quá 20mg/ngày khi dùng cùng Amlodipine.",
+      "clinical_recommendation": "Cần hiệu chỉnh giảm liều Simvastatin xuống tối đa 20mg/ngày."
+    }
+  ],
+  "dosage_warnings": [
+    {
+      "drug": "Simvastatin",
+      "warning": "Liều 40mg vượt ngưỡng khuyến cáo an toàn khi phối hợp với Amlodipine (tối đa 20mg)."
+    }
+  ]
+}
+```
+
+---
+
+## 12. Clinical & Operational Usage Examples
+
+### 12.1 Scenario 1: Acute Emergency Symptom Fast-Path
+- **User Query**: *"Tôi bị đau thắt ngực dữ dội lan ra cánh tay trái, khó thở và vã mồ hôi 20 phút nay rồi, phải uống thuốc gì?"*
+- **Router Classification**: `INTENT: EMERGENCY_FAST_PATH` (Confidence: 1.0)
+- **Execution Path**: Generative RAG bypassed completely.
+- **System Output**:
+  > 🚨 **CẢNH BÁO KHẨN CẤP — CẦN CẤP CỨU NGAY LẬP TỨC**  
+  > Các triệu chứng của bạn (đau thắt ngực lan ra tay trái, khó thở, vã mồ hôi) là dấu hiệu cảnh báo của **Hội chứng mạch vành cấp (Nhồi máu cơ tim)**.
+  > 
+  > 1. **GỌI NGAY CẤP CỨU 115** hoặc đến cơ sở y tế gần nhất ngay bây giờ.  
+  > 2. **Dừng mọi hoạt động**, ngồi hoặc nằm nghỉ ngơi ở tư thế nửa nằm nửa ngồi.  
+  > 3. **Nới lỏng quần áo**, giữ bình tĩnh và gọi người thân bên cạnh hỗ trợ.  
+  > 4. **TUYỆT ĐỐI KHÔNG TỰ LÁI XE** hoặc tự ý uống các loại thuốc giảm đau khi chưa có chỉ định của nhân viên y tế cấp cứu.
+
+### 12.2 Scenario 2: Ambient Scribe Consultation & SOAP Synthesis
+- **Consultation Dialogue**:  
+  *Bác sĩ: "Chào bác Hùng, hôm nay bác tái khám đái tháo đường thế nào?"*  
+  *Bệnh nhân: "Tôi dạo này hay bị đói cồn cào lúc gần trưa, run tay. Huyết áp ở nhà đo khoảng 135/85. Tôi vẫn uống Metformin 850mg ngày 2 viên và Gliclazide 60mg sáng 1 viên."*  
+  *Bác sĩ: "Để tôi kiểm tra đường huyết đói hôm nay là 4.2 mmol/L, có dấu hiệu hạ đường huyết nhẹ do Gliclazide. Ta sẽ giảm liều Gliclazide xuống 30mg nhé."*
+- **Scribe SOAP Generation**:
+  - **S**: Bệnh nhân nam đến tái khám ĐTĐ type 2. Báo cáo triệu chứng đói cồn cào trước bữa trưa kèm run tay (nghi ngờ hạ đường huyết nhẹ). HA tại nhà ~135/85 mmHg. Tuân thủ thuốc: Metformin 850mg x 2, Gliclazide MR 60mg x 1.
+  - **O**: Sinh hiệu ổn định. ĐH mao mạch lúc đói: 4.2 mmol/L. HA phòng khám: 130/80 mmHg.
+  - **A**: Đái tháo đường type 2 (ICD-10: E11) - Có cơn hạ đường huyết nhẹ liên quan đến Sulfonylurea (Gliclazide). Tăng huyết áp nguyên phát (ICD-10: I10) - Kiểm soát tốt.
+  - **P**:
+    1. Giảm liều Gliclazide MR xuống 30mg uống sáng.
+    2. Duy trì Metformin 850mg: 1 viên x 2 lần/ngày (sau ăn).
+    3. Hướng dẫn xử trí hạ đường huyết: Quy tắc 15g carbohydrate nhanh khi run tay/đói.
+    4. Hẹn tái khám sau 4 tuần hoặc khi có diễn biến bất thường.
+
+---
+
+## 13. Technical Boundaries, Scope & Disclaimers
+
+### 13.1 Regulatory Intended Use
+CLARA is categorized as a **Clinical Decision Support System (CDSS) and Health Information Platform**. It is intended to assist:
+1. **Patients & Caregivers**: In organizing medical history, understanding clinical terminology, monitoring medication schedules, and preparing for physician appointments.
+2. **Physicians & Healthcare Providers**: In rapidly synthesizing literature, surfacing potential drug interactions, preparing multidisciplinary case insights, and reducing administrative documentation burdens.
+
+### 13.2 Non-Diagnostic Disclaimer
+> **IMPORTANT MEDICAL NOTICE**: CLARA does not establish definitive medical diagnoses, issue binding prescription orders, or perform autonomous surgical/treatment planning. All clinical outputs, analyses, and recommendations must be validated by a licensed physician before any clinical action is taken. In the event of a medical emergency, users must immediately contact their local emergency services (115 in Vietnam) or proceed to the nearest emergency department.
+
+---
+
+## 14. Canonical URLs & Reference Directory
+
+| Surface / Resource | Canonical URL | Description |
+|---|---|---|
+| **Portal Homepage** | https://theclaracare.com/ | Platform overview, features, and enterprise clinical solutions |
+| **Conversational Chat & Ask** | https://theclaracare.com/chat | Multi-turn medical AI chat with deterministic safety gating |
+| **LifeMap Health Timeline** | https://theclaracare.com/lifemap | Longitudinal personal health timeline & event provenance ledger |
+| **Medicines & DDI Hub** | https://theclaracare.com/medicines | Medication cabinet, barcode OCR scanner, and DDI interaction checker |
+| **Clinical Council** | https://theclaracare.com/council | Multi-specialist clinical deliberation & case review workspace |
+| **Ambient Scribe** | https://theclaracare.com/scribe | Bilingual medical ASR, SOAP note generator & electronic signing |
+| **Living Evidence Hub** | https://theclaracare.com/evidence | Federated search across DAV, DrugBank, PubMed, and WHO |
+| **User & Clinician Guide** | https://theclaracare.com/huong-dan | Comprehensive operating manual, workflows, and best practices |
+| **Safety Invariants Specification** | https://theclaracare.com/safety | Full mathematical and clinical guardrail documentation |
+| **Privacy Policy & Decree 13** | https://theclaracare.com/legal/privacy | Legal basis, data sovereignty, consent ledgers, and DSAR rights |
+| **Short LLMs Protocol** | https://theclaracare.com/llms.txt | Brief index and machine-readable discovery protocol |
+| **Full LLMs Protocol** | https://theclaracare.com/llms-full.txt | Complete architectural and clinical deep documentation |
+
+---
+*© 2026 The CLARA Care Ecosystem. All rights reserved. Compliant with Vietnam Law on AI No. 134/2025/QH15 & Decree 13/2023/NĐ-CP.*

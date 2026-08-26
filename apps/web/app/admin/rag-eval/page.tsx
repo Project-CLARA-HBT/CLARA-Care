@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminShell from "@/components/admin/admin-shell";
 import AsyncSection, { type AsyncState } from "@/components/ui/async-section";
 import { KpiCard, PanelCard, TrendBars } from "@/components/admin/analytics-primitives";
 import Button from "@/components/ui/button";
 import Icon from "@/components/ui/icon";
+import { getRole, type UserRole } from "@/lib/auth-store";
 import api from "@/lib/http-client";
 import { formatLocaleDate, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
@@ -95,6 +96,7 @@ function toPercentPoint(value: number | null | undefined): number {
 
 export default function AdminRagEvalPage() {
   const language = useUILanguage();
+  const [role, setRoleState] = useState<UserRole | null>(() => getRole());
   const [k, setK] = useState(10);
   const [runId, setRunId] = useState("");
   const [results, setResults] = useState<EvalResultsResponse | null>(null);
@@ -108,6 +110,10 @@ export default function AdminRagEvalPage() {
   const [selectedQuestion, setSelectedQuestion] = useState<EvalResultItem | null>(null);
   const [questionFilter, setQuestionFilter] = useState<"all" | "errors" | "low_faithfulness" | "low_recall">("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    setRoleState(getRole());
+  }, []);
 
   const fetchResults = useCallback(async (id: string) => {
     setIsLoadingResults(true);
@@ -176,6 +182,33 @@ export default function AdminRagEvalPage() {
   }, [isLoadingResults, error, results]);
 
   const showTrend = runs.length >= 2;
+  const isEn = language === "en";
+
+  // Defense-in-depth: Non-admin role gating
+  if (role !== null && role !== "admin") {
+    return (
+      <AdminShell
+        activeTab="rag-eval"
+        title={t(language, "admin.ragEval.title")}
+        description={t(language, "admin.ragEval.description")}
+      >
+        <div
+          role="alert"
+          className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-8 text-center text-[var(--status-danger-text)] shadow-soft"
+        >
+          <Icon name="warning" size={36} className="mx-auto mb-3 text-[var(--status-danger-text)]" />
+          <h2 className="text-lg font-bold">
+            {isEn ? "Access Denied (403)" : "Từ chối quyền truy cập (403)"}
+          </h2>
+          <p className="mt-2 text-sm opacity-90 max-w-md mx-auto">
+            {isEn
+              ? "You do not have permission to access the RAG Evaluation Benchmark. Administrator role required."
+              : "Bạn không có quyền truy cập Bảng Đánh giá Benchmark RAG. Chỉ tài khoản Quản trị viên (Admin) mới được phép xem."}
+          </p>
+        </div>
+      </AdminShell>
+    );
+  }
 
   return (
     <AdminShell

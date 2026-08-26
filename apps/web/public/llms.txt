@@ -1,0 +1,32 @@
+# The CLARA Care — Clinical Agent for Retrieval & Analysis
+
+> A safety-first, Vietnamese-specialized clinical & personal health AI assistant.
+
+CLARA (Clinical Agent for Retrieval & Analysis) is an evidence-first, multimodal clinical and personal health AI platform engineered specifically for the Vietnamese healthcare ecosystem. Designed with strict mathematical and clinical guardrails, CLARA functions as a clinical decision-support and health management partner—augmenting clinicians and empowering patients without ever replacing licensed medical practitioners.
+
+## Key Capabilities
+
+- **FIDES Deterministic Medical Safety Verification**: Real-time deterministic verification engine evaluating drug-drug interactions (DDI), maximum daily dosage thresholds, pediatric/geriatric adjustments, and medical contraindications against authoritative clinical ground truths (DAV Pharmacopoeia III, DrugBank 5.1). Fails closed on any `CRITICAL` safety claim violation.
+- **LifeMap Longitudinal Health Timeline**: Dual-temporal ($\tau_v$ valid time vs. $\tau_k$ knowledge time) longitudinal health record that tracks symptoms, diagnoses, vital measurements, lab reports, and medications across a patient's lifespan with immutable append-only provenance and FHIR R4 interoperability.
+- **Multi-Specialty Medical Council**: Collaborative multi-agent deliberation network bringing together autonomous specialist agents (Cardiology, Nephrology, Endocrinology, Neurology, Clinical Pharmacology) to evaluate complex, multi-morbid clinical cases, map consensus/divergence, and provide holistic clinical summaries under clinician oversight.
+- **Ambient Clinical Scribe**: Real-time bilingual (Vietnamese-English) medical speech-to-text (ASR) and SOAP note synthesis engine that generates clinical documentation, extracts discrete clinical entities, maps ICD-10 diagnostic codes, and supports cryptographic electronic signing and addenda workflows.
+- **Living Evidence Hub**: Continuous biomedical knowledge federation engine aggregating Dược thư Quốc gia Việt Nam (DAV III), DrugBank 5.1, WHO Clinical Guidelines, openFDA, DailyMed, PubMed, Europe PMC, and Semantic Scholar with hybrid vector-lexical search (Milvus + BM25) and GraphRAG biomedical relation traversal.
+- **Zero-CoT Data Privacy & Sovereignty**: Compliant with Vietnam's Personal Data Protection Decree No. 13/2023/NĐ-CP and AI Law No. 134/2025/QH15. Strict Zero-Chain-of-Thought (Zero-CoT) leakage protection ensures internal reasoning traces are stripped at the gateway before client delivery. Employs purpose-gated consent ledgers, no-PII telemetry, and granular Data Subject Access Rights (DSAR).
+
+## Canonical URLs
+
+- [Homepage](https://theclaracare.com/): Official portal, architectural overview, and core platform capabilities of CLARA Care.
+- [Chat & Ask](https://theclaracare.com/chat): Multi-turn conversational medical AI with deterministic emergency triage, adaptive reader modes, and evidence-grounded clinical retrieval.
+- [LifeMap](https://theclaracare.com/lifemap): Longitudinal personal health timeline tracking valid time vs. knowledge time with immutable audit provenance and health journey visualization.
+- [Medicines & DDI](https://theclaracare.com/medicines): Complete medication hub, home medicine cabinet inventory, and real-time Drug-Drug Interaction (DDI) safety verification engine.
+- [Clinical Council](https://theclaracare.com/council): Multi-specialist clinical deliberation workspace for complex and cross-disciplinary medical case analysis.
+- [Scribe](https://theclaracare.com/scribe): Ambient clinical scribe generating structured bilingual Vietnamese-English SOAP notes and ICD-10 suggestions from doctor-patient consultations.
+- [Evidence](https://theclaracare.com/evidence): Living Evidence Hub federating DAV Pharmacopoeia, DrugBank, WHO, FDA, and PubMed with continuous clinical guideline monitoring.
+- [User Guide](https://theclaracare.com/huong-dan): Comprehensive user, caregiver, and clinician onboarding documentation and workflow guides.
+- [Safety Invariants](https://theclaracare.com/safety): Detailed specification of CLARA's mathematical safety invariants, fail-closed thresholds, emergency fast-paths, and verification matrices.
+- [Privacy Policy](https://theclaracare.com/legal/privacy): Decree 13/2023/NĐ-CP compliance statement, data sovereignty guarantees, consent purpose matrices, and no-PII telemetry contracts.
+
+## Full Documentation
+
+For in-depth technical specifications, clinical rationale, data verification pipelines, algorithmic architectures, and complete usage examples, refer to:
+- [Full Documentation for LLMs (llms-full.txt)](https://theclaracare.com/llms-full.txt)

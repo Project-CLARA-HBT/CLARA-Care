@@ -7,6 +7,7 @@ import Button from "@/components/ui/button";
 import Icon from "@/components/ui/icon";
 import Modal from "@/components/ui/modal";
 import { InlineError } from "@/components/ui/surface";
+import { getRole, type UserRole } from "@/lib/auth-store";
 import {
   SocialReport,
   actOnReport,

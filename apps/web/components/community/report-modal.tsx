@@ -93,8 +93,8 @@ export function ReportModal({
       <div className="space-y-3">
         <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
           {isEn
-            ? "Please select the primary reason for reporting this content to the clinical moderation team:"
-            : "Vui lòng chọn lý do báo cáo nội dung này tới đội ngũ kiểm duyệt:"}
+            ? "Please select the primary reason for reporting this post to the clinical moderation team:"
+            : "Vui lòng chọn lý do báo cáo bài viết này tới đội ngũ kiểm duyệt:"}
         </p>
         <Select
           label={isEn ? "Report Reason" : "Lý do báo cáo"}

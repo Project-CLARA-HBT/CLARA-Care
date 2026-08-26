@@ -500,6 +500,34 @@ export default function AdminKnowledgeSourcesPage() {
     [sourceRecordDistribution]
   );
 
+  const isEn = language === "en";
+
+  // Defense-in-depth: Non-admin role gating
+  if (role !== null && role !== "admin") {
+    return (
+      <AdminShell
+        activeTab="knowledge-sources"
+        title={t(language, "admin.knowledgeSources.title")}
+        description={t(language, "admin.knowledgeSources.description")}
+      >
+        <div
+          role="alert"
+          className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-8 text-center text-[var(--status-danger-text)] shadow-soft"
+        >
+          <Icon name="warning" size={36} className="mx-auto mb-3 text-[var(--status-danger-text)]" />
+          <h2 className="text-lg font-bold">
+            {isEn ? "Access Denied (403)" : "Từ chối quyền truy cập (403)"}
+          </h2>
+          <p className="mt-2 text-sm opacity-90 max-w-md mx-auto">
+            {isEn
+              ? "You do not have permission to view the Knowledge Sources Workbench. Administrator role required."
+              : "Bạn không có quyền truy cập Bảng Quản lý Nguồn Tri thức. Chỉ tài khoản Quản trị viên (Admin) mới được phép xem."}
+          </p>
+        </div>
+      </AdminShell>
+    );
+  }
+
   return (
     <AdminShell
       activeTab="knowledge-sources"

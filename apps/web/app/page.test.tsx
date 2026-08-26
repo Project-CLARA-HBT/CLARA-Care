@@ -7,40 +7,45 @@ vi.mock("@/lib/use-ui-language", () => ({
 
 import HomePage, { metadata } from "./page";
 
-describe("HomePage (/ - Spec v5 Section 6.1 Marketing Landing)", () => {
-  it("exports metadata matching CLARA clinical assistant positioning", () => {
+describe("HomePage (/ - Spec v7 Spatial Art Landing & SEO)", () => {
+  it("exports rich metadata targeting primary Vietnamese and English search keywords", () => {
     expect(metadata.title).toContain("The Clara Care");
+    expect(metadata.title).toContain("Clinical AI Assistant");
     expect(metadata.description).toContain("FIDES");
     expect(metadata.description).toContain("Zero-CoT");
+    expect(metadata.description).toContain("Dược thư Quốc gia");
+
+    // Keywords in Vietnamese & English
+    const keywords = metadata.keywords as string[];
+    expect(keywords).toContain("trợ lý AI y tế");
+    expect(keywords).toContain("AI y tế Việt Nam");
+    expect(keywords).toContain("Clinical AI Assistant");
+    expect(keywords).toContain("Drug-Drug Interaction Checker");
+    expect(keywords).toContain("Vietnamese National Pharmacopoeia");
+    expect(keywords).toContain("Zero-CoT Medical Privacy");
+
+    // OpenGraph & Alternates
+    expect(metadata.openGraph?.title).toContain("The Clara Care");
+    expect(metadata.openGraph?.locale).toBe("vi_VN");
+    expect(metadata.alternates?.canonical).toBe("/");
   });
 
-  it("renders the Public Marketing Landing page", () => {
+  it("renders SeoJsonLd and LandingV7", () => {
     const { container } = render(<HomePage />);
-    const root = container.firstChild as HTMLElement;
 
-    expect(root).toHaveAttribute("data-shell-mode", "PUBLIC_MARKETING");
-    expect(root).toHaveAttribute("data-layout-archetype", "Marketing Landing");
+    // SeoJsonLd script verification
+    const jsonLdScript = container.querySelector('script[type="application/ld+json"]');
+    expect(jsonLdScript).not.toBeNull();
+    const jsonLdData = JSON.parse(jsonLdScript?.innerHTML || "{}");
+    expect(jsonLdData["@context"]).toBe("https://schema.org");
+    expect(jsonLdData["@graph"]).toBeDefined();
+    expect(jsonLdData["@graph"].length).toBeGreaterThanOrEqual(3);
 
-    // Header & Hero
-    const loginLinks = screen.getAllByRole("link", { name: /đăng nhập/i });
-    expect(loginLinks.length).toBeGreaterThan(0);
-    expect(loginLinks[0]).toHaveAttribute("href", "/login");
-
-    const registerLinks = screen.getAllByRole("link", { name: /đăng ký/i });
-    expect(registerLinks.length).toBeGreaterThan(0);
-    expect(registerLinks[0]).toHaveAttribute("href", "/register");
-
-    expect(screen.getAllByText("FIDES Guardrail Verified").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Zero-CoT Privacy Safe").length).toBeGreaterThan(0);
-
-    // Footer links
-    expect(screen.getByRole("link", { name: /trung tâm pháp lý \(\/legal\)/i })).toHaveAttribute(
-      "href",
-      "/legal",
-    );
-    expect(screen.getByRole("link", { name: /trung tâm hướng dẫn \(\/huong-dan\)/i })).toHaveAttribute(
-      "href",
-      "/huong-dan",
-    );
+    // LandingV7 content verification
+    expect(screen.getByRole("main")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Chuyển đến nội dung chính \/ Skip to main content/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
   });
 });
