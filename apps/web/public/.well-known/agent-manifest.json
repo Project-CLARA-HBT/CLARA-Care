@@ -1,0 +1,230 @@
+{
+  "schema_version": "1.0.0",
+  "manifest_version": "1.0",
+  "agent": {
+    "id": "the-clara-care-agent",
+    "name": "clara_care_medical_assistant",
+    "displayName": "The CLARA Care — Clinical & Medical AI",
+    "version": "2.4.0",
+    "description": "Vietnam's #1 safety-first clinical AI assistant for verified drug interactions (FIDES), medical guidelines, LifeMap timelines, and multi-specialty council reviews.",
+    "longDescription": "Assistant for Vietnamese and international clinical and medical inquiries. Uses deterministic FIDES verification for drug-drug interactions (DDI) and dosage safety checks against Vietnam National Pharmacopoeia (DAV) and DrugBank 5.1+. Provides structured evidence grounding, emergency 115 fast-path triage, and bounded health data processing.",
+    "provider": {
+      "name": "The CLARA Care Ecosystem",
+      "url": "https://theclaracare.com",
+      "contactEmail": "clara@thiennn.icu"
+    },
+    "iconUrl": "https://theclaracare.com/icons/clara-logo.png",
+    "documentationUrl": "https://theclaracare.com/llms-full.txt",
+    "legalUrl": "https://theclaracare.com/legal/terms",
+    "privacyPolicyUrl": "https://theclaracare.com/legal/privacy"
+  },
+  "endpoints": {
+    "baseUrl": "https://theclaracare.com/api/v1",
+    "openapiSchema": "https://theclaracare.com/openapi.json",
+    "mcpEndpoint": "https://theclaracare.com/api/v1/mcp"
+  },
+  "authentication": {
+    "type": "none"
+  },
+  "capabilities": [
+    "deterministic_ddi_verification",
+    "fides_dosage_bound_checking",
+    "federated_biomedical_evidence_search",
+    "emergency_115_fast_path_triage",
+    "bilingual_vi_en_medical_terminology",
+    "decree_13_pdpd_privacy_compliance",
+    "lifemap_longitudinal_health_timeline",
+    "multi_specialty_council_deliberation"
+  ],
+  "tools": [
+    {
+      "name": "check_drug_interaction",
+      "description": "Deterministic FIDES drug-drug interaction (DDI) and dosage safety verification for active pharmaceutical ingredients or brand names against DAV Pharmacopoeia III and DrugBank 5.1+.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "medications": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of active ingredients or commercial drug names to evaluate for pairwise and multi-drug interactions.",
+            "minItems": 1
+          },
+          "patient_age": {
+            "type": "integer",
+            "description": "Patient age in years (used for pediatric/geriatric dosing threshold checks)."
+          },
+          "egfr": {
+            "type": "number",
+            "description": "Estimated Glomerular Filtration Rate (mL/min/1.73m²) for renal clearance adjustments."
+          },
+          "patient_conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Existing patient conditions/diagnoses (e.g., 'Pregnancy', 'G6PD Deficiency', 'Hypertension')."
+          }
+        },
+        "required": [
+          "medications"
+        ]
+      },
+      "endpoint": {
+        "path": "/public/ddi/check",
+        "method": "POST"
+      }
+    },
+    {
+      "name": "lookup_evidence_source",
+      "description": "Queries The CLARA Care Living Evidence Hub across DAV Pharmacopoeia III, DrugBank 5.1, WHO Clinical Guidelines, openFDA, DailyMed, and PubMed/Europe PMC.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Medical search query, drug name, clinical condition, or mechanism of action."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "dav_pharmacopoeia",
+                "drugbank",
+                "who_guidelines",
+                "openfda",
+                "pubmed",
+                "all"
+              ]
+            },
+            "default": [
+              "all"
+            ],
+            "description": "Biomedical knowledge sources to include in search."
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "vi",
+              "en"
+            ],
+            "default": "vi",
+            "description": "Target language for clinical citations and snippets."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 5,
+            "description": "Maximum number of evidence entries to return."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "endpoint": {
+        "path": "/public/evidence/lookup",
+        "method": "POST"
+      }
+    },
+    {
+      "name": "get_clinical_standards",
+      "description": "Retrieves official clinical practice guidelines, emergency triage criteria (Fast-Path 115), and diagnostic protocols from Vietnam Ministry of Health (BYT), WHO, ACC/AHA, ADA, and KDIGO.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "Clinical topic or disease entity (e.g., 'acute_coronary_syndrome', 'hypertension', 'type_2_diabetes', 'dengue_fever', 'emergency_triage')."
+          },
+          "specialty": {
+            "type": "string",
+            "enum": [
+              "cardiology",
+              "endocrinology",
+              "nephrology",
+              "neurology",
+              "pharmacology",
+              "infectious_disease",
+              "emergency"
+            ],
+            "description": "Medical specialty classification."
+          },
+          "guideline_body": {
+            "type": "string",
+            "enum": [
+              "BYT",
+              "WHO",
+              "ACC_AHA",
+              "ADA",
+              "KDIGO",
+              "ANY"
+            ],
+            "default": "ANY",
+            "description": "Authoring clinical guideline body."
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "vi",
+              "en"
+            ],
+            "default": "vi"
+          }
+        },
+        "required": [
+          "topic"
+        ]
+      },
+      "endpoint": {
+        "path": "/public/clinical/standards",
+        "method": "POST"
+      }
+    }
+  ],
+  "knowledge_bases": [
+    {
+      "id": "dav_iii",
+      "name": "Dược thư Quốc gia Việt Nam (DAV III)",
+      "version": "3.0",
+      "jurisdiction": "Vietnam",
+      "authority": "Ministry of Health (Bộ Y tế)",
+      "description": "Official Vietnamese national pharmacopoeia, standard generic & brand mappings, registered dosages, and indications."
+    },
+    {
+      "id": "drugbank_5_1",
+      "name": "DrugBank Knowledgebase",
+      "version": "5.1+",
+      "jurisdiction": "International",
+      "authority": "OMx Technologies / DrugBank",
+      "description": "Small molecule & biologic DDI network, CYP450 enzyme metabolism pathways, contraindications, and target pharmacology."
+    },
+    {
+      "id": "moh_clinical_protocols",
+      "name": "Vietnam MoH Clinical Practice Guidelines",
+      "version": "2024-2026",
+      "jurisdiction": "Vietnam",
+      "authority": "Cục Quản lý Khám, chữa bệnh (Bộ Y tế)",
+      "description": "National diagnostic and treatment protocols for hospital and ambulatory care settings."
+    },
+    {
+      "id": "who_eml_guidelines",
+      "name": "WHO Model List of Essential Medicines & Guidelines",
+      "version": "23rd List (2025/2026)",
+      "jurisdiction": "Global",
+      "authority": "World Health Organization",
+      "description": "Global evidence-based clinical protocols, essential medicines list, and therapeutic guidelines."
+    },
+    {
+      "id": "openfda_dailymed",
+      "name": "openFDA & DailyMed Drug Monographs",
+      "version": "Live Sync",
+      "jurisdiction": "United States / Global",
+      "authority": "US FDA & National Library of Medicine",
+      "description": "Real-time drug labeling, boxed warnings, and post-marketing surveillance reports."
+    }
+  ]
+}

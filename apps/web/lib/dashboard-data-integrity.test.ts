@@ -7,7 +7,7 @@ const dashboardPageSource = readFileSync(
   "utf8",
 );
 const clinicalLaunchpadSource = readFileSync(
-  resolve(__dirname, "../components/clinical/clinical-overview-launchpad.tsx"),
+  resolve(__dirname, "../components/clinical/clinical-overview.tsx"),
   "utf8",
 );
 const researchLaunchpadSource = readFileSync(

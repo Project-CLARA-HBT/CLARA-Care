@@ -941,7 +941,16 @@ class FakeApiClient extends ApiClient {
   Map<String, dynamic> socialConsent = <String, dynamic>{'granted': false};
   List<Map<String, dynamic>> socialCommunities = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> socialFeed = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> socialCommunityPosts = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> socialSearchResults = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> socialBookmarks = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> socialComments = <Map<String, dynamic>>[];
+  Map<String, dynamic> socialProfile = <String, dynamic>{
+    'handle': 'clara7',
+    'display_name': 'Nguyen Van A',
+    'bio': 'Chia sẻ kinh nghiệm sống khỏe',
+    'role_badge': '',
+  };
   Object? socialError;
 
   @override
@@ -980,6 +989,17 @@ class FakeApiClient extends ApiClient {
         'joinSocialCommunity', {'communityId': communityId},
         accessToken: accessToken));
     return <String, dynamic>{'joined': true};
+  }
+
+  @override
+  Future<Map<String, dynamic>> leaveSocialCommunity({
+    required String accessToken,
+    required int communityId,
+  }) async {
+    invocations.add(FakeApiInvocation(
+        'leaveSocialCommunity', {'communityId': communityId},
+        accessToken: accessToken));
+    return <String, dynamic>{'joined': false};
   }
 
   @override
@@ -1063,6 +1083,36 @@ class FakeApiClient extends ApiClient {
       accessToken: accessToken,
     ));
     return <String, dynamic>{'reported': true};
+  }
+
+  @override
+  Future<Map<String, dynamic>> getSocialProfile({
+    required String accessToken,
+  }) async {
+    invocations.add(FakeApiInvocation('getSocialProfile', const {},
+        accessToken: accessToken));
+    if (socialError != null) throw socialError!;
+    return socialProfile;
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateSocialProfile({
+    required String accessToken,
+    required String displayName,
+    required String bio,
+  }) async {
+    invocations.add(FakeApiInvocation(
+      'updateSocialProfile',
+      {'displayName': displayName, 'bio': bio},
+      accessToken: accessToken,
+    ));
+    if (socialError != null) throw socialError!;
+    socialProfile = <String, dynamic>{
+      ...socialProfile,
+      'display_name': displayName,
+      'bio': bio,
+    };
+    return socialProfile;
   }
 
   // --- Medication courses ----------------------------------------------------

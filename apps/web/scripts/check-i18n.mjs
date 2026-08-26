@@ -638,10 +638,6 @@ const DYNAMIC_KEY_PREFIXES = [
     sourceToken: 'labelFor(language, "ecosystem.severity"',
   },
   {
-    prefix: "community.reaction.",
-    sourceToken: "`community.reaction.${kind}`",
-  },
-  {
     prefix: "errors.",
     sourceToken: "errors.",
   },

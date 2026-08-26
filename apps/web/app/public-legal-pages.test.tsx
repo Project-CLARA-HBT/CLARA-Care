@@ -90,12 +90,12 @@ describe("1. /legal/consent and /consent — Comprehensive Clinical Consent Agre
     expect(telLink).toHaveAttribute("href", "tel:115");
 
     // Consent withdrawal mechanisms and audit logging
-    expect(screen.getByText(/7\. Quyền rút lại đồng thuận & Quản trị quyền dữ liệu \(DSAR\)/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /7\. Quyền rút lại đồng thuận & Quản trị quyền dữ liệu \(DSAR\)/i })).toBeInTheDocument();
     expect(screen.getByText(/Chuẩn Zero-CoT bất biến:/i)).toBeInTheDocument();
     expect(screen.getByText(/Bản ghi đồng thuận phi định danh:/i)).toBeInTheDocument();
 
     // Related controls contain direct link to personal consent ledger
-    expect(screen.getByRole("link", { name: /Sổ cái đồng thuận cá nhân/i })).toHaveAttribute("href", "/account/consent");
+    expect(screen.getAllByRole("link", { name: /Sổ cái đồng thuận cá nhân/i })[0]).toHaveAttribute("href", "/account/consent");
   });
 
   it("renders /consent root wrapper with canonical alternate to /legal/consent", () => {
@@ -178,6 +178,11 @@ describe("3. /contact — Professional Contact Page & Multi-Channel Support", ()
       }),
     ).toBeInTheDocument();
 
+    // Breadcrumb and SLA badges
+    expect(screen.getByRole("navigation", { name: "Breadcrumb" })).toBeInTheDocument();
+    expect(screen.getByText(/Bảo mật Zero-PII/i)).toBeInTheDocument();
+    expect(screen.getByText(/Phản hồi: 24 - 72h/i)).toBeInTheDocument();
+
     // Emergency 115 disclaimer
     expect(screen.getByText(/Cảnh báo cấp cứu y tế khẩn cấp \(115\)/i)).toBeInTheDocument();
     const emergencyCallLink = screen.getByRole("link", { name: /GỌI NGAY CẤP CỨU 115/i });
@@ -189,10 +194,19 @@ describe("3. /contact — Professional Contact Page & Multi-Channel Support", ()
     expect(screen.getByText(/3\. Hợp tác nghiên cứu & Dữ liệu y học/i)).toBeInTheDocument();
     expect(screen.getByText(/4\. Cán bộ bảo vệ dữ liệu \(DPO\) & DSAR/i)).toBeInTheDocument();
 
+    // Channel scopes and details
+    expect(screen.getByText(/Doctor onboarding, Council review, Scribe verification/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Nghị định 13\/2023\/NĐ-CP/i).length).toBeGreaterThan(0);
+
     // Compliance address and operator details
     expect(screen.getByText(LEGAL_OPERATOR_NAME)).toBeInTheDocument();
     expect(screen.getByText(`https://${LEGAL_PRIMARY_DOMAIN}`)).toBeInTheDocument();
     expect(screen.getByText(/08:00 - 18:00 \(Thứ 2 - Thứ 6\)/i)).toBeInTheDocument();
+
+    // Quick navigation links
+    expect(screen.getByRole("link", { name: /Quyền riêng tư & DSAR/i })).toHaveAttribute("href", "/legal/privacy");
+    expect(screen.getByRole("link", { name: /Đồng thuận y tế/i })).toHaveAttribute("href", "/legal/consent");
+    expect(screen.getAllByRole("link", { name: /Tuyên ngôn an toàn/i })[0]).toHaveAttribute("href", "/safety");
 
     // Structured Feedback Form
     expect(screen.getByTestId("contact-feedback-form")).toBeInTheDocument();
@@ -211,6 +225,10 @@ describe("3. /contact — Professional Contact Page & Multi-Channel Support", ()
     // Attempt submission with empty inputs -> validation errors shown
     fireEvent.click(submitBtn);
     expect(screen.getByText(/Vui lòng nhập họ và tên của bạn/i)).toBeInTheDocument();
+
+    // Test category selector switch
+    const clinicianCategoryBtn = screen.getByRole("button", { name: /Cố vấn y khoa/i });
+    fireEvent.click(clinicianCategoryBtn);
 
     // Fill valid data
     const nameInput = screen.getByLabelText(/Họ và tên/i);
@@ -235,6 +253,21 @@ describe("3. /contact — Professional Contact Page & Multi-Channel Support", ()
     expect(screen.getByTestId("contact-form-success")).toBeInTheDocument();
     expect(screen.getByText(/Tiếp nhận thành công/i)).toBeInTheDocument();
     expect(screen.getByText(/tran.van.b@hospital.vn/i)).toBeInTheDocument();
+
+    // Verify modal receipt dialog can be opened
+    const viewReceiptBtn = screen.getByTestId("view-receipt-btn");
+    fireEvent.click(viewReceiptBtn);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText(/Biên nhận yêu cầu hỗ trợ/i)).toBeInTheDocument();
+
+    // Close modal
+    const closeModalBtn = screen.getByRole("button", { name: /Đóng biên nhận/i });
+    fireEvent.click(closeModalBtn);
+
+    // Test reset button
+    const submitAnotherBtn = screen.getByTestId("submit-another-btn");
+    fireEvent.click(submitAnotherBtn);
+    expect(screen.getByTestId("contact-feedback-form")).toBeInTheDocument();
 
     vi.useRealTimers();
   });

@@ -8,6 +8,8 @@ import {
   addComment,
   addReaction,
   getComments,
+  deleteComment,
+  toggleBookmark,
   isSocialModerationBlock,
   isClaraOfficial,
   reportContent,
@@ -20,10 +22,10 @@ import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
 import ReportModal from "./report-modal";
 
-const REACTIONS: { kind: ReactionKind; icon: string }[] = [
-  { kind: "helpful", icon: "👍" },
-  { kind: "relate", icon: "🤝" },
-  { kind: "thanks", icon: "🙏" },
+const REACTIONS: { kind: ReactionKind; icon: string; labelVi: string; labelEn: string }[] = [
+  { kind: "helpful", icon: "👍", labelVi: "Hữu ích", labelEn: "Helpful" },
+  { kind: "relate", icon: "🤝", labelVi: "Đồng cảm", labelEn: "Relate" },
+  { kind: "thanks", icon: "🙏", labelVi: "Cảm ơn", labelEn: "Thanks" },
 ];
 
 export interface PostDetailDialogProps {
@@ -32,6 +34,7 @@ export interface PostDetailDialogProps {
   onClose: () => void;
   onReactionAdded?: (postId: number, kind: ReactionKind) => void;
   onCommentAdded?: (postId: number) => void;
+  onBookmarkToggled?: (postId: number, bookmarked: boolean) => void;
 }
 
 export function PostDetailDialog({
@@ -40,6 +43,7 @@ export function PostDetailDialog({
   onClose,
   onReactionAdded,
   onCommentAdded,
+  onBookmarkToggled,
 }: PostDetailDialogProps) {
   const language = useUILanguage();
   const isEn = language === "en";
@@ -49,19 +53,25 @@ export function PostDetailDialog({
     [language]
   );
 
-  const reactionLabel = (kind: ReactionKind) =>
-    copy(`community.reaction.${kind}` as UITranslationKey);
+  const reactionLabel = (kind: ReactionKind) => {
+    const item = REACTIONS.find((r) => r.kind === kind);
+    return isEn ? item?.labelEn ?? kind : item?.labelVi ?? kind;
+  };
 
   const [comments, setComments] = useState<SocialComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [commentBody, setCommentBody] = useState("");
+  const [replyingTo, setReplyingTo] = useState<{ id: number; author: string } | null>(null);
   const [commentError, setCommentError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [reacted, setReacted] = useState<ReactionKind | null>(null);
+  const [reacted, setReacted] = useState<ReactionKind | null>(
+    (post.user_reaction as ReactionKind) || null
+  );
   const [reactionCount, setReactionCount] = useState(post.reaction_count);
+  const [isBookmarked, setIsBookmarked] = useState(Boolean(post.is_bookmarked));
   const [notice, setNotice] = useState<string | null>(null);
 
   // Internal reporting modal state
@@ -73,8 +83,8 @@ export function PostDetailDialog({
 
   const official =
     typeof isClaraOfficial === "function"
-      ? isClaraOfficial(post.author_handle)
-      : false;
+      ? isClaraOfficial(post.author_handle) || Boolean(post.is_verified_clinician)
+      : Boolean(post.is_verified_clinician);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,12 +108,21 @@ export function PostDetailDialog({
     setSubmitting(true);
     setCommentError(null);
     try {
-      await addComment(post.id, commentBody.trim());
+      if (replyingTo?.id) {
+        await addComment(post.id, commentBody.trim(), replyingTo.id);
+      } else {
+        await addComment(post.id, commentBody.trim());
+      }
       setCommentBody("");
+      setReplyingTo(null);
       onCommentAdded?.(post.id);
       await load();
-    } catch (err) {
-      if (isSocialModerationBlock(err)) {
+    } catch (err: unknown) {
+      const serverDetail = (err as { response?: { data?: { detail?: string } } })?.response
+        ?.data?.detail;
+      if (typeof serverDetail === "string" && serverDetail.trim()) {
+        setCommentError(serverDetail);
+      } else if (isSocialModerationBlock(err)) {
         setCommentError(copy("community.comment.moderationBlocked"));
       } else {
         setCommentError(copy("community.comment.submitError"));
@@ -111,7 +130,7 @@ export function PostDetailDialog({
     } finally {
       setSubmitting(false);
     }
-  }, [commentBody, copy, post.id, load, onCommentAdded]);
+  }, [commentBody, copy, post.id, replyingTo, load, onCommentAdded]);
 
   const sendReaction = useCallback(
     async (kind: ReactionKind) => {
@@ -128,6 +147,35 @@ export function PostDetailDialog({
     [copy, post.id, onReactionAdded]
   );
 
+  const handleBookmarkToggle = async () => {
+    try {
+      const res = await toggleBookmark(post.id);
+      setIsBookmarked(res.bookmarked);
+      onBookmarkToggled?.(post.id, res.bookmarked);
+      setNotice(
+        res.bookmarked
+          ? isEn
+            ? "Post saved to bookmarks."
+            : "Đã lưu bài viết vào mục đã lưu."
+          : isEn
+          ? "Post removed from bookmarks."
+          : "Đã bỏ lưu bài viết."
+      );
+    } catch {
+      setNotice(isEn ? "Failed to update bookmark." : "Không thể cập nhật đã lưu.");
+    }
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    try {
+      await deleteComment(commentId);
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+      setNotice(isEn ? "Comment deleted." : "Đã xóa bình luận.");
+    } catch {
+      setNotice(isEn ? "Failed to delete comment." : "Không thể xóa bình luận.");
+    }
+  };
+
   return (
     <>
       <Modal
@@ -140,6 +188,24 @@ export function PostDetailDialog({
         footer={
           canParticipate ? (
             <div className="w-full space-y-2">
+              {replyingTo ? (
+                <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-[var(--surface-brand-soft)] border border-[color:var(--brand-500)]/30 text-xs">
+                  <div className="flex items-center gap-1.5 text-[var(--text-brand)] font-medium">
+                    <Icon name="chat" size="0.85rem" />
+                    <span>
+                      {isEn ? `Replying to @${replyingTo.author}` : `Đang trả lời @${replyingTo.author}`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReplyingTo(null)}
+                    className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  >
+                    <Icon name="close" size="0.75rem" />
+                  </button>
+                </div>
+              ) : null}
+
               <div className="space-y-1">
                 <textarea
                   value={commentBody}
@@ -195,33 +261,42 @@ export function PostDetailDialog({
           <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[color:var(--shell-border)]/50 text-xs">
             <div className="flex flex-wrap items-center gap-2">
               <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
                   official
                     ? "bg-[var(--brand-600)] text-[var(--button-primary-text)]"
                     : "bg-[var(--surface-muted)] text-[var(--text-primary)] border border-[color:var(--shell-border)]"
                 }`}
               >
-                {post.author_handle.slice(0, 2).toUpperCase()}
+                {(post.author_display_name || post.author_handle).slice(0, 2).toUpperCase()}
               </div>
-              <span className="font-bold text-[var(--text-primary)]">
-                @{post.author_handle}
-              </span>
-              {official ? (
-                <Badge tone="brand" icon="check" className="text-[10px] py-0.5 font-bold">
-                  {isEn ? "CLARA Official" : "CLARA Chuyên gia"}
-                </Badge>
-              ) : (
-                <Badge tone="neutral" className="text-[10px] py-0.5">
-                  {isEn ? "Peer Member" : "Thành viên"}
-                </Badge>
-              )}
-              <Badge tone="ok" className="text-[10px] py-0.5">
-                {isEn ? "Moderated" : "Đã duyệt an toàn"}
-              </Badge>
+              <div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-bold text-[var(--text-primary)]">
+                    {post.author_display_name ? post.author_display_name : `@${post.author_handle}`}
+                  </span>
+                  {official ? (
+                    <Badge tone="brand" icon="check" className="text-[10px] py-0.5 font-bold">
+                      {isEn ? "CLARA Official" : "CLARA Chuyên gia"}
+                    </Badge>
+                  ) : (
+                    <Badge tone="neutral" className="text-[10px] py-0.5">
+                      {isEn ? "Peer Member" : "Thành viên"}
+                    </Badge>
+                  )}
+                  <Badge tone="ok" className="text-[10px] py-0.5">
+                    {isEn ? "Moderated" : "Đã duyệt an toàn"}
+                  </Badge>
+                </div>
+              </div>
             </div>
-            <span className="text-[11px] text-[var(--text-muted)]">
-              {formatLocaleDate(language, post.created_at)}
-            </span>
+            <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+              {post.community_name ? (
+                <span className="rounded bg-[var(--surface-muted)] px-2 py-0.5 font-medium border border-[color:var(--shell-border)]">
+                  {post.community_name}
+                </span>
+              ) : null}
+              <span>{formatLocaleDate(language, post.created_at)}</span>
+            </div>
           </div>
 
           {/* Post Full Body */}
@@ -244,7 +319,7 @@ export function PostDetailDialog({
             </div>
           </div>
 
-          {/* Reactions bar and report action */}
+          {/* Reactions bar and actions */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[color:var(--shell-border)]/50">
             <div className="flex flex-wrap items-center gap-2">
               {REACTIONS.map((r) => {
@@ -253,7 +328,7 @@ export function PostDetailDialog({
                   <button
                     key={r.kind}
                     type="button"
-                    disabled={!canParticipate || isActive}
+                    disabled={!canParticipate}
                     onClick={() => sendReaction(r.kind)}
                     className={`rounded-full px-3 py-1.5 text-xs font-semibold transition border flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                       isActive
@@ -276,19 +351,35 @@ export function PostDetailDialog({
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                setReportTarget({
-                  type: "post",
-                  id: post.id,
-                  titleOrSnippet: post.title,
-                })
-              }
-              className="rounded-lg px-2.5 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--status-danger-text)] transition cursor-pointer font-medium"
-            >
-              {copy("community.report.post")}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleBookmarkToggle}
+                className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
+                  isBookmarked
+                    ? "text-[var(--text-brand)] bg-[var(--surface-brand-soft)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                }`}
+                title={isBookmarked ? (isEn ? "Remove Bookmark" : "Bỏ lưu") : isEn ? "Bookmark" : "Lưu"}
+              >
+                <Icon name="folder" size="0.85rem" />
+                <span>{isBookmarked ? (isEn ? "Saved" : "Đã lưu") : isEn ? "Save" : "Lưu"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setReportTarget({
+                    type: "post",
+                    id: post.id,
+                    titleOrSnippet: post.title,
+                  })
+                }
+                className="rounded-lg px-2.5 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--status-danger-text)] transition cursor-pointer font-medium"
+              >
+                {copy("community.report.post")}
+              </button>
+            </div>
           </div>
 
           {notice ? (
@@ -306,7 +397,7 @@ export function PostDetailDialog({
 
           <hr className="my-2 border-[color:var(--shell-border)]" />
 
-          {/* Comments Section */}
+          {/* Comments Section with nested replies */}
           <div className="space-y-3">
             <h4 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
               <span>
@@ -348,14 +439,19 @@ export function PostDetailDialog({
             ) : (
               <ul className="space-y-2.5">
                 {comments.map((c) => {
-                  const commentOfficial = isClaraOfficial(c.author_handle);
+                  const commentOfficial =
+                    isClaraOfficial(c.author_handle) || Boolean(c.is_verified_clinician);
+                  const isReply = Boolean(c.parent_id);
+
                   return (
                     <li
                       key={c.id}
-                      className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/60 p-3.5 space-y-1.5"
+                      className={`rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/60 p-3.5 space-y-1.5 ${
+                        isReply ? "ml-6 border-l-2 border-l-[var(--brand-500)]" : ""
+                      }`}
                     >
                       <div className="flex items-center justify-between gap-2 text-xs">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <div
                             className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${
                               commentOfficial
@@ -363,34 +459,59 @@ export function PostDetailDialog({
                                 : "bg-[var(--surface-muted)] text-[var(--text-primary)] border border-[color:var(--shell-border)]"
                             }`}
                           >
-                            {c.author_handle.slice(0, 2).toUpperCase()}
+                            {(c.author_display_name || c.author_handle).slice(0, 2).toUpperCase()}
                           </div>
                           <span className="font-bold text-[var(--text-primary)]">
-                            @{c.author_handle}
+                            {c.author_display_name ? c.author_display_name : `@${c.author_handle}`}
                           </span>
                           {commentOfficial ? (
                             <Badge tone="brand" className="text-[9px] py-0 px-1">
                               {isEn ? "CLARA Official" : "Chuyên gia"}
                             </Badge>
                           ) : null}
+                          {isReply ? (
+                            <span className="text-[10px] text-[var(--text-brand)] font-medium">
+                              {isEn ? "Reply" : "Phản hồi"}
+                            </span>
+                          ) : null}
                           <span className="text-[var(--text-muted)] text-[11px]">·</span>
                           <span className="text-[var(--text-muted)] text-[11px]">
                             {formatLocaleDate(language, c.created_at)}
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setReportTarget({
-                              type: "comment",
-                              id: c.id,
-                              titleOrSnippet: c.body.slice(0, 60),
-                            })
-                          }
-                          className="text-[11px] text-[var(--text-muted)] hover:text-[var(--status-danger-text)] transition cursor-pointer"
-                        >
-                          {copy("community.report.comment")}
-                        </button>
+
+                        <div className="flex items-center gap-2">
+                          {canParticipate ? (
+                            <button
+                              type="button"
+                              onClick={() => setReplyingTo({ id: c.id, author: c.author_handle })}
+                              className="text-[11px] text-[var(--text-brand)] hover:underline font-medium cursor-pointer"
+                            >
+                              {isEn ? "Reply" : "Trả lời"}
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setReportTarget({
+                                type: "comment",
+                                id: c.id,
+                                titleOrSnippet: c.body.slice(0, 60),
+                              })
+                            }
+                            className="text-[11px] text-[var(--text-muted)] hover:text-[var(--status-danger-text)] transition cursor-pointer"
+                          >
+                            {copy("community.report.comment")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteComment(c.id)}
+                            className="text-[11px] text-[var(--text-muted)] hover:text-[var(--status-danger-text)] transition cursor-pointer"
+                            title={isEn ? "Delete Comment" : "Xóa bình luận"}
+                          >
+                            <Icon name="trash" size="0.75rem" />
+                          </button>
+                        </div>
                       </div>
                       <p className="whitespace-pre-wrap text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed pl-7">
                         {c.body}

@@ -850,6 +850,18 @@ class ApiClient {
     );
   }
 
+  /// Leaves a community (`POST /api/v1/social/communities/{id}/leave`).
+  Future<Map<String, dynamic>> leaveSocialCommunity({
+    required String accessToken,
+    required int communityId,
+  }) {
+    return _post(
+      '/api/v1/social/communities/$communityId/leave',
+      body: const {},
+      accessToken: accessToken,
+    );
+  }
+
   /// Returns the recency-ranked feed (`GET /api/v1/social/feed`).
   Future<List<Map<String, dynamic>>> getSocialFeed({
     required String accessToken,
@@ -861,6 +873,85 @@ class ApiClient {
       accessToken: accessToken,
     );
     return _asMapList(res['data'] ?? res['items']);
+  }
+
+  /// Lists posts within a community (`GET /api/v1/social/communities/{id}/posts`).
+  Future<List<Map<String, dynamic>>> listCommunityPosts({
+    required String accessToken,
+    required int communityId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final res = await _get(
+      '/api/v1/social/communities/$communityId/posts?limit=$limit&offset=$offset',
+      accessToken: accessToken,
+    );
+    return _asMapList(res['data'] ?? res['items']);
+  }
+
+  /// Searches social posts (`GET /api/v1/social/posts/search`).
+  Future<List<Map<String, dynamic>>> searchSocialPosts({
+    required String accessToken,
+    required String query,
+    int? communityId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final encodedQuery = Uri.encodeQueryComponent(query);
+    final communityParam =
+        communityId != null ? '&community_id=$communityId' : '';
+    final res = await _get(
+      '/api/v1/social/posts/search?q=$encodedQuery$communityParam&limit=$limit&offset=$offset',
+      accessToken: accessToken,
+    );
+    return _asMapList(res['data'] ?? res['items']);
+  }
+
+  /// Toggles bookmark on a post (`POST /api/v1/social/posts/{id}/bookmark`).
+  Future<Map<String, dynamic>> toggleSocialBookmark({
+    required String accessToken,
+    required int postId,
+  }) {
+    return _post(
+      '/api/v1/social/posts/$postId/bookmark',
+      body: const {},
+      accessToken: accessToken,
+    );
+  }
+
+  /// Returns the current user's bookmarked posts (`GET /api/v1/social/me/bookmarks`).
+  Future<List<Map<String, dynamic>>> getSocialBookmarks({
+    required String accessToken,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final res = await _get(
+      '/api/v1/social/me/bookmarks?limit=$limit&offset=$offset',
+      accessToken: accessToken,
+    );
+    return _asMapList(res['data'] ?? res['items']);
+  }
+
+  /// Deletes a social post (`DELETE /api/v1/social/posts/{id}`).
+  Future<Map<String, dynamic>> deleteSocialPost({
+    required String accessToken,
+    required int postId,
+  }) {
+    return _delete(
+      '/api/v1/social/posts/$postId',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Deletes a social comment (`DELETE /api/v1/social/comments/{id}`).
+  Future<Map<String, dynamic>> deleteSocialComment({
+    required String accessToken,
+    required int commentId,
+  }) {
+    return _delete(
+      '/api/v1/social/comments/$commentId',
+      accessToken: accessToken,
+    );
   }
 
   /// Creates a post (`POST /api/v1/social/posts`). The server screens the body

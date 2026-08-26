@@ -42,6 +42,7 @@ export function ComposeModal({
   );
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -50,6 +51,7 @@ export function ComposeModal({
       setError(null);
       setTitle("");
       setBody("");
+      setActiveTab("write");
       setCommunityId(initialCommunityId ?? communities[0]?.id ?? null);
     }
   }, [open, initialCommunityId, communities]);
@@ -73,8 +75,12 @@ export function ComposeModal({
       });
       await onPostCreated();
       onClose();
-    } catch (err) {
-      if (isSocialModerationBlock(err)) {
+    } catch (err: unknown) {
+      const serverDetail = (err as { response?: { data?: { detail?: string } } })?.response
+        ?.data?.detail;
+      if (typeof serverDetail === "string" && serverDetail.trim()) {
+        setError(serverDetail);
+      } else if (isSocialModerationBlock(err)) {
         setError(copy("community.compose.moderationBlocked"));
       } else {
         setError(copy("community.compose.createError"));
@@ -143,22 +149,66 @@ export function ComposeModal({
           </div>
         </div>
 
-        <div className="space-y-1">
-          <Textarea
-            label={copy("community.compose.bodyLabel")}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={5}
-            maxLength={5000}
-            placeholder={
-              isEn
-                ? "Describe your context, questions or insights. Please do not provide medical prescriptions or disclose personal identification details."
-                : "Mô tả bối cảnh, thắc mắc hoặc kinh nghiệm của bạn. Vui lòng không tự ý kê đơn thuốc hoặc tiết lộ thông tin định danh cá nhân."
-            }
-          />
-          <div className="text-right text-[11px] text-[var(--text-muted)]">
-            {body.length}/5000
+        {/* Write / Preview Tab switcher */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-[var(--text-primary)]">
+              {copy("community.compose.bodyLabel")}
+            </label>
+            <div className="inline-flex rounded-lg bg-[var(--surface-muted)] p-0.5 border border-[color:var(--shell-border)] text-xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab("write")}
+                className={`px-2.5 py-0.5 rounded font-medium transition ${
+                  activeTab === "write"
+                    ? "bg-[var(--surface-panel)] text-[var(--text-primary)] shadow-xs"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {isEn ? "Write" : "Soạn thảo"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("preview")}
+                className={`px-2.5 py-0.5 rounded font-medium transition ${
+                  activeTab === "preview"
+                    ? "bg-[var(--surface-panel)] text-[var(--text-primary)] shadow-xs"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {isEn ? "Preview" : "Xem trước"}
+              </button>
+            </div>
           </div>
+
+          {activeTab === "write" ? (
+            <div className="space-y-1">
+              <Textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={6}
+                maxLength={5000}
+                placeholder={
+                  isEn
+                    ? "Describe your context, questions or insights. Please do not provide medical prescriptions or disclose personal identification details."
+                    : "Mô tả bối cảnh, thắc mắc hoặc kinh nghiệm của bạn. Vui lòng không tự ý kê đơn thuốc hoặc tiết lộ thông tin định danh cá nhân."
+                }
+              />
+              <div className="text-right text-[11px] text-[var(--text-muted)]">
+                {body.length}/5000
+              </div>
+            </div>
+          ) : (
+            <div className="min-h-[140px] rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-3.5 text-xs text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">
+              {body.trim() ? (
+                body
+              ) : (
+                <span className="text-[var(--text-muted)] italic">
+                  {isEn ? "Nothing to preview yet." : "Chưa có nội dung để xem trước."}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Safety Guidelines helper */}

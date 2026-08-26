@@ -24,17 +24,27 @@ export type SocialPost = {
   id: number;
   community_id: number;
   author_handle: string;
+  author_display_name?: string;
+  is_verified_clinician?: boolean;
+  community_name?: string;
   title: string;
   body: string;
+  tags?: string[];
   created_at: string;
   comment_count: number;
   reaction_count: number;
+  user_reaction?: string | null;
+  is_bookmarked?: boolean;
+  reactions_breakdown?: Record<string, number>;
 };
 
 export type SocialComment = {
   id: number;
   post_id: number;
+  parent_id?: number | null;
   author_handle: string;
+  author_display_name?: string;
+  is_verified_clinician?: boolean;
   body: string;
   created_at: string;
 };
@@ -43,10 +53,45 @@ export type SocialProfile = {
   handle: string;
   display_name: string;
   bio: string;
-  role_badge: string;
+  role_badge?: string;
+  is_verified_clinician?: boolean;
 };
 
 export type ReactionKind = "helpful" | "relate" | "thanks";
+
+export type SocialReaction = {
+  id?: number;
+  post_id: number;
+  user_id?: number;
+  kind: ReactionKind | string;
+  created_at?: string;
+};
+
+export type SocialBookmark = {
+  id?: number;
+  user_id?: number;
+  post_id: number;
+  created_at?: string;
+};
+
+export type SocialReport = {
+  id: number;
+  reporter_id?: number;
+  target_type: "post" | "comment";
+  target_id: number;
+  reason: string;
+  detail?: string;
+  status: string;
+  created_at: string;
+};
+
+export type PostFilters = {
+  community_id?: number;
+  q?: string;
+  author_role?: "all" | "verified" | "peer";
+  limit?: number;
+  offset?: number;
+};
 
 export class SocialUnavailableError extends Error {
   constructor() {
@@ -56,14 +101,27 @@ export class SocialUnavailableError extends Error {
 }
 
 function isNotFound(error: unknown): boolean {
-  const status = (error as { response?: { status?: number } })?.response?.status;
+  const status =
+    (error as { response?: { status?: number }; status?: number })?.response?.status ??
+    (error as { status?: number })?.status;
   return status === 404;
 }
 
 /** True when a write was rejected by the pre-publish moderation gate (422). */
 export function isSocialModerationBlock(error: unknown): boolean {
-  const status = (error as { response?: { status?: number } })?.response?.status;
+  const status =
+    (error as { response?: { status?: number }; status?: number })?.response?.status ??
+    (error as { status?: number })?.status;
   return status === 422;
+}
+
+/** Extract detailed server validation or moderation message if available. */
+export function getSocialErrorMessage(error: unknown, fallbackMessage: string): string {
+  const detail = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+  return fallbackMessage;
 }
 
 /** Checks if an author handle represents CLARA official or verified clinician. */
@@ -105,6 +163,30 @@ export async function grantSocialConsent(): Promise<SocialConsentStatus> {
   });
 }
 
+export async function revokeSocialConsent(): Promise<SocialConsentStatus> {
+  return guarded(async () => {
+    const res = await api.delete<SocialConsentStatus>("/social/consent");
+    return res.data;
+  });
+}
+
+export async function getMyProfile(): Promise<SocialProfile> {
+  return guarded(async () => {
+    const res = await api.get<SocialProfile>("/social/me/profile");
+    return res.data;
+  });
+}
+
+export async function updateMyProfile(payload: {
+  display_name?: string;
+  bio?: string;
+}): Promise<SocialProfile> {
+  return guarded(async () => {
+    const res = await api.patch<SocialProfile>("/social/me/profile", payload);
+    return res.data;
+  });
+}
+
 export async function listCommunities(): Promise<SocialCommunity[]> {
   return guarded(async () => {
     const res = await api.get<SocialCommunity[]>("/social/communities");
@@ -112,82 +194,184 @@ export async function listCommunities(): Promise<SocialCommunity[]> {
   });
 }
 
-export async function joinCommunity(communityId: number): Promise<void> {
-  await guarded(async () => {
-    await api.post(`/social/communities/${communityId}/join`, {});
-  });
-}
-
-export async function leaveCommunity(communityId: number): Promise<void> {
-  await guarded(async () => {
-    await api.post(`/social/communities/${communityId}/leave`, {});
-  });
-}
-
-export async function getFeed(limit = 20, offset = 0): Promise<SocialPost[]> {
+export async function joinCommunity(id: number): Promise<SocialCommunity | void> {
   return guarded(async () => {
-    const res = await api.get<SocialPost[]>("/social/feed", { params: { limit, offset } });
+    const res = await api.post<SocialCommunity>(`/social/communities/${id}/join`, {});
+    return res.data;
+  });
+}
+
+export async function leaveCommunity(id: number): Promise<SocialCommunity | void> {
+  return guarded(async () => {
+    const res = await api.post<SocialCommunity>(`/social/communities/${id}/leave`, {});
+    return res.data;
+  });
+}
+
+export async function getFeed(
+  params?: PostFilters | number,
+  legacyOffset = 0
+): Promise<SocialPost[]> {
+  return guarded(async () => {
+    const queryParams =
+      typeof params === "number"
+        ? { limit: params, offset: legacyOffset }
+        : params;
+    const res = await api.get<SocialPost[]>("/social/feed", { params: queryParams });
     return Array.isArray(res.data) ? res.data : [];
   });
 }
 
-export async function createPost(input: {
-  communityId: number;
+export async function getCommunityPosts(
+  communityId: number,
+  limit = 20,
+  offset = 0
+): Promise<SocialPost[]> {
+  return guarded(async () => {
+    const res = await api.get<SocialPost[]>(`/social/communities/${communityId}/posts`, {
+      params: { limit, offset },
+    });
+    return Array.isArray(res.data) ? res.data : [];
+  });
+}
+
+export async function searchPosts(
+  query: string,
+  params?: PostFilters
+): Promise<SocialPost[]> {
+  return guarded(async () => {
+    const res = await api.get<SocialPost[]>("/social/posts/search", {
+      params: { q: query, ...params },
+    });
+    return Array.isArray(res.data) ? res.data : [];
+  });
+}
+
+export async function getPost(id: number): Promise<SocialPost> {
+  return guarded(async () => {
+    const res = await api.get<SocialPost>(`/social/posts/${id}`);
+    return res.data;
+  });
+}
+
+export async function createPost(payload: {
+  community_id?: number;
+  communityId?: number;
   title: string;
   body: string;
+  tags?: string[];
 }): Promise<SocialPost> {
+  const community_id = payload.community_id ?? payload.communityId ?? 0;
   return guarded(async () => {
     const res = await api.post<SocialPost>("/social/posts", {
-      community_id: input.communityId,
-      title: input.title,
-      body: input.body
+      community_id,
+      title: payload.title,
+      body: payload.body,
+      ...(payload.tags ? { tags: payload.tags } : {}),
     });
     return res.data;
   });
 }
 
-export async function getComments(postId: number): Promise<SocialComment[]> {
+export async function deletePost(id: number): Promise<{ deleted: boolean }> {
   return guarded(async () => {
-    const res = await api.get<SocialComment[]>(`/social/posts/${postId}/comments`);
+    const res = await api.delete<{ deleted: boolean }>(`/social/posts/${id}`);
+    return res.data;
+  });
+}
+
+export async function getComments(
+  postId: number,
+  limit = 50,
+  offset = 0
+): Promise<SocialComment[]> {
+  return guarded(async () => {
+    const res = await api.get<SocialComment[]>(`/social/posts/${postId}/comments`, {
+      params: { limit, offset },
+    });
     return Array.isArray(res.data) ? res.data : [];
   });
 }
 
-export async function addComment(postId: number, body: string): Promise<SocialComment> {
+export async function addComment(
+  postId: number,
+  payload:
+    | { body: string; parent_id?: number | null }
+    | string,
+  legacyParentId?: number | null
+): Promise<SocialComment> {
+  let bodyData: { body: string; parent_id?: number | null };
+  if (typeof payload === "string") {
+    bodyData = { body: payload };
+    if (legacyParentId !== undefined && legacyParentId !== null) {
+      bodyData.parent_id = legacyParentId;
+    }
+  } else {
+    bodyData = payload;
+  }
   return guarded(async () => {
-    const res = await api.post<SocialComment>(`/social/posts/${postId}/comments`, { body });
+    const res = await api.post<SocialComment>(`/social/posts/${postId}/comments`, bodyData);
     return res.data;
   });
 }
 
-export async function addReaction(postId: number, kind: ReactionKind): Promise<void> {
-  await guarded(async () => {
-    await api.post(`/social/posts/${postId}/reactions`, { kind });
+export async function deleteComment(commentId: number): Promise<{ deleted: boolean }> {
+  return guarded(async () => {
+    const res = await api.delete<{ deleted: boolean }>(`/social/comments/${commentId}`);
+    return res.data;
   });
 }
 
-export async function reportContent(input: {
-  targetType: "post" | "comment";
-  targetId: number;
-  reason?: string;
-}): Promise<void> {
-  await guarded(async () => {
-    await api.post("/social/reports", {
-      target_type: input.targetType,
-      target_id: input.targetId,
-      reason: input.reason ?? ""
-    });
+export async function toggleReaction(
+  postId: number,
+  kind: "helpful" | "relate" | "thanks"
+): Promise<{ ok: boolean } | void> {
+  return guarded(async () => {
+    const res = await api.post<{ ok: boolean }>(`/social/posts/${postId}/reactions`, { kind });
+    return res.data;
   });
 }
 
-export type SocialReport = {
-  id: number;
-  target_type: "post" | "comment";
-  target_id: number;
+export const addReaction = toggleReaction;
+
+export async function toggleBookmark(postId: number): Promise<{ bookmarked: boolean }> {
+  return guarded(async () => {
+    const res = await api.post<{ bookmarked: boolean }>(`/social/posts/${postId}/bookmark`, {});
+    return res.data;
+  });
+}
+
+export async function getBookmarks(
+  params?: { limit?: number; offset?: number }
+): Promise<SocialPost[]> {
+  return guarded(async () => {
+    const res = await api.get<SocialPost[]>("/social/me/bookmarks", { params });
+    return Array.isArray(res.data) ? res.data : [];
+  });
+}
+
+export const getMyBookmarks = getBookmarks;
+
+export async function reportContent(payload: {
+  target_type?: "post" | "comment";
+  targetType?: "post" | "comment";
+  target_id?: number;
+  targetId?: number;
   reason: string;
-  status: string;
-  created_at: string;
-};
+  detail?: string;
+}): Promise<{ reported: boolean } | void> {
+  const target_type = payload.target_type ?? payload.targetType ?? "post";
+  const target_id = payload.target_id ?? payload.targetId ?? 0;
+  return guarded(async () => {
+    const res = await api.post<{ reported: boolean }>("/social/reports", {
+      target_type,
+      target_id,
+      reason: payload.reason ?? "",
+      detail: payload.detail ?? payload.reason ?? "",
+    });
+    return res.data;
+  });
+}
 
 // Admin-only: the open moderation queue.
 export async function listReports(): Promise<SocialReport[]> {

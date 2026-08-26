@@ -54,11 +54,10 @@ describe("CommunityModerationPage (Spec v5 Section 6.65)", () => {
     render(<CommunityModerationPage />);
 
     await waitFor(() => {
-      expect(mockListReports).toHaveBeenCalled();
+      expect(screen.getByText("#1")).toBeInTheDocument();
     });
 
     expect(screen.getByText("Community Moderation")).toBeInTheDocument();
-    expect(screen.getByText("#1")).toBeInTheDocument();
     expect(screen.getByText("#2")).toBeInTheDocument();
     expect(screen.getByText(/Post #101/i)).toBeInTheDocument();
     expect(screen.getByText(/Comment #202/i)).toBeInTheDocument();

@@ -12,9 +12,12 @@ export interface PostCardProps {
   community?: SocialCommunity;
   canParticipate: boolean;
   onOpenDetail: (post: SocialPost) => void;
-  onReaction: (post: SocialPost) => void;
+  onReaction: (post: SocialPost, kind?: "helpful" | "relate" | "thanks") => void;
+  onToggleBookmark?: (post: SocialPost) => void;
   onReport: (post: SocialPost) => void;
   onToggleHide: (postId: number) => void;
+  onDelete?: (postId: number) => void;
+  canDelete?: boolean;
 }
 
 export function PostCard({
@@ -23,8 +26,11 @@ export function PostCard({
   canParticipate,
   onOpenDetail,
   onReaction,
+  onToggleBookmark,
   onReport,
   onToggleHide,
+  onDelete,
+  canDelete,
 }: PostCardProps) {
   const language = useUILanguage();
   const isEn = language === "en";
@@ -33,8 +39,8 @@ export function PostCard({
 
   const official =
     typeof isClaraOfficial === "function"
-      ? isClaraOfficial(post.author_handle)
-      : false;
+      ? isClaraOfficial(post.author_handle) || Boolean(post.is_verified_clinician)
+      : Boolean(post.is_verified_clinician);
 
   return (
     <SurfaceCard
@@ -46,43 +52,51 @@ export function PostCard({
         <div className="flex flex-wrap items-center gap-2">
           {/* Avatar */}
           <div
-            className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+            className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
               official
                 ? "bg-[var(--brand-600)] text-[var(--button-primary-text)] shadow-xs"
                 : "bg-[var(--surface-muted)] text-[var(--text-primary)] border border-[color:var(--shell-border)]"
             }`}
           >
-            {post.author_handle.slice(0, 2).toUpperCase()}
+            {(post.author_display_name || post.author_handle).slice(0, 2).toUpperCase()}
           </div>
 
-          <span className="font-bold text-[var(--text-primary)]">
-            @{post.author_handle}
-          </span>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-bold text-[var(--text-primary)]">
+                {post.author_display_name ? post.author_display_name : `@${post.author_handle}`}
+              </span>
+              {post.author_display_name ? (
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  @{post.author_handle}
+                </span>
+              ) : null}
 
-          {/* Author verification badge */}
-          {official ? (
-            <Badge tone="brand" icon="check" className="text-[10px] py-0.5 font-bold">
-              {isEn ? "CLARA Official" : "CLARA Chuyên gia"}
-            </Badge>
-          ) : (
-            <Badge tone="neutral" className="text-[10px] py-0.5">
-              {isEn ? "Peer Member" : "Thành viên"}
-            </Badge>
-          )}
+              {/* Author verification badge */}
+              {official ? (
+                <Badge tone="brand" icon="check" className="text-[10px] py-0.5 font-bold">
+                  {isEn ? "CLARA Official" : "CLARA Chuyên gia"}
+                </Badge>
+              ) : (
+                <Badge tone="neutral" className="text-[10px] py-0.5">
+                  {isEn ? "Peer Member" : "Thành viên"}
+                </Badge>
+              )}
 
-          {/* Safety moderation badge */}
-          <Badge tone="ok" className="text-[10px] py-0.5">
-            {isEn ? "Moderated" : "Đã duyệt an toàn"}
-          </Badge>
-
-          {community ? (
-            <span className="rounded-md bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-muted)] border border-[color:var(--shell-border)]">
-              {community.name}
-            </span>
-          ) : null}
+              {/* Safety moderation badge */}
+              <Badge tone="ok" className="text-[10px] py-0.5">
+                {isEn ? "Moderated" : "Đã duyệt an toàn"}
+              </Badge>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 text-[var(--text-muted)] text-[11px]">
+          {community || post.community_name ? (
+            <span className="rounded-md bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] border border-[color:var(--shell-border)]">
+              {community?.name || post.community_name}
+            </span>
+          ) : null}
           <span>{formatLocaleDate(language, post.created_at)}</span>
         </div>
       </div>
@@ -110,7 +124,7 @@ export function PostCard({
 
       {/* Action Bar */}
       <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--shell-border)]/50 text-xs text-[var(--text-secondary)]">
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
           {/* Comments count button */}
           <button
             type="button"
@@ -125,30 +139,116 @@ export function PostCard({
             </span>
           </button>
 
-          {/* Quick supportive reaction button */}
-          <button
-            type="button"
-            onClick={() => onReaction(post)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition cursor-pointer font-medium"
-            title={
-              canParticipate
-                ? isEn
-                  ? "Send supportive reaction"
-                  : "Gửi phản hồi tích cực"
-                : copy("community.reaction.joinToReact")
-            }
-          >
-            <span aria-hidden="true">👍</span>
-            <span>
-              {copy("community.reactions.count", {
-                count: formatLocaleNumber(language, post.reaction_count),
-              })}
-            </span>
-          </button>
+          {/* 3 Supportive reactions */}
+          <div className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onReaction(post)}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg transition cursor-pointer font-medium text-xs ${
+                post.user_reaction === "helpful"
+                  ? "bg-[var(--surface-brand-soft)] text-[var(--text-brand)] font-bold border border-[color:var(--brand-500)]/30"
+                  : "hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+              }`}
+              title={
+                canParticipate
+                  ? isEn
+                    ? "Helpful 👍"
+                    : "Gửi phản hồi tích cực"
+                  : copy("community.reaction.joinToReact")
+              }
+            >
+              <span aria-hidden="true">👍</span>
+              <span>
+                {post.reactions_breakdown?.helpful ?? (
+                  post.reaction_count > 0 ? formatLocaleNumber(language, post.reaction_count) : ""
+                )}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onReaction(post, "relate")}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg transition cursor-pointer font-medium text-xs ${
+                post.user_reaction === "relate"
+                  ? "bg-[var(--surface-brand-soft)] text-[var(--text-brand)] font-bold border border-[color:var(--brand-500)]/30"
+                  : "hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+              }`}
+              title={
+                canParticipate
+                  ? isEn
+                    ? "Relate 🤝"
+                    : "Đồng cảm 🤝"
+                  : copy("community.reaction.joinToReact")
+              }
+            >
+              <span aria-hidden="true">🤝</span>
+              {post.reactions_breakdown?.relate ? (
+                <span>{formatLocaleNumber(language, post.reactions_breakdown.relate)}</span>
+              ) : null}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onReaction(post, "thanks")}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg transition cursor-pointer font-medium text-xs ${
+                post.user_reaction === "thanks"
+                  ? "bg-[var(--surface-brand-soft)] text-[var(--text-brand)] font-bold border border-[color:var(--brand-500)]/30"
+                  : "hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+              }`}
+              title={
+                canParticipate
+                  ? isEn
+                    ? "Thanks 🙏"
+                    : "Cảm ơn 🙏"
+                  : copy("community.reaction.joinToReact")
+              }
+            >
+              <span aria-hidden="true">🙏</span>
+              {post.reactions_breakdown?.thanks ? (
+                <span>{formatLocaleNumber(language, post.reactions_breakdown.thanks)}</span>
+              ) : null}
+            </button>
+          </div>
+
+          {/* Bookmark Toggle */}
+          {onToggleBookmark ? (
+            <button
+              type="button"
+              onClick={() => onToggleBookmark(post)}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg transition cursor-pointer font-medium text-xs ${
+                post.is_bookmarked
+                  ? "text-[var(--text-brand)] font-bold bg-[var(--surface-brand-soft)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
+              }`}
+              title={
+                post.is_bookmarked
+                  ? isEn
+                    ? "Remove Bookmark"
+                    : "Bỏ lưu bài viết"
+                  : isEn
+                  ? "Bookmark Post"
+                  : "Lưu bài viết"
+              }
+            >
+              <Icon
+                name={post.is_bookmarked ? "folder" : "folder"}
+                size="0.85rem"
+              />
+              <span className="hidden sm:inline">
+                {post.is_bookmarked
+                  ? isEn
+                    ? "Saved"
+                    : "Đã lưu"
+                  : isEn
+                  ? "Save"
+                  : "Lưu"}
+              </span>
+            </button>
+          ) : null}
         </div>
 
-        {/* Report / Mute Actions */}
-        <div className="flex items-center gap-2">
+        {/* Report / Hide / Delete Actions */}
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => onReport(post)}
@@ -165,6 +265,16 @@ export function PostCard({
           >
             {isEn ? "Hide" : "Ẩn bài"}
           </button>
+          {canDelete && onDelete ? (
+            <button
+              type="button"
+              onClick={() => onDelete(post.id)}
+              className="px-2 py-1 text-[11px] text-[var(--status-danger-text)] hover:underline transition rounded cursor-pointer"
+              title={isEn ? "Delete Post" : "Xóa bài viết"}
+            >
+              {isEn ? "Delete" : "Xóa"}
+            </button>
+          ) : null}
         </div>
       </div>
     </SurfaceCard>

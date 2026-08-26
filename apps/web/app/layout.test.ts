@@ -64,7 +64,7 @@ describe("RootLayout Metadata & SEO Suite", () => {
     });
   });
 
-  it("exports OpenGraph metadata with locale and alternateLocale", () => {
+  it("exports OpenGraph metadata with locale and alternateLocale and image endpoint", () => {
     expect(metadata.openGraph).toEqual({
       title:
         "The Clara Care — Trợ lý AI Lâm sàng & Y tế An toàn #1 Việt Nam | Clinical AI Assistant",
@@ -74,17 +74,26 @@ describe("RootLayout Metadata & SEO Suite", () => {
       siteName: "The Clara Care",
       locale: "vi_VN",
       alternateLocale: ["en_US"],
+      images: [
+        {
+          url: "/opengraph-image",
+          width: 1200,
+          height: 630,
+          alt: "The Clara Care — Trợ lý AI Lâm sàng & Y tế An toàn #1 Việt Nam | Clinical AI Assistant",
+        },
+      ],
       type: "website",
     });
   });
 
-  it("exports Twitter Card metadata", () => {
+  it("exports Twitter Card metadata with image endpoint", () => {
     expect(metadata.twitter).toEqual({
       card: "summary_large_image",
       title:
         "The Clara Care — Trợ lý AI Lâm sàng & Y tế An toàn #1 Việt Nam | Clinical AI Assistant",
       description:
         "Hệ thống trợ lý AI y tế và lâm sàng an toàn hàng đầu Việt Nam. Đối chiếu Dược thư Quốc gia, kiểm chứng tương tác thuốc FIDES, bệnh án SOAP Scribe, hội chẩn Council đa chuyên khoa và bảo mật Zero-CoT.",
+      images: ["/twitter-image"],
       creator: "@theclaracare",
     });
   });
@@ -98,5 +107,17 @@ describe("RootLayout Metadata & SEO Suite", () => {
       },
     });
     expect(metadata.verification).toBeDefined();
+    expect(metadata.verification?.google).toBeDefined();
+  });
+
+  it("exports AI search engine and crawler metadata tags in other", () => {
+    expect(metadata.other).toEqual({
+      "ai-agent": "https://theclaracare.com/.well-known/ai-plugin.json",
+      "mcp-server": "https://theclaracare.com/.well-known/mcp.json",
+      "llms-txt": "https://theclaracare.com/llms.txt",
+      rating: "general",
+      referrer: "origin-when-cross-origin",
+      classification: "Medical Artificial Intelligence & Clinical Decision Support System",
+    });
   });
 });

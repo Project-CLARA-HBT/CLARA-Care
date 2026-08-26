@@ -94,6 +94,9 @@ function getCaseStatusChip(
   language: "vi" | "en",
 ): { tone: StatusTone; label: string } {
   const s = (status || "").toLowerCase().trim();
+  if (!s || s === "unknown") {
+    return { tone: "unknown", label: language === "vi" ? "Chưa xác định" : "Unknown" };
+  }
   if (s === "completed" || s === "ready" || s === "done" || s === "hoàn thành") {
     return { tone: "success", label: language === "vi" ? "Hoàn thành" : "Completed" };
   }
@@ -286,6 +289,11 @@ export function ClinicalOverview({
             <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--status-warn-text)]">
               <Icon name="warning" size={13} />
               {copy("DrugBank v5.1.10 Ngoại tuyến", "DrugBank v5.1.10 Offline")}
+            </span>
+          ) : !ready ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--text-muted)]">
+              <Icon name="progress" size={13} />
+              {copy("Chưa xác định", "Unknown")}
             </span>
           ) : !isVerified ? (
             <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--status-warn-text)]">

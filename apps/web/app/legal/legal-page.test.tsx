@@ -409,6 +409,75 @@ describe("MedicalConsentPage (/legal/consent - Spec v5 Section 6.8 Legal Documen
     expect(screen.getByText(/Ranh giới lâm sàng theo Luật Khám bệnh, chữa bệnh số 15\/2023\/QH15:/i)).toBeInTheDocument();
     expect(screen.getAllByText(new RegExp(LEGAL_POLICY_VERSION)).length).toBeGreaterThan(0);
   });
+
+  it("renders all 5 Purpose-Gated Consent Pillars with statutory legal bases and data scopes", () => {
+    render(<MedicalConsentPage />);
+
+    // Pillar 1: Core Health Information Assistance (Mandatory)
+    expect(screen.getByText(/Mục đích 1: Trợ lý thông tin y tế & Kiểm tra an toàn tương tác thuốc/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Bắt buộc · Căn cứ cốt lõi/i).length).toBeGreaterThan(0);
+
+    // Pillar 2: Longitudinal Timeline & LifeMap (Optional)
+    expect(screen.getByText(/Mục đích 2: Dòng thời gian sinh hiệu & Tổng hợp bối cảnh LifeMap/i)).toBeInTheDocument();
+
+    // Pillar 3: Biomedical Research & Living Evidence Grounding (Anonymized)
+    expect(screen.getByText(/Mục đích 3: Nghiên cứu y sinh học & Đối chiếu y văn sống/i)).toBeInTheDocument();
+
+    // Pillar 4: Cross-Border Model Inference with Zero Data Retention (YEScale DeepSeek with TIA)
+    expect(screen.getByText(/Mục đích 4: Suy luận mô hình xuyên biên giới không lưu vết/i)).toBeInTheDocument();
+    expect(screen.getByText(/Đánh giá TIA · Zero Retention/i)).toBeInTheDocument();
+
+    // Pillar 5: Family & Clinician Bounded PHR Sharing
+    expect(screen.getByText(/Mục đích 5: Chia sẻ hồ sơ PHR có ranh giới cho người thân & Bác sĩ/i)).toBeInTheDocument();
+  });
+
+  it("renders Patient Rights: 1-click revocation, data portability, and erasure under PDPD", () => {
+    render(<MedicalConsentPage />);
+
+    // Patient Rights section
+    expect(screen.getByText(/Rút đồng thuận 1-chạm/i)).toBeInTheDocument();
+    expect(screen.getByText(/Quyền chuyển giao dữ liệu/i)).toBeInTheDocument();
+    expect(screen.getByText(/Quyền xóa dữ liệu \(Erasure\)/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/72h làm việc/i).length).toBeGreaterThan(0);
+
+    // Link to personal consent ledger
+    const accountConsentLinks = screen.getAllByRole("link", { name: /Sổ cái đồng thuận cá nhân/i });
+    expect(accountConsentLinks.length).toBeGreaterThan(0);
+    expect(accountConsentLinks[0]).toHaveAttribute("href", "/account/consent");
+  });
+
+  it("renders Interactive Consent Status Preview widget with real-time toggle simulation and consequence analysis", () => {
+    render(<MedicalConsentPage />);
+
+    // Widget presence
+    const widget = screen.getByTestId("interactive-consent-preview-widget");
+    expect(widget).toBeInTheDocument();
+    expect(screen.getByText(/Xem trước trạng thái đồng thuận theo mục đích/i)).toBeInTheDocument();
+
+    // 5 Pillar preview rows inside widget
+    expect(screen.getByTestId("preview-pillar-row-medical_ai_reasoning")).toBeInTheDocument();
+    expect(screen.getByTestId("preview-pillar-row-personalization")).toBeInTheDocument();
+    expect(screen.getByTestId("preview-pillar-row-research")).toBeInTheDocument();
+    expect(screen.getByTestId("preview-pillar-row-cross_border_processing")).toBeInTheDocument();
+    expect(screen.getByTestId("preview-pillar-row-sharing")).toBeInTheDocument();
+
+    // Toggle switch simulation
+    const togglePersonalization = screen.getByTestId("preview-toggle-personalization");
+    expect(togglePersonalization).toHaveAttribute("aria-checked", "true");
+
+    // Click toggle to turn off
+    fireEvent.click(togglePersonalization);
+    expect(togglePersonalization).toHaveAttribute("aria-checked", "false");
+
+    // Click again to turn back on
+    fireEvent.click(togglePersonalization);
+    expect(togglePersonalization).toHaveAttribute("aria-checked", "true");
+
+    // Click on row to inspect consequence analysis
+    const researchRow = screen.getByTestId("preview-pillar-row-research");
+    fireEvent.click(researchRow);
+    expect(screen.getByText(/Phân tích tác động: 3\. Nghiên cứu y sinh học/i)).toBeInTheDocument();
+  });
 });
 
 describe("CookiePolicyPage (/legal/cookies - Spec v5 Section 6.9 Legal Document Reader)", () => {

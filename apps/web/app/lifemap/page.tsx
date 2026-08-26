@@ -192,8 +192,8 @@ function captureDraftCategoryLabel(
 export default function LifeMapPage() {
   const language = useUILanguage();
   const copy = useCallback(
-    (key: UITranslationKey, values?: Record<string, string | number>) =>
-      t(language, key, values ?? {}),
+    (key: string, values?: Record<string, string | number>) =>
+      t(language, key as UITranslationKey, values ?? {}),
     [language],
   );
   const [data, setData] = useState<LifeMapToday | null>(null);

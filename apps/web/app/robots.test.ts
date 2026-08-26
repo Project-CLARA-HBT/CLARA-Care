@@ -17,13 +17,18 @@ describe("robots.ts metadata route", () => {
     expect(aiCrawlerRule.userAgent).toEqual([
       "GPTBot",
       "ChatGPT-User",
+      "OAI-SearchBot",
       "PerplexityBot",
       "ClaudeBot",
       "anthropic-ai",
       "Google-Extended",
+      "GoogleOther",
       "Bingbot",
       "Applebot-Extended",
       "Meta-ExternalAgent",
+      "cohere-ai",
+      "Amazonbot",
+      "Bytespider",
     ]);
 
     const expectedAllowedRoutes = [
@@ -38,7 +43,13 @@ describe("robots.ts metadata route", () => {
       "/safety",
       "/privacy",
       "/sources",
+      "/clinical-standards",
+      "/contact",
+      "/terms",
       "/legal/*",
+      "/llms.txt",
+      "/llms-full.txt",
+      "/.well-known/*",
     ];
 
     const expectedDisallowedRoutes = [

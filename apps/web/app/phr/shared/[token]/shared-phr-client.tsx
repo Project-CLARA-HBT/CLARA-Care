@@ -23,6 +23,8 @@ const SHARED_KEYS = {
   allergies: "phr.shared.allergies",
   conditions: "phr.shared.conditions",
   medications: "phr.shared.medications",
+  observations: "phr.shared.observations",
+  results: "phr.shared.results",
   emergencyContact: "phr.shared.emergencyContact",
   safety: "phr.shared.safety",
   fullName: "phr.field.fullName",
@@ -102,7 +104,7 @@ function listLines(
 ): string[] {
   return recordList(raw)
     .map((item) => {
-      const primary = text(item.name) || text(item.substance);
+      const primary = text(item.name) || text(item.substance) || text(item.label) || text(item.test_name);
       if (!primary) return null;
       const extras = fields
         .map(({ key, controlled }) => {
@@ -197,6 +199,14 @@ function sharedView(
       listLines(
         record.medications,
         [{ key: "dose" }, { key: "frequency" }],
+        copy,
+      ),
+    ),
+    section(
+      copy(SHARED_KEYS.observations),
+      listLines(
+        record.observations,
+        [{ key: "value" }, { key: "unit" }, { key: "observed_on" }],
         copy,
       ),
     ),

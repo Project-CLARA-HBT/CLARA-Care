@@ -47,11 +47,77 @@ describe("SeoJsonLd Component & Schema Serialization", () => {
     expect(org?.description).toBe(
       "Hệ thống trợ lý AI y tế và lâm sàng an toàn hàng đầu Việt Nam, hỗ trợ tra cứu tương tác thuốc FIDES, bệnh án SOAP Scribe, hội chẩn đa chuyên khoa và dòng thời gian sức khỏe LifeMap."
     );
+    expect(org?.sameAs).toEqual([
+      "https://www.wikidata.org/wiki/Q1156298",
+      "https://www.wikidata.org/wiki/Q11660",
+      "https://www.wikidata.org/wiki/Q12140",
+      "https://www.wikidata.org/wiki/Q8386",
+      "https://www.wikidata.org/wiki/Q11190",
+    ]);
     expect(org?.medicalSpecialty).toEqual([
       "Cardiology",
       "Nephrology",
       "ClinicalPharmacology",
       "PrimaryCare",
+      "Endocrinology",
+    ]);
+
+    // knowsAbout array with MeSH & SNOMED CT concepts
+    const knowsAbout = org?.knowsAbout as Array<Record<string, unknown>>;
+    expect(Array.isArray(knowsAbout)).toBe(true);
+    expect(knowsAbout).toHaveLength(6);
+
+    const ddi = knowsAbout.find((k) => k.name === "Drug-Drug Interaction (DDI)");
+    expect(ddi).toBeDefined();
+    expect(ddi?.code).toEqual([
+      { "@type": "MedicalCode", code: "D004347", codingSystem: "MeSH" },
+      { "@type": "MedicalCode", code: "79899007", codingSystem: "SNOMED-CT" },
+    ]);
+    expect(ddi?.sameAs).toContain("https://id.nlm.nih.gov/mesh/D004347");
+    expect(ddi?.sameAs).toContain("http://snomed.info/id/79899007");
+
+    const cdss = knowsAbout.find(
+      (k) => k.name === "Clinical Decision Support Systems (CDSS)"
+    );
+    expect(cdss).toBeDefined();
+    expect(cdss?.code).toEqual([
+      { "@type": "MedicalCode", code: "D020000", codingSystem: "MeSH" },
+      { "@type": "MedicalCode", code: "423876004", codingSystem: "SNOMED-CT" },
+    ]);
+
+    const pv = knowsAbout.find((k) => k.name === "Pharmacovigilance");
+    expect(pv).toBeDefined();
+    expect(pv?.code).toEqual([
+      { "@type": "MedicalCode", code: "D060733", codingSystem: "MeSH" },
+      { "@type": "MedicalCode", code: "386053000", codingSystem: "SNOMED-CT" },
+    ]);
+
+    const soap = knowsAbout.find(
+      (k) => k.name === "SOAP Note (Subjective, Objective, Assessment, Plan)"
+    );
+    expect(soap).toBeDefined();
+    expect(soap?.code).toEqual([
+      { "@type": "MedicalCode", code: "D000072001", codingSystem: "MeSH" },
+      { "@type": "MedicalCode", code: "425268008", codingSystem: "SNOMED-CT" },
+    ]);
+
+    const telehealth = knowsAbout.find(
+      (k) => k.name === "Telehealth / Telemedicine"
+    );
+    expect(telehealth).toBeDefined();
+    expect(telehealth?.code).toEqual([
+      { "@type": "MedicalCode", code: "D017216", codingSystem: "MeSH" },
+      { "@type": "MedicalCode", code: "448337001", codingSystem: "SNOMED-CT" },
+    ]);
+
+    const icd10 = knowsAbout.find(
+      (k) =>
+        k.name === "ICD-10 (International Classification of Diseases, 10th Revision)"
+    );
+    expect(icd10).toBeDefined();
+    expect(icd10?.code).toEqual([
+      { "@type": "MedicalCode", code: "D007388", codingSystem: "MeSH" },
+      { "@type": "MedicalCode", code: "446522006", codingSystem: "SNOMED-CT" },
     ]);
   });
 
@@ -68,7 +134,20 @@ describe("SeoJsonLd Component & Schema Serialization", () => {
     expect(app?.["@id"]).toBe("https://theclaracare.com/#software");
     expect(app?.name).toBe("CLARA Care System");
     expect(app?.applicationCategory).toBe("HealthApplication");
+    expect(app?.applicationSubCategory).toBe(
+      "Clinical Decision Support System (CDSS)"
+    );
     expect(app?.operatingSystem).toBe("Web, iOS, Android");
+    expect(app?.softwareRequirements).toBe(
+      "HTML5, HTTPS, WebRTC Audio Capture, Modern Web Browser (Chrome 100+, Safari 15+, Firefox 100+, Edge)"
+    );
+    expect(app?.aggregateRating).toEqual({
+      "@type": "AggregateRating",
+      ratingValue: 4.9,
+      reviewCount: 1250,
+      bestRating: 5,
+      worstRating: 1,
+    });
     expect(app?.featureList).toEqual([
       "FIDES Safety Drug-Drug Interaction Verification",
       "Longitudinal Health Timeline LifeMap",
@@ -77,6 +156,21 @@ describe("SeoJsonLd Component & Schema Serialization", () => {
       "Living Evidence Hub (DAV, DrugBank, WHO, FDA, PubMed)",
       "Zero-CoT Banking-Grade Medical Privacy",
     ]);
+
+    // hasPart detailing 5 sub-modules
+    const hasPart = app?.hasPart as Array<Record<string, unknown>>;
+    expect(Array.isArray(hasPart)).toBe(true);
+    expect(hasPart).toHaveLength(5);
+
+    const partNames = hasPart.map((p) => p.name);
+    expect(partNames).toEqual([
+      "FIDES Guard",
+      "LifeMap Timeline",
+      "Medical Council",
+      "SOAP Scribe",
+      "Living Evidence Hub",
+    ]);
+
     expect(app?.offers).toEqual({
       "@type": "Offer",
       price: "0",
@@ -135,6 +229,27 @@ describe("SeoJsonLd Component & Schema Serialization", () => {
     expect(webPage?.about).toBe(
       "Medical Artificial Intelligence & Clinical Decision Support"
     );
+    expect(webPage?.specialty).toEqual([
+      "Cardiology",
+      "Nephrology",
+      "ClinicalPharmacology",
+      "PrimaryCare",
+      "Endocrinology",
+    ]);
+    expect(webPage?.medicalSpecialty).toEqual([
+      "Cardiology",
+      "Nephrology",
+      "ClinicalPharmacology",
+      "PrimaryCare",
+      "Endocrinology",
+    ]);
+    expect(webPage?.citation).toEqual([
+      "Dược thư Quốc gia Việt Nam",
+      "DrugBank 5.1",
+      "WHO Guidelines for Essential Medicines",
+      "US FDA DailyMed",
+      "PubMed / MEDLINE",
+    ]);
     expect(webPage?.aspect).toEqual([
       "DiagnosisSupport",
       "TreatmentGuidance",

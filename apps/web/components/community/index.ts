@@ -18,3 +18,9 @@ export * from "./privacy-modal";
 
 export { default as PostDetailDialog } from "./post-detail-dialog";
 export * from "./post-detail-dialog";
+
+export { default as ProfileDrawer } from "./profile-drawer";
+export * from "./profile-drawer";
+
+export { default as ConsentGateModal } from "./consent-gate-modal";
+export * from "./consent-gate-modal";

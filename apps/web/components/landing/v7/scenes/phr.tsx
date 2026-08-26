@@ -40,7 +40,7 @@ export function PhrScene() {
     <LandingScene
       id="phr"
       scale="standard"
-      tone="canvas"
+      tone="azure"
       className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-36"
     >
       {/* Ambient Lighting Field */}

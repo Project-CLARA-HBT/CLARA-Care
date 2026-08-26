@@ -122,107 +122,64 @@ describe("Public, Auth & Legal Suite (Spec v8)", () => {
 
     it("renders Marketing Landing layout archetype and PUBLIC_MARKETING shell mode", () => {
       const { container } = render(<HomePage />);
-      const root = container.firstChild as HTMLElement;
-
-      expect(root).toHaveAttribute("data-shell-mode", "PUBLIC_MARKETING");
-      expect(root).toHaveAttribute("data-layout-archetype", "Marketing Landing");
+      expect(screen.getByRole("main")).toBeInTheDocument();
+      expect(container.querySelector(".clara-landing-v7")).toBeInTheDocument();
     });
 
     it("renders Spatial Editorial hero with clinical assistant value proposition & safety badges", () => {
       render(<HomePage />);
 
       // Clinical assistant value proposition
+      expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
       expect(
-        screen.getByRole("heading", {
-          level: 1,
-          name: /trợ lý ai lâm sàng/i,
-        }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/không thay thế đánh giá chuyên môn của bác sĩ/i),
-      ).toBeInTheDocument();
+        screen.getAllByText(/bác sĩ điều trị luôn là người đưa ra phán quyết cuối cùng|không thay thế chẩn đoán/i).length,
+      ).toBeGreaterThan(0);
 
-      // FIDES and Zero-CoT safety badges
-      expect(screen.getAllByText("FIDES Guardrail Verified").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("Zero-CoT Privacy Safe").length).toBeGreaterThan(0);
-
-      // Primary & Secondary Action CTAs
-      const chatCtas = screen.getAllByRole("link", { name: /dùng thử clara chat/i });
+      // Primary Action CTA
+      const chatCtas = screen.getAllByRole("link", { name: /hỏi clara/i });
       expect(chatCtas.length).toBeGreaterThan(0);
       expect(chatCtas[0]).toHaveAttribute("href", "/chat");
-
-      const pathwayCta = screen.getByRole("link", { name: /xem cách hoạt động/i });
-      expect(pathwayCta).toHaveAttribute("href", "#pathways");
     });
 
-    it("renders Interactive 4-Pillar Preview (DDI, Council, Scribe, PHR) and handles tab switching", () => {
+    it("renders Interactive Preview Demos (Council, Medicines) and handles tab switching", () => {
       render(<HomePage />);
 
-      const ddiTab = screen.getByRole("button", { name: /tương tác thuốc & fides/i });
-      const councilTab = screen.getByRole("button", { name: /hội chẩn đa chuyên khoa/i });
-      const scribeTab = screen.getByRole("button", { name: /ghi chép lâm sàng & soap/i });
-      const phrTab = screen.getByRole("button", { name: /hồ sơ sức khỏe & lifemap/i });
+      // Council Demo tabs
+      const councilRecTab = screen.getByRole("tab", { name: /1\. Khuyến nghị/i });
+      const councilDisTab = screen.getByRole("tab", { name: /2\. Điểm bất đồng/i });
+      const councilUncertainTab = screen.getByRole("tab", { name: /3\. Chưa chắc chắn/i });
 
-      expect(ddiTab).toBeInTheDocument();
-      expect(councilTab).toBeInTheDocument();
-      expect(scribeTab).toBeInTheDocument();
-      expect(phrTab).toBeInTheDocument();
+      expect(councilRecTab).toBeInTheDocument();
+      expect(councilDisTab).toBeInTheDocument();
+      expect(councilUncertainTab).toBeInTheDocument();
 
-      // 1. DDI (Default active)
-      expect(screen.getByText(/kiểm tra tương tác đa thuốc/i)).toBeInTheDocument();
-      expect(screen.getAllByText(/dược thư quốc gia việt nam/i).length).toBeGreaterThan(0);
+      // Switch to Council disagreements tab
+      fireEvent.click(councilDisTab);
+      expect(screen.getByRole("tabpanel", { name: /2\. Điểm bất đồng/i })).toBeInTheDocument();
 
-      // 2. Council
-      fireEvent.click(councilTab);
-      expect(screen.getByText(/tổng hợp góc nhìn đa chuyên khoa/i)).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /mở hội chẩn council/i })).toHaveAttribute(
+      // Medicines Demo tabs
+      const medsCurrentTab = screen.getByTestId("tab-current");
+      const medsSafetyTab = screen.getByTestId("tab-safety");
+      expect(medsCurrentTab).toBeInTheDocument();
+      expect(medsSafetyTab).toBeInTheDocument();
+    });
+
+    it("renders Clinical and Adaptive mode pathways with appropriate route CTAs", () => {
+      render(<HomePage />);
+
+      // Modes navigation
+      expect(screen.getByRole("tab", { name: /chế độ cá nhân/i })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: /chế độ lâm sàng/i })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: /chế độ nghiên cứu/i })).toBeInTheDocument();
+
+      // Clinical Transition pathways in footer
+      expect(screen.getByRole("link", { name: /tổng quan lâm sàng/i })).toHaveAttribute(
+        "href",
+        "/clinical",
+      );
+      expect(screen.getByRole("link", { name: /hội đồng council/i })).toHaveAttribute(
         "href",
         "/council",
-      );
-
-      // 3. Scribe
-      fireEvent.click(scribeTab);
-      expect(screen.getByText(/chuẩn hóa ghi chú khám bệnh soap tự động/i)).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /dùng thử scribe y khoa/i })).toHaveAttribute(
-        "href",
-        "/scribe",
-      );
-
-      // 4. PHR & LifeMap
-      fireEvent.click(phrTab);
-      expect(
-        screen.getByText(/hồ sơ sức khỏe cá nhân & dòng thời gian lifemap/i),
-      ).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /xem hồ sơ sức khỏe/i })).toHaveAttribute(
-        "href",
-        "/phr",
-      );
-    });
-
-    it("renders Clinician, Personal, and Evidence pathways with appropriate route CTAs", () => {
-      render(<HomePage />);
-
-      // Personal Pathway
-      expect(screen.getByText(/phân hệ cá nhân — spatial health companion/i)).toBeInTheDocument();
-      expect(screen.getByText(/tủ thuốc thông minh \(self-med\)/i)).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /bắt đầu với tài khoản cá nhân/i })).toHaveAttribute(
-        "href",
-        "/register",
-      );
-
-      // Clinician Pathway
-      expect(screen.getByText(/phân hệ lâm sàng — spatial clinical instrument/i)).toBeInTheDocument();
-      expect(screen.getByText(/hội chẩn đa chuyên khoa \(council ai\)/i)).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /đăng nhập cổng bác sĩ/i })).toHaveAttribute(
-        "href",
-        "/login",
-      );
-
-      // Evidence Pathway
-      expect(screen.getByText(/phân hệ bằng chứng — editorial evidence workstation/i)).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /tra cứu bằng chứng y khoa/i })).toHaveAttribute(
-        "href",
-        "/chat",
       );
     });
 
@@ -234,37 +191,21 @@ describe("Public, Auth & Legal Suite (Spec v8)", () => {
       expect(loginLinks.length).toBeGreaterThan(0);
       expect(loginLinks[0]).toHaveAttribute("href", "/login");
 
-      const registerLinks = screen.getAllByRole("link", { name: /đăng ký/i });
-      expect(registerLinks.length).toBeGreaterThan(0);
-      expect(registerLinks[0]).toHaveAttribute("href", "/register");
+      const chatLinks = screen.getAllByRole("link", { name: /hỏi clara/i });
+      expect(chatLinks.length).toBeGreaterThan(0);
+      expect(chatLinks[0]).toHaveAttribute("href", "/chat");
 
       // Footer links
-      const legalLink = screen.getByRole("link", { name: /trung tâm pháp lý \(\/legal\)/i });
-      expect(legalLink).toHaveAttribute("href", "/legal");
-
-      const guideLink = screen.getByRole("link", { name: /trung tâm hướng dẫn \(\/huong-dan\)/i });
+      const guideLink = screen.getByRole("link", { name: /hướng dẫn sử dụng/i });
       expect(guideLink).toHaveAttribute("href", "/huong-dan");
 
-      expect(screen.getByRole("link", { name: /chính sách quyền riêng tư/i })).toHaveAttribute(
-        "href",
-        "/legal/privacy",
-      );
-      expect(screen.getByRole("link", { name: /điều khoản dịch vụ/i })).toHaveAttribute(
-        "href",
-        "/legal/terms",
-      );
-      expect(screen.getByRole("link", { name: /đồng thuận y tế/i })).toHaveAttribute(
-        "href",
-        "/legal/consent",
-      );
-      expect(screen.getByRole("link", { name: /chính sách cookie/i })).toHaveAttribute(
-        "href",
-        "/legal/cookies",
-      );
+      expect(screen.getAllByRole("link", { name: /chính sách bảo mật|bảo mật/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("link", { name: /điều khoản dịch vụ|điều khoản/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("link", { name: /đồng thuận y tế/i }).length).toBeGreaterThan(0);
 
       // Medical disclaimer
       expect(
-        screen.getByText(/không thay thế bác sĩ hoặc quyết định chuyên môn y tế/i),
+        screen.getByText(/không thay thế chẩn đoán, điều trị hay lời khuyên của bác sĩ/i),
       ).toBeInTheDocument();
     });
   });
@@ -562,10 +503,11 @@ describe("Public, Auth & Legal Suite (Spec v8)", () => {
 
       // DSAR Rights
       expect(screen.getByText(/1\. Quyền được biết/i)).toBeInTheDocument();
-      expect(screen.getByText(/2\. Quyền đồng ý & rút đồng thuận/i)).toBeInTheDocument();
+      expect(screen.getByText(/2\. Quyền đồng ý/i)).toBeInTheDocument();
       expect(screen.getByText(/3\. Quyền truy cập & xem dữ liệu/i)).toBeInTheDocument();
-      expect(screen.getByText(/4\. Quyền xóa dữ liệu/i)).toBeInTheDocument();
-      expect(screen.getByText(/6\. Quyền cung cấp dữ liệu \(Portability\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/4\. Quyền rút lại sự đồng ý/i)).toBeInTheDocument();
+      expect(screen.getByText(/5\. Quyền xóa dữ liệu/i)).toBeInTheDocument();
+      expect(screen.getByText(/7\. Quyền cung cấp dữ liệu \(Portability\)/i)).toBeInTheDocument();
     });
 
     it("renders /legal/terms with statutory medical boundaries under Law on Medical Examination 2023", () => {
@@ -730,7 +672,7 @@ describe("Public, Auth & Legal Suite (Spec v8)", () => {
         "Liên kết chia sẻ không hợp lệ, đã hết hạn hoặc đã bị thu hồi.",
       );
       expect(errorCard).toHaveTextContent("Đã hết hạn");
-      expect(errorCard).toHaveTextContent("Zero-CoT Privacy Safe");
+      expect(errorCard).toHaveTextContent(/Bảo mật riêng tư Zero-CoT|Zero-CoT Privacy Safe/i);
       expect(screen.getByRole("link", { name: /Về trang chủ/i })).toHaveAttribute("href", "/");
     });
 

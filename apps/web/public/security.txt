@@ -1,0 +1,9 @@
+Contact: mailto:security@thiennn.icu
+Contact: mailto:clara@thiennn.icu
+Expires: 2027-12-31T23:59:59.000Z
+Encryption: https://theclaracare.com/pgp-key.txt
+Acknowledgments: https://theclaracare.com/safety
+Preferred-Languages: vi, en
+Canonical: https://theclaracare.com/.well-known/security.txt
+Policy: https://theclaracare.com/legal/privacy
+Hiring: https://theclaracare.com/contact

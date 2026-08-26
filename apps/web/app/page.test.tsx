@@ -28,6 +28,26 @@ describe("HomePage (/ - Spec v7 Spatial Art Landing & SEO)", () => {
     expect(metadata.openGraph?.title).toContain("The Clara Care");
     expect(metadata.openGraph?.locale).toBe("vi_VN");
     expect(metadata.alternates?.canonical).toBe("/");
+    expect(metadata.openGraph?.images).toEqual([
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "The Clara Care — Trợ lý AI Y tế Lâm sàng & Tham vấn Sức khỏe An toàn",
+      },
+    ]);
+    expect(metadata.twitter?.images).toEqual(["/twitter-image"]);
+    expect(metadata.verification).toBeDefined();
+
+    // AI search engines other metadata
+    expect(metadata.other).toEqual({
+      "ai-agent": "https://theclaracare.com/.well-known/ai-plugin.json",
+      "mcp-server": "https://theclaracare.com/.well-known/mcp.json",
+      "llms-txt": "https://theclaracare.com/llms.txt",
+      rating: "general",
+      referrer: "origin-when-cross-origin",
+      classification: "Medical Artificial Intelligence & Clinical Decision Support System",
+    });
   });
 
   it("renders SeoJsonLd and LandingV7", () => {

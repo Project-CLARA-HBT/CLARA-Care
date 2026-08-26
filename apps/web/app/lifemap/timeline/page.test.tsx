@@ -116,8 +116,8 @@ describe("JourneyTimelinePage (Spec v5 Section 6.18)", () => {
       render(<JourneyTimelinePage />);
     });
 
-    // 1. Filter by Khám bệnh (Doctor Visits)
-    const encountersFilterBtn = screen.getByRole("button", { name: "Khám bệnh" });
+    // 1. Filter by Thăm khám lâm sàng (Doctor Visits)
+    const encountersFilterBtn = screen.getByRole("button", { name: "Thăm khám lâm sàng" });
     fireEvent.click(encountersFilterBtn);
 
     expect(screen.getByText("Tái khám Tim mạch định kỳ")).toBeInTheDocument();
@@ -125,8 +125,8 @@ describe("JourneyTimelinePage (Spec v5 Section 6.18)", () => {
       screen.queryByText("Khởi động hành trình Kiểm soát huyết áp"),
     ).not.toBeInTheDocument();
 
-    // 2. Filter by Đổi đơn thuốc (Medication Changes)
-    const medicationFilterBtn = screen.getByRole("button", { name: "Đổi đơn thuốc" });
+    // 2. Filter by Thuốc & Dược phẩm (Medication Changes)
+    const medicationFilterBtn = screen.getByRole("button", { name: "Thuốc & Dược phẩm" });
     fireEvent.click(medicationFilterBtn);
 
     expect(
@@ -134,8 +134,8 @@ describe("JourneyTimelinePage (Spec v5 Section 6.18)", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("Tái khám Tim mạch định kỳ")).not.toBeInTheDocument();
 
-    // 3. Filter by Xét nghiệm máu (Blood Tests / Labs)
-    const labsFilterBtn = screen.getByRole("button", { name: "Xét nghiệm máu" });
+    // 3. Filter by Xét nghiệm & Cận lâm sàng (Blood Tests / Labs)
+    const labsFilterBtn = screen.getByRole("button", { name: "Xét nghiệm & Cận lâm sàng" });
     fireEvent.click(labsFilterBtn);
 
     expect(
@@ -145,8 +145,8 @@ describe("JourneyTimelinePage (Spec v5 Section 6.18)", () => {
       screen.queryByText("Đổi đơn thuốc: Chuyển sang Amlodipine 5mg"),
     ).not.toBeInTheDocument();
 
-    // 4. Filter by Báo cáo theo dõi (Monitoring Reports)
-    const reportsFilterBtn = screen.getByRole("button", { name: "Báo cáo theo dõi" });
+    // 4. Filter by Báo cáo & Giấy tờ (Monitoring Reports)
+    const reportsFilterBtn = screen.getByRole("button", { name: "Báo cáo & Giấy tờ" });
     fireEvent.click(reportsFilterBtn);
 
     expect(
@@ -194,8 +194,8 @@ describe("JourneyTimelinePage (Spec v5 Section 6.18)", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("dialog")).toBeInTheDocument();
-      expect(screen.getByText("Thời gian diễn ra thực tế:")).toBeInTheDocument();
-      expect(screen.getByText("Thời gian hệ thống ghi nhận:")).toBeInTheDocument();
+      expect(screen.getByText(/Thời điểm diễn ra/i)).toBeInTheDocument();
+      expect(screen.getByText(/Thời điểm ghi nhận vào hệ thống/i)).toBeInTheDocument();
       expect(screen.getByText("Revision #1")).toBeInTheDocument();
     });
 

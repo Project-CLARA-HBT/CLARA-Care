@@ -10,8 +10,8 @@ export interface TopicFilterBarProps {
   communities: SocialCommunity[];
   selectedCommunityId: number | "all";
   onSelectCommunity: (id: number | "all") => void;
-  authorFilter: "all" | "official" | "peers";
-  onSelectAuthorFilter: (filter: "all" | "official" | "peers") => void;
+  authorFilter: "all" | "official" | "peers" | "bookmarks";
+  onSelectAuthorFilter: (filter: "all" | "official" | "peers" | "bookmarks") => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   onToggleJoinCommunity: (community: SocialCommunity) => void;
@@ -55,7 +55,7 @@ export function TopicFilterBar({
         </div>
 
         {/* Author filter segmented toggle */}
-        <div className="inline-flex rounded-lg bg-[var(--surface-muted)] p-1 border border-[color:var(--shell-border)] text-xs">
+        <div className="inline-flex flex-wrap rounded-lg bg-[var(--surface-muted)] p-1 border border-[color:var(--shell-border)] text-xs">
           <button
             type="button"
             onClick={() => onSelectAuthorFilter("all")}
@@ -88,6 +88,18 @@ export function TopicFilterBar({
             }`}
           >
             {isEn ? "Peer Community" : "Thành viên"}
+          </button>
+          <button
+            type="button"
+            onClick={() => onSelectAuthorFilter("bookmarks")}
+            className={`px-3 py-1 rounded-md font-semibold transition flex items-center gap-1 ${
+              authorFilter === "bookmarks"
+                ? "bg-[var(--surface-panel)] text-[var(--text-brand)] shadow-xs border border-[color:var(--shell-border)]"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            <Icon name="folder" size="0.8rem" />
+            <span>{isEn ? "Bookmarks" : "Đã lưu"}</span>
           </button>
         </div>
       </div>

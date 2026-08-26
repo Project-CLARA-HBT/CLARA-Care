@@ -1,0 +1,94 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp.json",
+  "name": "clara-care-mcp",
+  "version": "1.0.0",
+  "description": "The CLARA Care Model Context Protocol (MCP) server for clinical evidence retrieval, FIDES drug-drug interaction verification, and medical guidelines in Vietnam.",
+  "capabilities": {
+    "tools": true,
+    "resources": true,
+    "prompts": true
+  },
+  "tools": [
+    {
+      "name": "check_drug_interaction",
+      "description": "Deterministic drug-drug interaction and dosage safety verification using FIDES engine against Vietnam National Pharmacopoeia (DAV) and DrugBank 5.1+.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "drugs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of active pharmaceutical ingredients or Vietnamese medication brand names"
+          },
+          "patient_context": {
+            "type": "object",
+            "properties": {
+              "age": {
+                "type": "number"
+              },
+              "is_pregnant": {
+                "type": "boolean"
+              },
+              "renal_impairment": {
+                "type": "boolean"
+              }
+            },
+            "description": "Optional clinical risk modifiers"
+          }
+        },
+        "required": [
+          "drugs"
+        ]
+      }
+    },
+    {
+      "name": "search_medical_evidence",
+      "description": "Federated biomedical guideline and evidence retrieval across DAV Pharmacopoeia, WHO Guidelines, openFDA, and PubMed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Clinical search query or guideline topic"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "vi",
+              "en"
+            ],
+            "default": "vi"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "consult_clinical_council",
+      "description": "Multi-specialty clinical deliberation request covering Cardiology, Nephrology, Endocrinology, Neurology, and Clinical Pharmacology.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "case_summary": {
+            "type": "string",
+            "description": "Structured medical case presentation"
+          },
+          "specialties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of medical specialties to convene"
+          }
+        },
+        "required": [
+          "case_summary"
+        ]
+      }
+    }
+  ]
+}

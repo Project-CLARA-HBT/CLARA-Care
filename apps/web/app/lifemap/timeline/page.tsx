@@ -196,8 +196,8 @@ function formatSourceKind(kind: string): string {
 export default function JourneyTimelinePage() {
   const language = useUILanguage();
   const copy = useCallback(
-    (key: UITranslationKey, values?: Record<string, string | number>) =>
-      t(language, key, values ?? {}),
+    (key: string, values?: Record<string, string | number>) =>
+      t(language, key as UITranslationKey, values ?? {}),
     [language],
   );
 

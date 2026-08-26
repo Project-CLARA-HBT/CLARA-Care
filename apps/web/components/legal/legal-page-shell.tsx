@@ -36,6 +36,11 @@ export interface LegalSectionMeta {
   status?: SectionIndexStatus;
 }
 
+export interface LegalBreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
 export interface LegalPageShellProps {
   title: string;
   eyebrow?: string;
@@ -45,6 +50,13 @@ export interface LegalPageShellProps {
   policyKey: LegalPolicyKey;
   sections?: LegalSectionMeta[];
   highlights?: string[];
+  breadcrumbs?: LegalBreadcrumbItem[];
+  securityBadges?: Array<{
+    label: string;
+    description?: string;
+    tone?: BadgeTone;
+    icon?: string;
+  }>;
   relatedControls?: Array<{
     href: string;
     label: string;
@@ -142,6 +154,8 @@ export default function LegalPageShell({
   policyKey,
   sections = [],
   highlights = [],
+  breadcrumbs,
+  securityBadges,
   relatedControls = [],
   children,
 }: LegalPageShellProps) {
@@ -183,7 +197,7 @@ export default function LegalPageShell({
         {/* 1. Header & Navigation */}
         <header className="space-y-6 border-b border-[color:var(--shell-border)]/70 pb-8 sm:pb-10">
           <nav className="flex flex-wrap items-center justify-between gap-3 text-xs font-semibold">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Link
                 href="/legal"
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
@@ -197,6 +211,24 @@ export default function LegalPageShell({
               >
                 <span>Trang chủ</span>
               </Link>
+              {breadcrumbs && breadcrumbs.length > 0 ? (
+                <div aria-label="Breadcrumb" className="hidden lg:flex items-center gap-1.5 pl-2 border-l border-[color:var(--shell-border)]/60 text-[11px] text-[var(--text-muted)] font-medium">
+                  {breadcrumbs.map((bc, idx) => (
+                    <span key={idx} className="flex items-center gap-1.5">
+                      {idx > 0 ? <span className="opacity-40">/</span> : null}
+                      {bc.href ? (
+                        <Link href={bc.href} className="hover:text-[var(--text-primary)] transition">
+                          {bc.label}
+                        </Link>
+                      ) : (
+                        <span className="text-[var(--text-primary)] font-semibold truncate max-w-[200px]">
+                          {bc.label}
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
             <div className="flex items-center gap-2">
               {/* Language Switcher Toggle */}
@@ -264,6 +296,29 @@ export default function LegalPageShell({
               {LEGAL_PRIMARY_DOMAIN}
             </Badge>
           </div>
+
+          {/* Dedicated Security Badges Grid (if provided) */}
+          {securityBadges && securityBadges.length > 0 ? (
+            <div className="grid gap-3 pt-1 sm:grid-cols-2 lg:grid-cols-4">
+              {securityBadges.map((b, idx) => (
+                <div
+                  key={idx}
+                  className="flex flex-col justify-between rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3.5 space-y-1.5 shadow-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <Badge tone={b.tone || "brand"}>
+                      {b.label}
+                    </Badge>
+                  </div>
+                  {b.description ? (
+                    <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                      {b.description}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           {/* Quick Policy Switcher Tabs */}
           <nav

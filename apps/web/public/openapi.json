@@ -1,0 +1,193 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "The CLARA Care API",
+    "description": "Vietnam's premier safety-first clinical AI assistant API providing deterministic FIDES drug-drug interaction checks, medical evidence retrieval, SOAP clinical notes, and multi-specialty council deliberation.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "The CLARA Care Security & Engineering Team",
+      "email": "clara@thiennn.icu",
+      "url": "https://theclaracare.com/contact"
+    },
+    "license": {
+      "name": "Proprietary",
+      "url": "https://theclaracare.com/legal/terms"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://theclaracare.com/api/v1",
+      "description": "Production Gateway"
+    }
+  ],
+  "paths": {
+    "/medicines/check-interaction": {
+      "post": {
+        "summary": "Check Drug-Drug Interactions (FIDES Verification)",
+        "operationId": "checkDrugInteractions",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DDIRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deterministic safety analysis result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DDIResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/evidence/search": {
+      "get": {
+        "summary": "Search Medical Evidence & Guidelines",
+        "operationId": "searchEvidence",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Biomedical inquiry"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evidence search results grounded in authoritative sources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/safety/invariants": {
+      "get": {
+        "summary": "Retrieve System Safety Invariants and Status",
+        "operationId": "getSafetyInvariants",
+        "responses": {
+          "200": {
+            "description": "Active safety invariants and compliance specs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetyInvariantsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DDIRequest": {
+        "type": "object",
+        "required": [
+          "drugs"
+        ],
+        "properties": {
+          "drugs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "DDIResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "interactions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "severity": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "EvidenceResponse": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "snippet": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SafetyInvariantsResponse": {
+        "type": "object",
+        "properties": {
+          "invariants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "enforced": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

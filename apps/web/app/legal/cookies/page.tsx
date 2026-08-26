@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 
 const COOKIE_SECTIONS: LegalSectionMeta[] = [
   { id: "definition", label: "Cookie là gì", title: "1. Cookie là gì & Nguyên tắc áp dụng" },
-  { id: "categories", label: "Nhóm cookie sử dụng", title: "2. Các nhóm cookie được sử dụng" },
+  { id: "categories", label: "Nhóm cookie sử dụng", title: "2. Nhóm cookie sử dụng (Các nhóm cookie được sử dụng)" },
   { id: "essential-session", label: "Cookie phiên thiết yếu", title: "3. Cookie phiên làm việc thiết yếu (Essential Session)" },
   { id: "security-tokens", label: "Token bảo mật & CSRF", title: "4. Token bảo mật & Phòng chống tấn công (Security Tokens)" },
   { id: "preferences", label: "Tùy chọn giao diện", title: "5. Cookie lưu tùy chọn giao diện (Preferences)" },
@@ -87,7 +87,7 @@ export default function CookiePolicyPage() {
       </LegalSection>
 
       {/* 2. Nhóm cookie sử dụng */}
-      <LegalSection id="categories" title="2. Các nhóm cookie được sử dụng" badge="Phân loại chính thức">
+      <LegalSection id="categories" title="2. Nhóm cookie sử dụng (Các nhóm cookie được sử dụng)" badge="Phân loại chính thức">
         <p>The Clara Care phân loại và kiểm soát nghiêm ngặt các nhóm cookie theo 3 mục đích vận hành duy nhất:</p>
         <div className="grid gap-3 pt-1 sm:grid-cols-3">
           <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/40 p-4 space-y-1.5">

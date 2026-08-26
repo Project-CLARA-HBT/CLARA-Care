@@ -77,6 +77,7 @@ function getReasonInfo(reason: string): ReasonInfo {
 
 export default function CommunityModerationPage() {
   const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
+  const [role, setRoleState] = useState<UserRole | null>(() => getRole());
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +106,10 @@ export default function CommunityModerationPage() {
     return onUILanguageChange(setUiLanguage);
   }, []);
 
+  useEffect(() => {
+    setRoleState(getRole());
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -131,8 +136,12 @@ export default function CommunityModerationPage() {
   }, [uiLanguage]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (role === "admin") {
+      void load();
+    } else if (role !== null) {
+      setLoading(false);
+    }
+  }, [role, load]);
 
   const executeAction = useCallback(async () => {
     if (!confirmModal.report || !confirmModal.action) return;
@@ -197,6 +206,27 @@ export default function CommunityModerationPage() {
     uiLanguage === "vi"
       ? "Xem xét các báo cáo nội dung. Gỡ nội dung vi phạm hoặc bỏ qua báo cáo."
       : "Review content violation reports. Remove violating items or dismiss reports.";
+
+  if (role !== null && role !== "admin") {
+    return (
+      <AdminShell activeTab="community-moderation" title={title} description={description}>
+        <div
+          role="alert"
+          className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-8 text-center text-[var(--status-danger-text)] shadow-soft"
+        >
+          <Icon name="warning" size={36} className="mx-auto mb-3 text-[var(--status-danger-text)]" />
+          <h2 className="text-lg font-bold">
+            {uiLanguage === "vi" ? "Từ chối quyền truy cập (403)" : "Access Denied (403)"}
+          </h2>
+          <p className="mt-2 text-sm opacity-90 max-w-md mx-auto">
+            {uiLanguage === "vi"
+              ? "Bạn không có quyền truy cập Bàn kiểm duyệt cộng đồng. Yêu cầu quyền quản trị viên (Admin)."
+              : "You do not have permission to access Community Moderation. Administrator role required."}
+          </p>
+        </div>
+      </AdminShell>
+    );
+  }
 
   if (unavailable) {
     return (

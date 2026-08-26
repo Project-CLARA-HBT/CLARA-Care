@@ -1,7 +1,11 @@
+import Link from "next/link";
 import LegalPageShell, {
   LegalSection,
   type LegalSectionMeta,
 } from "@/components/legal/legal-page-shell";
+import { ConsentStatusPreviewWidget } from "@/components/legal/consent-status-preview-widget";
+import { Badge } from "@/components/ui/badge";
+import { Icon } from "@/components/ui/icon";
 import {
   LEGAL_CONTACT_EMAIL,
   LEGAL_CONTACT_PHONE,
@@ -21,13 +25,16 @@ export const metadata: Metadata = {
 const CONSENT_SECTIONS: LegalSectionMeta[] = [
   { id: "nature", title: "1. Bản chất hệ thống AI hỗ trợ lâm sàng" },
   { id: "scope", title: "2. Phạm vi tính năng bắt buộc đồng thuận" },
-  { id: "user-undertakings", title: "3. Cam kết & trách nhiệm người dùng" },
+  { id: "purpose-pillars", title: "3. 5 Trụ cột đồng thuận theo mục đích (Purpose-Gated Pillars)" },
   { id: "clinical-verification", title: "4. Yêu cầu xác nhận chuyên môn y tế" },
   { id: "emergency-fast-path", title: "5. Luồng xử lý tình huống khẩn cấp (115)" },
-  { id: "consent-privacy-zero-cot", title: "6. Dữ liệu đồng thuận, Zero-PII & Zero-CoT" },
-  { id: "withdrawal-dsar", title: "7. Quyền rút đồng thuận & Quản trị DSAR" },
-  { id: "versioning-validity", title: "8. Phiên bản hóa & Hiệu lực áp dụng" },
-  { id: "support-dpo", title: "9. Kênh hỗ trợ, DPO & Tiếp nhận phản ánh" },
+  { id: "user-undertakings", title: "6. Cam kết & trách nhiệm người dùng" },
+  { id: "withdrawal-dsar", title: "7. Quyền rút lại đồng thuận & Quản trị quyền dữ liệu (DSAR)" },
+  { id: "cross-border-tia", title: "8. Chuyển giao dữ liệu suy luận xuyên biên giới & TIA" },
+  { id: "consent-privacy-zero-cot", title: "9. Dữ liệu đồng thuận, Zero-PII & Zero-CoT" },
+  { id: "status-preview", title: "10. Bảng điều khiển trạng thái đồng thuận trực quan" },
+  { id: "versioning-validity", title: "11. Phiên bản hóa & Hiệu lực áp dụng" },
+  { id: "support-dpo", title: "12. Kênh hỗ trợ, DPO & Tiếp nhận phản ánh" },
 ];
 
 export default function MedicalConsentPage() {
@@ -73,7 +80,47 @@ export default function MedicalConsentPage() {
         },
       ]}
     >
-      {/* 1. Bản chất hệ thống */}
+      {/* Visual Breadcrumbs & Statutory Header Badges */}
+      <nav aria-label="Đường dẫn điều hướng" className="mb-2 flex flex-wrap items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+        <Link href="/" className="hover:text-[var(--text-primary)] transition">Trang chủ</Link>
+        <span className="text-[var(--text-muted)]">/</span>
+        <Link href="/legal" className="hover:text-[var(--text-primary)] transition">Trung tâm pháp lý</Link>
+        <span className="text-[var(--text-muted)]">/</span>
+        <span className="font-bold text-[var(--text-brand)]">Đồng thuận y tế & Ranh giới lâm sàng</span>
+      </nav>
+
+      {/* Statutory Header Badges Card */}
+      <div className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/60 p-4 sm:p-5 space-y-3">
+        <div className="flex items-center gap-2 text-[var(--text-brand)]">
+          <Icon name="clinical-notes" size="1.1rem" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+            Căn cứ pháp lý y tế & Ranh giới bảo vệ người bệnh
+          </h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="brand" icon="clinical-notes">
+            Luật Khám bệnh số 15/2023/QH15
+          </Badge>
+          <Badge tone="ok" icon="check">
+            Nghị định 13/2023/NĐ-CP (PDPD)
+          </Badge>
+          <Badge tone="neutral" icon="settings">
+            Luật AI số 134/2025/QH15
+          </Badge>
+          <Badge tone="neutral" icon="folder">
+            Tên miền: {LEGAL_PRIMARY_DOMAIN}
+          </Badge>
+          <Badge tone="neutral" icon="calendar">
+            Phiên bản: {LEGAL_POLICY_VERSION}
+          </Badge>
+        </div>
+        <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+          Thỏa thuận này xác lập ranh giới vận hành, nguyên tắc đồng thuận theo mục đích (Purpose-Gated Consent),
+          cam kết an toàn Zero-CoT/Zero-PII và các quyền tự quyết của người bệnh khi tương tác với hệ thống AI y tế CLARA.
+        </p>
+      </div>
+
+      {/* 1. Bản chất hệ thống AI hỗ trợ lâm sàng */}
       <LegalSection
         id="nature"
         title="1. Bản chất của hệ thống AI hỗ trợ lâm sàng"
@@ -95,9 +142,14 @@ export default function MedicalConsentPage() {
             ý ra y lệnh điều trị hoặc kê đơn thuốc độc lập.
           </p>
         </div>
+        <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+          Mục tiêu tối thượng của The Clara Care là nâng cao năng lực tiếp cận y văn và chuẩn bị thông tin
+          cho người bệnh trước khi thăm khám, đồng thời hỗ trợ nhân viên y tế tra cứu phác đồ và bằng chứng
+          lâm sàng nhanh chóng và an toàn.
+        </p>
       </LegalSection>
 
-      {/* 2. Phạm vi bắt buộc */}
+      {/* 2. Phạm vi tính năng bắt buộc đồng thuận */}
       <LegalSection
         id="scope"
         title="2. Phạm vi tính năng bắt buộc đồng thuận y tế"
@@ -131,33 +183,140 @@ export default function MedicalConsentPage() {
         </ul>
       </LegalSection>
 
-      {/* 3. Cam kết người dùng */}
+      {/* 3. 5 Trụ cột đồng thuận theo mục đích (Purpose-Gated Pillars) */}
       <LegalSection
-        id="user-undertakings"
-        title="3. Cam kết & Trách nhiệm của người dùng khi đồng thuận"
-        badge="Cam kết người dùng"
+        id="purpose-pillars"
+        title="3. 5 Trụ cột đồng thuận theo mục đích (Purpose-Gated Consent Pillars)"
+        badge="Kiến trúc đồng thuận"
       >
-        <p>Bằng việc nhấn xác nhận đồng thuận hoặc tiếp tục sử dụng các tính năng lâm sàng, bạn cam kết:</p>
-        <ul className="list-disc space-y-2 pl-5 text-xs sm:text-sm">
-          <li>
-            Cung cấp thông tin đầy đủ, chính xác và trung thực về các loại thuốc đang dùng, tiền sử dị ứng,
-            bệnh nền và chỉ số sinh hiệu thực tế.
-          </li>
-          <li>
-            Không tự ý ngưng thuốc, đổi thuốc, tăng hoặc giảm liều lượng được bác sĩ kê đơn chỉ dựa trên gợi
-            ý từ hệ thống AI mà không tham vấn ý kiến chuyên môn.
-          </li>
-          <li>
-            Hiểu rõ rằng gợi ý của AI là kết quả xử lý xác suất thống kê dựa trên dữ liệu tham chiếu và có
-            thể có độ trễ so với các hướng dẫn lâm sàng cập nhật mới nhất.
-          </li>
-        </ul>
+        <p>
+          Tuân thủ nguyên tắc xử lý có mục đích và giảm thiểu dữ liệu theo Điều 9 và Điều 13 Nghị định 13/2023/NĐ-CP,
+          The Clara Care phân tách sự đồng thuận của bạn thành <strong>5 Trụ cột độc lập</strong>, cho phép quản lý
+          từng quyền xử lý riêng biệt mà không bị gộp chung hay ép buộc:
+        </p>
+
+        <div className="space-y-4 pt-2">
+          {/* Purpose 1 */}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/40 p-4 sm:p-5 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)]/50 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-500)] text-xs font-bold text-white">
+                  1
+                </span>
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                  Mục đích 1: Trợ lý thông tin y tế & Kiểm tra an toàn tương tác thuốc (Mandatory)
+                </h3>
+              </div>
+              <Badge tone="ok">Bắt buộc · Căn cứ cốt lõi</Badge>
+            </div>
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+              <strong>Phạm vi xử lý:</strong> Hỗ trợ hỏi đáp triệu chứng, đối chiếu Living Evidence, Dược thư Quốc gia,
+              kiểm tra tương tác thuốc DDI, cảnh báo dị ứng và chống chỉ định qua module CareGuard và FIDES Verification.
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              <strong>Căn cứ pháp lý:</strong> Điều 15 Luật Khám bệnh, chữa bệnh 2023 và Điều 9 Nghị định 13/2023/NĐ-CP.
+              Toàn bộ chuỗi suy luận logic (Zero-CoT) được tiêu hủy ngay sau phiên thực thi.
+            </p>
+          </div>
+
+          {/* Purpose 2 */}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/40 p-4 sm:p-5 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)]/50 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-500)] text-xs font-bold text-white">
+                  2
+                </span>
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                  Mục đích 2: Dòng thời gian sinh hiệu & Tổng hợp bối cảnh LifeMap (Optional)
+                </h3>
+              </div>
+              <Badge tone="brand">Tùy chọn · Gated</Badge>
+            </div>
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+              <strong>Phạm vi xử lý:</strong> Phân tích chuỗi dữ liệu sinh hiệu liên tục (huyết áp, đường huyết, nhịp tim),
+              tiền sử bệnh mạn tính và biểu đồ LifeMap nhằm phát hiện diễn tiến bất thường và chuẩn bị tóm tắt trước khám.
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              <strong>Căn cứ pháp lý:</strong> Điều 9 & Điều 13 Nghị định 13/2023/NĐ-CP (Xử lý dữ liệu sức khỏe nhạy cảm).
+              Bạn có thể bật hoặc tắt tính năng này bất kỳ lúc nào mà không ảnh hưởng tới các chức năng tra cứu cơ bản.
+            </p>
+          </div>
+
+          {/* Purpose 3 */}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/40 p-4 sm:p-5 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)]/50 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-500)] text-xs font-bold text-white">
+                  3
+                </span>
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                  Mục đích 3: Nghiên cứu y sinh học & Đối chiếu y văn sống (Anonymized)
+                </h3>
+              </div>
+              <Badge tone="neutral">Khử định danh 100%</Badge>
+            </div>
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+              <strong>Phạm vi xử lý:</strong> Thu thập các cặp truy vấn hỏi - đáp lâm sàng đã loại bỏ 100% thông tin định danh
+              (tên, số điện thoại, ngày sinh, địa chỉ) theo chuẩn Zero-PII nhằm đánh giá chuẩn xác mô hình AI y tế và hoàn thiện
+              cơ sở dữ liệu Living Evidence tại Việt Nam.
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              <strong>Căn cứ pháp lý:</strong> Điều 21 Nghị định 13/2023/NĐ-CP (Xử lý dữ liệu phục vụ nghiên cứu khoa học sau khi khử định danh).
+            </p>
+          </div>
+
+          {/* Purpose 4 */}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/40 p-4 sm:p-5 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)]/50 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-500)] text-xs font-bold text-white">
+                  4
+                </span>
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                  Mục đích 4: Suy luận mô hình xuyên biên giới không lưu vết (YEScale DeepSeek with TIA)
+                </h3>
+              </div>
+              <Badge tone="brand">Đánh giá TIA · Zero Retention</Badge>
+            </div>
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+              <strong>Phạm vi xử lý:</strong> Chuyển tải các đoạn truy vấn đã tối thiểu hóa tới điểm cuối mô hình ngôn ngữ lớn DeepSeek
+              (qua nhà cung cấp YEScale) nhằm thực hiện suy luận y khoa chuyên sâu.
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              <strong>Bảo đảm an toàn:</strong> Tuân thủ thủ tục Đánh giá tác động chuyển giao dữ liệu (TIA) theo Điều 25 Nghị định 13/2023/NĐ-CP.
+              Cam kết Zero Data Retention (không lưu nội dung tại máy chủ mô hình), mã hóa TLS 1.3 và không dùng dữ liệu để huấn luyện LLM công cộng.
+            </p>
+          </div>
+
+          {/* Purpose 5 */}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/40 p-4 sm:p-5 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)]/50 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-500)] text-xs font-bold text-white">
+                  5
+                </span>
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                  Mục đích 5: Chia sẻ hồ sơ PHR có ranh giới cho người thân & Bác sĩ (Bounded PHR Sharing)
+                </h3>
+              </div>
+              <Badge tone="neutral">Ủy quyền có thời hạn</Badge>
+            </div>
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+              <strong>Phạm vi xử lý:</strong> Cấp quyền truy cập chỉ đọc đối với hồ sơ sức khỏe cá nhân, nhật ký dùng thuốc và cảnh báo
+              sinh hiệu cho người giám hộ, người chăm sóc chỉ định hoặc bác sĩ điều trị thông qua liên kết mã hóa và mã PIN xác thực.
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              <strong>Căn cứ pháp lý:</strong> Điều 17 Nghị định 13/2023/NĐ-CP (Chuyển giao và phân quyền tiếp cận dữ liệu cá nhân).
+              Bạn có quyền thu hồi mọi liên kết chia sẻ tức thì bằng 1 thao tác.
+            </p>
+          </div>
+        </div>
       </LegalSection>
 
-      {/* 4. Xác nhận chuyên môn */}
+      {/* 4. Yêu cầu xác nhận chuyên môn y tế */}
       <LegalSection
         id="clinical-verification"
-        title="4. Yêu cầu bắt buộc xác nhận chuyên môn y tế"
+        title="4. Yêu cầu xác nhận chuyên môn y tế"
         badge="Luật Khám bệnh 2023"
       >
         <p>
@@ -171,12 +330,16 @@ export default function MedicalConsentPage() {
             nhận và chịu trách nhiệm pháp lý</strong> trước khi áp dụng trên người bệnh.
           </p>
         </div>
+        <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+          The Clara Care đóng vai trò là công cụ tham vấn tri thức và tăng cường hiệu quả giao tiếp giữa bác sĩ
+          và người bệnh, không tạo ra mối quan hệ pháp lý bác sĩ - bệnh nhân giữa hệ thống AI và người sử dụng.
+        </p>
       </LegalSection>
 
-      {/* 5. Tình huống khẩn cấp */}
+      {/* 5. Luồng xử lý tình huống khẩn cấp */}
       <LegalSection
         id="emergency-fast-path"
-        title="5. Luồng xử lý tình huống khẩn cấp (Emergency Fast-Path)"
+        title="5. Luồng xử lý tình huống khẩn cấp (115)"
         badge="Cấp cứu khẩn cấp"
       >
         <div className="rounded-[var(--radius-xl)] border border-[color:var(--status-danger-border)]/70 bg-[var(--status-danger-bg)]/20 p-4 space-y-2">
@@ -207,10 +370,139 @@ export default function MedicalConsentPage() {
         </p>
       </LegalSection>
 
-      {/* 6. Dữ liệu đồng thuận & Zero-CoT */}
+      {/* 6. Cam kết & trách nhiệm người dùng */}
+      <LegalSection
+        id="user-undertakings"
+        title="6. Cam kết & Trách nhiệm của người dùng khi đồng thuận"
+        badge="Cam kết người dùng"
+      >
+        <p>Bằng việc nhấn xác nhận đồng thuận hoặc tiếp tục sử dụng các tính năng lâm sàng, bạn cam kết:</p>
+        <ul className="list-disc space-y-2 pl-5 text-xs sm:text-sm">
+          <li>
+            Cung cấp thông tin đầy đủ, chính xác và trung thực về các loại thuốc đang dùng, tiền sử dị ứng,
+            bệnh nền và chỉ số sinh hiệu thực tế.
+          </li>
+          <li>
+            Không tự ý ngưng thuốc, đổi thuốc, tăng hoặc giảm liều lượng được bác sĩ kê đơn chỉ dựa trên gợi
+            ý từ hệ thống AI mà không tham vấn ý kiến chuyên môn.
+          </li>
+          <li>
+            Hiểu rõ rằng gợi ý của AI là kết quả xử lý xác suất thống kê dựa trên dữ liệu tham chiếu và có
+            thể có độ trễ so với các hướng dẫn lâm sàng cập nhật mới nhất.
+          </li>
+          <li>
+            Bảo mật tài khoản cá nhân, mã PIN và không chia sẻ token truy cập hồ sơ sức khỏe cho các bên thứ ba
+            không có thẩm quyền.
+          </li>
+        </ul>
+      </LegalSection>
+
+      {/* 7. Quyền rút lại đồng thuận & DSAR */}
+      <LegalSection
+        id="withdrawal-dsar"
+        title="7. Quyền rút lại đồng thuận & Quản trị quyền dữ liệu (DSAR)"
+        badge="Quyền của người bệnh"
+      >
+        <p>
+          Căn cứ Điều 12 và Điều 9 Nghị định 13/2023/NĐ-CP, bạn là chủ thể dữ liệu và có toàn quyền tự quyết
+          đối với dữ liệu sức khỏe của mình:
+        </p>
+
+        <div className="grid gap-3 pt-2 sm:grid-cols-3 text-xs">
+          {/* Right 1: 1-Click Withdrawal */}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-3.5 space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold text-[var(--text-brand)]">
+              <Icon name="trash" size="0.95rem" />
+              <span>Rút đồng thuận 1-chạm</span>
+            </div>
+            <p className="text-[var(--text-secondary)] leading-relaxed">
+              Bạn có thể tắt đồng thuận cho từng mục đích tùy chọn bất kỳ lúc nào tại Sổ cái đồng thuận cá nhân
+              với hiệu lực tức thì.
+            </p>
+          </div>
+
+          {/* Right 2: Data Portability */}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-3.5 space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold text-[var(--status-ok-text)]">
+              <Icon name="download" size="0.95rem" />
+              <span>Quyền chuyển giao dữ liệu</span>
+            </div>
+            <p className="text-[var(--text-secondary)] leading-relaxed">
+              Yêu cầu xuất toàn bộ hồ sơ sức khỏe cá nhân (PHR) dưới định dạng mở máy đọc được (JSON, CSV, PDF chuẩn HL7).
+            </p>
+          </div>
+
+          {/* Right 3: Erasure */}
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-3.5 space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold text-amber-500">
+              <Icon name="close" size="0.95rem" />
+              <span>Quyền xóa dữ liệu (Erasure)</span>
+            </div>
+            <p className="text-[var(--text-secondary)] leading-relaxed">
+              Yêu cầu xóa vĩnh viễn hoặc khử định danh hoàn toàn toàn bộ hồ sơ dữ liệu cá nhân trong thời hạn tối đa 72h làm việc.
+            </p>
+          </div>
+        </div>
+
+        <div className="pt-2 flex flex-wrap items-center gap-3">
+          <Link
+            href="/account/consent"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-600)] px-4 py-2 text-xs font-bold text-[var(--text-on-brand)] shadow-sm hover:bg-[var(--brand-500)] transition"
+          >
+            <Icon name="clinical-notes" size="0.95rem" />
+            <span>Mở Sổ cái đồng thuận cá nhân</span>
+          </Link>
+          <Link
+            href="/legal/privacy"
+            className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] transition"
+          >
+            <span>Quy trình gửi yêu cầu DSAR</span>
+          </Link>
+        </div>
+
+        <p className="text-xs text-[var(--text-muted)] pt-1">
+          Việc rút lại đồng thuận không ảnh hưởng đến tính hợp pháp của các hoạt động xử lý dữ liệu đã thực
+          hiện hợp lệ trước thời điểm rút.
+        </p>
+      </LegalSection>
+
+      {/* 8. Chuyển giao dữ liệu xuyên biên giới & TIA */}
+      <LegalSection
+        id="cross-border-tia"
+        title="8. Chuyển giao dữ liệu suy luận xuyên biên giới & Đánh giá TIA"
+        badge="Nghị định 13/2023 §25"
+      >
+        <p>
+          Để cung cấp khả năng phân tích y văn chính xác cao, The Clara Care sử dụng các điểm cuối suy luận mô hình
+          ngôn ngữ lớn DeepSeek đặt tại hạ tầng đối tác chuyên biệt (YEScale) ngoài lãnh thổ Việt Nam. Hoạt động này
+          tuân thủ chặt chẽ các điều kiện tại <strong>Điều 25 Nghị định 13/2023/NĐ-CP</strong>:
+        </p>
+
+        <ul className="list-disc space-y-2 pl-5 text-xs sm:text-sm">
+          <li>
+            <strong>Hồ sơ Đánh giá Tác động Chuyển giao (TIA):</strong> Đơn vị vận hành đã lập và lưu trữ hồ sơ đánh
+            giá mức độ an toàn dữ liệu, sẵn sàng phục vụ công tác thanh tra của Cục An ninh mạng và Phòng, chống tội phạm
+            sử dụng công nghệ cao (Bộ Công an).
+          </li>
+          <li>
+            <strong>Chuẩn Zero Data Retention (ZDR):</strong> Điểm cuối YEScale DeepSeek chỉ nhận dữ liệu để tạo phản hồi
+            ngay trong phiên (in-flight inference) và không lưu trữ bản ghi truy vấn hoặc phản hồi vào ổ cứng.
+          </li>
+          <li>
+            <strong>Không dùng dữ liệu để tái huấn luyện:</strong> Toàn bộ dữ liệu hội thoại y tế của bạn được bảo đảm
+            tuyệt đối không bị trích xuất để huấn luyện hay tinh chỉnh (fine-tune) bất kỳ mô hình AI thương mại nào.
+          </li>
+          <li>
+            <strong>Mã hóa đầu cuối TLS 1.3:</strong> Đường truyền dữ liệu xuyên biên giới được bảo vệ bằng giao thức mã
+            hóa tiên tiến nhất, chống lại mọi hình thức giải mã hoặc chặn bắt trung gian.
+          </li>
+        </ul>
+      </LegalSection>
+
+      {/* 9. Dữ liệu đồng thuận, Zero-PII & Zero-CoT */}
       <LegalSection
         id="consent-privacy-zero-cot"
-        title="6. Dữ liệu đồng thuận, Bảo đảm Zero-PII & Chuẩn Zero-CoT"
+        title="9. Dữ liệu đồng thuận, Bảo đảm Zero-PII & Chuẩn Zero-CoT"
         badge="Bảo vệ dữ liệu"
       >
         <p>
@@ -234,37 +526,26 @@ export default function MedicalConsentPage() {
         </ul>
       </LegalSection>
 
-      {/* 7. Rút lại đồng thuận */}
+      {/* 10. Bảng điều khiển trạng thái đồng thuận trực quan */}
       <LegalSection
-        id="withdrawal-dsar"
-        title="7. Quyền rút lại đồng thuận & Quản trị quyền dữ liệu (DSAR)"
-        badge="Nghị định 13/2023"
+        id="status-preview"
+        title="10. Bảng điều khiển trạng thái đồng thuận tương tác"
+        badge="Widget tương tác"
       >
         <p>
-          Theo Điều 12 Nghị định 13/2023/NĐ-CP, bạn có quyền <strong>rút lại sự đồng ý</strong> bất kỳ lúc
-          nào:
+          Dưới đây là widget tương tác minh họa trực tiếp cơ chế Purpose-Gated Consent của hệ thống. Bạn có thể
+          thử nghiệm bật/tắt từng trụ cột để xem cách thức hệ thống phản ứng và điều chỉnh năng lực lâm sàng:
         </p>
-        <ul className="list-disc space-y-2 pl-5 text-xs sm:text-sm">
-          <li>
-            Bạn có thể tắt đồng thuận y tế trực tiếp tại trang Quản lý tài khoản hoặc gửi yêu cầu tới Cán bộ
-            bảo vệ dữ liệu.
-          </li>
-          <li>
-            Khi rút lại đồng thuận, các tính năng chuyên môn nhạy cảm (CareGuard, Council, DDI) sẽ tự động
-            khóa lại để bảo đảm an toàn, trong khi dữ liệu hồ sơ cá nhân hiện có vẫn được bảo lưu an toàn cho
-            đến khi bạn có yêu cầu xóa.
-          </li>
-          <li>
-            Việc rút lại đồng thuận không ảnh hưởng đến tính hợp pháp của các hoạt động xử lý dữ liệu đã thực
-            hiện trước thời điểm rút.
-          </li>
-        </ul>
+
+        <div className="pt-2">
+          <ConsentStatusPreviewWidget />
+        </div>
       </LegalSection>
 
-      {/* 8. Phiên bản hóa & Hiệu lực */}
+      {/* 11. Phiên bản hóa & Hiệu lực */}
       <LegalSection
         id="versioning-validity"
-        title="8. Phiên bản hóa, Lưu vết kiểm toán & Hiệu lực áp dụng"
+        title="11. Phiên bản hóa, Lưu vết kiểm toán & Hiệu lực áp dụng"
         badge="Lưu vết chính sách"
       >
         <p>
@@ -282,7 +563,7 @@ export default function MedicalConsentPage() {
           </div>
           <div className="flex items-center justify-between pt-0.5">
             <span className="text-[var(--text-muted)]">Phạm vi áp dụng:</span>
-            <span className="font-semibold text-[var(--status-ok-text)]">Toàn bộ nền tảng The Clara Care</span>
+            <span className="font-semibold text-[var(--status-ok-text)]">Toàn bộ nền tảng The Clara Care ({LEGAL_PRIMARY_DOMAIN})</span>
           </div>
         </div>
         <p className="text-xs text-[var(--text-muted)] pt-2">
@@ -291,10 +572,10 @@ export default function MedicalConsentPage() {
         </p>
       </LegalSection>
 
-      {/* 9. Kênh hỗ trợ */}
+      {/* 12. Kênh hỗ trợ */}
       <LegalSection
         id="support-dpo"
-        title="9. Kênh hỗ trợ, DPO & Tiếp nhận phản ánh lâm sàng"
+        title="12. Kênh hỗ trợ, DPO & Tiếp nhận phản ánh lâm sàng"
         badge="Liên hệ tuân thủ"
       >
         <p>
@@ -327,4 +608,3 @@ export default function MedicalConsentPage() {
     </LegalPageShell>
   );
 }
-
