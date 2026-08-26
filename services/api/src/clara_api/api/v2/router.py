@@ -21,6 +21,9 @@ router.include_router(home_router, prefix="/home", tags=["v2-home"])
 router.include_router(health_router, prefix="/health", tags=["v2-health"])
 router.include_router(care_router, prefix="/care", tags=["v2-care"])
 router.include_router(medications_router, prefix="/medications", tags=["v2-medications"])
+router.include_router(
+    medications_router, prefix="/health/medications", tags=["v2-health-medications"]
+)
 router.include_router(ask_router, prefix="/ask", tags=["v2-ask"])
 router.include_router(capture_router, prefix="/capture", tags=["v2-capture"])
 router.include_router(you_router, prefix="/you", tags=["v2-you"])

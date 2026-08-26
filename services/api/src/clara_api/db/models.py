@@ -3904,6 +3904,9 @@ class SocialComment(Base):
     post_id: Mapped[int] = mapped_column(
         ForeignKey("social_posts.id", ondelete="CASCADE"), index=True
     )
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("social_comments.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     body: Mapped[str] = mapped_column(Text, default="")
     moderation_status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
@@ -3926,6 +3929,20 @@ class SocialReaction(Base):
         ForeignKey("social_posts.id", ondelete="CASCADE"), index=True
     )
     kind: Mapped[str] = mapped_column(String(16), default="helpful")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SocialBookmark(Base):
+    """A saved post bookmark by a user."""
+
+    __tablename__ = "social_bookmarks"
+    __table_args__ = (UniqueConstraint("user_id", "post_id", name="uq_social_bookmark"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    post_id: Mapped[int] = mapped_column(
+        ForeignKey("social_posts.id", ondelete="CASCADE"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

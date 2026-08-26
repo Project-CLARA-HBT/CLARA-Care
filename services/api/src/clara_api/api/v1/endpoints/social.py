@@ -30,13 +30,14 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from clara_api.core.config import get_settings
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
+    SocialBookmark,
     SocialComment,
     SocialCommunity,
     SocialMembership,
@@ -285,21 +286,31 @@ class PostResponse(BaseModel):
     id: int
     community_id: int
     author_handle: str
+    author_display_name: str = ""
+    is_verified_clinician: bool = False
+    community_name: str = ""
     title: str
     body: str
     created_at: str
-    comment_count: int
-    reaction_count: int
+    comment_count: int = 0
+    reaction_count: int = 0
+    user_reaction: str | None = None
+    is_bookmarked: bool = False
+    reactions_breakdown: dict[str, int] = Field(default_factory=dict)
 
 
 class CommentCreate(BaseModel):
     body: str = Field(min_length=1, max_length=_MAX_BODY)
+    parent_id: int | None = None
 
 
 class CommentResponse(BaseModel):
     id: int
     post_id: int
+    parent_id: int | None = None
     author_handle: str
+    author_display_name: str = ""
+    is_verified_clinician: bool = False
     body: str
     created_at: str
 
@@ -334,7 +345,7 @@ def _get_or_create_profile(db: Session, user: User) -> SocialProfile:
             handle=base_handle,
             display_name=(user.full_name or base_handle)[:80],
             bio="",
-            role_badge=user.role if user.role in {"doctor", "researcher"} else "",
+            is_verified_clinician=user.role in {"doctor", "researcher"},
         )
         db.add(profile)
         db.flush()
@@ -456,6 +467,30 @@ def update_my_profile(
     db.add(profile)
     db.commit()
     return _profile_out(profile)
+
+
+@router.get("/me/bookmarks", response_model=list[PostResponse])
+def get_my_bookmarks(
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
+    db: Session = Depends(get_db),
+) -> list[PostResponse]:
+    _require_social_enabled()
+    user = _require_user(token, db)
+    stmt = (
+        select(SocialPost)
+        .join(SocialBookmark, SocialBookmark.post_id == SocialPost.id)
+        .where(
+            SocialBookmark.user_id == user.id,
+            SocialPost.is_deleted.is_(False),
+        )
+        .order_by(SocialBookmark.created_at.desc(), SocialBookmark.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    posts = db.execute(stmt).scalars().all()
+    return _posts_out(db, list(posts), current_user_id=user.id)
 
 
 @router.get("/profiles/{handle}", response_model=ProfileResponse)
@@ -595,13 +630,42 @@ def leave_community(
 # --------------------------------------------------------------------------
 # Posts / comments / reactions
 # --------------------------------------------------------------------------
-def _posts_out(db: Session, posts: list[SocialPost]) -> list[PostResponse]:
-    """Serialize posts with three bounded aggregate queries, never N+1."""
+def _posts_out(
+    db: Session,
+    posts: list[SocialPost],
+    current_user_id: int | None = None,
+) -> list[PostResponse]:
+    """Serialize posts with bounded aggregate queries, never N+1."""
 
     if not posts:
         return []
     post_ids = [post.id for post in posts]
-    handles = _handles_for(db, {post.author_id for post in posts})
+    author_ids = {post.author_id for post in posts}
+    community_ids = {post.community_id for post in posts if post.community_id}
+
+    profiles = db.execute(
+        select(SocialProfile).where(SocialProfile.user_id.in_(author_ids))
+    ).scalars().all()
+    profile_map = {p.user_id: p for p in profiles}
+
+    missing_user_ids = author_ids - set(profile_map.keys())
+    user_map: dict[int, User] = {}
+    if missing_user_ids:
+        users = db.execute(
+            select(User).where(User.id.in_(missing_user_ids))
+        ).scalars().all()
+        user_map = {u.id: u for u in users}
+
+    if community_ids:
+        communities = db.execute(
+            select(SocialCommunity.id, SocialCommunity.name).where(
+                SocialCommunity.id.in_(community_ids)
+            )
+        ).all()
+        community_map = {int(c_id): str(c_name) for c_id, c_name in communities}
+    else:
+        community_map = {}
+
     comment_counts = {
         int(post_id): int(count)
         for post_id, count in db.execute(
@@ -610,31 +674,139 @@ def _posts_out(db: Session, posts: list[SocialPost]) -> list[PostResponse]:
             .group_by(SocialComment.post_id)
         ).all()
     }
-    reaction_counts = {
-        int(post_id): int(count)
-        for post_id, count in db.execute(
-            select(SocialReaction.post_id, func.count(SocialReaction.id))
-            .where(SocialReaction.post_id.in_(post_ids))
-            .group_by(SocialReaction.post_id)
+
+    reaction_rows = db.execute(
+        select(SocialReaction.post_id, SocialReaction.kind, func.count(SocialReaction.id))
+        .where(SocialReaction.post_id.in_(post_ids))
+        .group_by(SocialReaction.post_id, SocialReaction.kind)
+    ).all()
+    reactions_breakdown_map: dict[int, dict[str, int]] = {p_id: {} for p_id in post_ids}
+    reaction_count_map: dict[int, int] = {p_id: 0 for p_id in post_ids}
+    for p_id, kind, count in reaction_rows:
+        p_id_int = int(p_id)
+        cnt = int(count)
+        reactions_breakdown_map[p_id_int][str(kind)] = cnt
+        reaction_count_map[p_id_int] += cnt
+
+    user_reaction_map: dict[int, str] = {}
+    bookmarked_post_ids: set[int] = set()
+    if current_user_id is not None:
+        user_reactions = db.execute(
+            select(SocialReaction.post_id, SocialReaction.kind).where(
+                SocialReaction.post_id.in_(post_ids),
+                SocialReaction.user_id == current_user_id,
+            )
         ).all()
-    }
-    return [
-        PostResponse(
-            id=post.id,
-            community_id=post.community_id or 0,
-            author_handle=handles[post.author_id],
-            title=post.title,
-            body=post.body,
-            created_at=post.created_at.isoformat() if post.created_at else "",
-            comment_count=comment_counts.get(post.id, 0),
-            reaction_count=reaction_counts.get(post.id, 0),
+        for p_id, kind in user_reactions:
+            user_reaction_map[int(p_id)] = str(kind)
+
+        bookmarks = db.execute(
+            select(SocialBookmark.post_id).where(
+                SocialBookmark.post_id.in_(post_ids),
+                SocialBookmark.user_id == current_user_id,
+            )
+        ).scalars().all()
+        bookmarked_post_ids = {int(p_id) for p_id in bookmarks}
+
+    out: list[PostResponse] = []
+    for post in posts:
+        p = profile_map.get(post.author_id)
+        u = user_map.get(post.author_id)
+        if p is not None:
+            author_handle = p.handle
+            author_display_name = p.display_name or p.handle
+            is_verified_clinician = bool(p.is_verified_clinician)
+        elif u is not None:
+            author_handle = f"clara{u.id}"
+            author_display_name = u.full_name or author_handle
+            is_verified_clinician = u.role in {"doctor", "researcher"}
+        else:
+            author_handle = f"clara{post.author_id}"
+            author_display_name = author_handle
+            is_verified_clinician = False
+
+        community_name = community_map.get(post.community_id, "") if post.community_id else ""
+
+        out.append(
+            PostResponse(
+                id=post.id,
+                community_id=post.community_id or 0,
+                author_handle=author_handle,
+                author_display_name=author_display_name,
+                is_verified_clinician=is_verified_clinician,
+                community_name=community_name,
+                title=post.title,
+                body=post.body,
+                created_at=post.created_at.isoformat() if post.created_at else "",
+                comment_count=comment_counts.get(post.id, 0),
+                reaction_count=reaction_count_map.get(post.id, 0),
+                user_reaction=user_reaction_map.get(post.id),
+                is_bookmarked=post.id in bookmarked_post_ids,
+                reactions_breakdown=reactions_breakdown_map.get(post.id, {}),
+            )
         )
-        for post in posts
-    ]
+    return out
 
 
-def _post_out(db: Session, post: SocialPost) -> PostResponse:
-    return _posts_out(db, [post])[0]
+def _post_out(
+    db: Session,
+    post: SocialPost,
+    current_user_id: int | None = None,
+) -> PostResponse:
+    return _posts_out(db, [post], current_user_id=current_user_id)[0]
+
+
+def _comments_out(db: Session, comments: list[SocialComment]) -> list[CommentResponse]:
+    if not comments:
+        return []
+    author_ids = {comment.author_id for comment in comments}
+    profiles = db.execute(
+        select(SocialProfile).where(SocialProfile.user_id.in_(author_ids))
+    ).scalars().all()
+    profile_map = {p.user_id: p for p in profiles}
+
+    missing_user_ids = author_ids - set(profile_map.keys())
+    user_map: dict[int, User] = {}
+    if missing_user_ids:
+        users = db.execute(
+            select(User).where(User.id.in_(missing_user_ids))
+        ).scalars().all()
+        user_map = {u.id: u for u in users}
+
+    out: list[CommentResponse] = []
+    for c in comments:
+        p = profile_map.get(c.author_id)
+        u = user_map.get(c.author_id)
+        if p is not None:
+            author_handle = p.handle
+            author_display_name = p.display_name or p.handle
+            is_verified_clinician = bool(p.is_verified_clinician)
+        elif u is not None:
+            author_handle = f"clara{u.id}"
+            author_display_name = u.full_name or author_handle
+            is_verified_clinician = u.role in {"doctor", "researcher"}
+        else:
+            author_handle = f"clara{c.author_id}"
+            author_display_name = author_handle
+            is_verified_clinician = False
+
+        out.append(
+            CommentResponse(
+                id=c.id,
+                post_id=c.post_id,
+                parent_id=c.parent_id,
+                author_handle=author_handle,
+                author_display_name=author_display_name,
+                is_verified_clinician=is_verified_clinician,
+                body=c.body,
+                created_at=c.created_at.isoformat() if c.created_at else "",
+            )
+        )
+    return out
+
+
+def _comment_out(db: Session, comment: SocialComment) -> CommentResponse:
+    return _comments_out(db, [comment])[0]
 
 
 @router.post("/posts", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
@@ -650,6 +822,7 @@ def create_post(
     community = db.get(SocialCommunity, payload.community_id)
     if community is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy cộng đồng")
+    _get_or_create_profile(db, user)
     # Pre-publish moderation on BOTH title and body (safety invariant).
     _enforce_moderation(db, user_id=user.id, body=f"{payload.title}\n{payload.body}", surface="post")
     post = SocialPost(
@@ -660,7 +833,30 @@ def create_post(
     )
     db.add(post)
     db.commit()
-    return _post_out(db, post)
+    return _post_out(db, post, current_user_id=user.id)
+
+
+@router.get("/posts/search", response_model=list[PostResponse])
+def search_posts(
+    q: str = Query(default=""),
+    community_id: int | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
+    db: Session = Depends(get_db),
+) -> list[PostResponse]:
+    _require_social_enabled()
+    user = _require_user(token, db)
+    stmt = select(SocialPost).where(SocialPost.is_deleted.is_(False))
+    if community_id is not None:
+        stmt = stmt.where(SocialPost.community_id == community_id)
+    query_text = q.strip()
+    if query_text:
+        pattern = f"%{query_text}%"
+        stmt = stmt.where(or_(SocialPost.title.ilike(pattern), SocialPost.body.ilike(pattern)))
+    stmt = stmt.order_by(SocialPost.created_at.desc(), SocialPost.id.desc()).limit(limit).offset(offset)
+    posts = db.execute(stmt).scalars().all()
+    return _posts_out(db, list(posts), current_user_id=user.id)
 
 
 @router.get("/posts/{post_id}", response_model=PostResponse)
@@ -670,11 +866,11 @@ def get_post(
     db: Session = Depends(get_db),
 ) -> PostResponse:
     _require_social_enabled()
-    _require_user(token, db)
+    user = _require_user(token, db)
     post = db.get(SocialPost, post_id)
     if post is None or post.is_deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bài viết")
-    return _post_out(db, post)
+    return _post_out(db, post, current_user_id=user.id)
 
 
 @router.delete("/posts/{post_id}", response_model=dict[str, bool])
@@ -696,6 +892,34 @@ def delete_post(
     return {"deleted": True}
 
 
+@router.post("/posts/{post_id}/bookmark", response_model=dict[str, bool])
+def toggle_bookmark(
+    post_id: int,
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
+    db: Session = Depends(get_db),
+) -> dict[str, bool]:
+    _require_social_enabled()
+    user = _require_user(token, db)
+    _require_social_consent(db, user_id=user.id)
+    post = db.get(SocialPost, post_id)
+    if post is None or post.is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bài viết")
+    existing = db.execute(
+        select(SocialBookmark).where(
+            SocialBookmark.post_id == post_id,
+            SocialBookmark.user_id == user.id,
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        db.add(SocialBookmark(post_id=post_id, user_id=user.id))
+        db.commit()
+        return {"bookmarked": True}
+    else:
+        db.delete(existing)
+        db.commit()
+        return {"bookmarked": False}
+
+
 @router.get("/communities/{community_id}/posts", response_model=list[PostResponse])
 def list_community_posts(
     community_id: int,
@@ -705,7 +929,7 @@ def list_community_posts(
     db: Session = Depends(get_db),
 ) -> list[PostResponse]:
     _require_social_enabled()
-    _require_user(token, db)
+    user = _require_user(token, db)
     posts = (
         db.execute(
             select(SocialPost)
@@ -717,7 +941,7 @@ def list_community_posts(
         .scalars()
         .all()
     )
-    return _posts_out(db, list(posts))
+    return _posts_out(db, list(posts), current_user_id=user.id)
 
 
 @router.get("/feed", response_model=list[PostResponse])
@@ -744,7 +968,7 @@ def get_feed(
         stmt = stmt.where(SocialPost.community_id.in_(joined_ids))
     stmt = stmt.order_by(SocialPost.created_at.desc(), SocialPost.id.desc()).limit(limit).offset(offset)
     posts = db.execute(stmt).scalars().all()
-    return _posts_out(db, list(posts))
+    return _posts_out(db, list(posts), current_user_id=user.id)
 
 
 @router.post(
@@ -765,21 +989,23 @@ def create_comment(
     post = db.get(SocialPost, post_id)
     if post is None or post.is_deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bài viết")
+    if payload.parent_id is not None:
+        parent = db.get(SocialComment, payload.parent_id)
+        if parent is None or parent.is_deleted or parent.post_id != post_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bình luận cha"
+            )
+    _get_or_create_profile(db, user)
     _enforce_moderation(db, user_id=user.id, body=payload.body, surface="comment")
     comment = SocialComment(
         post_id=post_id,
+        parent_id=payload.parent_id,
         author_id=user.id,
         body=payload.body.strip()[:_MAX_BODY],
     )
     db.add(comment)
     db.commit()
-    return CommentResponse(
-        id=comment.id,
-        post_id=post_id,
-        author_handle=_handle_for(db, user.id),
-        body=comment.body,
-        created_at=comment.created_at.isoformat() if comment.created_at else "",
-    )
+    return _comment_out(db, comment)
 
 
 @router.get("/posts/{post_id}/comments", response_model=list[CommentResponse])
@@ -803,17 +1029,26 @@ def list_comments(
         .scalars()
         .all()
     )
-    handles = _handles_for(db, {comment.author_id for comment in comments})
-    return [
-        CommentResponse(
-            id=c.id,
-            post_id=c.post_id,
-            author_handle=handles[c.author_id],
-            body=c.body,
-            created_at=c.created_at.isoformat() if c.created_at else "",
-        )
-        for c in comments
-    ]
+    return _comments_out(db, list(comments))
+
+
+@router.delete("/comments/{comment_id}", response_model=dict[str, bool])
+def delete_comment(
+    comment_id: int,
+    token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
+    db: Session = Depends(get_db),
+) -> dict[str, bool]:
+    _require_social_enabled()
+    user = _require_user(token, db)
+    comment = db.get(SocialComment, comment_id)
+    if comment is None or comment.is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bình luận")
+    if comment.author_id != user.id and token.role != "admin" and user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Không đủ quyền")
+    comment.is_deleted = True
+    db.add(comment)
+    db.commit()
+    return {"deleted": True}
 
 
 @router.post("/posts/{post_id}/reactions", response_model=dict[str, Any])

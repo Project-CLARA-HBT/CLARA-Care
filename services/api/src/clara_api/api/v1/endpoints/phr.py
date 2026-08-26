@@ -29,11 +29,12 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Query,
     Response,
     UploadFile,
     status,
 )
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
 from clara_api.compliance.consent import PURPOSE_SHARING
@@ -822,8 +823,33 @@ def delete_phr_entry(
     return _enhanced_response(profile)
 
 
+def _parse_temporal_param(val: str | date | datetime | None) -> datetime | None:
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val.astimezone(UTC) if val.tzinfo is not None else val.replace(tzinfo=UTC)
+    if isinstance(val, date):
+        return datetime(val.year, val.month, val.day, tzinfo=UTC)
+    s = str(val).strip().replace(" ", "+")
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(s)
+        return dt.astimezone(UTC) if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
+    except (ValueError, TypeError):
+        try:
+            d = date.fromisoformat(s)
+            return datetime(d.year, d.month, d.day, tzinfo=UTC)
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"code": "invalid_timestamp_filter", "value": str(val)},
+            ) from exc
+
+
 @router.get("/history")
 def get_phr_history(
+    system_time_from: str | datetime | None = Query(default=None),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
     settings: Settings = SETTINGS_DEP,
@@ -838,6 +864,20 @@ def get_phr_history(
     if profile is None:
         return {"versions": []}
     versions = audit_svc.list_versions(db, profile_id=profile.id)
+    if system_time_from is not None:
+        s_time = _parse_temporal_param(system_time_from)
+        assert s_time is not None
+        versions = [
+            v
+            for v in versions
+            if v.created_at
+            and (
+                v.created_at.astimezone(UTC)
+                if v.created_at.tzinfo is not None
+                else v.created_at.replace(tzinfo=UTC)
+            )
+            >= s_time
+        ]
     return {
         "versions": [
             {
@@ -945,6 +985,8 @@ def _body_measurement_rows(profile: PhrProfile, db: Session) -> list[dict[str, A
 
 @router.get("/body-measurements")
 def list_phr_body_measurements(
+    valid_time_from: str | date | datetime | None = Query(default=None),
+    system_time_from: str | datetime | None = Query(default=None),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
     settings: Settings = SETTINGS_DEP,
@@ -959,7 +1001,12 @@ def list_phr_body_measurements(
     ).scalar_one_or_none()
     if profile is None:
         return {"measurements": []}
-    return {"measurements": _body_measurement_rows(profile, db)}
+    measurements = _body_measurement_rows(profile, db)
+    if valid_time_from is not None:
+        v_dt = _parse_temporal_param(valid_time_from)
+        v_date_str = v_dt.date().isoformat() if v_dt else ""
+        measurements = [m for m in measurements if str(m.get("observed_on", "")) >= v_date_str]
+    return {"measurements": measurements}
 
 
 @router.post("/body-measurements")
@@ -1048,6 +1095,8 @@ def create_phr_body_measurement(
 
 @router.get("/observations")
 def list_phr_observations(
+    valid_time_from: str | date | datetime | None = Query(default=None),
+    system_time_from: str | datetime | None = Query(default=None),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
     settings: Settings = SETTINGS_DEP,
@@ -1062,9 +1111,19 @@ def list_phr_observations(
     ).scalar_one_or_none()
     if profile is None:
         return {"observations": []}
-    rows = db.execute(
-        select(PhrObservation).where(PhrObservation.profile_id == profile.id)
-    ).scalars()
+    query = select(PhrObservation).where(PhrObservation.profile_id == profile.id)
+    if valid_time_from is not None:
+        v_dt = _parse_temporal_param(valid_time_from)
+        v_date = v_dt.date() if v_dt else None
+        if v_date is not None:
+            query = query.where(
+                or_(PhrObservation.observed_on.is_(None), PhrObservation.observed_on >= v_date)
+            )
+    if system_time_from is not None:
+        s_time = _parse_temporal_param(system_time_from)
+        if s_time is not None:
+            query = query.where(PhrObservation.created_at >= s_time)
+    rows = db.execute(query).scalars()
     return {
         "observations": [
             {

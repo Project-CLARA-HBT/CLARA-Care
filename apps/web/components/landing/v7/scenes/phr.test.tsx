@@ -41,13 +41,13 @@ function renderPhrScene(initialLanguage: "vi" | "en" = "vi") {
 }
 
 describe("PhrScene (Landing v7 Bounded PHR Sharing)", () => {
-  it("renders landing scene with id='phr', scale='standard', tone='canvas'", () => {
+  it("renders landing scene with id='phr', scale='standard', tone='azure'", () => {
     const { container } = renderPhrScene("vi");
     const section = container.querySelector("section#phr");
     expect(section).toBeInTheDocument();
     expect(section).toHaveAttribute("data-scene-id", "phr");
     expect(section).toHaveAttribute("data-scene-scale", "standard");
-    expect(section).toHaveAttribute("data-scene-tone", "canvas");
+    expect(section).toHaveAttribute("data-scene-tone", "azure");
   });
 
   it("renders SceneHeader with eyebrow, title, and description in Vietnamese by default", () => {

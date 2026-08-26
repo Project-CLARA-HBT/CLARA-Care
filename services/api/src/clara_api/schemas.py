@@ -66,6 +66,10 @@ class LoginOtpVerifyRequest(BaseModel):
     otp_code: str = Field(min_length=4, max_length=16)
 
 
+class AuthCallbackRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=1024)
+
+
 class RefreshTokenRequest(BaseModel):
     refresh_token: str | None = None
 

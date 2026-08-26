@@ -21,4 +21,28 @@ describe("LifeMap Visit Prep Canonical Redirect (Spec v5 Section 6.19)", () => {
     await mod.default({});
     expect(redirect).toHaveBeenCalledWith("/care/prepare");
   });
+
+  it("preserves longitudinal context parameters like episodeId, journey, and source from LifeMap", async () => {
+    redirect.mockClear();
+    const mod = await import("./page");
+    await mod.default({
+      searchParams: Promise.resolve({
+        episodeId: "ep-456",
+        from: "lifemap",
+        journey: "hypertension",
+      }),
+    });
+    expect(redirect).toHaveBeenCalledWith(
+      "/care/prepare?episodeId=ep-456&from=lifemap&journey=hypertension",
+    );
+  });
+
+  it("maps visit alias parameter to canonical visitId parameter", async () => {
+    redirect.mockClear();
+    const mod = await import("./page");
+    await mod.default({
+      searchParams: Promise.resolve({ visit: "v-789" }),
+    });
+    expect(redirect).toHaveBeenCalledWith("/care/prepare?visit=v-789&visitId=v-789");
+  });
 });

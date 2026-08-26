@@ -64,6 +64,9 @@ api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(
     clinical_workbench.router, prefix="/clinical-workbench", tags=["clinical-workbench"]
 )
+api_router.include_router(
+    clinical_workbench.router, prefix="/clinical/workbench", tags=["clinical-workbench"]
+)
 api_router.include_router(phr.router, prefix="/phr", tags=["phr"])
 api_router.include_router(connected_health.router, prefix="/connectors", tags=["connected-health"])
 api_router.include_router(search.router, prefix="/search", tags=["search"])

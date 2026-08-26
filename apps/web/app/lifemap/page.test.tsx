@@ -169,7 +169,7 @@ describe("LifeMapPage (Spec v5 Section 6.16 - Journey Canvas)", () => {
     expect(screen.getByText("Đo huyết áp sáng và tối")).toBeInTheDocument();
 
     // Check link to timeline and new journey
-    expect(screen.getByRole("link", { name: /Dòng thời gian/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /dòng thời gian/i })).toHaveAttribute(
       "href",
       "/lifemap/timeline",
     );

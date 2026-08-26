@@ -152,6 +152,81 @@ class CancelCommitmentRequest(_Strict):
     cancellation_predicate: dict[str, object] | None = None
 
 
+class ProposalResponse(_Strict):
+    proposal_id: str
+    commitment_id: str
+    base_state_version: int
+    origin: str
+    target_profile_id: str
+    actor_role: str
+    task: str
+    purpose: str
+    context_binding_mode: str
+    source_snapshot_id: str
+    source_snapshot_digest: str
+    proposal_digest: str
+
+
+class ReviewedProposalResponse(_Strict):
+    proposal_id: str
+    reviewed_proposal_id: str
+    origin: str
+    target_profile_id: str
+    actor_role: str
+    task: str
+    purpose: str
+    context_binding_mode: str
+    base_state_version: int
+    source_snapshot_id: str
+    source_snapshot_digest: str
+    proposal_digest: str
+
+
+class TransitionResponse(_Strict):
+    decision_id: str
+    resulting_state_version: int
+    origin: str
+    source_snapshot_id: str
+    source_snapshot_digest: str
+
+
+class SnapshotResponse(_Strict):
+    snapshot_id: str
+    state_version: int
+    policy_version: str
+    consent_version: str
+    snapshot_digest: str
+    manifest_digest: str
+    assertion_hashes: list[str]
+    pipeline_trace: list[dict[str, Any]]
+    sufficiency: dict[str, Any]
+    expires_at: datetime
+
+
+class HeldCoordinateItem(_Strict):
+    domain: str
+    semantic_key: str
+
+
+class LeaseResponse(_Strict):
+    lease_id: str
+    profile_id: int
+    epoch: int
+    state: str
+    held_coordinates: list[HeldCoordinateItem] = Field(default_factory=list)
+    created_at: str | None = None
+    renewed_at: str | None = None
+
+
+class CancelCommitmentResponse(_Strict):
+    decision_id: str
+    commitment_id: str
+    lifecycle_state: str
+    resulting_state_version: int
+    origin: str
+    reason_code: str
+
+
 def _scope(
     db: Session,
     token: TokenPayload,
@@ -193,13 +268,13 @@ def _evidence(db: Session, scope: ProfileScope, public_ids: list[str]) -> tuple[
     return rows
 
 
-@router.post("/proposals", status_code=status.HTTP_201_CREATED)
+@router.post("/proposals", response_model=ProposalResponse, status_code=status.HTTP_201_CREATED)
 def create_proposal(
     request: ProposalRequest,
     x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
-) -> dict[str, object]:
+) -> ProposalResponse:
     scope = _scope(db, token, x_profile, action="create", domain=request.domain)
     try:
         commitment = get_or_create_commitment(
@@ -241,14 +316,14 @@ def create_proposal(
     }
 
 
-@router.post("/proposals/{proposal_id}/review", status_code=status.HTTP_201_CREATED)
+@router.post("/proposals/{proposal_id}/review", response_model=ReviewedProposalResponse, status_code=status.HTTP_201_CREATED)
 def review_model_proposal(
     proposal_id: str,
     domain: str,
     x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
-) -> dict[str, object]:
+) -> ReviewedProposalResponse:
     scope = _scope(db, token, x_profile, action="correct", domain=domain)
     proposal = db.execute(
         select(GlhsClinicalCommitmentProposal)
@@ -283,7 +358,7 @@ def review_model_proposal(
     }
 
 
-@router.post("/{commitment_id}/transitions", status_code=status.HTTP_201_CREATED)
+@router.post("/{commitment_id}/transitions", response_model=TransitionResponse, status_code=status.HTTP_201_CREATED)
 def apply_transition(
     commitment_id: str,
     request: TransitionRequest,
@@ -291,7 +366,7 @@ def apply_transition(
     x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
-) -> dict[str, object]:
+) -> TransitionResponse:
     action = "create" if request.lifecycle_state == "OPEN" else "correct"
     scope = _scope(db, token, x_profile, action=action, domain=request.domain)
     commitment = db.execute(
@@ -353,13 +428,13 @@ def apply_transition(
     }
 
 
-@router.post("/snapshots")
+@router.post("/snapshots", response_model=SnapshotResponse, status_code=status.HTTP_200_OK)
 def snapshot(
     request: SnapshotRequest,
     x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
-) -> dict[str, Any]:
+) -> SnapshotResponse:
     domains = frozenset(request.domains)
     scope = _scope(db, token, x_profile, action="view", domain=sorted(domains)[0])
     try:
@@ -441,13 +516,13 @@ def _parse_lease_partitions(
     return coords
 
 
-@lease_router.post("/acquire", status_code=status.HTTP_201_CREATED)
+@lease_router.post("/acquire", response_model=LeaseResponse, status_code=status.HTTP_201_CREATED)
 def acquire_lease(
     request: AcquireLeaseRequest | None = None,
     x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
-) -> dict[str, Any]:
+) -> LeaseResponse:
     req = request or AcquireLeaseRequest()
     domain = req.domain or "medications"
     if domain not in DOMAINS:
@@ -504,14 +579,14 @@ def acquire_lease(
     }
 
 
-@lease_router.post("/{lease_id}/renew", status_code=status.HTTP_200_OK)
+@lease_router.post("/{lease_id}/renew", response_model=LeaseResponse, status_code=status.HTTP_200_OK)
 def renew_lease(
     lease_id: str,
     request: RenewLeaseRequest | None = None,
     x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
-) -> dict[str, Any]:
+) -> LeaseResponse:
     lock_mgr = get_dag_lock_manager()
     txn = lock_mgr.get_transaction(lease_id)
     if txn is None:
@@ -562,7 +637,7 @@ def renew_lease(
 router.include_router(lease_router, prefix="/leases")
 
 
-@router.post("/{commitment_id}/cancel", status_code=status.HTTP_201_CREATED)
+@router.post("/{commitment_id}/cancel", response_model=CancelCommitmentResponse, status_code=status.HTTP_201_CREATED)
 def cancel_commitment(
     commitment_id: str,
     request: CancelCommitmentRequest,
@@ -570,7 +645,7 @@ def cancel_commitment(
     x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER,
-) -> dict[str, object]:
+) -> CancelCommitmentResponse:
     scope = _scope(db, token, x_profile, action="correct", domain=request.domain)
     commitment = db.execute(
         select(GlhsClinicalCommitment).where(

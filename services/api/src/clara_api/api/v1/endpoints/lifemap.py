@@ -14,7 +14,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -198,6 +198,24 @@ CLINICAL_REVIEW_EVENT_TYPES = frozenset(
 )
 
 
+def _normalize_filter_time(val: str | datetime | None) -> datetime | None:
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val.astimezone(UTC) if val.tzinfo is not None else val.replace(tzinfo=UTC)
+    s = str(val).strip().replace(" ", "+")
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(s)
+        return dt.astimezone(UTC) if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "invalid_timestamp_filter", "value": str(val)},
+        ) from exc
+
+
 class TodayResponse(BaseModel):
     generated_at: datetime
     tasks: list[dict]
@@ -205,6 +223,136 @@ class TodayResponse(BaseModel):
     pending_confirmation_count: int
     completed_today_count: int = 0
     activity_days: list[dict] = Field(default_factory=list)
+    valid_time_from: datetime | None = None
+    system_time_from: datetime | None = None
+
+
+class LifeMapSummaryEventItem(BaseModel):
+    id: str
+    event_type: str
+    truth_state: str
+    occurred_at: datetime
+    recorded_at: datetime | None = None
+    source_kind: str = "reported"
+    episode_id: str | None = None
+
+
+class LifeMapSummaryResponse(BaseModel):
+    profile_id: str
+    generated_at: datetime
+    episodes_count: int
+    active_episodes_count: int
+    tasks_count: int
+    pending_tasks_count: int
+    events_count: int
+    recent_events: list[LifeMapSummaryEventItem] = Field(default_factory=list)
+    valid_time_from: datetime | None = None
+    system_time_from: datetime | None = None
+
+
+class LifeMapTimelineItem(BaseModel):
+    id: str
+    event_type: str
+    truth_state: str
+    occurred_at: datetime
+    recorded_at: datetime | None = None
+    payload: dict = Field(default_factory=dict)
+    provenance: dict = Field(default_factory=dict)
+    source_kind: str = "reported"
+    episode_id: str | None = None
+    revision_no: int = 1
+
+
+class LifeMapTimelineResponse(BaseModel):
+    generated_at: datetime
+    items: list[LifeMapTimelineItem] = Field(default_factory=list)
+    total_count: int = 0
+    valid_time_from: datetime | None = None
+    system_time_from: datetime | None = None
+
+
+class LifeMapEpisodeItem(BaseModel):
+    id: str
+    title: str
+    goal: str
+    priority: str
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime | None = None
+    closed_at: datetime | None = None
+
+
+class LifeMapEpisodesResponse(BaseModel):
+    generated_at: datetime
+    items: list[LifeMapEpisodeItem] = Field(default_factory=list)
+    total_count: int = 0
+    valid_time_from: datetime | None = None
+    system_time_from: datetime | None = None
+
+
+class LifeMapEpisodeCreateResponse(BaseModel):
+    id: str
+    status: str
+    command_id: str | None = None
+    idempotent_replay: bool = False
+
+
+class LifeMapTaskDetailItem(BaseModel):
+    id: str
+    episode_id: str | None = None
+    episode_title: str | None = None
+    title: str
+    status: str
+    due_at: datetime | None = None
+    accepted_at: datetime | None = None
+    completed_at: datetime | None = None
+    version: int
+    created_at: datetime
+    updated_at: datetime | None = None
+
+
+class LifeMapTasksResponse(BaseModel):
+    generated_at: datetime
+    items: list[LifeMapTaskDetailItem] = Field(default_factory=list)
+    total_count: int = 0
+    valid_time_from: datetime | None = None
+    system_time_from: datetime | None = None
+
+
+class LifeMapRevisionDetailItem(BaseModel):
+    id: str
+    event_id: str
+    event_type: str | None = None
+    revision_no: int
+    truth_state: str
+    payload: dict = Field(default_factory=dict)
+    provenance: dict = Field(default_factory=dict)
+    reason_code: str = ""
+    recorded_at: datetime
+    occurred_at: datetime | None = None
+
+
+class LifeMapRevisionsResponse(BaseModel):
+    generated_at: datetime
+    items: list[LifeMapRevisionDetailItem] = Field(default_factory=list)
+    total_count: int = 0
+    valid_time_from: datetime | None = None
+    system_time_from: datetime | None = None
+
+
+class LifeMapExportResponse(BaseModel):
+    export_id: str
+    profile_id: str
+    generated_at: datetime
+    purpose: str
+    events: list[dict] = Field(default_factory=list)
+    episodes: list[dict] = Field(default_factory=list)
+    tasks: list[dict] = Field(default_factory=list)
+    medications: list[dict] = Field(default_factory=list)
+    documents: list[dict] = Field(default_factory=list)
+    valid_time_from: datetime | None = None
+    system_time_from: datetime | None = None
 
 
 def _scope(
@@ -1535,14 +1683,126 @@ def event_revision_comparison(
     }
 
 
+@router.get("/summary", response_model=LifeMapSummaryResponse)
+def lifemap_summary(
+    valid_time_from: str | datetime | None = Query(default=None),
+    system_time_from: str | datetime | None = Query(default=None),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> LifeMapSummaryResponse:
+    scope = _scope(db, token, x_profile, action="view")
+    now = datetime.now(UTC)
+    v_from = _normalize_filter_time(valid_time_from)
+    s_from = _normalize_filter_time(system_time_from)
+
+    episodes_query = select(LifeMapEpisode).where(
+        LifeMapEpisode.profile_id == scope.profile.id
+    )
+    if s_from is not None:
+        episodes_query = episodes_query.where(LifeMapEpisode.created_at >= s_from)
+    episodes = list(db.execute(episodes_query).scalars())
+    episodes_count = len(episodes)
+    active_episodes_count = sum(1 for ep in episodes if ep.status == "open")
+
+    tasks_query = select(LifeMapCareTask).where(
+        LifeMapCareTask.profile_id == scope.profile.id
+    )
+    if v_from is not None:
+        tasks_query = tasks_query.where(
+            or_(
+                LifeMapCareTask.due_at.is_(None),
+                LifeMapCareTask.due_at >= v_from,
+                LifeMapCareTask.completed_at >= v_from,
+            )
+        )
+    if s_from is not None:
+        tasks_query = tasks_query.where(LifeMapCareTask.created_at >= s_from)
+    tasks = list(db.execute(tasks_query).scalars())
+    tasks_count = len(tasks)
+    pending_tasks_count = sum(1 for t in tasks if t.status in TODAY_ELIGIBLE_TASK_STATES)
+
+    events_query = (
+        select(LifeMapEvent, LifeMapEventRevision)
+        .join(
+            LifeMapEventRevision,
+            (LifeMapEventRevision.event_id == LifeMapEvent.id)
+            & (LifeMapEventRevision.revision_no == LifeMapEvent.current_revision_no),
+        )
+        .where(
+            LifeMapEvent.profile_id == scope.profile.id,
+            LifeMapEvent.lifecycle_status == "active",
+        )
+    )
+    if v_from is not None:
+        events_query = events_query.where(LifeMapEvent.occurred_at >= v_from)
+    if s_from is not None:
+        events_query = events_query.where(LifeMapEventRevision.recorded_at >= s_from)
+
+    events_rows = list(
+        db.execute(
+            events_query.order_by(LifeMapEvent.occurred_at.desc(), LifeMapEvent.id.desc()).limit(20)
+        ).all()
+    )
+    events_count_query = (
+        select(func.count(LifeMapEvent.id))
+        .join(
+            LifeMapEventRevision,
+            (LifeMapEventRevision.event_id == LifeMapEvent.id)
+            & (LifeMapEventRevision.revision_no == LifeMapEvent.current_revision_no),
+        )
+        .where(
+            LifeMapEvent.profile_id == scope.profile.id,
+            LifeMapEvent.lifecycle_status == "active",
+        )
+    )
+    if v_from is not None:
+        events_count_query = events_count_query.where(LifeMapEvent.occurred_at >= v_from)
+    if s_from is not None:
+        events_count_query = events_count_query.where(LifeMapEventRevision.recorded_at >= s_from)
+    events_count = db.execute(events_count_query).scalar_one()
+
+    episodes_by_id = {ep.id: ep.public_id for ep in episodes}
+    recent_events = [
+        LifeMapSummaryEventItem(
+            id=ev.public_id,
+            event_type=ev.event_type,
+            truth_state=ev.truth_state,
+            occurred_at=ev.occurred_at,
+            recorded_at=rev.recorded_at,
+            source_kind=ev.source_kind,
+            episode_id=episodes_by_id.get(ev.episode_id) if ev.episode_id else None,
+        )
+        for ev, rev in events_rows
+    ]
+
+    _audit_read(db, scope, entity="summary")
+    return LifeMapSummaryResponse(
+        profile_id=scope.profile.public_id,
+        generated_at=now,
+        episodes_count=episodes_count,
+        active_episodes_count=active_episodes_count,
+        tasks_count=tasks_count,
+        pending_tasks_count=pending_tasks_count,
+        events_count=events_count,
+        recent_events=recent_events,
+        valid_time_from=v_from,
+        system_time_from=s_from,
+    )
+
+
 @router.get("/today", response_model=TodayResponse)
 def today(
+    valid_time_from: str | datetime | None = Query(default=None),
+    system_time_from: str | datetime | None = Query(default=None),
     x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
 ) -> TodayResponse:
     scope = _scope(db, token, x_profile, action="view")
     generated_at = datetime.now(UTC)
+    v_from = _normalize_filter_time(valid_time_from)
+    s_from = _normalize_filter_time(system_time_from)
     try:
         profile_timezone = ZoneInfo(scope.profile.timezone or "Asia/Ho_Chi_Minh")
     except ZoneInfoNotFoundError:
@@ -1551,17 +1811,22 @@ def today(
     local_today_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
     local_week_start = local_today_start - timedelta(days=6)
     local_tomorrow_start = local_today_start + timedelta(days=1)
-    completed_timestamps = list(
-        db.execute(
-            select(LifeMapCareTask.completed_at).where(
-                LifeMapCareTask.profile_id == scope.profile.id,
-                LifeMapCareTask.status == "completed",
-                LifeMapCareTask.completed_at.is_not(None),
-                LifeMapCareTask.completed_at >= local_week_start.astimezone(UTC),
-                LifeMapCareTask.completed_at < local_tomorrow_start.astimezone(UTC),
-            )
-        ).scalars()
+    completed_timestamps_query = select(LifeMapCareTask.completed_at).where(
+        LifeMapCareTask.profile_id == scope.profile.id,
+        LifeMapCareTask.status == "completed",
+        LifeMapCareTask.completed_at.is_not(None),
+        LifeMapCareTask.completed_at >= local_week_start.astimezone(UTC),
+        LifeMapCareTask.completed_at < local_tomorrow_start.astimezone(UTC),
     )
+    if v_from is not None:
+        completed_timestamps_query = completed_timestamps_query.where(
+            LifeMapCareTask.completed_at >= v_from
+        )
+    if s_from is not None:
+        completed_timestamps_query = completed_timestamps_query.where(
+            LifeMapCareTask.created_at >= s_from
+        )
+    completed_timestamps = list(db.execute(completed_timestamps_query).scalars())
     completed_by_local_date: dict[str, int] = {}
     for completed_at in completed_timestamps:
         if completed_at is None:
@@ -1583,13 +1848,22 @@ def today(
         for offset in range(7)
     ]
     completed_today_count = completed_by_local_date.get(local_now.date().isoformat(), 0)
+
+    task_filters = [
+        LifeMapCareTask.profile_id == scope.profile.id,
+        LifeMapCareTask.status.in_(tuple(TODAY_ELIGIBLE_TASK_STATES)),
+    ]
+    if v_from is not None:
+        task_filters.append(
+            or_(LifeMapCareTask.due_at.is_(None), LifeMapCareTask.due_at >= v_from)
+        )
+    if s_from is not None:
+        task_filters.append(LifeMapCareTask.created_at >= s_from)
+
     tasks = list(
         db.execute(
             select(LifeMapCareTask)
-            .where(
-                LifeMapCareTask.profile_id == scope.profile.id,
-                LifeMapCareTask.status.in_(tuple(TODAY_ELIGIBLE_TASK_STATES)),
-            )
+            .where(*task_filters)
             .order_by(
                 LifeMapCareTask.due_at.is_(None),
                 LifeMapCareTask.due_at,
@@ -1597,24 +1871,35 @@ def today(
             )
         ).scalars()
     )
+
+    episode_filters = [
+        LifeMapEpisode.profile_id == scope.profile.id,
+        LifeMapEpisode.status == "open",
+    ]
+    if s_from is not None:
+        episode_filters.append(LifeMapEpisode.created_at >= s_from)
+
     episodes = list(
         db.execute(
             select(LifeMapEpisode)
-            .where(
-                LifeMapEpisode.profile_id == scope.profile.id,
-                LifeMapEpisode.status == "open",
-            )
+            .where(*episode_filters)
             .order_by(LifeMapEpisode.priority.desc(), LifeMapEpisode.updated_at.desc())
         ).scalars()
     )
     episodes_by_id = {item.id: item for item in episodes}
-    drafts = db.execute(
-        select(LifeMapEvent.id).where(
-            LifeMapEvent.profile_id == scope.profile.id,
-            LifeMapEvent.truth_state.in_(("draft", "extracted_draft")),
-            LifeMapEvent.lifecycle_status == "active",
-        )
-    ).all()
+
+    draft_filters = [
+        LifeMapEvent.profile_id == scope.profile.id,
+        LifeMapEvent.truth_state.in_(("draft", "extracted_draft")),
+        LifeMapEvent.lifecycle_status == "active",
+    ]
+    if v_from is not None:
+        draft_filters.append(LifeMapEvent.occurred_at >= v_from)
+    if s_from is not None:
+        draft_filters.append(LifeMapEvent.created_at >= s_from)
+
+    drafts = db.execute(select(LifeMapEvent.id).where(*draft_filters)).all()
+
     result = TodayResponse(
         generated_at=generated_at,
         tasks=[
@@ -1644,9 +1929,409 @@ def today(
         pending_confirmation_count=len(drafts),
         completed_today_count=completed_today_count,
         activity_days=activity_days,
+        valid_time_from=v_from,
+        system_time_from=s_from,
     )
     _audit_read(db, scope, entity="today")
     return result
+
+
+@router.get("/timeline", response_model=LifeMapTimelineResponse)
+def lifemap_timeline(
+    valid_time_from: str | datetime | None = Query(default=None),
+    system_time_from: str | datetime | None = Query(default=None),
+    episode_id: str | None = Query(default=None),
+    event_type: str | None = Query(default=None),
+    truth_state: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> LifeMapTimelineResponse:
+    scope = _scope(db, token, x_profile, action="view")
+    now = datetime.now(UTC)
+    v_from = _normalize_filter_time(valid_time_from)
+    s_from = _normalize_filter_time(system_time_from)
+
+    query = (
+        select(LifeMapEvent, LifeMapEventRevision)
+        .join(
+            LifeMapEventRevision,
+            (LifeMapEventRevision.event_id == LifeMapEvent.id)
+            & (LifeMapEventRevision.revision_no == LifeMapEvent.current_revision_no),
+        )
+        .where(
+            LifeMapEvent.profile_id == scope.profile.id,
+            LifeMapEvent.lifecycle_status == "active",
+        )
+    )
+
+    if episode_id:
+        episode = _episode(db, scope, episode_id)
+        query = query.where(LifeMapEvent.episode_id == episode.id)
+    if event_type:
+        query = query.where(LifeMapEvent.event_type == event_type)
+    if truth_state:
+        query = query.where(LifeMapEvent.truth_state == truth_state)
+    if v_from is not None:
+        query = query.where(LifeMapEvent.occurred_at >= v_from)
+    if s_from is not None:
+        query = query.where(LifeMapEventRevision.recorded_at >= s_from)
+
+    count_subq = query.with_only_columns(func.count(LifeMapEvent.id)).order_by(None)
+    total_count = db.execute(count_subq).scalar_one()
+
+    rows = list(
+        db.execute(
+            query.order_by(LifeMapEvent.occurred_at.desc(), LifeMapEvent.id.desc())
+            .offset(offset)
+            .limit(limit)
+        ).all()
+    )
+
+    episode_ids = {ev.episode_id for ev, _ in rows if ev.episode_id is not None}
+    episodes_map: dict[int, str] = {}
+    if episode_ids:
+        episodes_map = {
+            ep.id: ep.public_id
+            for ep in db.execute(
+                select(LifeMapEpisode.id, LifeMapEpisode.public_id).where(
+                    LifeMapEpisode.id.in_(episode_ids)
+                )
+            ).all()
+        }
+
+    items = [
+        LifeMapTimelineItem(
+            id=ev.public_id,
+            event_type=ev.event_type,
+            truth_state=ev.truth_state,
+            occurred_at=ev.occurred_at,
+            recorded_at=rev.recorded_at,
+            payload=rev.payload_json if isinstance(rev.payload_json, dict) else {},
+            provenance=rev.provenance_json if isinstance(rev.provenance_json, dict) else {},
+            source_kind=ev.source_kind,
+            episode_id=episodes_map.get(ev.episode_id) if ev.episode_id else None,
+            revision_no=rev.revision_no,
+        )
+        for ev, rev in rows
+    ]
+
+    _audit_read(db, scope, entity="timeline")
+    return LifeMapTimelineResponse(
+        generated_at=now,
+        items=items,
+        total_count=total_count,
+        valid_time_from=v_from,
+        system_time_from=s_from,
+    )
+
+
+@router.get("/episodes", response_model=LifeMapEpisodesResponse)
+def list_episodes(
+    status: str | None = Query(default=None),
+    priority: str | None = Query(default=None),
+    valid_time_from: str | datetime | None = Query(default=None),
+    system_time_from: str | datetime | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> LifeMapEpisodesResponse:
+    scope = _scope(db, token, x_profile, action="view")
+    now = datetime.now(UTC)
+    v_from = _normalize_filter_time(valid_time_from)
+    s_from = _normalize_filter_time(system_time_from)
+
+    query = select(LifeMapEpisode).where(LifeMapEpisode.profile_id == scope.profile.id)
+    if status:
+        query = query.where(LifeMapEpisode.status == status)
+    if priority:
+        query = query.where(LifeMapEpisode.priority == priority)
+    if v_from is not None:
+        query = query.where(LifeMapEpisode.created_at >= v_from)
+    if s_from is not None:
+        query = query.where(LifeMapEpisode.created_at >= s_from)
+
+    count_subq = query.with_only_columns(func.count(LifeMapEpisode.id)).order_by(None)
+    total_count = db.execute(count_subq).scalar_one()
+
+    rows = list(
+        db.execute(
+            query.order_by(LifeMapEpisode.priority.desc(), LifeMapEpisode.updated_at.desc())
+            .offset(offset)
+            .limit(limit)
+        ).scalars()
+    )
+
+    items = [
+        LifeMapEpisodeItem(
+            id=ep.public_id,
+            title=ep.title,
+            goal=ep.goal,
+            priority=ep.priority,
+            status=ep.status,
+            version=ep.version_no,
+            created_at=ep.created_at,
+            updated_at=ep.updated_at,
+            closed_at=ep.closed_at,
+        )
+        for ep in rows
+    ]
+
+    _audit_read(db, scope, entity="episodes")
+    return LifeMapEpisodesResponse(
+        generated_at=now,
+        items=items,
+        total_count=total_count,
+        valid_time_from=v_from,
+        system_time_from=s_from,
+    )
+
+
+@router.get("/tasks", response_model=LifeMapTasksResponse)
+def list_tasks(
+    episode_id: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    valid_time_from: str | datetime | None = Query(default=None),
+    system_time_from: str | datetime | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> LifeMapTasksResponse:
+    scope = _scope(db, token, x_profile, action="view")
+    now = datetime.now(UTC)
+    v_from = _normalize_filter_time(valid_time_from)
+    s_from = _normalize_filter_time(system_time_from)
+
+    query = select(LifeMapCareTask).where(LifeMapCareTask.profile_id == scope.profile.id)
+    if episode_id:
+        episode = _episode(db, scope, episode_id)
+        query = query.where(LifeMapCareTask.episode_id == episode.id)
+    if status:
+        query = query.where(LifeMapCareTask.status == status)
+    if v_from is not None:
+        query = query.where(
+            or_(
+                LifeMapCareTask.due_at.is_(None),
+                LifeMapCareTask.due_at >= v_from,
+                LifeMapCareTask.completed_at >= v_from,
+            )
+        )
+    if s_from is not None:
+        query = query.where(LifeMapCareTask.created_at >= s_from)
+
+    count_subq = query.with_only_columns(func.count(LifeMapCareTask.id)).order_by(None)
+    total_count = db.execute(count_subq).scalar_one()
+
+    rows = list(
+        db.execute(
+            query.order_by(
+                LifeMapCareTask.due_at.is_(None),
+                LifeMapCareTask.due_at,
+                LifeMapCareTask.id,
+            )
+            .offset(offset)
+            .limit(limit)
+        ).scalars()
+    )
+
+    episode_ids = {t.episode_id for t in rows if t.episode_id is not None}
+    episodes_map: dict[int, LifeMapEpisode] = {}
+    if episode_ids:
+        episodes_map = {
+            ep.id: ep
+            for ep in db.execute(
+                select(LifeMapEpisode).where(LifeMapEpisode.id.in_(episode_ids))
+            ).scalars()
+        }
+
+    items = [
+        LifeMapTaskDetailItem(
+            id=t.public_id,
+            episode_id=episodes_map[t.episode_id].public_id if t.episode_id in episodes_map else None,
+            episode_title=episodes_map[t.episode_id].title if t.episode_id in episodes_map else None,
+            title=t.title,
+            status=t.status,
+            due_at=t.due_at,
+            accepted_at=t.accepted_at,
+            completed_at=t.completed_at,
+            version=t.version_no,
+            created_at=t.created_at,
+            updated_at=t.updated_at,
+        )
+        for t in rows
+    ]
+
+    _audit_read(db, scope, entity="tasks")
+    return LifeMapTasksResponse(
+        generated_at=now,
+        items=items,
+        total_count=total_count,
+        valid_time_from=v_from,
+        system_time_from=s_from,
+    )
+
+
+@router.get("/revisions", response_model=LifeMapRevisionsResponse)
+def list_revisions(
+    event_id: str | None = Query(default=None),
+    truth_state: str | None = Query(default=None),
+    valid_time_from: str | datetime | None = Query(default=None),
+    system_time_from: str | datetime | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> LifeMapRevisionsResponse:
+    scope = _scope(db, token, x_profile, action="view")
+    now = datetime.now(UTC)
+    v_from = _normalize_filter_time(valid_time_from)
+    s_from = _normalize_filter_time(system_time_from)
+
+    query = (
+        select(LifeMapEventRevision, LifeMapEvent)
+        .join(LifeMapEvent, LifeMapEvent.id == LifeMapEventRevision.event_id)
+        .where(LifeMapEventRevision.profile_id == scope.profile.id)
+    )
+    if event_id:
+        event = _event(db, scope, event_id)
+        query = query.where(LifeMapEventRevision.event_id == event.id)
+    if truth_state:
+        query = query.where(LifeMapEventRevision.truth_state == truth_state)
+    if v_from is not None:
+        query = query.where(LifeMapEvent.occurred_at >= v_from)
+    if s_from is not None:
+        query = query.where(LifeMapEventRevision.recorded_at >= s_from)
+
+    count_subq = query.with_only_columns(func.count(LifeMapEventRevision.id)).order_by(None)
+    total_count = db.execute(count_subq).scalar_one()
+
+    rows = list(
+        db.execute(
+            query.order_by(LifeMapEventRevision.recorded_at.desc(), LifeMapEventRevision.id.desc())
+            .offset(offset)
+            .limit(limit)
+        ).all()
+    )
+
+    items = [
+        LifeMapRevisionDetailItem(
+            id=rev.public_id,
+            event_id=ev.public_id,
+            event_type=ev.event_type,
+            revision_no=rev.revision_no,
+            truth_state=rev.truth_state,
+            payload=rev.payload_json if isinstance(rev.payload_json, dict) else {},
+            provenance=rev.provenance_json if isinstance(rev.provenance_json, dict) else {},
+            reason_code=rev.reason_code,
+            recorded_at=rev.recorded_at,
+            occurred_at=ev.occurred_at,
+        )
+        for rev, ev in rows
+    ]
+
+    _audit_read(db, scope, entity="revisions")
+    return LifeMapRevisionsResponse(
+        generated_at=now,
+        items=items,
+        total_count=total_count,
+        valid_time_from=v_from,
+        system_time_from=s_from,
+    )
+
+
+@router.get("/export", response_model=LifeMapExportResponse)
+def export_lifemap(
+    purpose: str = Query(default="self_download"),
+    include: str = Query(default=FHIR_DEFAULT_INCLUDE),
+    valid_time_from: str | datetime | None = Query(default=None),
+    system_time_from: str | datetime | None = Query(default=None),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> LifeMapExportResponse:
+    scope = _fhir_scope(
+        db,
+        token,
+        requested_profile=x_profile,
+        action="export",
+        purpose=purpose,
+    )
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    v_from = _normalize_filter_time(valid_time_from)
+    s_from = _normalize_filter_time(system_time_from)
+
+    include_set = frozenset(item.strip() for item in include.split(",") if item.strip())
+    snapshot = _fhir_snapshot(db, scope, include=include_set)
+    export_id = str(uuid4())
+    now = datetime.now(UTC)
+
+    events = snapshot.get("events", [])
+    if v_from is not None:
+        events = [
+            ev
+            for ev in events
+            if isinstance(ev.get("occurred_at"), datetime)
+            and _normalize_filter_time(ev["occurred_at"]) >= v_from
+        ]
+
+    episodes = snapshot.get("episodes", [])
+    tasks = snapshot.get("tasks", [])
+    if v_from is not None:
+        tasks = [
+            t
+            for t in tasks
+            if t.get("due_at") is None
+            or (
+                isinstance(t.get("due_at"), datetime)
+                and _normalize_filter_time(t["due_at"]) >= v_from
+            )
+        ]
+
+    medications = snapshot.get("medications", [])
+    if v_from is not None:
+        medications = [
+            m
+            for m in medications
+            if m.get("started_at") is None
+            or (
+                isinstance(m.get("started_at"), datetime)
+                and _normalize_filter_time(m["started_at"]) >= v_from
+            )
+        ]
+
+    documents = snapshot.get("documents", [])
+
+    write_audit(
+        db,
+        profile_id=scope.profile.id,
+        action="export",
+        entity="lifemap_export",
+        entity_id=export_id,
+        actor_user_id=scope.actor.id,
+        scope=f"{scope.actor_role}:{purpose}",
+    )
+    db.commit()
+
+    return LifeMapExportResponse(
+        export_id=export_id,
+        profile_id=scope.profile.public_id,
+        generated_at=now,
+        purpose=purpose,
+        events=events,
+        episodes=episodes,
+        tasks=tasks,
+        medications=medications,
+        documents=documents,
+        valid_time_from=v_from,
+        system_time_from=s_from,
+    )
 
 
 @router.get("/v2/disputes")

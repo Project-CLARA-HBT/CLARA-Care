@@ -213,7 +213,9 @@ describe("Record Section Editor Archetype (Spec v5 Section 6.26)", () => {
 
     render(<PhrSectionPage />);
 
-    const saveBtn = await screen.findByRole("button", { name: "Lưu lần đo hôm nay" });
+    expect(await screen.findByLabelText("Chiều cao (cm)")).toHaveValue("160");
+
+    const saveBtn = screen.getByRole("button", { name: "Lưu lần đo hôm nay" });
     fireEvent.click(saveBtn);
 
     await waitFor(() => {

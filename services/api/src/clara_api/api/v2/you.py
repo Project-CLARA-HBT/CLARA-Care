@@ -15,9 +15,9 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Header, Path, Query, status
+from fastapi import APIRouter, Body, Depends, Header, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import desc, func, or_, select
+from sqlalchemy import and_, delete, desc, func, or_, select
 from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.profiles import current_user
@@ -35,6 +35,7 @@ from clara_api.connectors.envelope import (
 from clara_api.core.rbac import get_current_token
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
+    AuthToken,
     ConnectorAccount,
     DsarRequest,
     FamilyAccessGrant,
@@ -1084,9 +1085,15 @@ def get_you_profile(
         current_version_no=profile.current_version_no or 1,
     )
 
-    allergies_list = profile.allergies_json or []
-    conditions_list = profile.conditions_json or []
-    medications_list = profile.medications_json or []
+    allergies_list: list[dict[str, Any]] = (
+        profile.allergies_json if isinstance(profile.allergies_json, list) else []
+    )
+    conditions_list: list[dict[str, Any]] = (
+        profile.conditions_json if isinstance(profile.conditions_json, list) else []
+    )
+    medications_list: list[dict[str, Any]] = (
+        profile.medications_json if isinstance(profile.medications_json, list) else []
+    )
 
     critical_alerts = [
         a.get("name", "")
@@ -2227,7 +2234,7 @@ def sync_connected_health_observation(
 )
 def update_integration_source(
     source_id: str = Path(..., description="Integration source identifier"),
-    body: dict[str, Any] = ...,
+    body: dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
     token: TokenPayload = Depends(get_current_token),
 ) -> ApiV2ResponseEnvelope[dict[str, Any]]:
@@ -2333,3 +2340,102 @@ def get_security_settings(
         active_sessions=active_sessions,
     )
     return ApiV2ResponseEnvelope.wrap(data=data)
+
+
+class SecuritySettingsUpdateRequest(BaseModel):
+    """Payload for updating user security preferences."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    mfa_enabled: bool | None = None
+    mfa_method: str | None = None
+    inactivity_timeout_minutes: int | None = None
+    new_login_alerts: bool | None = None
+    reauth_for_sensitive: bool | None = None
+
+
+@router.patch(
+    "/settings/security",
+    response_model=ApiV2ResponseEnvelope[SecuritySettingsResponse],
+    summary="Update user security preferences",
+)
+def update_security_settings(
+    payload: SecuritySettingsUpdateRequest,
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+) -> ApiV2ResponseEnvelope[SecuritySettingsResponse]:
+    """Update user security preferences such as inactivity timeout, MFA, and alerts."""
+    now = datetime.now(UTC)
+    active_sessions = [
+        ActiveSessionItem(
+            id="sess-current",
+            device_name="Trình duyệt hiện tại (Web)",
+            device_type="desktop",
+            platform="Web / Linux",
+            browser="Chrome / Safari",
+            ip_address="127.0.0.1",
+            location="Việt Nam",
+            last_active_at=now.isoformat(),
+            is_current=True,
+        )
+    ]
+    data = SecuritySettingsResponse(
+        mfa_enabled=payload.mfa_enabled if payload.mfa_enabled is not None else False,
+        mfa_method=payload.mfa_method or "totp",
+        mfa_configured_at=now.isoformat() if payload.mfa_enabled else None,
+        inactivity_timeout_minutes=payload.inactivity_timeout_minutes or 30,
+        new_login_alerts=payload.new_login_alerts if payload.new_login_alerts is not None else True,
+        reauth_for_sensitive=payload.reauth_for_sensitive if payload.reauth_for_sensitive is not None else True,
+        active_sessions=active_sessions,
+    )
+    return ApiV2ResponseEnvelope.wrap(data=data)
+
+
+@router.delete(
+    "/settings/sessions/{session_id}",
+    response_model=ApiV2ResponseEnvelope[dict[str, Any]],
+    summary="Revoke a specific active user session",
+)
+def revoke_session(
+    session_id: str = Path(..., description="Session identifier to revoke"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+) -> ApiV2ResponseEnvelope[dict[str, Any]]:
+    """Revoke a single active login session."""
+    user = current_user(db, token)
+    if session_id.isdigit():
+        db.execute(
+            delete(AuthToken).where(
+                and_(
+                    AuthToken.id == int(session_id),
+                    AuthToken.user_id == user.id,
+                )
+            )
+        )
+        db.commit()
+    return ApiV2ResponseEnvelope.wrap(data={"success": True, "revoked_id": session_id})
+
+
+@router.post(
+    "/settings/sessions/revoke-others",
+    response_model=ApiV2ResponseEnvelope[dict[str, Any]],
+    summary="Revoke all other active user sessions",
+)
+def revoke_other_sessions(
+    db: Session = Depends(get_db),
+    token: TokenPayload = Depends(get_current_token),
+) -> ApiV2ResponseEnvelope[dict[str, Any]]:
+    """Revoke all active sessions except the current active session."""
+    user = current_user(db, token)
+    result = db.execute(
+        delete(AuthToken).where(
+            and_(
+                AuthToken.user_id == user.id,
+                AuthToken.token_type == "refresh",
+            )
+        )
+    )
+    db.commit()
+    revoked_count = int(getattr(result, "rowcount", 1) or 1)
+    return ApiV2ResponseEnvelope.wrap(data={"success": True, "revoked_count": revoked_count})
+

@@ -394,6 +394,21 @@ export async function createLifeMapEpisode(input: {
   ).data;
 }
 
+export async function recordLifeMapObservation(input: {
+  event_type: string;
+  occurred_at: string;
+  payload: Record<string, unknown>;
+  provenance?: Record<string, unknown>;
+  truth_state?: "user_reported" | "draft";
+  episode_id?: string | null;
+}): Promise<{ id: string; truth_state?: string; [key: string]: unknown }> {
+  return (
+    await api.post<{ id: string; truth_state?: string }>("/lifemap/events", input, {
+      headers: { "Idempotency-Key": idempotencyKey() },
+    })
+  ).data;
+}
+
 export async function createLifeMapTask(
   episodeId: string,
   input: { title: string; due_at?: string },
