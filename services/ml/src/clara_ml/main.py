@@ -161,11 +161,10 @@ _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
             (
-                r"(\bke\s*don\b|\bdon\s*thuoc\b|\btoa\s*thuoc\b|"
-                r"\bthuoc\s*tri\b|\bcho\s*toi\s*thuoc\b|"
-                r"\bnen\s*(uong|dung)\s*thuoc\s*gi\b|"
+                r"(\bke\s*don\b|\bke\s*toa\b|\bdon\s*thuoc\b|\btoa\s*thuoc\b|"
+                r"\bcho\s*toi\s*thuoc\b|"
                 r"\bprescribe\b|\bprescribed\b|\bprescription\b|"
-                r"\bwhat\s+medicine\s+should\s+i\s+take\b|\bwhat\s+should\s+i\s+take\b)"
+                r"\bwhat\s+medicine\s+should\s+i\s+take\b)"
             ),
             flags=re.IGNORECASE,
         ),
@@ -175,7 +174,7 @@ _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
         re.compile(
             (
                 r"(\bchan\s*doan\b|\bmac\s*benh\s*gi\b|\bxac\s*dinh\s*benh\b|"
-                r"\bbenh\s*gi\b|\bdiagnos(?:e|is|ing)\b|\bdiagnostic\b)"
+                r"\bdiagnos(?:e|is|ing)\b|\bdiagnostic\b)"
             ),
             flags=re.IGNORECASE,
         ),
@@ -184,7 +183,7 @@ _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
             (
-                r"(\blieu\b|\bdos(?:e|age)\b|\buong\s*may\b|"
+                r"(\bcho\s*toi\s*lieu\b|\blieu\s*dung\s*cho\s*toi\b|\buong\s*may\s*vien\b|\buong\s*may\b|"
                 r"\bbao\s*nhieu\s*(vien|mg|g|mcg|ml)\b|\bmay\s*(vien|mg|g|mcg|ml)\b|"
                 r"\bx\s*\d+\s*(vien|mg|g|mcg|ml)\b|"
                 r"\bdose\s*for\s*me\b)"
@@ -581,24 +580,18 @@ def _classify_medical_request_with_llm(
             ensure_ascii=False,
         ),
         system_prompt=(
-            "You are the semantic safety router for a medical assistant. Classify the "
-            "user's actual intent from full context, in Vietnamese or English. A stated "
-            "current medicine/dose is context, not automatically a dosing request. "
-            "Interpret negation and temporal context: symptoms explicitly denied are not "
-            "active red flags. Do not label a stable, asymptomatic elevated home reading "
-            "as an emergency solely because hypertension or a blood-pressure value is "
-            "mentioned; reserve emergency=true for an active time-critical presentation. "
-            "Educational differential diagnosis, evidence review, sexual health, habits, and questions about "
-            "what clinicians may evaluate are allowed. Do not confuse slang, informal phrases, sexual health, "
-            "or general health curiosity with a medical prescription. Block ONLY direct user requests for a "
-            "new clinical prescription, a personalized medication dose/start/stop/change instruction for a real disease, or a "
-            "definitive personal diagnosis. Detect urgent red flags even when phrased "
-            "indirectly. Return JSON only with keys action, reason, emergency, task, confidence. "
-            "action must be allow or block. reason must be one of none, "
-            "prescription_request, dosage_request, diagnosis_request, emergency. "
-            "task must be one of general_health_qa, symptom_triage, "
-            "medication_normalization, ddi_check, lifemap_query, document_extraction, "
-            "scribe_note, research_review, council_case, emergency."
+            "You are the semantic safety router for medical assistant CLARA. Classify user intent in Vietnamese or English. "
+            "Questions about symptom management, common drug classes, OTC remedies, dietary advice, "
+            "and general healthcare guidance (e.g. 'đau dạ dày nên uống gì/làm gì', 'sốt uống gì', "
+            "'đau đầu uống gì', 'tôi mấy kg', 'chỉ số BMI') are ALLOWED as general_health_qa or symptom_triage, "
+            "so the system can provide educational information, lifestyle tips, and red-flag warnings. "
+            "For clinicians/doctors (declared_audience='doctor', 'researcher', or 'admin'), all medical and clinical inquiries are ALWAYS ALLOWED. "
+            "A stated current medicine/dose is context, not automatically a dosing request. "
+            "Interpret negation and temporal context: symptoms explicitly denied are not active red flags. "
+            "Block ONLY direct, literal user demands for a new clinical prescription slip or a definitive personal diagnosis verdict. "
+            "Return JSON only with keys: action, reason, emergency, task, confidence. "
+            "action must be allow or block. reason must be one of none, prescription_request, dosage_request, diagnosis_request, emergency. "
+            "task must be one of general_health_qa, symptom_triage, medication_normalization, ddi_check, lifemap_query, document_extraction, scribe_note, research_review, council_case, emergency."
         ),
         max_tokens=180,
     )
@@ -939,10 +932,9 @@ def _legal_guard_refusal(*, role_hint: str | None, reason: str) -> dict[str, obj
             "confidence": 1.0,
             "emergency": False,
             "answer": (
-                "CLARA không có thẩm quyền kê đơn, chẩn đoán, hoặc chỉ định liều dùng. "
-                "Tôi chỉ có thể giải thích tương tác thuốc và thông tin an toàn sử dụng "
-                "từ nguồn tham khảo. "
-                "Vui lòng liên hệ bác sĩ hoặc dược sĩ để được chỉ định phù hợp."
+                "CLARA không có thẩm quyền kê đơn, chẩn đoán, hoặc chỉ định liều dùng trực tiếp. "
+                "CLARA là trợ lý AI hỗ trợ tra cứu và cung cấp kiến thức y tế tham khảo. "
+                "Vui lòng liên hệ bác sĩ hoặc dược sĩ chuyên khoa để được chẩn đoán và chỉ định phác đồ phù hợp nhất."
             ),
             "retrieved_ids": [],
             "model_used": "legal-hard-guard-v1",
@@ -1173,7 +1165,8 @@ def routed_chat_infer(payload: dict) -> dict:
         else:
             legal_guard_reason = None
     if legal_guard_reason and not (semantic_route and semantic_route.emergency):
-        return _legal_guard_refusal(role_hint=role_hint, reason=legal_guard_reason)
+        if role_hint not in {"doctor", "researcher", "admin"}:
+            return _legal_guard_refusal(role_hint=role_hint, reason=legal_guard_reason)
 
     rag_flow_payload = payload.get("rag_flow")
     rag_flow = rag_flow_payload if isinstance(rag_flow_payload, dict) else {}

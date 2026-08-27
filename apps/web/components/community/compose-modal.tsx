@@ -4,9 +4,33 @@ import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Field, Select, Textarea } from "@/components/ui/field";
+import { Icon } from "@/components/ui/icon";
 import { isSocialModerationBlock, SocialCommunity } from "@/lib/social";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
+
+const EMERGENCY_PATTERNS = [
+  "115",
+  "đột quỵ",
+  "nhồi máu",
+  "khó thở",
+  "đau ngực",
+  "ngất",
+  "hôn mê",
+  "cấp cứu",
+  "co giật",
+  "stroke",
+  "chest pain",
+  "infarction",
+  "emergency",
+  "dyspnea",
+];
+
+function containsEmergencyTerms(text: string): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  return EMERGENCY_PATTERNS.some((pattern) => lower.includes(pattern));
+}
 
 export interface ComposeModalProps {
   open: boolean;
@@ -236,9 +260,31 @@ export function ComposeModal({
         </div>
 
         {error ? (
-          <p className="text-xs font-semibold text-[var(--status-danger-text)] rounded-lg bg-[var(--status-danger-bg)] p-3 border border-[color:var(--status-danger-border)]">
-            {error}
-          </p>
+          <div className="space-y-2 rounded-lg bg-[var(--status-danger-bg)] p-3 border border-[color:var(--status-danger-border)]">
+            <p className="text-xs font-semibold text-[var(--status-danger-text)]">
+              {error}
+            </p>
+            {containsEmergencyTerms(error) ||
+            containsEmergencyTerms(title) ||
+            containsEmergencyTerms(body) ? (
+              <div className="rounded-md bg-white/70 dark:bg-black/30 p-2.5 text-xs text-[var(--status-danger-text)] flex items-center justify-between gap-2 border border-[color:var(--status-danger-border)]">
+                <span className="font-bold flex items-center gap-1.5 text-[11px]">
+                  <Icon name="emergency" size="0.95rem" />
+                  <span>
+                    {isEn
+                      ? "Emergency detected: Please call 115 immediately."
+                      : "Dấu hiệu cấp cứu khẩn cấp: Vui lòng gọi 115 ngay lập tức."}
+                  </span>
+                </span>
+                <a
+                  href="tel:115"
+                  className="px-2 py-0.5 rounded bg-[var(--status-danger-text)] text-white text-[11px] font-bold hover:opacity-90 transition shrink-0"
+                >
+                  {isEn ? "Call 115" : "Gọi 115"}
+                </a>
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </Modal>

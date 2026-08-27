@@ -496,10 +496,20 @@ export function FloatingPrimaryDock({
   }
 
   // 5. EXPANDED STATE (Default): Full featured role-adaptive floating dock
+  const workspaceAttr =
+    role === "doctor"
+      ? "clinical"
+      : role === "researcher"
+      ? "research"
+      : role === "admin"
+      ? "admin"
+      : "personal";
+
   return (
     <nav
       ref={dockNavRef}
-      data-testid="floating-primary-dock"
+      data-testid="workspace-dock"
+      data-workspace={workspaceAttr}
       className={[
         "fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(96vw,840px)]",
         "rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-header)]/92 backdrop-blur-2xl",

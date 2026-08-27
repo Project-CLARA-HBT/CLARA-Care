@@ -988,6 +988,7 @@ class FakeApiClient extends ApiClient {
     invocations.add(FakeApiInvocation(
         'joinSocialCommunity', {'communityId': communityId},
         accessToken: accessToken));
+    if (socialError != null) throw socialError!;
     return <String, dynamic>{'joined': true};
   }
 
@@ -999,6 +1000,7 @@ class FakeApiClient extends ApiClient {
     invocations.add(FakeApiInvocation(
         'leaveSocialCommunity', {'communityId': communityId},
         accessToken: accessToken));
+    if (socialError != null) throw socialError!;
     return <String, dynamic>{'joined': false};
   }
 
@@ -1013,6 +1015,91 @@ class FakeApiClient extends ApiClient {
         accessToken: accessToken));
     if (socialError != null) throw socialError!;
     return socialFeed;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> listCommunityPosts({
+    required String accessToken,
+    required int communityId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    invocations.add(FakeApiInvocation(
+        'listCommunityPosts',
+        {'communityId': communityId, 'limit': limit, 'offset': offset},
+        accessToken: accessToken));
+    if (socialError != null) throw socialError!;
+    return socialCommunityPosts;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> searchSocialPosts({
+    required String accessToken,
+    required String query,
+    int? communityId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    invocations.add(FakeApiInvocation(
+        'searchSocialPosts',
+        {
+          'query': query,
+          'communityId': communityId,
+          'limit': limit,
+          'offset': offset,
+        },
+        accessToken: accessToken));
+    if (socialError != null) throw socialError!;
+    return socialSearchResults;
+  }
+
+  @override
+  Future<Map<String, dynamic>> toggleSocialBookmark({
+    required String accessToken,
+    required int postId,
+  }) async {
+    invocations.add(FakeApiInvocation(
+        'toggleSocialBookmark', {'postId': postId},
+        accessToken: accessToken));
+    if (socialError != null) throw socialError!;
+    return <String, dynamic>{'bookmarked': true};
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getSocialBookmarks({
+    required String accessToken,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    invocations.add(FakeApiInvocation(
+        'getSocialBookmarks', {'limit': limit, 'offset': offset},
+        accessToken: accessToken));
+    if (socialError != null) throw socialError!;
+    return socialBookmarks;
+  }
+
+  @override
+  Future<Map<String, dynamic>> deleteSocialPost({
+    required String accessToken,
+    required int postId,
+  }) async {
+    invocations.add(FakeApiInvocation(
+        'deleteSocialPost', {'postId': postId},
+        accessToken: accessToken));
+    if (socialError != null) throw socialError!;
+    return <String, dynamic>{'deleted': true};
+  }
+
+  @override
+  Future<Map<String, dynamic>> deleteSocialComment({
+    required String accessToken,
+    required int commentId,
+  }) async {
+    invocations.add(FakeApiInvocation(
+        'deleteSocialComment', {'commentId': commentId},
+        accessToken: accessToken));
+    if (socialError != null) throw socialError!;
+    return <String, dynamic>{'deleted': true};
   }
 
   @override
@@ -1038,6 +1125,7 @@ class FakeApiClient extends ApiClient {
   }) async {
     invocations.add(FakeApiInvocation('getSocialComments', {'postId': postId},
         accessToken: accessToken));
+    if (socialError != null) throw socialError!;
     return socialComments;
   }
 
@@ -1050,12 +1138,20 @@ class FakeApiClient extends ApiClient {
     required String accessToken,
     required int postId,
     required String body,
+    int? parentId,
   }) async {
+    final params = <String, dynamic>{'postId': postId, 'body': body};
+    if (parentId != null) params['parentId'] = parentId;
     invocations.add(FakeApiInvocation(
-        'addSocialComment', {'postId': postId, 'body': body},
+        'addSocialComment', params,
         accessToken: accessToken));
     if (socialCommentError != null) throw socialCommentError!;
-    return <String, dynamic>{'id': 1, 'body': body};
+    return <String, dynamic>{
+      'id': 1,
+      'post_id': postId,
+      'body': body,
+      if (parentId != null) 'parent_id': parentId,
+    };
   }
 
   @override
@@ -1067,6 +1163,7 @@ class FakeApiClient extends ApiClient {
     invocations.add(FakeApiInvocation(
         'addSocialReaction', {'postId': postId, 'kind': kind},
         accessToken: accessToken));
+    if (socialError != null) throw socialError!;
     return <String, dynamic>{'ok': true};
   }
 
@@ -1082,6 +1179,7 @@ class FakeApiClient extends ApiClient {
       {'targetType': targetType, 'targetId': targetId, 'reason': reason},
       accessToken: accessToken,
     ));
+    if (socialError != null) throw socialError!;
     return <String, dynamic>{'reported': true};
   }
 

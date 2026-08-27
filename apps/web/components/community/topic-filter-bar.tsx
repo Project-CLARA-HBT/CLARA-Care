@@ -76,7 +76,7 @@ export function TopicFilterBar({
                 : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             }`}
           >
-            {isEn ? "CLARA / Verified" : "CLARA & Chuyên gia"}
+            {isEn ? "Clinicians & Doctors" : "Chuyên gia & Bác sĩ"}
           </button>
           <button
             type="button"

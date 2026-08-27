@@ -6,39 +6,43 @@ import api from "@/lib/http-client";
 // callers treat a 404 as "feature unavailable" and hide the surface
 // (fail-closed), exactly like the mobile client.
 
-export type SocialConsentStatus = {
+export interface SocialConsentStatus {
   consent_type: string;
   granted: boolean;
-};
+}
 
-export type SocialCommunity = {
+export interface SocialCommunity {
   id: number;
   slug: string;
   name: string;
   description: string;
   member_count: number;
   joined: boolean;
-};
+  is_curated?: boolean;
+  created_at?: string;
+}
 
-export type SocialPost = {
+export interface SocialPost {
   id: number;
   community_id: number;
+  community_name?: string;
   author_handle: string;
   author_display_name?: string;
   is_verified_clinician?: boolean;
-  community_name?: string;
   title: string;
   body: string;
-  tags?: string[];
-  created_at: string;
+  moderation_status?: string;
   comment_count: number;
   reaction_count: number;
   user_reaction?: string | null;
   is_bookmarked?: boolean;
   reactions_breakdown?: Record<string, number>;
-};
+  created_at: string;
+  updated_at?: string;
+  tags?: string[];
+}
 
-export type SocialComment = {
+export interface SocialComment {
   id: number;
   post_id: number;
   parent_id?: number | null;
@@ -46,52 +50,58 @@ export type SocialComment = {
   author_display_name?: string;
   is_verified_clinician?: boolean;
   body: string;
+  moderation_status?: string;
   created_at: string;
-};
+  updated_at?: string;
+}
 
-export type SocialProfile = {
+export interface SocialProfile {
   handle: string;
   display_name: string;
   bio: string;
   role_badge?: string;
   is_verified_clinician?: boolean;
-};
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export type ReactionKind = "helpful" | "relate" | "thanks";
 
-export type SocialReaction = {
+export interface SocialReaction {
   id?: number;
   post_id: number;
   user_id?: number;
   kind: ReactionKind | string;
   created_at?: string;
-};
+}
 
-export type SocialBookmark = {
+export interface SocialBookmark {
   id?: number;
   user_id?: number;
   post_id: number;
   created_at?: string;
-};
+}
 
-export type SocialReport = {
+export interface SocialReport {
   id: number;
   reporter_id?: number;
-  target_type: "post" | "comment";
+  target_type: "post" | "comment" | string;
   target_id: number;
   reason: string;
   detail?: string;
   status: string;
   created_at: string;
-};
+  resolved_at?: string;
+}
 
-export type PostFilters = {
+export interface PostFilters {
   community_id?: number;
   q?: string;
-  author_role?: "all" | "verified" | "peer";
+  author_role?: "all" | "verified" | "peer" | string;
   limit?: number;
   offset?: number;
-};
+}
 
 export class SocialUnavailableError extends Error {
   constructor() {
@@ -282,12 +292,18 @@ export async function deletePost(id: number): Promise<{ deleted: boolean }> {
 
 export async function getComments(
   postId: number,
-  limit = 50,
+  limitOrParams?: number | { limit?: number; offset?: number },
   offset = 0
 ): Promise<SocialComment[]> {
   return guarded(async () => {
+    let params: { limit?: number; offset?: number } = { limit: 50, offset: 0 };
+    if (typeof limitOrParams === "number") {
+      params = { limit: limitOrParams, offset };
+    } else if (limitOrParams && typeof limitOrParams === "object") {
+      params = limitOrParams;
+    }
     const res = await api.get<SocialComment[]>(`/social/posts/${postId}/comments`, {
-      params: { limit, offset },
+      params,
     });
     return Array.isArray(res.data) ? res.data : [];
   });
@@ -324,7 +340,7 @@ export async function deleteComment(commentId: number): Promise<{ deleted: boole
 
 export async function toggleReaction(
   postId: number,
-  kind: "helpful" | "relate" | "thanks"
+  kind: "helpful" | "relate" | "thanks" | ReactionKind
 ): Promise<{ ok: boolean } | void> {
   return guarded(async () => {
     const res = await api.post<{ ok: boolean }>(`/social/posts/${postId}/reactions`, { kind });
@@ -342,7 +358,7 @@ export async function toggleBookmark(postId: number): Promise<{ bookmarked: bool
 }
 
 export async function getBookmarks(
-  params?: { limit?: number; offset?: number }
+  params?: { limit?: number; offset?: number } | PostFilters
 ): Promise<SocialPost[]> {
   return guarded(async () => {
     const res = await api.get<SocialPost[]>("/social/me/bookmarks", { params });
@@ -353,8 +369,8 @@ export async function getBookmarks(
 export const getMyBookmarks = getBookmarks;
 
 export async function reportContent(payload: {
-  target_type?: "post" | "comment";
-  targetType?: "post" | "comment";
+  target_type?: "post" | "comment" | string;
+  targetType?: "post" | "comment" | string;
   target_id?: number;
   targetId?: number;
   reason: string;

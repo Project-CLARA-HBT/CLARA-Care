@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import Button from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +40,7 @@ import {
   isClaraOfficial,
 } from "@/lib/social";
 
-// Curated default topics for Vietnamese health community if API returns empty/default
+// Curated fallback topics for Vietnamese health community if API returns empty
 const CURATED_DEFAULT_TOPICS: SocialCommunity[] = [
   {
     id: 1,
@@ -127,8 +127,6 @@ export default function CommunityPage() {
   // Hidden post IDs for local mute
   const [hiddenPostIds, setHiddenPostIds] = useState<number[]>([]);
 
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -143,7 +141,7 @@ export default function CommunityPage() {
       setCommunities(comm.length > 0 ? comm : CURATED_DEFAULT_TOPICS);
       setFeed(posts);
 
-      // Attempt to load bookmarks if user is consented
+      // Attempt to load bookmarks if user has granted consent
       if (consent.granted) {
         try {
           const bookmarks = await getMyBookmarks();
@@ -330,19 +328,26 @@ export default function CommunityPage() {
       if (selectedCommunityId !== "all" && post.community_id !== selectedCommunityId) {
         return false;
       }
-      if (authorFilter === "official" && !isClaraOfficial(post.author_handle)) {
+      const isOfficial =
+        typeof isClaraOfficial === "function"
+          ? isClaraOfficial(post.author_handle) || Boolean(post.is_verified_clinician)
+          : Boolean(post.is_verified_clinician);
+
+      if (authorFilter === "official" && !isOfficial) {
         return false;
       }
-      if (authorFilter === "peers" && isClaraOfficial(post.author_handle)) {
+      if (authorFilter === "peers" && isOfficial) {
         return false;
       }
       if (q) {
-        const text = `${post.title} ${post.body} ${post.author_handle} ${post.author_display_name || ""}`.toLowerCase();
+        const commName = communities.find((c) => c.id === post.community_id)?.name || "";
+        const tags = Array.isArray(post.tags) ? post.tags.join(" ") : "";
+        const text = `${post.title} ${post.body} ${post.author_handle} ${post.author_display_name || ""} ${commName} ${tags}`.toLowerCase();
         if (!text.includes(q)) return false;
       }
       return true;
     });
-  }, [feed, bookmarkedPosts, hiddenPostIds, selectedCommunityId, authorFilter, searchQuery]);
+  }, [feed, bookmarkedPosts, hiddenPostIds, selectedCommunityId, authorFilter, searchQuery, communities]);
 
   if (unavailable) {
     return (
@@ -369,15 +374,39 @@ export default function CommunityPage() {
       variant="plain"
     >
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header Action Bar: Search shortcut, Bookmarks, Profile, Create Post */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 rounded-[var(--radius-xl)] bg-[var(--surface-panel)] border border-[color:var(--shell-border)] shadow-xs">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-[var(--text-primary)]">
+        {/* Header Action Bar: Omnisearch, Bookmarks, Profile, Compose Post */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-[var(--radius-xl)] bg-[var(--surface-panel)] border border-[color:var(--shell-border)] shadow-xs">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="text-sm font-bold text-[var(--text-primary)]">
               {isEn ? "Community Hub" : "Cộng đồng Sức khỏe CLARA"}
             </span>
-            <Badge tone="neutral" className="text-[10px] py-0.5">
+            <Badge tone="brand" className="text-[10px] py-0.5 font-semibold">
               {isEn ? "Peer Support & Moderated" : "Chia sẻ & Đã kiểm duyệt"}
             </Badge>
+          </div>
+
+          <div className="flex flex-1 max-w-sm items-center relative">
+            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-[var(--text-muted)]">
+              <Icon name="search" size="0.85rem" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={isEn ? "Omnisearch community..." : "Tìm kiếm nhanh bài viết, tác giả, thẻ..."}
+              className="block w-full pl-8 pr-7 py-1.5 bg-[var(--surface-muted)] border border-[color:var(--shell-border)] rounded-lg text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:ring-1 focus:ring-[var(--brand-500)] outline-none transition"
+              data-testid="header-omnisearch-input"
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute inset-y-0 right-0 pr-2 flex items-center text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                aria-label={isEn ? "Clear search" : "Xóa tìm kiếm"}
+              >
+                <Icon name="close" size="0.75rem" />
+              </button>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -390,7 +419,7 @@ export default function CommunityPage() {
               <Icon name="folder" size="0.85rem" className="mr-1" />
               <span>{isEn ? "Bookmarks" : "Bài viết đã lưu"}</span>
               {bookmarkedPosts.length > 0 ? (
-                <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+                <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-brand-soft)] text-[var(--text-brand)] font-bold">
                   {bookmarkedPosts.length}
                 </span>
               ) : null}
@@ -403,7 +432,7 @@ export default function CommunityPage() {
               className="text-xs font-semibold"
             >
               <Icon name="user-card" size="0.85rem" className="mr-1" />
-              <span>{isEn ? "My Profile" : "Hồ sơ của tôi"}</span>
+              <span>{isEn ? "My Profile" : "Hồ sơ cộng đồng"}</span>
             </Button>
 
             <Button
@@ -413,7 +442,7 @@ export default function CommunityPage() {
               className="text-xs font-bold"
             >
               <Icon name="plus" size="0.85rem" className="mr-1" />
-              <span>{isEn ? "Create Post" : "Viết bài"}</span>
+              <span>{isEn ? "Compose Post" : "Viết bài mới"}</span>
             </Button>
           </div>
         </div>
@@ -497,7 +526,7 @@ export default function CommunityPage() {
               className="shrink-0 font-bold"
             >
               <Icon name="plus" size="0.9rem" className="mr-1" />
-              {copy("community.compose.action")}
+              {isEn ? "Compose Post" : "Viết bài mới"}
             </Button>
           </SurfaceCard>
         )}
@@ -533,7 +562,7 @@ export default function CommunityPage() {
             ) : null}
           </div>
 
-          {/* 5. Loading Skeleton vs Finished Feed vs Empty State (No Perpetual Skeleton) */}
+          {/* 5. Loading Skeleton vs Finished Feed vs Empty State */}
           {loading ? (
             <div className="space-y-4 py-4">
               {[1, 2, 3].map((i) => (
@@ -581,30 +610,50 @@ export default function CommunityPage() {
                   : searchQuery || selectedCommunityId !== "all" || authorFilter !== "all"
                   ? isEn
                     ? "No posts matched your current filters. Try resetting search or selecting all topics."
-                    : "Không tìm thấy bài viết nào phù hợp với bộ lọc. Hãy thử đặt lại tìm kiếm."
+                    : "Không tìm thấy bài viết nào phù hợp với bộ lọc. Hãy thử đặt lại tìm kiếm hoặc chọn tất cả chủ đề."
                   : isEn
                   ? "Be the first to share an experience or question with the community."
                   : "Hãy là người đầu tiên chia sẻ câu chuyện cùng cộng đồng."
               }
             >
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                {canCompose ? (
-                  <Button variant="primary" size="sm" onClick={openCompose}>
-                    {copy("community.compose.action")}
-                  </Button>
-                ) : null}
-                {searchQuery || selectedCommunityId !== "all" || authorFilter !== "all" ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSelectedCommunityId("all");
-                      setAuthorFilter("all");
-                    }}
-                  >
-                    {isEn ? "Reset Filters" : "Đặt lại bộ lọc"}
-                  </Button>
+              <div className="flex flex-col items-center gap-3 pt-2">
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {canCompose ? (
+                    <Button variant="primary" size="sm" onClick={openCompose}>
+                      <Icon name="plus" size="0.85rem" className="mr-1" />
+                      <span>{isEn ? "Create First Post" : "Tạo bài viết đầu tiên"}</span>
+                    </Button>
+                  ) : null}
+                  {searchQuery || selectedCommunityId !== "all" || authorFilter !== "all" ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSelectedCommunityId("all");
+                        setAuthorFilter("all");
+                      }}
+                    >
+                      {isEn ? "Reset Filters" : "Đặt lại bộ lọc"}
+                    </Button>
+                  ) : null}
+                </div>
+
+                {/* Quick Topic Suggestions */}
+                {communities.length > 0 && selectedCommunityId !== "all" ? (
+                  <div className="pt-2 flex flex-wrap items-center justify-center gap-1.5 text-xs text-[var(--text-muted)]">
+                    <span>{isEn ? "Suggested Topics:" : "Chủ đề gợi ý:"}</span>
+                    {communities.slice(0, 3).map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setSelectedCommunityId(c.id)}
+                        className="px-2.5 py-1 rounded-full bg-[var(--surface-muted)] text-[var(--text-primary)] hover:bg-[var(--surface-panel)] border border-[color:var(--shell-border)] cursor-pointer transition font-medium text-[11px]"
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
                 ) : null}
               </div>
             </EmptyState>

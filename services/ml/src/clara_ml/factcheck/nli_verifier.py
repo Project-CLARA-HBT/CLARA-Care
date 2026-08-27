@@ -25,42 +25,42 @@ _NEGATION_TERMS = {
 }
 _INCREASE_TERMS = {"tang", "tăng", "increase", "increased", "higher", "cao"}
 _DECREASE_TERMS = {"giam", "giảm", "decrease", "reduced", "lower", "thap"}
-_DOSAGE_TERMS = {"liều", "lieu", "dose", "dosage", "mg", "viên", "vien", "uống", "uong", "g", "mcg", "ml"}
-_INTERACTION_TERMS = {
-    "tương",
-    "tuong",
-    "tac",
-    "tác",
-    "interaction",
-    "ddi",
-    "dùng",
-    "dung",
-    "cùng",
-    "cung",
-    "warfarin",
-    "aspirin",
-    "phối",
-    "phoi",
-    "hợp",
-    "hop",
-}
-_CONTRAINDICATION_TERMS = {
-    "chống",
-    "chong",
-    "chỉ",
-    "chi",
-    "định",
-    "dinh",
+
+_CONTRAINDICATION_PHRASES = (
+    "chống chỉ định",
+    "chong chi dinh",
     "contraindication",
     "contraindicated",
-    "không nên",
-    "khong nen",
-    "avoid",
-    "tránh",
-    "tranh",
-    "cấm",
-    "cam",
-}
+    "tuyệt đối không dùng",
+    "tuyet doi khong dung",
+    "nghiêm cấm sử dụng",
+    "nghiem cam su dung",
+    "chống chỉ định tuyệt đối",
+    "chống chỉ định tương đối",
+)
+
+_INTERACTION_PHRASES = (
+    "tương tác thuốc",
+    "tuong tac thuoc",
+    "drug interaction",
+    "tương tác bất lợi",
+    "tuong tac bat loi",
+    "tương tác nghiêm trọng",
+    "tuong tac nghiem trong",
+    "ddi",
+)
+
+_DOSAGE_PHRASES = (
+    "liều dùng",
+    "lieu dung",
+    "chỉ định liều",
+    "chi dinh lieu",
+    "dosage",
+    "uống mỗi ngày",
+    "uong moi ngay",
+    "liều lượng",
+    "lieu luong",
+)
 
 SAFETY_CRITICAL_CLAIM_TYPES = frozenset({"dosage", "interaction", "contraindication"})
 
@@ -124,47 +124,25 @@ NliClaimVerdict = ClaimVerdict
 
 
 def _tokenize(text: str) -> set[str]:
-    lowered = str(text or "").lower()
-    return {token for token in re.findall(r"[0-9a-zA-ZÀ-ỹ]{2,}", lowered) if token}
+    lowered = text.lower()
+    cleaned = re.sub(r"[^\w\s]", " ", lowered)
+    return {token for token in cleaned.split() if len(token) > 1}
 
 
 def _compact_snippet(text: str, *, max_len: int = 180) -> str:
     snippet = " ".join(str(text or "").split()).strip()
-    if not snippet:
-        return ""
     if len(snippet) <= max_len:
         return snippet
     return f"{snippet[: max_len - 3]}..."
 
 
 def infer_claim_type(claim: str) -> str:
-    claim_tokens = _tokenize(claim)
     lowered = str(claim or "").lower()
-    if (
-        "chống chỉ định" in lowered
-        or "chong chi dinh" in lowered
-        or "contraindication" in lowered
-        or "contraindicated" in lowered
-        or "không nên dùng" in lowered
-        or "khong nen dung" in lowered
-        or claim_tokens.intersection(_CONTRAINDICATION_TERMS)
-    ):
+    if any(phrase in lowered for phrase in _CONTRAINDICATION_PHRASES):
         return "contraindication"
-    if (
-        "tương tác" in lowered
-        or "tuong tac" in lowered
-        or "drug interaction" in lowered
-        or "ddi" in lowered
-        or claim_tokens.intersection(_INTERACTION_TERMS)
-    ):
+    if any(phrase in lowered for phrase in _INTERACTION_PHRASES):
         return "interaction"
-    if (
-        "liều dùng" in lowered
-        or "lieu dung" in lowered
-        or "dosage" in lowered
-        or "dose" in lowered
-        or claim_tokens.intersection(_DOSAGE_TERMS)
-    ):
+    if any(phrase in lowered for phrase in _DOSAGE_PHRASES):
         return "dosage"
     return "general"
 

@@ -276,7 +276,7 @@ export function PostDetailDialog({
                   </span>
                   {official ? (
                     <Badge tone="brand" icon="check" className="text-[10px] py-0.5 font-bold">
-                      {isEn ? "CLARA Official" : "CLARA Chuyên gia"}
+                      {isEn ? "Verified Clinician" : "Bác sĩ Chuyên gia"}
                     </Badge>
                   ) : (
                     <Badge tone="neutral" className="text-[10px] py-0.5">
@@ -465,8 +465,8 @@ export function PostDetailDialog({
                             {c.author_display_name ? c.author_display_name : `@${c.author_handle}`}
                           </span>
                           {commentOfficial ? (
-                            <Badge tone="brand" className="text-[9px] py-0 px-1">
-                              {isEn ? "CLARA Official" : "Chuyên gia"}
+                            <Badge tone="brand" className="text-[9px] py-0 px-1 font-semibold">
+                              {isEn ? "Verified Clinician" : "Bác sĩ Chuyên gia"}
                             </Badge>
                           ) : null}
                           {isReply ? (

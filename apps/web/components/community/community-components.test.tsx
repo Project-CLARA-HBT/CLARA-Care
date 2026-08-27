@@ -136,7 +136,7 @@ describe("Community Sub-components Audit & Verification", () => {
       expect(onSelectCommunity).toHaveBeenCalledWith(2);
 
       // Author filter click
-      const officialBtn = screen.getByRole("button", { name: "CLARA & Chuyên gia" });
+      const officialBtn = screen.getByRole("button", { name: /Chuyên gia/i });
       fireEvent.click(officialBtn);
       expect(onSelectAuthorFilter).toHaveBeenCalledWith("official");
 
@@ -172,7 +172,7 @@ describe("Community Sub-components Audit & Verification", () => {
       );
 
       expect(screen.getByText("Hướng dẫn nhận biết dấu hiệu sớm")).toBeInTheDocument();
-      expect(screen.getByText("CLARA Chuyên gia")).toBeInTheDocument();
+      expect(screen.getByText("Bác sĩ Chuyên gia")).toBeInTheDocument();
       expect(screen.getByText("Đã duyệt an toàn")).toBeInTheDocument();
 
       // Open detail on click

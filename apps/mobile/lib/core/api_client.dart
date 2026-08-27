@@ -990,10 +990,15 @@ class ApiClient {
     required String accessToken,
     required int postId,
     required String body,
+    int? parentId,
   }) {
+    final payload = <String, dynamic>{'body': body};
+    if (parentId != null) {
+      payload['parent_id'] = parentId;
+    }
     return _post(
       '/api/v1/social/posts/$postId/comments',
-      body: <String, dynamic>{'body': body},
+      body: payload,
       accessToken: accessToken,
     );
   }

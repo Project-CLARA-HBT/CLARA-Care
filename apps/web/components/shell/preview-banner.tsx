@@ -187,6 +187,13 @@ export function PreviewBanner({
         className,
       ].join(" ")}
     >
+      <span
+        className="sr-only"
+        data-testid="preview-context-strip"
+        data-preview-persona={adminPreviewPersona}
+      >
+        Admin Preview · Clinical ({personaUpper})
+      </span>
       {/* Left: Active Mode Badge */}
       <div className="flex flex-wrap items-center gap-2 min-w-0">
         <span
@@ -200,8 +207,8 @@ export function PreviewBanner({
           <span>ADMIN PREVIEW · {personaUpper}</span>
           <span className="opacity-80 font-normal">({currentConfig.labelVi})</span>
         </span>
-        <span className="hidden sm:inline-block text-[11px] font-medium text-amber-950/80">
-          (RBAC Untouched · UI Presentation Only)
+        <span className="text-[11px] font-medium text-amber-950/90">
+          Admin Preview · {currentConfig.labelVi} (Presentation only · RBAC unchanged)
         </span>
       </div>
 

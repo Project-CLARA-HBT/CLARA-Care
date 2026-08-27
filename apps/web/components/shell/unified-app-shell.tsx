@@ -9,15 +9,9 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
 import TransparencyNoticeGate from "@/components/compliance/transparency-notice-gate";
-import PreviewContextStrip from "@/components/shell/preview-context-strip";
-import AdminPreviewBanner, {
-  PreviewBanner,
-} from "@/components/shell/admin-preview-banner";
-import GlobalCommandBar from "@/components/shell/global-context-bar";
-import ContextHeader from "@/components/shell/context-header";
-import ContentFrame from "@/components/shell/content-frame";
-import WorkspaceDock from "@/components/shell/workspace-dock";
-import FloatingNavbar from "@/components/shell/floating-navbar";
+import AdminPreviewBanner from "@/components/shell/admin-preview-banner";
+import GlobalContextBar from "@/components/shell/global-context-bar";
+import FloatingPrimaryDock from "@/components/shell/floating-primary-dock";
 import CommandPalette from "@/components/shell/command-palette";
 import { PreferenceContext } from "@/components/shell/preference-provider";
 import { SessionContext } from "@/components/shell/session-boundary";
@@ -45,6 +39,32 @@ export interface UnifiedAppShellProps {
 
 const IMMERSIVE_LAYOUT_PREFIXES = ["/chat", "/research", "/council", "/scribe"];
 
+const AUTH_STANDALONE_ROUTES = new Set([
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+  "/auth/callback",
+]);
+
+function isAuthOrStandaloneRoute(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (pathname === "/") return true; // Landing page uses dedicated spatial landing navbar & footer
+  if (AUTH_STANDALONE_ROUTES.has(pathname)) return true;
+  if (
+    pathname === "/welcome" ||
+    pathname.startsWith("/welcome/") ||
+    pathname === "/onboarding" ||
+    pathname.startsWith("/onboarding/") ||
+    pathname === "/role-select" ||
+    pathname.startsWith("/share/")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -64,19 +84,13 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
   const adminPreviewMode = sessionContext ? sessionContext.adminPreviewMode : null;
   const uiLanguage = preferenceContext ? preferenceContext.uiLanguage : "vi";
 
-  const isPublicOrUtility =
-    isPublicRoute(pathname) || isAuthenticatedUtilityRoute(pathname);
+  const isStandalone = isAuthOrStandaloneRoute(pathname);
 
   const isImmersivePath = IMMERSIVE_LAYOUT_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
   const isChatLayout = pathname === "/chat" || pathname.startsWith("/chat/");
-  const isImmersive = shellMode.isImmersive;
-  // FloatingNavbar / WorkspaceDock is active on Personal, Clinical, Research (including /chat);
-  // suppressed only on /admin/* or when explicit immersive display mode is active
-  const hideBottomDock =
-    (pathname.startsWith("/admin/") && !adminPreviewMode) ||
-    shellMode.isImmersive;
+  const hideBottomDock = shellMode.isImmersive;
 
   // Fallback hydration if outside SessionBoundary
   useEffect(() => {
@@ -175,8 +189,8 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
     };
   }, [isRoleHydrated, isSessionChecked, pathname, role, router, sessionContext]);
 
-  // On public/auth/share routes: suppresses ContextHeader/GlobalCommandBar and WorkspaceDock, mounts clean unauthenticated container
-  if (isPublicOrUtility) {
+  // On public auth/onboarding/standalone routes: suppresses app shell, mounts clean container
+  if (isStandalone) {
     return (
       <div
         id="public-shell-root"
@@ -190,8 +204,7 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
     );
   }
 
-  // On standard/focus/dense/explore/read/immersive routes:
-  // Shell composition order: PreviewContextStrip -> GlobalCommandBar -> <main id="main-content"> (ContentFrame) -> WorkspaceDock -> CommandPalette
+  // On standard/focus/dense/explore/read/immersive app routes:
   return (
     <div
       data-testid="unified-app-shell"
@@ -202,23 +215,39 @@ export function UnifiedAppShell({ children }: UnifiedAppShellProps) {
       </a>
       <TransparencyNoticeGate />
 
-      {/* 1. Top: PreviewContextStrip & PreviewBanner (admin preview only) */}
-      <PreviewContextStrip />
-      <PreviewBanner />
+      {/* 1. Top: Admin Preview Banner */}
+      <AdminPreviewBanner />
 
-      {/* 2. Top: GlobalCommandBar */}
-      <GlobalCommandBar />
+      {/* 2. Top: GlobalContextBar */}
+      <GlobalContextBar />
 
-      {/* 3. Main Content Canvas: ContentFrame (<main id="main-content">) */}
-      <ContentFrame
-        isImmersive={isImmersive}
-        isChatLayout={isChatLayout}
+      {/* 3. Main Content Canvas */}
+      <main
+        id="main-content"
+        data-testid="content-frame"
+        data-immersive={isImmersivePath || shellMode.isImmersive ? "true" : "false"}
+        tabIndex={-1}
+        className={[
+          "app-content-canvas flex-1",
+          isImmersivePath
+            ? isChatLayout
+              ? "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] pt-0 sm:px-0 sm:pb-24 sm:pt-0 lg:px-0 lg:pb-0 lg:pt-0"
+              : "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] pt-0 sm:px-0.5 sm:pb-24 sm:pt-0 lg:px-0.5 lg:pb-1 lg:pt-0"
+            : "px-4 pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] pt-5 sm:px-6 sm:pb-28 sm:pt-7 lg:px-12 lg:pb-24 lg:pt-8",
+        ].join(" ")}
       >
-        {children}
-      </ContentFrame>
+        <div
+          className={[
+            "w-full",
+            isImmersivePath ? "max-w-none" : "mx-auto max-w-[1120px]",
+          ].join(" ")}
+        >
+          {children}
+        </div>
+      </main>
 
-      {/* 4. Bottom: WorkspaceDock (smoothly recedes on immersive routes) */}
-      {!hideBottomDock && <WorkspaceDock role={effectiveRole} />}
+      {/* 4. Bottom: FloatingPrimaryDock with CLARA Orb (role-adaptive) */}
+      {!hideBottomDock && <FloatingPrimaryDock role={effectiveRole} />}
 
       {/* 5. Universal Command Palette (Cmd+K / Ctrl+K) */}
       <CommandPalette role={effectiveRole} />

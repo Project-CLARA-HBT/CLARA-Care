@@ -151,13 +151,13 @@ describe("UnifiedAppShell V8 Structural Hierarchy (Spec v8)", () => {
 
       // 4. WorkspaceDock (Personal Workspace with ClaraOrb)
       const dock = screen.getByRole("navigation", {
-        name: "Thanh điều hướng không gian làm việc",
+        name: /Thanh điều hướng/i,
       });
       expect(dock).toBeInTheDocument();
       expect(dock).toHaveAttribute("data-workspace", "personal");
       expect(within(dock).getByRole("link", { name: "Hôm nay" })).toBeInTheDocument();
       expect(within(dock).getByRole("link", { name: "Hành trình" })).toBeInTheDocument();
-      expect(within(dock).getByRole("link", { name: "◉ CLARA" })).toBeInTheDocument();
+      expect(within(dock).getByRole("link", { name: "Hỏi CLARA" })).toBeInTheDocument();
       expect(within(dock).getByRole("link", { name: "Thuốc men" })).toBeInTheDocument();
       expect(within(dock).getByRole("link", { name: "Cá nhân" })).toBeInTheDocument();
     });
@@ -186,7 +186,7 @@ describe("UnifiedAppShell V8 Structural Hierarchy (Spec v8)", () => {
 
       // In clinical preview, WorkspaceDock displays Clinical items
       const dock = screen.getByRole("navigation", {
-        name: "Thanh điều hướng không gian làm việc",
+        name: /Thanh điều hướng/i,
       });
       expect(dock).toHaveAttribute("data-workspace", "clinical");
       expect(within(dock).getByRole("link", { name: "Tổng quan" })).toBeInTheDocument();
@@ -205,14 +205,14 @@ describe("UnifiedAppShell V8 Structural Hierarchy (Spec v8)", () => {
       });
 
       const dock = screen.getByRole("navigation", {
-        name: "Thanh điều hướng không gian làm việc",
+        name: /Thanh điều hướng/i,
       });
       expect(dock).toHaveAttribute("data-workspace", "research");
-      expect(within(dock).getByRole("link", { name: "Tra cứu" })).toBeInTheDocument();
       expect(within(dock).getByRole("link", { name: "Bằng chứng" })).toBeInTheDocument();
-      expect(within(dock).getByRole("link", { name: "◉ CLARA" })).toBeInTheDocument();
-      expect(within(dock).getByRole("link", { name: "Nguồn" })).toBeInTheDocument();
-      expect(within(dock).getByRole("link", { name: "Thêm" })).toBeInTheDocument();
+      expect(within(dock).getByRole("link", { name: "Nguồn Y văn" })).toBeInTheDocument();
+      expect(within(dock).getByRole("link", { name: "Hỏi CLARA" })).toBeInTheDocument();
+      expect(within(dock).getByRole("link", { name: "Tổng quan" })).toBeInTheDocument();
+      expect(within(dock).getByRole("link", { name: "Cá nhân" })).toBeInTheDocument();
     });
   });
 

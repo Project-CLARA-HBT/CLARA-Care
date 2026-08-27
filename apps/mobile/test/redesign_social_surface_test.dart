@@ -6,6 +6,7 @@
 //   * Consent gate: without social consent, the compose CTA routes through the
 //     consent sheet (posting is not reachable until consent is granted).
 //   * Feed render: posts from the API are listed.
+//   * Interactions: reactions, bookmarks, comments, search, and profile.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -116,6 +117,85 @@ void main() {
       // The detail sheet loads and renders the post's comment.
       expect(find.textContaining('Cảm ơn bạn đã chia sẻ'), findsOneWidget);
       expect(api.wasCalled('getSocialComments'), isTrue);
+    });
+
+    testWidgets('triggers reaction and bookmark actions on post cards',
+        (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final api = FakeApiClient();
+      api.socialConsent = {'granted': true};
+      api.socialCommunities = [
+        {
+          'id': 1,
+          'slug': 'tim-mach',
+          'name': 'Tim mạch',
+          'description': '',
+          'member_count': 5,
+          'joined': true
+        },
+      ];
+      api.socialFeed = [
+        {
+          'id': 20,
+          'community_id': 1,
+          'author_handle': 'dr_long',
+          'author_display_name': 'BS. Lê Hoàng Long',
+          'is_verified_clinician': true,
+          'title': 'Lời khuyên đo huyết áp tại nhà',
+          'body': 'Nên đo vào buổi sáng sau khi nghỉ ngơi 5 phút.',
+          'created_at': '2026-07-04T06:00:00',
+          'comment_count': 0,
+          'reaction_count': 12,
+          'is_bookmarked': false,
+        },
+      ];
+
+      await tester.pumpWidget(_host(await build(api)));
+      await tester.pumpAndSettle();
+
+      // Bookmark button on post card
+      expect(find.byKey(const Key('post-bookmark-20')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('post-bookmark-20')));
+      await tester.pumpAndSettle();
+      expect(api.wasCalled('toggleSocialBookmark'), isTrue);
+
+      // Helpful reaction
+      expect(find.text('Hữu ích'), findsOneWidget);
+      await tester.tap(find.text('Hữu ích'));
+      await tester.pumpAndSettle();
+      expect(api.wasCalled('addSocialReaction'), isTrue);
+    });
+
+    testWidgets('unconsented user clicking compose prompts consent sheet',
+        (tester) async {
+      final api = FakeApiClient();
+      api.socialConsent = {'granted': false};
+      api.socialCommunities = [
+        {
+          'id': 1,
+          'name': 'Dinh dưỡng',
+          'member_count': 2,
+          'joined': false,
+        }
+      ];
+      api.socialFeed = [];
+
+      await tester.pumpWidget(_host(await build(api)));
+      await tester.pumpAndSettle();
+
+      // Click compose FAB
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+
+      // Consent prompt appears
+      expect(find.text('Tôi đồng ý tham gia'), findsOneWidget);
+      await tester.tap(find.text('Tôi đồng ý tham gia'));
+      await tester.pumpAndSettle();
+      expect(api.wasCalled('grantSocialConsent'), isTrue);
     });
   });
 }

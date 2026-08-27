@@ -72,6 +72,88 @@ void main() {
       expect(events.map((e) => e.event), ['progress', 'done']);
       expect(api.wasCalled('streamResearchJob'), isTrue);
     });
+
+    test('supports all social platform fake handlers and stubs', () async {
+      final api = FakeApiClient();
+      api.socialCommunityPosts = [
+        {'id': 101, 'title': 'Post in community'},
+      ];
+      api.socialSearchResults = [
+        {'id': 102, 'title': 'Search match'},
+      ];
+      api.socialBookmarks = [
+        {'id': 103, 'title': 'Bookmarked post'},
+      ];
+
+      // leaveSocialCommunity
+      final leaveRes = await api.leaveSocialCommunity(
+        accessToken: 'tok',
+        communityId: 42,
+      );
+      expect(leaveRes['joined'], isFalse);
+      expect(api.wasCalled('leaveSocialCommunity'), isTrue);
+
+      // listCommunityPosts
+      final commPosts = await api.listCommunityPosts(
+        accessToken: 'tok',
+        communityId: 42,
+      );
+      expect(commPosts, api.socialCommunityPosts);
+      expect(api.wasCalled('listCommunityPosts'), isTrue);
+
+      // searchSocialPosts
+      final searchRes = await api.searchSocialPosts(
+        accessToken: 'tok',
+        query: 'test',
+        communityId: 42,
+      );
+      expect(searchRes, api.socialSearchResults);
+      expect(api.wasCalled('searchSocialPosts'), isTrue);
+
+      // toggleSocialBookmark
+      final bookmarkRes = await api.toggleSocialBookmark(
+        accessToken: 'tok',
+        postId: 101,
+      );
+      expect(bookmarkRes['bookmarked'], isTrue);
+      expect(api.wasCalled('toggleSocialBookmark'), isTrue);
+
+      // getSocialBookmarks
+      final bookmarks = await api.getSocialBookmarks(accessToken: 'tok');
+      expect(bookmarks, api.socialBookmarks);
+      expect(api.wasCalled('getSocialBookmarks'), isTrue);
+
+      // deleteSocialPost
+      final deletePostRes = await api.deleteSocialPost(
+        accessToken: 'tok',
+        postId: 101,
+      );
+      expect(deletePostRes['deleted'], isTrue);
+      expect(api.wasCalled('deleteSocialPost'), isTrue);
+
+      // deleteSocialComment
+      final deleteCommentRes = await api.deleteSocialComment(
+        accessToken: 'tok',
+        commentId: 201,
+      );
+      expect(deleteCommentRes['deleted'], isTrue);
+      expect(api.wasCalled('deleteSocialComment'), isTrue);
+
+      // getSocialProfile
+      final profile = await api.getSocialProfile(accessToken: 'tok');
+      expect(profile['handle'], 'clara7');
+      expect(api.wasCalled('getSocialProfile'), isTrue);
+
+      // updateSocialProfile
+      final updatedProfile = await api.updateSocialProfile(
+        accessToken: 'tok',
+        displayName: 'New Name',
+        bio: 'New Bio',
+      );
+      expect(updatedProfile['display_name'], 'New Name');
+      expect(updatedProfile['bio'], 'New Bio');
+      expect(api.wasCalled('updateSocialProfile'), isTrue);
+    });
   });
 
   group('FakeSessionStore', () {

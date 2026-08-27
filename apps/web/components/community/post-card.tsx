@@ -75,7 +75,7 @@ export function PostCard({
               {/* Author verification badge */}
               {official ? (
                 <Badge tone="brand" icon="check" className="text-[10px] py-0.5 font-bold">
-                  {isEn ? "CLARA Official" : "CLARA Chuyên gia"}
+                  {isEn ? "Verified Clinician" : "Bác sĩ Chuyên gia"}
                 </Badge>
               ) : (
                 <Badge tone="neutral" className="text-[10px] py-0.5">
