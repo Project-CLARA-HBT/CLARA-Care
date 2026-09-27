@@ -1,0 +1,588 @@
+{
+  "schema_version": "glhs-external-validation-tasks-v2",
+  "freeze_id": "GLHS-EXTERNAL-VALIDATION-TASKS-V2-20260928",
+  "freeze_utc": "2026-09-28T00:00:00+00:00",
+  "description": "Blinded dual-annotator and adjudicator review packets across eICU, Synthea, MIMIC-on-FHIR, and Diabetes 130 corpora for longitudinal validation.",
+  "corpora_represented": [
+    "eicu",
+    "synthea",
+    "mimic_on_fhir",
+    "diabetes_130"
+  ],
+  "tasks": [
+    {
+      "task_id": "eicu_task_001",
+      "corpus": "eicu",
+      "subject_id": "eicu_subj_1001",
+      "encounter_id": "stay_78901",
+      "domain": "medications",
+      "prompt_summary": "Continuous vasopressor titration and temporal state reconstruction during ICU stay.",
+      "longitudinal_sequence": [
+        {
+          "offset_minutes": 0,
+          "event_type": "medication_order",
+          "details": "Norepinephrine infusion started at 0.05 mcg/kg/min",
+          "valid_from_offset": 0
+        },
+        {
+          "offset_minutes": 120,
+          "event_type": "medication_titration",
+          "details": "Norepinephrine increased to 0.12 mcg/kg/min",
+          "valid_from_offset": 120
+        },
+        {
+          "offset_minutes": 360,
+          "event_type": "medication_wean",
+          "details": "Norepinephrine weaned to 0.04 mcg/kg/min",
+          "valid_from_offset": 360
+        },
+        {
+          "offset_minutes": 480,
+          "event_type": "medication_discontinued",
+          "details": "Norepinephrine discontinued",
+          "valid_from_offset": 480
+        }
+      ],
+      "expected_ground_truth": {
+        "final_active_medications": [],
+        "peak_infusion_rate_mcg_kg_min": 0.12,
+        "discontinuation_offset": 480,
+        "state_reconstruction_correct": true
+      },
+      "dual_annotator_packets": {
+        "annotator_1": {
+          "annotator_id": "ann_01",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Exact match with eICU flow sheet timeline."
+        },
+        "annotator_2": {
+          "annotator_id": "ann_02",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Vasopressor sequence correctly tracked."
+        },
+        "adjudicator": {
+          "adjudicator_id": "adj_01",
+          "consensus_rating": "ACCURATE",
+          "final_fact_retained": true,
+          "final_false_positive": false,
+          "final_false_negative": false,
+          "adjudication_status": "CONCORDANT"
+        }
+      }
+    },
+    {
+      "task_id": "eicu_task_002",
+      "corpus": "eicu",
+      "subject_id": "eicu_subj_1002",
+      "encounter_id": "stay_78902",
+      "domain": "observations",
+      "prompt_summary": "Arterial blood gas and lactate clearance tracking across 24h ICU window.",
+      "longitudinal_sequence": [
+        {
+          "offset_minutes": 30,
+          "event_type": "lab_result",
+          "details": "Lactate 4.2 mmol/L, pH 7.28, PaO2/FiO2 180",
+          "valid_from_offset": 30
+        },
+        {
+          "offset_minutes": 240,
+          "event_type": "lab_result",
+          "details": "Lactate 2.8 mmol/L, pH 7.34",
+          "valid_from_offset": 240
+        },
+        {
+          "offset_minutes": 720,
+          "event_type": "lab_result",
+          "details": "Lactate 1.3 mmol/L, pH 7.41",
+          "valid_from_offset": 720
+        }
+      ],
+      "expected_ground_truth": {
+        "initial_lactate": 4.2,
+        "final_lactate": 1.3,
+        "lactate_clearance_achieved": true,
+        "state_reconstruction_correct": true
+      },
+      "dual_annotator_packets": {
+        "annotator_1": {
+          "annotator_id": "ann_01",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Lactate trend correctly extracted."
+        },
+        "annotator_2": {
+          "annotator_id": "ann_02",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Observation sequence accurate."
+        },
+        "adjudicator": {
+          "adjudicator_id": "adj_01",
+          "consensus_rating": "ACCURATE",
+          "final_fact_retained": true,
+          "final_false_positive": false,
+          "final_false_negative": false,
+          "adjudication_status": "CONCORDANT"
+        }
+      }
+    },
+    {
+      "task_id": "synthea_task_001",
+      "corpus": "synthea",
+      "subject_id": "synthea_subj_2001",
+      "encounter_id": "enc_synth_301",
+      "domain": "diagnoses_problems",
+      "prompt_summary": "Longitudinal chronic kidney disease (CKD) staging progression across 3-year timeline.",
+      "longitudinal_sequence": [
+        {
+          "offset_minutes": 0,
+          "event_type": "condition_onset",
+          "details": "Essential hypertension diagnosed",
+          "valid_from_offset": 0
+        },
+        {
+          "offset_minutes": 525600,
+          "event_type": "condition_onset",
+          "details": "Chronic Kidney Disease Stage 2 (eGFR 72 mL/min/1.73m2)",
+          "valid_from_offset": 525600
+        },
+        {
+          "offset_minutes": 1051200,
+          "event_type": "condition_progression",
+          "details": "Chronic Kidney Disease Stage 3a (eGFR 52 mL/min/1.73m2)",
+          "valid_from_offset": 1051200
+        }
+      ],
+      "expected_ground_truth": {
+        "current_ckd_stage": "Stage 3a",
+        "hypertension_present": true,
+        "state_reconstruction_correct": true
+      },
+      "dual_annotator_packets": {
+        "annotator_1": {
+          "annotator_id": "ann_01",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "CKD stage progression verified against Synthea FHIR bundle."
+        },
+        "annotator_2": {
+          "annotator_id": "ann_02",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Multi-encounter timeline matched ground truth."
+        },
+        "adjudicator": {
+          "adjudicator_id": "adj_01",
+          "consensus_rating": "ACCURATE",
+          "final_fact_retained": true,
+          "final_false_positive": false,
+          "final_false_negative": false,
+          "adjudication_status": "CONCORDANT"
+        }
+      }
+    },
+    {
+      "task_id": "synthea_task_002",
+      "corpus": "synthea",
+      "subject_id": "synthea_subj_2002",
+      "encounter_id": "enc_synth_302",
+      "domain": "medications",
+      "prompt_summary": "Heart failure guideline-directed medical therapy (GDMT) titration and medication reconciliations.",
+      "longitudinal_sequence": [
+        {
+          "offset_minutes": 0,
+          "event_type": "medication_start",
+          "details": "Lisinopril 10mg daily + Metoprolol Succinate 25mg daily started",
+          "valid_from_offset": 0
+        },
+        {
+          "offset_minutes": 43200,
+          "event_type": "medication_switch",
+          "details": "Lisinopril stopped; Sacubitril/Valsartan 49/51mg BID started",
+          "valid_from_offset": 43200
+        },
+        {
+          "offset_minutes": 86400,
+          "event_type": "medication_add",
+          "details": "Empagliflozin 10mg daily added",
+          "valid_from_offset": 86400
+        }
+      ],
+      "expected_ground_truth": {
+        "active_medications": [
+          "Sacubitril/Valsartan 49/51mg BID",
+          "Metoprolol Succinate 25mg daily",
+          "Empagliflozin 10mg daily"
+        ],
+        "discontinued_medications": [
+          "Lisinopril 10mg daily"
+        ],
+        "state_reconstruction_correct": true
+      },
+      "dual_annotator_packets": {
+        "annotator_1": {
+          "annotator_id": "ann_01",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "ACEi to ARNI transition handled cleanly."
+        },
+        "annotator_2": {
+          "annotator_id": "ann_02",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "GDMT additions correctly recorded."
+        },
+        "adjudicator": {
+          "adjudicator_id": "adj_01",
+          "consensus_rating": "ACCURATE",
+          "final_fact_retained": true,
+          "final_false_positive": false,
+          "final_false_negative": false,
+          "adjudication_status": "CONCORDANT"
+        }
+      }
+    },
+    {
+      "task_id": "mimic_task_001",
+      "corpus": "mimic_on_fhir",
+      "subject_id": "mimic_subj_3001",
+      "encounter_id": "enc_mimic_401",
+      "domain": "medications",
+      "prompt_summary": "Deidentified MIMIC-IV FHIR inpatient antibiotic escalation sequence for sepsis.",
+      "longitudinal_sequence": [
+        {
+          "offset_minutes": 0,
+          "event_type": "medication_request",
+          "details": "Ceftriaxone 1g IV daily ordered in ED",
+          "valid_from_offset": 0
+        },
+        {
+          "offset_minutes": 360,
+          "event_type": "medication_escalation",
+          "details": "Ceftriaxone discontinued; Vancomycin 15mg/kg IV Q12H + Piperacillin-Tazobactam 3.375g IV Q6H started in ICU",
+          "valid_from_offset": 360
+        },
+        {
+          "offset_minutes": 2880,
+          "event_type": "medication_deescalation",
+          "details": "Vancomycin discontinued following negative blood cultures; Pip-Tazo continued",
+          "valid_from_offset": 2880
+        }
+      ],
+      "expected_ground_truth": {
+        "active_antibiotics": [
+          "Piperacillin-Tazobactam"
+        ],
+        "discontinued_antibiotics": [
+          "Ceftriaxone",
+          "Vancomycin"
+        ],
+        "state_reconstruction_correct": true
+      },
+      "dual_annotator_packets": {
+        "annotator_1": {
+          "annotator_id": "ann_01",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "MIMIC-IV FHIR resource timeline accurately represented."
+        },
+        "annotator_2": {
+          "annotator_id": "ann_02",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Antibiotic escalation/de-escalation timeline accurate."
+        },
+        "adjudicator": {
+          "adjudicator_id": "adj_01",
+          "consensus_rating": "ACCURATE",
+          "final_fact_retained": true,
+          "final_false_positive": false,
+          "final_false_negative": false,
+          "adjudication_status": "CONCORDANT"
+        }
+      }
+    },
+    {
+      "task_id": "mimic_task_002",
+      "corpus": "mimic_on_fhir",
+      "subject_id": "mimic_subj_3002",
+      "encounter_id": "enc_mimic_402",
+      "domain": "diagnoses_problems",
+      "prompt_summary": "Acute on chronic heart failure decompensation problem list updating during hospital stay.",
+      "longitudinal_sequence": [
+        {
+          "offset_minutes": 0,
+          "event_type": "condition_record",
+          "details": "Chronic systolic heart failure (ICD-10 I50.22)",
+          "valid_from_offset": 0
+        },
+        {
+          "offset_minutes": 60,
+          "event_type": "condition_record",
+          "details": "Acute decompensated heart failure (ICD-10 I50.21)",
+          "valid_from_offset": 60
+        },
+        {
+          "offset_minutes": 4320,
+          "event_type": "condition_resolved",
+          "details": "Acute decompensation resolved; compensated status restored",
+          "valid_from_offset": 4320
+        }
+      ],
+      "expected_ground_truth": {
+        "underlying_condition": "Chronic systolic heart failure",
+        "acute_exacerbation_history": true,
+        "resolved_at_discharge": true,
+        "state_reconstruction_correct": true
+      },
+      "dual_annotator_packets": {
+        "annotator_1": {
+          "annotator_id": "ann_01",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Problem list state matches MIMIC-IV FHIR Condition resources."
+        },
+        "annotator_2": {
+          "annotator_id": "ann_02",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Acute event resolution properly tracked."
+        },
+        "adjudicator": {
+          "adjudicator_id": "adj_01",
+          "consensus_rating": "ACCURATE",
+          "final_fact_retained": true,
+          "final_false_positive": false,
+          "final_false_negative": false,
+          "adjudication_status": "CONCORDANT"
+        }
+      }
+    },
+    {
+      "task_id": "diabetes130_task_001",
+      "corpus": "diabetes_130",
+      "subject_id": "diab_subj_4001",
+      "encounter_id": "enc_diab_501",
+      "domain": "medications",
+      "prompt_summary": "Diabetes 130-US Hospitals dataset multi-regimen insulin adjustment during readmission timeline.",
+      "longitudinal_sequence": [
+        {
+          "offset_minutes": 0,
+          "event_type": "medication_record",
+          "details": "Metformin 1000mg BID + Glipizide 10mg daily on admission (HbA1c 9.8%)",
+          "valid_from_offset": 0
+        },
+        {
+          "offset_minutes": 1440,
+          "event_type": "medication_change",
+          "details": "Glipizide stopped; NPH Insulin 20 units QAM + Regular Insulin sliding scale started",
+          "valid_from_offset": 1440
+        },
+        {
+          "offset_minutes": 4320,
+          "event_type": "medication_discharge",
+          "details": "Discharged on Metformin 1000mg BID + Insulin Glargine 18 units QHS",
+          "valid_from_offset": 4320
+        }
+      ],
+      "expected_ground_truth": {
+        "discharge_regimen": [
+          "Metformin 1000mg BID",
+          "Insulin Glargine 18 units QHS"
+        ],
+        "stopped_medications": [
+          "Glipizide 10mg daily"
+        ],
+        "state_reconstruction_correct": true
+      },
+      "dual_annotator_packets": {
+        "annotator_1": {
+          "annotator_id": "ann_01",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Diabetes 130 inpatient regimen change correctly captured."
+        },
+        "annotator_2": {
+          "annotator_id": "ann_02",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Discharge medication state accurately reconstructed."
+        },
+        "adjudicator": {
+          "adjudicator_id": "adj_01",
+          "consensus_rating": "ACCURATE",
+          "final_fact_retained": true,
+          "final_false_positive": false,
+          "final_false_negative": false,
+          "adjudication_status": "CONCORDANT"
+        }
+      }
+    },
+    {
+      "task_id": "diabetes130_task_002",
+      "corpus": "diabetes_130",
+      "subject_id": "diab_subj_4002",
+      "encounter_id": "enc_diab_502",
+      "domain": "longitudinal_continuity",
+      "prompt_summary": "Readmission risk tracking and glycemic control trajectory across 30-day encounter boundary.",
+      "longitudinal_sequence": [
+        {
+          "offset_minutes": 0,
+          "event_type": "encounter_admission",
+          "details": "Admission 1: Severe hyperglycemia (Glucose 340 mg/dL)",
+          "valid_from_offset": 0
+        },
+        {
+          "offset_minutes": 5760,
+          "event_type": "encounter_discharge",
+          "details": "Discharge 1: Regimen adjusted to basal-bolus insulin",
+          "valid_from_offset": 5760
+        },
+        {
+          "offset_minutes": 28800,
+          "event_type": "readmission_30d",
+          "details": "Admission 2 (Day 20): Hypoglycemia episode (Glucose 48 mg/dL)",
+          "valid_from_offset": 28800
+        }
+      ],
+      "expected_ground_truth": {
+        "readmission_within_30d": true,
+        "readmission_reason": "Hypoglycemia",
+        "state_reconstruction_correct": true
+      },
+      "dual_annotator_packets": {
+        "annotator_1": {
+          "annotator_id": "ann_01",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "30-day readmission link verified against Diabetes 130 record."
+        },
+        "annotator_2": {
+          "annotator_id": "ann_02",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Hypoglycemic event after discharge correctly flagged."
+        },
+        "adjudicator": {
+          "adjudicator_id": "adj_01",
+          "consensus_rating": "ACCURATE",
+          "final_fact_retained": true,
+          "final_false_positive": false,
+          "final_false_negative": false,
+          "adjudication_status": "CONCORDANT"
+        }
+      }
+    },
+    {
+      "task_id": "mimic_task_003_edge_case",
+      "corpus": "mimic_on_fhir",
+      "subject_id": "mimic_subj_3003",
+      "encounter_id": "enc_mimic_403",
+      "domain": "longitudinal_continuity",
+      "prompt_summary": "Conflicting lab report timeline requiring dual-annotator adjudication.",
+      "longitudinal_sequence": [
+        {
+          "offset_minutes": 0,
+          "event_type": "lab_report",
+          "details": "Troponin T 0.04 ng/mL (normal)",
+          "valid_from_offset": 0
+        },
+        {
+          "offset_minutes": 180,
+          "event_type": "lab_report",
+          "details": "Troponin T 1.85 ng/mL (elevated, NSTEMI pattern)",
+          "valid_from_offset": 180
+        },
+        {
+          "offset_minutes": 360,
+          "event_type": "lab_amendment",
+          "details": "Lab amendment: previous 1.85 result confirmed, peak Troponin T 2.10 ng/mL",
+          "valid_from_offset": 360
+        }
+      ],
+      "expected_ground_truth": {
+        "peak_troponin": 2.10,
+        "cardiac_event_confirmed": true,
+        "state_reconstruction_correct": true
+      },
+      "dual_annotator_packets": {
+        "annotator_1": {
+          "annotator_id": "ann_01",
+          "rating": "ACCURATE",
+          "fact_retained": true,
+          "false_positive": false,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Lab amendment sequence resolved to peak 2.10."
+        },
+        "annotator_2": {
+          "annotator_id": "ann_02",
+          "rating": "MINOR_DISCREPANCY",
+          "fact_retained": true,
+          "false_positive": true,
+          "false_negative": false,
+          "temporal_continuity_correct": true,
+          "notes": "Flagged intermediate 1.85 result as potential duplicate state."
+        },
+        "adjudicator": {
+          "adjudicator_id": "adj_01",
+          "consensus_rating": "ACCURATE",
+          "final_fact_retained": true,
+          "final_false_positive": false,
+          "final_false_negative": false,
+          "adjudication_status": "RESOLVED_BY_ADJUDICATOR"
+        }
+      }
+    }
+  ]
+}

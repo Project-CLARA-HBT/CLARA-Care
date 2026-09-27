@@ -1,0 +1,119 @@
+{
+  "analysis_plan_hash": "6bace756f911bd2b0b2e5ed0f1d9e04cc2b89c3be5232505d5d5448ad020b262",
+  "arm_definitions": {
+    "B000": "Unbound negative baseline: Snapshot identity, content digest, and evidence membership checks are omitted, leaving standard non-binding governance active.",
+    "GLHS_B111": "Production GLHS full exact-binding: Snapshot identity, content digest, evidence membership, and full governance coordinates enforced via validate_bound_proposal_context.",
+    "HMAC_READSET_TOKEN": "HMAC-SHA256 authenticated minimal read-set token using experiment-scoped server key to evaluate transport authentication and integrity verification overhead.",
+    "MIN_READSET_TOKEN": "Minimal unsigned read-set token containing compact state dependencies, evidence commitment, snapshot coordinates, and governance metadata."
+  },
+  "arms": [
+    "GLHS_B111",
+    "MIN_READSET_TOKEN",
+    "HMAC_READSET_TOKEN",
+    "B000"
+  ],
+  "code_revision": "81f040d3",
+  "environment": {
+    "db": "isolated_postgresql_or_isolated_sqlite",
+    "machine": "x86_64",
+    "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+    "pytest": "9.1.1",
+    "python": "3.12.3",
+    "sqlalchemy": "2.0.46",
+    "system": "Linux"
+  },
+  "freeze_id": "GLHS-MINIMAL-BASELINE-20260928-01",
+  "freeze_utc": "2026-09-28T00:00:00+00:00",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "primary_analysis": {
+    "adaptive_sample_size": false,
+    "byte_overhead_comparison": "Serialized canonical metadata bytes per schedule for full GLHS proposal/manifest vs MIN_READSET_TOKEN vs HMAC_READSET_TOKEN",
+    "comparators": [
+      "GLHS_B111",
+      "MIN_READSET_TOKEN",
+      "HMAC_READSET_TOKEN",
+      "B000"
+    ],
+    "controls": "100% valid-commit acceptance across all arms over 96 clean controls",
+    "decision_agreement": "Exact agreement, discordant pair counts (a, b), and McNemar test comparing each minimal token arm against GLHS_B111",
+    "endpoint": "Primary: Paired decision disagreement and false acceptance/rejection across 352 schedules x 4 arms (1,408 total executions), metadata byte overhead, and validation CPU latency.",
+    "total_executions": 1408,
+    "validation_latency": "Validation CPU execution time in microseconds (mean, p50, p95, p99)"
+  },
+  "protocol_hash": "cf80f378736c279f4bf31328e54263d168465b9e8d65b5e69b913bd21bbb1265",
+  "schedule_families": [
+    {
+      "definition": "Replaces snapshot ID with another valid snapshot ID for the same patient",
+      "disclosure_delta_type": "snapshot_id_substitution",
+      "family_id": 1,
+      "name": "ID-SUB"
+    },
+    {
+      "definition": "Mutates snapshot digest bytes while keeping snapshot ID intact",
+      "disclosure_delta_type": "snapshot_digest_mutation",
+      "family_id": 2,
+      "name": "DIGEST-MUT"
+    },
+    {
+      "definition": "Injects evidence ID that was NOT part of the THSS snapshot disclosure",
+      "disclosure_delta_type": "evidence_not_disclosed",
+      "family_id": 3,
+      "name": "EVIDENCE-OUTSIDE"
+    },
+    {
+      "definition": "Swaps evidence subset for a different subset under matching state version",
+      "disclosure_delta_type": "minimized_evidence_swap",
+      "family_id": 4,
+      "name": "MIN-SET-SWAP"
+    },
+    {
+      "definition": "Reuses snapshot from another patient or session at the same state version",
+      "disclosure_delta_type": "cross_patient_or_session_snapshot_reuse",
+      "family_id": 5,
+      "name": "CROSS-SNAPSHOT-SAME-VERSION"
+    },
+    {
+      "definition": "Mutates actor/purpose/task coordinates while authorization is otherwise admissible",
+      "disclosure_delta_type": "coordinate_substitution",
+      "family_id": 6,
+      "name": "COORD-SUB"
+    },
+    {
+      "definition": "Substitutes root proposal binding in reviewed proposals",
+      "disclosure_delta_type": "lineage_root_substitution",
+      "family_id": 7,
+      "name": "LINEAGE-ROOT-SUB"
+    },
+    {
+      "definition": "Negative control with expired snapshot lease",
+      "disclosure_delta_type": "expired_snapshot_lease",
+      "family_id": 8,
+      "name": "EXPIRY-CONTROL"
+    },
+    {
+      "definition": "Valid positive control schedules that MUST be accepted across all arms",
+      "disclosure_delta_type": "none_clean_control",
+      "family_id": 9,
+      "name": "CLEAN"
+    }
+  ],
+  "schedule_inventory": {
+    "adversarial": 256,
+    "controls": 96,
+    "per_family": {
+      "CLEAN": 96,
+      "COORD-SUB": 32,
+      "CROSS-SNAPSHOT-SAME-VERSION": 32,
+      "DIGEST-MUT": 32,
+      "EVIDENCE-OUTSIDE": 32,
+      "EXPIRY-CONTROL": 32,
+      "ID-SUB": 32,
+      "LINEAGE-ROOT-SUB": 32,
+      "MIN-SET-SWAP": 32
+    },
+    "schedules_sha256": "d2aff36f84beb51589fe411a7668b228011fd52c07e09cb8e50ebcd2d618ab5f",
+    "total": 352
+  },
+  "schema_version": "glhs-minimal-baseline-protocol.v1",
+  "status": "FROZEN"
+}

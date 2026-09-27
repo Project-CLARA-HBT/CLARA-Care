@@ -1,0 +1,15 @@
+experiment_id,priority,primary_question,existing_reuse,new_work,scientific_unit,primary_endpoint,manuscript_role
+E00,P0,Does manuscript match final implementation?,gateway/canonical_json/commit_kernel/commitment_gateway,Paper-code synchronization and route inventory,implementation contract,material discrepancy count,Methods validity gate
+E01,P0,Which binding components matter?,glhs_binding_only_ablation,2^3 identity-digest-evidence component ablation,logical schedule,invalid acceptance and clean acceptance,Novelty/minimality core
+E02,P0,Can a simpler mechanism enforce same invariant?,standards_composed_baseline,MIN_READSET_TOKEN plus optional HMAC variant,logical schedule,decision disagreement/false accept/false reject,Alternative-design baseline
+E03,P0,Can THSS-derived proposals downgrade to weak path?,commitment lineage and mandatory binding tests,Static route inventory plus negative path schedules,write path / logical schedule,downgrade success,Scope/universal-path boundary
+E04,P0,Does safety hold beyond 12 hand-authored races?,glhs_postgres_toctou primitives,Generated frozen PostgreSQL TOCTOU campaign,unique logical schedule,forbidden commit,Broader concurrency evidence
+E05,P0,Why did V2-05/V2-09 mismatch expectations?,historical protocol_v2 and repetition artifacts,Instrumented replay/root-cause analysis,historical logical schedule,classified root cause,Reconcile prior limitation
+E06,P0,Are proposal dependencies complete?,commit_kernel dependency vector/property tests,Schema-derived dependency contract and omission mutations,mutation case,accepted required-dependency omission,Close central safety assumption
+E07,P1,Are snapshot bytes interoperably canonical?,canonical_json.py,Machine-readable RFC8785 vectors and cross-runtime check,test vector,byte/digest equality,Protocol reproducibility
+E08,P1,Do bounded model invariants hold?,formal_governance,Seal documented model plus mutation checks,bounded state/transition exploration,invariant violations,Formal assurance supplement
+E09,P1,How does partitioning behave under realistic overlap?,DAG/Zipfian/contention runners,Frozen multifactor workload,workload cell/run,false stale/true stale/throughput,Systems characterization
+E10,P2,What is end-to-end overhead?,fullstack_benchmark,HTTP boundary and larger steady-state workload,independent run,latency/throughput/resource metrics,Supplementary performance
+E11,P1,Does large context result replicate across two model families?,CommitLoop v5+ infrastructure,New source-disjoint prospective two-model freeze,subject,paired all-axes exact difference/equivalence,Secondary model-utility evidence
+E12,P1,Are malformed outputs condition-dependent?,malformed_audit_v1,Prospective taxonomy and repair/retry sensitivity,model-condition generation,malformed rate and recovery,Construct-validity analysis
+E13,P2,Does evidence transport beyond synthetic author-built cases?,external_validation/model_adjudication,Independent curator/optional clinician labels,subject/task,external correctness/agreement,Health-informatics generalization

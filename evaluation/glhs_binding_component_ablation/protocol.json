@@ -1,0 +1,45 @@
+{
+  "analysis_plan_hash": "cf123fa578945c7ba0dee954c7f6b47beea0fdbe3059682a6e5bba924f1870ce",
+  "arm_definitions": {
+    "B000": "None (all 3 binding components disabled)",
+    "B001": "Evidence Membership Only",
+    "B010": "Snapshot Digest Only",
+    "B011": "Digest + Evidence",
+    "B100": "Snapshot Identity Only",
+    "B101": "Identity + Evidence",
+    "B110": "Identity + Digest",
+    "B111": "Full Exact Binding (Identity + Digest + Evidence)"
+  },
+  "arms": [
+    "B000",
+    "B100",
+    "B010",
+    "B001",
+    "B110",
+    "B101",
+    "B011",
+    "B111"
+  ],
+  "freeze_id": "GLHS-E01-COMPONENT-ABLATION-20260928-01",
+  "freeze_utc": "2026-09-28T00:00:00+00:00",
+  "primary_analysis": {
+    "adaptive_sample_size": false,
+    "bootstrap_iterations": 10000,
+    "bootstrap_seed": 20260928,
+    "ci95": "95% Wilson score and paired bootstrap percentile CI",
+    "controls": "valid-commit acceptance per arm over 96 clean controls",
+    "denominator": 256,
+    "endpoint": "Factorial invalid-commit acceptance on 256 adversarial schedules over 8 component arms B000-B111",
+    "exact_mcnemar": "exact two-sided McNemar test against B111",
+    "logistic_regression": "2^3 factorial logistic regression estimating main effects and interactions"
+  },
+  "protocol_hash": "83daf789e53f06d86a1a16f6914a26609ea5bf27e1403b8cbfb1a21179da97af",
+  "schedule_inventory": {
+    "adversarial": 256,
+    "controls": 96,
+    "schedules_sha256": "915142d4d646bdeedf5ff1efa1580b14bb8f64a588e1c31c7242596c177d8ef9",
+    "total": 352
+  },
+  "schema_version": "glhs-binding-component-ablation-protocol.v1",
+  "status": "FROZEN"
+}

@@ -1,0 +1,19 @@
+{
+  "adjudication_type": "SYNTHETIC_MODEL_ADJUDICATION",
+  "checksums_sha256": "1496bc6138799bd6549b20e375edaf63e7e8350976ab54d3e58aadbd74aec963",
+  "cohen_kappa": 0.0,
+  "fact_retention_accuracy": 1.0,
+  "false_negative_rate": 0.0,
+  "false_positive_rate": 0.0,
+  "freeze_id": "GLHS-EXTERNAL-VALIDATION-E13-20260928-01",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "human_adjudication_status": "NOT_RUN_HUMAN_UNAVAILABLE",
+  "independent_human_claim_eligible": false,
+  "krippendorff_alpha": 4.440892098500626e-16,
+  "raw_results_sha256": "da4216530111e0d77a32f67b8abcda9ed58cde7f2274b51c0605668ba249a183",
+  "schema_version": "glhs-e13-external-validation-seal-v1",
+  "sealed_utc": "2026-09-28T00:00:00+00:00",
+  "statistical_targets_met": false,
+  "status": "SEALED",
+  "total_tasks": 9
+}

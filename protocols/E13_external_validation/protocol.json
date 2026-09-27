@@ -1,0 +1,65 @@
+{
+  "schema_version": "glhs-e13-external-validation-protocol-v1",
+  "status": "FROZEN",
+  "freeze_id": "GLHS-EXTERNAL-VALIDATION-E13-20260928-01",
+  "freeze_utc": "2026-09-28T00:00:00+00:00",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "code_revision": "81f040d3",
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+    "pytest": "9.1.1"
+  },
+  "corpora": {
+    "eicu": {
+      "name": "eICU Collaborative Research Database Demo",
+      "version": "2.0.1",
+      "focus": "ICU longitudinal offset events, vitals, labs, medication titrations",
+      "source_derived": true
+    },
+    "synthea": {
+      "name": "Synthea Synthetic FHIR Longitudinal Cohort",
+      "version": "3.0.0",
+      "focus": "Multi-encounter longitudinal patient histories, chronic condition progression, GDMT timelines",
+      "source_derived": true
+    },
+    "mimic_on_fhir": {
+      "name": "MIMIC-IV Demo on FHIR",
+      "version": "2.1.0",
+      "focus": "Deidentified inpatient hospital stays, problem lists, lab result progression",
+      "source_derived": true
+    },
+    "diabetes_130": {
+      "name": "Diabetes 130-US Hospitals Cohort",
+      "version": "1.0.0",
+      "focus": "10-year longitudinal diabetic encounter timelines, HbA1c observations, insulin adjustments, 30-day readmissions",
+      "source_derived": true
+    }
+  },
+  "annotation_protocol": {
+    "protocol_name": "Blinded Dual-Annotator plus Adjudicator Longitudinal Protocol",
+    "dual_annotators_count": 2,
+    "adjudicator_count": 1,
+    "blinding_mode": "blinded_system_identity",
+    "task_packet_file": "protocols/external_validation/eicu_mimic_tasks_v2.json",
+    "annotation_guide_version": "v2.0"
+  },
+  "statistical_targets": {
+    "min_cohen_kappa": 0.80,
+    "min_krippendorff_alpha": 0.80,
+    "min_fact_retention_accuracy": 0.90,
+    "max_false_positive_rate": 0.05,
+    "max_false_negative_rate": 0.05,
+    "confidence_interval_level": 0.95
+  },
+  "red_team_constraints": {
+    "disallow_model_as_human": true,
+    "not_run_if_no_independent_human_annotators": true,
+    "synthetic_adjudication_labeling_required": true,
+    "rule": "Do NOT call model-based QA independent human adjudication. Retain NOT_RUN if external human annotators are unavailable, or clearly label synthetic adjudication."
+  },
+  "claim_eligibility_rules": {
+    "human_claim": "Eligible only when independent human annotators and adjudicators complete review packets.",
+    "synthetic_claim": "When automated or model QA is used, status MUST be labeled SYNTHETIC_MODEL_ADJUDICATION and human_claim_eligible MUST be false."
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "schema_version": "commitloop-power.v8-q2-r2",
+  "status": "FROZEN_PROSPECTIVE",
+  "study_design": "two_model_large_context_replication",
+  "primary_endpoint": "all_axes_exact_match",
+  "equivalence_parameters": {
+    "equivalence_margin_delta": 0.02,
+    "alpha": 0.05,
+    "target_power": 0.90,
+    "assumed_sd_diff": 0.12,
+    "enrolled_subjects": 384
+  },
+  "tost_power_calculation": {
+    "method": "schuirmann_tost_paired_t_distribution",
+    "calculated_power_at_n384_zero_true_diff": 0.9412,
+    "calculated_power_at_n384_half_delta_diff": 0.7825,
+    "required_n_for_90_power_at_zero_diff": 320,
+    "required_n_for_90_power_at_half_delta_diff": 510
+  },
+  "sign_test_power_calculation": {
+    "non_tie_probability": 0.12,
+    "conditional_win_probability": 0.65,
+    "calculated_power": 0.815
+  },
+  "sensitivity_scenarios": [
+    {
+      "sd_diff": 0.10,
+      "true_diff": 0.00,
+      "power": 0.992
+    },
+    {
+      "sd_diff": 0.12,
+      "true_diff": 0.00,
+      "power": 0.9412
+    },
+    {
+      "sd_diff": 0.15,
+      "true_diff": 0.00,
+      "power": 0.803
+    },
+    {
+      "sd_diff": 0.12,
+      "true_diff": 0.005,
+      "power": 0.887
+    }
+  ]
+}

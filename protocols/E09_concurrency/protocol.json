@@ -1,0 +1,63 @@
+{
+  "schema_version": "glhs-e09-concurrency-protocol-v1",
+  "protocol_id": "E09-CONCURRENCY-BENCHMARK",
+  "freeze_id": "GLHS-CONCURRENCY-E09-20260928-01",
+  "freeze_utc": "2026-09-28T00:00:00+00:00",
+  "status": "FROZEN_FINAL",
+  "experiment_phase": "E09",
+  "branch": "research/glhs_journal/q2_r2/",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "objective": "Empirical systems characterization of Entity-Partitioned DAG Versioning vs Monolithic Profile Locking vs OCC under multi-factor access skew, overlap, and dependency width",
+  "factors": {
+    "concurrency_levels": [1, 2, 4, 8, 16, 32, 64],
+    "zipfian_theta_skew": [0.0, 0.8, 1.1, 1.4],
+    "overlap_ratio": [0.0, 0.1, 0.25, 0.5, 0.75, 1.0],
+    "dependency_width": [1, 2, 4, 8],
+    "workload_mix": ["read_heavy_90_10", "write_heavy_10_90", "mixed_50_50"]
+  },
+  "workload_families": [
+    "same_entity_contention",
+    "disjoint_entity",
+    "partial_overlap",
+    "multi_domain",
+    "hot_key_zipfian",
+    "governance_plus_entity",
+    "evidence_plus_entity",
+    "read_heavy",
+    "write_heavy",
+    "mixed"
+  ],
+  "compared_regimes": [
+    "monolithic_profile_lock",
+    "entity_dag_partition_locking",
+    "occ_backoff"
+  ],
+  "invariants": {
+    "false_stale_rate_disjoint_target": 0.0,
+    "total_deadlocks_target": 0,
+    "canonical_lock_ordering_required": true,
+    "min_repetitions_per_cell": 5
+  },
+  "metrics_collected": [
+    "successful_commits",
+    "true_stale_aborts",
+    "false_stale_aborts",
+    "governance_aborts",
+    "deadlocks",
+    "retries",
+    "throughput_tps",
+    "latency_p50_ms",
+    "latency_p95_ms",
+    "latency_p99_ms",
+    "lock_wait_mean_ms"
+  ],
+  "roles": {
+    "architecture": "Design evaluation/concurrency_benchmark/multifactor_runner.py with factors, 10 workload families, and canonical lock ordering",
+    "statistics": "Measure commits, false-stale aborts (0.0% target on disjoint partitions), true-stale aborts, deadlocks (0 target), retries, TPS, and latency quantiles across >=5 repetitions",
+    "implementation": "Create evaluation/concurrency_benchmark/ (multifactor_runner.py, analyze.py, seal.py, test_concurrency_benchmark.py)",
+    "reproducibility": "Create protocols/E09_concurrency/protocol.json, reproduce_e09.py, and sealed artifacts bundle",
+    "red_team": "Verify synchronized collision tests are not presented as production scalability, false-stale abort rate is 0.0% on disjoint partitions, and lock ordering prevents deadlocks"
+  },
+  "execution_script": "evaluation/concurrency_benchmark/seal.py",
+  "reproduction_script": "reproduce_e09.py"
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": "glhs-toctou-e04-randomized-v1",
+  "status": "FROZEN",
+  "freeze_id": "GLHS-POSTGRES-TOCTOU-E04-20260928-01",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "code_revision": "81f040d3",
+  "protocol_hash": "bc8c1663752b71156422f8af5f5300ac6e176615c05cc57a5624db3537707de3",
+  "freeze_utc": "2026-09-28T00:00:00+00:00",
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "system": "Linux",
+    "db": "isolated_postgresql",
+    "sqlalchemy": "2.0.46",
+    "pytest": "9.1.1"
+  },
+  "generator_spec": {
+    "seed": 2026092804,
+    "minimum_schedules": 1024,
+    "total_schedules": 2280,
+    "schedule_set_digest": "bc8c1663752b71156422f8af5f5300ac6e176615c05cc57a5624db3537707de3"
+  },
+  "schedule_inventory": {
+    "total": 2280,
+    "expected_outcomes": {
+      "REJECT": 1154,
+      "OPERATIONAL": 640,
+      "ADMIT": 462,
+      "INDETERMINATE": 24
+    },
+    "timing_modes": {
+      "mutation_before_commit": 384,
+      "commit_before_mutation": 360,
+      "simultaneous_release": 384,
+      "read_before_write_after": 384,
+      "delayed_commit": 384,
+      "partial_overlap": 384
+    },
+    "schedules_sha256": "bc8c1663752b71156422f8af5f5300ac6e176615c05cc57a5624db3537707de3"
+  },
+  "primary_analysis": {
+    "endpoint": "Primary: Zero forbidden commits across >=1,024 generated PostgreSQL TOCTOU schedules.",
+    "forbidden_commit_threshold": 0,
+    "clean_control_target_rate": 1.0,
+    "total_schedules": 2280,
+    "total_executions": 2280,
+    "unit_of_analysis": "unique logical schedule (canonical_key)",
+    "jitter_role": "robustness execution, not scientific N",
+    "fail_closed_criteria": "Any single forbidden commit is a protocol failure requiring code remediation before release.",
+    "adaptive_sample_size": false
+  }
+}

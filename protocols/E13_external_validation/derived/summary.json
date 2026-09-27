@@ -1,0 +1,134 @@
+{
+  "adjudication_type": "SYNTHETIC_MODEL_ADJUDICATION",
+  "fact_retention_accuracy": {
+    "ci_95": [
+      0.7008549515804559,
+      1.0
+    ],
+    "point_estimate": 1.0,
+    "retained_count": 9,
+    "total_count": 9
+  },
+  "false_negative_rate": {
+    "ci_95": [
+      0.0,
+      0.2991450484195441
+    ],
+    "fn_count": 0,
+    "point_estimate": 0.0,
+    "total_count": 9
+  },
+  "false_positive_rate": {
+    "ci_95": [
+      0.0,
+      0.2991450484195441
+    ],
+    "fp_count": 0,
+    "point_estimate": 0.0,
+    "total_count": 9
+  },
+  "freeze_id": "GLHS-EXTERNAL-VALIDATION-E13-20260928-01",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "human_adjudication_status": "NOT_RUN_HUMAN_UNAVAILABLE",
+  "independent_human_claim_eligible": false,
+  "inter_rater_agreement": {
+    "cohen_kappa": 0.0,
+    "krippendorff_alpha": 4.440892098500626e-16,
+    "target_alpha": 0.8,
+    "target_kappa": 0.8
+  },
+  "per_corpus_breakdown": {
+    "diabetes_130": {
+      "cohen_kappa": 1.0,
+      "fact_retention_accuracy": 1.0,
+      "fact_retention_ci_95": [
+        0.34238022750665303,
+        1.0
+      ],
+      "false_negative_ci_95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "false_negative_rate": 0.0,
+      "false_positive_ci_95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "false_positive_rate": 0.0,
+      "total_tasks": 2
+    },
+    "eicu": {
+      "cohen_kappa": 1.0,
+      "fact_retention_accuracy": 1.0,
+      "fact_retention_ci_95": [
+        0.34238022750665303,
+        1.0
+      ],
+      "false_negative_ci_95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "false_negative_rate": 0.0,
+      "false_positive_ci_95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "false_positive_rate": 0.0,
+      "total_tasks": 2
+    },
+    "mimic_on_fhir": {
+      "cohen_kappa": 0.0,
+      "fact_retention_accuracy": 1.0,
+      "fact_retention_ci_95": [
+        0.4385029682449546,
+        1.0
+      ],
+      "false_negative_ci_95": [
+        0.0,
+        0.5614970317550454
+      ],
+      "false_negative_rate": 0.0,
+      "false_positive_ci_95": [
+        0.0,
+        0.5614970317550454
+      ],
+      "false_positive_rate": 0.0,
+      "total_tasks": 3
+    },
+    "synthea": {
+      "cohen_kappa": 1.0,
+      "fact_retention_accuracy": 1.0,
+      "fact_retention_ci_95": [
+        0.34238022750665303,
+        1.0
+      ],
+      "false_negative_ci_95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "false_negative_rate": 0.0,
+      "false_positive_ci_95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "false_positive_rate": 0.0,
+      "total_tasks": 2
+    }
+  },
+  "red_team_guardrails": {
+    "disallow_model_as_human_enforced": true,
+    "red_team_rule": "Model-based QA is strictly labeled as SYNTHETIC_MODEL_ADJUDICATION and ineligible for independent human clinical claim."
+  },
+  "schema_version": "glhs-e13-external-summary-v1",
+  "state_reconstruction_accuracy": {
+    "ci_95": [
+      0.7008549515804559,
+      1.0
+    ],
+    "pass_count": 9,
+    "point_estimate": 1.0,
+    "total_count": 9
+  },
+  "statistical_targets_met": false,
+  "total_tasks": 9
+}

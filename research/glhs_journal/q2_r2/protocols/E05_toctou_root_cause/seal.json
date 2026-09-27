@@ -1,0 +1,30 @@
+{
+  "artifact_inventory": {
+    "E05_root_cause_analysis.json": "f95d761eb13a54b6d2a61bd3b27c58076a8a67706a0c8377aa13573f835977ef",
+    "protocol.json": "0fb3ed4996b5b877a3b91c50c4824a086fe08e696aeab685c376f23078b6ceef",
+    "replay_v2_05_results.json": "43e85854ad29e7c559e0996d53a3bca6e349e391beca4e01fc6f968173e57152",
+    "replay_v2_09_results.json": "ce74cfdb58d7c63c13005253406bb50cb879b32f271ea24e885f3d9771383dc6"
+  },
+  "claim_eligible": true,
+  "forbidden_commits_observed": 0,
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "mismatched_schedules": [
+    "TOCTOU-V2-05",
+    "TOCTOU-V2-09"
+  ],
+  "protocol_id": "E05-TOCTOU-ROOT-CAUSE",
+  "protocol_sha256": "0fb3ed4996b5b877a3b91c50c4824a086fe08e696aeab685c376f23078b6ceef",
+  "replay_v2_05_sha256": "43e85854ad29e7c559e0996d53a3bca6e349e391beca4e01fc6f968173e57152",
+  "replay_v2_09_sha256": "ce74cfdb58d7c63c13005253406bb50cb879b32f271ea24e885f3d9771383dc6",
+  "root_cause_analysis_sha256": "f95d761eb13a54b6d2a61bd3b27c58076a8a67706a0c8377aa13573f835977ef",
+  "run_id": "GLHS-E05-ROOT-CAUSE-20260928",
+  "safety_verdict": "SAFETY_PRESERVED",
+  "schema_version": "glhs-e05-root-cause-seal-v1",
+  "sealed_at_utc": "2026-09-27T20:41:17.548379+00:00",
+  "status": "SEALED",
+  "total_perturbations": 200,
+  "v205_perturbations": 100,
+  "v205_root_cause": "conservative_safe_rejection_by_implementation",
+  "v209_perturbations": 100,
+  "v209_root_cause": "conservative_safe_rejection_by_implementation"
+}

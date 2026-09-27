@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "inventory_version": "glhs-q2-r2-implementation-inventory.v1",
+  "generated_at": "2026-09-28T00:00:00Z",
+  "git_commit": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "branch": "research/glhs-q2-r2-experiments",
+  "experiments": {
+    "E00": {
+      "name": "Paper/Code Synchronization & Preflight",
+      "priority": "P0",
+      "status": "PASSED_GATE_0",
+      "existing_modules": [
+        "services/api/src/clara_api/glhs/gateway.py",
+        "services/api/src/clara_api/glhs/commit_kernel.py",
+        "services/api/src/clara_api/glhs/canonical_json.py",
+        "services/api/tests/test_glhs_gateway.py",
+        "services/api/tests/test_glhs_commit_kernel.py"
+      ],
+      "required_new_modules": [
+        "research/glhs_journal/q2_r2/paper_code_sync/R2_CODE_MANUSCRIPT_SYNC.md",
+        "research/glhs_journal/q2_r2/paper_code_sync/R2_IMPLEMENTATION_INVENTORY.json",
+        "research/glhs_journal/q2_r2/paper_code_sync/R2_CLAIM_CODE_TRACE.csv",
+        "research/glhs_journal/q2_r2/paper_code_sync/R2_BLOCKER_LEDGER.json"
+      ],
+      "database_backend": "none",
+      "fail_closed_checks": ["clean_tree_check", "zero_material_discrepancies"]
+    },
+    "E01": {
+      "name": "2^3 Binding-Component Factorial Ablation",
+      "priority": "P0",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "evaluation/glhs_binding_only_ablation/postgres_runner.py",
+        "evaluation/glhs_binding_only_ablation/adapter.py",
+        "evaluation/glhs_binding_only_ablation/observer.py"
+      ],
+      "required_new_modules": [
+        "evaluation/glhs_binding_component_ablation/__init__.py",
+        "evaluation/glhs_binding_component_ablation/binding_mask.py",
+        "evaluation/glhs_binding_component_ablation/build_schedules.py",
+        "evaluation/glhs_binding_component_ablation/adapter.py",
+        "evaluation/glhs_binding_component_ablation/postgres_runner.py",
+        "evaluation/glhs_binding_component_ablation/analyze.py",
+        "evaluation/glhs_binding_component_ablation/seal.py"
+      ],
+      "database_backend": "real_postgresql",
+      "fail_closed_checks": ["isolated_db_guard", "zero_clean_rejections", "zero_production_flags"]
+    },
+    "E02": {
+      "name": "Minimal Alternative-Design Baseline",
+      "priority": "P0",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "evaluation/comparator_studies/standards_composed_baseline/engine.py",
+        "evaluation/comparator_studies/bitemporal_state_arbitration/adapter.py"
+      ],
+      "required_new_modules": [
+        "evaluation/comparator_studies/minimal_readset_token/schema.json",
+        "evaluation/comparator_studies/minimal_readset_token/token.py",
+        "evaluation/comparator_studies/minimal_readset_token/validator.py",
+        "evaluation/comparator_studies/minimal_readset_token/postgres_adapter.py"
+      ],
+      "database_backend": "real_postgresql",
+      "fail_closed_checks": ["exact_schedule_alignment", "isolated_db_guard"]
+    },
+    "E03": {
+      "name": "Downgrade & Lineage Anti-Laundering",
+      "priority": "P0",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "services/api/src/clara_api/glhs/commitment_reconciliation.py",
+        "services/api/src/clara_api/glhs/commitment_gateway.py",
+        "services/api/tests/test_glhs_mandatory_thss_binding.py"
+      ],
+      "required_new_modules": [
+        "evaluation/glhs_downgrade/negative_schedules.json",
+        "evaluation/glhs_downgrade/runner.py",
+        "evaluation/glhs_downgrade/analyze.py"
+      ],
+      "database_backend": "real_postgresql",
+      "fail_closed_checks": ["zero_downgrade_success"]
+    },
+    "E04": {
+      "name": "Generated PostgreSQL TOCTOU Campaign",
+      "priority": "P0",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "evaluation/glhs_postgres_toctou/barrier.py",
+        "evaluation/glhs_postgres_toctou/jitter.py",
+        "evaluation/glhs_postgres_toctou/observer_v2.py",
+        "evaluation/glhs_postgres_toctou/governance_writers.py",
+        "evaluation/glhs_postgres_toctou/commit_order.py"
+      ],
+      "required_new_modules": [
+        "evaluation/glhs_toctou_r2/grammar.py",
+        "evaluation/glhs_toctou_r2/generator.py",
+        "evaluation/glhs_toctou_r2/oracle.py",
+        "evaluation/glhs_toctou_r2/executor.py",
+        "evaluation/glhs_toctou_r2/shrink.py",
+        "evaluation/glhs_toctou_r2/analyze.py"
+      ],
+      "database_backend": "real_postgresql",
+      "fail_closed_checks": ["isolated_db_guard", "zero_forbidden_commits", "admissible_outcome_compliance"]
+    },
+    "E05": {
+      "name": "Historical TOCTOU Mismatch Root-Cause Replay",
+      "priority": "P0",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "research/glhs_journal/protocol_v2/postgres_toctou_protocol_v2.json",
+        "evaluation/glhs_postgres_toctou/executor_v2.py"
+      ],
+      "required_new_modules": [
+        "evaluation/glhs_toctou_root_cause/replay_v2_05.py",
+        "evaluation/glhs_toctou_root_cause/replay_v2_09.py",
+        "evaluation/glhs_toctou_root_cause/analyze_root_cause.py"
+      ],
+      "database_backend": "real_postgresql",
+      "fail_closed_checks": ["historical_artifact_immutability", "timestamp_trace_complete"]
+    },
+    "E06": {
+      "name": "Dependency-Completeness Contract & Mutations",
+      "priority": "P0",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "services/api/src/clara_api/glhs/predicate_dsl.py",
+        "services/api/src/clara_api/glhs/commit_kernel.py"
+      ],
+      "required_new_modules": [
+        "services/api/src/clara_api/glhs/dependency_contract.py",
+        "evaluation/glhs_dependency_completeness/generate_cases.py",
+        "evaluation/glhs_dependency_completeness/mutate_dependencies.py",
+        "evaluation/glhs_dependency_completeness/postgres_runner.py",
+        "evaluation/glhs_dependency_completeness/analyze.py"
+      ],
+      "database_backend": "real_postgresql",
+      "fail_closed_checks": ["zero_accepted_omissions", "zero_accepted_write_skews"]
+    },
+    "E07": {
+      "name": "Canonicalization Conformance & Vectors",
+      "priority": "P1",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "services/api/src/clara_api/glhs/canonical_json.py",
+        "services/api/tests/test_glhs_canonical_json.py"
+      ],
+      "required_new_modules": [
+        "testdata/glhs/canonicalization/v2/vectors.json",
+        "evaluation/canonicalization/verify_node_rfc8785.js"
+      ],
+      "database_backend": "none",
+      "fail_closed_checks": ["cross_runtime_byte_equality", "legacy_profile_backward_compatibility"]
+    },
+    "E08": {
+      "name": "Sealed Bounded Formal Assurance",
+      "priority": "P1",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "evaluation/formal_governance/model.py",
+        "evaluation/formal_governance/transitions.py",
+        "evaluation/formal_governance/invariants.py",
+        "evaluation/formal_governance/explore.py",
+        "evaluation/formal_governance/tests/test_invariants.py"
+      ],
+      "required_new_modules": [
+        "evaluation/formal_governance/SPECIFICATION.md",
+        "evaluation/formal_governance/REFINEMENT_MAP.md",
+        "evaluation/formal_governance/tests/test_invariants_mutation.py",
+        "evaluation/formal_governance/seal_run.py"
+      ],
+      "database_backend": "none",
+      "fail_closed_checks": ["zero_invariant_violations", "mutation_detection_rate_100"]
+    },
+    "E09": {
+      "name": "Realistic Concurrency & Partition Benchmark",
+      "priority": "P1",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "evaluation/glhs_postgres_toctou/dag_concurrency_benchmark.py",
+        "evaluation/glhs_postgres_toctou/zipfian_concurrency_bench.py",
+        "evaluation/contention_analysis/run_postgresql.py"
+      ],
+      "required_new_modules": [
+        "evaluation/concurrency_benchmark/multifactor_runner.py",
+        "evaluation/concurrency_benchmark/analyze.py"
+      ],
+      "database_backend": "real_postgresql",
+      "fail_closed_checks": ["isolated_db_guard", "min_repetition_count_5"]
+    },
+    "E10": {
+      "name": "Full-Stack Performance Characterization",
+      "priority": "P2",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "evaluation/fullstack_benchmark/run_postgresql.py"
+      ],
+      "required_new_modules": [
+        "evaluation/fullstack_benchmark/run_http.py"
+      ],
+      "database_backend": "real_postgresql",
+      "fail_closed_checks": ["isolated_db_guard", "no_synthetic_latency_injection"]
+    },
+    "E11": {
+      "name": "Two-Model Large Context Replication",
+      "priority": "P1",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "evaluation/commitloop/v5_freeze.py",
+        "evaluation/commitloop/generation.py",
+        "evaluation/commitloop/score.py",
+        "evaluation/commitloop/statistics.py",
+        "evaluation/commitloop/tost_equivalence.py"
+      ],
+      "required_new_modules": [
+        "protocols/commitloop/v8-glhs-q2-r2/protocol.json",
+        "protocols/commitloop/v8-glhs-q2-r2/cohort.json",
+        "evaluation/commitloop/v8_runner.py"
+      ],
+      "database_backend": "none",
+      "fail_closed_checks": ["exact_model_id_lock", "zero_fallback", "pre_run_cohort_freeze"]
+    },
+    "E12": {
+      "name": "Malformed-Output Taxonomy & Sensitivity",
+      "priority": "P1",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "research/glhs_journal/malformed_audit_v1/taxonomy_parser.py"
+      ],
+      "required_new_modules": [
+        "evaluation/commitloop/malformed_sensitivity.py"
+      ],
+      "database_backend": "none",
+      "fail_closed_checks": ["itt_primary_scoring_preserved", "recovery_stratification_complete"]
+    },
+    "E13": {
+      "name": "External / Independent Validation",
+      "priority": "P2",
+      "status": "READY_FOR_EXECUTION",
+      "existing_modules": [
+        "evaluation/external_validation/run_common_offset_glhs.py",
+        "evaluation/model_adjudication/reconcile_v2.py"
+      ],
+      "required_new_modules": [
+        "protocols/external_validation/eicu_mimic_tasks_v2.json"
+      ],
+      "database_backend": "transient_or_isolated_postgresql",
+      "fail_closed_checks": ["lawful_curator_attestation", "no_synthetic_clinical_blending"]
+    }
+  }
+}

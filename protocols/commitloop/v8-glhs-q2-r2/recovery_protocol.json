@@ -1,0 +1,37 @@
+{
+  "schema_version": "commitloop-recovery-protocol.v8-q2-r2",
+  "status": "FROZEN_PROSPECTIVE",
+  "protocol_name": "malformed_sensitivity_recovery_arms",
+  "arms": {
+    "R0": {
+      "name": "ITT Primary Baseline",
+      "network_retry": false,
+      "local_repair": false,
+      "max_attempts": 1,
+      "description": "Raw provider output scored as-is under Intention-To-Treat primary protocol."
+    },
+    "R1": {
+      "name": "Deterministic Local Repair",
+      "network_retry": false,
+      "local_repair": true,
+      "max_attempts": 1,
+      "description": "Apply local deterministic JSON extraction and syntax fixes (strip markdown fences, fix trailing commas) without provider calls."
+    },
+    "R2": {
+      "name": "Identical Prompt Retry",
+      "network_retry": true,
+      "local_repair": false,
+      "max_attempts": 2,
+      "retry_prompt_type": "identical",
+      "description": "Re-issue 1 identical request to provider upon malformed/failed response."
+    },
+    "R3": {
+      "name": "Constrained Repair Prompt",
+      "network_retry": true,
+      "local_repair": true,
+      "max_attempts": 2,
+      "retry_prompt_type": "constrained_repair",
+      "description": "Re-issue 1 targeted follow-up prompt including error diagnostic message and strict JSON format schema instruction."
+    }
+  }
+}

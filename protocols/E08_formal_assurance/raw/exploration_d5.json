@@ -1,0 +1,32 @@
+{
+  "admitted": 62416,
+  "admitted_commits": 2226,
+  "distinct_canonical_coordinates": 32,
+  "i11_clean_commit_reachable": true,
+  "idempotent_replays": 46,
+  "max_depth": 5,
+  "max_depth_reached": 5,
+  "rejected": 28016,
+  "runtime_seconds": 2.4961,
+  "source_sha": "6f2b4b6e21ab2b372a01dd1f512bb1962ac896497cc71f9f747397c0a58c2c9e",
+  "states": 21361,
+  "tool_version": "w5-formal-assure-v1.0",
+  "transition_counts": {
+    "advance_policy": 4959,
+    "advance_state": 4959,
+    "change_purpose": 9918,
+    "change_role": 9918,
+    "commit": 4959,
+    "corrupt_digest": 4490,
+    "create_proposal": 35902,
+    "expire_snapshot": 4490,
+    "issue_disclosure": 1876,
+    "replay_proposal": 4959,
+    "retry": 278,
+    "revoke_consent": 3702,
+    "rollback": 22
+  },
+  "transitions_explored": 90432,
+  "violation_count": 0,
+  "violations": []
+}

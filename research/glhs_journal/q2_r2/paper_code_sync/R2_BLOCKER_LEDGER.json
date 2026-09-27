@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "program_id": "GLHS-Q2-R2-EXPERIMENT-PROGRAM",
+  "ledger_version": "1.0.0",
+  "created_at": "2026-09-28T00:00:00Z",
+  "overall_readiness": "PHASE_0_COMPLETE_READY_FOR_EXPERIMENT_EXECUTION",
+  "blockers": [
+    {
+      "id": "BLK-P0-01",
+      "priority": "P0",
+      "category": "NOVELTY_AND_MINIMALITY",
+      "title": "Exact-Binding Component Minimality and Interaction Unproven",
+      "risk_rating": "CRITICAL",
+      "threat_description": "Reviewers will claim GLHS is gratuitously complex and that snapshot ID alone or standard OCC achieves identical safety without digest or evidence membership checks.",
+      "affected_components": [
+        "services/api/src/clara_api/glhs/gateway.py",
+        "evaluation/glhs_binding_only_ablation"
+      ],
+      "required_resolution_criteria": "Execute E01 (2^3 factorial component ablation over Snapshot ID, Manifest Digest, and Evidence Membership) across >=352 frozen schedules; prove distinct failure modes for each component."
+    },
+    {
+      "id": "BLK-P0-02",
+      "priority": "P0",
+      "category": "ALTERNATIVE_DESIGN_BASELINE",
+      "title": "Absence of Direct Minimal Read-Set Token Baseline Comparator",
+      "risk_rating": "CRITICAL",
+      "threat_description": "Lack of a compact alternative baseline (MIN_READSET_TOKEN) allows reviewers to reject manuscript for failing to compare against simpler established designs.",
+      "affected_components": [
+        "evaluation/comparator_studies"
+      ],
+      "required_resolution_criteria": "Implement MIN_READSET_TOKEN and optional HMAC_READSET_TOKEN; execute identical E01 schedule corpus; report exact decision concordance, metadata size, and CPU overhead."
+    },
+    {
+      "id": "BLK-P0-03",
+      "priority": "P0",
+      "category": "CONCURRENCY_TOCTOU",
+      "title": "Unresolved Historical TOCTOU Classification Mismatches (V2-05, V2-09)",
+      "risk_rating": "HIGH",
+      "threat_description": "Historical v2 artifacts have NOT_CLAIM_ELIGIBLE status due to single-label expectations on concurrent race conditions.",
+      "affected_components": [
+        "research/glhs_journal/protocol_v2",
+        "evaluation/glhs_postgres_toctou"
+      ],
+      "required_resolution_criteria": "Instrument and execute E05 replays for V2-05 and V2-09; reformulate oracle to use Admissible Outcome Sets; scale E04 to >=1,024 generated schedules with zero forbidden commits."
+    },
+    {
+      "id": "BLK-P0-04",
+      "priority": "P0",
+      "category": "DEPENDENCY_SAFETY",
+      "title": "Kernel Vulnerability to Silent Dependency Omission (Write-Skew)",
+      "risk_rating": "CRITICAL",
+      "threat_description": "The commit kernel validates declared dependencies but cannot detect if an LLM or caller omitted critical read dependencies (e.g. lab values during dosage adjustment).",
+      "affected_components": [
+        "services/api/src/clara_api/glhs/commit_kernel.py",
+        "services/api/src/clara_api/glhs/dependency_contract.py"
+      ],
+      "required_resolution_criteria": "Implement schema-derived OperationDependencyContract enforcing static read-dependency requirements; execute E06 omission mutation tests with 0 accepted missing-dependency mutants."
+    },
+    {
+      "id": "BLK-P0-05",
+      "priority": "P0",
+      "category": "DOWNGRADE_AND_LINEAGE",
+      "title": "Potential Snapshot Binding Bypass on Alternate Persistence Routes",
+      "risk_rating": "HIGH",
+      "threat_description": "Model-originated proposals or human-adapted proposals could be routed to base-version-only OCC paths, laundering AI content without snapshot validation.",
+      "affected_components": [
+        "services/api/src/clara_api/glhs/gateway.py",
+        "services/api/src/clara_api/glhs/commitment_gateway.py"
+      ],
+      "required_resolution_criteria": "Build comprehensive static write-route AST inventory; execute E03 negative downgrade test suite across 10 distinct laundering patterns with 0 downgrade successes."
+    },
+    {
+      "id": "BLK-P1-01",
+      "priority": "P1",
+      "category": "MODEL_GENERALIZABILITY",
+      "title": "Single-Model Dependency in Context-Utility Evaluation",
+      "risk_rating": "MEDIUM",
+      "threat_description": "CommitLoop 384-subject evaluation is restricted to Claude family, risking reviewer critique on LLM architecture overfitting.",
+      "affected_components": [
+        "evaluation/commitloop"
+      ],
+      "required_resolution_criteria": "Execute E11 prospective replication across two distinct model families (Claude 3.7 Sonnet and Gemini 2.0 Flash) using sealed cohort and request randomization."
+    },
+    {
+      "id": "BLK-P1-02",
+      "priority": "P1",
+      "category": "MALFORMED_OUTPUT_AUDIT",
+      "title": "Unstratified Malformed-Output Rate in Primary Results",
+      "risk_rating": "MEDIUM",
+      "threat_description": "Aggregate 6.36% malformed rate obscures whether errors are schema syntax issues, context truncations, or provider timeouts.",
+      "affected_components": [
+        "research/glhs_journal/malformed_audit_v1"
+      ],
+      "required_resolution_criteria": "Execute E12 stratified taxonomy parser; evaluate R0 (ITT), R1 (deterministic normalize), and R2 (single retry) sensitivity arms."
+    },
+    {
+      "id": "BLK-P1-03",
+      "priority": "P1",
+      "category": "STANDARDS_CONFORMANCE",
+      "title": "Paper/Code Profile Desynchronization on Canonical JSON",
+      "risk_rating": "MEDIUM",
+      "threat_description": "Manuscript text references custom v1 profile while codebase default is RFC 8785 (v2), causing audit discrepancy.",
+      "affected_components": [
+        "services/api/src/clara_api/glhs/canonical_json.py",
+        "testdata/glhs/canonicalization"
+      ],
+      "required_resolution_criteria": "Publish machine-readable RFC 8785 test vectors (E07); add legacy v1 backward-compatibility tests; align manuscript Methods text."
+    },
+    {
+      "id": "BLK-P1-04",
+      "priority": "P1",
+      "category": "FORMAL_ASSURANCE",
+      "title": "Unpublished State Bounds and Refinement Map for Formal Model",
+      "risk_rating": "LOW",
+      "threat_description": "Formal governance model exists in Python but lacks explicit documentation on bounded search depth and formal-to-production predicate mapping.",
+      "affected_components": [
+        "evaluation/formal_governance"
+      ],
+      "required_resolution_criteria": "Publish SPECIFICATION.md and REFINEMENT_MAP.md mapping 11 invariants to production code; execute sealed exploration at depth 5 and 6 (E08)."
+    },
+    {
+      "id": "BLK-P2-01",
+      "priority": "P2",
+      "category": "PERFORMANCE_BENCHMARKING",
+      "title": "Simplistic Contention Benchmark Lacks Zipfian and Partial Overlap Distributions",
+      "risk_rating": "LOW",
+      "threat_description": "Current contention benchmarks test synthetic 100% hot-key conflict rather than realistic multi-entity clinical access patterns.",
+      "affected_components": [
+        "evaluation/contention_analysis"
+      ],
+      "required_resolution_criteria": "Execute E09 benchmark across Zipfian parameters theta in {0.8, 1.1, 1.4} and overlap ratios {0%, 25%, 50%, 100%}."
+    }
+  ]
+}

@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clara.care/schemas/minimal-readset-token.v1.json",
+  "title": "MinimalReadsetToken",
+  "description": "JSON schema for minimal read-set / disclosure tokens (MIN_READSET_TOKEN and HMAC_READSET_TOKEN) used as alternative-design baselines in E02 comparator studies.",
+  "type": "object",
+  "required": [
+    "schema",
+    "profile_id",
+    "actor_id",
+    "actor_role",
+    "purpose",
+    "task",
+    "snapshot_id",
+    "snapshot_digest",
+    "evidence_commitment",
+    "state_dependencies",
+    "policy_version",
+    "consent_version",
+    "expires_at"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "enum": ["minimal-readset-token.v1", "hmac-readset-token.v1"]
+    },
+    "profile_id": {
+      "type": ["string", "integer"],
+      "description": "Subject profile identifier."
+    },
+    "actor_id": {
+      "type": ["string", "integer"],
+      "description": "Actor user identifier authorized to observe and act on the state."
+    },
+    "actor_role": {
+      "type": "string",
+      "description": "Role of the actor when the read-set was captured (e.g. owner, clinician)."
+    },
+    "purpose": {
+      "type": "string",
+      "description": "Governed purpose of use (e.g. self_care, clinical_review)."
+    },
+    "task": {
+      "type": "string",
+      "description": "Governed clinical or administrative task."
+    },
+    "snapshot_id": {
+      "type": "string",
+      "description": "Disclosed source snapshot identifier."
+    },
+    "snapshot_digest": {
+      "type": "string",
+      "description": "Cryptographic digest of the disclosed snapshot content."
+    },
+    "evidence_commitment": {
+      "type": "string",
+      "description": "Deterministic commitment (SHA-256 or Merkle root) over the disclosed evidence set."
+    },
+    "state_dependencies": {
+      "type": "array",
+      "description": "Observed state dependencies and versions.",
+      "items": {
+        "type": "object",
+        "required": ["key", "observed_version"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Domain or semantic key dependency (e.g. domain:semantic_key)."
+          },
+          "observed_version": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Observed state version."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "policy_version": {
+      "type": "string",
+      "description": "Policy version governing the admission decision."
+    },
+    "consent_version": {
+      "type": "string",
+      "description": "Consent version in effect when the read-set was captured."
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp after which this read-set token is expired."
+    },
+    "disclosed_evidence_ids": {
+      "type": "array",
+      "description": "Optional list of disclosed evidence IDs included for provenance transparency.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "signature": {
+      "type": "string",
+      "description": "Hex-encoded HMAC-SHA256 signature for HMAC_READSET_TOKEN."
+    },
+    "signature_algorithm": {
+      "type": "string",
+      "enum": ["HMAC-SHA256", "hmac-sha256"],
+      "description": "Signature algorithm used."
+    },
+    "key_id": {
+      "type": "string",
+      "description": "Key identifier for HMAC verification."
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "schema": {
+        "const": "hmac-readset-token.v1"
+      }
+    }
+  },
+  "then": {
+    "required": ["signature", "signature_algorithm"]
+  }
+}

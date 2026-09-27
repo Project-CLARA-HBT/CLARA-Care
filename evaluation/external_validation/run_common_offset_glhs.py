@@ -75,7 +75,7 @@ TEMPORAL_MAPPING = {
 }
 # These are deliberately naive abstract coordinates.  Assigning UTC here would
 # falsely turn a source-relative ICU offset into an absolute clinical instant.
-RELATIVE_EPOCH = datetime(2000, 1, 1, tzinfo=UTC).replace(tzinfo=None)
+RELATIVE_EPOCH = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)
 POST_INGEST_KNOWLEDGE_CUTOFF = datetime(9999, 1, 1, tzinfo=UTC).replace(tzinfo=None)
 
 
@@ -268,7 +268,7 @@ def _ingest_and_reconstruct(
                 artifact_public_id=event_id,
                 fingerprint=fingerprint,
                 valid_from=valid_from,
-                valid_to=valid_to,
+                valid_to=None,
                 time_precision="unknown",
                 estimated_time=False,
             ),

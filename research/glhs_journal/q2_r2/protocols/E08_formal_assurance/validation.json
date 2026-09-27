@@ -1,0 +1,13 @@
+{
+  "claim_eligible": true,
+  "depth5_states": 21361,
+  "depth5_transitions": 90432,
+  "depth6_states": 69342,
+  "depth6_transitions": 378602,
+  "freeze_id": "GLHS-FORMAL-ASSURANCE-E08-20260928-01",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "mutation_tests_passed": true,
+  "status": "VALIDATED",
+  "total_violations": 0,
+  "validated_at_utc": "2026-09-27T19:48:16Z"
+}

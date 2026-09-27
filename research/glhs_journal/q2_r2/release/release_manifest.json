@@ -1,0 +1,146 @@
+{
+  "audited_git_commit": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "claim_eligible_experiments": 14,
+  "environment": {
+    "cpu_count": 88,
+    "machine": "x86_64",
+    "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+    "python_version": "3.12.3",
+    "system": "Linux"
+  },
+  "experiments": {
+    "E00": {
+      "artifact_dir": "research/glhs_journal/q2_r2/paper_code_sync",
+      "claim_eligible": true,
+      "name": "Paper/Code Synchronization & Preflight",
+      "protocol_path": "research/glhs_journal/q2_r2/paper_code_sync/R2_IMPLEMENTATION_INVENTORY.json",
+      "protocol_sha256": "9b841c29ae0dfb482776512fa122f194bcda9e01b5e39197521bc8355d970d0a",
+      "seal_sha256": "N/A",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E01": {
+      "artifact_dir": "artifacts/glhs-q2-r2/GLHS-Q2-R2-20260928-R01/E01_binding_components",
+      "claim_eligible": true,
+      "name": "2^3 Binding-Component Factorial Ablation",
+      "protocol_path": "protocols/E01_binding_components/protocol.json",
+      "protocol_sha256": "a842e05eda7def6ec9af76969a0899766f670e25ec87dfcdb736f7ee501f7cc6",
+      "seal_sha256": "d4f2e2837aadc8ea3ec992d75eba3a06ace4cb99561e92b17aae50322f620318",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E02": {
+      "artifact_dir": "artifacts/glhs-q2-r2/GLHS-Q2-R2-20260928-R01/E02_minimal_baseline",
+      "claim_eligible": true,
+      "name": "Minimal Alternative-Design Baseline",
+      "protocol_path": "protocols/E02_minimal_baseline/protocol.json",
+      "protocol_sha256": "2ee4c66b9ded14dc1d5a0845b4a934cc026070a003d48e6f801b0cbdee0b015c",
+      "seal_sha256": "e8b618c41bfb5a92814619a15ba14c8dfcf24f58b707bc09c3f03f0ac0f1e3a5",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E03": {
+      "artifact_dir": "artifacts/glhs-q2-r2/GLHS-Q2-R2-20260928-R01/E03_downgrade",
+      "claim_eligible": true,
+      "name": "Downgrade & Lineage Anti-Laundering",
+      "protocol_path": "protocols/E03_downgrade/protocol.json",
+      "protocol_sha256": "218696e12bda7dd02a098ab1d95984886330e5be2b84cf9142dc820a2d5ae2c5",
+      "seal_sha256": "d2a37180896a1b9d752da7996642f7d3810f45e77f5c782ac31672531387750e",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E04": {
+      "artifact_dir": "artifacts/glhs-q2-r2/GLHS-Q2-R2-20260928-R01/E04_randomized_toctou",
+      "claim_eligible": true,
+      "name": "Generated PostgreSQL TOCTOU Campaign",
+      "protocol_path": "protocols/E04_randomized_toctou/protocol.json",
+      "protocol_sha256": "6f9977ef214e4f4a696b01cfd8b1cd7ebed954a7dd8d9859fee1d6d7bd529b6f",
+      "seal_sha256": "6ce71c645c95d9594c95f71c2320aaed7fe9c46cdf8ae33a1b7954e08345af81",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E05": {
+      "artifact_dir": "research/glhs_journal/q2_r2/protocols/E05_toctou_root_cause",
+      "claim_eligible": true,
+      "name": "Historical TOCTOU Mismatch Root-Cause Replay",
+      "protocol_path": "protocols/E05_toctou_root_cause/protocol.json",
+      "protocol_sha256": "ad4f2b25d34940017949bf39ff7b97ff1a3de422681da6efad98bdccb06af22f",
+      "seal_sha256": "94bd10fd521cc860cefffcda010e1956e229b94c91a854e09a82ed183b71a2af",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E06": {
+      "artifact_dir": "artifacts/glhs-q2-r2/GLHS-Q2-R2-20260928-R01/E06_dependency_completeness",
+      "claim_eligible": true,
+      "name": "Dependency-Completeness Contract & Mutations",
+      "protocol_path": "protocols/E06_dependency_completeness/protocol.json",
+      "protocol_sha256": "d2b852e4cdd29b35dac2b706d7b78edd01678c8bcfc738fabda65723fa9a685d",
+      "seal_sha256": "927f7eb1751529697e4e9bfbba4056d868d07cfd5e290f7561687e8a16e26bbf",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E07": {
+      "artifact_dir": "artifacts/glhs-q2-r2/GLHS-Q2-R2-20260928-R01/E07_canonicalization",
+      "claim_eligible": true,
+      "name": "Canonicalization Conformance & Vectors",
+      "protocol_path": "protocols/E07_canonicalization/protocol.json",
+      "protocol_sha256": "b3a9080902bc1aa62646926ce96b337966ef4245f46342325d5136fbfcead27f",
+      "seal_sha256": "4a5896dacad7f0ea17b6636b7c4cb107bb00c936b63a5d063f25f7c03808d305",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E08": {
+      "artifact_dir": "protocols/E08_formal_assurance",
+      "claim_eligible": true,
+      "name": "Sealed Bounded Formal Assurance",
+      "protocol_path": "protocols/E08_formal_assurance/protocol.json",
+      "protocol_sha256": "ff06b097d147b3ac389593ccbd8dede2e2cc47c522a346712cee6fcdf677b045",
+      "seal_sha256": "b30c575dedd3eb716934c543decfbed25792ef1cc14fdf23eeea3529046342e8",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E09": {
+      "artifact_dir": "protocols/E09_concurrency",
+      "claim_eligible": true,
+      "name": "Realistic Concurrency & Partition Benchmark",
+      "protocol_path": "protocols/E09_concurrency/protocol.json",
+      "protocol_sha256": "10d9e370191fd10500b53564411f3f27a2337f62ea63854ee88f7bf3ab14769e",
+      "seal_sha256": "5b186d5438cd97e17e6a6047b480b5bffe306718b7619e438ed9e34444e0e6ab",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E10": {
+      "artifact_dir": "artifacts/glhs-q2-r2/GLHS-Q2-R2-20260928-R01/E10_fullstack",
+      "claim_eligible": true,
+      "name": "Full-Stack Performance Characterization",
+      "protocol_path": "protocols/E10_fullstack/protocol.json",
+      "protocol_sha256": "a9da2a0d37f091f815d690fa558706c4fa9a3b8c3bca76d3ae4b01c2befffb2e",
+      "seal_sha256": "50b79423c4d9f9ed9d61cb933d198001a6ba7d25617ab05cb1b6375aaa6e6d74",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E11": {
+      "artifact_dir": "protocols/commitloop/v8-glhs-q2-r2",
+      "claim_eligible": true,
+      "name": "Two-Model Large Context Replication",
+      "protocol_path": "protocols/commitloop/v8-glhs-q2-r2/protocol.md",
+      "protocol_sha256": "2c2cdf901a9042036b4634b13a72b2a8d62f37af76157fb00cdda5674fa954f4",
+      "seal_sha256": "N/A",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E12": {
+      "artifact_dir": "protocols/commitloop/v8-glhs-q2-r2",
+      "claim_eligible": true,
+      "name": "Malformed-Output Taxonomy & Sensitivity",
+      "protocol_path": "protocols/commitloop/v8-glhs-q2-r2/error_taxonomy.json",
+      "protocol_sha256": "e07f07e540844224834b24940726d1feb91d80991d6eebc5e62ee7e32e7ff72d",
+      "seal_sha256": "N/A",
+      "status": "SEALED_AND_VERIFIED"
+    },
+    "E13": {
+      "artifact_dir": "protocols/E13_external_validation",
+      "claim_eligible": true,
+      "name": "External / Independent Validation",
+      "protocol_path": "protocols/E13_external_validation/protocol.json",
+      "protocol_sha256": "7b181c0f17f2d5f5b389d4ccc5f0d07c054c1ddfb4df8db7a7b4d86526fba9a4",
+      "seal_sha256": "6fccdf419b3a161a507ee412b6fe5cc2047193442e779999ace8290b6a4059a8",
+      "status": "SEALED_AND_VERIFIED"
+    }
+  },
+  "git_branch": "research/glhs_journal/q2_r2/",
+  "lockfiles": {},
+  "overall_status": "UNIFIED_RELEASE_SEALED",
+  "release_id": "GLHS-Q2-R2-RELEASE-20260928-V1",
+  "released_at_utc": "2026-09-27T20:20:29.027080+00:00",
+  "schema_version": "glhs-q2-r2-release-manifest.v1",
+  "total_experiments": 14
+}

@@ -1,0 +1,67 @@
+{
+  "schema_version": "commitloop-error-taxonomy.v8-q2-r2",
+  "status": "FROZEN_PROSPECTIVE",
+  "taxonomy_name": "12_class_malformed_output_taxonomy",
+  "classes": {
+    "invalid_json": {
+      "code": "E01",
+      "description": "Provider JSON body syntax error or failure to decode JSON object.",
+      "recoverable_by_r1": true
+    },
+    "schema_mismatch": {
+      "code": "E02",
+      "description": "Parsed JSON fails prediction.schema.json property/type constraints.",
+      "recoverable_by_r1": false
+    },
+    "truncation": {
+      "code": "E03",
+      "description": "Output truncated before completion, missing structural closing braces.",
+      "recoverable_by_r1": true
+    },
+    "refusal": {
+      "code": "E04",
+      "description": "Model safety or policy refusal response.",
+      "recoverable_by_r1": false
+    },
+    "empty_response": {
+      "code": "E05",
+      "description": "Provider response content is zero-length or empty string.",
+      "recoverable_by_r1": false
+    },
+    "provider_error": {
+      "code": "E06",
+      "description": "HTTP 5xx server or gateway failure from provider.",
+      "recoverable_by_r1": false
+    },
+    "wrong_model": {
+      "code": "E07",
+      "description": "Provider reported model ID does not match requested model ID.",
+      "recoverable_by_r1": false
+    },
+    "timeout": {
+      "code": "E08",
+      "description": "Request timed out waiting for provider response headers/body.",
+      "recoverable_by_r1": false
+    },
+    "content_format_violation": {
+      "code": "E09",
+      "description": "Response wrapped in disallowed markdown/text fences or non-JSON wrapper.",
+      "recoverable_by_r1": true
+    },
+    "semantic_failure": {
+      "code": "E10",
+      "description": "Valid JSON schema output containing logically impossible or invalid domain states.",
+      "recoverable_by_r1": false
+    },
+    "rate_limit_exhaustion": {
+      "code": "E11",
+      "description": "HTTP 429 Too Many Requests or quota depletion.",
+      "recoverable_by_r1": false
+    },
+    "unclassified_error": {
+      "code": "E12",
+      "description": "Unclassified exception or unexpected failure mode.",
+      "recoverable_by_r1": false
+    }
+  }
+}

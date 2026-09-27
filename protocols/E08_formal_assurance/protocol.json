@@ -1,0 +1,65 @@
+{
+  "protocol_id": "E08-FORMAL-GOVERNANCE-ASSURANCE",
+  "schema_version": "glhs-e08-formal-assurance-protocol-v1",
+  "status": "FROZEN_FINAL",
+  "experiment_phase": "E08",
+  "branch": "research/glhs_journal/q2_r2/",
+  "base_commit": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "objective": "Formal governance assurance for GLHS commit substrate via bounded exhaustive exploration, invariant checking non-vacuity proof, and production refinement mapping",
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "system": "Linux",
+    "pytest": "9.1.1"
+  },
+  "formal_model": {
+    "module": "evaluation/formal_governance/",
+    "files": [
+      "model.py",
+      "transitions.py",
+      "invariants.py",
+      "explore.py",
+      "SPECIFICATION.md",
+      "REFINEMENT_MAP.md"
+    ],
+    "exploration_depths": [5, 6],
+    "invariants_count": 11,
+    "invariant_ids": [
+      "I1_no_stale_base_commit",
+      "I2_no_post_revocation_commit",
+      "I3_no_wrong_coordinate_commit",
+      "I4_no_expired_tampered_snapshot_commit",
+      "I5_no_undisclosed_evidence",
+      "I6_idempotent_replay_one_transition",
+      "I7_commit_advances_once",
+      "I8_rejected_does_not_advance",
+      "I9_admitted_reconstructable",
+      "I10_current_policy_in_admission",
+      "I11_clean_commit_reachable"
+    ]
+  },
+  "refinement_mapping": {
+    "specification": "evaluation/formal_governance/SPECIFICATION.md",
+    "refinement_map": "evaluation/formal_governance/REFINEMENT_MAP.md",
+    "production_targets": [
+      "services/api/src/clara_api/glhs/commit_kernel.py",
+      "services/api/src/clara_api/glhs/lock_hierarchy.py",
+      "services/api/src/clara_api/glhs/gateway.py"
+    ]
+  },
+  "acceptance_criteria": {
+    "invariant_violations_threshold": 0,
+    "mutation_tests_must_pass": true,
+    "code_hash_binding_required": true,
+    "depth_5_and_6_sweeps_required": true
+  },
+  "roles": {
+    "architecture": "Expose full state model, transitions, 11 invariants; bind code hashes; run depth 5 & 6 sweeps; distinguish model checking vs property testing vs formal proof; write SPECIFICATION.md and REFINEMENT_MAP.md",
+    "statistics": "Report reached states, transitions explored, invariant violations (0 expected), completeness boundary, search depth, and execution time",
+    "implementation": "Implement invariant mutation test suite test_invariants_mutation.py proving non-vacuity; create seal_run.py",
+    "reproducibility": "Create protocols/E08_formal_assurance/protocol.json, reproduce_e08.py, and seal bundle with cryptographic checksums",
+    "red_team": "Scrutinize formal model inspectability, production semantic matching, and mutation killing efficiency"
+  },
+  "freeze_rule": "This protocol and its outputs are frozen after execution. Any material change requires a new protocol_id."
+}

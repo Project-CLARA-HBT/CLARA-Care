@@ -1,0 +1,53 @@
+{
+  "schema_version": "glhs-canonicalization-protocol.v1",
+  "status": "FROZEN",
+  "freeze_id": "GLHS-CANONICALIZATION-E07-20260928-01",
+  "freeze_utc": "2026-09-28T00:00:00+00:00",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "code_revision": "81f040d3",
+  "environment": {
+    "python": "3.12.3",
+    "node": "20.20.2",
+    "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "system": "Linux",
+    "pytest": "9.1.1"
+  },
+  "authoritative_profile": "clara.canonical-json.v2-rfc8785",
+  "supported_profiles": [
+    "clara.canonical-json.v2-rfc8785",
+    "clara.canonical-json.v1-custom",
+    "clara.canonical-json.v1-legacy-python"
+  ],
+  "arm_definitions": {
+    "v2_rfc8785": "Authoritative strict RFC 8785 byte-level canonical serializer.",
+    "v1_custom": "Legacy frozen custom JCS-like serializer (no '+' sign in positive exponents).",
+    "v1_legacy_python": "Historical Python json.dumps sorting semantics."
+  },
+  "vector_categories": {
+    "rfc8785_official": "Official RFC 8785 Section 3.2.4 & Appendix B test vectors",
+    "float_subnormal": "Subnormal IEEE-754 double floats (5e-324, -5e-324)",
+    "float_extreme": "Finite extreme double floats (1.7976931348623157e+308)",
+    "float_exponent": "Exponential notation formatting boundary cases (1e21 -> 1e+21, 1e20 -> 100000000000000000000)",
+    "float_zero": "Negative zero normalization (-0.0 -> 0)",
+    "float_integral": "Integer-valued double floats (1.0 -> 1)",
+    "integer_limits": "I-JSON safe integer range boundaries (-9007199254740991, 9007199254740991)",
+    "integer_primitives": "Primitive integer serialization (0, -42, 42)",
+    "utf16_sorting": "UTF-16 code unit key sorting (including astral characters vs PUA vs FFFF)",
+    "string_escaping": "RFC 8785 control character hex escaping and standard escapes",
+    "string_unicode": "Unescaped raw UTF-8 string serialization",
+    "type_distinction": "Distinctness of null vs empty string vs boolean vs numbers",
+    "containers": "Lists, tuples, dicts, empty containers, and sentinel collision prevention",
+    "medical_assertion": "Canonical GLHS assertion payloads",
+    "rejection_surrogate": "Lone surrogate rejection (0xD800 - 0xDFFF)",
+    "rejection_non_finite": "Non-finite float rejection (NaN, Infinity)",
+    "rejection_integer_overflow": "Out-of-range integer rejection",
+    "rejection_decimal_precision": "Lossy Decimal precision rejection"
+  },
+  "primary_analysis": {
+    "endpoint": "Primary: 100% byte equality rate across all test vectors between Python v2 serializer and Node.js reference engine, zero cross-runtime discrepancies, and 100% rejection of invalid inputs.",
+    "byte_equality_target": 1.0,
+    "cross_runtime_determinism_target": true,
+    "minimum_vectors": 30
+  }
+}

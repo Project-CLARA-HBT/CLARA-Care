@@ -1,0 +1,82 @@
+{
+  "protocol_id": "E05-TOCTOU-ROOT-CAUSE",
+  "schema_version": "glhs-e05-root-cause-protocol-v1",
+  "status": "FROZEN_FINAL",
+  "experiment_phase": "E05",
+  "branch": "research/glhs-q2-r2-experiments",
+  "base_commit": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "objective": "Root-cause replay and formal reconciliation of TOCTOU-V2-05 and TOCTOU-V2-09 historical classification mismatches from GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01",
+  "investigation_scope": {
+    "mismatched_schedules": [
+      "TOCTOU-V2-05",
+      "TOCTOU-V2-09"
+    ],
+    "historical_run_id": "GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01",
+    "historical_run_status": "EXECUTED_V2_OBSERVATION_MISMATCH",
+    "historical_artifact_path": "research/glhs_journal/protocol_v2/",
+    "historical_artifacts_immutable": true
+  },
+  "root_cause_taxonomy": [
+    "incorrect_oracle_expectation",
+    "conservative_safe_rejection",
+    "lock_ordering_behavior",
+    "timestamp_insufficiency",
+    "implementation_behavior",
+    "protocol_ambiguity"
+  ],
+  "instrumentation": {
+    "transaction_session_ids": true,
+    "monotonic_process_timestamps_ns": true,
+    "postgresql_txid": "simulated (no live DB in perturbation replay)",
+    "lock_acquisition_release": "monitored (lock_waits in historical trace)",
+    "governance_writer_begin_commit_timing": true,
+    "proposal_commit_writer_begin_commit_timing": true,
+    "consent_recheck_timestamp": true,
+    "replay_rng_seed_recorded": true
+  },
+  "replay_design": {
+    "perturbation_count_per_schedule": 100,
+    "timing_model": "controlled jitter on governance_delay_us and proposal/commit_delay_us",
+    "v205_governance_delay_range_us": [
+      0,
+      100
+    ],
+    "v205_proposal_delay_range_us": [
+      50,
+      500
+    ],
+    "v209_governance_delay_range_us": [
+      0,
+      80
+    ],
+    "v209_commit_delay_range_us": [
+      0,
+      50
+    ],
+    "master_seed_v205": 20260928,
+    "master_seed_v209": 20260929,
+    "per_trial_seed": "derived from master_seed via Random.randint(0, 2^32-1)",
+    "rng_class": "random.Random (Mersenne Twister, deterministic under seed)"
+  },
+  "execution_scripts": {
+    "replay_v2_05": "evaluation/glhs_toctou_root_cause/replay_v2_05.py",
+    "replay_v2_09": "evaluation/glhs_toctou_root_cause/replay_v2_09.py",
+    "analyze_root_cause": "evaluation/glhs_toctou_root_cause/analyze_root_cause.py"
+  },
+  "output_artifacts": {
+    "replay_v2_05_results": "research/glhs_journal/q2_r2/protocols/E05_toctou_root_cause/replay_v2_05_results.json",
+    "replay_v2_09_results": "research/glhs_journal/q2_r2/protocols/E05_toctou_root_cause/replay_v2_09_results.json",
+    "root_cause_analysis": "research/glhs_journal/q2_r2/protocols/E05_toctou_root_cause/E05_root_cause_analysis.json",
+    "protocol": "protocols/E05_toctou_root_cause/protocol.json"
+  },
+  "safety_invariant": "forbidden_commit_observed must be false in all historical observations and all replay perturbation trials",
+  "reconciliation_policy": "DO NOT modify historical artifacts. Produce new explanatory artifacts in the E05 protocol directory.",
+  "roles": {
+    "architecture": "Trace execution paths for V2-05 and V2-09; identify whether mismatches result from oracle error, conservative rejection, lock ordering, timestamp insufficiency, implementation behavior, or protocol ambiguity",
+    "statistics": "Design instrumented replay with transaction/session IDs, monotonic timestamps, lock acquisition timing, governance writer begin/commit timing; compute rejection rates and Wilson confidence intervals",
+    "implementation": "Create evaluation/glhs_toctou_root_cause/ with replay scripts and analysis; execute 100 perturbations per schedule",
+    "reproducibility": "Create protocol.json and seal outputs with SHA-256 hashes",
+    "red_team": "Verify root-cause classification is honest; ensure no historical artifact rewriting occurs; confirm safety invariant holds in all conditions"
+  },
+  "freeze_rule": "This protocol and its outputs are frozen after execution. Any material change requires a new protocol_id."
+}

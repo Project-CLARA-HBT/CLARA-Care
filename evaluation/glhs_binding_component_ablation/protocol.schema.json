@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GlhsBindingComponentAblationProtocol",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "freeze_id",
+    "freeze_utc",
+    "arms",
+    "schedule_inventory",
+    "primary_analysis",
+    "analysis_plan_hash",
+    "protocol_hash"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["glhs-binding-component-ablation-protocol.v1"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["FROZEN"]
+    },
+    "freeze_id": {
+      "type": "string"
+    },
+    "freeze_utc": {
+      "type": "string"
+    },
+    "arms": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "schedule_inventory": {
+      "type": "object",
+      "required": ["total", "adversarial", "controls", "schedules_sha256"],
+      "properties": {
+        "total": { "type": "integer" },
+        "adversarial": { "type": "integer" },
+        "controls": { "type": "integer" },
+        "schedules_sha256": { "type": "string" }
+      }
+    },
+    "primary_analysis": {
+      "type": "object",
+      "required": ["adaptive_sample_size", "bootstrap_iterations", "bootstrap_seed"],
+      "properties": {
+        "adaptive_sample_size": { "type": "boolean", "enum": [false] },
+        "bootstrap_iterations": { "type": "integer" },
+        "bootstrap_seed": { "type": "integer" }
+      }
+    },
+    "analysis_plan_hash": {
+      "type": "string"
+    },
+    "protocol_hash": {
+      "type": "string"
+    }
+  }
+}

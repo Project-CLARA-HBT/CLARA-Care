@@ -1,0 +1,85 @@
+{
+  "schema_version": "commitloop-sap.v8-q2-r2",
+  "status": "FROZEN_PROSPECTIVE",
+  "phase_e11": {
+    "title": "Two-Model Large Context Replication",
+    "primary_unit": "subject",
+    "enrolled_subjects": 384,
+    "model_families": [
+      "claude-sonnet-4.6",
+      "gemini-3.6-flash-high"
+    ],
+    "primary_model": "claude-sonnet-4.6",
+    "secondary_model": "gemini-3.6-flash-high",
+    "primary_reference_condition": "glhs_hybrid_thss_strict",
+    "primary_comparator_condition": "full_authorized_history",
+    "interleaved_execution": true,
+    "primary_endpoint": "all_axes_exact_match",
+    "equivalence_testing": {
+      "framework": "schuirmann_tost",
+      "equivalence_margin_delta": 0.02,
+      "alpha": 0.05,
+      "confidence_interval": {
+        "method": "subject_bootstrap_percentile",
+        "level": 0.95,
+        "samples": 10000,
+        "seed": 2026082008
+      }
+    },
+    "directional_testing": {
+      "test": "exact_two_sided_paired_sign_test",
+      "alpha": 0.05
+    },
+    "itt_principle": "score_missing_invalid_as_zero_and_retain_subject_in_denominator"
+  },
+  "phase_e12": {
+    "title": "Malformed-Output Sensitivity Analysis",
+    "taxonomy_classes": 12,
+    "error_taxonomy": [
+      "invalid_json",
+      "schema_mismatch",
+      "truncation",
+      "refusal",
+      "empty_response",
+      "provider_error",
+      "wrong_model",
+      "timeout",
+      "content_format_violation",
+      "semantic_failure",
+      "rate_limit_exhaustion",
+      "unclassified_error"
+    ],
+    "recovery_arms": [
+      {
+        "arm": "R0",
+        "name": "ITT Primary Baseline",
+        "network_calls": 0,
+        "description": "Raw un-repaired model response scored as ITT primary."
+      },
+      {
+        "arm": "R1",
+        "name": "Deterministic Local Repair",
+        "network_calls": 0,
+        "description": "Local deterministic JSON fence/syntax repair without provider re-queries."
+      },
+      {
+        "arm": "R2",
+        "name": "Identical Prompt Retry",
+        "network_calls": 1,
+        "description": "Re-issue 1 identical prompt query to provider upon error."
+      },
+      {
+        "arm": "R3",
+        "name": "Constrained Repair Prompt",
+        "network_calls": 1,
+        "description": "Issue 1 follow-up repair prompt providing error diagnostic and schema instructions."
+      }
+    ],
+    "stratifications": [
+      "model",
+      "condition",
+      "task_family_stratum",
+      "attempt_number"
+    ]
+  }
+}
