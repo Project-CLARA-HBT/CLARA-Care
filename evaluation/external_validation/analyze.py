@@ -247,7 +247,7 @@ def analyze_e13_results(
 def generate_summary_markdown(summary: dict[str, Any]) -> str:
     """Generate clear Markdown report from E13 summary dictionary."""
     lines = [
-        "# E13 External / Independent Validation Report",
+        "# E13 Synthetic Source-Derived Task Suite Report",
         "",
         f"- **Freeze ID:** `{summary['freeze_id']}`",
         f"- **Git SHA:** `{summary['git_sha']}`",

@@ -1,0 +1,16 @@
+{
+  "schema_version": "glhs-downgrade-assurance-environment.v1",
+  "generated_at_utc": "2026-09-28T00:00:00+00:00",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "python_version": "3.12.3",
+  "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "processor": "x86_64",
+  "system": "Linux",
+  "cpu_count": 88,
+  "backend": "isolated_sqlite",
+  "libraries": {
+    "pytest": "9.1.1",
+    "sqlalchemy": "2.0.46"
+  }
+}

@@ -2421,6 +2421,17 @@ class GlhsInferenceContextBinding(Base):
     digest_algorithm: Mapped[str] = mapped_column(String(32))
     binding_schema_version: Mapped[str] = mapped_column(String(64))
     binding_digest: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="COMPLETED", index=True)
+    projection_digest: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    request_envelope_digest: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    prompt_template_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    system_prompt_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    provider: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    requested_model_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    reported_model_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    request_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    request_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    response_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
@@ -2949,7 +2960,7 @@ def _reject_glhs_canonical_content_mutation(
     }
     if not changed.issubset(projection_fields):
         raise ValueError(
-            "GLHS canonical row content is immutable:"
+            "GLHS ledger rows are immutable (canonical row content protection): "
             + ",".join(sorted(changed - projection_fields))
         )
 
@@ -2980,12 +2991,31 @@ def _protect_glhs_conflict_content(
     )
 
 
+def _protect_glhs_inference_binding_content(
+    mapper: object, connection: object, target: object
+) -> None:
+    _reject_glhs_canonical_content_mutation(
+        mapper,
+        connection,
+        target,
+        projection_fields=frozenset(
+            {
+                "status",
+                "reported_model_id",
+                "request_completed_at",
+                "response_digest",
+                "binding_digest",
+            }
+        ),
+    )
+
+
 sa_event.listen(GlhsAssertion, "before_update", _protect_glhs_assertion_content)
 sa_event.listen(GlhsAssertion, "before_delete", _reject_glhs_ledger_mutation)
 sa_event.listen(GlhsConflict, "before_update", _protect_glhs_conflict_content)
 sa_event.listen(GlhsConflict, "before_delete", _reject_glhs_ledger_mutation)
 sa_event.listen(
-    GlhsInferenceContextBinding, "before_update", _reject_glhs_ledger_mutation
+    GlhsInferenceContextBinding, "before_update", _protect_glhs_inference_binding_content
 )
 sa_event.listen(
     GlhsInferenceContextBinding, "before_delete", _reject_glhs_ledger_mutation

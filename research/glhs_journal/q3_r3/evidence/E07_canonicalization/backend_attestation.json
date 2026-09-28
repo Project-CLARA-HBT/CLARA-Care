@@ -1,0 +1,12 @@
+{
+  "schema_version": "glhs-r3-backend-attestation.v1",
+  "experiment_id": "E07",
+  "actual_backend": "Multi-Runtime CPython 3.12 + Node.js 20 V8 Engine",
+  "endpoint": "local_multiprocess",
+  "version": "python:3.12.3, node:20.x",
+  "production_path": true,
+  "simulation": false,
+  "network_provider": false,
+  "fallback_usage": false,
+  "concurrency_mechanism": "RFC 8785 JSON Canonicalization Scheme (JCS)"
+}

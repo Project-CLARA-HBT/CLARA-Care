@@ -1,0 +1,30 @@
+{
+  "artifact_inventory": {
+    "derived/summary.json": "5f6abbff3d0bfe70b0cc242b350ca9b5f5ced9e1ea2d3e1629cb966e56d1ba11",
+    "derived/summary.md": "511f10b00eb8fbe1ce2f00739434e5177a4f0e2bed17a6a92efcabb80e43e53d",
+    "environment.json": "a523c752f122cc54fb08ac420a27fd9f8c24fac751d05e6c0a723ddd9e21f796",
+    "protocol.json": "e69f8e65acc2872ce2adb59ee43af7f92fa433d7c808c6e7d7c4778c59b44787",
+    "raw/expected.json": "28e735a8541838fd6fc202ee774ec59deb888df192e3e13c89c66cdb5913c069",
+    "raw/results.jsonl": "225eaa48a1faa38fbe7857d1715dcb818db1f1c60b9f88896d2610ec021c8303",
+    "raw/vectors.json": "45b5476188fc2368a60fb63ad365611dd6acb3bb89baebb414dbe2503dcf4b59",
+    "validation.json": "c010a254fbb07fe494854c26408100dfeae33f6771da328e68d765740cea961b"
+  },
+  "byte_equality_rate": 1.0,
+  "claim_eligible": true,
+  "cross_runtime_determinism": true,
+  "freeze_id": "GLHS-CANONICALIZATION-E07-20260928-01",
+  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "protocol_sha256": "e69f8e65acc2872ce2adb59ee43af7f92fa433d7c808c6e7d7c4778c59b44787",
+  "python_v2_failed": 0,
+  "python_v2_passed": 35,
+  "raw_expected_sha256": "28e735a8541838fd6fc202ee774ec59deb888df192e3e13c89c66cdb5913c069",
+  "raw_results_sha256": "225eaa48a1faa38fbe7857d1715dcb818db1f1c60b9f88896d2610ec021c8303",
+  "raw_vectors_sha256": "45b5476188fc2368a60fb63ad365611dd6acb3bb89baebb414dbe2503dcf4b59",
+  "run_id": "GLHS-Q2-R2-20260928-R01",
+  "schema_version": "canonicalization-seal.v1",
+  "sealed_at_utc": "2026-09-28T19:19:26.839233+00:00",
+  "status": "SEALED",
+  "summary_sha256": "5f6abbff3d0bfe70b0cc242b350ca9b5f5ced9e1ea2d3e1629cb966e56d1ba11",
+  "total_vectors": 35,
+  "validation_sha256": "c010a254fbb07fe494854c26408100dfeae33f6771da328e68d765740cea961b"
+}

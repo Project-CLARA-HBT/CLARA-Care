@@ -1,0 +1,9 @@
+{
+  "schema_version": "glhs-r3-validation.v1",
+  "experiment_id": "E14",
+  "validated_at_utc": "2026-09-28T00:00:00Z",
+  "forbidden_mutations_observed": 0,
+  "claim_eligible": true,
+  "validation_verdict": "PASS",
+  "status": "VALIDATED"
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": "glhs-r3-backend-attestation.v1",
+  "experiment_id": "E00",
+  "actual_backend": "Static Literature Claim Audit & AST Write Route Inventory Engine",
+  "endpoint": "local-runner",
+  "version": "1.0",
+  "production_path": false,
+  "simulation": true,
+  "network_provider": false,
+  "fallback_usage": false,
+  "concurrency_mechanism": "Deterministic Execution / Offline Harness"
+}

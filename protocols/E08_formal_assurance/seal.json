@@ -9,22 +9,22 @@
     "evaluation/formal_governance/transitions.py": "6b3d69eafa51baf378658cf94c61985a5bee12e55b4e8d6d89f6c9d8cdb157bc"
   },
   "depth5_summary": {
-    "runtime_seconds": 2.4961,
+    "runtime_seconds": 2.4227,
     "states": 21361,
     "transitions": 90432,
     "violations": 0
   },
   "depth6_summary": {
-    "runtime_seconds": 11.0052,
+    "runtime_seconds": 10.2919,
     "states": 69342,
     "transitions": 378602,
     "violations": 0
   },
   "freeze_id": "GLHS-FORMAL-ASSURANCE-E08-20260928-01",
-  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
   "mutation_tests_passed": true,
   "run_id": "e08-formal-assurance-run-20260928",
   "schema_version": "glhs-e08-formal-assurance-seal-v1",
-  "sealed_at_utc": "2026-09-27T19:48:37Z",
+  "sealed_at_utc": "2026-09-28T19:18:56Z",
   "status": "SEALED"
 }

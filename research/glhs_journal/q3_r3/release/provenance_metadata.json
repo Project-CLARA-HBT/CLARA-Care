@@ -1,0 +1,28 @@
+{
+  "schema_version": "glhs-r3-provenance-metadata.v1",
+  "program": "GLHS R3 — Governed Read-to-Write Continuity",
+  "repository": "Project-CLARA-HBT/CLARA-Care",
+  "provenance": {
+    "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+    "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "active_branch": "research/glhs-q2-r2-experiments",
+    "provisional_r3_branch": "research/glhs_journal/q3_r3",
+    "prospective_freeze_established_at_utc": "2026-09-28T00:00:00Z"
+  },
+  "invariants": {
+    "rule_dual_sha_locking": "No claim-bearing R3 experiment may execute or seal until both system_under_test_sha and parent_harness_sha are verified and prospectively frozen.",
+    "rule_chronological_freeze": "All protocol, budget, and manifest freeze timestamps must strictly precede experimental execution timestamps.",
+    "rule_backend_truthfulness": "Simulated backends must never be labeled or claimed as PostgreSQL instances; actual database executions must run against PostgreSQL 16.14 at localhost:5433."
+  },
+  "environment_baseline": {
+    "python_version": "3.12.3",
+    "nodejs_version": "v20.20.2",
+    "postgresql_version": "16.14",
+    "postgresql_endpoint": "127.0.0.1:5433",
+    "database_user": "aura",
+    "database_name": "aura",
+    "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "cpu_count": 88
+  }
+}

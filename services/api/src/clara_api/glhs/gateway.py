@@ -50,8 +50,14 @@ from clara_api.glhs.commit_kernel import (
 )
 
 __all__ = [
+    "build_canonical_inference_envelope",
     "consistency_fingerprint",
+    "create_inference_context_binding",
+    "fail_inference_context_binding",
     "fast_canonical_digest",
+    "finalize_inference_context_binding",
+    "validate_inference_consumption_continuity",
+    "validate_inference_context_binding",
 ]
 from clara_api.glhs.commitment_projection import AbstentionDecision
 from clara_api.glhs.domain import (
@@ -510,10 +516,41 @@ def validate_snapshot_manifest(
     return cast(GlhsSnapshotManifest, snapshot)
 
 
+def build_canonical_inference_envelope(
+    *,
+    snapshot: GlhsSnapshotManifest,
+    model_visible_projection: object,
+    model_route: str,
+    requested_model_id: str,
+    prompt_template_version: str,
+    system_prompt_version: str,
+    purpose: str,
+    task: str,
+) -> dict[str, object]:
+    """Build the canonical request envelope for pre-dispatch inference binding (R3)."""
+
+    proj_digest = _snapshot_fingerprint(model_visible_projection)
+    return {
+        "schema": "clara.inference-envelope.v1",
+        "model_route": model_route,
+        "requested_model_id": requested_model_id,
+        "prompt_template_version": prompt_template_version,
+        "system_prompt_version": system_prompt_version,
+        "purpose": purpose,
+        "task": task,
+        "disclosure": {
+            "snapshot_id": snapshot.public_id,
+            "projection_digest": proj_digest,
+            "manifest_digest": snapshot.manifest_digest,
+        },
+        "model_visible_projection": model_visible_projection,
+    }
+
+
 def inference_binding_envelope(binding: GlhsInferenceContextBinding) -> dict[str, object]:
     """Return every security-relevant binding field covered by its digest."""
 
-    return {
+    envelope = {
         "binding_id": binding.public_id,
         "profile_id": binding.profile_id,
         "inference_manifest_id": binding.inference_manifest_id,
@@ -535,6 +572,25 @@ def inference_binding_envelope(binding: GlhsInferenceContextBinding) -> dict[str
         "digest_algorithm": binding.digest_algorithm,
         "binding_schema_version": binding.binding_schema_version,
     }
+    if binding.status is not None:
+        envelope["status"] = binding.status
+    if binding.projection_digest is not None:
+        envelope["projection_digest"] = binding.projection_digest
+    if binding.request_envelope_digest is not None:
+        envelope["request_envelope_digest"] = binding.request_envelope_digest
+    if binding.prompt_template_version is not None:
+        envelope["prompt_template_version"] = binding.prompt_template_version
+    if binding.system_prompt_version is not None:
+        envelope["system_prompt_version"] = binding.system_prompt_version
+    if binding.provider is not None:
+        envelope["provider"] = binding.provider
+    if binding.requested_model_id is not None:
+        envelope["requested_model_id"] = binding.requested_model_id
+    if binding.reported_model_id is not None:
+        envelope["reported_model_id"] = binding.reported_model_id
+    if binding.response_digest is not None:
+        envelope["response_digest"] = binding.response_digest
+    return envelope
 
 
 def create_inference_context_binding(
@@ -548,6 +604,16 @@ def create_inference_context_binding(
     purpose: str,
     task: str,
     disclosed_evidence_ids: Iterable[str],
+    status: str = "COMPLETED",
+    model_visible_projection: object | None = None,
+    projection_digest: str | None = None,
+    request_envelope_digest: str | None = None,
+    model_route: str | None = None,
+    prompt_template_version: str | None = None,
+    system_prompt_version: str | None = None,
+    provider: str | None = None,
+    requested_model_id: str | None = None,
+    request_started_at: datetime | None = None,
 ) -> GlhsInferenceContextBinding:
     """Persist the immutable inference-to-THSS binding at the API-owned boundary.
 
@@ -599,6 +665,36 @@ def create_inference_context_binding(
     )
     snapshot = persisted_snapshot
     snapshot_id = snapshot.public_id
+
+    proj_digest = projection_digest
+    if proj_digest is None and model_visible_projection is not None:
+        proj_digest = _snapshot_fingerprint(model_visible_projection)
+
+    env_digest = request_envelope_digest
+    if (
+        env_digest is None
+        and model_visible_projection is not None
+        and model_route
+        and requested_model_id
+        and prompt_template_version
+        and system_prompt_version
+    ):
+        env = build_canonical_inference_envelope(
+            snapshot=snapshot,
+            model_visible_projection=model_visible_projection,
+            model_route=model_route,
+            requested_model_id=requested_model_id,
+            prompt_template_version=prompt_template_version,
+            system_prompt_version=system_prompt_version,
+            purpose=purpose,
+            task=task,
+        )
+        env_digest = _snapshot_fingerprint(env)
+
+    started_at = request_started_at
+    if started_at is None and status == "PENDING":
+        started_at = datetime.now(UTC)
+
     binding = GlhsInferenceContextBinding(
         public_id=str(uuid4()),
         profile_id=profile_id,
@@ -620,6 +716,14 @@ def create_inference_context_binding(
         canonicalization_profile=snapshot.canonicalization_profile,
         digest_algorithm=snapshot.digest_algorithm,
         binding_schema_version=BINDING_SCHEMA_VERSION,
+        status=status,
+        projection_digest=proj_digest,
+        request_envelope_digest=env_digest,
+        prompt_template_version=prompt_template_version,
+        system_prompt_version=system_prompt_version,
+        provider=provider,
+        requested_model_id=requested_model_id,
+        request_started_at=started_at,
         binding_digest="",
     )
     binding.binding_digest = _snapshot_fingerprint(inference_binding_envelope(binding))
@@ -635,6 +739,73 @@ def create_inference_context_binding(
         aggregate_public_id=binding.public_id,
         event_type="glhs.inference-binding.created",
     )
+    return binding
+
+
+def finalize_inference_context_binding(
+    db: Session,
+    *,
+    binding_id: str,
+    profile_id: int,
+    reported_model_id: str | None = None,
+    response_digest: str | None = None,
+    request_completed_at: datetime | None = None,
+) -> GlhsInferenceContextBinding:
+    """Finalize a pre-dispatch PENDING inference context binding upon successful response."""
+
+    binding = db.execute(
+        select(GlhsInferenceContextBinding).where(
+            GlhsInferenceContextBinding.public_id == binding_id
+        ).execution_options(populate_existing=True)
+    ).scalar_one_or_none()
+    if binding is None:
+        raise GlhsInvariantError("inference_binding_not_found")
+    if binding.profile_id != profile_id:
+        raise GlhsInvariantError("inference_binding_profile_mismatch")
+    if binding.status != "PENDING":
+        raise GlhsInvariantError("inference_binding_not_pending")
+
+    binding.status = "COMPLETED"
+    if reported_model_id is not None:
+        binding.reported_model_id = reported_model_id
+    if response_digest is not None:
+        binding.response_digest = response_digest
+    binding.request_completed_at = request_completed_at or datetime.now(UTC)
+    binding.binding_digest = _snapshot_fingerprint(inference_binding_envelope(binding))
+    db.flush()
+    return binding
+
+
+def fail_inference_context_binding(
+    db: Session,
+    *,
+    binding_id: str,
+    profile_id: int,
+    status: str = "FAILED",
+    error_reason: str | None = None,
+    request_completed_at: datetime | None = None,
+) -> GlhsInferenceContextBinding:
+    """Mark a pre-dispatch PENDING inference context binding as FAILED or ABORTED."""
+
+    if status not in ("FAILED", "ABORTED"):
+        raise GlhsInvariantError("invalid_inference_binding_failure_status")
+
+    binding = db.execute(
+        select(GlhsInferenceContextBinding).where(
+            GlhsInferenceContextBinding.public_id == binding_id
+        ).execution_options(populate_existing=True)
+    ).scalar_one_or_none()
+    if binding is None:
+        raise GlhsInvariantError("inference_binding_not_found")
+    if binding.profile_id != profile_id:
+        raise GlhsInvariantError("inference_binding_profile_mismatch")
+    if binding.status != "PENDING":
+        raise GlhsInvariantError("inference_binding_not_pending")
+
+    binding.status = status
+    binding.request_completed_at = request_completed_at or datetime.now(UTC)
+    binding.binding_digest = _snapshot_fingerprint(inference_binding_envelope(binding))
+    db.flush()
     return binding
 
 
@@ -657,6 +828,8 @@ def validate_inference_context_binding(
         raise GlhsInvariantError("inference_binding_profile_mismatch")
     if not binding.consumed_thss:
         raise GlhsInvariantError("inference_binding_thss_not_consumed")
+    if binding.status != "COMPLETED":
+        raise GlhsInvariantError("binding_not_completed")
     if binding.binding_schema_version != BINDING_SCHEMA_VERSION:
         raise GlhsInvariantError("inference_binding_schema_mismatch")
     if binding.digest_algorithm != DIGEST_ALGORITHM:
@@ -669,6 +842,54 @@ def validate_inference_context_binding(
         raise GlhsInvariantError("inference_binding_digest_mismatch")
     if _as_utc(binding.snapshot_expires_at) <= datetime.now(UTC):
         raise GlhsInvariantError("inference_binding_snapshot_expired")
+
+    return binding
+
+
+def validate_inference_consumption_continuity(
+    db: Session,
+    *,
+    profile_id: int,
+    binding_id: str,
+    expected_snapshot_id: str | None = None,
+    expected_snapshot_digest: str | None = None,
+    expected_manifest_digest: str | None = None,
+    expected_projection_digest: str | None = None,
+    expected_request_envelope_digest: str | None = None,
+    observed_model_visible_projection: object | None = None,
+    observed_request_envelope: object | None = None,
+) -> GlhsInferenceContextBinding:
+    """Verify that a proposal's cited binding is COMPLETED and matches the exact projection digest."""
+
+    binding = validate_inference_context_binding(db, profile_id=profile_id, binding_id=binding_id)
+
+    if expected_snapshot_id is not None and binding.source_snapshot_id != expected_snapshot_id:
+        raise GlhsInvariantError("snapshot_identity_mismatch")
+
+    if expected_snapshot_digest is not None and binding.source_snapshot_digest != expected_snapshot_digest:
+        raise GlhsInvariantError("snapshot_digest_mismatch")
+
+    if expected_manifest_digest is not None and binding.source_manifest_digest != expected_manifest_digest:
+        raise GlhsInvariantError("manifest_digest_mismatch")
+
+    if expected_projection_digest is not None:
+        if binding.projection_digest is None or binding.projection_digest != expected_projection_digest:
+            raise GlhsInvariantError("projection_digest_mismatch")
+
+    if observed_model_visible_projection is not None:
+        computed_proj_digest = _snapshot_fingerprint(observed_model_visible_projection)
+        if binding.projection_digest is None or binding.projection_digest != computed_proj_digest:
+            raise GlhsInvariantError("projection_digest_mismatch")
+
+    if expected_request_envelope_digest is not None:
+        if binding.request_envelope_digest is None or binding.request_envelope_digest != expected_request_envelope_digest:
+            raise GlhsInvariantError("request_envelope_mismatch")
+
+    if observed_request_envelope is not None:
+        computed_env_digest = _snapshot_fingerprint(observed_request_envelope)
+        if binding.request_envelope_digest is None or binding.request_envelope_digest != computed_env_digest:
+            raise GlhsInvariantError("request_envelope_mismatch")
+
     return binding
 
 

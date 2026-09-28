@@ -9,7 +9,9 @@ from clara_api.glhs.commit_kernel import (
     DependencySpec,
     GlhsCommitContext,
     GlhsCommitResult,
+    GrwcAdmissionResult,
     compute_dependency_vector_digest,
+    evaluate_grwc_admission,
     execute_atomic_glhs_commit,
 )
 
@@ -17,7 +19,9 @@ __all__ = [
     "DependencySpec",
     "GlhsCommitContext",
     "GlhsCommitResult",
+    "GrwcAdmissionResult",
     "compute_dependency_vector_digest",
+    "evaluate_grwc_admission",
     "execute_atomic_glhs_commit",
 ]
 

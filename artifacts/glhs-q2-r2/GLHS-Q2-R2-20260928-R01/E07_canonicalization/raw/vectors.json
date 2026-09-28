@@ -1,0 +1,314 @@
+[
+  {
+    "id": "V01",
+    "category": "rfc8785_official",
+    "description": "RFC 8785 Section 3.2.4 official complex sample",
+    "input": {
+      "numbers": [
+        333333333.3333333,
+        1e+30,
+        4.5,
+        0.002,
+        1e-27
+      ],
+      "string": "€$\u000f\na'B\"\\\\\"/",
+      "literals": [
+        null,
+        true,
+        false
+      ]
+    }
+  },
+  {
+    "id": "V02",
+    "category": "float_subnormal",
+    "description": "IEEE-754 minimum positive subnormal double (5e-324)",
+    "input": 5e-324
+  },
+  {
+    "id": "V03",
+    "category": "float_subnormal",
+    "description": "IEEE-754 minimum negative subnormal double (-5e-324)",
+    "input": -5e-324
+  },
+  {
+    "id": "V04",
+    "category": "float_extreme",
+    "description": "IEEE-754 maximum positive finite double (1.7976931348623157e+308)",
+    "input": 1.7976931348623157e+308
+  },
+  {
+    "id": "V05",
+    "category": "float_extreme",
+    "description": "IEEE-754 maximum negative finite double (-1.7976931348623157e+308)",
+    "input": -1.7976931348623157e+308
+  },
+  {
+    "id": "V06",
+    "category": "float_exponent",
+    "description": "Positive scientific exponent threshold (1e21 -> 1e+21)",
+    "input": 1e+21
+  },
+  {
+    "id": "V07",
+    "category": "float_exponent",
+    "description": "Negative scientific exponent threshold (1e-7 -> 1e-7)",
+    "input": 1e-07
+  },
+  {
+    "id": "V08",
+    "category": "float_exponent",
+    "description": "Large double below exponent threshold (1e20 -> 100000000000000000000)",
+    "input": 1e+20
+  },
+  {
+    "id": "V09",
+    "category": "float_zero",
+    "description": "Negative floating-point zero (-0.0 -> 0)",
+    "input": -0.0
+  },
+  {
+    "id": "V10",
+    "category": "float_integral",
+    "description": "Floating-point number with integral value (1.0 -> 1)",
+    "input": 1.0
+  },
+  {
+    "id": "V11",
+    "category": "integer_limits",
+    "description": "Minimum I-JSON safe integer (-9007199254740991)",
+    "input": -9007199254740991
+  },
+  {
+    "id": "V12",
+    "category": "integer_limits",
+    "description": "Maximum I-JSON safe integer (9007199254740991)",
+    "input": 9007199254740991
+  },
+  {
+    "id": "V13",
+    "category": "integer_primitives",
+    "description": "Zero integer (0)",
+    "input": 0
+  },
+  {
+    "id": "V14",
+    "category": "integer_primitives",
+    "description": "Negative integer (-42)",
+    "input": -42
+  },
+  {
+    "id": "V15",
+    "category": "integer_primitives",
+    "description": "Positive integer (42)",
+    "input": 42
+  },
+  {
+    "id": "V16",
+    "category": "utf16_sorting",
+    "description": "RFC 8785 Section 3.2.3 official key sorting test vector",
+    "input": {
+      "€": "Euro Sign",
+      "\r": "Carriage Return",
+      "דּ": "Hebrew Letter Dalet With Dagesh",
+      "1": "One",
+      "😀": "Emoji: Grinning Face",
+      "": "Control",
+      "ö": "Latin Small Letter O With Diaeresis"
+    }
+  },
+  {
+    "id": "V17",
+    "category": "utf16_sorting",
+    "description": "Astral emoji (high surrogate 0xD83D) vs PUA U+E000 sorting",
+    "input": {
+      "": 1,
+      "😀": 2
+    }
+  },
+  {
+    "id": "V18",
+    "category": "utf16_sorting",
+    "description": "Astral emoji vs U+FFFF sorting",
+    "input": {
+      "￿": 1,
+      "😀": 2
+    }
+  },
+  {
+    "id": "V19",
+    "category": "utf16_sorting",
+    "description": "ASCII lexicographical key sorting",
+    "input": {
+      "b": 1,
+      "a": 2,
+      "10": 3,
+      "2": 4
+    }
+  },
+  {
+    "id": "V20",
+    "category": "utf16_sorting",
+    "description": "Vietnamese accented characters and astral emoji key sorting",
+    "input": {
+      "z": 1,
+      "é": 2,
+      "è": 3,
+      "💩": 4
+    }
+  },
+  {
+    "id": "V21",
+    "category": "string_escaping",
+    "description": "Control characters 0x00-0x1F and standard JSON escapes",
+    "input": "hello\u0000world\u001f\b\t\n\f\r\"\\"
+  },
+  {
+    "id": "V22",
+    "category": "string_escaping",
+    "description": "Unescaped forward slashes and URL format",
+    "input": "https://clara.care/api/v1/patient?id=123"
+  },
+  {
+    "id": "V23",
+    "category": "string_unicode",
+    "description": "Vietnamese medical text with unescaped UTF-8 and emoji",
+    "input": "Bệnh nhân uống 500mg Paracetamol 💊"
+  },
+  {
+    "id": "V24",
+    "category": "type_distinction",
+    "description": "Distinction between null, empty string, and string null",
+    "input": {
+      "a": null,
+      "b": "",
+      "c": "null"
+    }
+  },
+  {
+    "id": "V25",
+    "category": "type_distinction",
+    "description": "Distinction between boolean literals and boolean strings",
+    "input": {
+      "b_bool": true,
+      "b_str": "true",
+      "f_bool": false,
+      "f_str": "false"
+    }
+  },
+  {
+    "id": "V26",
+    "category": "containers",
+    "description": "Empty list and empty object serialization",
+    "input": {
+      "arr": [],
+      "obj": {}
+    }
+  },
+  {
+    "id": "V27",
+    "category": "containers",
+    "description": "Array containing heterogeneous primitive types",
+    "input": [
+      null,
+      true,
+      false,
+      0,
+      1.5,
+      "test"
+    ]
+  },
+  {
+    "id": "V28",
+    "category": "containers",
+    "description": "Nested object and array structures",
+    "input": {
+      "c": null,
+      "a": [
+        1,
+        {
+          "b": 2
+        }
+      ]
+    }
+  },
+  {
+    "id": "V29",
+    "category": "containers",
+    "description": "Dictionary sentinel collision prevention",
+    "input": {
+      "__dict__": [
+        [
+          "a",
+          1
+        ]
+      ]
+    }
+  },
+  {
+    "id": "V30",
+    "category": "medical_assertion",
+    "description": "Canonical GLHS clinical assertion payload",
+    "input": {
+      "assertion_id": "ast-101",
+      "active": true,
+      "dose_mg": 500,
+      "patient_id": 42
+    }
+  },
+  {
+    "id": "V31",
+    "category": "rejection_surrogate",
+    "description": "Lone high surrogate code point (U+D800)",
+    "input": {
+      "$type": "lone_surrogate",
+      "value": "D800"
+    },
+    "status": "REJECTED",
+    "expected_error": "canonical_json_lone_surrogate"
+  },
+  {
+    "id": "V32",
+    "category": "rejection_surrogate",
+    "description": "Lone low surrogate code point (U+DFFF)",
+    "input": {
+      "$type": "lone_surrogate",
+      "value": "DFFF"
+    },
+    "status": "REJECTED",
+    "expected_error": "canonical_json_lone_surrogate"
+  },
+  {
+    "id": "V33",
+    "category": "rejection_non_finite",
+    "description": "Non-finite floating point value (NaN)",
+    "input": {
+      "$type": "non_finite_float",
+      "value": "NaN"
+    },
+    "status": "REJECTED",
+    "expected_error": "canonical_json_non_finite_number"
+  },
+  {
+    "id": "V34",
+    "category": "rejection_integer_overflow",
+    "description": "Out-of-range integer exceeding MAX_SAFE_INTEGER (9007199254740992)",
+    "input": {
+      "$type": "integer_overflow",
+      "value": 9007199254740992
+    },
+    "status": "REJECTED",
+    "expected_error": "canonical_json_integer_out_of_ijson_range"
+  },
+  {
+    "id": "V35",
+    "category": "rejection_decimal_precision",
+    "description": "Decimal with lossy floating-point precision representation",
+    "input": {
+      "$type": "unsafe_decimal",
+      "value": "1.234567890123456789"
+    },
+    "status": "REJECTED",
+    "expected_error": "canonical_json_unsafe_decimal_precision"
+  }
+]

@@ -1,0 +1,8 @@
+operation,history_depth,concurrency,p50_ms,p95_ms,p99_ms,throughput_per_second,db_reads,db_writes,write_amplification,reconstruction_ms,snapshot_compile_ms,governed_decision_reconstruction_ms,audit_lookup_ms,invalidation_rebuild_ms,enter_in_error_rebuild_ms,cpu_percent,peak_rss_bytes
+transition,50,1,99.126,113.314,166.94,9.578,6201,1700,17.0,,,,,,,70.135,2219802624
+reconstruction,50,1,13.264,13.872,14.825,75.151,1100,0,0.0,13.307,,,,,,101.265,2219802624
+snapshot_compile,50,1,27.369,32.444,35.519,36.967,1100,100,1.0,,27.051,,,,,63.657,2219802624
+governed_decision_reconstruction,50,1,13.602,14.216,14.598,66.872,1100,0,0.0,,,14.954,,,,101.174,2219802624
+audit_lookup,50,1,13.828,14.439,14.824,72.214,1100,0,0.0,,,,13.848,,,101.269,2219802624
+invalidation_rebuild,50,1,10.813,11.772,13.412,86.486,841,15,0.15,,,,,11.563,,99.803,2219802624
+enter_in_error_rebuild,50,1,10.686,11.54,11.762,92.754,800,0,0.0,,,,,,10.781,101.347,2219802624

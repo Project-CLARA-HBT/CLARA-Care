@@ -16,6 +16,7 @@ from typing import Any
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
+from dataclasses import asdict
 from evaluation.glhs_binding_component_ablation.observer import ExecutionRecord, Observer
 from evaluation.glhs_downgrade.adapter import DowngradeAssuranceAdapter, ScheduleExecutionOutcome
 from evaluation.glhs_downgrade.analyze import analyze_downgrade_results
@@ -23,6 +24,29 @@ from evaluation.glhs_downgrade.schedules import build_schedules_document
 
 TOTAL_SCHEDULES_E03 = 300
 TOTAL_EXECUTIONS_E03 = 300
+
+
+def execute_schedule(db_or_engine: Any, schedule: Any) -> ScheduleExecutionOutcome:
+    """Execute a single schedule against the database."""
+    if hasattr(db_or_engine, "get_bind"):
+        engine = db_or_engine.get_bind()
+    elif hasattr(db_or_engine, "bind"):
+        engine = db_or_engine.bind
+    else:
+        engine = db_or_engine
+    adapter = DowngradeAssuranceAdapter(engine)
+    if isinstance(schedule, dict):
+        sched_dict = schedule
+    elif hasattr(schedule, "__dataclass_fields__"):
+        sched_dict = asdict(schedule)
+    else:
+        sched_dict = dict(schedule)
+    return adapter.execute_schedule(sched_dict)
+
+
+def run_all_schedules(db_or_engine: Any, schedules: list[Any]) -> list[ScheduleExecutionOutcome]:
+    """Execute a list of schedules against the database."""
+    return [execute_schedule(db_or_engine, s) for s in schedules]
 
 
 def _git_sha() -> str:

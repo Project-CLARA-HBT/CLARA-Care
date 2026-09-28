@@ -1,0 +1,12 @@
+{
+  "experiment_id": "E05",
+  "total_runs": 312,
+  "invalid_mutant_runs": 204,
+  "invalid_mutants_rejected": 204,
+  "invalid_mutant_rejection_rate": 1.0,
+  "upper_95_wilson_ci_omission_admission": 0.01796,
+  "valid_superset_runs": 54,
+  "valid_superset_admitted": 54,
+  "false_stale_abort_rate": 0.0,
+  "claim_eligible": true
+}

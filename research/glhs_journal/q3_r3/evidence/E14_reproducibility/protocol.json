@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "glhs-r3-protocol-e14.v1",
+  "protocol_id": "E14_reproducibility",
+  "title": "Phase 9 / E14: Independent Reproduction Audit & Clean Checkout Verification Protocol",
+  "program": "GLHS R3 \u2014 Governed Read-to-Write Continuity (GRWC)",
+  "phase": "Phase 9 \u2014 Hermetic Clean-Tree Reproduction Audit",
+  "date": "2026-09-28",
+  "curator": "Agent D \u2014 Implementation & Reproducibility",
+  "status": "PROSPECTIVE_FROZEN",
+  "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+  "primary_question": "Can the entire GLHS R3 experimental campaign (all 15 experiments E00 through E14), cryptographic artifact seals, statistical estimand bounds, and manuscript tables be deterministically reproduced in a hermetic clean environment without manual intervention?",
+  "target_invariants": [
+    "I01_state_isolation",
+    "I02_governance_freshness",
+    "I03_phantom_free",
+    "I04_deadlock_free",
+    "I05_idempotency_atomicity",
+    "I06_cas_monotonicity",
+    "I07_evidence_closure",
+    "I08_binding_immutability",
+    "I09_lineage_preservation",
+    "I10_dependency_completeness",
+    "I11_no_weak_route_downgrade",
+    "I12_exact_inference_disclosure_continuity",
+    "I13_non_downgradable_human_lineage",
+    "I14_undisclosed_evidence_rejection",
+    "I15_clean_path_reachability"
+  ],
+  "unit_of_analysis": "One end-to-end execution of the reproduction audit harness over a clean repository clone.",
+  "sample_size_allocation": {
+    "experiments_to_verify": 15,
+    "reproduction_trials": 1
+  },
+  "execution_environment_and_isolation": {
+    "primary_runner": "scripts/ops/seal_glhs_r3_protocols.py"
+  }
+}

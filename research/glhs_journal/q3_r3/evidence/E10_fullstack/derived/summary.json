@@ -1,0 +1,93 @@
+{
+  "architecture_path": "client>fastapi_http>auth_rbac_csrf>glhs_validation_thss>postgresql_commit>response_audit_outbox",
+  "claim_eligible": true,
+  "history_depth": 50,
+  "http_transport_measured": true,
+  "missing_operations_count": 0,
+  "operation_summaries": {
+    "audit_lookup": {
+      "cpu_percent": 71.009,
+      "db_reads": 1300,
+      "db_writes": 0,
+      "p50_ms": 24.559,
+      "p95_ms": 25.592,
+      "p99_ms": 26.523,
+      "peak_rss_bytes": 2932445184,
+      "throughput_tps": 40.598,
+      "write_amplification": 0.0
+    },
+    "enter_in_error_rebuild": {
+      "cpu_percent": 73.016,
+      "db_reads": 1000,
+      "db_writes": 0,
+      "p50_ms": 18.494,
+      "p95_ms": 19.044,
+      "p99_ms": 19.429,
+      "peak_rss_bytes": 2932445184,
+      "throughput_tps": 54.115,
+      "write_amplification": 0.0
+    },
+    "governed_decision_reconstruction": {
+      "cpu_percent": 73.531,
+      "db_reads": 1300,
+      "db_writes": 0,
+      "p50_ms": 24.457,
+      "p95_ms": 25.612,
+      "p99_ms": 28.963,
+      "peak_rss_bytes": 2932445184,
+      "throughput_tps": 38.522,
+      "write_amplification": 0.0
+    },
+    "invalidation_rebuild": {
+      "cpu_percent": 71.261,
+      "db_reads": 1054,
+      "db_writes": 12,
+      "p50_ms": 18.527,
+      "p95_ms": 19.204,
+      "p99_ms": 19.601,
+      "peak_rss_bytes": 2932445184,
+      "throughput_tps": 50.511,
+      "write_amplification": 0.12
+    },
+    "reconstruction": {
+      "cpu_percent": 74.095,
+      "db_reads": 1300,
+      "db_writes": 0,
+      "p50_ms": 23.289,
+      "p95_ms": 25.541,
+      "p99_ms": 27.121,
+      "peak_rss_bytes": 2932445184,
+      "throughput_tps": 42.687,
+      "write_amplification": 0.0
+    },
+    "snapshot_compile": {
+      "cpu_percent": 72.538,
+      "db_reads": 1300,
+      "db_writes": 100,
+      "p50_ms": 28.004,
+      "p95_ms": 29.955,
+      "p99_ms": 31.978,
+      "peak_rss_bytes": 2932445184,
+      "throughput_tps": 35.7,
+      "write_amplification": 1.0
+    },
+    "transition": {
+      "cpu_percent": 64.108,
+      "db_reads": 8201,
+      "db_writes": 1400,
+      "p50_ms": 139.894,
+      "p95_ms": 150.824,
+      "p99_ms": 220.971,
+      "peak_rss_bytes": 2932445184,
+      "throughput_tps": 6.877,
+      "write_amplification": 14.0
+    }
+  },
+  "peak_rss_bytes": 2932445184,
+  "repetitions": 100,
+  "sample_size_sufficient": true,
+  "schema_version": "glhs-fullstack-analysis.v1",
+  "status": "ANALYZED",
+  "total_db_reads": 15455,
+  "total_db_writes": 1512
+}

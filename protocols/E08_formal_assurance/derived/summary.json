@@ -9,7 +9,7 @@
     "max_depth": 5,
     "max_depth_reached": 5,
     "rejected": 28016,
-    "runtime_seconds": 2.4961,
+    "runtime_seconds": 2.4227,
     "source_sha": "6f2b4b6e21ab2b372a01dd1f512bb1962ac896497cc71f9f747397c0a58c2c9e",
     "states": 21361,
     "tool_version": "w5-formal-assure-v1.0",
@@ -41,7 +41,7 @@
     "max_depth": 6,
     "max_depth_reached": 6,
     "rejected": 120417,
-    "runtime_seconds": 11.0052,
+    "runtime_seconds": 10.2919,
     "source_sha": "6f2b4b6e21ab2b372a01dd1f512bb1962ac896497cc71f9f747397c0a58c2c9e",
     "states": 69342,
     "tool_version": "w5-formal-assure-v1.0",
@@ -65,7 +65,7 @@
     "violations": []
   },
   "freeze_id": "GLHS-FORMAL-ASSURANCE-E08-20260928-01",
-  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
   "invariants_verified": [
     "I1_no_stale_base_commit",
     "I2_no_post_revocation_commit",
@@ -80,7 +80,7 @@
     "I11_clean_commit_reachable"
   ],
   "mutation_tests": {
-    "runtime_seconds": 7.7162,
+    "runtime_seconds": 7.2046,
     "success": true
   },
   "total_invariant_violations": 0

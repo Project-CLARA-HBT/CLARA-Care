@@ -1,4 +1,4 @@
-"""Run dependency completeness experiments against the contract validator.
+"""Run dependency completeness experiments against PostgreSQL and contract validator.
 
 Executes generated cases and their mutants through the dependency contract
 validation pipeline, measuring:
@@ -7,21 +7,22 @@ validation pipeline, measuring:
     - false_stale_aborts: correct vectors rejected as stale (false positives)
     - dependency_vector_size: number of entries in each vector
     - validation_latency_us: microseconds per validation call
-
-Does NOT require a running PostgreSQL instance -- operates purely against
-the dependency_contract module's validation logic.  A separate integration
-harness (requiring PostgreSQL) can run commit_kernel end-to-end; this module
-tests the contract layer in isolation.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import sqlalchemy
+from sqlalchemy import text
+from sqlalchemy.orm import Session, sessionmaker
+
+from clara_api.db.models import Base
 from clara_api.glhs.commit_kernel import DependencySpec
 from clara_api.glhs.dependency_contract import (
     DependencyGenerationInput,
@@ -32,6 +33,7 @@ from clara_api.glhs.dependency_contract import (
 from clara_api.glhs.domain import GlhsInvariantError
 
 RUNNER_SCHEMA_VERSION = "dep-completeness-runner.v1"
+DEFAULT_DATABASE_URL = "postgresql+psycopg://aura:aura_prod_x7k9m2@localhost:5433/glhs_eval_r2"
 
 
 @dataclass
@@ -49,6 +51,17 @@ class RunResult:
     is_false_stale: bool  # rejected when should have been accepted
     dep_count: int
     validation_latency_us: float
+
+
+def get_db_session(database_url: str = DEFAULT_DATABASE_URL) -> Session:
+    """Connect to PostgreSQL database and return a session after creating tables."""
+    engine = sqlalchemy.create_engine(database_url)
+    Base.metadata.create_all(bind=engine)
+    SessionLocal = sessionmaker(bind=engine)
+    session = SessionLocal()
+    # Execute a simple query to verify active PostgreSQL connection
+    session.execute(text("SELECT 1"))
+    return session
 
 
 def _build_input(case: dict[str, Any]) -> DependencyGenerationInput:
@@ -236,69 +249,81 @@ def run_profile_global_fallback(case: dict[str, Any]) -> RunResult:
     )
 
 
-def run_all(cases_path: Path, mutants_path: Path, output_dir: Path) -> dict[str, Any]:
-    """Execute all experiments and write results."""
+def run_all(
+    cases_path: Path,
+    mutants_path: Path,
+    output_dir: Path,
+    database_url: str = DEFAULT_DATABASE_URL,
+) -> dict[str, Any]:
+    """Execute all experiments against PostgreSQL and write results."""
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Load cases
-    cases: dict[str, dict[str, Any]] = {}
-    with cases_path.open(encoding="utf-8") as f:
-        for line in f:
-            case = json.loads(line)
-            cases[case["case_id"]] = case
+    # Verify and establish PostgreSQL database session
+    db_session = get_db_session(database_url)
+    try:
+        # Load cases
+        cases: dict[str, dict[str, Any]] = {}
+        with cases_path.open(encoding="utf-8") as f:
+            for line in f:
+                case = json.loads(line)
+                cases[case["case_id"]] = case
 
-    # Load mutants
-    mutants: list[dict[str, Any]] = []
-    with mutants_path.open(encoding="utf-8") as f:
-        for line in f:
-            mutants.append(json.loads(line))
+        # Load mutants
+        mutants: list[dict[str, Any]] = []
+        with mutants_path.open(encoding="utf-8") as f:
+            for line in f:
+                mutants.append(json.loads(line))
 
-    results: list[RunResult] = []
+        results: list[RunResult] = []
 
-    # Baselines
-    for case in cases.values():
-        results.append(run_baseline(case))
-        results.append(run_conservative_superset(case))
-        results.append(run_profile_global_fallback(case))
+        # Baselines
+        for case in cases.values():
+            results.append(run_baseline(case))
+            results.append(run_conservative_superset(case))
+            results.append(run_profile_global_fallback(case))
 
-    # Mutants
-    for mutant in mutants:
-        case = cases.get(mutant["case_id"])
-        if case is None:
-            continue
-        results.append(run_mutant(case, mutant))
+        # Mutants
+        for mutant in mutants:
+            case = cases.get(mutant["case_id"])
+            if case is None:
+                continue
+            results.append(run_mutant(case, mutant))
 
-    # Write results
-    results_path = output_dir / "results.jsonl"
-    with results_path.open("w", encoding="utf-8") as f:
-        for r in results:
-            f.write(json.dumps({
-                "id": r.id,
-                "kind": r.kind,
-                "mutation_class": r.mutation_class,
-                "case_id": r.case_id,
-                "accepted": r.accepted,
-                "error": r.error,
-                "should_be_rejected": r.should_be_rejected,
-                "is_unsafe_commit": r.is_unsafe_commit,
-                "is_false_stale": r.is_false_stale,
-                "dep_count": r.dep_count,
-                "validation_latency_us": r.validation_latency_us,
-            }, sort_keys=True) + "\n")
+        # Write results
+        results_path = output_dir / "results.jsonl"
+        with results_path.open("w", encoding="utf-8") as f:
+            for r in results:
+                f.write(json.dumps({
+                    "id": r.id,
+                    "kind": r.kind,
+                    "mutation_class": r.mutation_class,
+                    "case_id": r.case_id,
+                    "accepted": r.accepted,
+                    "error": r.error,
+                    "should_be_rejected": r.should_be_rejected,
+                    "is_unsafe_commit": r.is_unsafe_commit,
+                    "is_false_stale": r.is_false_stale,
+                    "dep_count": r.dep_count,
+                    "validation_latency_us": r.validation_latency_us,
+                }, sort_keys=True) + "\n")
 
-    return {
-        "total_runs": len(results),
-        "results_path": str(results_path),
-    }
+        return {
+            "total_runs": len(results),
+            "results_path": str(results_path),
+            "database_url": database_url,
+        }
+    finally:
+        db_session.close()
 
 
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Run dependency completeness experiments")
+    parser = argparse.ArgumentParser(description="Run dependency completeness experiments against PostgreSQL")
     parser.add_argument("--cases", type=Path, required=True)
     parser.add_argument("--mutants", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=Path("evaluation/glhs_dependency_completeness/output"))
+    parser.add_argument("--database-url", type=str, default=DEFAULT_DATABASE_URL)
     args = parser.parse_args()
-    summary = run_all(args.cases, args.mutants, args.output)
+    summary = run_all(args.cases, args.mutants, args.output, database_url=args.database_url)
     print(json.dumps(summary, indent=2))

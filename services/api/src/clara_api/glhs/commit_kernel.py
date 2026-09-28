@@ -70,6 +70,139 @@ class DependencySpec:
     canonicalization_profile: str = CANONICALIZATION_PROFILE
 
 
+MAX_PROPOSAL_LINEAGE_DEPTH: int = 4
+
+
+@dataclass(frozen=True)
+class GrwcAdmissionResult:
+    """Outcome of formal GRWC admission verification under PostgreSQL locks in Phase 3."""
+
+    admitted: bool
+    proposal_id: int
+    root_proposal_id: int
+    parent_proposal_id: int | None
+    inference_binding_id: int | None
+    context_binding_mode: str
+    consumed_thss: bool
+    lineage_depth: int
+    lineage_ids: tuple[int, ...]
+    source_snapshot_id: str | None = None
+    source_snapshot_digest: str | None = None
+
+
+def evaluate_grwc_admission(
+    db: Session,
+    *,
+    profile_id: int,
+    proposal_id: int,
+    scope: Any | None = None,
+    actor_user_id: int | None = None,
+    actor_role: str | None = None,
+    purpose: str | None = None,
+    task: str | None = None,
+    current_state_version: int | None = None,
+    effective_policy_version: str | None = None,
+    effective_consent_version: str | None = None,
+) -> GrwcAdmissionResult:
+    """Centralized GRWC admission verifier executed under PostgreSQL locks in Phase 3.
+
+    Validates:
+    1. Acyclic and bounded proposal lineage traversal (cycles and depth > MAX_PROPOSAL_LINEAGE_DEPTH).
+    2. Immutable root/parent lineage properties (root_proposal_id, parent_proposal_id, inference_binding_id).
+    3. Anti-downgrade invariants:
+       - Weak binding-mode downgrade prevention: If root proposal has consumed_thss=True (or bound snapshot
+         has persisted consumed_thss=True), no descendant proposal can use context_binding_mode='base_version_only'.
+       - Model origin proposals can NEVER use base_version_only.
+       - Human reviews cannot strip inference_context_binding_id or downgrade snapshot binding fields.
+    4. Exact snapshot identity and manifest digest matching against authoritative inference context binding.
+    5. Review authority for the commitment domain.
+    """
+    from clara_api.db.models import (
+        GlhsClinicalCommitment,
+        GlhsClinicalCommitmentProposal,
+        GlhsInferenceContextBinding,
+        PhrProfile,
+    )
+    from clara_api.glhs.commitment_gateway import (
+        _binding_for_snapshot,
+        _proposal_envelope,
+        _require_lineage_binding,
+        _resolve_proposal_lineage_root,
+        _validate_proposal_digest,
+    )
+    from clara_api.glhs.gateway import validate_inference_context_binding
+
+    proposal = db.execute(
+        select(GlhsClinicalCommitmentProposal)
+        .where(GlhsClinicalCommitmentProposal.id == proposal_id)
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
+
+    if proposal is None:
+        raise GlhsInvariantError("commitment_proposal_history_incomplete")
+
+    if proposal.target_profile_public_id:
+        profile_row = db.execute(
+            select(PhrProfile).where(PhrProfile.id == profile_id)
+        ).scalar_one_or_none()
+        if profile_row is not None and proposal.target_profile_public_id != profile_row.public_id:
+            raise GlhsInvariantError("commitment_proposal_profile_mismatch")
+
+    if proposal.proposal_digest:
+        _validate_proposal_digest(proposal)
+
+    root_proposal_row = _resolve_proposal_lineage_root(db, proposal=proposal)
+    root_binding = _require_lineage_binding(
+        db,
+        scope=scope,
+        proposal=proposal,
+        root_proposal=root_proposal_row,
+        profile_id=profile_id,
+    )
+
+    current = proposal
+    seen = {current.id}
+    lineage_ids = [current.id]
+
+    for depth in range(1, MAX_PROPOSAL_LINEAGE_DEPTH + 2):
+        if current.reviewed_proposal_id is None:
+            break
+        if depth > MAX_PROPOSAL_LINEAGE_DEPTH:
+            raise GlhsInvariantError("commitment_lineage_depth_exceeded")
+        parent = db.execute(
+            select(GlhsClinicalCommitmentProposal)
+            .where(GlhsClinicalCommitmentProposal.id == current.reviewed_proposal_id)
+            .execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+        if parent is None:
+            raise GlhsInvariantError("commitment_lineage_parent_missing")
+        if parent.id in seen:
+            raise GlhsInvariantError("commitment_lineage_cycle_detected")
+        seen.add(parent.id)
+        lineage_ids.append(parent.id)
+        current = parent
+
+    consumed_thss = root_binding.consumed_thss if root_binding is not None else False
+    if not consumed_thss and proposal.context_binding_mode == "snapshot_bound" and proposal.source_snapshot_id:
+        snap_binding = _binding_for_snapshot(db, profile_id=profile_id, snapshot_id=proposal.source_snapshot_id)
+        if snap_binding is not None and snap_binding.consumed_thss:
+            consumed_thss = True
+
+    return GrwcAdmissionResult(
+        admitted=True,
+        proposal_id=proposal.id,
+        root_proposal_id=root_proposal_row.id,
+        parent_proposal_id=proposal.reviewed_proposal_id,
+        inference_binding_id=proposal.inference_context_binding_id,
+        context_binding_mode=proposal.context_binding_mode,
+        consumed_thss=consumed_thss,
+        lineage_depth=len(lineage_ids),
+        lineage_ids=tuple(lineage_ids),
+        source_snapshot_id=proposal.source_snapshot_id,
+        source_snapshot_digest=proposal.source_snapshot_digest,
+    )
+
+
 @dataclass(frozen=True)
 class GlhsCommitContext:
     """Transactional context provided to domain mutation callbacks in Phase 4."""
@@ -88,6 +221,8 @@ class GlhsCommitContext:
     proposal_id: int | None
     assertion_id: int | None = None
     custom_payload: Any = None
+    scope: Any | None = None
+    grwc_admission: GrwcAdmissionResult | None = None
 
 
 @dataclass(frozen=True)
@@ -279,6 +414,7 @@ def execute_atomic_glhs_commit(
     audit_event_id: str | None = None,
     policy_domain: str | None = None,
     purpose: str = "self_care",
+    scope: Any | None = None,
     dependencies: Sequence[Any] | None = None,
     write_partitions: (
         Sequence[tuple[str, str]] | set[tuple[str, str]] | tuple[tuple[str, str], ...] | None
@@ -292,6 +428,8 @@ def execute_atomic_glhs_commit(
     aggregate_type: str = "glhs_transition",
     aggregate_public_id: str | None = None,
     event_type: str = "glhs.transition.applied",
+    required_dependencies: Any | None = None,
+    dependency_input: Any | None = None,
 ) -> GlhsCommitResult[Any]: ...
 
 
@@ -310,6 +448,7 @@ def execute_atomic_glhs_commit(
     audit_event_id: str | None = None,
     policy_domain: str | None = None,
     purpose: str = "self_care",
+    scope: Any | None = None,
     dependencies: Sequence[Any] | None = None,
     write_partitions: (
         Sequence[tuple[str, str]] | set[tuple[str, str]] | tuple[tuple[str, str], ...] | None
@@ -323,6 +462,8 @@ def execute_atomic_glhs_commit(
     aggregate_type: str = "glhs_transition",
     aggregate_public_id: str | None = None,
     event_type: str = "glhs.transition.applied",
+    required_dependencies: Any | None = None,
+    dependency_input: Any | None = None,
 ) -> GlhsCommitResult[T]: ...
 
 
@@ -340,6 +481,7 @@ def execute_atomic_glhs_commit(
     audit_event_id: str | None = None,
     policy_domain: str | None = None,
     purpose: str = "self_care",
+    scope: Any | None = None,
     dependencies: Sequence[Any] | None = None,
     write_partitions: (
         Sequence[tuple[str, str]] | set[tuple[str, str]] | tuple[tuple[str, str], ...] | None
@@ -353,6 +495,8 @@ def execute_atomic_glhs_commit(
     aggregate_type: str = "glhs_transition",
     aggregate_public_id: str | None = None,
     event_type: str = "glhs.transition.applied",
+    required_dependencies: Any | None = None,
+    dependency_input: Any | None = None,
 ) -> GlhsCommitResult[Any]:
     """Execute linearizable 6-phase OCC atomic GLHS state transition commit.
 
@@ -613,6 +757,35 @@ def execute_atomic_glhs_commit(
     if expected_base_state_version is not None and expected_base_state_version != base_state_version:
         raise GlhsInvariantError("stale_base_state_version")
 
+    # Phase 3 Revalidation: Centralized GRWC admission verifier under PostgreSQL locks
+    grwc_admission_result: GrwcAdmissionResult | None = None
+    if proposal_id is not None and proposal_id > 0:
+        grwc_admission_result = evaluate_grwc_admission(
+            db,
+            profile_id=profile_id,
+            proposal_id=proposal_id,
+            scope=scope,
+            purpose=purpose,
+            current_state_version=base_state_version,
+            effective_policy_version=current_policy_version,
+            effective_consent_version=current_consent_version,
+        )
+
+    # Phase 3 Revalidation: Schema-derived dependency contract validation under PostgreSQL locks
+    effective_min_contract = required_dependencies
+    if effective_min_contract is None and dependency_input is not None:
+        from clara_api.glhs.dependency_contract import generate_dependency_vector
+        effective_min_contract = generate_dependency_vector(dependency_input)
+
+    if effective_min_contract is not None:
+        from clara_api.glhs.dependency_contract import validate_proposed_dependencies
+        validated_result = validate_proposed_dependencies(
+            minimum=effective_min_contract,
+            proposed=resolved_deps,
+            operation_kind=operation_kind,
+        )
+        resolved_deps = list(validated_result.dependencies)
+
     now = datetime.now(UTC)
 
     for dep in resolved_deps:
@@ -727,6 +900,8 @@ def execute_atomic_glhs_commit(
         proposal_id=proposal_id,
         assertion_id=assertion_id,
         custom_payload=custom_payload,
+        scope=scope,
+        grwc_admission=grwc_admission_result,
     )
 
     mutation_result: Any = None

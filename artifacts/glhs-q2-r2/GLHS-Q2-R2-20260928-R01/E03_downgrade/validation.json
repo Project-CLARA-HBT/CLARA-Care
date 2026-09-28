@@ -1,0 +1,17 @@
+{
+  "schema_version": "glhs-downgrade-assurance-validation.v1",
+  "status": "VALIDATED",
+  "freeze_id": "GLHS-DOWNGRADE-ASSURANCE-20260928-01",
+  "run_id": "GLHS-Q2-R2-20260928-R01",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "total_executions": 300,
+  "adversarial_total": 250,
+  "adversarial_rejected": 250,
+  "clean_total": 50,
+  "clean_admitted": 50,
+  "downgrade_success_threshold_met": true,
+  "clean_control_target_met": true,
+  "overall_pass": true,
+  "claim_eligible": true,
+  "validated_at_utc": "2026-09-28T00:00:00+00:00"
+}

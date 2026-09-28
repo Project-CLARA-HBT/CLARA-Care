@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "program": "GLHS R3 — Governed Read-to-Write Continuity (GRWC)",
+  "version": "3.0.0",
+  "date": "2026-09-28",
+  "curator": "Agent B — Systems & Formal Architecture",
+  "formal_model_module": "docs/formal/GLHS_GSA.tla",
+  "model_checker": "TLC (TLA+ Version 2)",
+  "state_variables": [
+    "entity_versions",
+    "consent_epochs",
+    "policy_epochs",
+    "leases",
+    "lock_state",
+    "policy_lock",
+    "consent_lock",
+    "txn_state",
+    "wait_for",
+    "inference_bindings",
+    "proposals",
+    "applied_transitions"
+  ],
+  "invariants": [
+    {
+      "id": "I01",
+      "name": "I01_state_isolation",
+      "description": "Causal read-dependency invariance across commits: committed state version must match observed version in dependency vector.",
+      "category": "Concurrency & State",
+      "formal_definition": "\\A a \\in Agents : txn_state[a] = \"committing\" => (\\A e \\in ReadSet(a) : entity_versions[e] = leases[a].v_s[e])",
+      "enforcement_point": "commit_kernel.py: Phase 3 Dependency Revalidation",
+      "target_experiment": "E04, E08",
+      "fail_closed_code": "stale_entity_partition"
+    },
+    {
+      "id": "I02",
+      "name": "I02_governance_freshness",
+      "description": "Monotonic policy and consent epoch stability during commit transaction execution.",
+      "category": "Governance",
+      "formal_definition": "\\A a \\in Agents : txn_state[a] = \"committing\" => (leases[a].c_s = consent_epochs[leases[a].domain] /\\ leases[a].p_s = policy_epochs[leases[a].domain])",
+      "enforcement_point": "commit_kernel.py: Phase 3 Governance Revalidation under locks",
+      "target_experiment": "E04, E08",
+      "fail_closed_code": "stale_policy_version, stale_consent_version"
+    },
+    {
+      "id": "I03",
+      "name": "I03_phantom_free",
+      "description": "Strict fail-closed abort on concurrent epoch drift or append-only ledger phantom insertions.",
+      "category": "Governance Concurrency",
+      "formal_definition": "\\A a \\in Agents : (txn_state[a] = \"committing\" /\\ (leases[a].c_s /= consent_epochs[leases[a].domain] \\/ leases[a].p_s /= policy_epochs[leases[a].domain])) => txn_state'[a] = \"aborted\"",
+      "enforcement_point": "lock_hierarchy.py: Class 1, 2, 3 Advisory & Row Anchors",
+      "target_experiment": "E04, E08",
+      "fail_closed_code": "proposal_snapshot_consent_mismatch"
+    },
+    {
+      "id": "I04",
+      "name": "I04_deadlock_free",
+      "description": "Acyclic wait-for graph under strict total 7-class lock hierarchy acquisition.",
+      "category": "Concurrency",
+      "formal_definition": "~(\\E a \\in Agents : <<a, a>> \\in TransitiveClosure(wait_for))",
+      "enforcement_point": "lock_hierarchy.py: build_lock_plan() total ordering",
+      "target_experiment": "E08, E09",
+      "fail_closed_code": "N/A (deadlock prevention by construction)"
+    },
+    {
+      "id": "I05",
+      "name": "I05_idempotency_atomicity",
+      "description": "Single execution per (tenant_id, operation_kind, idempotency_key); identical duplicate requests return cached result without re-executing mutations.",
+      "category": "Transaction & Idempotency",
+      "formal_definition": "\\A t1, t2 \\in applied_transitions : (t1.tenant_id = t2.tenant_id /\\ t1.op_kind = t2.op_kind /\\ t1.idem_key = t2.idem_key) => t1.id = t2.id",
+      "enforcement_point": "commit_kernel.py: Phase 1 & Phase 2 Idempotency Checks",
+      "target_experiment": "E04, ARCH-011",
+      "fail_closed_code": "idempotency_key_reused"
+    },
+    {
+      "id": "I06",
+      "name": "I06_cas_monotonicity",
+      "description": "Strict single-step CAS partition version increment (successor_version = predecessor_version + 1).",
+      "category": "State Progression",
+      "formal_definition": "\\A link \\in transition_partition_links : link.successor_version = link.predecessor_version + 1",
+      "enforcement_point": "commit_kernel.py: Phase 5 CAS progression",
+      "target_experiment": "E04, E08",
+      "fail_closed_code": "cas_version_conflict"
+    },
+    {
+      "id": "I07",
+      "name": "I07_evidence_closure",
+      "description": "Asserted evidence IDs in proposal must be a strict subset of evidence disclosed in the bound snapshot.",
+      "category": "Evidence & Provenance",
+      "formal_definition": "\\A p \\in proposals : p.asserted_evidence_ids \\subseteq p.snapshot.provenance_ids",
+      "enforcement_point": "gateway.py: validate_exact_disclosure_dependency()",
+      "target_experiment": "E01, E02",
+      "fail_closed_code": "proposal_evidence_not_disclosed"
+    },
+    {
+      "id": "I08",
+      "name": "I08_binding_immutability",
+      "description": "Inference context binding records are immutable and append-only; ORM/DB reject updates and deletes.",
+      "category": "Audit & Lineage",
+      "formal_definition": "\\A b \\in inference_bindings : b' = b /\\ ~(\\E b \\in inference_bindings : b \\notin inference_bindings')",
+      "enforcement_point": "models.py: _reject_glhs_ledger_mutation listeners",
+      "target_experiment": "E01, E06",
+      "fail_closed_code": "glhs_ledger_mutation_rejected"
+    },
+    {
+      "id": "I09",
+      "name": "I09_lineage_preservation",
+      "description": "Reviewed proposals retain the root model proposal id and root inference context binding.",
+      "category": "Proposal Lineage",
+      "formal_definition": "\\A p \\in proposals : p.origin = \"human_review\" => (p.root_proposal_id /= null /\\ p.inference_binding_id = Root(p).inference_binding_id)",
+      "enforcement_point": "commitment_gateway.py: _require_lineage_binding()",
+      "target_experiment": "E01, E06",
+      "fail_closed_code": "commitment_lineage_binding_missing"
+    },
+    {
+      "id": "I10",
+      "name": "I10_dependency_completeness",
+      "description": "Proposal dependency vector must cover the schema-derived minimum dependency vector for the operation kind.",
+      "category": "Dependency Contract",
+      "formal_definition": "\\A p \\in proposals : MinDependencies(p.operation_kind, p.target) \\subseteq p.dependency_vector",
+      "enforcement_point": "dependency_contract.py: generate_dependency_vector() & validate_proposed_dependencies()",
+      "target_experiment": "E05",
+      "fail_closed_code": "dependency_contract_insufficient_entities, dependency_contract_omission, dependency_contract_unexpected_extra, dependency_contract_version_mismatch, dependency_contract_digest_mismatch"
+    },
+    {
+      "id": "I11",
+      "name": "I11_no_weak_route_downgrade",
+      "description": "Proposals with model origin or model lineage ancestry are forbidden from using base_version_only commit route.",
+      "category": "Anti-Downgrade",
+      "formal_definition": "\\A p \\in proposals : (p.origin = \"model\" \\/ Root(p).origin = \"model\") => p.context_binding_mode = \"snapshot_bound\"",
+      "enforcement_point": "commitment_gateway.py: validate_base_proposal_context()",
+      "target_experiment": "E06",
+      "fail_closed_code": "commitment_lineage_base_only_forbidden, commitment_proposal_snapshot_binding_required"
+    },
+    {
+      "id": "I12",
+      "name": "I12_exact_inference_disclosure_continuity",
+      "description": "A persistent mutation proposal is admitted only when its inference binding points to the exact snapshot and matching projection digest supplied at inference time.",
+      "category": "Core GRWC Invariant",
+      "formal_definition": "\\A p \\in proposals, c \\in commits : Admitted(p, c) => (\\E b \\in inference_bindings, s \\in snapshots : p.inference_binding_id = b.id /\\ b.snapshot_id = s.id /\\ b.projection_digest = s.projection_digest /\\ b.manifest_digest = s.manifest_digest /\\ b.consumed_thss = TRUE /\\ b.status = \"COMPLETED\")",
+      "enforcement_point": "gateway.py: validate_exact_disclosure_dependency() & commitment_gateway.py: validate_bound_proposal_context()",
+      "target_experiment": "E01, E02, E08",
+      "fail_closed_code": "projection_digest_mismatch, inference_binding_snapshot_id_mismatch, binding_not_completed"
+    },
+    {
+      "id": "I13",
+      "name": "I13_non_downgradable_human_lineage",
+      "description": "Human modifications to a model proposal cannot alter or strip the root inference binding to bypass GRWC admission checks.",
+      "category": "Anti-Laundering & Lineage",
+      "formal_definition": "\\A p \\in proposals : (p.origin = \"human_review\" /\\ Root(p).origin = \"model\") => (p.inference_binding_id = Root(p).inference_binding_id /\\ p.context_binding_mode = \"snapshot_bound\" /\\ p.source_snapshot_id = Root(p).source_snapshot_id)",
+      "enforcement_point": "commitment_gateway.py: _require_lineage_binding()",
+      "target_experiment": "E01, E06, E08",
+      "fail_closed_code": "commitment_lineage_binding_mismatch, commitment_lineage_snapshot_mismatch"
+    },
+    {
+      "id": "I14",
+      "name": "I14_undisclosed_evidence_rejection",
+      "description": "Globally valid clinical evidence present in the database but omitted from the model-visible disclosure snapshot cannot satisfy disclosure-specific evidence checks.",
+      "category": "Evidence Scope",
+      "formal_definition": "\\A p \\in proposals, e \\in p.asserted_evidence_ids : (e \\in GlobalEvidence(p.profile_id) /\\ e \\notin DisclosedEvidence(p.inference_binding_id)) => ~Admitted(p)",
+      "enforcement_point": "gateway.py: validate_exact_disclosure_dependency()",
+      "target_experiment": "E01, E08",
+      "fail_closed_code": "proposal_evidence_not_disclosed"
+    },
+    {
+      "id": "I15",
+      "name": "I15_clean_path_reachability",
+      "description": "Under un-conflicted state, valid governance, and intact lineage continuity, a clean proposal transition is guaranteed to commit successfully without false rejections.",
+      "category": "Liveness & Correctness",
+      "formal_definition": "\\A p \\in proposals : (ValidLineage(p) /\\ ContinuousDisclosure(p) /\\ StateCurrent(p) /\\ GovCurrent(p) /\\ DepsComplete(p) /\\ ~ConcurrentConflict(p)) => <>Committed(p)",
+      "enforcement_point": "commit_kernel.py: execute_atomic_glhs_commit()",
+      "target_experiment": "E01, E04, E08",
+      "fail_closed_code": "N/A (Liveness property)"
+    }
+  ]
+}

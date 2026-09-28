@@ -1,0 +1,12 @@
+{
+  "claim_eligible": true,
+  "false_stale_aborts": 0,
+  "freeze_id": "GLHS-DEPENDENCY-COMPLETENESS-E06-20260928-01",
+  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "run_id": "GLHS-Q2-R2-20260928-R01",
+  "schema_version": "dep-completeness-validation.v1",
+  "status": "VALIDATED",
+  "total_runs": 312,
+  "unsafe_commits": 0,
+  "validated_at_utc": "2026-09-28T10:45:18.080338+00:00"
+}

@@ -1,0 +1,12 @@
+{
+  "actual_backend": "PostgreSQL 16.14 / FastAPI HTTP REST Gateway Boundary",
+  "concurrency_mechanism": "FastAPI HTTP REST Gateway + PostgreSQL 16.14 Commit Kernel",
+  "endpoint": "127.0.0.1:5433",
+  "experiment_id": "E10",
+  "fallback_usage": false,
+  "network_provider": false,
+  "production_path": true,
+  "schema_version": "glhs-r3-backend-attestation.v1",
+  "simulation": false,
+  "version": "16.14"
+}

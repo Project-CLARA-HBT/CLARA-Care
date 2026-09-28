@@ -17,6 +17,7 @@ validated against (and must be a superset of) the schema-derived minimum.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -66,7 +67,7 @@ class OperationDependencyRule:
     min_entity_count: int = 1
 
 
-# Exhaustive registry of permitted operation types.
+OperationDependencyContract = OperationDependencyRule
 # Adding a new operation type requires a code change here.
 _OPERATION_RULES: dict[str, OperationDependencyRule] = {
     "COMMIT_PROPOSAL": OperationDependencyRule(
@@ -134,6 +135,24 @@ _OPERATION_RULES: dict[str, OperationDependencyRule] = {
         entity_access_mode="READ",
         min_entity_count=0,
         allow_additional_entities=False,
+    ),
+    "COMMIT_COMMITMENT_TRANSITION": OperationDependencyRule(
+        operation_kind="COMMIT_COMMITMENT_TRANSITION",
+        requires_governance=True,
+        requires_consent=True,
+        requires_evidence=False,
+        entity_access_mode="WRITE",
+        min_entity_count=1,
+        allow_additional_entities=True,
+    ),
+    "APPLY_TRANSITION": OperationDependencyRule(
+        operation_kind="APPLY_TRANSITION",
+        requires_governance=False,
+        requires_consent=False,
+        requires_evidence=False,
+        entity_access_mode="WRITE",
+        min_entity_count=0,
+        allow_additional_entities=True,
     ),
 }
 
@@ -300,22 +319,59 @@ def _dep_identity(dep: DependencySpec) -> tuple[str, str, str]:
 
 
 def validate_proposed_dependencies(
-    minimum: GeneratedDependencyVector,
-    proposed: list[DependencySpec],
+    minimum: GeneratedDependencyVector | Sequence[DependencySpec] | None = None,
+    proposed: list[DependencySpec] | Sequence[DependencySpec] | None = None,
     *,
     operation_kind: str,
+    required_deps: GeneratedDependencyVector | Sequence[DependencySpec] | None = None,
+    proposed_deps: Sequence[DependencySpec] | None = None,
 ) -> GeneratedDependencyVector:
-    """Validate that ``proposed`` is a superset of ``minimum``.
+    """Validate that ``proposed`` is a superset of ``minimum`` (or ``required_deps``).
 
     Returns a ``GeneratedDependencyVector`` with ``is_superset=True`` and the
     extra keys recorded when the proposed set is strictly larger.
 
-    Raises ``GlhsInvariantError`` if any minimum dependency is missing.
+    Raises ``GlhsInvariantError`` if any minimum dependency is missing or corrupted.
     """
+    effective_min = required_deps if required_deps is not None else minimum
+    if effective_min is None:
+        raise GlhsInvariantError("dependency_contract_minimum_required")
+
+    effective_prop = proposed_deps if proposed_deps is not None else proposed
+    if effective_prop is None:
+        raise GlhsInvariantError("dependency_contract_proposed_required")
+
+    proposed_list = list(effective_prop)
     rule = lookup_operation_rule(operation_kind)
 
-    minimum_ids = {_dep_identity(d) for d in minimum.dependencies}
-    proposed_ids = {_dep_identity(d) for d in proposed}
+    min_deps: tuple[DependencySpec, ...]
+    if isinstance(effective_min, GeneratedDependencyVector):
+        min_deps = effective_min.dependencies
+        contract_version = effective_min.contract_version
+        generation_rule = effective_min.generation_rule
+        generation_digest = effective_min.generation_digest
+        generated_at = effective_min.generated_at
+    else:
+        min_deps = tuple(effective_min)
+        contract_version = CONTRACT_VERSION
+        generation_rule = operation_kind
+        generation_digest = ""
+        generated_at = datetime.now(UTC).isoformat()
+
+    minimum_ids = {_dep_identity(d) for d in min_deps}
+    proposed_ids = {_dep_identity(d) for d in proposed_list}
+
+    # Validate access mode match for matching kind and key (catches mode corruptions M3)
+    min_kind_keys = {(d.dependency_kind, d.dependency_key): d for d in min_deps}
+    for pdep in proposed_list:
+        kk = (pdep.dependency_kind, pdep.dependency_key)
+        if kk in min_kind_keys:
+            mdep = min_kind_keys[kk]
+            if mdep.access_mode != pdep.access_mode:
+                raise GlhsInvariantError(
+                    f"dependency_contract_access_mode_mismatch: dependency_contract_omission: {kk[0]}:{kk[1]} "
+                    f"expected {mdep.access_mode}, got {pdep.access_mode}"
+                )
 
     missing = minimum_ids - proposed_ids
     if missing:
@@ -332,8 +388,8 @@ def validate_proposed_dependencies(
         )
 
     # Validate version / digest consistency for matching deps
-    minimum_map = {_dep_identity(d): d for d in minimum.dependencies}
-    for pdep in proposed:
+    minimum_map = {_dep_identity(d): d for d in min_deps}
+    for pdep in proposed_list:
         pid = _dep_identity(pdep)
         if pid in minimum_map:
             mdep = minimum_map[pid]
@@ -357,13 +413,13 @@ def validate_proposed_dependencies(
 
     return GeneratedDependencyVector(
         dependencies=tuple(sorted(
-            proposed,
+            proposed_list,
             key=lambda d: (d.dependency_kind, d.dependency_key, d.access_mode),
         )),
-        contract_version=minimum.contract_version,
-        generation_rule=minimum.generation_rule,
-        generation_digest=minimum.generation_digest,
-        generated_at=minimum.generated_at,
+        contract_version=contract_version,
+        generation_rule=generation_rule,
+        generation_digest=generation_digest,
+        generated_at=generated_at,
         is_superset=bool(extra),
         superset_extra_keys=extra_keys,
     )

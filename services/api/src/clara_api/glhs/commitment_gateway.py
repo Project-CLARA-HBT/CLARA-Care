@@ -401,9 +401,10 @@ def _resolve_proposal_lineage_root(
 def _require_lineage_binding(
     db: Session,
     *,
-    scope: ProfileScope,
+    scope: ProfileScope | None = None,
     proposal: GlhsClinicalCommitmentProposal,
     root_proposal: GlhsClinicalCommitmentProposal,
+    profile_id: int | None = None,
 ) -> GlhsInferenceContextBinding | None:
     """GLHS-B03 anti-laundering invariant at admission time.
 
@@ -413,6 +414,20 @@ def _require_lineage_binding(
     reference that binding even when its own origin is non-model; otherwise a
     model-produced snapshot could be laundered through a user-origin proposal.
     """
+
+    target_profile_id = (
+        scope.profile.id
+        if scope is not None
+        else (
+            profile_id
+            if profile_id is not None
+            else (proposal.commitment.profile_id if proposal.commitment else None)
+        )
+    )
+    if target_profile_id is None and proposal.commitment_id:
+        comm = db.get(GlhsClinicalCommitment, proposal.commitment_id)
+        if comm is not None:
+            target_profile_id = comm.profile_id
 
     root_binding: GlhsInferenceContextBinding | None = None
     if root_proposal.inference_context_binding_id is not None:
@@ -433,11 +448,12 @@ def _require_lineage_binding(
         if root_binding is None:
             raise GlhsInvariantError("commitment_lineage_binding_missing")
         root_binding = validate_inference_context_binding(
-            db, profile_id=scope.profile.id, binding_id=root_binding.public_id
+            db, profile_id=target_profile_id, binding_id=root_binding.public_id
         )
         _validate_bound_proposal_binding(
             binding=root_binding,
             scope=scope,
+            profile_id=target_profile_id,
             base_state_version=root_proposal.base_state_version,
             policy_version=root_proposal.policy_version,
             consent_version=root_proposal.consent_version,
@@ -449,18 +465,21 @@ def _require_lineage_binding(
             source_manifest_digest=root_proposal.source_snapshot_digest,
             evidence_ids=sorted(root_proposal.observed_evidence_ids_json or ()),
         )
-        if proposal.inference_context_binding_id != root_proposal.inference_context_binding_id:
-            raise GlhsInvariantError("commitment_lineage_binding_mismatch")
         if root_binding.consumed_thss:
             if proposal.context_binding_mode != "snapshot_bound":
                 raise GlhsInvariantError("commitment_lineage_base_only_forbidden")
+        if proposal.inference_context_binding_id is None:
+            raise GlhsInvariantError("commitment_lineage_binding_mismatch: commitment_lineage_binding_required")
+        if proposal.inference_context_binding_id != root_proposal.inference_context_binding_id:
+            raise GlhsInvariantError("commitment_lineage_binding_mismatch")
+        if root_binding.consumed_thss:
             if proposal.source_snapshot_id != root_binding.source_snapshot_id:
                 raise GlhsInvariantError("commitment_lineage_snapshot_mismatch")
             if proposal.source_snapshot_digest != root_binding.source_manifest_digest:
-                raise GlhsInvariantError("commitment_lineage_manifest_digest_mismatch")
+                raise GlhsInvariantError("commitment_lineage_manifest_mismatch: commitment_lineage_manifest_digest_mismatch")
     elif proposal.context_binding_mode == "snapshot_bound" and proposal.source_snapshot_id:
         snapshot_binding = _binding_for_snapshot(
-            db, profile_id=scope.profile.id, snapshot_id=proposal.source_snapshot_id
+            db, profile_id=target_profile_id, snapshot_id=proposal.source_snapshot_id
         )
         if snapshot_binding is not None and snapshot_binding.consumed_thss:
             raise GlhsInvariantError("commitment_lineage_binding_required")
@@ -1543,7 +1562,8 @@ def propose_bound_commitment_transition(
 def _validate_bound_proposal_binding(
     *,
     binding: GlhsInferenceContextBinding,
-    scope: ProfileScope,
+    scope: ProfileScope | None = None,
+    profile_id: int | None = None,
     base_state_version: int,
     policy_version: str,
     consent_version: str,
@@ -1557,7 +1577,8 @@ def _validate_bound_proposal_binding(
 ) -> None:
     """Tie the immutable binding to the exact proposal coordinates (B-005)."""
 
-    if binding.profile_id != scope.profile.id:
+    target_profile_id = scope.profile.id if scope is not None else profile_id
+    if target_profile_id is not None and binding.profile_id != target_profile_id:
         raise GlhsInvariantError("inference_binding_profile_mismatch")
     if binding.base_state_version != base_state_version:
         raise GlhsInvariantError("inference_binding_state_version_mismatch")
@@ -1755,34 +1776,18 @@ def review_model_commitment_proposal(
         raise GlhsInvariantError("commitment_review_authority_required")
     if proposal.inference_context_binding_id is None:
         raise GlhsInvariantError("inference_binding_required")
-    root_binding_row = db.get(
-        GlhsInferenceContextBinding, proposal.inference_context_binding_id
-    )
-    if root_binding_row is None:
-        raise GlhsInvariantError("commitment_lineage_binding_missing")
-    root_binding = validate_inference_context_binding(
-        db, profile_id=scope.profile.id, binding_id=root_binding_row.public_id
-    )
     if (
         proposal.context_binding_mode != "snapshot_bound"
         or proposal.source_snapshot_id is None
         or proposal.source_snapshot_digest is None
     ):
         raise GlhsInvariantError("commitment_review_downgrade_forbidden")
-    _validate_bound_proposal_binding(
-        binding=root_binding,
-        scope=scope,
-        base_state_version=proposal.base_state_version,
-        policy_version=proposal.policy_version,
-        consent_version=proposal.consent_version,
-        purpose=proposal.purpose,
-        task=proposal.task,
-        actor_user_id=proposal.actor_user_id,
-        actor_role=proposal.actor_role,
-        source_snapshot_id=proposal.source_snapshot_id,
-        source_manifest_digest=proposal.source_snapshot_digest,
-        evidence_ids=sorted(proposal.observed_evidence_ids_json or ()),
+    root_proposal = _resolve_proposal_lineage_root(db, proposal=proposal)
+    root_binding = _require_lineage_binding(
+        db, scope=scope, proposal=proposal, root_proposal=root_proposal
     )
+    if root_binding is None:
+        raise GlhsInvariantError("commitment_lineage_binding_missing")
     evidence = list(
         db.execute(
             select(GlhsEvidence).where(
@@ -2145,6 +2150,7 @@ def apply_commitment_transition(
             disclosure_digest=proposal.source_snapshot_digest or "",
             policy_domain=commitment.domain,
             purpose=scope.purpose,
+            scope=scope,
             canonicalization_profile=CANONICALIZATION_PROFILE,
             mutation_callback=_mutation_callback,
             aggregate_type="glhs_clinical_commitment",

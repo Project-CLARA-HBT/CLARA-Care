@@ -1,0 +1,29 @@
+{
+  "schema_version": "glhs-r3-experiment-seal.v1",
+  "experiment_id": "E06",
+  "run_id": "GLHS-R3-E06-20260928",
+  "provenance": {
+    "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+    "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "active_branch": "research/glhs-q2-r2-experiments"
+  },
+  "protocol_sha256": "8a71d3fe942b1a51f231f22b8bac6738d1e1bc83b4c49a74e7cb07c26fe67bee",
+  "backend_attestation_sha256": "3efc710f76f43da9cbd76a4bb32edaeef0709381763b4dd692c1190688855b81",
+  "validation_verdict": "PASS",
+  "forbidden_mutations_observed": 0,
+  "claim_eligible": true,
+  "artifact_inventory": {
+    "backend_attestation.json": "3efc710f76f43da9cbd76a4bb32edaeef0709381763b4dd692c1190688855b81",
+    "code_manifest.json": "4d64f5fa33cbf894ca888950940c1fb3f309ecdf1e18e5979227a11d0f6f230f",
+    "derived/summary.json": "f4cee364086df188cf277227ae51ff9d20431c555892d26dbc80985ca4cc3d0f",
+    "derived/summary.md": "5673aed363b00cd1295f70f68fd39c0f8c171730582667cf6ce9d6ac381ced1d",
+    "environment.json": "620e33407f8668ca8a7f7bb2c809fbd5909883e69b25b42e4af05eab7247526d",
+    "freeze.json": "23ddfd62c020cbe040c8b0c22d9b3f58509c1045870066ed175d51ca62242276",
+    "protocol.json": "8a71d3fe942b1a51f231f22b8bac6738d1e1bc83b4c49a74e7cb07c26fe67bee",
+    "protocol.sha256": "c8ca67b369cfe9176ccefeb3167f7756cf666ecf1a8f163dca55089f0f63155d",
+    "raw/runs.jsonl": "30d1d2f03c249a75a0759b4763e9b9fda46011456932b5946681d9971c663df6",
+    "validation.json": "602bf8cd2d0644c9289f7b69a0f6357837c8b3d4426efe3a3d987ceb9978f930"
+  },
+  "sealed_at_utc": "2026-09-28T00:00:00Z",
+  "status": "SEALED"
+}

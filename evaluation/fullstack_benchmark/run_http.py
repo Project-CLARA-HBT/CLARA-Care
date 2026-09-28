@@ -51,6 +51,8 @@ from clara_api.glhs.gateway import (
 from clara_api.lifemap.profile_scope import ProfileScope
 from clara_api.main import app
 
+DEFAULT_POSTGRES_URL = "postgresql+psycopg://aura:aura_prod_x7k9m2@localhost:5433/glhs_eval_r2"
+
 OPERATIONS = (
     "transition",
     "reconstruction",
@@ -615,6 +617,18 @@ def run_http_benchmark(
     raw_path = output_dir / "raw_latencies.json"
     raw_path.write_text(json.dumps(raw_latencies, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
+    results_path = output_dir / "results.jsonl"
+    with results_path.open("w", encoding="utf-8") as stream:
+        for op, lats in raw_latencies.items():
+            for idx, lat in enumerate(lats):
+                record = {
+                    "operation": op,
+                    "repetition": idx,
+                    "latency_ms": lat,
+                    "history_depth": history_depth,
+                }
+                stream.write(json.dumps(record) + "\n")
+
     manifest = {
         "schema_version": "glhs-fullstack-http-transport.v2",
         "status": "EXECUTED_FULLSTACK_HTTP",
@@ -655,7 +669,7 @@ def run_http_benchmark(
 
     checksums = [
         f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}"
-        for path in (metrics_path, manifest_path, raw_path)
+        for path in (metrics_path, manifest_path, raw_path, results_path)
     ]
     (output_dir / "checksums.sha256").write_text("\n".join(checksums) + "\n", encoding="utf-8")
     return manifest
@@ -663,7 +677,7 @@ def run_http_benchmark(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--database-url", default=os.environ.get("DATABASE_URL"))
+    parser.add_argument("--database-url", default=os.environ.get("DATABASE_URL", DEFAULT_POSTGRES_URL))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--history-depth", type=int, default=50)
     parser.add_argument("--repetitions", type=int, default=100)

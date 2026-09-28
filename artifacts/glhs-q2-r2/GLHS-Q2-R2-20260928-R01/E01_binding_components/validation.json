@@ -1,0 +1,20 @@
+{
+  "adversarial_executions_audited": 2048,
+  "claim_eligible": true,
+  "clean_controls_admitted": 96,
+  "clean_controls_rate": 1.0,
+  "clean_controls_total": 96,
+  "execution_audit": {
+    "records_audited": 2816,
+    "valid": true
+  },
+  "freeze_id": "GLHS-BINDING-COMPONENT-ABLATION-20260928-01",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "no_forbidden_services_imports": true,
+  "no_production_flags": true,
+  "run_id": "GLHS-Q2-R2-20260928-R01",
+  "schema_version": "glhs-binding-component-ablation-validation.v1",
+  "status": "VALIDATED",
+  "total_executions_audited": 2816,
+  "validated_at_utc": "2026-09-27T17:34:09.378412+00:00"
+}

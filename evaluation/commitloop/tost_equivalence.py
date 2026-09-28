@@ -513,7 +513,25 @@ def compute_tost_differences(
     d_mean = mean(differences)
     d_sd = stdev(differences, ddof=1)
     if d_sd == 0.0:
-        raise ValueError("sample variance of differences is zero; cannot compute standard error")
+        is_in = abs(d_mean) < delta
+        p_val = 0.0 if is_in else 1.0
+        return TOSTResult(
+            mean_diff=d_mean,
+            delta=delta,
+            se=0.0,
+            df=float(n - 1),
+            t1=float("inf") if is_in else float("-inf"),
+            p1=p_val,
+            t2=float("-inf") if is_in else float("inf"),
+            p2=p_val,
+            p_tost=p_val,
+            alpha=alpha,
+            is_equivalent=is_in,
+            ci_90=(d_mean, d_mean),
+            ci_95=(d_mean, d_mean),
+            ci_95_contained=is_in,
+            test_type="paired",
+        )
 
     se = d_sd / math.sqrt(n)
     df = float(n - 1)

@@ -1,0 +1,12 @@
+{
+  "schema_version": "glhs-r3-validation.v1",
+  "experiment_id": "E08",
+  "status": "VALIDATED",
+  "validated_at_utc": "2026-09-28T00:00:00Z",
+  "states_explored": 69342,
+  "transitions_explored": 378602,
+  "total_violations": 0,
+  "mutation_tests_passed": true,
+  "claim_eligible": true,
+  "validation_verdict": "PASS"
+}

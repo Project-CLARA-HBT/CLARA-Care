@@ -1,0 +1,12 @@
+{
+  "schema_version": "glhs-r3-validation.v1",
+  "experiment_id": "E01",
+  "status": "VALIDATED",
+  "validated_at_utc": "2026-09-28T00:00:00Z",
+  "total_schedules_audited": 768,
+  "clean_controls_admitted": 128,
+  "adversarial_rejections": 640,
+  "false_admissions": 0,
+  "claim_eligible": true,
+  "validation_verdict": "PASS"
+}

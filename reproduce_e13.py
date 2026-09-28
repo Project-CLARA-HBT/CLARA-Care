@@ -26,16 +26,17 @@ from pathlib import Path
 from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parent
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+for _p in (_REPO_ROOT, _REPO_ROOT / "services" / "api" / "src", _REPO_ROOT / "services" / "ml" / "src"):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 from evaluation.external_validation.analyze import analyze_e13_results
 from evaluation.external_validation.seal import seal_e13
 
 PROTOCOL_SCHEMA_VERSION = "glhs-e13-external-validation-protocol-v1"
 SEAL_SCHEMA_VERSION = "glhs-e13-external-validation-seal-v1"
-DEFAULT_ARTIFACT_DIR = Path("protocols/E13_external_validation")
-DEFAULT_PROTOCOL_PATH = Path("protocols/E13_external_validation/protocol.json")
+DEFAULT_ARTIFACT_DIR = _REPO_ROOT / "research/glhs_journal/q3_r3/evidence/E13_external_validation"
+DEFAULT_PROTOCOL_PATH = _REPO_ROOT / "research/glhs_journal/q3_r3/protocols/E13_external_validation/protocol.json"
 
 
 class NetworkAccessProhibitedError(RuntimeError):
@@ -44,13 +45,19 @@ class NetworkAccessProhibitedError(RuntimeError):
 
 def disable_network() -> None:
     """Prohibit all socket creation and DNS resolution fail-closed."""
-    def forbidden_socket(*args: Any, **kwargs: Any) -> Any:
+    _orig_socket = socket.socket
+
+    class ForbiddenSocket(_orig_socket):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            raise NetworkAccessProhibitedError("network_access_prohibited_during_reproduction")
+
+    def forbidden_conn(*args: Any, **kwargs: Any) -> Any:
         raise NetworkAccessProhibitedError("network_access_prohibited_during_reproduction")
 
-    socket.socket = forbidden_socket  # type: ignore[assignment]
-    socket.create_connection = forbidden_socket  # type: ignore[assignment]
-    socket.getaddrinfo = forbidden_socket  # type: ignore[assignment]
-    socket.gethostbyname = forbidden_socket  # type: ignore[assignment]
+    socket.socket = ForbiddenSocket  # type: ignore[assignment]
+    socket.create_connection = forbidden_conn  # type: ignore[assignment]
+    socket.getaddrinfo = forbidden_conn  # type: ignore[assignment]
+    socket.gethostbyname = forbidden_conn  # type: ignore[assignment]
 
 
 def sha256_file(path: Path) -> str:
@@ -126,8 +133,43 @@ def reproduce_and_verify(
 
     # 2. Verify protocol document
     protocol_doc = json.loads(protocol_path.read_text(encoding="utf-8"))
-    if protocol_doc.get("schema_version") != PROTOCOL_SCHEMA_VERSION:
+    valid_proto_schemas = (
+        PROTOCOL_SCHEMA_VERSION,
+        "glhs-r3-protocol.v1",
+        "glhs-r3-protocol-e13.v1",
+    )
+    if protocol_doc.get("schema_version") not in valid_proto_schemas:
         raise ValueError(f"invalid_protocol_schema:{protocol_doc.get('schema_version')}")
+
+    is_r3 = protocol_doc.get("schema_version") in ("glhs-r3-protocol.v1", "glhs-r3-protocol-e13.v1")
+
+    # For R3 artifact directories, verify required artifact bundle
+    if is_r3 or (artifact_dir / "freeze.json").is_file():
+        required_artifacts = [
+            "protocol.json",
+            "protocol.sha256",
+            "freeze.json",
+            "environment.json",
+            "code_manifest.json",
+            "backend_attestation.json",
+            "raw/results.jsonl",
+            "raw/execution_metadata.json",
+            "derived/summary.json",
+            "derived/summary.md",
+            "validation.json",
+            "checksums.sha256",
+            "seal.json",
+        ]
+        for rel_f in required_artifacts:
+            target = artifact_dir / rel_f
+            if not target.is_file():
+                raise FileNotFoundError(f"required_artifact_missing:{rel_f}")
+
+        # Verify protocol.sha256 match
+        actual_proto_sha = sha256_file(artifact_dir / "protocol.json")
+        sealed_proto_sha = (artifact_dir / "protocol.sha256").read_text(encoding="utf-8").split()[0]
+        if actual_proto_sha.lower() != sealed_proto_sha.lower():
+            raise ValueError(f"protocol_sha256_mismatch:{actual_proto_sha}!={sealed_proto_sha}")
 
     # 3. Verify raw results file
     raw_results_path = artifact_dir / "raw" / "results.jsonl"
@@ -155,19 +197,24 @@ def reproduce_and_verify(
     validation_doc = json.loads(validation_path.read_text(encoding="utf-8"))
     if validation_doc.get("status") != "VALIDATED":
         raise ValueError("validation_status_invalid")
+    if "validation_verdict" in validation_doc and validation_doc["validation_verdict"] != "PASS":
+        raise ValueError("validation_verdict_not_pass")
 
     # 7. Verify seal.json
     seal_path = artifact_dir / "seal.json"
     seal_doc = json.loads(seal_path.read_text(encoding="utf-8"))
-    if seal_doc.get("status") != "SEALED" or seal_doc.get("schema_version") != SEAL_SCHEMA_VERSION:
+    valid_seal_schemas = (SEAL_SCHEMA_VERSION, "glhs-r3-experiment-seal.v1")
+    if seal_doc.get("status") != "SEALED" or seal_doc.get("schema_version") not in valid_seal_schemas:
         raise ValueError("seal_doc_invalid")
 
     if seal_doc.get("raw_results_sha256") != sha256_file(raw_results_path):
         raise ValueError("seal_raw_results_hash_mismatch")
+    if "validation_verdict" in seal_doc and seal_doc["validation_verdict"] != "PASS":
+        raise ValueError("seal_validation_verdict_not_pass")
 
     report = {
         "status": "REPRODUCED_AND_VERIFIED",
-        "freeze_id": protocol_doc.get("freeze_id", "GLHS-EXTERNAL-VALIDATION-E13-20260928-01"),
+        "freeze_id": protocol_doc.get("freeze_id", "GLHS-R3-E13-FREEZE-20260928-V1"),
         "git_sha": seal_doc["git_sha"],
         "network_disabled": True,
         "checksums_verified_count": len(verified_checksums),
@@ -219,7 +266,7 @@ def main() -> int:
     )
 
     print("\n" + "=" * 65)
-    print(" E13 EXTERNAL VALIDATION OFFLINE REPRODUCTION PASSED")
+    print(" E13 SYNTHETIC SOURCE-DERIVED TASK SUITE OFFLINE REPRODUCTION PASSED")
     print("=" * 65)
     print(f"  Status:                            {result['status']}")
     print(f"  Freeze ID:                         {result['freeze_id']}")

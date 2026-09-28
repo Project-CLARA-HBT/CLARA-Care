@@ -1,0 +1,221 @@
+{
+  "freeze_id": "GLHS-POSTGRES-TOCTOU-E04-20260928-01",
+  "total_schedules": 2280,
+  "executed_schedules": 2280,
+  "total_executions": 2280,
+  "forbidden_count": 0,
+  "forbidden_commits_observed": 0,
+  "safe_rejection_count": 0,
+  "indeterminate_count": 0,
+  "operational_count": 0,
+  "admit_count": 0,
+  "forbidden_commit_rate": 0.0,
+  "forbidden_commit_rate_ci_95": [
+    0.0,
+    0.001682
+  ],
+  "forbidden_commit_rate_upper_95": 0.001185,
+  "safe_rejection_rate": 0.0,
+  "indeterminate_rate": 0.0,
+  "operational_rate": 0.0,
+  "admit_rate": 0.0,
+  "primary_endpoint_pass": true,
+  "primary_endpoint_met": true,
+  "overall_pass": true,
+  "timing_breakdown": {
+    "commit_before_mutation": {
+      "category": "commit_before_mutation",
+      "total_executed": 360,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.007459
+    },
+    "delayed_commit": {
+      "category": "delayed_commit",
+      "total_executed": 384,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.006996
+    },
+    "mutation_before_commit": {
+      "category": "mutation_before_commit",
+      "total_executed": 384,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.006996
+    },
+    "partial_overlap": {
+      "category": "partial_overlap",
+      "total_executed": 384,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.006996
+    },
+    "read_before_write_after": {
+      "category": "read_before_write_after",
+      "total_executed": 384,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.006996
+    },
+    "simultaneous_release": {
+      "category": "simultaneous_release",
+      "total_executed": 384,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.006996
+    }
+  },
+  "mutation_breakdown": {
+    "unknown": {
+      "category": "unknown",
+      "total_executed": 2280,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.001185
+    }
+  },
+  "entity_breakdown": {
+    "cross_profile": {
+      "category": "cross_profile",
+      "total_executed": 462,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.005822
+    },
+    "delegated_actor": {
+      "category": "delegated_actor",
+      "total_executed": 678,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.003975
+    },
+    "owner_self": {
+      "category": "owner_self",
+      "total_executed": 642,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.004197
+    },
+    "unrelated_entity": {
+      "category": "unrelated_entity",
+      "total_executed": 498,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.005403
+    }
+  },
+  "modifier_breakdown": {
+    "competing_lock": {
+      "category": "competing_lock",
+      "total_executed": 440,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.006111
+    },
+    "deadlock_provocation": {
+      "category": "deadlock_provocation",
+      "total_executed": 320,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.008384
+    },
+    "none": {
+      "category": "none",
+      "total_executed": 440,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.006111
+    },
+    "retry_after_rollback": {
+      "category": "retry_after_rollback",
+      "total_executed": 440,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.006111
+    },
+    "simultaneous_writers": {
+      "category": "simultaneous_writers",
+      "total_executed": 320,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.008384
+    },
+    "transaction_abort": {
+      "category": "transaction_abort",
+      "total_executed": 320,
+      "forbidden_count": 0,
+      "safe_rejection_count": 0,
+      "indeterminate_count": 0,
+      "operational_count": 0,
+      "admit_count": 0,
+      "forbidden_rate": 0.0,
+      "wilson_95_upper": 0.008384
+    }
+  },
+  "classification_stability": null
+}

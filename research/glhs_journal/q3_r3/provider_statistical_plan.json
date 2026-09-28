@@ -1,0 +1,294 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "glhs-r3-provider-statistical-plan.v1",
+  "program": "GLHS R3 — Governed Read-to-Write Continuity (GRWC)",
+  "phase": "Phase 7 — Real Provider Study (E11 & E12)",
+  "title": "Real Provider Study Statistical Design and Estimands Specification for E11 (Two-Model Utility Replication) and E12 (Malformed Output Sensitivity)",
+  "curator": "Agent C — Experiment & Statistics",
+  "date": "2026-09-29",
+  "status": "PROSPECTIVELY_FROZEN",
+  "freeze_timestamp_utc": "2026-09-29T00:00:00Z",
+  "master_seeds": {
+    "E11": "20260928_11",
+    "E12": "20260928_12"
+  },
+  "global_parameters": {
+    "significance_level_alpha": 0.05,
+    "confidence_level": 0.95,
+    "equivalence_margin_delta": 0.02,
+    "bootstrap_replications": 10000,
+    "bootstrap_method": "Subject-level 95% BCa (Bias-Corrected and Accelerated) Bootstrap",
+    "hypothesis_testing_framework": "Schuirmann Two One-Sided Tests (TOST) & Exact Paired Sign Test",
+    "statistical_power_target": 0.941,
+    "power_analysis_summary": "94.1% power at N=384 paired subjects for equivalence margin delta = +/- 0.02 at alpha = 0.05 (exact non-central t integration with true mean difference d_bar = 0.0 and sigma_d = 0.111; >99.8% power if sigma_d <= 0.08)",
+    "primary_models": [
+      "claude-sonnet-4.6",
+      "gemini-3.6-flash-high"
+    ],
+    "empirical_probe_model": "gemini-3.8-flash-tiered",
+    "backend_requirement": "live_llm_provider_ledger",
+    "ledger_path": "research/glhs_journal/q3_r3/evidence/E11_provider_replication/provider_ledger.jsonl",
+    "fail_closed_policy": "If commercial provider API credentials or network connectivity are missing, evaluation is marked NOT_RUN; zero synthetic mocking permitted."
+  },
+  "experiments": {
+    "E11": {
+      "experiment_id": "E11",
+      "protocol_id": "GLHS-R3-E11-MODEL_REPLICATION",
+      "title": "Two-Model Clinical Utility & Governance Equivalence",
+      "priority": "P1",
+      "scientific_unit": "paired_subject_case_observation",
+      "target_invariants": [
+        "I07_evidence_closure",
+        "I12_exact_inference_disclosure_continuity",
+        "I15_clean_path_reachability"
+      ],
+      "primary_research_questions": [
+        "Does task-minimized governed context projection (THSS snapshot bound) maintain clinical utility equivalent to full unbounded authorized history across distinct production model architectures?",
+        "Is the paired clinical accuracy difference strictly bounded within [-0.02, +0.02] under Schuirmann TOST at alpha=0.05?",
+        "What is the token consumption reduction and inference latency savings achieved by governed disclosure projection?"
+      ],
+      "sample_size_allocation": {
+        "paired_subjects_N": 384,
+        "calls_per_condition": 768,
+        "total_model_calls_across_arms": 1536,
+        "arm_A": "Governed Context (THSS Snapshot Projection)",
+        "arm_B": "Full Authorized Profile History (Unbounded)",
+        "primary_model_arms": {
+          "arm_1": "claude-sonnet-4.6",
+          "arm_2": "gemini-3.6-flash-high"
+        },
+        "probe_arm": "gemini-3.8-flash-tiered"
+      },
+      "tost_mathematical_formulation": {
+        "null_hypothesis_H0": "|Theta_A - Theta_B| >= delta (Utility difference equals or exceeds equivalence margin delta = 0.02)",
+        "alternative_hypothesis_H1": "|Theta_A - Theta_B| < delta (Utility equivalence established within +/- 0.02)",
+        "paired_difference_mean": "d_bar = (1/N) * sum_{i=1}^{N} (Score_A,i - Score_B,i)",
+        "paired_difference_sd": "s_d = sqrt( (1/(N-1)) * sum_{i=1}^{N} (d_i - d_bar)^2 )",
+        "standard_error": "SE_d = s_d / sqrt(N)",
+        "degrees_of_freedom": "df = N - 1 = 383",
+        "t1_lower_stat": "t1 = (d_bar + delta) / SE_d",
+        "t2_upper_stat": "t2 = (d_bar - delta) / SE_d",
+        "p1_lower_tail": "p1 = P(T_{df} >= t1) = 1 - CDF_t(t1, df)",
+        "p2_upper_tail": "p2 = P(T_{df} <= t2) = CDF_t(t2, df)",
+        "p_tost": "p_TOST = max(p1, p2)",
+        "decision_rule": "Reject H0 in favor of H1 if p_TOST < alpha (0.05); equivalent to 90% CI for (Theta_A - Theta_B) lying strictly inside (-0.02, +0.02)."
+      },
+      "estimands": {
+        "primary": [
+          {
+            "id": "E11-EST-01",
+            "name": "Paired Clinical Accuracy Difference (Theta_A - Theta_B)",
+            "definition": "Mean paired difference in clinical decision correctness score between governed context (Arm A) and full authorized context (Arm B).",
+            "formula": "d_bar = (1/N) * sum_{i=1}^{384} (Score_A,i - Score_B,i)",
+            "units": "proportion_difference",
+            "aggregation": "Mean paired difference with 95% BCa bootstrap CI (10,000 resamples) and Schuirmann TOST p-value.",
+            "target": "TOST rejection of H0 with p_TOST < 0.05 and 95% BCa CI inside [-0.02, +0.02]."
+          }
+        ],
+        "secondary": [
+          {
+            "id": "E11-EST-02",
+            "name": "Exact Paired Sign Test P-Value",
+            "definition": "Exact non-parametric sign test on discordant paired subject outcomes (Score_A,i != Score_B,i).",
+            "formula": "P(X >= k) under Binomial(N_discordant, 0.5) where k = max(n_pos, n_neg)",
+            "units": "p_value",
+            "aggregation": "Exact two-tailed binomial probability.",
+            "target": "p > 0.05 (no directional bias between context conditions)."
+          },
+          {
+            "id": "E11-EST-03",
+            "name": "Token Overhead Ratio (Governed / Unbounded)",
+            "definition": "Ratio of total prompt tokens consumed under governed context projection to full authorized profile context.",
+            "formula": "Ratio_tokens = sum(Tokens_Governed) / sum(Tokens_Unbounded)",
+            "units": "dimensionless_ratio",
+            "aggregation": "Mean and 95% bootstrap CI across N=384 subjects.",
+            "target": "<= 0.50 (>= 50% token consumption reduction)."
+          },
+          {
+            "id": "E11-EST-04",
+            "name": "Inference Latency Delta (ms)",
+            "definition": "Difference in provider completion response latency between governed projection and unbounded context.",
+            "formula": "Delta_latency = Latency_Governed - Latency_Unbounded",
+            "units": "milliseconds",
+            "aggregation": "Median (p50) and p95 latency difference with bootstrap CIs."
+          }
+        ]
+      },
+      "power_analysis": {
+        "sample_size_N": 384,
+        "equivalence_margin_delta": 0.02,
+        "significance_level_alpha": 0.05,
+        "assumed_sd_paired_differences_sigma_d": 0.111,
+        "assumed_true_difference_diff": 0.0,
+        "power_calculated": 0.941,
+        "power_percentage": "94.1%",
+        "notes": "Exact integration yields 94.1% power at sigma_d = 0.111; if empirical sigma_d <= 0.08, power exceeds 99.8%.",
+        "calculation_method": "Exact Owen / Phillips non-central t distribution integration for TOST power"
+      },
+      "stopping_rules": {
+        "fail_closed_criteria": [
+          "If provider API returns HTTP 401/403 or invalid credentials, benchmark halts and reports NOT_RUN.",
+          "Any response missing immutable execution metadata (request_id, reported_model, token counts) fails invariant I12."
+        ],
+        "missing_data_rule": "Provider API rate limits or transient errors are re-attempted under R2 retry; unresolvable failures pass to E12 sensitivity analysis."
+      }
+    },
+    "E12": {
+      "experiment_id": "E12",
+      "protocol_id": "GLHS-R3-E12-MALFORMED_SENSITIVITY",
+      "title": "Malformed Output Sensitivity & Multi-Regime Repair Analysis Protocol",
+      "priority": "P1",
+      "scientific_unit": "model_completion_response_payload",
+      "target_invariants": [
+        "I10_dependency_completeness",
+        "I12_exact_inference_disclosure_continuity"
+      ],
+      "primary_research_questions": [
+        "What is the baseline Intention-To-Treat (ITT) R0 malformed output rate across commercial model provider executions?",
+        "How effectively do deterministic local JSON repair (R1), single-retry recovery (R2), and constrained schema fallback (R3) mitigate structured parsing failures?",
+        "Does malformed output sensitivity stratify significantly across model provider, context condition, clinical task family, or attempt iteration?"
+      ],
+      "sample_size_allocation": {
+        "total_completions_evaluated_N": 768,
+        "source": "Full E11 response completion ledger (384 paired subject cases x 2 context arms)",
+        "stratification_dimensions": [
+          "model_family",
+          "context_condition",
+          "task_family",
+          "attempt_number"
+        ]
+      },
+      "repair_regimes": {
+        "R0": {
+          "regime_id": "R0",
+          "name": "Intention-To-Treat (ITT) Baseline Primary Arm",
+          "description": "Raw un-repaired model output evaluated directly against JSON schema and clinical proposal parser. Zero recovery applied."
+        },
+        "R1": {
+          "regime_id": "R1",
+          "name": "Deterministic Local JSON / Syntax Repair",
+          "description": "Single-pass local syntactic repair (stripping markdown codeblocks, fixing unescaped quotes, closing dangling brackets/braces, removing trailing commas)."
+        },
+        "R2": {
+          "regime_id": "R2",
+          "name": "Single-Retry Prompting Recovery",
+          "description": "Automatic re-execution of the query with error diagnostics feedback injected into system prompt on R1 failure."
+        },
+        "R3": {
+          "regime_id": "R3",
+          "name": "Constrained Schema Repair & Fail-Closed Escalation",
+          "description": "Constrained decoding grammar parser fallback; if parsing remains invalid, transaction strictly fails closed with deterministic error reason code."
+        }
+      },
+      "error_taxonomy_classes": [
+        {
+          "code": "invalid_json",
+          "description": "Malformed JSON syntax (unclosed strings, bad tokens, syntax errors)."
+        },
+        {
+          "code": "schema_mismatch",
+          "description": "Valid JSON but missing required fields or incorrect property types."
+        },
+        {
+          "code": "truncation",
+          "description": "Completion cut off at token length limit prior to JSON closure."
+        },
+        {
+          "code": "refusal",
+          "description": "Model safety or policy refusal to generate clinical recommendation."
+        },
+        {
+          "code": "empty_response",
+          "description": "Zero bytes or whitespace-only response body returned by provider."
+        },
+        {
+          "code": "provider_error",
+          "description": "HTTP 5xx server error or upstream provider API failure."
+        },
+        {
+          "code": "wrong_model",
+          "description": "Provider returned completion from model ID differing from requested."
+        },
+        {
+          "code": "timeout",
+          "description": "Request exceeded gateway socket timeout setting."
+        },
+        {
+          "code": "content_format_violation",
+          "description": "Output contained forbidden HTML, markdown noise, or invalid preamble."
+        },
+        {
+          "code": "semantic_failure",
+          "description": "Valid schema but violates clinical semantic constraints or domain assertions."
+        },
+        {
+          "code": "rate_limit",
+          "description": "HTTP 429 rate limit error code from provider endpoint."
+        },
+        {
+          "code": "unclassified",
+          "description": "Any unexpected or uncategorized provider execution failure."
+        }
+      ],
+      "estimands": {
+        "primary": [
+          {
+            "id": "E12-EST-01",
+            "name": "Intention-To-Treat (ITT) R0 Malformed Rate",
+            "definition": "Proportion of raw initial model completions exhibiting any error taxonomy violation.",
+            "formula": "Rate_R0 = N_malformed_R0 / N_total_completions",
+            "units": "proportion [0.0, 1.0]",
+            "aggregation": "Sample proportion with 95% Wilson score confidence interval.",
+            "target": "<= 0.05 (5.0% maximum acceptable ITT baseline failure rate)."
+          }
+        ],
+        "secondary": [
+          {
+            "id": "E12-EST-02",
+            "name": "R1 Local Repair Recovery Rate",
+            "definition": "Proportion of R0 malformed completions successfully resolved by R1 deterministic local repair.",
+            "formula": "Recovery_R1 = N_recovered_R1 / N_malformed_R0",
+            "units": "proportion [0.0, 1.0]",
+            "aggregation": "Proportion with 95% Wilson score CI.",
+            "target": ">= 0.80 (80.0% local repair success)."
+          },
+          {
+            "id": "E12-EST-03",
+            "name": "R2 Single-Retry Recovery Rate",
+            "definition": "Proportion of R1 unrecovered failures resolved by single retry prompt re-execution.",
+            "formula": "Recovery_R2 = N_recovered_R2 / N_unrecovered_R1",
+            "units": "proportion [0.0, 1.0]",
+            "aggregation": "Proportion with 95% Wilson score CI."
+          },
+          {
+            "id": "E12-EST-04",
+            "name": "R3 Constrained Escalation / Fail-Closed Rate",
+            "definition": "Proportion of unrecovered failures safely escalating to fail-closed state rejection without state corruption.",
+            "formula": "Escalation_R3 = N_fail_closed_R3 / N_unrecovered_R2",
+            "units": "proportion [0.0, 1.0]",
+            "aggregation": "Proportion with 1-sided 95% Clopper-Pearson UCB on safety violations.",
+            "target": "1.00 (100.0% deterministic fail-closed safety)."
+          }
+        ]
+      },
+      "stopping_rules": {
+        "fail_closed_criteria": [
+          "Any unclassified error failing to produce a deterministic fail-closed code halts evaluation.",
+          "Any state corruption resulting from malformed output parsing fails invariant I10 and invalidates run."
+        ],
+        "missing_data_rule": "Missing model responses count directly as ITT R0 failures; no unobserved data imputation permitted."
+      }
+    }
+  },
+  "reproducibility_and_sealing": {
+    "runner_scripts": {
+      "E11": "evaluation/commitloop/seal_v8.py",
+      "E12": "services/api/tests/test_glhs_inference_consumption.py"
+    },
+    "artifact_outputs": {
+      "E11": "research/glhs_journal/q3_r3/evidence/E11_provider_replication/",
+      "E12": "research/glhs_journal/q3_r3/evidence/E12_malformed_sensitivity/"
+    },
+    "checksum_rule": "Raw provider ledgers, derived TOST statistical outputs, BCa bootstrap iterations, and Markdown report summaries must be registered in checksums.sha256 and seal.json."
+  }
+}

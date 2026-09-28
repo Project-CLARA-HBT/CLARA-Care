@@ -14,7 +14,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 4872
+      "elapsed_ns": 115367092,
+      "governance_txid": 5366,
+      "proposal_txid": 5368,
+      "lock_waits": []
     },
     {
       "trial_id": 1,
@@ -26,7 +29,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 3501
+      "elapsed_ns": 42744282,
+      "governance_txid": 5370,
+      "proposal_txid": 5371,
+      "lock_waits": []
     },
     {
       "trial_id": 2,
@@ -38,7 +44,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2800
+      "elapsed_ns": 47873146,
+      "governance_txid": 5374,
+      "proposal_txid": 5375,
+      "lock_waits": []
     },
     {
       "trial_id": 3,
@@ -50,7 +59,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2567
+      "elapsed_ns": 39275111,
+      "governance_txid": 5378,
+      "proposal_txid": 5379,
+      "lock_waits": []
     },
     {
       "trial_id": 4,
@@ -62,7 +74,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2509
+      "elapsed_ns": 39292946,
+      "governance_txid": 5382,
+      "proposal_txid": 5383,
+      "lock_waits": []
     },
     {
       "trial_id": 5,
@@ -74,7 +89,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2947
+      "elapsed_ns": 39888615,
+      "governance_txid": 5386,
+      "proposal_txid": 5387,
+      "lock_waits": []
     },
     {
       "trial_id": 6,
@@ -86,7 +104,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2950
+      "elapsed_ns": 43438947,
+      "governance_txid": 5391,
+      "proposal_txid": 5390,
+      "lock_waits": []
     },
     {
       "trial_id": 7,
@@ -98,7 +119,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2430
+      "elapsed_ns": 42170641,
+      "governance_txid": 5394,
+      "proposal_txid": 5395,
+      "lock_waits": []
     },
     {
       "trial_id": 8,
@@ -110,7 +134,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2524
+      "elapsed_ns": 39116227,
+      "governance_txid": 5398,
+      "proposal_txid": 5399,
+      "lock_waits": []
     },
     {
       "trial_id": 9,
@@ -122,7 +149,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2589
+      "elapsed_ns": 38526319,
+      "governance_txid": 5402,
+      "proposal_txid": 5403,
+      "lock_waits": []
     },
     {
       "trial_id": 10,
@@ -134,7 +164,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2387
+      "elapsed_ns": 39199321,
+      "governance_txid": 5406,
+      "proposal_txid": 5407,
+      "lock_waits": []
     },
     {
       "trial_id": 11,
@@ -146,7 +179,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2452
+      "elapsed_ns": 36297447,
+      "governance_txid": 5410,
+      "proposal_txid": 5411,
+      "lock_waits": []
     },
     {
       "trial_id": 12,
@@ -158,7 +194,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2404
+      "elapsed_ns": 36347766,
+      "governance_txid": 5414,
+      "proposal_txid": 5415,
+      "lock_waits": []
     },
     {
       "trial_id": 13,
@@ -170,7 +209,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2374
+      "elapsed_ns": 36094332,
+      "governance_txid": 5418,
+      "proposal_txid": 5419,
+      "lock_waits": []
     },
     {
       "trial_id": 14,
@@ -182,7 +224,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2669
+      "elapsed_ns": 36153629,
+      "governance_txid": 5422,
+      "proposal_txid": 5423,
+      "lock_waits": []
     },
     {
       "trial_id": 15,
@@ -194,7 +239,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2347
+      "elapsed_ns": 36633430,
+      "governance_txid": 5427,
+      "proposal_txid": 5426,
+      "lock_waits": []
     },
     {
       "trial_id": 16,
@@ -206,7 +254,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2259
+      "elapsed_ns": 38628446,
+      "governance_txid": 5430,
+      "proposal_txid": 5431,
+      "lock_waits": []
     },
     {
       "trial_id": 17,
@@ -218,7 +269,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2303
+      "elapsed_ns": 39219617,
+      "governance_txid": 5434,
+      "proposal_txid": 5435,
+      "lock_waits": []
     },
     {
       "trial_id": 18,
@@ -230,7 +284,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2122
+      "elapsed_ns": 38333743,
+      "governance_txid": 5439,
+      "proposal_txid": 5438,
+      "lock_waits": []
     },
     {
       "trial_id": 19,
@@ -242,7 +299,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2020
+      "elapsed_ns": 37253847,
+      "governance_txid": 5442,
+      "proposal_txid": 5443,
+      "lock_waits": []
     },
     {
       "trial_id": 20,
@@ -254,7 +314,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2065
+      "elapsed_ns": 36442615,
+      "governance_txid": 5446,
+      "proposal_txid": 5447,
+      "lock_waits": []
     },
     {
       "trial_id": 21,
@@ -266,7 +329,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2072
+      "elapsed_ns": 36925985,
+      "governance_txid": 5450,
+      "proposal_txid": 5451,
+      "lock_waits": []
     },
     {
       "trial_id": 22,
@@ -278,7 +344,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2106
+      "elapsed_ns": 38315443,
+      "governance_txid": 5455,
+      "proposal_txid": 5454,
+      "lock_waits": []
     },
     {
       "trial_id": 23,
@@ -290,7 +359,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2408
+      "elapsed_ns": 39123213,
+      "governance_txid": 5458,
+      "proposal_txid": 5459,
+      "lock_waits": []
     },
     {
       "trial_id": 24,
@@ -302,7 +374,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2030
+      "elapsed_ns": 37486376,
+      "governance_txid": 5462,
+      "proposal_txid": 5463,
+      "lock_waits": []
     },
     {
       "trial_id": 25,
@@ -314,7 +389,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2180
+      "elapsed_ns": 39095607,
+      "governance_txid": 5466,
+      "proposal_txid": 5467,
+      "lock_waits": []
     },
     {
       "trial_id": 26,
@@ -326,7 +404,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2096
+      "elapsed_ns": 39114084,
+      "governance_txid": 5470,
+      "proposal_txid": 5471,
+      "lock_waits": []
     },
     {
       "trial_id": 27,
@@ -338,7 +419,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2084
+      "elapsed_ns": 38132743,
+      "governance_txid": 5474,
+      "proposal_txid": 5475,
+      "lock_waits": []
     },
     {
       "trial_id": 28,
@@ -350,7 +434,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2078
+      "elapsed_ns": 38212305,
+      "governance_txid": 5478,
+      "proposal_txid": 5479,
+      "lock_waits": []
     },
     {
       "trial_id": 29,
@@ -362,7 +449,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2089
+      "elapsed_ns": 39983049,
+      "governance_txid": 5482,
+      "proposal_txid": 5483,
+      "lock_waits": []
     },
     {
       "trial_id": 30,
@@ -374,7 +464,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2166
+      "elapsed_ns": 39265587,
+      "governance_txid": 5486,
+      "proposal_txid": 5487,
+      "lock_waits": []
     },
     {
       "trial_id": 31,
@@ -386,7 +479,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2137
+      "elapsed_ns": 39343659,
+      "governance_txid": 5490,
+      "proposal_txid": 5491,
+      "lock_waits": []
     },
     {
       "trial_id": 32,
@@ -398,7 +494,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2135
+      "elapsed_ns": 38510454,
+      "governance_txid": 5494,
+      "proposal_txid": 5495,
+      "lock_waits": []
     },
     {
       "trial_id": 33,
@@ -410,7 +509,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2089
+      "elapsed_ns": 39165940,
+      "governance_txid": 5498,
+      "proposal_txid": 5499,
+      "lock_waits": []
     },
     {
       "trial_id": 34,
@@ -422,7 +524,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2078
+      "elapsed_ns": 37461788,
+      "governance_txid": 5502,
+      "proposal_txid": 5503,
+      "lock_waits": []
     },
     {
       "trial_id": 35,
@@ -434,7 +539,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2010
+      "elapsed_ns": 36400420,
+      "governance_txid": 5506,
+      "proposal_txid": 5507,
+      "lock_waits": []
     },
     {
       "trial_id": 36,
@@ -446,7 +554,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2069
+      "elapsed_ns": 36594753,
+      "governance_txid": 5510,
+      "proposal_txid": 5511,
+      "lock_waits": []
     },
     {
       "trial_id": 37,
@@ -458,7 +569,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2019
+      "elapsed_ns": 36639103,
+      "governance_txid": 5514,
+      "proposal_txid": 5515,
+      "lock_waits": []
     },
     {
       "trial_id": 38,
@@ -470,7 +584,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2045
+      "elapsed_ns": 44986546,
+      "governance_txid": 5518,
+      "proposal_txid": 5519,
+      "lock_waits": []
     },
     {
       "trial_id": 39,
@@ -482,7 +599,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2060
+      "elapsed_ns": 42121971,
+      "governance_txid": 5522,
+      "proposal_txid": 5523,
+      "lock_waits": []
     },
     {
       "trial_id": 40,
@@ -494,7 +614,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2150
+      "elapsed_ns": 37857768,
+      "governance_txid": 5526,
+      "proposal_txid": 5527,
+      "lock_waits": []
     },
     {
       "trial_id": 41,
@@ -506,7 +629,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2288
+      "elapsed_ns": 38672462,
+      "governance_txid": 5530,
+      "proposal_txid": 5531,
+      "lock_waits": []
     },
     {
       "trial_id": 42,
@@ -518,7 +644,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2291
+      "elapsed_ns": 40263721,
+      "governance_txid": 5534,
+      "proposal_txid": 5535,
+      "lock_waits": []
     },
     {
       "trial_id": 43,
@@ -530,19 +659,25 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2533
+      "elapsed_ns": 38518628,
+      "governance_txid": 5538,
+      "proposal_txid": 5539,
+      "lock_waits": []
     },
     {
       "trial_id": 44,
       "seed": 1854899288,
       "governance_delay_us": 63,
       "proposal_delay_us": 62,
-      "observed_classification": "proposal_committed_before_observed_revoke_commit",
-      "observed_outcome": "proposal_committed",
+      "observed_classification": "rejected_after_or_during_governance_race",
+      "observed_outcome": "proposal_snapshot_consent_mismatch",
       "forbidden_commit": false,
       "safety_success": true,
-      "governance_committed_first": false,
-      "elapsed_ns": 2658
+      "governance_committed_first": true,
+      "elapsed_ns": 37675407,
+      "governance_txid": 5543,
+      "proposal_txid": 5542,
+      "lock_waits": []
     },
     {
       "trial_id": 45,
@@ -554,7 +689,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2529
+      "elapsed_ns": 38112626,
+      "governance_txid": 5546,
+      "proposal_txid": 5547,
+      "lock_waits": []
     },
     {
       "trial_id": 46,
@@ -566,7 +704,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2410
+      "elapsed_ns": 38486094,
+      "governance_txid": 5550,
+      "proposal_txid": 5551,
+      "lock_waits": []
     },
     {
       "trial_id": 47,
@@ -578,7 +719,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2781
+      "elapsed_ns": 37953281,
+      "governance_txid": 5554,
+      "proposal_txid": 5555,
+      "lock_waits": []
     },
     {
       "trial_id": 48,
@@ -590,7 +734,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2410
+      "elapsed_ns": 37746131,
+      "governance_txid": 5558,
+      "proposal_txid": 5559,
+      "lock_waits": []
     },
     {
       "trial_id": 49,
@@ -602,7 +749,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2555
+      "elapsed_ns": 38208427,
+      "governance_txid": 5562,
+      "proposal_txid": 5563,
+      "lock_waits": []
     },
     {
       "trial_id": 50,
@@ -614,7 +764,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2581
+      "elapsed_ns": 38911851,
+      "governance_txid": 5566,
+      "proposal_txid": 5567,
+      "lock_waits": []
     },
     {
       "trial_id": 51,
@@ -626,7 +779,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2400
+      "elapsed_ns": 38413201,
+      "governance_txid": 5570,
+      "proposal_txid": 5571,
+      "lock_waits": []
     },
     {
       "trial_id": 52,
@@ -638,7 +794,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2465
+      "elapsed_ns": 38917840,
+      "governance_txid": 5574,
+      "proposal_txid": 5575,
+      "lock_waits": []
     },
     {
       "trial_id": 53,
@@ -650,7 +809,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2433
+      "elapsed_ns": 38863352,
+      "governance_txid": 5578,
+      "proposal_txid": 5579,
+      "lock_waits": []
     },
     {
       "trial_id": 54,
@@ -662,19 +824,25 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2564
+      "elapsed_ns": 38191614,
+      "governance_txid": 5582,
+      "proposal_txid": 5583,
+      "lock_waits": []
     },
     {
       "trial_id": 55,
       "seed": 252556718,
       "governance_delay_us": 97,
       "proposal_delay_us": 79,
-      "observed_classification": "proposal_committed_before_observed_revoke_commit",
-      "observed_outcome": "proposal_committed",
+      "observed_classification": "rejected_after_or_during_governance_race",
+      "observed_outcome": "proposal_snapshot_consent_mismatch",
       "forbidden_commit": false,
       "safety_success": true,
-      "governance_committed_first": false,
-      "elapsed_ns": 2647
+      "governance_committed_first": true,
+      "elapsed_ns": 40890207,
+      "governance_txid": 5586,
+      "proposal_txid": 5587,
+      "lock_waits": []
     },
     {
       "trial_id": 56,
@@ -686,7 +854,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2510
+      "elapsed_ns": 38672726,
+      "governance_txid": 5590,
+      "proposal_txid": 5591,
+      "lock_waits": []
     },
     {
       "trial_id": 57,
@@ -698,7 +869,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2483
+      "elapsed_ns": 40751626,
+      "governance_txid": 5594,
+      "proposal_txid": 5595,
+      "lock_waits": []
     },
     {
       "trial_id": 58,
@@ -710,7 +884,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2485
+      "elapsed_ns": 37753413,
+      "governance_txid": 5598,
+      "proposal_txid": 5599,
+      "lock_waits": []
     },
     {
       "trial_id": 59,
@@ -722,7 +899,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2417
+      "elapsed_ns": 37302144,
+      "governance_txid": 5602,
+      "proposal_txid": 5603,
+      "lock_waits": []
     },
     {
       "trial_id": 60,
@@ -734,7 +914,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2455
+      "elapsed_ns": 36715559,
+      "governance_txid": 5607,
+      "proposal_txid": 5606,
+      "lock_waits": []
     },
     {
       "trial_id": 61,
@@ -746,7 +929,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2468
+      "elapsed_ns": 36331684,
+      "governance_txid": 5610,
+      "proposal_txid": 5611,
+      "lock_waits": []
     },
     {
       "trial_id": 62,
@@ -758,7 +944,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2397
+      "elapsed_ns": 38641457,
+      "governance_txid": 5614,
+      "proposal_txid": 5615,
+      "lock_waits": []
     },
     {
       "trial_id": 63,
@@ -770,7 +959,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2431
+      "elapsed_ns": 36355179,
+      "governance_txid": 5618,
+      "proposal_txid": 5619,
+      "lock_waits": []
     },
     {
       "trial_id": 64,
@@ -782,7 +974,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2420
+      "elapsed_ns": 36498985,
+      "governance_txid": 5622,
+      "proposal_txid": 5623,
+      "lock_waits": []
     },
     {
       "trial_id": 65,
@@ -794,7 +989,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2484
+      "elapsed_ns": 36246794,
+      "governance_txid": 5626,
+      "proposal_txid": 5627,
+      "lock_waits": []
     },
     {
       "trial_id": 66,
@@ -806,7 +1004,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2471
+      "elapsed_ns": 36909884,
+      "governance_txid": 5630,
+      "proposal_txid": 5631,
+      "lock_waits": []
     },
     {
       "trial_id": 67,
@@ -818,7 +1019,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2349
+      "elapsed_ns": 37707631,
+      "governance_txid": 5634,
+      "proposal_txid": 5635,
+      "lock_waits": []
     },
     {
       "trial_id": 68,
@@ -830,7 +1034,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2319
+      "elapsed_ns": 36904176,
+      "governance_txid": 5638,
+      "proposal_txid": 5639,
+      "lock_waits": []
     },
     {
       "trial_id": 69,
@@ -842,7 +1049,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2559
+      "elapsed_ns": 37124952,
+      "governance_txid": 5642,
+      "proposal_txid": 5643,
+      "lock_waits": []
     },
     {
       "trial_id": 70,
@@ -854,7 +1064,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2453
+      "elapsed_ns": 36399881,
+      "governance_txid": 5646,
+      "proposal_txid": 5647,
+      "lock_waits": []
     },
     {
       "trial_id": 71,
@@ -866,7 +1079,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2283
+      "elapsed_ns": 36838380,
+      "governance_txid": 5650,
+      "proposal_txid": 5651,
+      "lock_waits": []
     },
     {
       "trial_id": 72,
@@ -878,7 +1094,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2396
+      "elapsed_ns": 36002591,
+      "governance_txid": 5654,
+      "proposal_txid": 5655,
+      "lock_waits": []
     },
     {
       "trial_id": 73,
@@ -890,7 +1109,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2337
+      "elapsed_ns": 39535146,
+      "governance_txid": 5658,
+      "proposal_txid": 5659,
+      "lock_waits": []
     },
     {
       "trial_id": 74,
@@ -902,7 +1124,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2338
+      "elapsed_ns": 37720243,
+      "governance_txid": 5663,
+      "proposal_txid": 5662,
+      "lock_waits": []
     },
     {
       "trial_id": 75,
@@ -914,7 +1139,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2411
+      "elapsed_ns": 37983335,
+      "governance_txid": 5666,
+      "proposal_txid": 5667,
+      "lock_waits": []
     },
     {
       "trial_id": 76,
@@ -926,7 +1154,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2378
+      "elapsed_ns": 38707769,
+      "governance_txid": 5670,
+      "proposal_txid": 5671,
+      "lock_waits": []
     },
     {
       "trial_id": 77,
@@ -938,7 +1169,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2399
+      "elapsed_ns": 38287935,
+      "governance_txid": 5674,
+      "proposal_txid": 5675,
+      "lock_waits": []
     },
     {
       "trial_id": 78,
@@ -950,7 +1184,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2476
+      "elapsed_ns": 37778115,
+      "governance_txid": 5678,
+      "proposal_txid": 5679,
+      "lock_waits": []
     },
     {
       "trial_id": 79,
@@ -962,7 +1199,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2322
+      "elapsed_ns": 37342359,
+      "governance_txid": 5682,
+      "proposal_txid": 5683,
+      "lock_waits": []
     },
     {
       "trial_id": 80,
@@ -974,7 +1214,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2324
+      "elapsed_ns": 38009663,
+      "governance_txid": 5686,
+      "proposal_txid": 5687,
+      "lock_waits": []
     },
     {
       "trial_id": 81,
@@ -986,7 +1229,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2349
+      "elapsed_ns": 38551696,
+      "governance_txid": 5691,
+      "proposal_txid": 5690,
+      "lock_waits": []
     },
     {
       "trial_id": 82,
@@ -998,7 +1244,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2336
+      "elapsed_ns": 40709200,
+      "governance_txid": 5694,
+      "proposal_txid": 5695,
+      "lock_waits": []
     },
     {
       "trial_id": 83,
@@ -1010,7 +1259,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2413
+      "elapsed_ns": 40319142,
+      "governance_txid": 5698,
+      "proposal_txid": 5699,
+      "lock_waits": []
     },
     {
       "trial_id": 84,
@@ -1022,7 +1274,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2495
+      "elapsed_ns": 39947404,
+      "governance_txid": 5702,
+      "proposal_txid": 5703,
+      "lock_waits": []
     },
     {
       "trial_id": 85,
@@ -1034,7 +1289,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2303
+      "elapsed_ns": 39143908,
+      "governance_txid": 5706,
+      "proposal_txid": 5707,
+      "lock_waits": []
     },
     {
       "trial_id": 86,
@@ -1046,7 +1304,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2379
+      "elapsed_ns": 38840265,
+      "governance_txid": 5710,
+      "proposal_txid": 5711,
+      "lock_waits": []
     },
     {
       "trial_id": 87,
@@ -1058,7 +1319,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2477
+      "elapsed_ns": 37124124,
+      "governance_txid": 5714,
+      "proposal_txid": 5715,
+      "lock_waits": []
     },
     {
       "trial_id": 88,
@@ -1070,7 +1334,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2308
+      "elapsed_ns": 38815993,
+      "governance_txid": 5718,
+      "proposal_txid": 5719,
+      "lock_waits": []
     },
     {
       "trial_id": 89,
@@ -1082,7 +1349,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2420
+      "elapsed_ns": 37703777,
+      "governance_txid": 5722,
+      "proposal_txid": 5723,
+      "lock_waits": []
     },
     {
       "trial_id": 90,
@@ -1094,7 +1364,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2322
+      "elapsed_ns": 38679897,
+      "governance_txid": 5726,
+      "proposal_txid": 5727,
+      "lock_waits": []
     },
     {
       "trial_id": 91,
@@ -1106,7 +1379,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2309
+      "elapsed_ns": 38304115,
+      "governance_txid": 5730,
+      "proposal_txid": 5731,
+      "lock_waits": []
     },
     {
       "trial_id": 92,
@@ -1118,7 +1394,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2338
+      "elapsed_ns": 40073991,
+      "governance_txid": 5734,
+      "proposal_txid": 5735,
+      "lock_waits": []
     },
     {
       "trial_id": 93,
@@ -1130,7 +1409,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2297
+      "elapsed_ns": 37864051,
+      "governance_txid": 5738,
+      "proposal_txid": 5739,
+      "lock_waits": []
     },
     {
       "trial_id": 94,
@@ -1142,7 +1424,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2353
+      "elapsed_ns": 38841341,
+      "governance_txid": 5742,
+      "proposal_txid": 5743,
+      "lock_waits": []
     },
     {
       "trial_id": 95,
@@ -1154,7 +1439,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2502
+      "elapsed_ns": 41884826,
+      "governance_txid": 5746,
+      "proposal_txid": 5747,
+      "lock_waits": []
     },
     {
       "trial_id": 96,
@@ -1166,7 +1454,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2318
+      "elapsed_ns": 38885441,
+      "governance_txid": 5750,
+      "proposal_txid": 5751,
+      "lock_waits": []
     },
     {
       "trial_id": 97,
@@ -1178,7 +1469,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2360
+      "elapsed_ns": 39868207,
+      "governance_txid": 5755,
+      "proposal_txid": 5754,
+      "lock_waits": []
     },
     {
       "trial_id": 98,
@@ -1190,7 +1484,10 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2258
+      "elapsed_ns": 40399231,
+      "governance_txid": 5758,
+      "proposal_txid": 5759,
+      "lock_waits": []
     },
     {
       "trial_id": 99,
@@ -1202,14 +1499,17 @@
       "forbidden_commit": false,
       "safety_success": true,
       "governance_committed_first": true,
-      "elapsed_ns": 2433
+      "elapsed_ns": 39887085,
+      "governance_txid": 5762,
+      "proposal_txid": 5763,
+      "lock_waits": []
     }
   ],
   "classification_distribution": {
-    "rejected_after_or_during_governance_race": 98,
-    "proposal_committed_before_observed_revoke_commit": 2
+    "rejected_after_or_during_governance_race": 100
   },
   "root_cause_classification": "conservative_safe_rejection_by_implementation",
-  "reconciliation_note": "The gateway's propose_assertion re-checks consent via a fresh SELECT under READ COMMITTED. The consent_revoke writer's transaction is structurally lighter than propose_assertion (1 row INSERT+COMMIT vs multi-step evidence+snapshot+assertion pipeline). Under simultaneous barrier release, the governance writer's commit becomes visible to PostgreSQL before the proposal writer reaches its consent check in >=98% of perturbations. The oracle's 'indeterminate_ordering' expectation assumed symmetric transaction weight and did not model the gateway's re-check-at-propose semantics. The observed rejection is SAFE (forbidden_commit_observed=false in all trials). The mismatch is a conservative oracle error, not a safety violation.",
-  "executed_at": "2026-09-27T20:41:17.536479+00:00"
+  "reconciliation_note": "Executed against real PostgreSQL database. The gateway's propose_assertion re-checks consent via a fresh SELECT under READ COMMITTED. The consent_revoke writer's transaction is structurally lighter than propose_assertion. Under simultaneous barrier release on PostgreSQL, the governance writer's commit becomes visible before the proposal writer reaches its consent check in >=100% of perturbations. The observed rejection is SAFE (forbidden_commit_observed=false in all trials).",
+  "executed_at": "2026-09-28T14:42:28.029246+00:00",
+  "database_url": "postgresql+psycopg://aura:aura_prod_x7k9m2@localhost:5433/glhs_eval_r2"
 }

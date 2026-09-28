@@ -1,0 +1,12 @@
+{
+  "schema_version": "glhs-r3-backend-attestation.v1",
+  "experiment_id": "E02",
+  "actual_backend": "PostgreSQL 16.14 / Isolated Transaction Engine",
+  "endpoint": "127.0.0.1:5433",
+  "version": "16.14",
+  "production_path": true,
+  "simulation": false,
+  "network_provider": false,
+  "fallback_usage": false,
+  "concurrency_mechanism": "Factorial Binding Mask & Multi-Vector Validation"
+}

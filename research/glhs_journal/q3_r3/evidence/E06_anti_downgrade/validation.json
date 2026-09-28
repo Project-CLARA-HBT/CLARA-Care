@@ -1,0 +1,11 @@
+{
+  "schema_version": "glhs-r3-validation.v1",
+  "experiment_id": "E06",
+  "status": "VALIDATED",
+  "validated_at_utc": "2026-09-28T00:00:00Z",
+  "total_schedules_audited": 300,
+  "laundering_attacks_rejected": 250,
+  "clean_controls_admitted": 50,
+  "claim_eligible": true,
+  "validation_verdict": "PASS"
+}

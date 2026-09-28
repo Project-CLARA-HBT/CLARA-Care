@@ -1,0 +1,368 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "glhs-r3-systems-statistical-plan.v1",
+  "program": "GLHS R3 — Governed Read-to-Write Continuity (GRWC)",
+  "phase": "Phase 6 — Systems Experiments (E09 & E10)",
+  "title": "Systems Experiments Statistical Design and Estimands Specification for E09 (Concurrency) and E10 (Full-Stack HTTP)",
+  "curator": "Agent C — Experiment & Statistics",
+  "date": "2026-09-29",
+  "status": "PROSPECTIVELY_FROZEN",
+  "freeze_timestamp_utc": "2026-09-29T00:00:00Z",
+  "master_seeds": {
+    "E09": "20260928_09",
+    "E10": "20260928_10"
+  },
+  "global_parameters": {
+    "significance_level_alpha": 0.05,
+    "confidence_level": 0.95,
+    "bootstrap_replications": 10000,
+    "target_database_backend": "PostgreSQL 16.14 under READ COMMITTED with 7-Class Lock Hierarchy & Serializable OCC Revalidation",
+    "isolation_guarantee": "Strict benchmark harness isolation; all connections drawn from dedicated pool with connection pooling bypass and instrumentation hooks."
+  },
+  "experiments": {
+    "E09": {
+      "experiment_id": "E09",
+      "protocol_id": "GLHS-R3-E09-CONCURRENCY",
+      "title": "Real PostgreSQL Concurrency & Contention Analysis",
+      "priority": "P1",
+      "scientific_unit": "concurrent_workload_cell_trial",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I04_deadlock_free",
+        "I06_cas_monotonicity",
+        "I15_clean_path_reachability"
+      ],
+      "primary_research_questions": [
+        "How does entity-partitioned DAG versioning scale in commit throughput (TPS) and tail latency (p50, p95, p99 ms) under worker concurrency W in {1, 2, 4, 8, 16, 32, 64}?",
+        "Does entity-partitioned DAG versioning strictly preserve a 0.0% false-stale abort rate under 100% disjoint concurrent write workloads?",
+        "Does the 7-class governance lock hierarchy guarantee 0 deadlocks across all 10 clinical workload contention regimes?"
+      ],
+      "experimental_grid": {
+        "concurrency_levels_W": [1, 2, 4, 8, 16, 32, 64],
+        "workload_families_count": 10,
+        "repetitions_per_cell": 5,
+        "total_cells": 70,
+        "total_trial_runs_N": 350,
+        "extended_budget_runs_N": 504,
+        "workload_families": {
+          "WF01_same_entity_contention": {
+            "name": "Same-Entity Contention (Hotspot Collisions)",
+            "description": "All W concurrent workers attempt to commit mutations targeting the exact same patient entity partition coordinate (100% write conflict).",
+            "access_pattern": "Single entity key (e.g., phr_1001:medication:med_rx_001), 100% writes.",
+            "theoretical_winner_count_per_round": 1,
+            "expected_abort_behavior": "True-stale aborts dominate; exactly 1 winner advances CAS version, W-1 aborted with stale_entity_partition. 0 false-stale aborts."
+          },
+          "WF02_disjoint_entity": {
+            "name": "Disjoint Entity Partitions (Pure Parallelism)",
+            "description": "Each of the W workers mutates an independent, mutually disjoint entity partition coordinate within or across patient profiles.",
+            "access_pattern": "W disjoint entity keys (e.g., phr_1001:medication:med_rx_{worker_id}), 100% writes.",
+            "theoretical_winner_count_per_round": "W",
+            "expected_abort_behavior": "0 true-stale aborts, 0 false-stale aborts (target 0.0%), 0 deadlocks. Linear scaling expected up to connection/IO saturation."
+          },
+          "WF03_partial_overlap_25": {
+            "name": "Partial Partition Overlap (25% Cross-Contention)",
+            "description": "25% of submitted write transactions contend on shared entity partitions, while 75% target disjoint partitions.",
+            "access_pattern": "Bernoulli(p=0.25) collision on shared entity key; (1-p)=0.75 on disjoint keys.",
+            "theoretical_winner_count_per_round": "0.75*W + 1",
+            "expected_abort_behavior": "Controlled true-stale aborts proportional to overlap; false-stale abort rate strictly 0.0% on unshared partitions."
+          },
+          "WF04_multi_domain": {
+            "name": "Multi-Domain Atomic Bundle Transactions",
+            "description": "Each transaction spans multiple clinical domains (medication, condition, observation, allergy_intolerance) within a single atomic commit.",
+            "access_pattern": "4 partition coordinates per transaction acquired in strict lexicographical order: (domain ASC, semantic_key ASC).",
+            "theoretical_winner_count_per_round": "Variable based on domain partition interleaving",
+            "expected_abort_behavior": "Zero deadlocks despite multi-key multi-domain lock acquisition; verification of Class 5 total order sorting."
+          },
+          "WF05_hot_key_zipfian": {
+            "name": "Hot-Key Contention under Zipfian Distribution",
+            "description": "Workers select entity partitions following a Zipfian distribution with skew parameter theta = 1.4 across a pool of K=100 entity partitions.",
+            "access_pattern": "P(key = k) ~ 1 / k^1.4 for k in {1..100}.",
+            "theoretical_winner_count_per_round": "Sub-linear; heavy contention on top 5% hot-keys.",
+            "expected_abort_behavior": "Stress tests lock queuing under extreme realistic skew; evaluates p95/p99 tail latency inflation."
+          },
+          "WF06_governance_entity_race": {
+            "name": "Concurrent Governance Policy Advance + Entity Writes",
+            "description": "Background workers advance domain policy epochs (Class 2 exclusive lock) while foreground workers commit clinical entity transitions.",
+            "access_pattern": "10% Class 2 policy updates, 90% Class 5 entity writes.",
+            "theoretical_winner_count_per_round": "Pre-epoch commits succeed; post-epoch commits safely abort with stale_policy_version.",
+            "expected_abort_behavior": "Zero phantom writes; atomic invalidation of in-flight proposals across entire domain."
+          },
+          "WF07_evidence_entity_race": {
+            "name": "Concurrent Evidence Invalidation + Entity Writes",
+            "description": "Background workers invalidate or revoke clinical evidence items (Class 4 advisory lock) while foreground transactions assert those evidence IDs.",
+            "access_pattern": "10% Class 4 evidence revocations, 90% Class 5 entity writes with asserted evidence dependencies.",
+            "theoretical_winner_count_per_round": "Transactions committing after evidence revocation fail with evidence_undisclosed or evidence_revoked.",
+            "expected_abort_behavior": "Zero TOCTOU leaks on invalid evidence; strict fail-closed assertion."
+          },
+          "WF08_read_heavy_90_10": {
+            "name": "Read-Heavy Clinical Workload (90% Read / 10% Write)",
+            "description": "Simulates typical EHR clinical consultation workflows where 90% of requests are state reads/validations and 10% are commitment transitions.",
+            "access_pattern": "90% Class 5 FOR SHARE / snapshot reads, 10% Class 5 FOR UPDATE mutations.",
+            "theoretical_winner_count_per_round": "~W",
+            "expected_abort_behavior": "High throughput; minimal aborts due to shared-lock concurrency."
+          },
+          "WF09_write_heavy_10_90": {
+            "name": "Write-Heavy Intensive Ingestion (10% Read / 90% Write)",
+            "description": "Simulates high-throughput automated agent batch processing and clinical event ingestion streams.",
+            "access_pattern": "10% reads, 90% Class 5 FOR UPDATE mutations across partition pool.",
+            "theoretical_winner_count_per_round": "Contention-dependent",
+            "expected_abort_behavior": "Evaluates database WAL throughput, connection lock saturation, and CAS retry overhead."
+          },
+          "WF10_mixed_50_50": {
+            "name": "Balanced Mixed Workload (50% Read / 50% Write)",
+            "description": "Standard benchmark baseline balancing state validation/reconstruction and active commitment state progression.",
+            "access_pattern": "50% reads, 50% writes across uniform random entity partition selections.",
+            "theoretical_winner_count_per_round": "0.75*W",
+            "expected_abort_behavior": "Balanced throughput scaling curve."
+          }
+        }
+      },
+      "estimands": {
+        "primary": [
+          {
+            "id": "E09-EST-01",
+            "name": "Commit Throughput (TPS)",
+            "definition": "Total committed transactions divided by total elapsed wall-clock execution time in seconds across worker grid W.",
+            "formula": "TPS(W, WF) = N_committed / (t_end - t_start)",
+            "units": "transactions_per_second",
+            "aggregation": "Mean, standard deviation, and 95% bootstrap confidence interval across R >= 5 independent runs per cell.",
+            "target": "Monotonic throughput scaling from W=1 to W=8 on disjoint workloads (WF02, WF08)."
+          },
+          {
+            "id": "E09-EST-02",
+            "name": "Latency Distribution (p50, p95, p99 ms)",
+            "definition": "Empirical quantiles (50th, 95th, 99th percentiles) of end-to-end transaction commit execution latency in milliseconds.",
+            "formula": "Q_p(L) = inf { l in R : F_n(l) >= p } where F_n is the empirical CDF of observed latencies.",
+            "units": "milliseconds",
+            "aggregation": "Nearest-rank quantile with Harrell-Davis bootstrap standard error estimation.",
+            "target": "p50 < 10.0 ms, p95 < 50.0 ms, p99 < 150.0 ms under W <= 16."
+          }
+        ],
+        "secondary": [
+          {
+            "id": "E09-EST-03",
+            "name": "True-Stale Abort Rate",
+            "definition": "Proportion of transaction attempts aborted due to genuine CAS version progression on their declared write dependency partitions.",
+            "formula": "Rate_true_stale = N_true_stale_aborts / N_total_attempts",
+            "units": "proportion [0.0, 1.0]",
+            "aggregation": "Sample proportion with 95% Wilson score confidence interval.",
+            "target": "Matches theoretical collision expectation (1.0 - 1/W for WF01)."
+          },
+          {
+            "id": "E09-EST-04",
+            "name": "False-Stale Abort Rate",
+            "definition": "Proportion of transaction attempts aborted due to version advances on independent, unrelated entity partitions.",
+            "formula": "Rate_false_stale = N_false_stale_aborts / N_total_attempts",
+            "units": "proportion [0.0, 1.0]",
+            "aggregation": "Sample proportion with 1-sided Clopper-Pearson 95% Upper Confidence Bound (UCB).",
+            "target": "0.0000 (Exact 0.0% on disjoint partition workloads WF02, proving zero partition interference)."
+          },
+          {
+            "id": "E09-EST-05",
+            "name": "Deadlock Count",
+            "definition": "Total occurrences of PostgreSQL SQLSTATE 40P01 (deadlock_detected) during lock acquisition across all runs.",
+            "formula": "N_deadlocks = Sum(1[status == DEADLOCK_DETECTED])",
+            "units": "integer_count",
+            "aggregation": "Cumulative sum across all 70 grid cells.",
+            "target": "0 (Zero tolerance; any deadlock is a critical safety failure halting benchmark)."
+          },
+          {
+            "id": "E09-EST-06",
+            "name": "Advisory Lock Wait Latency (ms)",
+            "definition": "Time spent blocked waiting for Class 1..7 advisory and row locks during Phase 2 of the commit kernel.",
+            "formula": "t_lock_wait = t_locks_acquired - t_lock_acquisition_start",
+            "units": "milliseconds",
+            "aggregation": "Mean, p95, and max wait time per concurrency cell."
+          }
+        ]
+      },
+      "statistical_methods": {
+        "throughput_modeling": "Generalized Additive Model (GAM) with spline basis on log2(W) to characterize scalability frontiers and contention saturation knees.",
+        "false_stale_zero_proof": "1-sided Clopper-Pearson exact binomial confidence upper bound: UCB_95 = 1 - (1 - 0.95)^(1/N) for 0 observed false-stale aborts.",
+        "quantile_estimation": "Harrell-Davis distribution-free quantile estimator for p50, p95, p99."
+      },
+      "stopping_rules": {
+        "fail_closed_criteria": [
+          "Any deadlock (SQLSTATE 40P01) observed in any cell halts the experiment immediately.",
+          "Any false-stale abort (> 0) on disjoint entity workload (WF02) fails invariant I01 and halts the experiment.",
+          "Any CAS non-monotonic version progression fails invariant I06 and invalidates the run."
+        ],
+        "missing_data_rule": "Thread crashes or network drops are recorded as OPERATIONAL_FAILURE; missing runs must be re-executed under identical seed parameters."
+      }
+    },
+    "E10": {
+      "experiment_id": "E10",
+      "protocol_id": "GLHS-R3-E10-FULLSTACK",
+      "title": "HTTP / PostgreSQL Full-Stack Performance Characterization",
+      "priority": "P1",
+      "scientific_unit": "http_rest_operation_cycle",
+      "target_invariants": [
+        "I12_exact_inference_disclosure_continuity",
+        "I15_clean_path_reachability"
+      ],
+      "primary_research_questions": [
+        "What is the end-to-end wall-clock latency (p50, p95, p99 ms) and throughput (TPS) for all 7 production HTTP REST gateway operations under real PostgreSQL 16.14 persistence?",
+        "What is the exact database query overhead (SQL read statements vs SQL write statements) per REST operation class?",
+        "What is the Write Amplification Factor (WAF) and server memory RSS / CPU time footprint incurred by full GRWC validation?"
+      ],
+      "operation_classes": {
+        "OP01_transition": {
+          "name": "State Commitment Transition",
+          "method": "POST",
+          "endpoint": "/v1/glhs/transitions",
+          "description": "Full 6-phase atomic commit kernel executing idempotency check, 7-class lock acquisition, GRWC admission validation, domain mutation callback, CAS version bump, and applied transition persistence.",
+          "sample_size_n": 100,
+          "expected_sql_reads": "6 to 9 SELECTs",
+          "expected_sql_writes": "3 to 4 INSERT/UPDATEs"
+        },
+        "OP02_reconstruction": {
+          "name": "State DAG Reconstruction",
+          "method": "GET",
+          "endpoint": "/v1/glhs/state/reconstruct",
+          "description": "Deterministic historical state reconstruction by traversing the immutable applied transition ledger and partition version links from genesis to requested target version.",
+          "sample_size_n": 100,
+          "expected_sql_reads": "2 to 4 SELECTs",
+          "expected_sql_writes": "0"
+        },
+        "OP03_snapshot_compile": {
+          "name": "THSS Snapshot Compilation",
+          "method": "POST",
+          "endpoint": "/v1/glhs/snapshots",
+          "description": "Compiles task-minimized health state projection, computes RFC 8785 canonical JSON projection digest and manifest digest, and persists immutable snapshot record.",
+          "sample_size_n": 100,
+          "expected_sql_reads": "3 to 5 SELECTs",
+          "expected_sql_writes": "1 INSERT"
+        },
+        "OP04_governed_decision_reconstruction": {
+          "name": "Governed Decision Trail Reconstruction",
+          "method": "GET",
+          "endpoint": "/v1/glhs/decisions/{id}",
+          "description": "Audits complete provenance trail connecting model proposal lineage, inference context binding, THSS snapshot disclosure, policy/consent epochs, and applied commit record.",
+          "sample_size_n": 100,
+          "expected_sql_reads": "4 to 6 SELECTs",
+          "expected_sql_writes": "0"
+        },
+        "OP05_audit_lookup": {
+          "name": "Audit Ledger Verification Lookup",
+          "method": "GET",
+          "endpoint": "/v1/glhs/audit/transitions",
+          "description": "Cryptographic integrity lookup on applied transition records, validating request/result/disclosure digests against database ledger.",
+          "sample_size_n": 100,
+          "expected_sql_reads": "1 to 2 SELECTs",
+          "expected_sql_writes": "0"
+        },
+        "OP06_invalidation_rebuild": {
+          "name": "Partition DAG Invalidation Rebuild",
+          "method": "POST",
+          "endpoint": "/v1/glhs/state/invalidate",
+          "description": "Explicit cache invalidation and DAG branch recalculation following out-of-band policy/consent revocation or upstream clinical synchronization.",
+          "sample_size_n": 100,
+          "expected_sql_reads": "3 to 5 SELECTs",
+          "expected_sql_writes": "2 to 3 UPDATEs"
+        },
+        "OP07_enter_in_error_rebuild": {
+          "name": "Enter-in-Error State Rebuild",
+          "method": "POST",
+          "endpoint": "/v1/glhs/transitions/enter-in-error",
+          "description": "Retrospective clinical correction marking a historical transition as entered-in-error, performing compensating state DAG branch rebuild while preserving audit trail.",
+          "sample_size_n": 100,
+          "expected_sql_reads": "5 to 8 SELECTs",
+          "expected_sql_writes": "3 to 5 INSERT/UPDATEs"
+        }
+      },
+      "sample_size_allocation": {
+        "classes_count": 7,
+        "repetitions_per_class": 100,
+        "total_requests_N": 700,
+        "warmup_requests_per_class": 10,
+        "total_warmup_requests": 70
+      },
+      "estimands": {
+        "primary": [
+          {
+            "id": "E10-EST-01",
+            "name": "End-to-End HTTP Wall-Clock Latency (p50, p95, p99 ms)",
+            "definition": "Elapsed wall-clock time from HTTP request dispatch over TCP socket to complete HTTP response body reception and parsing.",
+            "formula": "t_http = t_response_complete - t_request_sent",
+            "units": "milliseconds",
+            "aggregation": "Empirical quantiles p50, p95, p99 with 95% bootstrap confidence intervals per operation class (N=100 each).",
+            "target": {
+              "OP01_transition": "p50 < 25.0 ms, p95 < 60.0 ms, p99 < 120.0 ms",
+              "OP02_reconstruction": "p50 < 15.0 ms, p95 < 40.0 ms, p99 < 80.0 ms",
+              "OP03_snapshot_compile": "p50 < 20.0 ms, p95 < 50.0 ms, p99 < 100.0 ms",
+              "OP04_governed_decision": "p50 < 15.0 ms, p95 < 35.0 ms, p99 < 70.0 ms",
+              "OP05_audit_lookup": "p50 < 10.0 ms, p95 < 25.0 ms, p99 < 50.0 ms",
+              "OP06_invalidation_rebuild": "p50 < 25.0 ms, p95 < 55.0 ms, p99 < 110.0 ms",
+              "OP07_enter_in_error": "p50 < 30.0 ms, p95 < 75.0 ms, p99 < 150.0 ms"
+            }
+          },
+          {
+            "id": "E10-EST-02",
+            "name": "Per-Operation HTTP Throughput (TPS)",
+            "definition": "Sustained requests completed per second under single-client persistent HTTP/1.1 connection pipeline.",
+            "formula": "TPS_op = N_completed_requests / Delta_t_total",
+            "units": "requests_per_second",
+            "aggregation": "Mean TPS across 100 repetitions per class."
+          }
+        ],
+        "secondary": [
+          {
+            "id": "E10-EST-03",
+            "name": "SQL Statement Statement Count Profile (Read / Write)",
+            "definition": "Exact count of SQL queries dispatched to PostgreSQL per HTTP request, decomposed into SELECT queries (reads) and INSERT/UPDATE/DELETE queries (writes).",
+            "formula": "N_sql_read = Count(SELECT), N_sql_write = Count(INSERT + UPDATE + DELETE)",
+            "units": "statements_per_request",
+            "aggregation": "Mean, min, max per operation class (verified via SQLAlchemy event instrumentation listeners)."
+          },
+          {
+            "id": "E10-EST-04",
+            "name": "Write Amplification Factor (WAF)",
+            "definition": "Ratio of total bytes written to PostgreSQL disk/WAL tables to the logical semantic payload mutation bytes.",
+            "formula": "WAF = Bytes_persisted_to_db / Bytes_semantic_mutation_delta",
+            "units": "dimensionless_ratio",
+            "aggregation": "Mean and p95 across write-bearing operation classes (OP01, OP03, OP06, OP07).",
+            "target": "WAF < 3.5 (governance audit and partition versioning overhead bounded)."
+          },
+          {
+            "id": "E10-EST-05",
+            "name": "Server Resource Footprint (Memory RSS & CPU Time)",
+            "definition": "Resident Set Size (RSS) delta in megabytes (MB) and total process CPU time (user + system) in milliseconds consumed per request cycle.",
+            "formula": "Delta_RSS = RSS_post - RSS_pre (MB); CPU_time = Delta(t_user + t_system) (ms)",
+            "units": "MB and ms",
+            "aggregation": "Mean and peak RSS growth across the 700-request benchmark suite."
+          }
+        ]
+      },
+      "statistical_methods": {
+        "latency_quantiles": "Nearest-rank and Harrell-Davis estimation with 10,000 bootstrap resamples for 95% BCa confidence intervals.",
+        "anova_and_kruskal_wallis": "Non-parametric Kruskal-Wallis test across the 7 operation classes to evaluate between-class latency heterogeneity (H-statistic and p-value).",
+        "correlation_analysis": "Spearman rank correlation between SQL statement count and end-to-end HTTP latency."
+      },
+      "stopping_rules": {
+        "fail_closed_criteria": [
+          "HTTP status code 500 error rate exceeding 0.001 (0.1%) halts the benchmark.",
+          "Any response payload hash mismatch or invariant failure invalidates the benchmark trial.",
+          "Memory leak rate exceeding 1.0 MB per 100 requests triggers investigation and halts sealing."
+        ],
+        "missing_data_rule": "Dropped requests due to network reset are recorded as CONNECTION_ERROR and retried up to 1 time with retry count logged."
+      }
+    }
+  },
+  "comparative_and_joint_analyses": {
+    "cross_experiment_synthesis": {
+      "systems_characterization_scope": "E09 characterizes concurrency limits, lock queuing, and partition isolation scaling in PostgreSQL, while E10 characterizes full-stack REST API gateway processing overhead, serialization, and network round-trip overhead.",
+      "joint_capacity_model": "Combines E09 kernel TPS scaling with E10 HTTP per-operation latency to establish deployment service level objectives (SLOs) for clinical AI deployments."
+    }
+  },
+  "reproducibility_and_sealing": {
+    "runner_scripts": {
+      "E09": "evaluation/concurrency_benchmark/seal.py",
+      "E10": "evaluation/fullstack_benchmark/seal.py"
+    },
+    "artifact_outputs": {
+      "E09": "research/glhs_journal/q3_r3/evidence/E09_concurrency/",
+      "E10": "research/glhs_journal/q3_r3/evidence/E10_fullstack/"
+    },
+    "checksum_rule": "Every raw run ledger (runs.jsonl / benchmark_raw.json), derived statistical summary (summary.json), and report (summary.md) must have its SHA-256 registered in checksums.sha256 and seal.json."
+  }
+}

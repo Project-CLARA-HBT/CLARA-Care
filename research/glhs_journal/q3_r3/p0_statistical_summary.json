@@ -1,0 +1,376 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "glhs-r3-p0-statistical-summary.v1",
+  "program": "GLHS R3 — Governed Read-to-Write Continuity (GRWC)",
+  "phase": "Phase 5 — P0 Correctness Experiments E01–E08 Statistical Synthesis",
+  "timestamp": "2026-09-29T00:00:00Z",
+  "curator": "Agent C — Experiment & Statistics",
+  "status": "FROZEN_VERIFIED",
+  "global_parameters": {
+    "significance_level_alpha": 0.05,
+    "confidence_level": 0.95,
+    "primary_database_backend": "PostgreSQL 16.0 under serializable isolation",
+    "master_seed_range": "20260928_00 to 20260928_08",
+    "isolation_safeguard": "Jitter repetitions are strictly isolated as secondary robustness probes to eliminate pseudoreplication. Primary sample sizes represent unique, independent logical schedules."
+  },
+  "summary_by_experiment": {
+    "E01": {
+      "experiment_id": "E01",
+      "title": "Inference Consumption Integrity & Continuous Attestation Protocol",
+      "priority": "P0",
+      "status": "PASS",
+      "target_invariants": [
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I14_undisclosed_evidence_rejection",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size": {
+        "N_total": 768,
+        "clean_controls_C1": 128,
+        "adversarial_invalid_schedules": 640,
+        "invalid_cells_count": 10,
+        "schedules_per_invalid_cell": 64
+      },
+      "results": {
+        "adversarial_invalid_admitted": 0,
+        "adversarial_invalid_rejected": 640,
+        "safety_rejection_rate": 1.0,
+        "adversarial_invalid_admission_rate": 0.0,
+        "clean_control_admitted": 128,
+        "clean_control_rejected": 0,
+        "clean_liveness_rate": 1.0,
+        "error_code_concordance_rate": 1.0
+      },
+      "statistical_bounds": {
+        "confidence_level": 0.95,
+        "wilson_1sided_ucb_invalid_admission": 0.00597,
+        "clopper_pearson_1sided_ucb_invalid_admission": 0.00578,
+        "wilson_1sided_lcb_clean_liveness": 0.97086
+      }
+    },
+    "E02": {
+      "experiment_id": "E02",
+      "title": "Binding Component Factorial Ablation (2^4)",
+      "priority": "P0",
+      "status": "PASS",
+      "target_invariants": [
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I12_exact_inference_disclosure_continuity",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size": {
+        "N_unique_schedules": 352,
+        "active_arms_count": 8,
+        "total_executions": 2816,
+        "adversarial_schedules_per_arm": 256,
+        "clean_controls_per_arm": 96
+      },
+      "factorial_logistic_regression": {
+        "n_samples": 2048,
+        "n_features": 8,
+        "converged": true,
+        "coefficients": {
+          "intercept": {
+            "beta": 1.09889,
+            "std_err": 0.1462,
+            "z_statistic": 7.516,
+            "p_value": 5.64e-14,
+            "odds_ratio": 3.0008,
+            "odds_ratio_ci95": [2.2614, 3.9821]
+          },
+          "c_id": {
+            "beta": -1.60969,
+            "std_err": 0.1937,
+            "z_statistic": -8.312,
+            "p_value": 9.40e-17,
+            "odds_ratio": 0.1999,
+            "odds_ratio_ci95": [0.1368, 0.2923]
+          },
+          "c_digest": {
+            "beta": -0.58813,
+            "std_err": 0.1937,
+            "z_statistic": -3.037,
+            "p_value": 0.00239,
+            "odds_ratio": 0.5554,
+            "odds_ratio_ci95": [0.3800, 0.8117]
+          },
+          "c_evidence": {
+            "beta": -1.09885,
+            "std_err": 0.1909,
+            "z_statistic": -5.755,
+            "p_value": 8.68e-09,
+            "odds_ratio": 0.3333,
+            "odds_ratio_ci95": [0.2292, 0.4845]
+          },
+          "c_id:c_digest": {
+            "beta": 0.00044,
+            "std_err": 0.2739,
+            "z_statistic": 0.0016,
+            "p_value": 0.99872,
+            "odds_ratio": 1.0004,
+            "odds_ratio_ci95": [0.5849, 1.7112]
+          },
+          "c_id:c_evidence": {
+            "beta": -0.33618,
+            "std_err": 0.2981,
+            "z_statistic": -1.128,
+            "p_value": 0.25937,
+            "odds_ratio": 0.7145,
+            "odds_ratio_ci95": [0.3984, 1.2815]
+          },
+          "c_digest:c_evidence": {
+            "beta": 0.07722,
+            "std_err": 0.2642,
+            "z_statistic": 0.2923,
+            "p_value": 0.77006,
+            "odds_ratio": 1.0803,
+            "odds_ratio_ci95": [0.6437, 1.8131]
+          },
+          "c_id:c_digest:c_evidence": {
+            "beta": -11.53752,
+            "std_err": 45.6359,
+            "z_statistic": -0.2528,
+            "p_value": 0.80041,
+            "odds_ratio": 9.76e-06,
+            "odds_ratio_ci95": [1.39e-44, 6.85e+33]
+          }
+        }
+      },
+      "arm_performance": {
+        "B000": { "adversarial_admit_rate": 0.75, "clean_admit_rate": 1.0 },
+        "B001": { "adversarial_admit_rate": 0.50, "clean_admit_rate": 1.0 },
+        "B010": { "adversarial_admit_rate": 0.625, "clean_admit_rate": 1.0 },
+        "B011": { "adversarial_admit_rate": 0.375, "clean_admit_rate": 1.0 },
+        "B100": { "adversarial_admit_rate": 0.375, "clean_admit_rate": 1.0 },
+        "B101": { "adversarial_admit_rate": 0.125, "clean_admit_rate": 1.0 },
+        "B110": { "adversarial_admit_rate": 0.25, "clean_admit_rate": 1.0 },
+        "B111": { "adversarial_admit_rate": 0.0, "clean_admit_rate": 1.0 }
+      }
+    },
+    "E03": {
+      "experiment_id": "E03",
+      "title": "Minimal Token / Capability Comparator Baseline",
+      "priority": "P0",
+      "status": "PASS",
+      "target_invariants": [
+        "I10_dependency_completeness",
+        "I12_exact_inference_disclosure_continuity",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size": {
+        "N_unique_schedules": 352,
+        "arms_count": 4,
+        "total_executions": 1408
+      },
+      "mcnemar_paired_decision_tests": {
+        "GLHS_B111_vs_MIN_READSET_TOKEN": {
+          "n_schedules": 352,
+          "matching_decisions": 352,
+          "concordance_rate": 1.0,
+          "discordant_n10": 0,
+          "discordant_n01": 0,
+          "mcnemar_p_value": 1.0,
+          "decision_equivalence": true
+        },
+        "GLHS_B111_vs_HMAC_READSET_TOKEN": {
+          "n_schedules": 352,
+          "matching_decisions": 352,
+          "concordance_rate": 1.0,
+          "discordant_n10": 0,
+          "discordant_n01": 0,
+          "mcnemar_p_value": 1.0,
+          "decision_equivalence": true
+        },
+        "GLHS_B111_vs_B000": {
+          "n_schedules": 352,
+          "matching_decisions": 160,
+          "concordance_rate": 0.45455,
+          "discordant_n10": 192,
+          "discordant_n01": 0,
+          "mcnemar_p_value": 3.19e-58,
+          "decision_equivalence": false
+        }
+      },
+      "overhead_and_latency_distributions": {
+        "GLHS_B111": {
+          "metadata_bytes": { "mean": 1407.54, "p50": 1406.0, "p95": 1478.0, "p99": 1515.0 },
+          "validation_latency_ms": { "mean": 2.182, "p50": 2.183, "p95": 2.991, "p99": 4.850 }
+        },
+        "HMAC_READSET_TOKEN": {
+          "metadata_bytes": { "mean": 738.51, "p50": 740.0, "p95": 765.0, "p99": 775.0 },
+          "byte_reduction_pct": 47.53,
+          "validation_latency_ms": { "mean": 1.876, "p50": 1.782, "p95": 2.565, "p99": 2.800 }
+        },
+        "MIN_READSET_TOKEN": {
+          "metadata_bytes": { "mean": 595.51, "p50": 597.0, "p95": 620.0, "p99": 630.0 },
+          "byte_reduction_pct": 57.69,
+          "validation_latency_ms": { "mean": 1.921, "p50": 1.845, "p95": 2.624, "p99": 3.100 }
+        }
+      }
+    },
+    "E04": {
+      "experiment_id": "E04",
+      "title": "Generated TOCTOU & Transactional Kernel Assurance",
+      "priority": "P0",
+      "status": "PASS",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I02_governance_freshness",
+        "I03_phantom_free",
+        "I04_deadlock_free",
+        "I05_idempotency_atomicity",
+        "I06_cas_monotonicity",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size": {
+        "N_unique_schedules": 1140,
+        "target_minimum_schedules": 1024,
+        "jitter_probe_executions": 1140,
+        "total_executions": 2280
+      },
+      "results": {
+        "forbidden_commits_observed": 0,
+        "forbidden_commit_rate": 0.0,
+        "safe_rejections_observed": 1140,
+        "safe_rejection_rate": 1.0,
+        "deadlocks_observed": 0,
+        "operational_failures": 0
+      },
+      "statistical_bounds": {
+        "confidence_level": 0.95,
+        "unique_schedules_N1024_wilson_1sided_ucb": 0.00264,
+        "unique_schedules_N1024_clopper_pearson_1sided_ucb": 0.00292,
+        "total_executions_N2280_wilson_1sided_ucb": 0.001185,
+        "total_executions_N2280_clopper_pearson_1sided_ucb": 0.001313
+      }
+    },
+    "E05": {
+      "experiment_id": "E05",
+      "title": "Dependency Completeness & Mutation Analysis Statistical Evaluation",
+      "priority": "P0",
+      "status": "PASS",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I02_governance_freshness",
+        "I06_cas_monotonicity",
+        "I07_evidence_closure",
+        "I10_dependency_completeness",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size": {
+        "N_total_executions": 312,
+        "valid_executions_subtotal": 108,
+        "invalid_mutant_executions_subtotal": 204,
+        "reference_arms_count": 3,
+        "mutation_classes_count": 9
+      },
+      "results": {
+        "invalid_mutants_admitted": 0,
+        "invalid_mutants_rejected": 204,
+        "unsafe_commit_rate": 0.0,
+        "valid_executions_admitted": 108,
+        "valid_executions_rejected": 0,
+        "false_stale_rate": 0.0,
+        "superset_liveness_rate": 1.0
+      },
+      "statistical_bounds": {
+        "confidence_level": 0.95,
+        "invalid_mutants_N204_wilson_1sided_ucb": 0.01309,
+        "invalid_mutants_N204_clopper_pearson_1sided_ucb": 0.01458,
+        "total_benchmark_N312_wilson_1sided_ucb": 0.00860,
+        "total_benchmark_N312_clopper_pearson_1sided_ucb": 0.00956,
+        "valid_executions_N108_wilson_1sided_lcb": 0.97560
+      }
+    },
+    "E06": {
+      "experiment_id": "E06",
+      "title": "Anti-Downgrade & Lineage Anti-Laundering Protocol",
+      "priority": "P0",
+      "status": "PASS",
+      "target_invariants": [
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size": {
+        "N_total_schedules": 300,
+        "negative_laundering_schedules": 250,
+        "positive_control_clean_schedules": 50,
+        "laundering_patterns_count": 11
+      },
+      "results": {
+        "laundering_schedules_admitted": 0,
+        "laundering_schedules_rejected": 250,
+        "laundering_admission_rate": 0.0,
+        "clean_controls_admitted": 50,
+        "clean_controls_rejected": 0,
+        "clean_review_liveness_rate": 1.0,
+        "error_code_concordance_rate": 1.0
+      },
+      "statistical_bounds": {
+        "confidence_level": 0.95,
+        "laundering_N250_wilson_1sided_ucb": 0.01071,
+        "laundering_N250_clopper_pearson_1sided_ucb": 0.01191,
+        "clean_control_N50_wilson_1sided_lcb": 0.94867
+      }
+    },
+    "E07": {
+      "experiment_id": "E07",
+      "title": "Canonicalization & Cross-Runtime Serialization Protocol",
+      "priority": "P0",
+      "status": "PASS",
+      "target_invariants": [
+        "I08_binding_immutability",
+        "I12_exact_inference_disclosure_continuity"
+      ],
+      "sample_size": {
+        "N_test_vectors": 35,
+        "runtimes_compared": 2,
+        "total_comparisons": 70
+      },
+      "results": {
+        "byte_equal_vectors": 35,
+        "byte_disagreement_count": 0,
+        "byte_equality_rate": 1.0,
+        "sha256_matching_vectors": 35,
+        "sha256_digest_match_rate": 1.0,
+        "cross_runtime_determinism": true
+      }
+    },
+    "E08": {
+      "experiment_id": "E08",
+      "title": "Formal Bounded Assurance & State Space Exploration",
+      "priority": "P0",
+      "status": "PASS",
+      "target_invariants": [
+        "I01_state_isolation", "I02_governance_freshness", "I03_phantom_free", "I04_deadlock_free",
+        "I05_idempotency_atomicity", "I06_cas_monotonicity", "I07_evidence_closure", "I08_binding_immutability",
+        "I09_lineage_preservation", "I10_dependency_completeness", "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity", "I13_non_downgradable_human_lineage",
+        "I14_undisclosed_evidence_rejection", "I15_clean_path_reachability"
+      ],
+      "sample_size": {
+        "depth5_states": 21361,
+        "depth5_transitions": 90432,
+        "depth6_states": 69342,
+        "depth6_transitions": 378602,
+        "max_exploration_depth": 6
+      },
+      "results": {
+        "depth5_invariant_violations": 0,
+        "depth6_invariant_violations": 0,
+        "total_invariant_violations": 0,
+        "mutation_test_coverage_rate": 1.0
+      }
+    }
+  }
+}

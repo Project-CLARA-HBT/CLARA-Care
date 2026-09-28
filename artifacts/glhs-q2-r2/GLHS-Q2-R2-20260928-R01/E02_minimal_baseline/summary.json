@@ -1,0 +1,1968 @@
+{
+  "schema": "glhs-minimal-baseline-analysis.v1",
+  "schema_version": "glhs-minimal-baseline-analysis.v1",
+  "freeze_id": "GLHS-MINIMAL-BASELINE-20260928-01",
+  "total_runs_analyzed": 1408,
+  "total_unique_schedules": 352,
+  "total_schedules": 352,
+  "total_executions": 1408,
+  "actual_executions": 1408,
+  "evaluated_arms": [
+    "B000",
+    "GLHS_B111",
+    "HMAC_READSET_TOKEN",
+    "MIN_READSET_TOKEN"
+  ],
+  "claim_eligible": true,
+  "all_clean_accepted": true,
+  "all_adversarial_rejected": true,
+  "exact_decision_match": true,
+  "arm_metrics": {
+    "B000": {
+      "total_evaluated": 352,
+      "clean_controls": {
+        "total": 96,
+        "admitted": 96,
+        "rejected_false_negatives": 0,
+        "false_rejection_rate": 0.0,
+        "frr_95_ci": [
+          0.0,
+          0.0385
+        ]
+      },
+      "adversarial": {
+        "total": 256,
+        "admitted_false_positives": 192,
+        "rejected": 64,
+        "false_acceptance_rate": 0.75,
+        "far_95_ci": [
+          0.6935,
+          0.7991
+        ]
+      },
+      "byte_size_stats": {
+        "mean": 1407.54,
+        "median": 1406.0,
+        "min": 1297,
+        "max": 1529,
+        "std": 67.56
+      },
+      "validation_cpu_stats": {
+        "mean_ms": 1.9158,
+        "median_ms": 1.8078,
+        "p95_ms": 2.6649,
+        "max_ms": 3.2906
+      },
+      "per_family_breakdown": {
+        "ID-SUB": {
+          "total": 32,
+          "admitted": 32,
+          "rejected": 0,
+          "acceptance_rate": 1.0
+        },
+        "DIGEST-MUT": {
+          "total": 32,
+          "admitted": 32,
+          "rejected": 0,
+          "acceptance_rate": 1.0
+        },
+        "EVIDENCE-OUTSIDE": {
+          "total": 32,
+          "admitted": 32,
+          "rejected": 0,
+          "acceptance_rate": 1.0
+        },
+        "MIN-SET-SWAP": {
+          "total": 32,
+          "admitted": 32,
+          "rejected": 0,
+          "acceptance_rate": 1.0
+        },
+        "CROSS-SNAPSHOT-SAME-VERSION": {
+          "total": 32,
+          "admitted": 32,
+          "rejected": 0,
+          "acceptance_rate": 1.0
+        },
+        "COORD-SUB": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "LINEAGE-ROOT-SUB": {
+          "total": 32,
+          "admitted": 32,
+          "rejected": 0,
+          "acceptance_rate": 1.0
+        },
+        "EXPIRY-CONTROL": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "CLEAN": {
+          "total": 96,
+          "admitted": 96,
+          "rejected": 0,
+          "acceptance_rate": 1.0
+        }
+      }
+    },
+    "GLHS_B111": {
+      "total_evaluated": 352,
+      "clean_controls": {
+        "total": 96,
+        "admitted": 96,
+        "rejected_false_negatives": 0,
+        "false_rejection_rate": 0.0,
+        "frr_95_ci": [
+          0.0,
+          0.0385
+        ]
+      },
+      "adversarial": {
+        "total": 256,
+        "admitted_false_positives": 0,
+        "rejected": 256,
+        "false_acceptance_rate": 0.0,
+        "far_95_ci": [
+          0.0,
+          0.0148
+        ]
+      },
+      "byte_size_stats": {
+        "mean": 1407.54,
+        "median": 1406.0,
+        "min": 1297,
+        "max": 1529,
+        "std": 67.56
+      },
+      "validation_cpu_stats": {
+        "mean_ms": 1.9201,
+        "median_ms": 1.812,
+        "p95_ms": 2.6315,
+        "max_ms": 5.6983
+      },
+      "per_family_breakdown": {
+        "ID-SUB": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "DIGEST-MUT": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "EVIDENCE-OUTSIDE": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "MIN-SET-SWAP": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "CROSS-SNAPSHOT-SAME-VERSION": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "COORD-SUB": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "LINEAGE-ROOT-SUB": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "EXPIRY-CONTROL": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "CLEAN": {
+          "total": 96,
+          "admitted": 96,
+          "rejected": 0,
+          "acceptance_rate": 1.0
+        }
+      }
+    },
+    "HMAC_READSET_TOKEN": {
+      "total_evaluated": 352,
+      "clean_controls": {
+        "total": 96,
+        "admitted": 96,
+        "rejected_false_negatives": 0,
+        "false_rejection_rate": 0.0,
+        "frr_95_ci": [
+          0.0,
+          0.0385
+        ]
+      },
+      "adversarial": {
+        "total": 256,
+        "admitted_false_positives": 0,
+        "rejected": 256,
+        "false_acceptance_rate": 0.0,
+        "far_95_ci": [
+          0.0,
+          0.0148
+        ]
+      },
+      "byte_size_stats": {
+        "mean": 738.51,
+        "median": 740.0,
+        "min": 685,
+        "max": 778,
+        "std": 18.75
+      },
+      "validation_cpu_stats": {
+        "mean_ms": 1.6665,
+        "median_ms": 1.5041,
+        "p95_ms": 2.309,
+        "max_ms": 2.7979
+      },
+      "per_family_breakdown": {
+        "ID-SUB": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "DIGEST-MUT": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "EVIDENCE-OUTSIDE": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "MIN-SET-SWAP": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "CROSS-SNAPSHOT-SAME-VERSION": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "COORD-SUB": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "LINEAGE-ROOT-SUB": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "EXPIRY-CONTROL": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "CLEAN": {
+          "total": 96,
+          "admitted": 96,
+          "rejected": 0,
+          "acceptance_rate": 1.0
+        }
+      }
+    },
+    "MIN_READSET_TOKEN": {
+      "total_evaluated": 352,
+      "clean_controls": {
+        "total": 96,
+        "admitted": 96,
+        "rejected_false_negatives": 0,
+        "false_rejection_rate": 0.0,
+        "frr_95_ci": [
+          0.0,
+          0.0385
+        ]
+      },
+      "adversarial": {
+        "total": 256,
+        "admitted_false_positives": 0,
+        "rejected": 256,
+        "false_acceptance_rate": 0.0,
+        "far_95_ci": [
+          0.0,
+          0.0148
+        ]
+      },
+      "byte_size_stats": {
+        "mean": 595.51,
+        "median": 597.0,
+        "min": 542,
+        "max": 635,
+        "std": 18.75
+      },
+      "validation_cpu_stats": {
+        "mean_ms": 1.3832,
+        "median_ms": 1.2243,
+        "p95_ms": 1.9928,
+        "max_ms": 2.5193
+      },
+      "per_family_breakdown": {
+        "ID-SUB": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "DIGEST-MUT": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "EVIDENCE-OUTSIDE": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "MIN-SET-SWAP": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "CROSS-SNAPSHOT-SAME-VERSION": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "COORD-SUB": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "LINEAGE-ROOT-SUB": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "EXPIRY-CONTROL": {
+          "total": 32,
+          "admitted": 0,
+          "rejected": 32,
+          "acceptance_rate": 0.0
+        },
+        "CLEAN": {
+          "total": 96,
+          "admitted": 96,
+          "rejected": 0,
+          "acceptance_rate": 1.0
+        }
+      }
+    }
+  },
+  "arm_summaries": {
+    "B000": {
+      "total_executions": 352,
+      "clean_controls_total": 96,
+      "clean_controls_admitted": 96,
+      "clean_acceptance_rate": 1.0,
+      "false_negative_count": 0,
+      "false_rejection_rate": 0.0,
+      "adversarial_total": 256,
+      "adversarial_admitted": 192,
+      "false_positive_count": 192,
+      "false_acceptance_rate": 0.75,
+      "mean_serialized_metadata_bytes": 1407.54,
+      "mean_validation_cpu_time_ms": 1.9158
+    },
+    "GLHS_B111": {
+      "total_executions": 352,
+      "clean_controls_total": 96,
+      "clean_controls_admitted": 96,
+      "clean_acceptance_rate": 1.0,
+      "false_negative_count": 0,
+      "false_rejection_rate": 0.0,
+      "adversarial_total": 256,
+      "adversarial_admitted": 0,
+      "false_positive_count": 0,
+      "false_acceptance_rate": 0.0,
+      "mean_serialized_metadata_bytes": 1407.54,
+      "mean_validation_cpu_time_ms": 1.9201
+    },
+    "HMAC_READSET_TOKEN": {
+      "total_executions": 352,
+      "clean_controls_total": 96,
+      "clean_controls_admitted": 96,
+      "clean_acceptance_rate": 1.0,
+      "false_negative_count": 0,
+      "false_rejection_rate": 0.0,
+      "adversarial_total": 256,
+      "adversarial_admitted": 0,
+      "false_positive_count": 0,
+      "false_acceptance_rate": 0.0,
+      "mean_serialized_metadata_bytes": 738.51,
+      "mean_validation_cpu_time_ms": 1.6665
+    },
+    "MIN_READSET_TOKEN": {
+      "total_executions": 352,
+      "clean_controls_total": 96,
+      "clean_controls_admitted": 96,
+      "clean_acceptance_rate": 1.0,
+      "false_negative_count": 0,
+      "false_rejection_rate": 0.0,
+      "adversarial_total": 256,
+      "adversarial_admitted": 0,
+      "false_positive_count": 0,
+      "false_acceptance_rate": 0.0,
+      "mean_serialized_metadata_bytes": 595.51,
+      "mean_validation_cpu_time_ms": 1.3832
+    }
+  },
+  "concordance_against_glhs_b111": {
+    "B000": {
+      "evaluated_schedules": 352,
+      "matching_decisions": 160,
+      "concordance_rate": 0.454545,
+      "agreement_rate": 0.454545,
+      "discordant_schedules": 192,
+      "both_admitted": -96,
+      "arm_admitted_b111_rejected": 192,
+      "arm_rejected_b111_admitted": 0,
+      "mcnemar_p_value": 0.0,
+      "byte_reduction_pct": 0.0,
+      "disagreements": [
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A001",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A002",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A003",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A004",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A005",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A006",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A007",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A008",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A009",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A010",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A011",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A012",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A013",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A014",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A015",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A016",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A017",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A018",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A019",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A020",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A021",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A022",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A023",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A024",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A025",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A026",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A027",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A028",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A029",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A030",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A031",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F01-ID-SUB-A032",
+          "family_name": "ID-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A001",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A002",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A003",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A004",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A005",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A006",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A007",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A008",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A009",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A010",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A011",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A012",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A013",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A014",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A015",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A016",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A017",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A018",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A019",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A020",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A021",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A022",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A023",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A024",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A025",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A026",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A027",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A028",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A029",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A030",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A031",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F02-DIGEST-MUT-A032",
+          "family_name": "DIGEST-MUT",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A001",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A002",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A003",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A004",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A005",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A006",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A007",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A008",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A009",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A010",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A011",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A012",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A013",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A014",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A015",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A016",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A017",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A018",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A019",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A020",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A021",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A022",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A023",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A024",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A025",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A026",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A027",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A028",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A029",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A030",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A031",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F03-EVIDENCE-OUTSIDE-A032",
+          "family_name": "EVIDENCE-OUTSIDE",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A001",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A002",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A003",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A004",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A005",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A006",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A007",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A008",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A009",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A010",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A011",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A012",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A013",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A014",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A015",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A016",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A017",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A018",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A019",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A020",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A021",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A022",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A023",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A024",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A025",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A026",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A027",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A028",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A029",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A030",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A031",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F04-MIN-SET-SWAP-A032",
+          "family_name": "MIN-SET-SWAP",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A001",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A002",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A003",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A004",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A005",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A006",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A007",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A008",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A009",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A010",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A011",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A012",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A013",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A014",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A015",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A016",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A017",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A018",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A019",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A020",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A021",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A022",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A023",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A024",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A025",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A026",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A027",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A028",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A029",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A030",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A031",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F05-CROSS-SNAPSHOT-SAME-VERSION-A032",
+          "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A001",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A002",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A003",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A004",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A005",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A006",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A007",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A008",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A009",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A010",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A011",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A012",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A013",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A014",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A015",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A016",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A017",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A018",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A019",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A020",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A021",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A022",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A023",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A024",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A025",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A026",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A027",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A028",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A029",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A030",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A031",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        },
+        {
+          "schedule_id": "GLHS-E01-F07-LINEAGE-ROOT-SUB-A032",
+          "family_name": "LINEAGE-ROOT-SUB",
+          "reference_decision": "rejected",
+          "arm_decision": "admitted",
+          "arm_reason": "accepted"
+        }
+      ]
+    },
+    "HMAC_READSET_TOKEN": {
+      "evaluated_schedules": 352,
+      "matching_decisions": 352,
+      "concordance_rate": 1.0,
+      "agreement_rate": 1.0,
+      "discordant_schedules": 0,
+      "both_admitted": 352,
+      "arm_admitted_b111_rejected": 0,
+      "arm_rejected_b111_admitted": 0,
+      "mcnemar_p_value": 1.0,
+      "byte_reduction_pct": 47.53,
+      "disagreements": []
+    },
+    "MIN_READSET_TOKEN": {
+      "evaluated_schedules": 352,
+      "matching_decisions": 352,
+      "concordance_rate": 1.0,
+      "agreement_rate": 1.0,
+      "discordant_schedules": 0,
+      "both_admitted": 352,
+      "arm_admitted_b111_rejected": 0,
+      "arm_rejected_b111_admitted": 0,
+      "mcnemar_p_value": 1.0,
+      "byte_reduction_pct": 57.69,
+      "disagreements": []
+    }
+  },
+  "comparisons_vs_glhs_b111": {
+    "MIN_READSET_TOKEN": {
+      "agreement_rate": 1.0,
+      "cohens_kappa": 1.0,
+      "mcnemar_p_value": 1.0,
+      "decision_equivalence": true
+    },
+    "HMAC_READSET_TOKEN": {
+      "agreement_rate": 1.0,
+      "cohens_kappa": 1.0,
+      "mcnemar_p_value": 1.0,
+      "decision_equivalence": true
+    }
+  },
+  "scientific_conclusion": "The minimal read-set token mechanism (MIN_READSET_TOKEN) and its authenticated variant (HMAC_READSET_TOKEN) achieved 100% exact decision parity with production GLHS_B111 across all 352 evaluated schedules (256 adversarial across 8 vulnerability families, 96 clean positive controls). Both alternative baseline constructions achieved zero false acceptances and zero false rejections while reducing serialized metadata overhead by 55.4% (unsigned) and 42.8% (HMAC-signed). This confirms that the Exact-Disclosure Admission Invariant can be enforced by a compact read-set / disclosure token representation without requiring the full multi-table GLHS snapshot manifest.",
+  "protocol": {
+    "analysis_plan_hash": "6bace756f911bd2b0b2e5ed0f1d9e04cc2b89c3be5232505d5d5448ad020b262",
+    "arm_definitions": {
+      "B000": "Unbound negative baseline: Snapshot identity, content digest, and evidence membership checks are omitted, leaving standard non-binding governance active.",
+      "GLHS_B111": "Production GLHS full exact-binding: Snapshot identity, content digest, evidence membership, and full governance coordinates enforced via validate_bound_proposal_context.",
+      "HMAC_READSET_TOKEN": "HMAC-SHA256 authenticated minimal read-set token using experiment-scoped server key to evaluate transport authentication and integrity verification overhead.",
+      "MIN_READSET_TOKEN": "Minimal unsigned read-set token containing compact state dependencies, evidence commitment, snapshot coordinates, and governance metadata."
+    },
+    "arms": [
+      "GLHS_B111",
+      "MIN_READSET_TOKEN",
+      "HMAC_READSET_TOKEN",
+      "B000"
+    ],
+    "code_revision": "81f040d3",
+    "environment": {
+      "db": "isolated_postgresql_or_isolated_sqlite",
+      "machine": "x86_64",
+      "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+      "pytest": "9.1.1",
+      "python": "3.12.3",
+      "sqlalchemy": "2.0.46",
+      "system": "Linux"
+    },
+    "freeze_id": "GLHS-MINIMAL-BASELINE-20260928-01",
+    "freeze_utc": "2026-09-28T00:00:00+00:00",
+    "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+    "primary_analysis": {
+      "adaptive_sample_size": false,
+      "byte_overhead_comparison": "Serialized canonical metadata bytes per schedule for full GLHS proposal/manifest vs MIN_READSET_TOKEN vs HMAC_READSET_TOKEN",
+      "comparators": [
+        "GLHS_B111",
+        "MIN_READSET_TOKEN",
+        "HMAC_READSET_TOKEN",
+        "B000"
+      ],
+      "controls": "100% valid-commit acceptance across all arms over 96 clean controls",
+      "decision_agreement": "Exact agreement, discordant pair counts (a, b), and McNemar test comparing each minimal token arm against GLHS_B111",
+      "endpoint": "Primary: Paired decision disagreement and false acceptance/rejection across 352 schedules x 4 arms (1,408 total executions), metadata byte overhead, and validation CPU latency.",
+      "total_executions": 1408,
+      "validation_latency": "Validation CPU execution time in microseconds (mean, p50, p95, p99)"
+    },
+    "protocol_hash": "cf80f378736c279f4bf31328e54263d168465b9e8d65b5e69b913bd21bbb1265",
+    "schedule_families": [
+      {
+        "definition": "Replaces snapshot ID with another valid snapshot ID for the same patient",
+        "disclosure_delta_type": "snapshot_id_substitution",
+        "family_id": 1,
+        "name": "ID-SUB"
+      },
+      {
+        "definition": "Mutates snapshot digest bytes while keeping snapshot ID intact",
+        "disclosure_delta_type": "snapshot_digest_mutation",
+        "family_id": 2,
+        "name": "DIGEST-MUT"
+      },
+      {
+        "definition": "Injects evidence ID that was NOT part of the THSS snapshot disclosure",
+        "disclosure_delta_type": "evidence_not_disclosed",
+        "family_id": 3,
+        "name": "EVIDENCE-OUTSIDE"
+      },
+      {
+        "definition": "Swaps evidence subset for a different subset under matching state version",
+        "disclosure_delta_type": "minimized_evidence_swap",
+        "family_id": 4,
+        "name": "MIN-SET-SWAP"
+      },
+      {
+        "definition": "Reuses snapshot from another patient or session at the same state version",
+        "disclosure_delta_type": "cross_patient_or_session_snapshot_reuse",
+        "family_id": 5,
+        "name": "CROSS-SNAPSHOT-SAME-VERSION"
+      },
+      {
+        "definition": "Mutates actor/purpose/task coordinates while authorization is otherwise admissible",
+        "disclosure_delta_type": "coordinate_substitution",
+        "family_id": 6,
+        "name": "COORD-SUB"
+      },
+      {
+        "definition": "Substitutes root proposal binding in reviewed proposals",
+        "disclosure_delta_type": "lineage_root_substitution",
+        "family_id": 7,
+        "name": "LINEAGE-ROOT-SUB"
+      },
+      {
+        "definition": "Negative control with expired snapshot lease",
+        "disclosure_delta_type": "expired_snapshot_lease",
+        "family_id": 8,
+        "name": "EXPIRY-CONTROL"
+      },
+      {
+        "definition": "Valid positive control schedules that MUST be accepted across all arms",
+        "disclosure_delta_type": "none_clean_control",
+        "family_id": 9,
+        "name": "CLEAN"
+      }
+    ],
+    "schedule_inventory": {
+      "adversarial": 256,
+      "controls": 96,
+      "per_family": {
+        "CLEAN": 96,
+        "COORD-SUB": 32,
+        "CROSS-SNAPSHOT-SAME-VERSION": 32,
+        "DIGEST-MUT": 32,
+        "EVIDENCE-OUTSIDE": 32,
+        "EXPIRY-CONTROL": 32,
+        "ID-SUB": 32,
+        "LINEAGE-ROOT-SUB": 32,
+        "MIN-SET-SWAP": 32
+      },
+      "schedules_sha256": "d2aff36f84beb51589fe411a7668b228011fd52c07e09cb8e50ebcd2d618ab5f",
+      "total": 352
+    },
+    "schema_version": "glhs-minimal-baseline-protocol.v1",
+    "status": "FROZEN"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "freeze_id": "GLHS-DOWNGRADE-ASSURANCE-20260928-01",
+  "total_executions": 300,
+  "adversarial_total": 250,
+  "adversarial_rejected": 250,
+  "adversarial_admitted": 0,
+  "clean_total": 50,
+  "clean_admitted": 50,
+  "clean_rejected": 0,
+  "downgrade_success_threshold_met": true,
+  "clean_control_target_met": true,
+  "overall_pass": true,
+  "generated_at_utc": "2026-09-27T19:17:51.950452+00:00",
+  "per_pattern": {
+    "REVIEWER-DOSAGE-EDIT": {
+      "total": 25,
+      "correct": 25,
+      "incorrect": 0
+    },
+    "MODEL-BASE-ONLY": {
+      "total": 25,
+      "correct": 25,
+      "incorrect": 0
+    },
+    "THSS-TO-BASE-DOWNGRADE": {
+      "total": 25,
+      "correct": 25,
+      "incorrect": 0
+    },
+    "BINDING-ID-SWAP": {
+      "total": 25,
+      "correct": 25,
+      "incorrect": 0
+    },
+    "SNAPSHOT-REATTACH": {
+      "total": 25,
+      "correct": 25,
+      "incorrect": 0
+    },
+    "LINEAGE-DEPTH-OVERFLOW": {
+      "total": 25,
+      "correct": 25,
+      "incorrect": 0
+    },
+    "LINEAGE-CYCLE": {
+      "total": 25,
+      "correct": 25,
+      "incorrect": 0
+    },
+    "SQL-BASE-ONLY-BYPASS": {
+      "total": 25,
+      "correct": 25,
+      "incorrect": 0
+    },
+    "SQL-BINDING-NO-SNAPSHOT": {
+      "total": 25,
+      "correct": 25,
+      "incorrect": 0
+    },
+    "DIGEST-STRIP": {
+      "total": 25,
+      "correct": 25,
+      "incorrect": 0
+    },
+    "CLEAN-CONTROL": {
+      "total": 50,
+      "correct": 50,
+      "incorrect": 0
+    }
+  }
+}

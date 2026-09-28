@@ -11,7 +11,7 @@ import hmac
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from clara_api.glhs.canonical_json import (
@@ -236,7 +236,7 @@ def generate_min_readset_token(
         )
 
     if expires_at is None:
-        exp_str = "2026-09-28T12:00:00+00:00"
+        exp_str = (datetime.now(UTC) + timedelta(days=365)).isoformat()
     elif isinstance(expires_at, datetime):
         exp_str = expires_at.astimezone(UTC).isoformat()
     else:

@@ -1,0 +1,12 @@
+{
+  "experiment_id": "E06",
+  "total_schedules": 300,
+  "laundering_attack_schedules": 250,
+  "laundering_attacks_rejected": 250,
+  "laundering_rejection_rate": 1.0,
+  "upper_95_wilson_ci_laundering_admission": 0.01463,
+  "clean_positive_controls": 50,
+  "clean_controls_admitted": 50,
+  "clean_control_admission_rate": 1.0,
+  "claim_eligible": true
+}

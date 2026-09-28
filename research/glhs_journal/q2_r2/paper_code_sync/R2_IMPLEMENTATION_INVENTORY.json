@@ -172,20 +172,20 @@
       "fail_closed_checks": ["zero_invariant_violations", "mutation_detection_rate_100"]
     },
     "E09": {
-      "name": "Realistic Concurrency & Partition Benchmark",
+      "name": "In-Memory Concurrency Simulation",
       "priority": "P1",
       "status": "READY_FOR_EXECUTION",
+      "simulation_details": "In-Memory Concurrency Simulation using SimulatedPartitionCoordinator / thread locking (NOT production PostgreSQL benchmark)",
       "existing_modules": [
-        "evaluation/glhs_postgres_toctou/dag_concurrency_benchmark.py",
-        "evaluation/glhs_postgres_toctou/zipfian_concurrency_bench.py",
-        "evaluation/contention_analysis/run_postgresql.py"
+        "evaluation/concurrency_benchmark/multifactor_runner.py",
+        "evaluation/concurrency_benchmark/analyze.py"
       ],
       "required_new_modules": [
         "evaluation/concurrency_benchmark/multifactor_runner.py",
         "evaluation/concurrency_benchmark/analyze.py"
       ],
-      "database_backend": "real_postgresql",
-      "fail_closed_checks": ["isolated_db_guard", "min_repetition_count_5"]
+      "database_backend": "in_memory_simulation",
+      "fail_closed_checks": ["disjoint_zero_false_stale", "canonical_lock_ordering_zero_deadlocks", "min_repetition_count_5"]
     },
     "E10": {
       "name": "Full-Stack Performance Characterization",

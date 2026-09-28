@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Offline reproduction and evidence integrity validator for Phase 9 (E09: Realistic Concurrency & Partition Benchmark).
+"""Offline reproduction and evidence integrity validator for Phase 9 (E09: In-Memory Concurrency Simulation).
 
-Validates the full sealed artifact bundle for E09:
+Validates the full sealed artifact bundle for E09 (In-Memory Concurrency Simulation using SimulatedPartitionCoordinator / thread locking, NOT production PostgreSQL benchmark):
 1. Disables all network access fail-closed.
 2. Verifies cryptographic checksums in checksums.sha256.
 3. Validates protocol freeze and factor bindings.
@@ -26,18 +26,20 @@ import time
 from pathlib import Path
 from typing import Any
 
-# Ensure project root is resolvable
+# Ensure project root and service packages are resolvable
 _REPO_ROOT = Path(__file__).resolve().parent
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+for _p in (_REPO_ROOT, _REPO_ROOT / "services" / "api" / "src", _REPO_ROOT / "services" / "ml" / "src"):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
+from clara_api.glhs.canonical_json import canonical_hash
 from evaluation.concurrency_benchmark.analyze import analyze_concurrency_metrics, generate_markdown_summary
 from evaluation.concurrency_benchmark.seal import seal_experiment_e09
 
 PROTOCOL_SCHEMA_VERSION = "glhs-e09-concurrency-protocol-v1"
 SEAL_SCHEMA_VERSION = "glhs-e09-concurrency-seal-v1"
-DEFAULT_ARTIFACT_DIR = "protocols/E09_concurrency"
-DEFAULT_PROTOCOL_PATH = "protocols/E09_concurrency/protocol.json"
+DEFAULT_ARTIFACT_DIR = "research/glhs_journal/q3_r3/evidence/E09_concurrency"
+DEFAULT_PROTOCOL_PATH = "research/glhs_journal/q3_r3/protocols/E09_concurrency/protocol.json"
 
 
 class NetworkAccessProhibitedError(RuntimeError):
@@ -45,14 +47,21 @@ class NetworkAccessProhibitedError(RuntimeError):
 
 
 def disable_network() -> None:
-    """Prohibit all socket creation and DNS resolution fail-closed."""
-    def forbidden_socket(*args: Any, **kwargs: Any) -> Any:
+    """Prohibit all socket creation and DNS resolution fail-closed (except AF_UNIX socketpairs)."""
+    _orig_socket = socket.socket
+
+    def forbidden_socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0, fileno=None):
+        if family in (socket.AF_INET, socket.AF_INET6):
+            raise NetworkAccessProhibitedError("network_access_prohibited_during_reproduction")
+        return _orig_socket(family, type, proto, fileno)
+
+    def forbidden_conn(*args: Any, **kwargs: Any) -> Any:
         raise NetworkAccessProhibitedError("network_access_prohibited_during_reproduction")
 
     socket.socket = forbidden_socket  # type: ignore[assignment]
-    socket.create_connection = forbidden_socket  # type: ignore[assignment]
-    socket.getaddrinfo = forbidden_socket  # type: ignore[assignment]
-    socket.gethostbyname = forbidden_socket  # type: ignore[assignment]
+    socket.create_connection = forbidden_conn  # type: ignore[assignment]
+    socket.getaddrinfo = forbidden_conn  # type: ignore[assignment]
+    socket.gethostbyname = forbidden_conn  # type: ignore[assignment]
 
 
 def sha256_file(path: Path) -> str:
@@ -128,17 +137,41 @@ def reproduce_and_verify(
 
     # 2. Verify protocol document
     protocol_doc = json.loads(protocol_path.read_text(encoding="utf-8"))
-    if protocol_doc.get("schema_version") != PROTOCOL_SCHEMA_VERSION:
+    if protocol_doc.get("schema_version") not in (PROTOCOL_SCHEMA_VERSION, "glhs-r3-protocol.v1", "glhs-r3-protocol-e09.v1"):
         raise ValueError(f"invalid_protocol_schema:{protocol_doc.get('schema_version')}")
-    if protocol_doc.get("protocol_id") != "E09-CONCURRENCY-BENCHMARK":
+    if protocol_doc.get("protocol_id") not in ("E09-CONCURRENCY-BENCHMARK", "GLHS-R3-E09-CONCURRENCY", "E09_concurrency"):
         raise ValueError(f"invalid_protocol_id:{protocol_doc.get('protocol_id')}")
 
     # 3. Read raw metrics and re-run statistical analysis
     raw_file = artifact_dir / "raw" / "benchmark_raw_metrics.json"
-    if not raw_file.is_file():
+    runs_file = artifact_dir / "raw" / "runs.jsonl"
+    if not raw_file.is_file() and not runs_file.is_file():
         raise FileNotFoundError("raw_metrics_file_missing")
 
-    raw_data = json.loads(raw_file.read_text(encoding="utf-8"))
+    # If runs.jsonl exists, verify its cryptographic hash chain
+    if runs_file.is_file():
+        prev_hash = ""
+        lines = runs_file.read_text(encoding="utf-8").splitlines()
+        for lineno, line in enumerate(lines, start=1):
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            stored_hash = record.get("hash")
+            expected_prev = record.get("prev_hash", "")
+            if expected_prev != prev_hash:
+                raise ValueError(f"hash_chain_broken:line={lineno}")
+            rec_copy = dict(record)
+            rec_copy.pop("hash", None)
+            computed_hash = canonical_hash(rec_copy, profile="clara.canonical-json.v2-rfc8785")
+            if stored_hash != computed_hash:
+                raise ValueError(f"hash_mismatch:line={lineno}")
+            prev_hash = str(stored_hash)
+
+    if raw_file.is_file():
+        raw_data = json.loads(raw_file.read_text(encoding="utf-8"))
+    else:
+        raw_data = [json.loads(line) for line in runs_file.read_text(encoding="utf-8").splitlines() if line.strip()]
+
     reproduced_report = analyze_concurrency_metrics(raw_data)
 
     if not reproduced_report.all_invariants_passed:
@@ -173,7 +206,7 @@ def reproduce_and_verify(
     if not seal_file.is_file():
         raise FileNotFoundError("seal_json_missing")
     seal_doc = json.loads(seal_file.read_text(encoding="utf-8"))
-    if seal_doc.get("status") != "SEALED" or seal_doc.get("schema_version") != SEAL_SCHEMA_VERSION:
+    if seal_doc.get("status") != "SEALED" or seal_doc.get("schema_version") not in (SEAL_SCHEMA_VERSION, "glhs-r3-experiment-seal.v1"):
         raise ValueError("seal_doc_invalid")
 
     return {

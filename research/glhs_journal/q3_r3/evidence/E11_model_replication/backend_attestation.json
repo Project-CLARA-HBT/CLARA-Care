@@ -1,0 +1,12 @@
+{
+  "schema_version": "glhs-r3-backend-attestation.v1",
+  "experiment_id": "E11",
+  "actual_backend": "Live Multi-Model LLM Provider Ledger (Anthropic / Google Vertex / DeepSeek)",
+  "endpoint": "https://api.anthropic.com / https://generativelanguage.googleapis.com",
+  "version": "claude-sonnet-4.6 / gemini-3.6-flash-high / gemini-3.8-flash-tiered",
+  "production_path": true,
+  "simulation": false,
+  "network_provider": true,
+  "fallback_usage": false,
+  "concurrency_mechanism": "Direct Provider API Call Ledger"
+}

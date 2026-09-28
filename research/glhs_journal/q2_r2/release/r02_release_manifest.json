@@ -1,0 +1,13 @@
+{
+  "schema_version": "glhs-r02-prospective-freeze-manifest.v1",
+  "freeze_id": "GLHS-R02-FREEZE-20260928-V1",
+  "frozen_at_utc": "2026-09-28T14:45:00.000000+00:00",
+  "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "experiment_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "git_branch": "research/glhs-q2-r2-experiments",
+  "status": "FROZEN_AND_SEALED",
+  "experiments_frozen": [
+    "E00", "E01", "E02", "E03", "E04", "E05",
+    "E06", "E07", "E08", "E09", "E10", "E11", "E12", "E13"
+  ]
+}

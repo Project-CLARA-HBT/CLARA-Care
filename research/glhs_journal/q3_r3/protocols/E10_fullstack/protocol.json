@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "artifact_layout": {
+    "artifact_directory": "research/glhs_journal/q3_r3/protocols/E10_fullstack",
+    "required_artifacts": [
+      "protocol.json",
+      "protocol.sha256"
+    ]
+  },
+  "backend_requirement": "real_postgresql_16",
+  "curator": "Agent D \u2014 Implementation & Reproducibility",
+  "date": "2026-09-28",
+  "execution_environment_and_isolation": {
+    "primary_runner": "evaluation/fullstack_benchmark/seal.py"
+  },
+  "experiment_id": "E10",
+  "freeze_id": "GLHS-R3-E10-FREEZE-20260928-V1",
+  "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "phase": "Phase 6 \u2014 Full-Stack HTTP Performance Evaluation",
+  "primary_endpoints": [
+    {
+      "acceptable_threshold": 250.0,
+      "definition": "95th percentile wall-clock HTTP request-response latency in milliseconds.",
+      "name": "End-to-End HTTP Latency p95",
+      "target_value": 50.0
+    }
+  ],
+  "primary_question": "What is the end-to-end wall-clock latency, throughput, and CPU overhead introduced by full GRWC validation in the production FastAPI HTTP REST gateway connected to PostgreSQL 16.14?",
+  "priority": "P1",
+  "program": "GLHS R3 \u2014 Governed Read-to-Write Continuity (GRWC)",
+  "protocol_id": "GLHS-R3-E10-FULLSTACK",
+  "sample_size": {
+    "total_executions_N": 700,
+    "unit_definition": "700 REST HTTP requests (100 repetitions per operation class across 7 operation classes)"
+  },
+  "sample_size_allocation": {
+    "http_requests_count": 1000
+  },
+  "schema_version": "glhs-r3-protocol.v1",
+  "scientific_unit": "http_rest_request",
+  "secondary_endpoints": [
+    {
+      "acceptable_threshold": 2.0,
+      "definition": "GRWC commitment payload size relative to ungoverned HTTP payload.",
+      "name": "Payload Overhead Ratio",
+      "target_value": 1.2
+    }
+  ],
+  "statistical_plan": {
+    "confidence_level": 0.95,
+    "method": "Full-Stack Benchmark Quantile Estimation & Network Overhead Profiling"
+  },
+  "status": "PROSPECTIVE_FROZEN",
+  "stopping_rules": {
+    "fail_closed_criteria": "HTTP 500 error rates exceeding 0.001 halt full-stack verification.",
+    "missing_data_rule": "Dropped requests are counted as connection errors."
+  },
+  "target_invariants": [
+    "I12_exact_inference_disclosure_continuity",
+    "I15_clean_path_reachability"
+  ],
+  "title": "Phase 6 / E10: HTTP / PostgreSQL Full-Stack Performance Characterization Protocol",
+  "unit_of_analysis": "One end-to-end HTTP request/response cycle over the FastAPI production gateway."
+}

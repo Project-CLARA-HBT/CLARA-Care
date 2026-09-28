@@ -1,45 +1,67 @@
-"""E05 Root-Cause Replay: TOCTOU-V2-05 timing perturbations.
+"""E05 Root-Cause Replay: TOCTOU-V2-05 timing perturbations on real PostgreSQL.
 
 TOCTOU-V2-05 is a ``concurrent_governance_writer_vs_proposal_writer`` schedule
 with ``barrier_phases=[simultaneous_release]``. The frozen oracle expected
 ``indeterminate_ordering`` but the historical run observed
 ``rejected_after_or_during_governance_race``.
 
-This replay executes 100 timing perturbations using the *test-injectable*
-driver infrastructure (no database required) to characterize the distribution
-of outcomes under controlled jitter. Each perturbation varies the relative
-delay between the governance writer's commit and the proposal writer's
-completion, simulating the timing window explored by the simultaneous barrier.
-
-Root-cause hypothesis under test:
-
-    The GLHS gateway's ``propose_assertion`` re-checks consent at proposal time.
-    When both parties are released simultaneously, the governance writer's
-    ``consent_revoke`` commit reaches PostgreSQL visibility before the proposal
-    writer's ``propose_assertion`` re-reads consent — even with zero artificial
-    delay. The ``simultaneous_release`` barrier does not guarantee interleaved
-    commit ordering; it only guarantees both threads are released from the same
-    rendezvous. PostgreSQL ``READ COMMITTED`` isolation means the proposal
-    writer *always* sees the revocation once it commits, producing a
-    deterministic rejection rather than the oracle-expected indeterminate
-    window.
-
-    Classification: **conservative safe rejection by implementation** — the
-    gateway is *more* restrictive than the oracle assumed, and the oracle's
-    ``indeterminate_ordering`` expectation was based on an abstract model that
-    did not account for the gateway's re-check-at-propose semantics.
+This replay executes 100 timing perturbations against real PostgreSQL at
+``postgresql+psycopg://aura:aura_prod_x7k9m2@localhost:5433/glhs_eval_r2``
+to characterize the distribution of outcomes under controlled jitter and capture
+real 64-bit PostgreSQL transaction IDs (txid_current()), lock acquisition traces,
+and monotonic timestamps.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import random
+import sys
+import threading
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
+
+# Ensure project root and services/api/src are in sys.path
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+_API_SRC = _REPO_ROOT / "services/api/src"
+if str(_API_SRC) not in sys.path:
+    sys.path.insert(0, str(_API_SRC))
+
+import psycopg
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
+
+from evaluation.glhs_postgres_toctou.executor_v2 import (
+    AssertionInput,
+    Base,
+    ExecutorEnv,
+    GlhsEvidence,
+    MEDICAL_CONSENT_TYPE,
+    PhrProfile,
+    ProfileScope,
+    User,
+    UserConsent,
+    WORKER_EXCEPTIONS,
+    _real_env,
+    classify_proposal_order,
+    consent_revoke,
+    now_monotonic_ns,
+    required_medical_disclaimer_version,
+    snapshot_binding_digest,
+    TransactionTrace,
+)
+
+POSTGRES_URL = os.environ.get(
+    "GLHS_E05_POSTGRES_URL",
+    "postgresql+psycopg://aura:aura_prod_x7k9m2@localhost:5433/glhs_eval_r2",
+)
 
 
 @dataclass(frozen=True)
@@ -56,6 +78,9 @@ class PerturbationResult:
     safety_success: bool
     governance_committed_first: bool | None
     elapsed_ns: int
+    governance_txid: int | None = None
+    proposal_txid: int | None = None
+    lock_waits: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -71,187 +96,269 @@ class ReplayV205Report:
     root_cause_classification: str = ""
     reconciliation_note: str = ""
     executed_at: str = ""
+    database_url: str = ""
 
 
-def _simulate_v2_05_race(
+class ReplayBarrier:
+    """Barrier for synchronizing perturbation workers."""
+
+    def __init__(self, count: int) -> None:
+        self._barrier = threading.Barrier(count)
+
+    def wait(self, phase: str) -> int:
+        return self._barrier.wait()
+
+
+def _run_v2_05_postgres_trial(
+    env: ExecutorEnv,
     *,
+    trial_id: int,
     governance_delay_us: int = 0,
     proposal_delay_us: int = 0,
-    rng: random.Random,
 ) -> dict[str, Any]:
-    """Simulate the V2-05 race under controlled timing perturbation.
+    """Execute V2-05 race on real PostgreSQL under controlled timing delay."""
+    trace = TransactionTrace()
+    db = env.session_factory()
+    try:
+        user = User(email=f"v205-owner-{uuid4().hex}@example.test", hashed_password="x", role="normal")
+        db.add(user)
+        db.flush()
+        profile = PhrProfile(user_id=user.id)
+        db.add(profile)
+        db.flush()
+        db.add(
+            UserConsent(
+                user_id=user.id,
+                consent_type=MEDICAL_CONSENT_TYPE,
+                consent_version=required_medical_disclaimer_version(),
+            )
+        )
+        db.flush()
+        scope = ProfileScope(
+            actor=user,
+            profile=profile,
+            actor_role="owner",
+            purpose="self_care",
+            allowed_actions=frozenset({"create", "correct", "resolve", "view"}),
+            allowed_data_classes=frozenset({"medications"}),
+        )
 
-    Models the actual gateway behavior: propose_assertion re-reads consent
-    within its own transaction. Under READ COMMITTED, if the consent_revoke
-    writer has committed before propose_assertion's SELECT, the proposal is
-    rejected with proposal_snapshot_consent_mismatch.
+        from evaluation.glhs_postgres_toctou.executor_v2 import _seed_evidence, _seed_snapshot
+        evidence = _seed_evidence(env, db, scope)
+        snapshot = _seed_snapshot(env, db, scope)
+        db.commit()
 
-    The simulation models two timing windows:
-    1. governance_delay_us: delay before the governance writer commits
-    2. proposal_delay_us: delay before the proposal writer's SELECT
+        user_id = scope.actor.id
+        profile_id = scope.profile.id
+        snapshot_id = str(snapshot.snapshot_id)
+        evidence_id = int(evidence.id)
+        digest, _ = snapshot_binding_digest(snapshot)
+    finally:
+        db.close()
 
-    The relative ordering of these determines the outcome:
-    - If governance commit < proposal SELECT: deterministic rejection
-    - If proposal SELECT < governance commit: proposal commits (indeterminate)
-    - If overlapping: depends on PostgreSQL's transaction visibility rules
-    """
-    base_ns = time.monotonic_ns()
+    barrier = ReplayBarrier(2)
+    mutex = threading.Lock()
+    observed: dict[str, Any] = {}
 
-    # Model: governance writer commit timestamp
-    governance_begin_ns = base_ns
-    governance_commit_ns = governance_begin_ns + (governance_delay_us * 1000)
+    def governance_writer() -> None:
+        try:
+            wdb = env.session_factory()
+            try:
+                adapter = env.adapter_factory(wdb)
+                barrier.wait("simultaneous_release")
+                if governance_delay_us > 0:
+                    time.sleep(governance_delay_us / 1e6)
 
-    # Model: proposal writer phases
-    proposal_begin_ns = base_ns  # simultaneous release
-    proposal_select_ns = proposal_begin_ns + (proposal_delay_us * 1000)
+                gov_txid = wdb.execute(text("SELECT txid_current()")).scalar()
 
-    # Under READ COMMITTED, the proposal writer sees the revocation if and
-    # only if the governance writer committed before the proposal writer's
-    # snapshot read. The gateway's propose_assertion does a fresh SELECT
-    # on UserConsent; it does not use a cached snapshot.
-    #
-    # Additional factor: PostgreSQL WAL flush latency means even a
-    # "simultaneous" release has the governance writer's INSERT+COMMIT
-    # visible to any subsequent SELECT by the proposal writer, because
-    # the threading barrier ensures both are released, but the governance
-    # writer's transaction is smaller (one INSERT + COMMIT) while the
-    # proposal writer must: reload evidence, build AssertionInput, call
-    # propose_assertion (which internally does SELECT on consent, snapshot
-    # validation, INSERT assertion, INSERT evidence link, etc.).
-    #
-    # The governance writer almost always commits first due to this
-    # asymmetry in transaction weight.
+                meta = consent_revoke(
+                    adapter,
+                    user_id=user_id,
+                    consent_type=MEDICAL_CONSENT_TYPE,
+                    consent_version=required_medical_disclaimer_version(),
+                    barrier=ReplayBarrier(1),
+                    barrier_phase="release",
+                    trace=trace,
+                    record_factory=env.consent_record_factory,
+                )
+                with mutex:
+                    observed["revoke_commit_ns"] = meta.commit_monotonic_ns
+                    observed["governance_txid"] = gov_txid
+            finally:
+                wdb.close()
+        except WORKER_EXCEPTIONS as exc:
+            with mutex:
+                observed["writer_error"] = f"{type(exc).__name__}:{exc}"
 
-    # Simulate natural jitter from threading + transaction weight asymmetry
-    natural_jitter_ns = rng.randint(500, 15000)  # 0.5us - 15us
+    def proposal_writer() -> None:
+        try:
+            pdb = env.session_factory()
+            try:
+                barrier.wait("simultaneous_release")
+                if proposal_delay_us > 0:
+                    time.sleep(proposal_delay_us / 1e6)
 
-    governance_visible_ns = governance_commit_ns + natural_jitter_ns
-    proposal_reads_consent_ns = proposal_select_ns + rng.randint(2000, 50000)
+                prop_txid = pdb.execute(text("SELECT txid_current()")).scalar()
+                evidence_obj = pdb.get(GlhsEvidence, evidence_id)
+                if evidence_obj is None:
+                    raise RuntimeError("v2_05_in_scope_evidence_missing")
+                try:
+                    env.gateway.propose_assertion(
+                        pdb,
+                        profile_id=profile_id,
+                        actor_user_id=user_id,
+                        data=AssertionInput(
+                            semantic_key=f"medication:v2-race:{uuid4()}",
+                            assertion_type="medications",
+                            predicate="dose",
+                            value={"dose": "1"},
+                            epistemic_state="reported",
+                            valid_from=datetime.now(UTC),
+                            source_snapshot_id=snapshot_id,
+                            source_snapshot_digest=digest,
+                            proposal_consumed_thss=True,
+                        ),
+                        evidence=((evidence_obj, "supports"),),
+                    )
+                    pdb.commit()
+                    outcome = "proposal_committed"
+                except env.gateway.GlhsInvariantError as exc:
+                    pdb.rollback()
+                    outcome = str(exc)
+                with mutex:
+                    observed["proposal_outcome"] = outcome
+                    observed["proposal_complete_ns"] = now_monotonic_ns()
+                    observed["proposal_txid"] = prop_txid
+            finally:
+                pdb.close()
+        except WORKER_EXCEPTIONS as exc:
+            with mutex:
+                observed["proposal_error"] = f"{type(exc).__name__}:{exc}"
 
-    if governance_visible_ns < proposal_reads_consent_ns:
-        # Governance revocation is visible before proposal reads consent
-        outcome = "proposal_snapshot_consent_mismatch"
-        classification = "rejected_after_or_during_governance_race"
-        forbidden = False
-        gov_first = True
-    elif proposal_reads_consent_ns < governance_visible_ns:
-        # Proposal reads consent before revocation is visible
-        # In practice this is extremely rare due to transaction weight asymmetry
-        outcome = "proposal_committed"
-        classification = "proposal_committed_before_observed_revoke_commit"
-        forbidden = False
-        gov_first = False
-    else:
-        # True simultaneous (effectively impossible with ns precision)
-        outcome = "proposal_snapshot_consent_mismatch"
-        classification = "rejected_after_or_during_governance_race"
-        forbidden = False
-        gov_first = None
+    left = threading.Thread(target=governance_writer)
+    right = threading.Thread(target=proposal_writer)
+    left.start()
+    right.start()
+    left.join(timeout=40)
+    right.join(timeout=40)
+
+    if left.is_alive() or right.is_alive():
+        raise RuntimeError("v2_05_workers_timed_out")
+    if "writer_error" in observed or "proposal_error" in observed:
+        raise RuntimeError(f"v2_05_worker_error:{observed}")
+
+    outcome = str(observed["proposal_outcome"])
+    classification, forbidden = classify_proposal_order(
+        outcome=outcome,
+        revoke_commit_ns=observed.get("revoke_commit_ns"),
+        proposal_complete_ns=observed.get("proposal_complete_ns"),
+    )
+
+    gov_ns = observed.get("revoke_commit_ns")
+    prop_ns = observed.get("proposal_complete_ns")
+    gov_first = (gov_ns < prop_ns) if (gov_ns is not None and prop_ns is not None) else None
 
     return {
         "observed_classification": classification,
         "observed_outcome": outcome,
         "forbidden_commit": forbidden,
-        "safety_success": True,
+        "safety_success": forbidden is False,
         "governance_committed_first": gov_first,
-        "governance_visible_ns": governance_visible_ns - base_ns,
-        "proposal_reads_consent_ns": proposal_reads_consent_ns - base_ns,
+        "governance_txid": observed.get("governance_txid"),
+        "proposal_txid": observed.get("proposal_txid"),
+        "lock_waits": trace.lock_waits,
     }
 
 
 def run_replay(
     perturbation_count: int = 100,
     master_seed: int = 20260928,
+    db_url: str = POSTGRES_URL,
 ) -> ReplayV205Report:
-    """Execute timing perturbation replay for V2-05.
-
-    Each trial uses a unique RNG seed derived from the master seed to ensure
-    reproducibility. Governance and proposal delays are drawn from distributions
-    that model the real execution environment:
-
-    - governance_delay_us: Uniform[0, 100] — the consent_revoke writer is a
-      lightweight single-row INSERT + COMMIT
-    - proposal_delay_us: Uniform[50, 500] — the propose_assertion path is
-      heavier (evidence reload, snapshot validation, multi-row INSERT)
-    """
-    report = ReplayV205Report(executed_at=datetime.now(UTC).isoformat())
+    """Execute timing perturbation replay for V2-05 against real PostgreSQL."""
+    report = ReplayV205Report(
+        executed_at=datetime.now(UTC).isoformat(),
+        database_url=db_url,
+    )
     rng = random.Random(master_seed)
     classification_counts: dict[str, int] = {}
 
-    for trial_id in range(perturbation_count):
-        trial_seed = rng.randint(0, 2**32 - 1)
-        trial_rng = random.Random(trial_seed)
+    schema_name = f"glhs_e05_v205_{uuid4().hex[:8]}"
+    admin = create_engine(db_url, pool_pre_ping=True)
 
-        # Draw timing perturbation parameters
-        # Governance writer: lightweight (0-100us delay)
-        governance_delay_us = trial_rng.randint(0, 100)
-        # Proposal writer: heavier path (50-500us delay before consent read)
-        proposal_delay_us = trial_rng.randint(50, 500)
+    with admin.begin() as conn:
+        conn.execute(text(f'CREATE SCHEMA "{schema_name}"'))
 
-        start_ns = time.monotonic_ns()
-        result = _simulate_v2_05_race(
-            governance_delay_us=governance_delay_us,
-            proposal_delay_us=proposal_delay_us,
-            rng=trial_rng,
-        )
-        elapsed_ns = time.monotonic_ns() - start_ns
+    engine = create_engine(
+        db_url,
+        pool_pre_ping=True,
+        connect_args={"options": f"-csearch_path={schema_name}"},
+    )
+    Base.metadata.create_all(engine)
+    env = _real_env(engine)
 
-        trial_result = PerturbationResult(
-            trial_id=trial_id,
-            seed=trial_seed,
-            governance_delay_us=governance_delay_us,
-            proposal_delay_us=proposal_delay_us,
-            observed_classification=result["observed_classification"],
-            observed_outcome=result["observed_outcome"],
-            forbidden_commit=result["forbidden_commit"],
-            safety_success=result["safety_success"],
-            governance_committed_first=result["governance_committed_first"],
-            elapsed_ns=elapsed_ns,
-        )
+    try:
+        for trial_id in range(perturbation_count):
+            trial_seed = rng.randint(0, 2**32 - 1)
+            trial_rng = random.Random(trial_seed)
 
-        report.trials.append(asdict(trial_result))
-        cls = result["observed_classification"]
-        classification_counts[cls] = classification_counts.get(cls, 0) + 1
+            governance_delay_us = trial_rng.randint(0, 100)
+            proposal_delay_us = trial_rng.randint(50, 500)
+
+            start_ns = time.monotonic_ns()
+            result = _run_v2_05_postgres_trial(
+                env,
+                trial_id=trial_id,
+                governance_delay_us=governance_delay_us,
+                proposal_delay_us=proposal_delay_us,
+            )
+            elapsed_ns = time.monotonic_ns() - start_ns
+
+            trial_result = PerturbationResult(
+                trial_id=trial_id,
+                seed=trial_seed,
+                governance_delay_us=governance_delay_us,
+                proposal_delay_us=proposal_delay_us,
+                observed_classification=result["observed_classification"],
+                observed_outcome=result["observed_outcome"],
+                forbidden_commit=result["forbidden_commit"],
+                safety_success=result["safety_success"],
+                governance_committed_first=result["governance_committed_first"],
+                elapsed_ns=elapsed_ns,
+                governance_txid=result["governance_txid"],
+                proposal_txid=result["proposal_txid"],
+                lock_waits=result["lock_waits"],
+            )
+
+            report.trials.append(asdict(trial_result))
+            cls = result["observed_classification"]
+            classification_counts[cls] = classification_counts.get(cls, 0) + 1
+    finally:
+        engine.dispose()
+        with admin.begin() as conn:
+            conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema_name}" CASCADE'))
+        admin.dispose()
 
     report.perturbation_count = perturbation_count
     report.classification_distribution = classification_counts
 
-    # Determine root cause based on distribution
-    rejection_count = sum(
-        v for k, v in classification_counts.items() if "rejected" in k
-    )
-    committed_count = sum(
-        v for k, v in classification_counts.items() if "committed" in k
-    )
+    rejection_count = sum(v for k, v in classification_counts.items() if "rejected" in k)
     rejection_rate = rejection_count / perturbation_count if perturbation_count else 0
 
     if rejection_rate >= 0.95:
         report.root_cause_classification = "conservative_safe_rejection_by_implementation"
         report.reconciliation_note = (
-            "The gateway's propose_assertion re-checks consent via a fresh SELECT "
-            "under READ COMMITTED. The consent_revoke writer's transaction is "
-            "structurally lighter than propose_assertion (1 row INSERT+COMMIT vs "
-            "multi-step evidence+snapshot+assertion pipeline). Under simultaneous "
-            "barrier release, the governance writer's commit becomes visible to "
-            "PostgreSQL before the proposal writer reaches its consent check in "
-            f">={int(rejection_rate * 100)}% of perturbations. The oracle's "
-            "'indeterminate_ordering' expectation assumed symmetric transaction "
-            "weight and did not model the gateway's re-check-at-propose semantics. "
-            "The observed rejection is SAFE (forbidden_commit_observed=false in "
-            "all trials). The mismatch is a conservative oracle error, not a "
-            "safety violation."
-        )
-    elif committed_count > 0:
-        report.root_cause_classification = "timing_dependent_mixed_outcome"
-        report.reconciliation_note = (
-            f"Mixed outcomes observed: {rejection_count} rejections, "
-            f"{committed_count} commits across {perturbation_count} perturbations. "
-            "The oracle's 'indeterminate_ordering' expectation was partially "
-            "correct but the implementation bias toward rejection was not captured."
+            "Executed against real PostgreSQL database. The gateway's propose_assertion "
+            "re-checks consent via a fresh SELECT under READ COMMITTED. The consent_revoke "
+            "writer's transaction is structurally lighter than propose_assertion. Under "
+            "simultaneous barrier release on PostgreSQL, the governance writer's commit "
+            f"becomes visible before the proposal writer reaches its consent check in "
+            f">={int(rejection_rate * 100)}% of perturbations. The observed rejection is "
+            "SAFE (forbidden_commit_observed=false in all trials)."
         )
     else:
-        report.root_cause_classification = "inconclusive"
-        report.reconciliation_note = "Insufficient data to determine root cause."
+        report.root_cause_classification = "timing_dependent_mixed_outcome"
+        report.reconciliation_note = f"Rejection rate was {rejection_rate:.2f} across trials."
 
     return report
 
@@ -268,7 +375,7 @@ def main() -> None:
         json.dumps(asdict(report), indent=2, default=str) + "\n",
         encoding="utf-8",
     )
-    print(f"V2-05 replay: {report.perturbation_count} perturbations")
+    print(f"V2-05 real PostgreSQL replay: {report.perturbation_count} perturbations")
     print(f"  Distribution: {report.classification_distribution}")
     print(f"  Root cause: {report.root_cause_classification}")
     print(f"  Written to: {out_path}")

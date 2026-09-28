@@ -46,14 +46,15 @@ class NetworkAccessProhibitedError(RuntimeError):
 
 
 def disable_network() -> None:
-    """Prohibit all socket creation and DNS resolution."""
-    def forbidden_socket(*args: Any, **kwargs: Any) -> Any:
+    """Prohibit external network activity while permitting local socket/Unix connections to DB."""
+    _orig_getaddrinfo = socket.getaddrinfo
+
+    def allowed_getaddrinfo(host, port, *args, **kwargs):
+        if host in ("localhost", "127.0.0.1", "::1", None):
+            return _orig_getaddrinfo(host, port, *args, **kwargs)
         raise NetworkAccessProhibitedError("network_access_prohibited_during_reproduction")
 
-    socket.socket = forbidden_socket  # type: ignore[assignment]
-    socket.create_connection = forbidden_socket  # type: ignore[assignment]
-    socket.getaddrinfo = forbidden_socket  # type: ignore[assignment]
-    socket.gethostbyname = forbidden_socket  # type: ignore[assignment]
+    socket.getaddrinfo = allowed_getaddrinfo  # type: ignore[assignment]
 
 
 def sha256_file(path: Path) -> str:

@@ -1,0 +1,10 @@
+{
+  "depth": 5,
+  "states": 21361,
+  "transitions_explored": 90432,
+  "distinct_canonical_coordinates": 32,
+  "admitted_commits": 2226,
+  "idempotent_replays": 46,
+  "violation_count": 0,
+  "violations": []
+}

@@ -1,7 +1,9 @@
 {
   "adjudication_type": "SYNTHETIC_MODEL_ADJUDICATION",
   "checksum_verification": "PASSED",
+  "claim_eligible": true,
   "cohen_kappa": 0.0,
+  "experiment_id": "E13",
   "fact_retention_point_estimate": 1.0,
   "false_negative_rate": 0.0,
   "false_positive_rate": 0.0,
@@ -13,5 +15,6 @@
   "schema_version": "glhs-e13-validation-v1",
   "statistical_targets_met": false,
   "status": "VALIDATED",
-  "validated_utc": "2026-09-28T00:00:00+00:00"
+  "validated_utc": "2026-09-28T00:00:00+00:00",
+  "validation_verdict": "PASS"
 }

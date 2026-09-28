@@ -208,3 +208,16 @@ def test_reproduce_e13_offline() -> None:
     assert report["network_disabled"] is True
     assert report["seal_verified"] is True
     assert report["total_tasks"] >= 8
+
+
+def test_reproduce_e13_r3_evidence_bundle() -> None:
+    """Test reproduce_e13.py offline validator on R3 evidence directory."""
+    report = reproduce_and_verify(
+        artifact_dir=Path("research/glhs_journal/q3_r3/evidence/E13_external_validation"),
+        protocol_path=Path("research/glhs_journal/q3_r3/protocols/E13_external_validation/protocol.json"),
+    )
+
+    assert report["status"] == "REPRODUCED_AND_VERIFIED"
+    assert report["network_disabled"] is True
+    assert report["seal_verified"] is True
+    assert report["total_tasks"] >= 8

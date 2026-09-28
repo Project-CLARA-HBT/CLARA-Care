@@ -1,0 +1,12 @@
+{
+  "schema_version": "glhs-r3-backend-attestation.v1",
+  "experiment_id": "E08",
+  "actual_backend": "TLC Model Checker 2.18 / TLA+ State Explorer",
+  "endpoint": "formal_verifier_local",
+  "version": "2.18",
+  "production_path": false,
+  "simulation": true,
+  "network_provider": false,
+  "fallback_usage": false,
+  "concurrency_mechanism": "Exhaustive BFS Bounded Model Checking (d=6)"
+}

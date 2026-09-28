@@ -18,6 +18,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+# Ensure project root and services/api/src are in sys.path
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+_API_SRC = _REPO_ROOT / "services/api/src"
+if str(_API_SRC) not in sys.path:
+    sys.path.insert(0, str(_API_SRC))
+
 from evaluation.glhs_toctou_root_cause.analyze_root_cause import run_analysis
 from evaluation.glhs_toctou_root_cause.replay_v2_05 import run_replay as run_replay_v205
 from evaluation.glhs_toctou_root_cause.replay_v2_09 import run_replay as run_replay_v209

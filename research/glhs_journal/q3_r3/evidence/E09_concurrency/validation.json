@@ -1,0 +1,15 @@
+{
+  "claim_eligible": true,
+  "disjoint_false_stale_rate_dag": 0.0,
+  "disjoint_false_stale_rate_monolithic": 45.65,
+  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "min_repetitions_met": true,
+  "protocol_id": "GLHS-R3-E09-CONCURRENCY",
+  "schema_version": "glhs-r3-validation.v1",
+  "status": "VALIDATED",
+  "total_deadlocks": 0,
+  "total_run_records": 6870,
+  "unique_cells": 1374,
+  "validated_at_utc": "2026-09-28T20:18:10.470082+00:00",
+  "validation_verdict": "PASS"
+}

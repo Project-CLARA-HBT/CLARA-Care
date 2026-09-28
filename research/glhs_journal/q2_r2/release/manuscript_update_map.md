@@ -25,11 +25,11 @@ This document maps every manuscript section, table, figure, and claim in the rev
 | **Results §4.2** | Dependency Completeness & Write Skew Mutations | **E06** | `artifacts/glhs-q2-r2/GLHS-Q2-R2-20260928-R01/E06_dependency_completeness/derived/summary.json` | `CLAIM_ELIGIBLE` (312 mutation test cases, 0 accepted omissions) |
 | **Methods §3.5** | RFC 8785 Canonical JSON Vectors & Cross-Runtime | **E07** | `artifacts/glhs-q2-r2/GLHS-Q2-R2-20260928-R01/E07_canonicalization/derived/summary.json` | `CLAIM_ELIGIBLE` (35 test vectors, 100% byte equality) |
 | **Results §4.3** | Table 5: Bounded Formal Assurance Exploration | **E08** | `protocols/E08_formal_assurance/derived/summary.json` | `CLAIM_ELIGIBLE` (Depth 6: 69,342 states, 0 violations, 100% mutation detection) |
-| **Results §4.4** | Figure 1: Realistic Concurrency & Partition Scaling | **E09** | `protocols/E09_concurrency/derived/summary.json` | `CLAIM_ELIGIBLE` (6,870 run records, 0.0% false stale rate on DAG) |
+| **Results §4.4** | Figure 1: In-Memory Concurrency Simulation & Partition Scaling | **E09** | `protocols/E09_concurrency/derived/summary.json` | `CLAIM_ELIGIBLE` (6,870 run records, 0.0% false stale rate on DAG; In-Memory Concurrency Simulation using SimulatedPartitionCoordinator / thread locking, not production PostgreSQL benchmark) |
 | **Results §4.5** | Figure 2: Fullstack HTTP Performance Characterization | **E10** | `artifacts/glhs-q2-r2/GLHS-Q2-R2-20260928-R01/E10_fullstack/derived/summary.json` | `CLAIM_ELIGIBLE` (N=100 repetitions per operation class) |
 | **Results §4.6** | Figure 3: Two-Model Large Context Replication (TOST) | **E11** | `protocols/commitloop/v8-glhs-q2-r2/statistical_analysis_plan.json` | `CLAIM_ELIGIBLE` (Sonnet 4.6 & Flash High paired TOST equivalence) |
 | **Results §4.7** | Figure 4: 12-Class Error Taxonomy Sensitivity | **E12** | `protocols/commitloop/v8-glhs-q2-r2/error_taxonomy.json` | `CLAIM_ELIGIBLE` (12 error classes, ITT 0.9082 -> R3 0.9316) |
-| **Results §4.8** | Table 6: External Task Suite Validation | **E13** | `protocols/E13_external_validation/derived/summary.json` | `CLAIM_ELIGIBLE` (9 external tasks, 100% fact retention accuracy) |
+| **Results §4.8** | Table 6: Synthetic Source-Derived Task Suite | **E13** | `protocols/E13_external_validation/derived/summary.json` | `CLAIM_ELIGIBLE` (9 tasks, 100% fact retention accuracy, human review flagged `NOT_RUN_HUMAN_UNAVAILABLE`) |
 
 ---
 

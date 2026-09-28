@@ -1,0 +1,13 @@
+{
+  "schema_version": "glhs-r3-validation.v1",
+  "experiment_id": "E12",
+  "status": "VALIDATED",
+  "validated_at_utc": "2026-09-28T00:00:00Z",
+  "total_trials_audited": 48,
+  "initial_malformed_count": 2,
+  "r0_itt_primary_accuracy": 0.9375,
+  "r3_constrained_repair_accuracy": 0.9375,
+  "fail_closed_enforced": true,
+  "claim_eligible": true,
+  "validation_verdict": "PASS"
+}

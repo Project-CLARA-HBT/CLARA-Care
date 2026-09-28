@@ -1,0 +1,12 @@
+{
+  "experiment_id": "E04",
+  "total_schedules_executed": 2280,
+  "forbidden_commits_observed": 0,
+  "point_estimate_forbidden_commit_rate": 0.0,
+  "clopper_pearson_upper_95_ci": 0.001616,
+  "wilson_upper_95_ci": 0.001617,
+  "deadlocks_observed": 0,
+  "clean_control_commit_rate": 1.0,
+  "backend": "PostgreSQL 16.14",
+  "claim_eligible": true
+}

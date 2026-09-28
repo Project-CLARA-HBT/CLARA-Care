@@ -1,0 +1,17 @@
+{
+  "schema_version": "glhs-toctou-e04-validation.v1",
+  "validated_at_utc": "2026-09-27T19:34:58.093991+00:00",
+  "freeze_id": "GLHS-POSTGRES-TOCTOU-E04-20260928-01",
+  "protocol_status": "FROZEN",
+  "total_schedules": 2280,
+  "total_executions": 2280,
+  "forbidden_commit_count": 0,
+  "claim_eligible": true,
+  "checks_passed": [
+    "protocol_frozen_verified",
+    "minimum_sample_size_met",
+    "execution_count_matched",
+    "zero_forbidden_commits_invariant_verified",
+    "claim_eligibility_attested"
+  ]
+}

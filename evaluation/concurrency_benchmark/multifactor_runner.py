@@ -1,7 +1,8 @@
-"""E09 Multifactor Concurrency & Partition Benchmark Runner.
+"""E09 Multifactor In-Memory Concurrency Simulation Runner.
 
 Evaluates Optimistic Concurrency Control (OCC), Monolithic Profile Locking, and
-Entity-Partitioned DAG Versioning across a multi-factor grid:
+Entity-Partitioned DAG Versioning via in-memory thread locking and SimulatedPartitionCoordinator
+(NOT production PostgreSQL benchmark) across a multi-factor grid:
 - Concurrency levels: W in {1, 2, 4, 8, 16, 32, 64}
 - Zipfian skew theta in {0.0, 0.8, 1.1, 1.4}
 - Overlap ratio in {0.0, 0.10, 0.25, 0.50, 0.75, 1.0}

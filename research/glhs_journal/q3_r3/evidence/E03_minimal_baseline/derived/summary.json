@@ -1,0 +1,16 @@
+{
+  "experiment_id": "E03",
+  "total_executions": 1408,
+  "unique_schedules": 352,
+  "comparator_arms_count": 4,
+  "token_bytes": {
+    "GLHS_B111": 680,
+    "MIN_READSET_TOKEN": 128,
+    "HMAC_READSET_TOKEN": 284,
+    "B000": 0
+  },
+  "min_token_disagreement_rate": 0.4261,
+  "min_token_audit_reconstructability": 0.0,
+  "glhs_audit_reconstructability": 1.0,
+  "claim_eligible": true
+}

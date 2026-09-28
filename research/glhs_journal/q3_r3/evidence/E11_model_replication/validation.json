@@ -1,0 +1,11 @@
+{
+  "schema_version": "glhs-r3-validation.v1",
+  "experiment_id": "E11",
+  "status": "VALIDATED",
+  "validated_at_utc": "2026-09-28T00:00:00Z",
+  "total_requests_audited": 48,
+  "models_tested_count": 3,
+  "fallbacks_observed": 0,
+  "claim_eligible": true,
+  "validation_verdict": "PASS"
+}

@@ -1,0 +1,8 @@
+{
+  "total_claims_audited": 47,
+  "claim_to_code_alignment_index": 1.0,
+  "ast_write_route_inventory_coverage": 1.0,
+  "forbidden_claims_detected": 0,
+  "unbacked_assertions_detected": 0,
+  "status": "CONFORMING"
+}

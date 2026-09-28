@@ -19,11 +19,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Ensure repo root is on sys.path
+# Ensure repo root and service packages are on sys.path
 _REPO_ROOT = Path(__file__).resolve().parent
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+for _p in (_REPO_ROOT, _REPO_ROOT / "services" / "api" / "src", _REPO_ROOT / "services" / "ml" / "src"):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
+from clara_api.glhs.canonical_json import canonical_hash
 from evaluation.fullstack_benchmark.analyze import analyze
 
 
@@ -129,6 +131,26 @@ def reproduce_and_verify(
     if not raw_manifest_path.is_file():
         raise FileNotFoundError(f"raw_manifest_missing:{raw_manifest_path}")
 
+    # If runs.jsonl exists, verify cryptographic Merkle hash chain
+    runs_path = artifact_dir / "raw" / "runs.jsonl"
+    if runs_path.is_file():
+        prev_hash = ""
+        lines = runs_path.read_text(encoding="utf-8").splitlines()
+        for lineno, line in enumerate(lines, start=1):
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            stored_hash = record.get("hash")
+            expected_prev = record.get("prev_hash", "")
+            if expected_prev != prev_hash:
+                raise ValueError(f"hash_chain_broken:line={lineno}")
+            rec_copy = dict(record)
+            rec_copy.pop("hash", None)
+            computed_hash = canonical_hash(rec_copy, profile="clara.canonical-json.v2-rfc8785")
+            if stored_hash != computed_hash:
+                raise ValueError(f"hash_mismatch:line={lineno}")
+            prev_hash = str(stored_hash)
+
     # 4. Reproduce derived summary from raw metrics
     reproduced_summary = analyze(raw_metrics_path, raw_manifest_path)
 
@@ -168,10 +190,14 @@ def reproduce_and_verify(
         raise ValueError("seal_raw_metrics_hash_mismatch")
     if seal_doc.get("raw_manifest_sha256") != sha256_file(raw_manifest_path):
         raise ValueError("seal_raw_manifest_hash_mismatch")
+    if "raw_results_sha256" in seal_doc:
+        raw_res_path = artifact_dir / "raw" / "results.jsonl"
+        if not raw_res_path.is_file() or sha256_file(raw_res_path) != seal_doc["raw_results_sha256"]:
+            raise ValueError("seal_raw_results_hash_mismatch")
 
     report = {
         "status": "REPRODUCED_AND_VERIFIED",
-        "freeze_id": protocol_data.get("freeze_id", "GLHS-FULLSTACK-E10-20260928-01"),
+        "freeze_id": protocol_data.get("freeze_id", "GLHS-R3-E10-FREEZE-20260928-V1"),
         "run_id": seal_doc["run_id"],
         "git_sha": seal_doc["git_sha"],
         "network_disabled": True,
@@ -189,12 +215,12 @@ def main() -> int:
     parser.add_argument(
         "--artifact-dir",
         type=Path,
-        default=Path("artifacts/glhs-q2-r2/GLHS-Q2-R2-20260928-R01/E10_fullstack"),
+        default=Path("research/glhs_journal/q3_r3/evidence/E10_fullstack"),
     )
     parser.add_argument(
         "--protocol",
         type=Path,
-        default=Path("protocols/E10_fullstack/protocol.json"),
+        default=Path("research/glhs_journal/q3_r3/protocols/E10_fullstack/protocol.json"),
     )
     args = parser.parse_args()
 

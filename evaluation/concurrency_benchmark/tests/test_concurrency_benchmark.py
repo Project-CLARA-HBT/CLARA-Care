@@ -1,4 +1,4 @@
-"""Comprehensive Unit and Integration Tests for E09 Concurrency Benchmark."""
+"""Comprehensive Unit and Integration Tests for E09 In-Memory Concurrency Simulation."""
 
 from __future__ import annotations
 

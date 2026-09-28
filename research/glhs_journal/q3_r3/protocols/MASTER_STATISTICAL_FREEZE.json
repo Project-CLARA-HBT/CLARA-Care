@@ -1,0 +1,710 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "glhs-r3-master-statistical-freeze.v1",
+  "program": "GLHS R3 — Governed Read-to-Write Continuity (GRWC)",
+  "phase": "Phase 4 — Master Prospective Statistical Freeze",
+  "freeze_timestamp": "2026-09-28T00:00:00Z",
+  "curator": "Agent C — Experiment & Statistics",
+  "status": "PROSPECTIVE_FROZEN",
+  "global_parameters": {
+    "significance_level_alpha": 0.05,
+    "confidence_level": 0.95,
+    "master_seed_range": "20260928_00 to 20260928_14",
+    "primary_database_backend": "PostgreSQL 16.0 under serializable isolation",
+    "claim_eligibility_criteria": [
+      "Protocol freeze hash sealed prior to execution",
+      "System under test SHA and harness SHA attested",
+      "Publicly retrievable raw byte artifacts",
+      "100% hash verification across fresh checkout",
+      "Claim wording compliant with claim_budget.json prohibitions"
+    ]
+  },
+  "experiments": {
+    "E00": {
+      "experiment_id": "E00",
+      "title": "Literature, Claim Budget, and Code Contract Freeze",
+      "priority": "P0",
+      "backend": "static audit",
+      "master_seed": "20260928_00",
+      "primary_question": "What is actually novel, and is the manuscript claim budget fully synchronized with codebase implementation capabilities?",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I02_governance_freshness",
+        "I03_phantom_free",
+        "I04_deadlock_free",
+        "I05_idempotency_atomicity",
+        "I06_cas_monotonicity",
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I10_dependency_completeness",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I14_undisclosed_evidence_rejection",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size_spec": {
+        "N": 1,
+        "unit": "Paper-code sync contract audit ledger",
+        "description": "Comprehensive static audit of all 15 formal invariants (I01–I15) against claim_budget.json and codebase anchors."
+      },
+      "primary_estimand": {
+        "name": "Claim-to-Code Alignment Index",
+        "mathematical_definition": "1.0 if 100% of claimed invariants map to active codebase code anchors without forbidden claims, 0.0 otherwise.",
+        "target_value": 1.0,
+        "acceptable_threshold": 1.0
+      },
+      "secondary_estimands": [
+        "Novelty boundary definition vs prior art (MemTX, Provenance, Macaroons)",
+        "Forbidden claim regex compliance rate"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "exact_verification": "Deterministic 100% concordance constraint."
+      }
+    },
+    "E01": {
+      "experiment_id": "E01",
+      "title": "Inference Consumption Integrity & Continuous Attestation Protocol",
+      "priority": "P0",
+      "backend": "production path + PostgreSQL 16",
+      "master_seed": "20260928_01",
+      "primary_question": "Was the claimed governed disclosure projection actually supplied to the inference pass that generated the proposal lineage?",
+      "target_invariants": [
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I14_undisclosed_evidence_rejection",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size_spec": {
+        "N": 768,
+        "unit": "Unique logical proposal admission schedules",
+        "clean_controls": 128,
+        "adversarial_schedules": 640,
+        "cell_allocation": {
+          "C1_clean_control": 128,
+          "C2_unconsumed_snapshot": 64,
+          "C3_snapshot_substitution": 64,
+          "C4_binding_pending_race": 64,
+          "C5_binding_failed_timeout": 64,
+          "C6_model_identity_mismatch": 64,
+          "C7_projection_tampered_hproj": 64,
+          "C8_envelope_tampered_henv": 64,
+          "C9_route_drift_downgrade": 64,
+          "C10_ghost_snapshot_reference": 64,
+          "C11_bare_ungrounded_proposal": 64
+        }
+      },
+      "primary_estimand": {
+        "name": "Adversarial Invalid-Admission Rate",
+        "mathematical_definition": "P(Admit | E in {C2..C11}) = (Sum_{i=1}^{640} I(decision_i == 'ADMIT')) / 640",
+        "target_value": 0.0,
+        "acceptable_threshold": 0.0,
+        "hypothesis": {
+          "H0": "P(Admit | invalid) >= 0.006",
+          "H1": "P(Admit | invalid) < 0.006"
+        }
+      },
+      "secondary_estimands": [
+        "Clean Control Admission Rate (P(Admit | C1) == 1.0)",
+        "Per-Cell Rejection Rate for C2..C11",
+        "Error Code Concordance Rate"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "projected_one_sided_wilson_ucb_invalid": 0.00597,
+        "projected_one_sided_clopper_pearson_ucb_invalid": 0.00578,
+        "projected_one_sided_wilson_lcb_control": 0.97086
+      }
+    },
+    "E02": {
+      "experiment_id": "E02",
+      "title": "Binding Component Factorial Ablation",
+      "priority": "P0",
+      "backend": "PostgreSQL 16",
+      "master_seed": "20260928_02",
+      "primary_question": "Which specific components of the GRWC binding are necessary to enforce exact-disclosure admission within the tested threat model?",
+      "target_invariants": [
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I12_exact_inference_disclosure_continuity"
+      ],
+      "sample_size_spec": {
+        "N": 352,
+        "unit": "Unique logical schedules across 2^4 factorial design",
+        "factorial_design": "2^4 = 16 combinations (4 factors: snapshot identity, projection digest, evidence membership, binding continuity)",
+        "active_arms": 8,
+        "schedules_per_arm": 44
+      },
+      "primary_estimand": {
+        "name": "Incremental Invalid-Admission Rate upon Component Removal",
+        "mathematical_definition": "Delta P(Admit | Arm_k) relative to full GRWC Baseline Arm.",
+        "target_value": 0.0,
+        "acceptable_threshold": 0.0
+      },
+      "secondary_estimands": [
+        "Clean control admissibility preservation per arm",
+        "Cross-component redundancy interaction coefficients"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "necessity_criterion": "A component is deemed necessary iff removing it yields P(Admit) > 0 on targeted counterexamples while clean controls remain 100% admissible."
+      }
+    },
+    "E03": {
+      "experiment_id": "E03",
+      "title": "Minimal Token / Capability Comparator Baseline",
+      "priority": "P0",
+      "backend": "PostgreSQL 16",
+      "master_seed": "20260928_03",
+      "primary_question": "Could a simpler mechanism (e.g. minimal unsigned token, HMAC, or Macaroon) satisfy the read-to-write continuity invariant under identical schedule replay?",
+      "target_invariants": [
+        "I12_exact_inference_disclosure_continuity",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size_spec": {
+        "N": 352,
+        "unit": "Identical logical schedules replayed across 4 comparator mechanisms",
+        "mechanisms": [
+          "GLHS Full GRWC",
+          "MIN_READSET_TOKEN (Unsigned)",
+          "HMAC_TOKEN (Symmetric)",
+          "MACAROON_CAVEAT_TOKEN (Delegated)"
+        ],
+        "schedules_per_mechanism": 88
+      },
+      "primary_estimand": {
+        "name": "Admission Decision Disagreement Rate",
+        "mathematical_definition": "Proportion of schedules where comparator decision differs from GLHS GRWC decision.",
+        "target_value": 0.0,
+        "acceptable_threshold": 0.05
+      },
+      "secondary_estimands": [
+        "Serialized payload size in bytes",
+        "Validation CPU time (us)",
+        "Database read/write IOPS",
+        "Reconstruction & review lineage support"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "equivalence_rule": "If comparator matches GLHS safety with lower overhead, equivalence is published prominently."
+      }
+    },
+    "E04": {
+      "experiment_id": "E04",
+      "title": "Generated TOCTOU & Transactional Kernel Assurance",
+      "priority": "P0",
+      "backend": "PostgreSQL 16",
+      "master_seed": "20260928_04",
+      "primary_question": "Does the PostgreSQL commit kernel strictly reject stale governance/state in tested schedules under live serializable execution?",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I02_governance_freshness",
+        "I03_phantom_free",
+        "I05_idempotency_atomicity",
+        "I06_cas_monotonicity"
+      ],
+      "sample_size_spec": {
+        "N": 1024,
+        "unit": "Unique logical schedules on live PostgreSQL 16",
+        "outcome_classes": [
+          "SAFE_ADMIT",
+          "SAFE_REJECT",
+          "FORBIDDEN_COMMIT",
+          "OPERATIONAL_FAILURE",
+          "INDETERMINATE_ORDER"
+        ]
+      },
+      "primary_estimand": {
+        "name": "Forbidden Commit Rate (P(FORBIDDEN_COMMIT))",
+        "mathematical_definition": "(Sum_{i=1}^{1024} I(outcome_i == FORBIDDEN_COMMIT)) / 1024",
+        "target_value": 0.0,
+        "acceptable_threshold": 0.0,
+        "hypothesis": {
+          "H0": "P(FORBIDDEN_COMMIT) >= 0.003",
+          "H1": "P(FORBIDDEN_COMMIT) < 0.003"
+        }
+      },
+      "secondary_estimands": [
+        "Safe Admission Rate on clean schedules",
+        "Safe Rejection Rate on race schedules",
+        "Idempotency deduplication rate"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "projected_one_sided_clopper_pearson_ucb": 0.00292,
+        "projected_one_sided_wilson_ucb": 0.00264,
+        "interpretation": "Proves 0/1024 forbidden commits with upper 1-sided 95% UCB <= 0.292%."
+      }
+    },
+    "E05": {
+      "experiment_id": "E05",
+      "title": "Dependency Completeness & Mutation Analysis Statistical Evaluation",
+      "priority": "P0",
+      "backend": "PostgreSQL 16",
+      "master_seed": "20260928_05",
+      "primary_question": "Are semantically required dependencies strictly derived and enforced at commit time, prohibiting LLM-hallucinated or omission-corrupted dependency vectors while admitting conservative supersets with zero false-stale aborts?",
+      "target_invariants": [
+        "I10_dependency_completeness",
+        "I01_state_isolation",
+        "I02_governance_freshness",
+        "I06_cas_monotonicity",
+        "I07_evidence_closure",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size_spec": {
+        "N": 312,
+        "unit": "Clinical operation execution or mutated dependency vector runs",
+        "reference_arms": {
+          "baseline": 27,
+          "superset": 27,
+          "global_fallback": 27
+        },
+        "mutation_classes": {
+          "M1_omit_entity": 27,
+          "M2_add_irrelevant": 27,
+          "M3_mutate_entity_key": 27,
+          "M4_mutate_access_mode": 27,
+          "M5_mutate_version": 27,
+          "M6_write_skew": 27,
+          "M7_unrelated_replace": 27,
+          "M8_omit_evidence": 15,
+          "M9_omit_governance": 27
+        },
+        "valid_executions_subtotal": 108,
+        "invalid_executions_subtotal": 204
+      },
+      "primary_estimand": {
+        "name": "Probability of Admission under Read/Write Omission or Corruption",
+        "mathematical_definition": "P(Admit | E in InvalidMutants) = (Sum_{i=1}^{204} I(decision_i == 'ADMIT')) / 204",
+        "target_value": 0.0,
+        "acceptable_threshold": 0.0,
+        "hypothesis": {
+          "H0": "P(admit | omission) >= 0.010",
+          "H1": "P(admit | omission) < 0.010"
+        }
+      },
+      "secondary_estimands": [
+        "False-Stale Rate under Conservative Superset (0.0 / 108 valid arms)",
+        "Error Code Concordance Rate (theta_concordance)",
+        "Contract Validation Latency (target mean < 250 us)"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "benchmark_N312_one_sided_wilson_ucb": 0.0086,
+        "benchmark_N312_one_sided_clopper_pearson_ucb": 0.0096,
+        "invalid_N204_one_sided_wilson_ucb": 0.0131,
+        "invalid_N204_one_sided_clopper_pearson_ucb": 0.0146,
+        "valid_N108_one_sided_wilson_lcb": 0.9756
+      }
+    },
+    "E06": {
+      "experiment_id": "E06",
+      "title": "Anti-Downgrade & Lineage Anti-Laundering Protocol",
+      "priority": "P0",
+      "backend": "API/service + PostgreSQL 16",
+      "master_seed": "20260928_06",
+      "primary_question": "Can bound lineage be laundered or downgraded across audited routes and frozen attack patterns?",
+      "target_invariants": [
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size_spec": {
+        "N": 300,
+        "unit": "Logical proposal admission schedules",
+        "negative_laundering_schedules": 250,
+        "positive_control_schedules": 50,
+        "pattern_allocation": {
+          "T1_route_downgrade": 24,
+          "T2_strip_binding": 24,
+          "T3_parent_substitution": 23,
+          "T4_snapshot_id_substitution": 23,
+          "T5_mode_mutation": 23,
+          "T6_forged_thss_flag": 23,
+          "T7_cross_profile_snapshot": 22,
+          "T8_actor_coordinate_substitution": 22,
+          "T9_purpose_task_laundering": 22,
+          "T10_direct_route_bypass": 22,
+          "T11_lineage_cycle_depth": 22,
+          "C_clean_positive_control": 50
+        }
+      },
+      "primary_estimand": {
+        "name": "Probability of Admission under Laundering Attempt",
+        "mathematical_definition": "P(Admit | E in {T1..T11}) = (Sum_{i=1}^{250} I(decision_i == 'ADMIT')) / 250",
+        "target_value": 0.0,
+        "acceptable_threshold": 0.0,
+        "hypothesis": {
+          "H0": "P(Admit | laundering) >= 0.012",
+          "H1": "P(Admit | laundering) < 0.012"
+        }
+      },
+      "secondary_estimands": [
+        "Clean Control Admission Rate (P(Admit | C_clean) == 1.0)",
+        "Error Code Concordance Rate (theta_concordance)",
+        "Enforcement Layer Distribution"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "projected_one_sided_wilson_ucb_negative": 0.01071,
+        "projected_one_sided_clopper_pearson_ucb_negative": 0.01191,
+        "projected_one_sided_wilson_lcb_positive": 0.94867
+      }
+    },
+    "E07": {
+      "experiment_id": "E07",
+      "title": "Canonicalization & Cross-Runtime Serialization Protocol",
+      "priority": "P0",
+      "backend": "Python 3.12 + Node.js (JCS RFC 8785)",
+      "master_seed": "20260928_07",
+      "primary_question": "Are JSON canonicalization commitments (H_proj and H_env) deterministic and bit-for-bit identical across Python and JavaScript runtimes?",
+      "target_invariants": [
+        "I08_binding_immutability",
+        "I12_exact_inference_disclosure_continuity"
+      ],
+      "sample_size_spec": {
+        "N": 35,
+        "unit": "Canonical test vectors",
+        "vector_categories": [
+          "RFC 8785 standard compliance vectors",
+          "Float/subnormal/extreme numeric values",
+          "Negative zero (-0.0) edge cases",
+          "Unicode / UTF-8 multi-byte strings",
+          "Nested key ordering variations",
+          "Invalid surrogate pair handling",
+          "Legacy schema read compatibility"
+        ]
+      },
+      "primary_estimand": {
+        "name": "Cross-Runtime Byte Disagreement Rate",
+        "mathematical_definition": "(Sum_{i=1}^{35} I(JCS_python(v_i) != JCS_js(v_i))) / 35",
+        "target_value": 0.0,
+        "acceptable_threshold": 0.0
+      },
+      "secondary_estimands": [
+        "SHA-256 digest equality rate across runtimes",
+        "Serialization throughput (vectors / sec)"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "exact_verification": "Zero bit drift allowed across all 35 test vectors."
+      }
+    },
+    "E08": {
+      "experiment_id": "E08",
+      "title": "Formal Bounded Assurance & State Space Exploration",
+      "priority": "P0",
+      "backend": "TLA+ Model Checker (TLC)",
+      "master_seed": "20260928_08",
+      "primary_question": "Are all formal state invariants counterexample-free within bounded BFS exploration depth?",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I02_governance_freshness",
+        "I03_phantom_free",
+        "I04_deadlock_free",
+        "I05_idempotency_atomicity",
+        "I06_cas_monotonicity",
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I10_dependency_completeness",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I14_undisclosed_evidence_rejection",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size_spec": {
+        "depth_5_states": 21475,
+        "depth_6_states": 69120,
+        "unit": "Reachable model states in TLA+ state graph",
+        "exploration_bounds": "Bounded BFS exploration through Depth 5 (21k states) and Depth 6 (69k states)"
+      },
+      "primary_estimand": {
+        "name": "Invariant Violation Count",
+        "mathematical_definition": "Count of trace states violating I01-I15 within depth d.",
+        "target_value": 0,
+        "acceptable_threshold": 0
+      },
+      "secondary_estimands": [
+        "Mutation-test detection coverage rate (target: 100%)",
+        "TLC exploration runtime and memory footprint"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "verification_scope": "Exhaustive bounded verification through depth d=6."
+      }
+    },
+    "E09": {
+      "experiment_id": "E09",
+      "title": "Concurrency & Write Contention Benchmark",
+      "priority": "P1",
+      "backend": "PostgreSQL 16",
+      "master_seed": "20260928_09",
+      "primary_question": "What contention, latency, and false-stale abort behavior occurs under multi-worker clinical write workloads?",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I04_deadlock_free",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size_spec": {
+        "N": 350,
+        "unit": "Benchmark trial executions",
+        "concurrency_grid": [1, 2, 4, 8, 16, 32, 64],
+        "workload_families": 10,
+        "replications_per_cell": 5,
+        "total_grid_cells": 70
+      },
+      "primary_estimand": {
+        "name": "Commit Throughput and Latency Profile",
+        "mathematical_definition": "Transactions Committed per Second (TPS) and Wall-clock Latency (p50, p95, p99 ms) across worker grid.",
+        "target_value": 0.0,
+        "acceptable_threshold": 0.0
+      },
+      "secondary_estimands": [
+        "Contention Abort / False-Stale Rate per concurrency cell",
+        "Advisory lock acquisition wait time (ms)"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "sample_size_per_cell": ">= 5 independent benchmark repetitions per cell"
+      }
+    },
+    "E10": {
+      "experiment_id": "E10",
+      "title": "Full-Stack System Performance & Latency Cost",
+      "priority": "P1",
+      "backend": "HTTP REST + PostgreSQL 16",
+      "master_seed": "20260928_10",
+      "primary_question": "What is the end-to-end full-stack latency and payload overhead of GRWC commitment checking over HTTP?",
+      "target_invariants": [
+        "I12_exact_inference_disclosure_continuity",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size_spec": {
+        "N": 600,
+        "unit": "HTTP REST endpoint repetitions",
+        "operation_classes": [
+          "propose_model_commitment_transition",
+          "review_model_commitment_proposal",
+          "apply_commitment_transition",
+          "create_inference_context_binding",
+          "validate_exact_disclosure_dependency",
+          "fetch_commitment_history"
+        ],
+        "repetitions_per_class": 100
+      },
+      "primary_estimand": {
+        "name": "Full-Stack HTTP Latency (p50, p95, p99 ms)",
+        "mathematical_definition": "Quantiles of end-to-end HTTP request-response latency.",
+        "target_value": 0.0,
+        "acceptable_threshold": 0.0
+      },
+      "secondary_estimands": [
+        "Payload expansion factor (GRWC metadata bytes vs raw transition bytes)",
+        "Database queries per commit HTTP request",
+        "Validation CPU time overhead (ms)"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "sample_size_per_class": 100
+      }
+    },
+    "E11": {
+      "experiment_id": "E11",
+      "title": "Two-Model Clinical Utility & Governance Equivalence",
+      "priority": "P1",
+      "backend": "Real LLM Providers (DeepSeek Pro / Flash)",
+      "master_seed": "20260928_11",
+      "primary_question": "Does strict governed context preserve benchmark clinical utility compared to un-governed full authorized history?",
+      "target_invariants": [
+        "I12_exact_inference_disclosure_continuity",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size_spec": {
+        "N": 384,
+        "unit": "Paired subject/case observations",
+        "arm_A": "Strict Governed Context (THSS Snapshot Bound)",
+        "arm_B": "Full Authorized Profile History (Unbounded)",
+        "paired_trials": 384
+      },
+      "primary_estimand": {
+        "name": "Paired Clinical Accuracy Difference (Theta_A - Theta_B)",
+        "mathematical_definition": "(1/N) * Sum_{i=1}^{384} (Score_A,i - Score_B,i)",
+        "target_value": 0.0,
+        "equivalence_margin_delta": 0.02,
+        "hypothesis": {
+          "H0": "|Theta_A - Theta_B| >= 0.02 (Utility degraded by > 2 pp)",
+          "H1": "|Theta_A - Theta_B| < 0.02 (Utility equivalence established within +/- 2 pp)"
+        }
+      },
+      "secondary_estimands": [
+        "Token consumption ratio (Governed / Full)",
+        "Inference latency difference (ms)",
+        "Hallucinated entity rate difference"
+      ],
+      "statistical_power_and_confidence": {
+        "statistical_test": "Schuirmann Two One-Sided Tests (TOST)",
+        "equivalence_margin": 0.02,
+        "confidence_level": 0.95,
+        "power": 0.8,
+        "power_analysis_notes": "At N=384 paired cases, power >= 80% to reject H0 for true difference <= 0.003 at alpha=0.05."
+      }
+    },
+    "E12": {
+      "experiment_id": "E12",
+      "title": "Malformed Response Sensitivity & Error Taxonomy Protocol",
+      "priority": "P1",
+      "backend": "Actual E11 Response Ledger",
+      "master_seed": "20260928_12",
+      "primary_question": "How do real LLM response failures impact clinical utility estimates under ITT vs prespecified recovery?",
+      "target_invariants": [
+        "I12_exact_inference_disclosure_continuity",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size_spec": {
+        "N": 768,
+        "unit": "Model completion responses from E11 ledger (384 paired trials x 2 arms)",
+        "error_taxonomy_classes": [
+          "invalid_json",
+          "schema_mismatch",
+          "truncation",
+          "refusal",
+          "empty_response",
+          "provider_error",
+          "wrong_model",
+          "timeout",
+          "content_format_violation",
+          "semantic_failure",
+          "rate_limit",
+          "unclassified"
+        ]
+      },
+      "primary_estimand": {
+        "name": "Intention-To-Treat (ITT) R0 Primary Failure Rate",
+        "mathematical_definition": "Proportion of initial model completions exhibiting any taxonomy error.",
+        "target_value": 0.0,
+        "acceptable_threshold": 0.05
+      },
+      "secondary_estimands": [
+        "R1 Deterministic Repair Success Rate",
+        "R2 Single Retry Recovery Success Rate",
+        "R3 Fallback / Failure Escalation Rate"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "analytical_framework": "R0 ITT primary -> R1-R3 secondary recovery pipeline."
+      }
+    },
+    "E13": {
+      "experiment_id": "E13",
+      "title": "External Cohort Generalizability & Source-Disjoint Validation",
+      "priority": "P2",
+      "backend": "External Cohort Datasets (eICU, Synthea, MIMIC-IV, Diabetes)",
+      "master_seed": "20260928_13",
+      "primary_question": "Does snapshot reconstruction and GRWC governance generalize across source-disjoint external cohorts?",
+      "target_invariants": [
+        "I07_evidence_closure",
+        "I10_dependency_completeness",
+        "I12_exact_inference_disclosure_continuity"
+      ],
+      "sample_size_spec": {
+        "N_cohorts": 4,
+        "cohorts": [
+          "eICU-CRD v2.0.1 Demo",
+          "Synthea Synthetic Clinical Cohort",
+          "MIMIC-IV Emergency/ICU Cohort",
+          "Diabetes Readmission Cohort"
+        ],
+        "unit": "External clinical profiles and snapshot reconstructions"
+      },
+      "primary_estimand": {
+        "name": "External Schema Mapping & Snapshot Reconstruction Completeness",
+        "mathematical_definition": "Proportion of external patient records successfully canonicalized into THSS snapshots without data loss.",
+        "target_value": 1.0,
+        "acceptable_threshold": 0.98
+      },
+      "secondary_estimands": [
+        "Cross-site governance invariant verification rate",
+        "Dependency vector extraction fidelity across site schemas"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "validation_strategy": "Independent source-disjoint cohort attestation."
+      }
+    },
+    "E14": {
+      "experiment_id": "E14",
+      "title": "Reproduction Audit & SHA-256 Hash Verification",
+      "priority": "P0",
+      "backend": "Fresh Checkout Environment",
+      "master_seed": "20260928_14",
+      "primary_question": "Can an independent third party recover and reproduce every central paper claim from a fresh repository checkout?",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I02_governance_freshness",
+        "I03_phantom_free",
+        "I04_deadlock_free",
+        "I05_idempotency_atomicity",
+        "I06_cas_monotonicity",
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I10_dependency_completeness",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I14_undisclosed_evidence_rejection",
+        "I15_clean_path_reachability"
+      ],
+      "sample_size_spec": {
+        "N": 1,
+        "unit": "Full repository reproduction audit pass",
+        "verifications": [
+          "100% SHA-256 match on prospective protocol JSON files",
+          "100% reproduction of analysis tables and figures",
+          "Zero claim budget violations"
+        ]
+      },
+      "primary_estimand": {
+        "name": "Audit Verification Binary Result",
+        "mathematical_definition": "1.0 if all protocol checksums pass and analysis scripts reproduce outputs exactly, 0.0 otherwise.",
+        "target_value": 1.0,
+        "acceptable_threshold": 1.0
+      },
+      "secondary_estimands": [
+        "Automated check script execution time (s)",
+        "Fresh environment setup reproducibility index"
+      ],
+      "statistical_power_and_confidence": {
+        "confidence_level": 0.95,
+        "exact_verification": "Deterministic 100% SHA-256 hash match."
+      }
+    }
+  },
+  "reproducibility_criteria": {
+    "claim_eligibility_rules": [
+      "Protocol freeze precedes execution.",
+      "Raw artifact bytes publicly accessible with matching SHA-256.",
+      "Backend attestation matches wording.",
+      "Analyzer script reproduces paper figures/tables.",
+      "Zero violations of claim_budget.json forbidden regexes."
+    ],
+    "status_taxonomy": [
+      "NOT_RUN",
+      "EXPLORATORY",
+      "SEALED_DESCRIPTIVE",
+      "CLAIM_ELIGIBLE",
+      "CLAIM_REVOKED"
+    ]
+  }
+}

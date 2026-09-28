@@ -1,0 +1,103 @@
+{
+  "analyzed_at_utc": "2026-09-28T19:19:26.836252+00:00",
+  "byte_equality_rate": 1.0,
+  "category_summary": {
+    "containers": {
+      "pass_rate": 1.0,
+      "passed": 4,
+      "total": 4
+    },
+    "float_exponent": {
+      "pass_rate": 1.0,
+      "passed": 3,
+      "total": 3
+    },
+    "float_extreme": {
+      "pass_rate": 1.0,
+      "passed": 2,
+      "total": 2
+    },
+    "float_integral": {
+      "pass_rate": 1.0,
+      "passed": 1,
+      "total": 1
+    },
+    "float_subnormal": {
+      "pass_rate": 1.0,
+      "passed": 2,
+      "total": 2
+    },
+    "float_zero": {
+      "pass_rate": 1.0,
+      "passed": 1,
+      "total": 1
+    },
+    "integer_limits": {
+      "pass_rate": 1.0,
+      "passed": 2,
+      "total": 2
+    },
+    "integer_primitives": {
+      "pass_rate": 1.0,
+      "passed": 3,
+      "total": 3
+    },
+    "medical_assertion": {
+      "pass_rate": 1.0,
+      "passed": 1,
+      "total": 1
+    },
+    "rejection_decimal_precision": {
+      "pass_rate": 1.0,
+      "passed": 1,
+      "total": 1
+    },
+    "rejection_integer_overflow": {
+      "pass_rate": 1.0,
+      "passed": 1,
+      "total": 1
+    },
+    "rejection_non_finite": {
+      "pass_rate": 1.0,
+      "passed": 1,
+      "total": 1
+    },
+    "rejection_surrogate": {
+      "pass_rate": 1.0,
+      "passed": 2,
+      "total": 2
+    },
+    "rfc8785_official": {
+      "pass_rate": 1.0,
+      "passed": 1,
+      "total": 1
+    },
+    "string_escaping": {
+      "pass_rate": 1.0,
+      "passed": 2,
+      "total": 2
+    },
+    "string_unicode": {
+      "pass_rate": 1.0,
+      "passed": 1,
+      "total": 1
+    },
+    "type_distinction": {
+      "pass_rate": 1.0,
+      "passed": 2,
+      "total": 2
+    },
+    "utf16_sorting": {
+      "pass_rate": 1.0,
+      "passed": 5,
+      "total": 5
+    }
+  },
+  "claim_eligible": true,
+  "cross_runtime_determinism": true,
+  "freeze_id": "GLHS-CANONICALIZATION-E07-20260928-01",
+  "python_v2_failed": 0,
+  "python_v2_passed": 35,
+  "schema_version": "canonicalization-conformance-summary.v1",
+  "total_vectors": 35
+}

@@ -28,7 +28,7 @@ The audited release bundle (`GLHS-Q2-R2-RELEASE-20260928-V1`) consolidates 14 cl
 | **E06** | Dependency Completeness & Write Skew | 312 Mutation Test Cases | 0 Accepted Omissions, 0 False-Stale Aborts | **PASSED** |
 | **E07** | RFC 8785 Canonicalization Conformance | 35 Test Vectors | 100% Cross-Runtime Byte Equality | **PASSED** |
 | **E08** | Sealed Bounded Formal Assurance | Depth 6 (69,342 States) | 0 Invariant Violations across 11 Invariants | **PASSED** |
-| **E09** | Realistic Concurrency & Partitioning | 6,870 Run Records / 1,374 Cells | 0.0% False-Stale Aborts under DAG Partitioning | **PASSED** |
+| **E09** | In-Memory Concurrency Simulation | 6,870 Run Records / 1,374 Cells | 0.0% False-Stale Aborts under DAG Partitioning | **PASSED** |
 | **E10** | Full-Stack HTTP Transport Benchmark | N=100 Repetitions / Op Class | Measured P50/P95/P99 Latency & Throughput | **PASSED** |
 | **E11** | Two-Model Context Replication (TOST) | 384 Subjects (2 LLM Families) | Paired TOST Equivalence within $\pm 2$ pp | **PASSED** |
 | **E12** | 12-Class Error Taxonomy & Repair | 12 Error Classes | ITT 0.9082 $\rightarrow$ R3 Constrained Repair 0.9316 | **PASSED** |
@@ -42,7 +42,7 @@ The audited release bundle (`GLHS-Q2-R2-RELEASE-20260928-V1`) consolidates 14 cl
 **Role & Focus:** Architecture verification, 6-phase atomic commit kernel, 7-class locking hierarchy, Optimistic Concurrency Control (OCC), PostgreSQL transactional semantics, RFC 8785 canonicalization.
 
 * **Commit Kernel & Lock Hierarchy:** Verified that `commit_kernel.py` enforces a strict 6-phase commit boundary (Lock Acquisition $\rightarrow$ Base-State Validation $\rightarrow$ Policy Epoch Verification $\rightarrow$ Consent Coordinate Check $\rightarrow$ Manifest Digest Validation $\rightarrow$ Atomic State Write). The 7-class lock hierarchy (`lock_hierarchy.py`) prevents lock inversion and deadlocks across concurrent write operations.
-* **OCC & Concurrency Safety (E04, E09):** Validated PostgreSQL transaction boundaries under PostgreSQL ACID isolation. Broad schedule generation (E04, 2,280 schedules) confirmed zero forbidden commits. Entity-partitioned DAG versioning (E09) eliminated false-stale aborts (0.0%) compared to profile-monolithic locking (44.48%).
+* **OCC & Concurrency Safety (E04, E09):** Validated PostgreSQL transaction boundaries under PostgreSQL ACID isolation for E04. Broad schedule generation (E04, 2,280 schedules) confirmed zero forbidden commits. In-memory concurrency simulation (E09, using SimulatedPartitionCoordinator / thread locking, not production PostgreSQL) demonstrated that entity-partitioned DAG versioning eliminated false-stale aborts (0.0%) compared to profile-monolithic locking (44.48%).
 * **Canonicalization (E07):** Verified `clara.canonical-json.v2-rfc8785` profile against 35 multi-language test vectors. 100% byte-for-byte identity was achieved between Python and JS implementations.
 * **Verdict:** **APPROVED**. Systems machinery is sound, lock hierarchy is deadlock-free, and transactional write boundaries satisfy all target safety properties.
 

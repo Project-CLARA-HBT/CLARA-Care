@@ -1,0 +1,1318 @@
+{
+  "actual_executions": 2816,
+  "adversarial_schedules": 256,
+  "aggregate_mcnemar_vs_b111": {
+    "B000": {
+      "mcnemar_p_value": 3.1861838222649046e-58,
+      "n_arm_admit_b111_reject": 192,
+      "n_arm_reject_b111_admit": 0
+    },
+    "B001": {
+      "mcnemar_p_value": 5.877471754111438e-39,
+      "n_arm_admit_b111_reject": 128,
+      "n_arm_reject_b111_admit": 0
+    },
+    "B010": {
+      "mcnemar_p_value": 1.3684555315672042e-48,
+      "n_arm_admit_b111_reject": 160,
+      "n_arm_reject_b111_admit": 0
+    },
+    "B011": {
+      "mcnemar_p_value": 2.524354896707238e-29,
+      "n_arm_admit_b111_reject": 96,
+      "n_arm_reject_b111_admit": 0
+    },
+    "B100": {
+      "mcnemar_p_value": 2.524354896707238e-29,
+      "n_arm_admit_b111_reject": 96,
+      "n_arm_reject_b111_admit": 0
+    },
+    "B101": {
+      "mcnemar_p_value": 4.656612873077393e-10,
+      "n_arm_admit_b111_reject": 32,
+      "n_arm_reject_b111_admit": 0
+    },
+    "B110": {
+      "mcnemar_p_value": 1.0842021724855044e-19,
+      "n_arm_admit_b111_reject": 64,
+      "n_arm_reject_b111_admit": 0
+    }
+  },
+  "claim_eligible": true,
+  "clean_acceptance_by_arm": {
+    "B000": {
+      "acceptance_rate": 1.0,
+      "accepted": 96,
+      "ci95_wilson": [
+        0.9615244121423243,
+        1.0
+      ],
+      "total": 96
+    },
+    "B001": {
+      "acceptance_rate": 1.0,
+      "accepted": 96,
+      "ci95_wilson": [
+        0.9615244121423243,
+        1.0
+      ],
+      "total": 96
+    },
+    "B010": {
+      "acceptance_rate": 1.0,
+      "accepted": 96,
+      "ci95_wilson": [
+        0.9615244121423243,
+        1.0
+      ],
+      "total": 96
+    },
+    "B011": {
+      "acceptance_rate": 1.0,
+      "accepted": 96,
+      "ci95_wilson": [
+        0.9615244121423243,
+        1.0
+      ],
+      "total": 96
+    },
+    "B100": {
+      "acceptance_rate": 1.0,
+      "accepted": 96,
+      "ci95_wilson": [
+        0.9615244121423243,
+        1.0
+      ],
+      "total": 96
+    },
+    "B101": {
+      "acceptance_rate": 1.0,
+      "accepted": 96,
+      "ci95_wilson": [
+        0.9615244121423243,
+        1.0
+      ],
+      "total": 96
+    },
+    "B110": {
+      "acceptance_rate": 1.0,
+      "accepted": 96,
+      "ci95_wilson": [
+        0.9615244121423243,
+        1.0
+      ],
+      "total": 96
+    },
+    "B111": {
+      "acceptance_rate": 1.0,
+      "accepted": 96,
+      "ci95_wilson": [
+        0.9615244121423243,
+        1.0
+      ],
+      "total": 96
+    }
+  },
+  "control_schedules": 96,
+  "expected_executions": 2816,
+  "factorial_logistic_regression": {
+    "coefficients": {
+      "c_digest": {
+        "beta": -0.5881273804601717,
+        "odds_ratio": 0.5553663013771676,
+        "odds_ratio_ci95": [
+          0.3799590509794202,
+          0.8117499186038881
+        ],
+        "p_value": 0.0023896102382691266,
+        "std_err": 0.19365531234112027,
+        "z_statistic": -3.0369803613969344
+      },
+      "c_digest:c_evidence": {
+        "beta": 0.07722120879496606,
+        "odds_ratio": 1.0802810176258086,
+        "odds_ratio_ci95": [
+          0.6436614059356484,
+          1.8130760463201159
+        ],
+        "p_value": 0.7700579123837535,
+        "std_err": 0.2641855444476781,
+        "z_statistic": 0.2922991451194246
+      },
+      "c_evidence": {
+        "beta": -1.0988518516860557,
+        "odds_ratio": 0.3332534885583275,
+        "odds_ratio_ci95": [
+          0.22921172282199515,
+          0.48452097592993704
+        ],
+        "p_value": 8.678047113527727e-09,
+        "std_err": 0.19094760054623516,
+        "z_statistic": -5.754729824007319
+      },
+      "c_id": {
+        "beta": -1.6096920316793912,
+        "odds_ratio": 0.19994918260805394,
+        "odds_ratio_ci95": [
+          0.1367969921724622,
+          0.29225551666535093
+        ],
+        "p_value": 9.399758809566674e-17,
+        "std_err": 0.19365572928541802,
+        "z_statistic": -8.312132244261976
+      },
+      "c_id:c_digest": {
+        "beta": 0.00043997394577533335,
+        "odds_ratio": 1.0004400707485082,
+        "odds_ratio_ci95": [
+          0.5848904694357073,
+          1.7112269518170007
+        ],
+        "p_value": 0.9987181590537721,
+        "std_err": 0.27386257906119327,
+        "z_statistic": 0.0016065500707821178
+      },
+      "c_id:c_digest:c_evidence": {
+        "beta": -11.537518348666026,
+        "odds_ratio": 9.757070574318685e-06,
+        "odds_ratio_ci95": [
+          1.3906654832344244e-44,
+          6.845674056051022e+33
+        ],
+        "p_value": 0.8004100234032262,
+        "std_err": 45.63594048244076,
+        "z_statistic": -0.2528164912719459
+      },
+      "c_id:c_evidence": {
+        "beta": -0.33617716053383107,
+        "odds_ratio": 0.7144965140190092,
+        "odds_ratio_ci95": [
+          0.3983705046709898,
+          1.2814836002151753
+        ],
+        "p_value": 0.2593672267239696,
+        "std_err": 0.29805899486679377,
+        "z_statistic": -1.127887989705101
+      },
+      "intercept": {
+        "beta": 1.0988903256083031,
+        "odds_ratio": 3.000834226788138,
+        "odds_ratio_ci95": [
+          2.2613681730983144,
+          3.982105242210669
+        ],
+        "p_value": 2.681523809428645e-14,
+        "std_err": 0.14434709651520417,
+        "z_statistic": 7.612832901647983
+      }
+    },
+    "converged": true,
+    "fitted": true,
+    "n_features": 8,
+    "n_samples": 2048
+  },
+  "freeze_id": "GLHS-BINDING-COMPONENT-ABLATION-20260928-01",
+  "per_family_stats": {
+    "1": {
+      "arm_acceptance": {
+        "B000": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B001": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B010": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B011": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B100": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B101": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B110": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B111": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        }
+      },
+      "family_id": 1,
+      "family_name": "ID-SUB",
+      "is_clean_control": false,
+      "mcnemar_vs_b111": {
+        "B000": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B001": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B010": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B011": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B100": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B101": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B110": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        }
+      },
+      "schedule_count": 32
+    },
+    "2": {
+      "arm_acceptance": {
+        "B000": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B001": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B010": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B011": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B100": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B101": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B110": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B111": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        }
+      },
+      "family_id": 2,
+      "family_name": "DIGEST-MUT",
+      "is_clean_control": false,
+      "mcnemar_vs_b111": {
+        "B000": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B001": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B010": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B011": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B100": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B101": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B110": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        }
+      },
+      "schedule_count": 32
+    },
+    "3": {
+      "arm_acceptance": {
+        "B000": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B001": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B010": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B011": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B100": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B101": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B110": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B111": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        }
+      },
+      "family_id": 3,
+      "family_name": "EVIDENCE-OUTSIDE",
+      "is_clean_control": false,
+      "mcnemar_vs_b111": {
+        "B000": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B001": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B010": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B011": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B100": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B101": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B110": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        }
+      },
+      "schedule_count": 32
+    },
+    "4": {
+      "arm_acceptance": {
+        "B000": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B001": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B010": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B011": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B100": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B101": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B110": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B111": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        }
+      },
+      "family_id": 4,
+      "family_name": "MIN-SET-SWAP",
+      "is_clean_control": false,
+      "mcnemar_vs_b111": {
+        "B000": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B001": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B010": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B011": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B100": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B101": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B110": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        }
+      },
+      "schedule_count": 32
+    },
+    "5": {
+      "arm_acceptance": {
+        "B000": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B001": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B010": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B011": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B100": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B101": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B110": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B111": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        }
+      },
+      "family_id": 5,
+      "family_name": "CROSS-SNAPSHOT-SAME-VERSION",
+      "is_clean_control": false,
+      "mcnemar_vs_b111": {
+        "B000": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B001": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B010": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B011": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B100": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B101": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B110": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        }
+      },
+      "schedule_count": 32
+    },
+    "6": {
+      "arm_acceptance": {
+        "B000": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B001": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B010": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B011": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B100": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B101": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B110": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B111": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        }
+      },
+      "family_id": 6,
+      "family_name": "COORD-SUB",
+      "is_clean_control": false,
+      "mcnemar_vs_b111": {
+        "B000": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B001": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B010": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B011": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B100": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B101": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B110": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        }
+      },
+      "schedule_count": 32
+    },
+    "7": {
+      "arm_acceptance": {
+        "B000": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B001": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B010": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B011": {
+          "accepted": 32,
+          "ci95_wilson": [
+            0.8928208017449293,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 32
+        },
+        "B100": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B101": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B110": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B111": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        }
+      },
+      "family_id": 7,
+      "family_name": "LINEAGE-ROOT-SUB",
+      "is_clean_control": false,
+      "mcnemar_vs_b111": {
+        "B000": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B001": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B010": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B011": {
+          "mcnemar_p_value": 4.656612873077393e-10,
+          "n_arm_admit_b111_reject": 32,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B100": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B101": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B110": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        }
+      },
+      "schedule_count": 32
+    },
+    "8": {
+      "arm_acceptance": {
+        "B000": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B001": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B010": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B011": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B100": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B101": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B110": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        },
+        "B111": {
+          "accepted": 0,
+          "ci95_wilson": [
+            0.0,
+            0.1071791982550706
+          ],
+          "rate": 0.0,
+          "total": 32
+        }
+      },
+      "family_id": 8,
+      "family_name": "EXPIRY-CONTROL",
+      "is_clean_control": false,
+      "mcnemar_vs_b111": {
+        "B000": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B001": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B010": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B011": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B100": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B101": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B110": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        }
+      },
+      "schedule_count": 32
+    },
+    "9": {
+      "arm_acceptance": {
+        "B000": {
+          "accepted": 96,
+          "ci95_wilson": [
+            0.9615244121423243,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 96
+        },
+        "B001": {
+          "accepted": 96,
+          "ci95_wilson": [
+            0.9615244121423243,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 96
+        },
+        "B010": {
+          "accepted": 96,
+          "ci95_wilson": [
+            0.9615244121423243,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 96
+        },
+        "B011": {
+          "accepted": 96,
+          "ci95_wilson": [
+            0.9615244121423243,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 96
+        },
+        "B100": {
+          "accepted": 96,
+          "ci95_wilson": [
+            0.9615244121423243,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 96
+        },
+        "B101": {
+          "accepted": 96,
+          "ci95_wilson": [
+            0.9615244121423243,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 96
+        },
+        "B110": {
+          "accepted": 96,
+          "ci95_wilson": [
+            0.9615244121423243,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 96
+        },
+        "B111": {
+          "accepted": 96,
+          "ci95_wilson": [
+            0.9615244121423243,
+            1.0
+          ],
+          "rate": 1.0,
+          "total": 96
+        }
+      },
+      "family_id": 9,
+      "family_name": "CLEAN",
+      "is_clean_control": true,
+      "mcnemar_vs_b111": {
+        "B000": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B001": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B010": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B011": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B100": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B101": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        },
+        "B110": {
+          "mcnemar_p_value": 1.0,
+          "n_arm_admit_b111_reject": 0,
+          "n_arm_reject_b111_admit": 0
+        }
+      },
+      "schedule_count": 96
+    }
+  },
+  "rejection_reason_breakdown": {
+    "B000": {
+      "commitment_proposal_purpose_mismatch": 32,
+      "proposal_snapshot_expired": 32
+    },
+    "B001": {
+      "commitment_proposal_purpose_mismatch": 32,
+      "proposal_evidence_not_disclosed": 64,
+      "proposal_snapshot_expired": 32
+    },
+    "B010": {
+      "commitment_proposal_purpose_mismatch": 32,
+      "proposal_snapshot_digest_mismatch": 32,
+      "proposal_snapshot_expired": 32
+    },
+    "B011": {
+      "commitment_proposal_purpose_mismatch": 32,
+      "proposal_evidence_not_disclosed": 64,
+      "proposal_snapshot_digest_mismatch": 32,
+      "proposal_snapshot_expired": 32
+    },
+    "B100": {
+      "commitment_proposal_purpose_mismatch": 32,
+      "proposal_snapshot_expired": 32,
+      "proposal_snapshot_id_mismatch": 96
+    },
+    "B101": {
+      "commitment_proposal_purpose_mismatch": 32,
+      "proposal_evidence_not_disclosed": 64,
+      "proposal_snapshot_expired": 32,
+      "proposal_snapshot_id_mismatch": 96
+    },
+    "B110": {
+      "commitment_proposal_purpose_mismatch": 32,
+      "proposal_snapshot_digest_mismatch": 32,
+      "proposal_snapshot_expired": 32,
+      "proposal_snapshot_id_mismatch": 96
+    },
+    "B111": {
+      "commitment_proposal_purpose_mismatch": 32,
+      "proposal_evidence_not_disclosed": 64,
+      "proposal_snapshot_digest_mismatch": 32,
+      "proposal_snapshot_expired": 32,
+      "proposal_snapshot_id_mismatch": 96
+    }
+  },
+  "schema_version": "glhs-binding-component-ablation-analysis.v1",
+  "total_schedules": 352
+}

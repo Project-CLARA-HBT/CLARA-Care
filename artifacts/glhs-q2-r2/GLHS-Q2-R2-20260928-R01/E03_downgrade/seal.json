@@ -1,0 +1,26 @@
+{
+  "schema_version": "glhs-downgrade-assurance-seal.v1",
+  "status": "SEALED",
+  "freeze_id": "GLHS-DOWNGRADE-ASSURANCE-20260928-01",
+  "run_id": "GLHS-Q2-R2-20260928-R01",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "protocol_sha256": "218696e12bda7dd02a098ab1d95984886330e5be2b84cf9142dc820a2d5ae2c5",
+  "schedules_sha256": "309966c1310a337801387c7739cb7e8ca5ffee329c2fc8cd796893e67845e617",
+  "raw_stream_sha256": "facf0c65f3f3303fa641e88c4f523476c59b5667ec75c4f01832308c1c5a235b",
+  "summary_sha256": "09cdadc260f1414ba308eda6b32fd637e223f08f1b2eb6717195495ea52f3fdc",
+  "total_schedules": 300,
+  "expected_executions": 300,
+  "executed_executions": 300,
+  "backend": "isolated_sqlite",
+  "claim_eligible": true,
+  "sealed_at_utc": "2026-09-28T00:00:00+00:00",
+  "artifact_inventory": {
+    "derived/summary.json": "09cdadc260f1414ba308eda6b32fd637e223f08f1b2eb6717195495ea52f3fdc",
+    "derived/summary.md": "91783152e1f4653e3ca6de0a016067cd3ccf94a8a203261ce7ee496fff5f7d26",
+    "environment.json": "1fd43685a494c04b7081f2fef92fa805661ce03ed9de5524466b926a1dc45aef",
+    "protocol.json": "218696e12bda7dd02a098ab1d95984886330e5be2b84cf9142dc820a2d5ae2c5",
+    "protocol.sha256": "503627083edcadfbe97765dd109396731fa707c0fa703cc1da8fcd4f8937e522",
+    "raw/runs.jsonl": "facf0c65f3f3303fa641e88c4f523476c59b5667ec75c4f01832308c1c5a235b",
+    "validation.json": "7e6592478c02f0e70f68c357a985aaf0d4811ba01ba65eeb2efccd5e630e4a17"
+  }
+}

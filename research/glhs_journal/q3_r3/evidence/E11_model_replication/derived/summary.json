@@ -1,0 +1,65 @@
+{
+  "schema_version": "commitloop-v8-analysis.v1",
+  "experiment_id": "E11",
+  "total_requests": 48,
+  "recorded_utc": "2026-09-28T14:32:52.182458+00:00",
+  "delta_equivalence_margin": 0.02,
+  "alpha": 0.05,
+  "e11_two_model_replication": {
+    "claude-sonnet-4.6": {
+      "n_cases": 8,
+      "strict_accuracy": 0.75,
+      "full_accuracy": 0.875,
+      "mean_paired_difference": -0.125,
+      "se": 0.125,
+      "df": 7.0,
+      "p_tost": 0.7856688993338448,
+      "ci_90": [
+        -0.36182232563625094,
+        0.11182232563625097
+      ],
+      "ci_95": [
+        -0.4205780314490983,
+        0.17057803144909828
+      ],
+      "is_equivalent": false
+    },
+    "gemini-3.6-flash-high": {
+      "n_cases": 8,
+      "strict_accuracy": 1.0,
+      "full_accuracy": 1.0,
+      "mean_paired_difference": 0.0,
+      "se": 0.0,
+      "df": 7.0,
+      "p_tost": 0.0,
+      "ci_90": [
+        0.0,
+        0.0
+      ],
+      "ci_95": [
+        0.0,
+        0.0
+      ],
+      "is_equivalent": true
+    },
+    "gemini-3.8-flash-tiered": {
+      "n_cases": 8,
+      "strict_accuracy": 1.0,
+      "full_accuracy": 1.0,
+      "mean_paired_difference": 0.0,
+      "se": 0.0,
+      "df": 7.0,
+      "p_tost": 0.0,
+      "ci_90": [
+        0.0,
+        0.0
+      ],
+      "ci_95": [
+        0.0,
+        0.0
+      ],
+      "is_equivalent": true
+    }
+  },
+  "claim_eligible": true
+}

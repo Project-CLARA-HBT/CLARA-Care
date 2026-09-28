@@ -1,0 +1,27 @@
+{
+  "artifact_inventory": {
+    "derived/summary.json": "7f972e7ca283a6ef97e3e9794671972f120d8c8b9fa1f3206bee2df581642f29",
+    "derived/summary.md": "e044368caa2a2db23d879acfda5f9d1226ccdeecf6184144d1321b8ec8f8b048",
+    "environment.json": "8d68949098353a6633511ea74cea50fdc166cb914bc74258296c8a36541354ec",
+    "protocol.json": "a842e05eda7def6ec9af76969a0899766f670e25ec87dfcdb736f7ee501f7cc6",
+    "protocol.sha256": "3a93512583ba38c630a895e66bfdb021397b20c91c855d5a99ba6aed0627354f",
+    "raw/runs.jsonl": "f6b9e9f1f520abeca16f44ecc8df8094f487457343bd827ed05e55a190a7e19a",
+    "validation.json": "a407a24ea5c63dc4db9e9e523cf0174ef93bbd882f618476a9bd892a8bb001c8"
+  },
+  "backend": "isolated_sqlite",
+  "claim_eligible": true,
+  "executed_executions": 2816,
+  "expected_executions": 2816,
+  "freeze_id": "GLHS-BINDING-COMPONENT-ABLATION-20260928-01",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "protocol_sha256": "a842e05eda7def6ec9af76969a0899766f670e25ec87dfcdb736f7ee501f7cc6",
+  "raw_stream_sha256": "f6b9e9f1f520abeca16f44ecc8df8094f487457343bd827ed05e55a190a7e19a",
+  "run_id": "GLHS-Q2-R2-20260928-R01",
+  "schedules_sha256": "d2aff36f84beb51589fe411a7668b228011fd52c07e09cb8e50ebcd2d618ab5f",
+  "schema_version": "glhs-binding-component-ablation-seal.v1",
+  "sealed_at_utc": "2026-09-27T17:34:09.502482+00:00",
+  "status": "SEALED",
+  "summary_sha256": "7f972e7ca283a6ef97e3e9794671972f120d8c8b9fa1f3206bee2df581642f29",
+  "total_schedules": 352,
+  "validation_sha256": "a407a24ea5c63dc4db9e9e523cf0174ef93bbd882f618476a9bd892a8bb001c8"
+}

@@ -1,0 +1,37 @@
+{
+  "GLHS_R3_EXECUTION_CHECKLIST.md": {
+    "bytes": 3112,
+    "lines": 96,
+    "sha256": "1b7195132a446f30fef7aa78d74c706ca455d9c21f301fd80154731b7ae89439"
+  },
+  "GLHS_R3_EXPERIMENT_AND_STATISTICS_PLAN.md": {
+    "bytes": 7859,
+    "lines": 336,
+    "sha256": "766f437755aeb10ae7cb118dfdece47126fb8112ab05cd00f7500243d7e68188"
+  },
+  "GLHS_R3_GOAL.md": {
+    "bytes": 8229,
+    "lines": 269,
+    "sha256": "f732f7ca1b72849077aba2bd3f5adad54776c28c2693f12537333f85b41458d3"
+  },
+  "GLHS_R3_LITERATURE_AND_MANUSCRIPT_REWRITE_PLAN.md": {
+    "bytes": 7932,
+    "lines": 197,
+    "sha256": "fb7aa9101b02aadfad1e9b5a4190a3ff620413a97dec69f9875ac8219e3a70f6"
+  },
+  "GLHS_R3_MASTER_SPEC.md": {
+    "bytes": 20157,
+    "lines": 697,
+    "sha256": "06f23fdee01baa96e09c033fc3f851af63d42861c0426338db50fa2dd0e51765"
+  },
+  "GLHS_R3_REQUIREMENTS.md": {
+    "bytes": 3883,
+    "lines": 62,
+    "sha256": "e316c710066ca32e6f330ef29ec7404556565f1316b44763098f5cc0b122c7bd"
+  },
+  "GLHS_R3_TECHNICAL_DESIGN.md": {
+    "bytes": 8218,
+    "lines": 414,
+    "sha256": "cab0d6e61db261509594c49b544c585b74ebbd566a5cea5827fbff7889151c15"
+  }
+}

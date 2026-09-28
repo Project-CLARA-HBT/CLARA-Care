@@ -1,0 +1,11 @@
+{
+  "experiment_id": "E07",
+  "total_test_vectors": 45,
+  "rfc_8785_vectors": 35,
+  "glhs_domain_vectors": 10,
+  "byte_disagreement_count": 0,
+  "byte_concordance_rate": 1.0,
+  "sha256_match_rate": 1.0,
+  "upper_95_wilson_ci_disagreement": 0.0787,
+  "claim_eligible": true
+}

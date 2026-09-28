@@ -1,0 +1,207 @@
+[
+  {
+    "id": "V01",
+    "status": "VALID",
+    "expected_canonical_json": "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$\\u000f\\na'B\\\"\\\\\\\\\\\"/\"}",
+    "expected_sha256": "20a2fa430b61879b0cb5401b669b9cc4a7927c7e8191f505183abd202fb8027e"
+  },
+  {
+    "id": "V02",
+    "status": "VALID",
+    "expected_canonical_json": "5e-324",
+    "expected_sha256": "c46e7ca1be4c8734f373a56530787288fa2058d73d07855e9247e949f811a42a"
+  },
+  {
+    "id": "V03",
+    "status": "VALID",
+    "expected_canonical_json": "-5e-324",
+    "expected_sha256": "046f4049d09944fcb2efbf2ddb0ea8f05e0204591d6d02c9106efc88190fa7f9"
+  },
+  {
+    "id": "V04",
+    "status": "VALID",
+    "expected_canonical_json": "1.7976931348623157e+308",
+    "expected_sha256": "c2784e1abd6317452708f3fbf9641c16b959561bc621a1d408c23a20aa2cb585"
+  },
+  {
+    "id": "V05",
+    "status": "VALID",
+    "expected_canonical_json": "-1.7976931348623157e+308",
+    "expected_sha256": "f0347276b171ff0c36491c912285a2833de7313d1a103a4b1be0274bfe7c021f"
+  },
+  {
+    "id": "V06",
+    "status": "VALID",
+    "expected_canonical_json": "1e+21",
+    "expected_sha256": "241c4643fa70b1dcde1205b71be4e3bebb17e9f880c8e1a33d0ead6c27271d3c"
+  },
+  {
+    "id": "V07",
+    "status": "VALID",
+    "expected_canonical_json": "1e-7",
+    "expected_sha256": "5b33e02f2c5103a05d32f6ba9cb058294452bfbf393967f68bb30c1bdcbbab22"
+  },
+  {
+    "id": "V08",
+    "status": "VALID",
+    "expected_canonical_json": "100000000000000000000",
+    "expected_sha256": "c344e9487bfbd5c4e03c9fb90d62a5dde5e00b54d55c46e9f4a803aea162b80c"
+  },
+  {
+    "id": "V09",
+    "status": "VALID",
+    "expected_canonical_json": "0",
+    "expected_sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+  },
+  {
+    "id": "V10",
+    "status": "VALID",
+    "expected_canonical_json": "1",
+    "expected_sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+  },
+  {
+    "id": "V11",
+    "status": "VALID",
+    "expected_canonical_json": "-9007199254740991",
+    "expected_sha256": "4c933a456bb8f2e9894b2d0b26480439cd72d52fb8a27cbf8fd7f323f22c7815"
+  },
+  {
+    "id": "V12",
+    "status": "VALID",
+    "expected_canonical_json": "9007199254740991",
+    "expected_sha256": "f40b423c2dd95ff2b2f027e22208f438cf7242862e5e746860e697308c9add26"
+  },
+  {
+    "id": "V13",
+    "status": "VALID",
+    "expected_canonical_json": "0",
+    "expected_sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+  },
+  {
+    "id": "V14",
+    "status": "VALID",
+    "expected_canonical_json": "-42",
+    "expected_sha256": "fec80006df0542549b4cbaafb8987eee00bb49bca396eefe9ac8be5b5928e8f6"
+  },
+  {
+    "id": "V15",
+    "status": "VALID",
+    "expected_canonical_json": "42",
+    "expected_sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049"
+  },
+  {
+    "id": "V16",
+    "status": "VALID",
+    "expected_canonical_json": "{\"\\r\":\"Carriage Return\",\"1\":\"One\",\"\":\"Control\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"€\":\"Euro Sign\",\"😀\":\"Emoji: Grinning Face\",\"דּ\":\"Hebrew Letter Dalet With Dagesh\"}",
+    "expected_sha256": "5e321556d22018a9656991a9e94f77ec175fa193e52a2429d312f8419ec8b08c"
+  },
+  {
+    "id": "V17",
+    "status": "VALID",
+    "expected_canonical_json": "{\"😀\":2,\"\":1}",
+    "expected_sha256": "28c95d1bbb2209223307e62f489020e8f9e0cfa16adf2daf6d88127a1e8dd22a"
+  },
+  {
+    "id": "V18",
+    "status": "VALID",
+    "expected_canonical_json": "{\"😀\":2,\"￿\":1}",
+    "expected_sha256": "48c5d098713870a7b88be7fc0ffc0a79e912d20f80ea8a4a5604426f49add103"
+  },
+  {
+    "id": "V19",
+    "status": "VALID",
+    "expected_canonical_json": "{\"10\":3,\"2\":4,\"a\":2,\"b\":1}",
+    "expected_sha256": "61148428c19ea27217951d647538266ed8df349d71b8982b3e3e37dfeb0b9643"
+  },
+  {
+    "id": "V20",
+    "status": "VALID",
+    "expected_canonical_json": "{\"z\":1,\"è\":3,\"é\":2,\"💩\":4}",
+    "expected_sha256": "3989561141cb883c834a50926d5120e220b61ef8c92d912f37f5897a84089e69"
+  },
+  {
+    "id": "V21",
+    "status": "VALID",
+    "expected_canonical_json": "\"hello\\u0000world\\u001f\\b\\t\\n\\f\\r\\\"\\\\\"",
+    "expected_sha256": "52b9f2981463313a03548161bca9a164ed8b5ffc1455efab1f1d62e295acf391"
+  },
+  {
+    "id": "V22",
+    "status": "VALID",
+    "expected_canonical_json": "\"https://clara.care/api/v1/patient?id=123\"",
+    "expected_sha256": "f02ed3336df31ce0b261dc6e2c088021e44a00eefa776defa5c547eb6d8a2dc3"
+  },
+  {
+    "id": "V23",
+    "status": "VALID",
+    "expected_canonical_json": "\"Bệnh nhân uống 500mg Paracetamol 💊\"",
+    "expected_sha256": "5e8498c8433a390e9740b779d3bd43f0c5ef45d485fc84e093f9484a923281d3"
+  },
+  {
+    "id": "V24",
+    "status": "VALID",
+    "expected_canonical_json": "{\"a\":null,\"b\":\"\",\"c\":\"null\"}",
+    "expected_sha256": "d1f8de0c2e6976cfef9ab6c6ec7eec3388f1d5e35e36258a11416cee829991b9"
+  },
+  {
+    "id": "V25",
+    "status": "VALID",
+    "expected_canonical_json": "{\"b_bool\":true,\"b_str\":\"true\",\"f_bool\":false,\"f_str\":\"false\"}",
+    "expected_sha256": "b097e0ccf302b23031c4fb721a985c02259d808a6ffc9d0f6972431bed7f8c82"
+  },
+  {
+    "id": "V26",
+    "status": "VALID",
+    "expected_canonical_json": "{\"arr\":[],\"obj\":{}}",
+    "expected_sha256": "7c557880ceed861401b04be6735c9708e326427e072562fd259da6f6a2612b96"
+  },
+  {
+    "id": "V27",
+    "status": "VALID",
+    "expected_canonical_json": "[null,true,false,0,1.5,\"test\"]",
+    "expected_sha256": "19c48af07a3d6318bf3b6d2eb9f17ab5fd71d2b4ef4538d2179b3051261266a9"
+  },
+  {
+    "id": "V28",
+    "status": "VALID",
+    "expected_canonical_json": "{\"a\":[1,{\"b\":2}],\"c\":null}",
+    "expected_sha256": "838f50fafdba6bd02b8b46ff87ee47fafc2628724a5560a50f9e88d2744cb8b5"
+  },
+  {
+    "id": "V29",
+    "status": "VALID",
+    "expected_canonical_json": "{\"__dict__\":[[\"a\",1]]}",
+    "expected_sha256": "ad306673e76b5c11f53fd6e5c3dbaaa40f3c207351b6b515b19854f8136872d0"
+  },
+  {
+    "id": "V30",
+    "status": "VALID",
+    "expected_canonical_json": "{\"active\":true,\"assertion_id\":\"ast-101\",\"dose_mg\":500,\"patient_id\":42}",
+    "expected_sha256": "6455d02ef9e417110f119d5eb7c49c49bbff654f27a8dd7a3cfa474ae9e04473"
+  },
+  {
+    "id": "V31",
+    "status": "REJECTED",
+    "expected_error": "canonical_json_lone_surrogate"
+  },
+  {
+    "id": "V32",
+    "status": "REJECTED",
+    "expected_error": "canonical_json_lone_surrogate"
+  },
+  {
+    "id": "V33",
+    "status": "REJECTED",
+    "expected_error": "canonical_json_non_finite_number"
+  },
+  {
+    "id": "V34",
+    "status": "REJECTED",
+    "expected_error": "canonical_json_integer_out_of_ijson_range"
+  },
+  {
+    "id": "V35",
+    "status": "REJECTED",
+    "expected_error": "canonical_json_unsafe_decimal_precision"
+  }
+]

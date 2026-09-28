@@ -1,0 +1,22 @@
+{
+  "corpus_counts": {
+    "diabetes_130": 2,
+    "eicu": 2,
+    "mimic_on_fhir": 3,
+    "synthea": 2
+  },
+  "environment": {
+    "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+    "pytest": "9.1.1",
+    "python": "3.12.3"
+  },
+  "execution_seconds": 0.0002613067626953125,
+  "freeze_id": "GLHS-R3-E13-FREEZE-20260928-V1",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "mode": "synthetic",
+  "protocol_file_sha256": "0bffb48daa5a11b81d2b6c7c17a86c163c99546af5c19c7b995375780c4de4cd",
+  "schema_version": "glhs-e13-external-run-v1",
+  "seed": 42,
+  "tasks_file_sha256": "6f216a216bddd0b3f0fc6f0e0952a5b9826bbe20627c594aa241c846c489fef0",
+  "total_tasks": 9
+}

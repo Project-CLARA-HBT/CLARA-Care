@@ -1,0 +1,52 @@
+{
+  "api_boundary": "fastapi_http_boundary",
+  "architecture_path": "client>fastapi_http>auth_rbac_csrf>glhs_validation_thss>postgresql_commit>response_audit_outbox",
+  "coverage_gaps": [
+    "source_revocation_propagation",
+    "concurrent_transition"
+  ],
+  "environment": {
+    "alembic_revision": "20260825_0063",
+    "database": "postgresql",
+    "database_image_digest": "operator_not_supplied",
+    "default_transaction_isolation": "read committed",
+    "max_connections": "100",
+    "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "server_version": "16.14",
+    "sqlalchemy": "2.0.52",
+    "synchronous_commit": "on"
+  },
+  "finished_at": "2026-09-28T20:11:44.369322+00:00",
+  "fixture_contains_phi": false,
+  "hardware": {
+    "cpu_count": 88,
+    "hostname": "clue"
+  },
+  "history_depth": 50,
+  "http_transport_measured": true,
+  "implementation": {
+    "implementation_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "tracked_worktree_clean": false
+  },
+  "operations": [
+    "transition",
+    "reconstruction",
+    "snapshot_compile",
+    "governed_decision_reconstruction",
+    "audit_lookup",
+    "invalidation_rebuild",
+    "enter_in_error_rebuild"
+  ],
+  "production_services_modified": false,
+  "repetitions": 100,
+  "row_counts": {
+    "assertions": 0,
+    "snapshots": 202,
+    "transitions": 0
+  },
+  "schema_version": "glhs-fullstack-http-transport.v2",
+  "started_at": "2026-09-28T20:11:15.420749+00:00",
+  "status": "EXECUTED_FULLSTACK_HTTP",
+  "worker_count": 1
+}

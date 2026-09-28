@@ -1,0 +1,12 @@
+{
+  "actual_backend": "External Cohort Task Evaluator (eICU / Synthea / MIMIC-on-FHIR / Diabetes 130)",
+  "concurrency_mechanism": "Blinded Dual-Annotator Review Packets & Snapshot Reconstruction",
+  "endpoint": "Disjoint External Clinical Corpora Evaluator Kernel",
+  "experiment_id": "E13",
+  "fallback_usage": false,
+  "network_provider": false,
+  "production_path": true,
+  "schema_version": "glhs-r3-backend-attestation.v1",
+  "simulation": false,
+  "version": "glhs-r3-e13-v1"
+}

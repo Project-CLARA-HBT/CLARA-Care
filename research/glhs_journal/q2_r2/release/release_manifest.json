@@ -93,7 +93,7 @@
     "E09": {
       "artifact_dir": "protocols/E09_concurrency",
       "claim_eligible": true,
-      "name": "Realistic Concurrency & Partition Benchmark",
+      "name": "In-Memory Concurrency Simulation",
       "protocol_path": "protocols/E09_concurrency/protocol.json",
       "protocol_sha256": "10d9e370191fd10500b53564411f3f27a2337f62ea63854ee88f7bf3ab14769e",
       "seal_sha256": "5b186d5438cd97e17e6a6047b480b5bffe306718b7619e438ed9e34444e0e6ab",

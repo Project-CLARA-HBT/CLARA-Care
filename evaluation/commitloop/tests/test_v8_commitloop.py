@@ -18,6 +18,7 @@ from evaluation.commitloop.malformed_sensitivity import (
     TAXONOMY_12_CLASSES,
     classify_error_12_class,
     evaluate_sensitivity_arms,
+    normalize_error_class,
     repair_local_json_r1,
     validate_prediction_schema,
 )
@@ -40,8 +41,10 @@ def test_12_class_error_taxonomy_classification() -> None:
     assert classify_error_12_class("TimeoutError", "timed out waiting", "Timeout") == "timeout"
     assert classify_error_12_class("FormatError", "markdown fence violation", "Here is JSON:\n```json\n{}```") == "content_format_violation"
     assert classify_error_12_class("SemanticError", "invalid enum state", '{"lifecycle_state": "INVALID", "evidence_state": "CLEAR", "timeliness_state": "BEFORE_DUE"}') == "semantic_failure"
-    assert classify_error_12_class("RateLimitError", "HTTP 429 quota_exceeded", "429") == "rate_limit_exhaustion"
-    assert classify_error_12_class("UnknownError", "unclassified issue", "random string") == "unclassified_error"
+    assert classify_error_12_class("RateLimitError", "HTTP 429 quota_exceeded", "429") == "rate_limit"
+    assert classify_error_12_class("UnknownError", "unclassified issue", "random string") == "unclassified"
+    assert normalize_error_class("rate_limit_exhaustion") == "rate_limit"
+    assert normalize_error_class("unclassified_error") == "unclassified"
 
 
 def test_r1_local_deterministic_repair() -> None:

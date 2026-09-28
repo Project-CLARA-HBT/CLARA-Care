@@ -1,0 +1,308 @@
+{
+  "schema_version": "glhs-r3-protocol-registry.v1",
+  "program": "GLHS R3 \u2014 Governed Read-to-Write Continuity (GRWC)",
+  "repository": "Project-CLARA-HBT/CLARA-Care",
+  "registry_created_at_utc": "2026-09-28T00:00:00Z",
+  "prospective_freeze_baseline_utc": "2026-09-28T00:00:00Z",
+  "provenance": {
+    "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+    "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "active_branch": "research/glhs-q2-r2-experiments"
+  },
+  "canonicalization": {
+    "profile": "clara.canonical-json.v2-rfc8785",
+    "hash_algorithm": "SHA-256"
+  },
+  "total_protocols": 15,
+  "chronology_validation": {
+    "all_freeze_timestamps_valid": true,
+    "freeze_precedes_execution_assertion": "PASSED"
+  },
+  "protocols": {
+    "E00_code_sync": {
+      "protocol_id": "E00_code_sync",
+      "title": "Phase 0 / E00: Literature/Claim Freeze, Novelty Contract & Code Synchronization Protocol",
+      "phase": "Phase 0 \u2014 Literature & Code Synchronization Baseline",
+      "schema_version": "glhs-r3-protocol-e00.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E00_code_sync/protocol.json",
+      "file_sha256": "aeb924ae4c289c8f744f36ceccaab0de258f45cf7569a1c7251dc837b3d24fc0",
+      "canonical_rfc8785_sha256": "86ba394b55acb68990dc93d4e959545d19631461e530d221dea382c6475ee65b",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I02_governance_freshness",
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I10_dependency_completeness",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I14_undisclosed_evidence_rejection",
+        "I15_clean_path_reachability"
+      ]
+    },
+    "E01_inference_consumption": {
+      "protocol_id": "E01_inference_consumption",
+      "title": "Phase 1 / E01: Inference Consumption Integrity & Continuous Attestation Protocol",
+      "phase": "Phase 1 \u2014 Inference Consumption Integrity",
+      "schema_version": "glhs-r3-protocol-e01.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E01_inference_consumption/protocol.json",
+      "file_sha256": "39d0573c44842b785754398206729cdcea9d11417b012bc935d2f58fab2dcef8",
+      "canonical_rfc8785_sha256": "2f66389d264661927359c243ae4b9459a6803e19f2da8f24dfe4c30845189fcc",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I14_undisclosed_evidence_rejection",
+        "I15_clean_path_reachability"
+      ]
+    },
+    "E02_component_ablation": {
+      "protocol_id": "E02_component_ablation",
+      "title": "Phase 5 / E02: Binding Component Factorial Ablation (2^4) Protocol",
+      "phase": "Phase 5 \u2014 Factorial Component Ablation",
+      "schema_version": "glhs-r3-protocol-e02.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E02_component_ablation/protocol.json",
+      "file_sha256": "41b807d13df0ad1e0693809e31537e3fd3faeab21314bcb07c2d03e05333a3b0",
+      "canonical_rfc8785_sha256": "6f1af08a60231f01ec5009b0836351080256057e4b1d0227813881ccc9fef837",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I12_exact_inference_disclosure_continuity",
+        "I15_clean_path_reachability"
+      ]
+    },
+    "E03_minimal_baseline": {
+      "protocol_id": "E03_minimal_baseline",
+      "title": "Phase 5 / E03: Minimal Token / Capability Comparator Baseline Protocol",
+      "phase": "Phase 5 \u2014 Minimal Baseline Comparator",
+      "schema_version": "glhs-r3-protocol-e03.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E03_minimal_baseline/protocol.json",
+      "file_sha256": "3f2c5640a5401874ede85a983d0d66ee40738952906599742188189a30078b98",
+      "canonical_rfc8785_sha256": "118bfc875ed4c41d4a9e9341a2d18f2a0c1c293c2ab5e9818314d53a684fe224",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I10_dependency_completeness",
+        "I12_exact_inference_disclosure_continuity",
+        "I15_clean_path_reachability"
+      ]
+    },
+    "E04_postgres_toctou": {
+      "protocol_id": "E04_postgres_toctou",
+      "title": "Phase 5 / E04: Generated PostgreSQL TOCTOU Adversarial Schedule Campaign Protocol",
+      "phase": "Phase 5 \u2014 PostgreSQL TOCTOU & Lock Hierarchy Attestation",
+      "schema_version": "glhs-r3-protocol-e04.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E04_postgres_toctou/protocol.json",
+      "file_sha256": "b82de5726679e7e2cff96a15896d17a0cc60c852001ba9a743fbd223510f3fdc",
+      "canonical_rfc8785_sha256": "27dd7be8cb75a67bae1e375ff7ef5ac1836a8dc1f7c59bcdd21199b2d0eb864d",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I02_governance_freshness",
+        "I03_phantom_free",
+        "I04_deadlock_free",
+        "I05_idempotency_atomicity",
+        "I06_cas_monotonicity",
+        "I15_clean_path_reachability"
+      ]
+    },
+    "E05_dependency_completeness": {
+      "protocol_id": "E05_dependency_completeness",
+      "title": "Phase 3 / E05: Dependency Completeness & Mutation Analysis Statistical Evaluation Protocol",
+      "phase": "Phase 3 \u2014 Dependency Completeness & Mutation Analysis",
+      "schema_version": "glhs-r3-protocol-e05.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E05_dependency_completeness/protocol.json",
+      "file_sha256": "bddba165d7f585ad488b35d73b1be59a836b888b21a74134d8df2585534b83cc",
+      "canonical_rfc8785_sha256": "36a14a6a8f1027dc85aef0c9bf74c7ee15d2133c4944bdbd34243548bb372916",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I10_dependency_completeness",
+        "I01_state_isolation",
+        "I02_governance_freshness",
+        "I06_cas_monotonicity",
+        "I07_evidence_closure",
+        "I15_clean_path_reachability"
+      ]
+    },
+    "E06_anti_downgrade": {
+      "protocol_id": "E06_anti_downgrade",
+      "title": "Phase 2 / E06: Anti-Downgrade & Lineage Anti-Laundering Statistical Evaluation Protocol",
+      "phase": "Phase 2 \u2014 Proposal Lineage & Anti-Laundering Assurance",
+      "schema_version": "glhs-r3-protocol-e06.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E06_anti_downgrade/protocol.json",
+      "file_sha256": "a0b16d8cbe940ee6d2014241b7cd015f7485dde8f61638e83443ff53a42f5867",
+      "canonical_rfc8785_sha256": "545d058ebbe504e243adbf96a604d85d188c3052995272519df22a94367486c6",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I15_clean_path_reachability"
+      ]
+    },
+    "E07_canonicalization": {
+      "protocol_id": "E07_canonicalization",
+      "title": "Phase 5 / E07: Multi-Runtime Canonicalization Conformance & Verification Protocol",
+      "phase": "Phase 5 \u2014 Cross-Runtime Canonicalization Conformance",
+      "schema_version": "glhs-r3-protocol-e07.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E07_canonicalization/protocol.json",
+      "file_sha256": "070171831dcf86acd522a20be88bcf4a6d95b90aaddccc241f818e725f46c791",
+      "canonical_rfc8785_sha256": "a5282451913d7215cd2c061b5371a1d830528edbcbb0211304d20965fbc8578e",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I08_binding_immutability",
+        "I12_exact_inference_disclosure_continuity"
+      ]
+    },
+    "E08_formal_assurance": {
+      "protocol_id": "E08_formal_assurance",
+      "title": "Phase 5 / E08: Sealed Bounded Formal Assurance (TLA+ / Model Checking) Protocol",
+      "phase": "Phase 5 \u2014 Formal Verification & Bounded State Exploration",
+      "schema_version": "glhs-r3-protocol-e08.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E08_formal_assurance/protocol.json",
+      "file_sha256": "9758c72b69bfdf483e7fd45f78ebd7ff24339aa313371c628468886bb0bd60f3",
+      "canonical_rfc8785_sha256": "7651ecb18c3ca8cebc956a5841e1900918d40feb0c8aeae4f71092cb1754954d",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I02_governance_freshness",
+        "I03_phantom_free",
+        "I04_deadlock_free",
+        "I05_idempotency_atomicity",
+        "I06_cas_monotonicity",
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I10_dependency_completeness",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I14_undisclosed_evidence_rejection",
+        "I15_clean_path_reachability"
+      ]
+    },
+    "E09_concurrency": {
+      "protocol_id": "E09_concurrency",
+      "title": "Phase 6 / E09: Real PostgreSQL Concurrency & Contention Analysis Protocol",
+      "phase": "Phase 6 \u2014 Multi-Worker PostgreSQL Concurrency Analysis",
+      "schema_version": "glhs-r3-protocol-e09.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E09_concurrency/protocol.json",
+      "file_sha256": "e483e83891e288ecabf4260875a5e6e63e068cb4ef87e19f2b49d94ee335ccf7",
+      "canonical_rfc8785_sha256": "57d8519b2de7d608acd49c493ca3a75f1ab99e1ef3171e0276d1b682f9cb3f72",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I04_deadlock_free",
+        "I06_cas_monotonicity",
+        "I15_clean_path_reachability"
+      ]
+    },
+    "E10_fullstack": {
+      "protocol_id": "E10_fullstack",
+      "title": "Phase 6 / E10: HTTP / PostgreSQL Full-Stack Performance Characterization Protocol",
+      "phase": "Phase 6 \u2014 Full-Stack HTTP Performance Evaluation",
+      "schema_version": "glhs-r3-protocol-e10.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E10_fullstack/protocol.json",
+      "file_sha256": "07b8b35dcdb2bebb18b67b809ab01e8c2b5e1bf516061fcb9fcec43182bc2cbe",
+      "canonical_rfc8785_sha256": "0d802915bea044d9353bda2ca65cd899a5863a92f5821fdbfef6fe38e2c34748",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I12_exact_inference_disclosure_continuity",
+        "I15_clean_path_reachability"
+      ]
+    },
+    "E11_model_replication": {
+      "protocol_id": "E11_model_replication",
+      "title": "Phase 7 / E11: Two-Model Large Context Utility & Replication Protocol",
+      "phase": "Phase 7 \u2014 Multi-Model Provider Utility & Replication",
+      "schema_version": "glhs-r3-protocol-e11.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E11_model_replication/protocol.json",
+      "file_sha256": "59b0aa958325182377a6308a9d76e5f75b18e52ba77ec6a135674315bcfcb6f2",
+      "canonical_rfc8785_sha256": "5185c07ca752d4662a6c3afd53b401593d10a9b4543d2d42ead9f21cee1c0d8d",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I07_evidence_closure",
+        "I12_exact_inference_disclosure_continuity"
+      ]
+    },
+    "E12_malformed_sensitivity": {
+      "protocol_id": "E12_malformed_sensitivity",
+      "title": "Phase 7 / E12: Malformed-Output Sensitivity & Error Taxonomy Analysis Protocol",
+      "phase": "Phase 7 \u2014 Malformed Provider Output & Error Taxonomy",
+      "schema_version": "glhs-r3-protocol-e12.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E12_malformed_sensitivity/protocol.json",
+      "file_sha256": "606e66102d32afc0a5563a35f3b36c308772593024232282ceb94ff97c3fd750",
+      "canonical_rfc8785_sha256": "b3568f4d79a0079f4a2ef26fe2c72f29e2df0bf967a287285c9025ed05662890",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I10_dependency_completeness",
+        "I12_exact_inference_disclosure_continuity"
+      ]
+    },
+    "E13_external_validation": {
+      "protocol_id": "E13_external_validation",
+      "title": "Phase 8 / E13: External / Source-Disjoint Task Validation Protocol",
+      "phase": "Phase 8 \u2014 External Disjoint Dataset Generalization",
+      "schema_version": "glhs-r3-protocol-e13.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E13_external_validation/protocol.json",
+      "file_sha256": "4fe5fbbaee737f10f1ebad10a7a9265c5a0072712cf40e6cf1d712c550812695",
+      "canonical_rfc8785_sha256": "41464a274ea7b64e680fae6e24faae088857336aaa64c2f8fac2c4ba69fbb322",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I10_dependency_completeness",
+        "I12_exact_inference_disclosure_continuity",
+        "I15_clean_path_reachability"
+      ]
+    },
+    "E14_reproducibility": {
+      "protocol_id": "E14_reproducibility",
+      "title": "Phase 9 / E14: Independent Reproduction Audit & Clean Checkout Verification Protocol",
+      "phase": "Phase 9 \u2014 Hermetic Clean-Tree Reproduction Audit",
+      "schema_version": "glhs-r3-protocol-e14.v1",
+      "protocol_path": "research/glhs_journal/q3_r3/protocols/E14_reproducibility/protocol.json",
+      "file_sha256": "2577da67264f149baf59318bbf0a155c48bea1f8d84352eb12301bd60007703a",
+      "canonical_rfc8785_sha256": "903b131f6fa2822903be6073223cb257622b0a8da57e5928c6408b1801aa6ad6",
+      "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+      "status": "PROSPECTIVE_FROZEN",
+      "target_invariants": [
+        "I01_state_isolation",
+        "I02_governance_freshness",
+        "I03_phantom_free",
+        "I04_deadlock_free",
+        "I05_idempotency_atomicity",
+        "I06_cas_monotonicity",
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I10_dependency_completeness",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I14_undisclosed_evidence_rejection",
+        "I15_clean_path_reachability"
+      ]
+    }
+  }
+}

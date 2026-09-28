@@ -1,0 +1,24 @@
+{
+  "experiment_id": "E01",
+  "total_executions": 768,
+  "clean_controls": 128,
+  "clean_controls_admitted": 128,
+  "clean_control_admission_rate": 1.0,
+  "adversarial_invalid_schedules": 640,
+  "adversarial_invalid_rejected": 640,
+  "invalid_rejection_rate": 1.0,
+  "false_admission_rate_point_estimate": 0.0,
+  "clopper_pearson_upper_95_ci": 0.00576,
+  "wilson_upper_95_ci": 0.00576,
+  "claim_eligible": true,
+  "reason_code_distribution": {
+    "inference_binding_thss_not_consumed": 64,
+    "snapshot_identity_mismatch": 64,
+    "binding_not_completed": 128,
+    "model_identity_mismatch": 64,
+    "projection_digest_mismatch": 64,
+    "request_envelope_mismatch": 64,
+    "commitment_proposal_snapshot_binding_required": 128,
+    "proposal_snapshot_not_found": 64
+  }
+}

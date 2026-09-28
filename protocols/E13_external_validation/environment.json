@@ -1,0 +1,17 @@
+{
+  "backend": "External Cohort Evaluator (eICU, Synthea, MIMIC-IV, Diabetes 130)",
+  "cpu_count": 88,
+  "experiment_id": "E13",
+  "generated_at_utc": "2026-09-28T00:00:00Z",
+  "libraries": {
+    "fastapi": "0.115.0",
+    "pytest": "9.1.1",
+    "sqlalchemy": "2.0.46"
+  },
+  "machine": "x86_64",
+  "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+  "python_version": "3.12.3",
+  "schema_version": "glhs-r3-environment.v1",
+  "system": "Linux",
+  "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e"
+}

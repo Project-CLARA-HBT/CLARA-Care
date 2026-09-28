@@ -1,0 +1,18 @@
+{
+  "adversarial_false_acceptances": 0,
+  "claim_eligible": true,
+  "clean_controls_admitted": 96,
+  "clean_controls_rate": 1.0,
+  "clean_controls_total": 96,
+  "exact_decision_match_with_glhs": true,
+  "freeze_id": "GLHS-MINIMAL-BASELINE-20260928-01",
+  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "no_forbidden_services_imports": true,
+  "no_production_flags": true,
+  "run_id": "GLHS-Q2-R2-20260928-R01",
+  "schema_version": "glhs-minimal-baseline-validation.v1",
+  "status": "VALIDATED",
+  "total_executions_audited": 1408,
+  "total_schedules_audited": 352,
+  "validated_at_utc": "2026-09-28T19:36:00.372359+00:00"
+}

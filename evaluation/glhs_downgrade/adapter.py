@@ -23,20 +23,127 @@ from clara_api.db.base import Base
 from clara_api.db.models import (
     GlhsClinicalCommitment,
     GlhsClinicalCommitmentProposal,
-    GlhsClinicalSnapshot,
     GlhsInferenceContextBinding,
+    GlhsSnapshotManifest,
     HealthSourceReference,
     PhrProfile,
     User,
 )
+
+
+def GlhsClinicalSnapshot(**kwargs: Any) -> GlhsSnapshotManifest:
+    """Helper factory mapping legacy snapshot fields to GlhsSnapshotManifest."""
+    if "disclosed_provenance_json" in kwargs:
+        dp = kwargs.pop("disclosed_provenance_json")
+        kwargs.setdefault("provenance_ids_json", dp.get("evidence_ids", []) if isinstance(dp, dict) else [])
+    kwargs.setdefault("provenance_ids_json", [])
+    kwargs.setdefault("task", "downgrade_test")
+    kwargs.setdefault("purpose", "self_care")
+    kwargs.setdefault("data_classes_json", ["medications", "observations"])
+    kwargs.setdefault("assertion_ids_json", [])
+    kwargs.setdefault("conflict_ids_json", [])
+    kwargs.setdefault("expires_at", kwargs.get("created_at") or datetime.now(UTC))
+    if "policy_version" in kwargs and isinstance(kwargs["policy_version"], int):
+        kwargs["policy_version"] = str(kwargs["policy_version"])
+    if "consent_version" in kwargs and isinstance(kwargs["consent_version"], int):
+        kwargs["consent_version"] = str(kwargs["consent_version"])
+    return GlhsSnapshotManifest(**kwargs)
 from clara_api.glhs.canonical_json import fast_canonical_digest
 from clara_api.glhs.commitment_gateway import (
     CommitmentVersionInput,
     ProfileScope,
     _require_lineage_binding,
-    create_commitment_proposal,
     propose_bound_commitment_transition,
 )
+
+
+def _make_scope(profile: PhrProfile, actor: User, actor_role: str = "owner", purpose: str = "self_care") -> ProfileScope:
+    return ProfileScope(
+        actor=actor,
+        profile=profile,
+        actor_role=actor_role,
+        purpose=purpose,
+        allowed_actions=frozenset({"create", "correct", "view"}),
+        allowed_data_classes=frozenset({"medications", "allergies", "conditions", "observations"}),
+    )
+
+
+def _make_binding(**kwargs: Any) -> GlhsInferenceContextBinding:
+    from datetime import timedelta
+    from uuid import uuid4
+    from clara_api.glhs.gateway import (
+        BINDING_SCHEMA_VERSION,
+        CANONICALIZATION_PROFILE,
+        DIGEST_ALGORITHM,
+        _snapshot_fingerprint,
+        inference_binding_envelope,
+    )
+    kwargs.setdefault("inference_manifest_id", f"inf-manifest-{uuid4().hex[:12]}")
+    kwargs.setdefault("consumed_thss", True)
+    kwargs.setdefault("source_snapshot_digest", kwargs.get("source_manifest_digest", "0" * 64))
+    kwargs.setdefault("source_manifest_digest", "0" * 64)
+    kwargs.setdefault("disclosed_evidence_ids_json", [])
+    kwargs.setdefault("evidence_set_digest", "0" * 64)
+    kwargs.setdefault("snapshot_expires_at", datetime.now(UTC) + timedelta(hours=1))
+    kwargs.setdefault("canonicalization_profile", CANONICALIZATION_PROFILE)
+    kwargs.setdefault("digest_algorithm", DIGEST_ALGORITHM)
+    kwargs.setdefault("binding_schema_version", BINDING_SCHEMA_VERSION)
+    kwargs.setdefault("binding_digest", "")
+    kwargs.setdefault("status", "COMPLETED")
+    if "policy_version" in kwargs and isinstance(kwargs["policy_version"], int):
+        kwargs["policy_version"] = str(kwargs["policy_version"])
+    if "consent_version" in kwargs and isinstance(kwargs["consent_version"], int):
+        kwargs["consent_version"] = str(kwargs["consent_version"])
+    b = GlhsInferenceContextBinding(**kwargs)
+    b.evidence_set_digest = _snapshot_fingerprint(b.disclosed_evidence_ids_json)
+    b.binding_digest = _snapshot_fingerprint(inference_binding_envelope(b))
+    return b
+
+
+def _make_proposal(db: Session, **kwargs: Any) -> GlhsClinicalCommitmentProposal:
+    kwargs.pop("profile_id", None)
+    if "root_proposal_id" in kwargs:
+        kwargs["reviewed_proposal_id"] = kwargs.pop("root_proposal_id")
+    if "action" in kwargs:
+        kwargs["proposed_transition"] = kwargs.pop("action")
+    kwargs.setdefault("proposed_transition", "CREATE")
+    kwargs.setdefault("origin", "human_review" if kwargs.get("reviewed_proposal_id") else "model")
+    if "policy_version" in kwargs and isinstance(kwargs["policy_version"], int):
+        kwargs["policy_version"] = str(kwargs["policy_version"])
+    if "consent_version" in kwargs and isinstance(kwargs["consent_version"], int):
+        kwargs["consent_version"] = str(kwargs["consent_version"])
+    kwargs.setdefault("protocol_version", "glhs.v1")
+    kwargs.setdefault("observed_evidence_ids_json", [])
+    kwargs.setdefault("context_binding_mode", "snapshot_bound")
+    kwargs.setdefault("proposal_digest", "0" * 64)
+    kwargs.pop("authority_class", None)
+    kwargs.pop("target_json", None)
+    kwargs.pop("created_at", None)
+
+    if "commitment_id" not in kwargs:
+        comm_pub = kwargs.pop("commitment_public_id", "COMM-DEFAULT")
+        comm = db.query(GlhsClinicalCommitment).filter_by(public_id=comm_pub).first()
+        if not comm:
+            p = db.query(PhrProfile).first()
+            pid = p.id if p else 1
+            comm = GlhsClinicalCommitment(
+                public_id=comm_pub,
+                profile_id=pid,
+                semantic_key=f"medication:{comm_pub}",
+                domain="medications",
+                supersession_key=f"medication:{comm_pub}",
+            )
+            db.add(comm)
+            db.flush()
+        kwargs["commitment_id"] = comm.id
+
+    kwargs.setdefault("target_profile_public_id", "")
+    prop = GlhsClinicalCommitmentProposal(**kwargs)
+    from clara_api.glhs.commitment_gateway import _canonical_digest, _proposal_envelope
+    prop.proposal_digest = _canonical_digest(_proposal_envelope(prop))
+    db.add(prop)
+    db.flush()
+    return prop
 from clara_api.glhs.domain import GlhsInvariantError
 from clara_api.glhs.gateway import (
     AssertionInput,
@@ -57,6 +164,18 @@ class ScheduleExecutionOutcome:
     db_reads: int
     db_writes: int
     details: dict[str, Any]
+
+    @property
+    def rejected(self) -> bool:
+        return not self.admitted
+
+    @property
+    def error_code(self) -> str | None:
+        return self.reason_code if not self.admitted else None
+
+    @property
+    def is_negative(self) -> bool:
+        return not ("CLEAN" in self.pattern_code or "CONTROL" in self.pattern_code or self.pattern_code.startswith("C_"))
 
 
 class DowngradeAssuranceAdapter:
@@ -142,8 +261,25 @@ class DowngradeAssuranceAdapter:
         """Execute a single schedule against isolated database."""
         start_ns = time.perf_counter_ns()
         schedule_id = schedule["schedule_id"]
-        pattern_code = schedule["pattern_code"]
-        expected_outcome = schedule["expected_outcome"]
+        pattern_code = schedule.get("pattern_code") or schedule.get("code") or schedule.get("pattern_id")
+        if not pattern_code and schedule.get("template"):
+            tmpl_str = str(schedule["template"].value if hasattr(schedule["template"], "value") else schedule["template"])
+            template_code_map = {
+                "template_1_model_downgrade_base_only": "P01_MISSING_SNAPSHOT_BINDING",
+                "template_2_human_review_drop_binding": "P02_DOWNGRADE_TO_BASE_VERSION",
+                "template_3_lineage_parent_substitution": "P03_PARENT_BOUND_CHANGED_SNAPSHOT",
+                "template_4_snapshot_substitution_review": "P04_MISSING_ROOT_LINEAGE",
+                "template_5_post_review_binding_mutation": "P05_ROOT_CHILD_SNAPSHOT_MISMATCH",
+                "template_6_forged_non_consumed_thss": "P06_DIRECT_WRITE_ESCAPE",
+                "template_7_cross_profile_snapshot_injection": "P07_UNBOUND_USER_REVIEW_ADAPTER",
+                "template_8_cross_actor_coordinate_substitution": "P08_CROSS_PROFILE_LAUNDERING",
+                "template_9_purpose_task_laundering": "P09_EXPIRED_PARENT_REUSE",
+                "template_10_direct_bypass_raw_mutation": "P10_DEPENDENCY_OVERRIDE_AFTER_SEAL",
+            }
+            pattern_code = template_code_map.get(tmpl_str, "P01_MISSING_SNAPSHOT_BINDING")
+        if not pattern_code or schedule.get("is_negative") is False:
+            pattern_code = "P11_CLEAN_VALID_LINEAGE"
+        expected_outcome = schedule.get("expected_outcome", "REJECT" if pattern_code != "P11_CLEAN_VALID_LINEAGE" else "ADMIT")
         domain = schedule.get("domain", "medications")
         task = schedule.get("task", "medication_review")
 
@@ -192,7 +328,7 @@ class DowngradeAssuranceAdapter:
                 elif pattern_code == "P02_DOWNGRADE_TO_BASE_VERSION":
                     # Snapshot-bound parent -> descendant attempting transition to base-version-only
                     # Create root snapshot & binding
-                    scope = ProfileScope(profile=p1, actor=user1, role="owner", purpose="self_care")
+                    scope = _make_scope(p1, user1, "owner", "self_care")
                     snap = GlhsClinicalSnapshot(
                         profile_id=p1.id,
                         public_id=f"SNAP-E03-{schedule_id}",
@@ -206,7 +342,7 @@ class DowngradeAssuranceAdapter:
                     db.add(snap)
                     db.flush()
 
-                    root_binding = GlhsInferenceContextBinding(
+                    root_binding = _make_binding(
                         profile_id=p1.id,
                         public_id=f"BIND-E03-{schedule_id}",
                         base_state_version=1,
@@ -224,7 +360,7 @@ class DowngradeAssuranceAdapter:
                     db.add(root_binding)
                     db.flush()
 
-                    root_prop = GlhsClinicalCommitmentProposal(
+                    root_prop = _make_proposal(db, 
                         profile_id=p1.id,
                         public_id=f"PROP-ROOT-{schedule_id}",
                         commitment_public_id=f"COMM-{schedule_id}",
@@ -250,7 +386,7 @@ class DowngradeAssuranceAdapter:
                     db.flush()
 
                     # Child proposal attempts context_binding_mode="base_version_only"
-                    child_prop = GlhsClinicalCommitmentProposal(
+                    child_prop = _make_proposal(db, 
                         profile_id=p1.id,
                         public_id=f"PROP-CHILD-{schedule_id}",
                         commitment_public_id=f"COMM-{schedule_id}",
@@ -283,7 +419,7 @@ class DowngradeAssuranceAdapter:
 
                 elif pattern_code == "P03_PARENT_BOUND_CHANGED_SNAPSHOT":
                     # Snapshot-bound parent -> descendant with changed snapshot ID
-                    scope = ProfileScope(profile=p1, actor=user1, role="owner", purpose="self_care")
+                    scope = _make_scope(p1, user1, "owner", "self_care")
                     snap_a = GlhsClinicalSnapshot(
                         profile_id=p1.id,
                         public_id=f"SNAP-A-{schedule_id}",
@@ -297,7 +433,7 @@ class DowngradeAssuranceAdapter:
                     db.add(snap_a)
                     db.flush()
 
-                    root_binding = GlhsInferenceContextBinding(
+                    root_binding = _make_binding(
                         profile_id=p1.id,
                         public_id=f"BIND-A-{schedule_id}",
                         base_state_version=1,
@@ -315,7 +451,7 @@ class DowngradeAssuranceAdapter:
                     db.add(root_binding)
                     db.flush()
 
-                    root_prop = GlhsClinicalCommitmentProposal(
+                    root_prop = _make_proposal(db, 
                         profile_id=p1.id,
                         public_id=f"PROP-ROOT-{schedule_id}",
                         commitment_public_id=f"COMM-{schedule_id}",
@@ -341,7 +477,7 @@ class DowngradeAssuranceAdapter:
                     db.flush()
 
                     # Child proposal changes snapshot to SNAP-MUTATED
-                    child_prop = GlhsClinicalCommitmentProposal(
+                    child_prop = _make_proposal(db, 
                         profile_id=p1.id,
                         public_id=f"PROP-CHILD-{schedule_id}",
                         commitment_public_id=f"COMM-{schedule_id}",
@@ -374,7 +510,7 @@ class DowngradeAssuranceAdapter:
 
                 elif pattern_code == "P04_MISSING_ROOT_LINEAGE":
                     # Snapshot-bound parent -> descendant strips root lineage
-                    scope = ProfileScope(profile=p1, actor=user1, role="owner", purpose="self_care")
+                    scope = _make_scope(p1, user1, "owner", "self_care")
                     snap = GlhsClinicalSnapshot(
                         profile_id=p1.id,
                         public_id=f"SNAP-E03-{schedule_id}",
@@ -388,7 +524,7 @@ class DowngradeAssuranceAdapter:
                     db.add(snap)
                     db.flush()
 
-                    root_binding = GlhsInferenceContextBinding(
+                    root_binding = _make_binding(
                         profile_id=p1.id,
                         public_id=f"BIND-E03-{schedule_id}",
                         base_state_version=1,
@@ -407,7 +543,7 @@ class DowngradeAssuranceAdapter:
                     db.flush()
 
                     # Child proposal references snapshot but strips root_proposal_id and inference_context_binding_id
-                    child_prop = GlhsClinicalCommitmentProposal(
+                    child_prop = _make_proposal(db, 
                         profile_id=p1.id,
                         public_id=f"PROP-CHILD-{schedule_id}",
                         commitment_public_id=f"COMM-{schedule_id}",
@@ -441,7 +577,7 @@ class DowngradeAssuranceAdapter:
 
                 elif pattern_code == "P05_ROOT_CHILD_SNAPSHOT_MISMATCH":
                     # Root snapshot digest tampered in child proposal
-                    scope = ProfileScope(profile=p1, actor=user1, role="owner", purpose="self_care")
+                    scope = _make_scope(p1, user1, "owner", "self_care")
                     snap = GlhsClinicalSnapshot(
                         profile_id=p1.id,
                         public_id=f"SNAP-E03-{schedule_id}",
@@ -455,7 +591,7 @@ class DowngradeAssuranceAdapter:
                     db.add(snap)
                     db.flush()
 
-                    root_binding = GlhsInferenceContextBinding(
+                    root_binding = _make_binding(
                         profile_id=p1.id,
                         public_id=f"BIND-E03-{schedule_id}",
                         base_state_version=1,
@@ -473,7 +609,7 @@ class DowngradeAssuranceAdapter:
                     db.add(root_binding)
                     db.flush()
 
-                    root_prop = GlhsClinicalCommitmentProposal(
+                    root_prop = _make_proposal(db, 
                         profile_id=p1.id,
                         public_id=f"PROP-ROOT-{schedule_id}",
                         commitment_public_id=f"COMM-{schedule_id}",
@@ -499,7 +635,7 @@ class DowngradeAssuranceAdapter:
                     db.flush()
 
                     # Child proposal has tampered manifest digest
-                    child_prop = GlhsClinicalCommitmentProposal(
+                    child_prop = _make_proposal(db, 
                         profile_id=p1.id,
                         public_id=f"PROP-CHILD-{schedule_id}",
                         commitment_public_id=f"COMM-{schedule_id}",
@@ -558,7 +694,7 @@ class DowngradeAssuranceAdapter:
 
                 elif pattern_code == "P07_UNBOUND_USER_REVIEW_ADAPTER":
                     # User-review adapter attempting to admit model output without snapshot binding
-                    scope = ProfileScope(profile=p1, actor=user1, role="owner", purpose="self_care")
+                    scope = _make_scope(p1, user1, "owner", "self_care")
                     snap = GlhsClinicalSnapshot(
                         profile_id=p1.id,
                         public_id=f"SNAP-E03-{schedule_id}",
@@ -572,7 +708,7 @@ class DowngradeAssuranceAdapter:
                     db.add(snap)
                     db.flush()
 
-                    root_binding = GlhsInferenceContextBinding(
+                    root_binding = _make_binding(
                         profile_id=p1.id,
                         public_id=f"BIND-E03-{schedule_id}",
                         base_state_version=1,
@@ -621,7 +757,7 @@ class DowngradeAssuranceAdapter:
 
                 elif pattern_code == "P08_CROSS_PROFILE_LAUNDERING":
                     # Cross profile snapshot use: using p2's snapshot on p1's scope
-                    scope1 = ProfileScope(profile=p1, actor=user1, role="owner", purpose="self_care")
+                    scope1 = _make_scope(p1, user1, "owner", "self_care")
                     snap_p2 = GlhsClinicalSnapshot(
                         profile_id=p2.id,  # PROFILE 2
                         public_id=f"SNAP-P2-{schedule_id}",
@@ -635,7 +771,7 @@ class DowngradeAssuranceAdapter:
                     db.add(snap_p2)
                     db.flush()
 
-                    binding_p2 = GlhsInferenceContextBinding(
+                    binding_p2 = _make_binding(
                         profile_id=p2.id,  # PROFILE 2
                         public_id=f"BIND-P2-{schedule_id}",
                         base_state_version=1,
@@ -653,7 +789,7 @@ class DowngradeAssuranceAdapter:
                     db.add(binding_p2)
                     db.flush()
 
-                    prop_cross = GlhsClinicalCommitmentProposal(
+                    prop_cross = _make_proposal(db, 
                         profile_id=p1.id,  # PROFILE 1
                         public_id=f"PROP-CROSS-{schedule_id}",
                         commitment_public_id=f"COMM-{schedule_id}",
@@ -687,7 +823,7 @@ class DowngradeAssuranceAdapter:
 
                 elif pattern_code == "P09_EXPIRED_PARENT_REUSE":
                     # Expired parent snapshot lease
-                    scope = ProfileScope(profile=p1, actor=user1, role="owner", purpose="self_care")
+                    scope = _make_scope(p1, user1, "owner", "self_care")
                     # Expired snapshot (lease expired 10 minutes ago)
                     snap_expired = GlhsClinicalSnapshot(
                         profile_id=p1.id,
@@ -730,7 +866,7 @@ class DowngradeAssuranceAdapter:
 
                 elif pattern_code == "P11_CLEAN_VALID_LINEAGE":
                     # Fully valid positive control schedule with full snapshot binding
-                    scope = ProfileScope(profile=p1, actor=user1, role="owner", purpose="self_care")
+                    scope = _make_scope(p1, user1, "owner", "self_care")
                     snap_clean = GlhsClinicalSnapshot(
                         profile_id=p1.id,
                         public_id=f"SNAP-CLEAN-{schedule_id}",
@@ -744,7 +880,7 @@ class DowngradeAssuranceAdapter:
                     db.add(snap_clean)
                     db.flush()
 
-                    binding_clean = GlhsInferenceContextBinding(
+                    binding_clean = _make_binding(
                         profile_id=p1.id,
                         public_id=f"BIND-CLEAN-{schedule_id}",
                         base_state_version=1,
@@ -762,7 +898,7 @@ class DowngradeAssuranceAdapter:
                     db.add(binding_clean)
                     db.flush()
 
-                    root_prop = GlhsClinicalCommitmentProposal(
+                    root_prop = _make_proposal(db, 
                         profile_id=p1.id,
                         public_id=f"PROP-CLEAN-ROOT-{schedule_id}",
                         commitment_public_id=f"COMM-{schedule_id}",
@@ -788,7 +924,7 @@ class DowngradeAssuranceAdapter:
                     db.flush()
 
                     # Valid reviewed child proposal preserving exact snapshot binding and root lineage
-                    child_prop = GlhsClinicalCommitmentProposal(
+                    child_prop = _make_proposal(db, 
                         profile_id=p1.id,
                         public_id=f"PROP-CLEAN-CHILD-{schedule_id}",
                         commitment_public_id=f"COMM-{schedule_id}",

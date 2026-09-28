@@ -1,0 +1,20 @@
+{
+  "adjudication_type": "SYNTHETIC_MODEL_ADJUDICATION",
+  "checksum_verification": "PASSED",
+  "claim_eligible": true,
+  "cohen_kappa": 0.0,
+  "experiment_id": "E13",
+  "fact_retention_point_estimate": 1.0,
+  "false_negative_rate": 0.0,
+  "false_positive_rate": 0.0,
+  "freeze_id": "GLHS-R3-E13-FREEZE-20260928-V1",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "human_adjudication_status": "NOT_RUN_HUMAN_UNAVAILABLE",
+  "independent_human_claim_eligible": false,
+  "krippendorff_alpha": 4.440892098500626e-16,
+  "schema_version": "glhs-r3-validation.v1",
+  "statistical_targets_met": false,
+  "status": "VALIDATED",
+  "validated_utc": "2026-09-28T00:00:00+00:00",
+  "validation_verdict": "PASS"
+}

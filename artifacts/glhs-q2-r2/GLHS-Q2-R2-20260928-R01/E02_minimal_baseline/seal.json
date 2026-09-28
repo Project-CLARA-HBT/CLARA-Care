@@ -1,0 +1,30 @@
+{
+  "artifact_inventory": {
+    "derived/comparator_method_card.md": "cc5febb193d06120c83645cef6cb4259ff5c8efeb7550326aa01bc48fd14f0b0",
+    "derived/comparison_summary.json": "db9b5739d66ca3956fe5cd0727694e9fd5cbda516d86cc0136f679fa9891cedd",
+    "derived/comparison_summary.md": "06169c209d2e9a86f801d045919922f36cec07c3bc880b7fe476d21af2226d32",
+    "environment.json": "8052fa33672a592abf6c90a7c7cb0978a797faba03ceaaf04d7972343f4215b5",
+    "protocol.json": "2ee4c66b9ded14dc1d5a0845b4a934cc026070a003d48e6f801b0cbdee0b015c",
+    "protocol.sha256": "e0e9e1fa6c8337264ca35582d817d6a7892a01b9f8dd0b6bff87e744c55d8ecf",
+    "raw/runs.jsonl": "295313f761b33c60bdb778ca2559ff8cacd22ec5777ae8405301fb1243c124a7",
+    "summary.json": "d136bdf7b0f4fe6c9095ea8ea5db093d5b2e551a8a6f4c9ee3b52a04a57fe718",
+    "validation.json": "544626afb4e47ff746c20f48b041e623fff74e4113b7f15e621d6b31df810c8c"
+  },
+  "backend": "isolated_sqlite",
+  "claim_eligible": true,
+  "comparator_method_card_sha256": "cc5febb193d06120c83645cef6cb4259ff5c8efeb7550326aa01bc48fd14f0b0",
+  "comparison_summary_sha256": "db9b5739d66ca3956fe5cd0727694e9fd5cbda516d86cc0136f679fa9891cedd",
+  "executed_executions": 1408,
+  "expected_executions": 1408,
+  "freeze_id": "GLHS-MINIMAL-BASELINE-20260928-01",
+  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "protocol_sha256": "2ee4c66b9ded14dc1d5a0845b4a934cc026070a003d48e6f801b0cbdee0b015c",
+  "raw_stream_sha256": "295313f761b33c60bdb778ca2559ff8cacd22ec5777ae8405301fb1243c124a7",
+  "run_id": "GLHS-Q2-R2-20260928-R01",
+  "schedules_sha256": "d2aff36f84beb51589fe411a7668b228011fd52c07e09cb8e50ebcd2d618ab5f",
+  "schema_version": "glhs-minimal-baseline-seal.v1",
+  "sealed_at_utc": "2026-09-28T19:36:00.380353+00:00",
+  "status": "SEALED",
+  "total_schedules": 352,
+  "validation_sha256": "544626afb4e47ff746c20f48b041e623fff74e4113b7f15e621d6b31df810c8c"
+}

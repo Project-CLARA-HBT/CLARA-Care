@@ -2,17 +2,17 @@
 
 ## 1. Overview & Verification Status
 - **Protocol Freeze ID:** `GLHS-FORMAL-ASSURANCE-E08-20260928-01`
-- **Git SHA:** `81f040d3e05905cc384239c5ae130f629e722d3e`
+- **Git SHA:** `e7a073749d8d3d434f6d47204238cc6655431f76`
 - **Claim Eligible:** `TRUE`
 - **Invariant Violations:** `0` (Zero violations detected across all reachable states)
-- **Mutation Tests:** `PASSED` (7.7162s)
+- **Mutation Tests:** `PASSED` (7.2046s)
 
 ## 2. Bounded Exhaustive Sweep Statistics
 
 | Search Depth | Reached States | Distinct Canonical Coordinates | Transitions Explored | Admitted Transitions | Rejected Transitions | Admitted Commits | Idempotent Replays | Violations | Execution Time |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Depth 5** | 21,361 | 32 | 90,432 | 62,416 | 28,016 | 2,226 | 46 | 0 | 2.4961s |
-| **Depth 6** | 69,342 | 32 | 378,602 | 258,185 | 120,417 | 5,790 | 480 | 0 | 11.0052s |
+| **Depth 5** | 21,361 | 32 | 90,432 | 62,416 | 28,016 | 2,226 | 46 | 0 | 2.4227s |
+| **Depth 6** | 69,342 | 32 | 378,602 | 258,185 | 120,417 | 5,790 | 480 | 0 | 10.2919s |
 
 ## 3. Verified Invariant Catalog (I1 - I11)
 

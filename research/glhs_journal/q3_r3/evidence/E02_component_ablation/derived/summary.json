@@ -1,0 +1,11 @@
+{
+  "experiment_id": "E02",
+  "total_executions": 2816,
+  "unique_schedules": 352,
+  "factorial_arms_count": 8,
+  "full_arm_false_admissions": 0,
+  "full_arm_clean_admission_rate": 1.0,
+  "mcnemar_p_value_single_factor_removal": 1.727e-77,
+  "risk_difference_single_factor_removal": 1.0,
+  "claim_eligible": true
+}

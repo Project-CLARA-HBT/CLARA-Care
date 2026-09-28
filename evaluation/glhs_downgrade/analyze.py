@@ -71,8 +71,8 @@ def compute_wilson_score_interval(
         max(0.0, (p_hat * (1.0 - p_hat) / n) + (z**2) / (4.0 * (n**2)))
     )
 
-    lower = 0.0 if one_sided else max(0.0, center - margin)
-    upper = min(1.0, center + margin)
+    lower = 0.0 if (one_sided or k == 0) else max(0.0, center - margin)
+    upper = 1.0 if k == n else min(1.0, center + margin)
     return (lower, upper)
 
 

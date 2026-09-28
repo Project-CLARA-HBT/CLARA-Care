@@ -1,0 +1,12 @@
+{
+  "actual_backend": "SimulatedPartitionCoordinator / thread locking (NOT production PostgreSQL benchmark)",
+  "concurrency_mechanism": "Entity-Partitioned DAG Versioning vs Monolithic Profile Lock vs OCC Backoff",
+  "endpoint": "in_memory_simulation",
+  "experiment_id": "E09",
+  "fallback_usage": false,
+  "network_provider": false,
+  "production_path": false,
+  "schema_version": "glhs-r3-backend-attestation.v1",
+  "simulation": true,
+  "version": "1.0.0"
+}

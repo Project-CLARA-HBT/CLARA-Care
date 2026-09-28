@@ -1,7 +1,7 @@
 {
   "analysis_id": "E05-TOCTOU-ROOT-CAUSE-20260928",
   "schema_version": "glhs-e05-root-cause-analysis-v1",
-  "executed_at": "2026-09-27T20:41:17.545610+00:00",
+  "executed_at": "2026-09-28T14:43:05.456815+00:00",
   "historical_run_id": "GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01",
   "historical_run_status": "EXECUTED_V2_OBSERVATION_MISMATCH",
   "mismatches_investigated": [
@@ -70,13 +70,12 @@
       "replay_statistics": {
         "perturbation_count": 100,
         "classification_distribution": {
-          "rejected_after_or_during_governance_race": 98,
-          "proposal_committed_before_observed_revoke_commit": 2
+          "rejected_after_or_during_governance_race": 100
         },
-        "rejection_count": 98,
-        "committed_count": 2,
-        "rejection_rate": 0.98,
-        "wilson_upper_bound_95": 0.9934,
+        "rejection_count": 100,
+        "committed_count": 0,
+        "rejection_rate": 1.0,
+        "wilson_upper_bound_95": 1.0,
         "all_trials_safety_success": true,
         "all_trials_no_forbidden_commit": true
       }
@@ -141,14 +140,12 @@
       "replay_statistics": {
         "perturbation_count": 100,
         "classification_distribution": {
-          "rejected_during_or_before_governance_race": 53,
-          "rejected_after_observed_revoke_commit": 36,
-          "transition_committed_before_observed_revoke_commit": 11
+          "rejected_during_or_before_governance_race": 100
         },
-        "rejection_count": 89,
-        "committed_count": 11,
-        "rejection_rate": 0.89,
-        "wilson_upper_bound_95": 0.9315,
+        "rejection_count": 100,
+        "committed_count": 0,
+        "rejection_rate": 1.0,
+        "wilson_upper_bound_95": 1.0,
         "all_trials_safety_success": true,
         "all_trials_no_forbidden_commit": true
       }

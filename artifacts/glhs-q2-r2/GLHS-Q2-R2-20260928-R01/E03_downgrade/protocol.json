@@ -1,0 +1,137 @@
+{
+  "schema_version": "glhs-downgrade-assurance-protocol.v1",
+  "status": "FROZEN",
+  "freeze_id": "GLHS-DOWNGRADE-ASSURANCE-20260928-01",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "code_revision": "81f040d3",
+  "protocol_hash": "a4733477d597858238473b08074da972ed250496d166fd086435d25914a1ea8c",
+  "analysis_plan_hash": "27be05e29ce6fdfade3b5890cf662ca0f2c6183c23567d21dd19dd36e6964279",
+  "freeze_utc": "2026-09-28T00:00:00+00:00",
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "system": "Linux",
+    "db": "isolated_postgresql_or_isolated_sqlite",
+    "sqlalchemy": "2.0.46",
+    "pytest": "9.1.1"
+  },
+  "laundering_patterns": [
+    {
+      "pattern_id": 1,
+      "code": "REVIEWER-DOSAGE-EDIT",
+      "name": "Reviewer edits clinical dosage and strips model provenance",
+      "threat_vector": "A reviewer with human origin creates a new proposal that references the same commitment but omits inference_context_binding_id while editing target.dosage, attempting to strip model lineage.",
+      "expected_outcome": "REJECT",
+      "rejection_reason_code": "commitment_lineage_binding_required"
+    },
+    {
+      "pattern_id": 2,
+      "code": "MODEL-BASE-ONLY",
+      "name": "Model origin attempts base_version_only binding mode",
+      "threat_vector": "An attacker sets origin=\"model\" with context_binding_mode=\"base_version_only\" to bypass THSS snapshot validation.",
+      "expected_outcome": "REJECT",
+      "rejection_reason_code": "commitment_proposal_snapshot_binding_required"
+    },
+    {
+      "pattern_id": 3,
+      "code": "THSS-TO-BASE-DOWNGRADE",
+      "name": "Downgrade consumed-THSS lineage to base_version_only via reviewed proposal",
+      "threat_vector": "A reviewed proposal retains reviewed_proposal_id but switches context_binding_mode to base_version_only while root consumed THSS.",
+      "expected_outcome": "REJECT",
+      "rejection_reason_code": "commitment_lineage_base_only_forbidden"
+    },
+    {
+      "pattern_id": 4,
+      "code": "BINDING-ID-SWAP",
+      "name": "Substitute inference_context_binding_id with a different binding",
+      "threat_vector": "A proposal references a valid but different inference binding than the root proposal to redirect lineage without detection.",
+      "expected_outcome": "REJECT",
+      "rejection_reason_code": "commitment_lineage_binding_mismatch"
+    },
+    {
+      "pattern_id": 5,
+      "code": "SNAPSHOT-REATTACH",
+      "name": "Re-present snapshot without consumed-THSS binding",
+      "threat_vector": "A non-model origin proposal consumes a snapshot that has a persisted consumed_thss=true binding but omits inference_context_binding_id.",
+      "expected_outcome": "REJECT",
+      "rejection_reason_code": "commitment_lineage_binding_required"
+    },
+    {
+      "pattern_id": 6,
+      "code": "LINEAGE-DEPTH-OVERFLOW",
+      "name": "Exceed maximum proposal lineage depth",
+      "threat_vector": "An attacker constructs a chain of reviewed_proposal_id references exceeding MAX_PROPOSAL_LINEAGE_DEPTH (4) to overflow lineage traversal.",
+      "expected_outcome": "REJECT",
+      "rejection_reason_code": "commitment_lineage_depth_exceeded"
+    },
+    {
+      "pattern_id": 7,
+      "code": "LINEAGE-CYCLE",
+      "name": "Create a cyclic parent-ID reference in proposal lineage",
+      "threat_vector": "An attacker crafts proposals where reviewed_proposal_id creates A->B->A cycle to cause infinite traversal.",
+      "expected_outcome": "REJECT",
+      "rejection_reason_code": "commitment_lineage_cycle_detected"
+    },
+    {
+      "pattern_id": 8,
+      "code": "SQL-BASE-ONLY-BYPASS",
+      "name": "Direct SQL INSERT bypassing ORM with base_version_only + model origin",
+      "threat_vector": "Direct PostgreSQL INSERT of a proposal row with origin=\"model\" AND context_binding_mode=\"base_version_only\" to bypass Python-level guards.",
+      "expected_outcome": "REJECT",
+      "rejection_reason_code": "ck_glhs_proposal_base_only_lineage_absent"
+    },
+    {
+      "pattern_id": 9,
+      "code": "SQL-BINDING-NO-SNAPSHOT",
+      "name": "Direct SQL INSERT with binding_id but NULL snapshot fields",
+      "threat_vector": "Direct INSERT setting inference_context_binding_id with source_snapshot_id=NULL to decouple binding from snapshot proof.",
+      "expected_outcome": "REJECT",
+      "rejection_reason_code": "ck_glhs_proposal_binding_requires_snapshot"
+    },
+    {
+      "pattern_id": 10,
+      "code": "DIGEST-STRIP",
+      "name": "Reviewer modifies proposal but retains original proposal_digest",
+      "threat_vector": "Craft a reviewed proposal that modifies fields in the envelope but keeps the original proposal_digest, attempting to pass digest validation.",
+      "expected_outcome": "REJECT",
+      "rejection_reason_code": "commitment_proposal_digest_mismatch"
+    },
+    {
+      "pattern_id": 11,
+      "code": "CLEAN-CONTROL",
+      "name": "Valid positive control: correct snapshot-bound reviewed proposal",
+      "threat_vector": "Correctly formed reviewed proposal with valid root binding, matching snapshot, and proper lineage.",
+      "expected_outcome": "ADMIT",
+      "rejection_reason_code": ""
+    }
+  ],
+  "schedule_inventory": {
+    "total": 300,
+    "adversarial_negative": 250,
+    "clean_controls": 50,
+    "per_pattern": {
+      "REVIEWER-DOSAGE-EDIT": 25,
+      "MODEL-BASE-ONLY": 25,
+      "THSS-TO-BASE-DOWNGRADE": 25,
+      "BINDING-ID-SWAP": 25,
+      "SNAPSHOT-REATTACH": 25,
+      "LINEAGE-DEPTH-OVERFLOW": 25,
+      "LINEAGE-CYCLE": 25,
+      "SQL-BASE-ONLY-BYPASS": 25,
+      "SQL-BINDING-NO-SNAPSHOT": 25,
+      "DIGEST-STRIP": 25,
+      "CLEAN-CONTROL": 50
+    },
+    "schedules_sha256": "309966c1310a337801387c7739cb7e8ca5ffee329c2fc8cd796893e67845e617"
+  },
+  "primary_analysis": {
+    "endpoint": "Primary: zero adversarial laundering proposals admitted across 250 negative schedules and 100% clean-control acceptance across 50 positive schedules (300 total executions).",
+    "downgrade_success_threshold": 0,
+    "clean_control_target_rate": 1.0,
+    "total_executions": 300,
+    "route_inventory_scope": "All 5 write routes: propose_bound_commitment_transition, propose_base_commitment_transition, review_model_commitment_proposal, apply_commitment_transition, and direct SQL boundary (CHECK constraints)",
+    "fail_closed_criteria": "Any single adversarial admission is a protocol failure requiring code remediation before release.",
+    "adaptive_sample_size": false
+  }
+}

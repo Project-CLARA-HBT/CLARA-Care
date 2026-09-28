@@ -12,7 +12,8 @@ data/rag_seed/manifests/*
 .venv-ci/
 .pycache_tmp/
 apps/web/tsconfig.tsbuildinfo
-artifacts/
+artifacts/*
+!artifacts/glhs-q2-r2/
 !artifacts/peer_transactional_baselines.json
 !artifacts/peer_transactional_baselines.tex
 !artifacts/occ_thrashing_model_report.json

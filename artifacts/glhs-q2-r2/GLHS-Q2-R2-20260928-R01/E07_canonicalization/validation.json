@@ -1,0 +1,14 @@
+{
+  "byte_equality_rate": 1.0,
+  "claim_eligible": true,
+  "cross_runtime_determinism": true,
+  "freeze_id": "GLHS-CANONICALIZATION-E07-20260928-01",
+  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "python_v2_failed": 0,
+  "python_v2_passed": 35,
+  "run_id": "GLHS-Q2-R2-20260928-R01",
+  "schema_version": "canonicalization-validation.v1",
+  "status": "VALIDATED",
+  "total_vectors": 35,
+  "validated_at_utc": "2026-09-28T19:19:26.836824+00:00"
+}

@@ -26,10 +26,20 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
+import sys
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+# Ensure project root and services/api/src are in sys.path
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+_API_SRC = _REPO_ROOT / "services/api/src"
+if str(_API_SRC) not in sys.path:
+    sys.path.insert(0, str(_API_SRC))
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 RESULTS_DIR = ROOT / "research/glhs_journal/q2_r2/protocols/E05_toctou_root_cause"

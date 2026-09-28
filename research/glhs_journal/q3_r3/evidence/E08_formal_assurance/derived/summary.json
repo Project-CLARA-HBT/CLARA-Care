@@ -1,0 +1,47 @@
+{
+  "experiment_id": "E08",
+  "formal_module": "docs/formal/GLHS_GSA.tla",
+  "search_depth_max": 6,
+  "depth5": {
+    "depth": 5,
+    "states": 21361,
+    "transitions_explored": 90432,
+    "distinct_canonical_coordinates": 32,
+    "admitted_commits": 2226,
+    "idempotent_replays": 46,
+    "violation_count": 0,
+    "violations": []
+  },
+  "depth6": {
+    "depth": 6,
+    "states": 69342,
+    "transitions_explored": 378602,
+    "distinct_canonical_coordinates": 32,
+    "admitted_commits": 5790,
+    "idempotent_replays": 480,
+    "violation_count": 0,
+    "violations": []
+  },
+  "total_reachable_states_explored": 69342,
+  "total_transitions_explored": 378602,
+  "invariant_violations_detected": 0,
+  "invariants_verified": [
+    "I01",
+    "I02",
+    "I03",
+    "I04",
+    "I05",
+    "I06",
+    "I07",
+    "I08",
+    "I09",
+    "I10",
+    "I11",
+    "I12",
+    "I13",
+    "I14",
+    "I15"
+  ],
+  "mutation_tests_passed": true,
+  "claim_eligible": true
+}

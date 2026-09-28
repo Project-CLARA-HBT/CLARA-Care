@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "glhs-r3-protocol.v1",
+  "protocol_id": "GLHS-R3-E05-DEPENDENCY_COMPLETENESS",
+  "title": "Phase 3 / E05: Dependency Completeness & Mutation Analysis Statistical Evaluation Protocol",
+  "program": "GLHS R3 \u2014 Governed Read-to-Write Continuity (GRWC)",
+  "phase": "Phase 3 \u2014 Dependency Completeness & Mutation Analysis",
+  "date": "2026-09-29",
+  "curator": "Agent C \u2014 Experiment & Statistics",
+  "status": "PROSPECTIVE_FROZEN",
+  "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
+  "primary_question": "Are semantically required dependencies strictly derived and enforced at commit time, prohibiting LLM-hallucinated or omission-corrupted dependency vectors while admitting conservative supersets with zero false-stale aborts?",
+  "target_invariants": [
+    "I10_dependency_completeness",
+    "I01_state_isolation",
+    "I02_governance_freshness",
+    "I06_cas_monotonicity",
+    "I07_evidence_closure",
+    "I15_clean_path_reachability"
+  ],
+  "unit_of_analysis": "One frozen clinical operation execution or mutated dependency vector evaluated against the GLHS schema-derived dependency contract validator and PostgreSQL commit kernel under transactional isolation.",
+  "threat_model_and_mutation_taxonomy": {
+    "description": "Taxonomy of 9 dependency mutation classes (M1-M9) and 3 reference configuration arms designed to evaluate dependency vector completeness.",
+    "reference_arms": [
+      {
+        "arm_id": "ARM_REF_BASELINE",
+        "name": "baseline",
+        "expected_admission": true
+      },
+      {
+        "arm_id": "ARM_REF_SUPERSET",
+        "name": "superset",
+        "expected_admission": true
+      },
+      {
+        "arm_id": "ARM_REF_GLOBAL_FALLBACK",
+        "name": "global_fallback",
+        "expected_admission": true
+      }
+    ],
+    "mutation_classes": [
+      {
+        "class_id": "M1_omit_entity",
+        "expected_admission": false,
+        "expected_error_code": "dependency_contract_omission"
+      },
+      {
+        "class_id": "M2_add_irrelevant",
+        "expected_admission": true,
+        "expected_error_code": null
+      },
+      {
+        "class_id": "M3_mutate_entity_key",
+        "expected_admission": false,
+        "expected_error_code": "dependency_contract_omission"
+      },
+      {
+        "class_id": "M4_mutate_access_mode",
+        "expected_admission": false,
+        "expected_error_code": "dependency_contract_omission"
+      },
+      {
+        "class_id": "M5_mutate_version",
+        "expected_admission": false,
+        "expected_error_code": "dependency_contract_version_mismatch"
+      },
+      {
+        "class_id": "M6_write_skew",
+        "expected_admission": false,
+        "expected_error_code": "dependency_contract_omission"
+      },
+      {
+        "class_id": "M7_unrelated_replace",
+        "expected_admission": false,
+        "expected_error_code": "dependency_contract_omission"
+      },
+      {
+        "class_id": "M8_omit_evidence",
+        "expected_admission": false,
+        "expected_error_code": "dependency_contract_omission"
+      },
+      {
+        "class_id": "M9_omit_governance",
+        "expected_admission": false,
+        "expected_error_code": "dependency_contract_omission"
+      }
+    ]
+  },
+  "sample_size_allocation": {
+    "total_executions_N": 312,
+    "valid_executions_subtotal": 108,
+    "invalid_executions_subtotal": 204
+  },
+  "statistical_estimands": {
+    "primary_safety_estimand": {
+      "name": "Probability of Admission under Read/Write Omission or Corruption",
+      "target_value": 0.0,
+      "acceptable_threshold": 0.0,
+      "sample_denominator": 204
+    },
+    "primary_liveness_and_false_stale_estimand": {
+      "name": "False-Stale Rate under Conservative Superset",
+      "target_value": 0.0,
+      "acceptable_threshold": 0.0,
+      "sample_denominator": 108
+    }
+  },
+  "execution_environment_and_isolation": {
+    "primary_runner": "services/api/tests/test_dependency_completeness.py"
+  },
+  "claim_budget_traceability": {
+    "authorized_claims": [
+      "Operationalizes a Schema-Derived Dependency Completeness (I10) invariant for longitudinal health AI.",
+      "Enforces that persistent AI mutations cannot omit required clinical entity, governance, or evidence dependencies."
+    ],
+    "forbidden_claims": [
+      "Absolute or universal security against arbitrary un-audited database backdoors."
+    ]
+  },
+  "experiment_id": "E05",
+  "priority": "P0",
+  "freeze_id": "GLHS-R3-E05-FREEZE-20260928-V1",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "backend_requirement": "real_postgresql_16",
+  "scientific_unit": "clinical_operation_dependency_vector",
+  "primary_endpoints": [
+    {
+      "name": "Probability of Admission under Omission/Corruption P(admit | omission)",
+      "definition": "Proportion of invalid mutants M1-M9 admitted by commit kernel.",
+      "target_value": 0.0,
+      "acceptable_threshold": 0.0
+    }
+  ],
+  "secondary_endpoints": [
+    {
+      "name": "False-Stale Rate under Conservative Superset",
+      "definition": "Proportion of valid superset declarations falsely rejected.",
+      "target_value": 0.0,
+      "acceptable_threshold": 0.0
+    }
+  ],
+  "sample_size": {
+    "total_executions_N": 312,
+    "unit_definition": "312 operation executions (81 reference baseline/superset + 231 mutation classes M1-M9)"
+  },
+  "statistical_plan": {
+    "method": "Mutation Analysis Sensitivity & Wilson Upper Bound",
+    "confidence_level": 0.95
+  },
+  "stopping_rules": {
+    "fail_closed_criteria": "Any schedule admitting an invalid dependency mutant halts release gating immediately.",
+    "missing_data_rule": "Missing mutant executions cannot be encoded as rejections."
+  },
+  "artifact_layout": {
+    "required_artifacts": [
+      "protocol.json",
+      "protocol.sha256"
+    ],
+    "artifact_directory": "research/glhs_journal/q3_r3/protocols/E05_dependency_completeness"
+  }
+}

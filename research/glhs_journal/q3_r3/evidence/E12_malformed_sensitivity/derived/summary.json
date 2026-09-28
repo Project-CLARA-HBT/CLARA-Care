@@ -1,0 +1,63 @@
+{
+  "schema_version": "commitloop-malformed-sensitivity.v8-q2-r2",
+  "total_cells": 48,
+  "initial_malformed_cells": 2,
+  "initial_malformed_rate": 0.041666666666666664,
+  "taxonomy_12_class_counts": {
+    "invalid_json": 2,
+    "schema_mismatch": 0,
+    "truncation": 0,
+    "refusal": 0,
+    "empty_response": 0,
+    "provider_error": 0,
+    "wrong_model": 0,
+    "timeout": 0,
+    "content_format_violation": 0,
+    "semantic_failure": 0,
+    "rate_limit": 0,
+    "unclassified": 0
+  },
+  "stratified_errors": {
+    "claude-sonnet-4.6:glhs_hybrid_thss_strict:default": {
+      "invalid_json": 2,
+      "schema_mismatch": 0,
+      "truncation": 0,
+      "refusal": 0,
+      "empty_response": 0,
+      "provider_error": 0,
+      "wrong_model": 0,
+      "timeout": 0,
+      "content_format_violation": 0,
+      "semantic_failure": 0,
+      "rate_limit": 0,
+      "unclassified": 0
+    }
+  },
+  "arms": {
+    "R0_ITT_Primary": {
+      "correct_cells": 45,
+      "accuracy": 0.9375,
+      "repair_count": 0
+    },
+    "R1_Local_Repair": {
+      "correct_cells": 45,
+      "accuracy": 0.9375,
+      "repair_count": 1,
+      "accuracy_gain_over_r0": 0.0
+    },
+    "R2_Identical_Retry": {
+      "correct_cells": 45,
+      "accuracy": 0.9375,
+      "repair_count": 1,
+      "accuracy_gain_over_r0": 0.0
+    },
+    "R3_Constrained_Repair": {
+      "correct_cells": 45,
+      "accuracy": 0.9375,
+      "repair_count": 1,
+      "accuracy_gain_over_r0": 0.0
+    }
+  },
+  "experiment_id": "E12",
+  "claim_eligible": true
+}

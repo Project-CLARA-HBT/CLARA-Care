@@ -22,9 +22,45 @@ TAXONOMY_12_CLASSES = (
     "timeout",
     "content_format_violation",
     "semantic_failure",
+    "rate_limit",
+    "unclassified",
+)
+
+TAXONOMY_12_CLASSES_CANONICAL = TAXONOMY_12_CLASSES
+
+TAXONOMY_12_CLASSES_FROZEN_PROTOCOL = (
+    "invalid_json",
+    "schema_mismatch",
+    "truncation",
+    "refusal",
+    "empty_response",
+    "provider_error",
+    "wrong_model",
+    "timeout",
+    "content_format_violation",
+    "semantic_failure",
     "rate_limit_exhaustion",
     "unclassified_error",
 )
+
+TAXONOMY_CLASS_ALIASES: dict[str, str] = {
+    "rate_limit_exhaustion": "rate_limit",
+    "rate_limit": "rate_limit",
+    "ratelimit": "rate_limit",
+    "429": "rate_limit",
+    "quota_exceeded": "rate_limit",
+    "unclassified_error": "unclassified",
+    "unclassified": "unclassified",
+    "unknown_error": "unclassified",
+}
+
+
+def normalize_error_class(class_name: str | None) -> str | None:
+    """Normalize any error class string to the canonical 12-class taxonomy name."""
+    if not class_name:
+        return None
+    cleaned = str(class_name).strip().lower()
+    return TAXONOMY_CLASS_ALIASES.get(cleaned, cleaned)
 
 REQUIRED_PREDICTION_KEYS = {"lifecycle_state", "evidence_state", "timeliness_state"}
 
@@ -61,7 +97,7 @@ def classify_error_12_class(
     combined = f"{name} {diag}"
 
     if any(k in combined for k in ("rate_limit", "429", "quota_exceeded", "ratelimit")):
-        return "rate_limit_exhaustion"
+        return "rate_limit"
     if any(k in combined for k in ("timeout", "timed_out")):
         return "timeout"
     if any(k in combined for k in ("wrong_model", "model_substitution", "model_mismatch")):
@@ -103,7 +139,7 @@ def classify_error_12_class(
             except json.JSONDecodeError:
                 return "invalid_json"
 
-    return "unclassified_error"
+    return "unclassified"
 
 
 def validate_prediction_schema(parsed: Any) -> bool:

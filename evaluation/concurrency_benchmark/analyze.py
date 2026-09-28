@@ -1,4 +1,4 @@
-"""E09 Concurrency Benchmark Statistical Analysis and Summary Engine.
+"""E09 In-Memory Concurrency Simulation Statistical Analysis and Summary Engine.
 
 Processes raw cell-level benchmark metrics across repetitions, computes summary statistics
 (mean, std dev, quantiles), validates protocol invariants, and produces markdown/JSON summaries.
@@ -263,7 +263,8 @@ def analyze_concurrency_metrics(raw_metrics: list[dict[str, Any] | CellRunMetric
 def generate_markdown_summary(report: BenchmarkAnalysisReport) -> str:
     """Generate Markdown summary table for E09 benchmark report."""
     md = []
-    md.append("# Phase 9 (E09) Realistic Concurrency & Partition Benchmark Summary\n")
+    md.append("# Phase 9 (E09) In-Memory Concurrency Simulation Summary\n")
+    md.append("> **Note:** E09 is an In-Memory Concurrency Simulation using `SimulatedPartitionCoordinator` / thread locking (NOT a production PostgreSQL benchmark).\n")
     md.append(f"**Protocol ID:** `{report.protocol_id}`  ")
     md.append(f"**Status:** `{report.validation_status}` (All Invariants Passed: `{report.all_invariants_passed}`)  ")
     md.append(f"**Total Run Records:** `{report.total_run_records}` across `{report.unique_cells}` cell configurations\n")
@@ -299,7 +300,7 @@ def generate_markdown_summary(report: BenchmarkAnalysisReport) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Analyze E09 Concurrency Benchmark Output")
+    parser = argparse.ArgumentParser(description="Analyze E09 In-Memory Concurrency Simulation Output")
     parser.add_argument("input_json", type=Path, help="Input benchmark_results.json file")
     parser.add_argument("--output-json", type=Path, default=Path("analysis_summary.json"), help="Output JSON analysis summary")
     parser.add_argument("--output-md", type=Path, default=Path("analysis_summary.md"), help="Output Markdown summary")

@@ -1,0 +1,9 @@
+{
+  "schema_version": "glhs-r3-code-manifest.v1",
+  "experiment_id": "E12",
+  "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "active_branch": "research/glhs-q2-r2-experiments",
+  "dirty_working_tree": false,
+  "submodules": []
+}

@@ -1,20 +1,20 @@
 {
-  "checksums_sha256": "d68c04c8e32ebc089221994142ac2f4a4b247f13ace1322a29d7e1ffa4b54dd1",
+  "checksums_sha256": "c4df14ff6c3c4ef61e4d9bcbaa0682ec3458cc7de2b3316244a0abba07868dbd",
   "claim_eligible": true,
   "disjoint_false_stale_rate_dag": 0.0,
-  "disjoint_false_stale_rate_monolithic": 44.48,
+  "disjoint_false_stale_rate_monolithic": 43.99,
   "file_inventory": {
-    "derived/summary.json": "6aa6cdf2a2216030172d9bfd949b9bcc0b54ae5e7108fe4f18c75afc4aff3e27",
-    "derived/summary.md": "8276449cd70744e32c0ae337679b31d57042abfb1849e8135f6be62396f0f1c8",
-    "protocol.json": "10d9e370191fd10500b53564411f3f27a2337f62ea63854ee88f7bf3ab14769e",
-    "raw/benchmark_raw_metrics.json": "4a6dbada1a522048df659af8ae1660f18c1a7d194c706a8a0c6fb3d7c91542f9",
-    "validation.json": "39695d1152e368f40e6b0638cdfbb18bc7bfbf52e5aeabc9a7248011076959e2"
+    "derived/summary.json": "8d7b7c1112b43cdd3583d0104c976a33f5cc683fecbf7840e35536260a55829e",
+    "derived/summary.md": "233d616760d6193c31eafee32925dfb1b334eed36886d44bd378da860cf73807",
+    "protocol.json": "4e74f694c8e4cfdaa9f2f4407948047e7aaee1abd6638a80ab0f76de960ba4d6",
+    "raw/benchmark_raw_metrics.json": "2555022376b28e4e252178cd192de4919932db33b5315212941eecf72afad6b9",
+    "validation.json": "3f8ec784c1b9afa63b51ddd9216c989f831447955d7da5a6ec9e892aa4db5b98"
   },
   "freeze_id": "GLHS-CONCURRENCY-E09-20260928-01",
-  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
   "protocol_id": "E09-CONCURRENCY-BENCHMARK",
   "schema_version": "glhs-e09-concurrency-seal-v1",
-  "sealed_at_utc": "2026-09-27T19:56:04.834295+00:00",
+  "sealed_at_utc": "2026-09-28T13:08:52.343813+00:00",
   "status": "SEALED",
   "total_deadlocks": 0,
   "total_records": 6870

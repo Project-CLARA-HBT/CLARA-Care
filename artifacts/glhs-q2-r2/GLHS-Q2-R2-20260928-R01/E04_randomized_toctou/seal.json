@@ -1,0 +1,28 @@
+{
+  "schema_version": "glhs-toctou-e04-seal.v1",
+  "status": "SEALED",
+  "freeze_id": "GLHS-POSTGRES-TOCTOU-E04-20260928-01",
+  "run_id": "GLHS-Q2-R2-20260928-R01",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "protocol_sha256": "6f9977ef214e4f4a696b01cfd8b1cd7ebed954a7dd8d9859fee1d6d7bd529b6f",
+  "schedules_sha256": "bc8c1663752b71156422f8af5f5300ac6e176615c05cc57a5624db3537707de3",
+  "raw_stream_sha256": "c7cbf45ca99e8196bbc44093776006563bce0ccfc146bb763aa2008e8417d948",
+  "summary_sha256": "fb8bb61ea795c09e9c26c3b417b3b45581c3803532fb1c839b0a2ff842417ec7",
+  "validation_sha256": "67ce1f13e4d807b4bb7eda41eef79818375bc531e455c3720ee48fc89c66af21",
+  "total_schedules": 2280,
+  "expected_executions": 2280,
+  "executed_executions": 2280,
+  "forbidden_commits": 0,
+  "backend": "isolated_postgresql",
+  "claim_eligible": true,
+  "sealed_at_utc": "2026-09-27T19:34:58.100394+00:00",
+  "artifact_inventory": {
+    "derived/summary.json": "fb8bb61ea795c09e9c26c3b417b3b45581c3803532fb1c839b0a2ff842417ec7",
+    "derived/summary.md": "94b747502f78f284e6e14f1544e4cb88bf75487176dd7262f00c10e37747bf6b",
+    "environment.json": "3c041f155eeaba3870e76120073664eac4798572b21623cdc3f55029bbe23684",
+    "protocol.json": "6f9977ef214e4f4a696b01cfd8b1cd7ebed954a7dd8d9859fee1d6d7bd529b6f",
+    "protocol.sha256": "0d5e07015abae207aee67eb58e16412731f5f94506104309f3846828c6f6af92",
+    "raw/runs.jsonl": "c7cbf45ca99e8196bbc44093776006563bce0ccfc146bb763aa2008e8417d948",
+    "validation.json": "67ce1f13e4d807b4bb7eda41eef79818375bc531e455c3720ee48fc89c66af21"
+  }
+}

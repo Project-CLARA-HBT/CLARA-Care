@@ -1,0 +1,12 @@
+{
+  "schema_version": "glhs-r3-backend-attestation.v1",
+  "experiment_id": "E12",
+  "actual_backend": "12-Class Error Taxonomy Parser & Sensitivity Recovery Engine",
+  "endpoint": "Live Provider Run Ledger & Constrained Gate Evaluator",
+  "version": "commitloop-malformed-sensitivity.v8-q2-r2",
+  "production_path": true,
+  "simulation": false,
+  "network_provider": true,
+  "fallback_usage": false,
+  "concurrency_mechanism": "Commitment Gateway Parser Validation & Local JSON Repair"
+}

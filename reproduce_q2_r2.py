@@ -198,11 +198,11 @@ def sweep_all_experiments() -> dict[str, dict[str, Any]]:
     r08 = reproduce_e08.reproduce_and_verify(artifact_dir=e08_art, protocol_path=e08_prot)
     results["E08"] = {"experiment_id": "E08", "name": "Sealed Bounded Formal Assurance", **r08}
 
-    # E09: Concurrency Benchmark
+    # E09: In-Memory Concurrency Simulation
     e09_art = _REPO_ROOT / "protocols" / "E09_concurrency"
     e09_prot = _REPO_ROOT / "protocols" / "E09_concurrency" / "protocol.json"
     r09 = reproduce_e09.reproduce_and_verify(artifact_dir=e09_art, protocol_path=e09_prot)
-    results["E09"] = {"experiment_id": "E09", "name": "Realistic Concurrency & Partition Benchmark", **r09}
+    results["E09"] = {"experiment_id": "E09", "name": "In-Memory Concurrency Simulation", **r09}
 
     # E10: Fullstack Benchmark
     e10_art = _REPO_ROOT / "artifacts" / "glhs-q2-r2" / "GLHS-Q2-R2-20260928-R01" / "E10_fullstack"

@@ -1,0 +1,27 @@
+{
+  "artifact_inventory": {
+    "derived/summary.json": "7cf0f69050f414003d5657361bae3c220a784b1d90aaec03d354ed0f7d004e88",
+    "derived/summary.md": "1d91f18f4e1b549f182c8e7a6408b591b249234d363837b5611204440850c4d3",
+    "environment.json": "d233f62e2743a4f49fddca50c77de462bfbce4ac257b3790e75465909b4c3139",
+    "protocol.json": "2f62344d42674b9ccbc66d862dfd5aa9c02be6b42bded54e1ae81cb7c9b38536",
+    "raw/fullstack_manifest.json": "2f617f8a03e51944515a2876ed4004f2b2f3b67cae3ff8922a36982d452876f2",
+    "raw/fullstack_metrics.csv": "6f898a37eb0624db8802e9c28cde9f990b6dd146518f16002ae838087bdffc1f",
+    "raw/raw_latencies.json": "ef81ded92322620a304b3a8afc3c56f7ef0560e99732abbebc199db9ef4952d1",
+    "validation.json": "572adaaf57bf42a1d5d7b761f0e341bb1a3a044f134bf95fbc5507539c813306"
+  },
+  "claim_eligible": true,
+  "freeze_id": "GLHS-FULLSTACK-E10-20260928-01",
+  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "protocol_sha256": "2f62344d42674b9ccbc66d862dfd5aa9c02be6b42bded54e1ae81cb7c9b38536",
+  "raw_latencies_sha256": "ef81ded92322620a304b3a8afc3c56f7ef0560e99732abbebc199db9ef4952d1",
+  "raw_manifest_sha256": "2f617f8a03e51944515a2876ed4004f2b2f3b67cae3ff8922a36982d452876f2",
+  "raw_metrics_sha256": "6f898a37eb0624db8802e9c28cde9f990b6dd146518f16002ae838087bdffc1f",
+  "repetitions": 100,
+  "run_id": "GLHS-Q2-R2-20260928-R01",
+  "sample_size_sufficient": true,
+  "schema_version": "fullstack-seal.v1",
+  "sealed_at_utc": "2026-09-27T20:13:12.381159+00:00",
+  "status": "SEALED",
+  "summary_sha256": "7cf0f69050f414003d5657361bae3c220a784b1d90aaec03d354ed0f7d004e88",
+  "validation_sha256": "572adaaf57bf42a1d5d7b761f0e341bb1a3a044f134bf95fbc5507539c813306"
+}

@@ -1162,14 +1162,14 @@ For each enforceable invariant, create at least one model mutation that should v
 
 ---
 
-# 15. E09 — realistic concurrency and dependency-partition benchmark
+# 15. E09 — In-Memory Concurrency Simulation
 
 **Priority:** P1  
 **Reuse:** DAG benchmark, Zipfian benchmark, contention runner.
 
 ## 15.1 Purpose
 
-Replace the simplistic synchronized `(W-1)/W` contention sanity check with a broader systems characterization.
+In-memory concurrency simulation of Entity-Partitioned DAG Versioning vs Monolithic Profile Locking vs OCC using `SimulatedPartitionCoordinator` / thread locking (NOT a production PostgreSQL benchmark). Replace the simplistic synchronized `(W-1)/W` contention sanity check with a broader systems characterization.
 
 ## 15.2 Factors
 

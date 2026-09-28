@@ -1,4 +1,4 @@
-# E13 External / Independent Validation Report
+# E13 Synthetic Source-Derived Task Suite Report
 
 - **Freeze ID:** `GLHS-EXTERNAL-VALIDATION-E13-20260928-01`
 - **Git SHA:** `81f040d3e05905cc384239c5ae130f629e722d3e`
