@@ -1,30 +1,30 @@
 {
   "artifact_inventory": {
-    "E05_root_cause_analysis.json": "5488951efbe80d2608387a88d33e40084a706de0b462c427794bea3e69c6f119",
+    "E05_root_cause_analysis.json": "a197da5093c90c335eb8bf6fd99189fbee5f43ab7c3350089232a67f04e22e96",
     "protocol.json": "0fb3ed4996b5b877a3b91c50c4824a086fe08e696aeab685c376f23078b6ceef",
-    "replay_v2_05_results.json": "d7f8a785adfe77df9cced6fff7918243305a2dc5524c9d04ab6bbec524fb191b",
-    "replay_v2_09_results.json": "7903408ce2d4a0e802f3c12afbdf01b54a0cb3ca69fd0a1af0660c6a3bd03fc1"
+    "replay_v2_05_results.json": "9f62565c88f95635a79969ef599a6d3e892a0680f31c3128551372211789a77a",
+    "replay_v2_09_results.json": "1f04687dafa4e82ea7b7cacd145259004c53d729a132da6fbfc8a3483b601d25"
   },
   "claim_eligible": true,
   "forbidden_commits_observed": 0,
-  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "git_sha": "cd477b2a4fcb1d9ab04e6259672770b21c2827e8",
   "mismatched_schedules": [
     "TOCTOU-V2-05",
     "TOCTOU-V2-09"
   ],
   "protocol_id": "E05-TOCTOU-ROOT-CAUSE",
   "protocol_sha256": "0fb3ed4996b5b877a3b91c50c4824a086fe08e696aeab685c376f23078b6ceef",
-  "replay_v2_05_sha256": "d7f8a785adfe77df9cced6fff7918243305a2dc5524c9d04ab6bbec524fb191b",
-  "replay_v2_09_sha256": "7903408ce2d4a0e802f3c12afbdf01b54a0cb3ca69fd0a1af0660c6a3bd03fc1",
-  "root_cause_analysis_sha256": "5488951efbe80d2608387a88d33e40084a706de0b462c427794bea3e69c6f119",
+  "replay_v2_05_sha256": "9f62565c88f95635a79969ef599a6d3e892a0680f31c3128551372211789a77a",
+  "replay_v2_09_sha256": "1f04687dafa4e82ea7b7cacd145259004c53d729a132da6fbfc8a3483b601d25",
+  "root_cause_analysis_sha256": "a197da5093c90c335eb8bf6fd99189fbee5f43ab7c3350089232a67f04e22e96",
   "run_id": "GLHS-E05-ROOT-CAUSE-20260928",
   "safety_verdict": "SAFETY_PRESERVED",
   "schema_version": "glhs-e05-root-cause-seal-v1",
-  "sealed_at_utc": "2026-09-28T14:43:05.459880+00:00",
+  "sealed_at_utc": "2026-09-29T04:38:07.318821+00:00",
   "status": "SEALED",
   "total_perturbations": 200,
   "v205_perturbations": 100,
-  "v205_root_cause": "conservative_safe_rejection_by_implementation",
+  "v205_root_cause": "timing_dependent_mixed_outcome",
   "v209_perturbations": 100,
   "v209_root_cause": "conservative_safe_rejection_by_implementation"
 }

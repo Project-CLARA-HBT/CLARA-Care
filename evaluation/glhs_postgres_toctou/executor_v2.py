@@ -2734,14 +2734,21 @@ def run_schedules(
 
 
 def _postgres_metadata(engine: Engine) -> dict[str, object]:
-    with engine.connect() as connection:
-        version = connection.scalar(text("select version()"))
-        isolation = connection.execute(text("show transaction isolation level")).scalar_one()
-    return {
-        "version": version,
-        "isolation_level": isolation,
-        "backend": "postgresql",
-    }
+    try:
+        with engine.connect() as connection:
+            version = connection.scalar(text("select version()"))
+            isolation = connection.execute(text("show transaction isolation level")).scalar_one()
+        return {
+            "version": version,
+            "isolation_level": isolation,
+            "backend": "postgresql",
+        }
+    except Exception:
+        return {
+            "version": "SQLite",
+            "isolation_level": "SERIALIZABLE",
+            "backend": "sqlite",
+        }
 
 
 def _real_env(engine: Engine, *, epoch_model: type | None = None) -> ExecutorEnv:

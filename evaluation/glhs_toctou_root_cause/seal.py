@@ -78,6 +78,7 @@ def seal_experiment_e05(
     protocol_path: Path = DEFAULT_PROTOCOL_PATH,
     artifact_dir: Path = DEFAULT_ARTIFACT_DIR,
     run_id: str = "GLHS-E05-ROOT-CAUSE-20260928",
+    perturbation_count: int = 100,
 ) -> dict[str, Any]:
     """Execute, analyze, and cryptographically seal E05 root-cause replay experiment."""
     artifact_dir = artifact_dir.resolve()
@@ -90,14 +91,14 @@ def seal_experiment_e05(
     protocol_data = json.loads(protocol_path.read_text(encoding="utf-8"))
     validate_e05_protocol(protocol_data)
 
-    # 2. Run 100 perturbation trials for V2-05
-    v205_report = run_replay_v205(perturbation_count=100, master_seed=20260928)
+    # 2. Run perturbation trials for V2-05
+    v205_report = run_replay_v205(perturbation_count=perturbation_count, master_seed=20260928)
     v205_file = artifact_dir / "replay_v2_05_results.json"
     from dataclasses import asdict
     v205_file.write_text(json.dumps(asdict(v205_report), indent=2, default=str) + "\n", encoding="utf-8")
 
-    # 3. Run 100 perturbation trials for V2-09
-    v209_report = run_replay_v209(perturbation_count=100, master_seed=20260929)
+    # 3. Run perturbation trials for V2-09
+    v209_report = run_replay_v209(perturbation_count=perturbation_count, master_seed=20260929)
     v209_file = artifact_dir / "replay_v2_09_results.json"
     v209_file.write_text(json.dumps(asdict(v209_report), indent=2, default=str) + "\n", encoding="utf-8")
 

@@ -7,6 +7,7 @@ read/write tracking, query isolation, and fail-closed safety guards.
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from dataclasses import dataclass
@@ -36,6 +37,11 @@ from evaluation.glhs_binding_component_ablation.adapter import validate_proposal
 from evaluation.glhs_binding_component_ablation.binding_mask import B000, B111
 
 E02_ARMS = ("GLHS_B111", "MIN_READSET_TOKEN", "HMAC_READSET_TOKEN", "B000")
+DEFAULT_DATABASE_URL = (
+    os.getenv("GLHS_DATABASE_URL")
+    or os.getenv("DATABASE_URL")
+    or "postgresql+psycopg://postgres:postgres@localhost:5432/glhs_eval_r2"
+)
 
 FORBIDDEN_PRODUCTION_IMPORT_MESSAGE = (
     "minimal_readset_token is an evaluation-only comparator package (E02); "

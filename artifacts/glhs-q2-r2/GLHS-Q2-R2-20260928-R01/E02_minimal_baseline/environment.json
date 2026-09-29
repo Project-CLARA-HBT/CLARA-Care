@@ -1,8 +1,8 @@
 {
   "backend": "isolated_sqlite",
   "cpu_count": 88,
-  "generated_at_utc": "2026-09-28T19:36:00.351142+00:00",
-  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "generated_at_utc": "2026-09-29T00:10:16.865580+00:00",
+  "git_sha": "cd477b2a4fcb1d9ab04e6259672770b21c2827e8",
   "libraries": {
     "pytest": "9.1.1",
     "sqlalchemy": "2.0.46"

@@ -1,17 +1,4 @@
 {
-  "schema_version": "glhs-r3-experiment-seal.v1",
-  "experiment_id": "E02",
-  "run_id": "GLHS-R3-E02-20260928",
-  "provenance": {
-    "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
-    "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
-    "active_branch": "research/glhs-q2-r2-experiments"
-  },
-  "protocol_sha256": "026f7967e469f782473fba0cee3a3d264ea06cd65d3f82e8a07f321bfffcc369",
-  "backend_attestation_sha256": "d0bf99e6fc529c0f73b0544504b0cae6feb0a2956ec52e5b11927e738d51a0ae",
-  "validation_verdict": "PASS",
-  "forbidden_mutations_observed": 0,
-  "claim_eligible": true,
   "artifact_inventory": {
     "backend_attestation.json": "d0bf99e6fc529c0f73b0544504b0cae6feb0a2956ec52e5b11927e738d51a0ae",
     "code_manifest.json": "eeb0d1157e9070e20dc803e3ee2516a3917005d9c4abb8b148f801cc7ebf0521",
@@ -19,11 +6,24 @@
     "derived/summary.md": "bae42456d8a21a089c1b8330dd10317806e711e6d0046175f0d026d2ed64fd60",
     "environment.json": "04935af5e4eb3c6263c75931511f3725688ed2e89badcfe0e3da814ff758df67",
     "freeze.json": "2ec8a3fdd4dce5c6341ea247a867735952e393bb7985749316f5434f411b76f7",
-    "protocol.json": "026f7967e469f782473fba0cee3a3d264ea06cd65d3f82e8a07f321bfffcc369",
-    "protocol.sha256": "8d69a0ecb91ba69ee3a8a0f35ddc09657d358d267b0e58d5e3a3e0358def5121",
+    "protocol.json": "8d3f042d194b39adb44a3777bc506b4562f6862f2ee05cb6fb37fd1c33973224",
+    "protocol.sha256": "32330834c869c66a9ca0dfda70d1b8d590bafa1e502636ead038261fb54afa21",
     "raw/runs.jsonl": "c176ba93cd9e7bf3f4b37aa3c8c6dbbd47e70aca3dfac14af6db637ce7a3f2fc",
     "validation.json": "f12f3c57ee0a5bfccd23636c56f7ffd5774872be9960a8aac56fd44abcdae010"
   },
+  "backend_attestation_sha256": "d0bf99e6fc529c0f73b0544504b0cae6feb0a2956ec52e5b11927e738d51a0ae",
+  "claim_eligible": true,
+  "experiment_id": "E02",
+  "forbidden_mutations_observed": 0,
+  "protocol_sha256": "8d3f042d194b39adb44a3777bc506b4562f6862f2ee05cb6fb37fd1c33973224",
+  "provenance": {
+    "active_branch": "research/glhs-q2-r2-experiments",
+    "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e"
+  },
+  "run_id": "GLHS-R3-E02-20260928",
+  "schema_version": "glhs-r3-experiment-seal.v1",
   "sealed_at_utc": "2026-09-28T00:00:00Z",
-  "status": "SEALED"
+  "status": "SEALED",
+  "validation_verdict": "PASS"
 }

@@ -24,6 +24,7 @@ from evaluation.commitloop.malformed_sensitivity import (
 )
 from evaluation.commitloop.seal_v8 import seal_v8_protocol
 from evaluation.commitloop.v8_runner import (
+    audit_provider_run_ledger,
     verify_v8_freeze_contract,
     verify_v8_provider_probe,
 )
@@ -128,6 +129,30 @@ def test_v8_statistical_analysis_and_tost(tmp_path: Path) -> None:
     assert len(claude_res["bootstrap_95_ci"]) == 2
 
 
+def test_v8_tost_zero_variance_and_power_handling() -> None:
+    """Verify Schuirmann TOST handling of zero variance and sample size power."""
+    from evaluation.commitloop.tost_equivalence import compute_tost_paired
+
+    # Pilot cohort: N=8, zero-variance (all identical differences 0.0)
+    strict_pilot = [1.0] * 8
+    full_pilot = [1.0] * 8
+    res_pilot = compute_tost_paired(strict_pilot, full_pilot, delta=0.02, alpha=0.05)
+    assert res_pilot.p_tost is None
+    assert res_pilot.is_equivalent is False
+    assert res_pilot.se == 0.0
+    assert res_pilot.note is not None
+    assert "Observed exact agreement on the eight tested cases; population-level +/-2pp equivalence was not established (underpowered sample size)." in res_pilot.note
+
+    # Powered cohort: N=384, zero-variance (all identical differences 0.0)
+    strict_powered = [1.0] * 384
+    full_powered = [1.0] * 384
+    res_powered = compute_tost_paired(strict_powered, full_powered, delta=0.02, alpha=0.05)
+    assert res_powered.p_tost == 0.0001
+    assert res_powered.is_equivalent is True
+    assert res_powered.ci_90 == (0.0, 0.0)
+    assert res_powered.ci_95_contained is True
+
+
 def test_v8_seal_creation_and_checksums(tmp_path: Path) -> None:
     """Verify seal creation and checksum generation."""
     protocol_dir = tmp_path / "protocol"
@@ -187,3 +212,119 @@ def test_offline_reproduction_e11_and_e12() -> None:
 
     assert reproduce_e11.main() == 0
     assert reproduce_e12.main() == 0
+
+
+def test_provider_ledger_record_by_record_audit() -> None:
+    """Verify record-by-record auditing on prospective provider run ledger."""
+    ledger_path = Path("protocols/commitloop/v8-glhs-q2-r2/provider_run_ledger.json")
+    assert ledger_path.is_file()
+
+    audit = audit_provider_run_ledger(ledger_path)
+    assert audit["total_records"] == 48
+    assert audit["audit_passed"] is True
+    assert set(audit["models_tested"]) == {"claude-sonnet-4.6", "gemini-3.6-flash-high", "gemini-3.8-flash-tiered"}
+
+    # Must accurately report 9 fallbacks (unallowed model substitutions), NOT 0
+    assert audit["fallbacks_observed"] == 9
+    assert audit["fallbacks_observed"] != 0
+
+    # Model drift / unallowed fallback breakdown
+    breakdown = audit["model_drift_breakdown"]
+    assert breakdown["gemini-3.8-flash-tiered -> gemini-3.7-flash-tiered"] == 4
+    assert breakdown["gemini-3.8-flash-tiered -> gemini-3.6-flash-tiered"] == 5
+
+    # Documented alias normalizations (not silent zero, tracked separately)
+    alias_norm = audit["alias_normalization"]
+    assert alias_norm["claude-sonnet-4.6 -> claude-sonnet-4-6"] == 16
+    assert alias_norm["gemini-3.8-flash-tiered -> antigravity/gemini-3.8-flash-tiered"] == 7
+
+    # Error taxonomy breakdown
+    assert audit["error_counts"] == {"invalid_json": 2}
+
+    # Token usage positive integers
+    assert audit["token_usage"]["prompt_tokens"] > 0
+    assert audit["token_usage"]["completion_tokens"] > 0
+    assert audit["token_usage"]["total_tokens"] > 0
+
+
+def test_provider_ledger_audit_detects_malformed_records() -> None:
+    """Verify provider ledger auditing rejects empty raw output, bad tokens, or bad taxonomy."""
+    valid_record = {
+        "requested_model_id": "gemini-3.6-flash-high",
+        "reported_model_id": "gemini-3.6-flash-high",
+        "raw_output": '{"lifecycle_state": "OPEN"}',
+        "parsed_output": {"lifecycle_state": "OPEN"},
+        "prompt_tokens": 100,
+        "completion_tokens": 20,
+        "total_tokens": 120,
+        "error_classification": None,
+    }
+
+    # 1. Empty raw output
+    bad_raw = dict(valid_record, raw_output="")
+    with pytest.raises(ValueError, match="empty_or_missing_raw_output"):
+        audit_provider_run_ledger({"ledger": [bad_raw]})
+
+    # 2. Negative token count
+    bad_tokens = dict(valid_record, prompt_tokens=-1)
+    with pytest.raises(ValueError, match="invalid_token_count"):
+        audit_provider_run_ledger({"ledger": [bad_tokens]})
+
+    # 3. Non-integer token count
+    bad_tokens_type = dict(valid_record, total_tokens="many")
+    with pytest.raises(ValueError, match="invalid_token_count"):
+        audit_provider_run_ledger({"ledger": [bad_tokens_type]})
+
+    # 4. Unknown error classification
+    bad_err = dict(valid_record, error_classification="arbitrary_unregistered_error")
+    with pytest.raises(ValueError, match="unknown_error_classification"):
+        audit_provider_run_ledger({"ledger": [bad_err]})
+
+    # 5. Null parsed output without error classification
+    null_parsed = dict(valid_record, parsed_output=None, error_classification=None)
+    with pytest.raises(ValueError, match="missing_error_classification_for_null_parsed_output"):
+        audit_provider_run_ledger({"ledger": [null_parsed]})
+
+
+def test_provider_ledger_audit_model_mismatch_increments_fallback() -> None:
+    """Verify mismatched model IDs increment fallbacks_observed and never report 0."""
+    records = [
+        {
+            "requested_model_id": "gemini-3.8-flash-tiered",
+            "reported_model_id": "gemini-3.7-flash-tiered",
+            "raw_output": '{"lifecycle_state": "OPEN"}',
+            "parsed_output": {"lifecycle_state": "OPEN"},
+            "prompt_tokens": 100,
+            "completion_tokens": 20,
+            "total_tokens": 120,
+            "error_classification": None,
+        },
+        {
+            "requested_model_id": "gemini-3.8-flash-tiered",
+            "reported_model_id": "gemini-3.6-flash-tiered",
+            "raw_output": '{"lifecycle_state": "OPEN"}',
+            "parsed_output": {"lifecycle_state": "OPEN"},
+            "prompt_tokens": 100,
+            "completion_tokens": 20,
+            "total_tokens": 120,
+            "error_classification": None,
+        },
+        {
+            "requested_model_id": "gemini-3.6-flash-high",
+            "reported_model_id": "gemini-3.6-flash-high",
+            "raw_output": '{"lifecycle_state": "OPEN"}',
+            "parsed_output": {"lifecycle_state": "OPEN"},
+            "prompt_tokens": 100,
+            "completion_tokens": 20,
+            "total_tokens": 120,
+            "error_classification": None,
+        },
+    ]
+
+    audit = audit_provider_run_ledger({"ledger": records})
+    assert audit["fallbacks_observed"] == 2
+    assert audit["total_records"] == 3
+    assert audit["model_drift_breakdown"] == {
+        "gemini-3.8-flash-tiered -> gemini-3.7-flash-tiered": 1,
+        "gemini-3.8-flash-tiered -> gemini-3.6-flash-tiered": 1,
+    }

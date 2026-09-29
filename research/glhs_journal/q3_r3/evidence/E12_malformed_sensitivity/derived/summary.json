@@ -59,5 +59,12 @@
     }
   },
   "experiment_id": "E12",
+  "fallbacks_observed": 32,
+  "model_routing_drift": {
+    "claude-sonnet-4.6 -> claude-sonnet-4-6": 16,
+    "gemini-3.8-flash-tiered -> antigravity/gemini-3.8-flash-tiered": 7,
+    "gemini-3.8-flash-tiered -> gemini-3.7-flash-tiered": 4,
+    "gemini-3.8-flash-tiered -> gemini-3.6-flash-tiered": 5
+  },
   "claim_eligible": true
 }

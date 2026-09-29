@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Offline reproduction and evidence integrity validator for E13 (External / Independent Validation).
+"""Offline reproduction and evidence integrity validator for E13 (Synthetic Source-Derived Task Suite).
 
-Validates the full sealed artifact bundle for E13:
+Validates the full sealed artifact bundle for E13 Synthetic Source-Derived Task Suite
+(derived from eICU/Synthea/MIMIC/Diabetes schemas) with human review as NOT_RUN_HUMAN_UNAVAILABLE:
 1. Disables all network access fail-closed.
 2. Verifies cryptographic checksums in checksums.sha256.
 3. Validates protocol freeze and corpora definitions.
 4. Reproduces derived/summary.json and derived/summary.md from raw execution results.
-5. Verifies Red Team (E) guardrails (synthetic model vs independent human adjudication).
-6. Validates seal.json binding and claim eligibility.
+5. Verifies Red Team (E) guardrails (synthetic model adjudication vs independent human adjudication).
+6. Validates seal.json binding and claim eligibility (adjudication_type = "SYNTHETIC_MODEL_ADJUDICATION", independent_human_claim_eligible = False).
 
 Run from repository root:
 
@@ -43,21 +44,49 @@ class NetworkAccessProhibitedError(RuntimeError):
     """Raised if any network activity is attempted during offline reproduction."""
 
 
+class RecordCountMismatchError(RuntimeError):
+    """Raised when raw runs record count does not match expected_records count."""
+
+
+_orig_socket = socket.socket
+_orig_create_connection = socket.create_connection
+_orig_getaddrinfo = socket.getaddrinfo
+_orig_gethostbyname = socket.gethostbyname
+
+
+def restore_network() -> None:
+    """Restore original socket functions."""
+    socket.socket = _orig_socket
+    socket.create_connection = _orig_create_connection
+    socket.getaddrinfo = _orig_getaddrinfo
+    socket.gethostbyname = _orig_gethostbyname
+
+
 def disable_network() -> None:
-    """Prohibit all socket creation and DNS resolution fail-closed."""
-    _orig_socket = socket.socket
+    """Prohibit external network activity while permitting local socket/loopback DB connections."""
+    def allowed_socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0, fileno=None):
+        return _orig_socket(family, type, proto, fileno)
 
-    class ForbiddenSocket(_orig_socket):
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            raise NetworkAccessProhibitedError("network_access_prohibited_during_reproduction")
+    def allowed_conn(address, *args: Any, **kwargs: Any) -> Any:
+        host = address[0] if isinstance(address, (list, tuple)) else address
+        if host in ("localhost", "127.0.0.1", "::1", None):
+            return _orig_create_connection(address, *args, **kwargs)
+        raise NetworkAccessProhibitedError(f"network_access_prohibited_during_reproduction: {host}")
 
-    def forbidden_conn(*args: Any, **kwargs: Any) -> Any:
-        raise NetworkAccessProhibitedError("network_access_prohibited_during_reproduction")
+    def allowed_getaddrinfo(host, port, *args: Any, **kwargs: Any) -> Any:
+        if host in ("localhost", "127.0.0.1", "::1", None):
+            return _orig_getaddrinfo(host, port, *args, **kwargs)
+        raise NetworkAccessProhibitedError(f"network_access_prohibited_during_reproduction: {host}")
 
-    socket.socket = ForbiddenSocket  # type: ignore[assignment]
-    socket.create_connection = forbidden_conn  # type: ignore[assignment]
-    socket.getaddrinfo = forbidden_conn  # type: ignore[assignment]
-    socket.gethostbyname = forbidden_conn  # type: ignore[assignment]
+    def allowed_gethostbyname(host: str) -> str:
+        if host in ("localhost", "127.0.0.1", "::1"):
+            return _orig_gethostbyname(host)
+        raise NetworkAccessProhibitedError(f"network_access_prohibited_during_reproduction: {host}")
+
+    socket.socket = allowed_socket  # type: ignore[assignment]
+    socket.create_connection = allowed_conn  # type: ignore[assignment]
+    socket.getaddrinfo = allowed_getaddrinfo  # type: ignore[assignment]
+    socket.gethostbyname = allowed_gethostbyname  # type: ignore[assignment]
 
 
 def sha256_file(path: Path) -> str:
@@ -175,6 +204,10 @@ def reproduce_and_verify(
     raw_results_path = artifact_dir / "raw" / "results.jsonl"
     if not raw_results_path.is_file():
         raise FileNotFoundError(f"raw_results_missing:{raw_results_path}")
+
+    raw_lines = [l for l in raw_results_path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    if len(raw_lines) != 9:
+        raise RecordCountMismatchError(f"execution_count_mismatch:expected=9:actual={len(raw_lines)}")
 
     # 4. Reproduce derived summary from raw stream
     reproduced_summary = analyze_e13_results(raw_results_path, protocol_path)

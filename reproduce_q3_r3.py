@@ -40,6 +40,12 @@ AUDITED_GIT_COMMIT = "81f040d3e05905cc384239c5ae130f629e722d3e"
 AUDITED_SUT_COMMIT = "81f040d3e05905cc384239c5ae130f629e722d3e"
 AUDITED_HARNESS_COMMIT = "e7a073749d8d3d434f6d47204238cc6655431f76"
 
+MODEL_ALIAS_MAP: dict[str, list[str]] = {
+    "claude-sonnet-4.6": ["claude-sonnet-4.6", "claude-sonnet-4-6"],
+    "gemini-3.6-flash-high": ["gemini-3.6-flash-high"],
+    "gemini-3.8-flash-tiered": ["gemini-3.8-flash-tiered", "antigravity/gemini-3.8-flash-tiered"],
+}
+
 RELEASE_ROOT = _REPO_ROOT / "research" / "glhs_journal" / "q3_r3" / "release"
 EVIDENCE_ROOT = _REPO_ROOT / "research" / "glhs_journal" / "q3_r3" / "evidence"
 PROTOCOLS_ROOT = _REPO_ROOT / "research" / "glhs_journal" / "q3_r3" / "protocols"
@@ -59,7 +65,7 @@ EXPERIMENTS_MAP = [
     ("E10", "E10_fullstack", "FastAPI HTTP REST Gateway & PostgreSQL Tail Performance", 700),
     ("E11", "E11_model_replication", "Two-Model Large Context Utility & TOST Equivalence", 48),
     ("E12", "E12_malformed_sensitivity", "12-Class Malformed-Output Error Taxonomy & Sensitivity", 48),
-    ("E13", "E13_external_validation", "External Longitudinal Cohort Validation (eICU/Synthea/MIMIC/Diabetes)", 9),
+    ("E13", "E13_external_validation", "Synthetic Source-Derived Task Suite (eICU/Synthea/MIMIC/Diabetes)", 9),
     ("E14", "E14_reproducibility", "Hermetic Clean-Environment Reproduction & Release Packaging", 15),
 ]
 
@@ -92,10 +98,30 @@ class ClaimBudgetViolationError(RuntimeError):
     """Raised when a claim ledger statement breaches claim_budget.json prohibitions."""
 
 
-def disable_network() -> None:
-    """Prohibit all socket creation and DNS resolution fail-closed."""
-    _orig_socket = socket.socket
+class GitWorktreeDirtyError(RuntimeError):
+    """Raised when git repository is dirty or git command fails during fail-closed check."""
 
+
+class RecordCountMismatchError(RuntimeError):
+    """Raised when raw runs record count does not match expected_records count."""
+
+
+_orig_socket = socket.socket
+_orig_create_connection = socket.create_connection
+_orig_getaddrinfo = socket.getaddrinfo
+_orig_gethostbyname = socket.gethostbyname
+
+
+def restore_network() -> None:
+    """Restore original socket functions."""
+    socket.socket = _orig_socket
+    socket.create_connection = _orig_create_connection
+    socket.getaddrinfo = _orig_getaddrinfo
+    socket.gethostbyname = _orig_gethostbyname
+
+
+def disable_network() -> None:
+    """Prohibit all socket creation and DNS resolution during offline reproduction."""
     def forbidden_socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0, fileno=None):
         if family in (socket.AF_INET, socket.AF_INET6):
             raise NetworkAccessProhibitedError("network_access_prohibited_during_reproduction")
@@ -133,7 +159,9 @@ def parse_iso8601(ts_str: str) -> datetime:
 
 
 def verify_git_state(skip_git_check: bool = False) -> dict[str, Any]:
-    """Verify git commit and clean-tree state."""
+    """Verify git commit and clean-tree state. Fail closed with GitWorktreeDirtyError if git is missing or tree is dirty."""
+    git_available = True
+    current_sha = AUDITED_SUT_COMMIT
     try:
         res_sha = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -144,19 +172,27 @@ def verify_git_state(skip_git_check: bool = False) -> dict[str, Any]:
         )
         current_sha = res_sha.stdout.strip()
     except (subprocess.SubprocessError, OSError):
-        current_sha = AUDITED_SUT_COMMIT
+        git_available = False
 
-    try:
-        res_status = subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=no"],
-            capture_output=True,
-            text=True,
-            check=True,
-            cwd=_REPO_ROOT,
-        )
-        clean_tree = len(res_status.stdout.strip()) == 0
-    except (subprocess.SubprocessError, OSError):
-        clean_tree = True
+    clean_tree = False
+    if git_available:
+        try:
+            res_status = subprocess.run(
+                ["git", "status", "--porcelain", "--untracked-files=no"],
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=_REPO_ROOT,
+            )
+            clean_tree = len(res_status.stdout.strip()) == 0
+        except (subprocess.SubprocessError, OSError):
+            git_available = False
+
+    if not skip_git_check:
+        if not git_available or not clean_tree:
+            raise GitWorktreeDirtyError(
+                "git_check_failed: git unavailable or tracked worktree is dirty"
+            )
 
     return {
         "audited_commit": AUDITED_GIT_COMMIT,
@@ -165,7 +201,7 @@ def verify_git_state(skip_git_check: bool = False) -> dict[str, Any]:
         "current_commit": current_sha,
         "commit_match": (current_sha == AUDITED_SUT_COMMIT or current_sha.startswith(AUDITED_SUT_COMMIT[:8])),
         "tracked_worktree_clean": clean_tree,
-        "git_check_passed": skip_git_check or clean_tree,
+        "git_check_passed": skip_git_check or (git_available and clean_tree),
     }
 
 
@@ -266,9 +302,12 @@ def verify_provider_run_ledger(exp_dir: Path) -> dict[str, Any]:
     data = json.loads(att_file.read_text(encoding="utf-8"))
     actual_backend = data.get("actual_backend", "").lower()
     is_live_provider = data.get("network_provider", False) and ("live" in actual_backend or "provider ledger" in actual_backend or "e11" in exp_dir.name.lower())
+    is_e12 = "e12" in exp_dir.name.lower()
 
-    if is_live_provider:
+    if is_live_provider or is_e12:
         ledger_file = exp_dir / "raw" / "provider_run_ledger.json"
+        if not ledger_file.is_file() and is_e12:
+            ledger_file = exp_dir.parent / "E11_model_replication" / "raw" / "provider_run_ledger.json"
         if not ledger_file.is_file():
             raise UnbackedProviderClaimError(
                 f"unbacked_provider_claim_missing_ledger in {exp_dir.name}"
@@ -276,35 +315,120 @@ def verify_provider_run_ledger(exp_dir: Path) -> dict[str, Any]:
         ledger_doc = json.loads(ledger_file.read_text(encoding="utf-8"))
         if not ledger_doc:
             raise UnbackedProviderClaimError(f"unbacked_provider_claim_empty_ledger:{exp_dir.name}")
+
+        from evaluation.commitloop.v8_runner import audit_provider_run_ledger
+        try:
+            audit_res = audit_provider_run_ledger(
+                ledger_doc,
+                raise_on_empty_raw=True,
+                raise_on_token_error=True,
+                raise_on_taxonomy_error=True,
+            )
+        except (ValueError, TypeError) as err:
+            raise UnbackedProviderClaimError(f"unbacked_provider_claim_invalid_ledger:{exp_dir.name}:{err}") from err
+
+        # Deep-check requested vs reported models: verify non-empty strings and valid models tested
+        if not audit_res.get("models_tested"):
+            raise UnbackedProviderClaimError(f"unbacked_provider_claim_missing_models_tested:{exp_dir.name}")
+
+        # Deep-check token usage non-negative and positive
+        token_usage = audit_res.get("token_usage", {})
+        if (
+            token_usage.get("prompt_tokens", 0) <= 0
+            or token_usage.get("completion_tokens", 0) <= 0
+            or token_usage.get("total_tokens", 0) <= 0
+        ):
+            raise UnbackedProviderClaimError(f"unbacked_provider_claim_invalid_token_usage:{exp_dir.name}:{token_usage}")
+
+        val_file = exp_dir / "validation.json"
+        if val_file.is_file():
+            val_doc = json.loads(val_file.read_text(encoding="utf-8"))
+            val_fallbacks = val_doc.get("fallbacks_observed")
+            if val_fallbacks is not None:
+                if audit_res["fallbacks_observed"] > 0 and val_fallbacks == 0:
+                    raise UnbackedProviderClaimError(
+                        f"unbacked_provider_claim_false_zero_fallback:{exp_dir.name}: audited={audit_res['fallbacks_observed']} vs reported={val_fallbacks}"
+                    )
+                if val_fallbacks != audit_res["fallbacks_observed"]:
+                    raise UnbackedProviderClaimError(
+                        f"unbacked_provider_claim_fallback_count_mismatch:{exp_dir.name}: audited={audit_res['fallbacks_observed']} vs reported={val_fallbacks}"
+                    )
+
+        ledger_doc["_audit"] = audit_res
         return ledger_doc
 
     return {}
 
 
 def verify_experiment_chronology(exp_dir: Path) -> None:
-    """Verify that protocol freeze strictly precedes execution timestamps."""
+    """Verify that protocol freeze strictly precedes execution, validation, and seal timestamps."""
     freeze_file = exp_dir / "freeze.json"
     if not freeze_file.is_file():
         raise MissingArtifactError(f"freeze_file_missing:{freeze_file}")
 
     freeze_data = json.loads(freeze_file.read_text(encoding="utf-8"))
-    freeze_ts_str = freeze_data.get("freeze_timestamp_utc", freeze_data.get("freeze_timestamp"))
+    freeze_ts_str = (
+        freeze_data.get("freeze_timestamp_utc")
+        or freeze_data.get("freeze_timestamp")
+        or freeze_data.get("prospective_freeze_timestamp_utc")
+    )
     if not freeze_ts_str:
-        return
+        raise ChronologyAnomalyError(f"missing_freeze_timestamp:{exp_dir.name}")
 
     freeze_dt = parse_iso8601(freeze_ts_str)
 
-    # Check execution artifacts in directory
-    for candidate in [exp_dir / "seal.json", exp_dir / "derived" / "summary.json"]:
+    exec_started_dt = None
+    exec_completed_dt = None
+    validated_dt = None
+    sealed_dt = None
+
+    for candidate in [
+        exp_dir / "seal.json",
+        exp_dir / "validation.json",
+        exp_dir / "derived" / "summary.json",
+        exp_dir / "raw" / "fullstack_manifest.json",
+    ]:
         if candidate.is_file():
             doc = json.loads(candidate.read_text(encoding="utf-8"))
-            exec_ts_str = doc.get("execution_timestamp", doc.get("sealed_at_utc", doc.get("started_at")))
-            if exec_ts_str:
-                exec_dt = parse_iso8601(exec_ts_str)
-                if freeze_dt > exec_dt:
-                    raise ChronologyAnomalyError(
-                        f"chronology_anomaly: freeze {freeze_dt.isoformat()} > execution {exec_dt.isoformat()} in {candidate.name}"
-                    )
+            st_str = doc.get("execution_started_utc") or doc.get("started_at")
+            cp_str = doc.get("execution_completed_utc") or doc.get("completed_at")
+            vl_str = doc.get("validated_at_utc") or doc.get("validated_utc")
+            sl_str = doc.get("sealed_at_utc") or doc.get("sealed_utc") or doc.get("execution_timestamp")
+
+            if st_str and exec_started_dt is None:
+                exec_started_dt = parse_iso8601(st_str)
+            if cp_str and exec_completed_dt is None:
+                exec_completed_dt = parse_iso8601(cp_str)
+            if vl_str and validated_dt is None:
+                validated_dt = parse_iso8601(vl_str)
+            if sl_str and sealed_dt is None:
+                sealed_dt = parse_iso8601(sl_str)
+
+    # Monotonic order: freeze_timestamp_utc <= execution_started_utc <= execution_completed_utc <= sealed_at_utc
+    if exec_started_dt and freeze_dt > exec_started_dt:
+        raise ChronologyAnomalyError(
+            f"chronology_anomaly: freeze {freeze_dt.isoformat()} > execution_started {exec_started_dt.isoformat()} in {exp_dir.name}"
+        )
+    if exec_started_dt and exec_completed_dt and exec_started_dt > exec_completed_dt:
+        raise ChronologyAnomalyError(
+            f"chronology_anomaly: execution_started {exec_started_dt.isoformat()} > execution_completed {exec_completed_dt.isoformat()} in {exp_dir.name}"
+        )
+    if exec_completed_dt and validated_dt and exec_completed_dt > validated_dt:
+        raise ChronologyAnomalyError(
+            f"chronology_anomaly: execution_completed {exec_completed_dt.isoformat()} > validated_at {validated_dt.isoformat()} in {exp_dir.name}"
+        )
+    if exec_completed_dt and sealed_dt and exec_completed_dt > sealed_dt:
+        raise ChronologyAnomalyError(
+            f"chronology_anomaly: execution_completed {exec_completed_dt.isoformat()} > sealed_at {sealed_dt.isoformat()} in {exp_dir.name}"
+        )
+    if validated_dt and sealed_dt and validated_dt > sealed_dt:
+        raise ChronologyAnomalyError(
+            f"chronology_anomaly: validated_at {validated_dt.isoformat()} > sealed_at {sealed_dt.isoformat()} in {exp_dir.name}"
+        )
+    if sealed_dt and freeze_dt > sealed_dt:
+        raise ChronologyAnomalyError(
+            f"chronology_anomaly: freeze {freeze_dt.isoformat()} > sealed_at {sealed_dt.isoformat()} in {exp_dir.name}"
+        )
 
 
 def verify_experiment_bundle(
@@ -354,6 +478,41 @@ def verify_experiment_bundle(
     elif (exp_dir / "raw" / "results.jsonl").is_file():
         results_file = exp_dir / "raw" / "results.jsonl"
         records_count = len([l for l in results_file.read_text(encoding="utf-8").splitlines() if l.strip()])
+
+    # Enforce expected_records line-count validation fail-closed
+    exp_expected = expected_records
+    val_file = exp_dir / "validation.json"
+    if exp_expected is None and val_file.is_file():
+        vdoc = json.loads(val_file.read_text(encoding="utf-8"))
+        exp_expected = (
+            vdoc.get("expected_records")
+            or vdoc.get("total_schedules_audited")
+            or vdoc.get("total_executions_audited")
+            or vdoc.get("total_run_records")
+            or vdoc.get("total_trials_audited")
+            or vdoc.get("total_tasks")
+            or vdoc.get("total_vectors_audited")
+        )
+
+    proto_file = exp_dir / "protocol.json"
+    if exp_expected is None and proto_file.is_file():
+        pdoc = json.loads(proto_file.read_text(encoding="utf-8"))
+        exp_expected = (
+            pdoc.get("sample_size_allocation", {}).get("total_executions")
+            or pdoc.get("sample_size_allocation", {}).get("total_runs")
+            or pdoc.get("sample_size_allocation", {}).get("total_schedules_N")
+            or pdoc.get("sample_size_allocation", {}).get("total_executions_N")
+        )
+
+    if exp_expected is None:
+        raise RecordCountMismatchError(
+            f"record_count_mismatch:{exp_id}:missing_expected_records_count"
+        )
+
+    if records_count != exp_expected:
+        raise RecordCountMismatchError(
+            f"record_count_mismatch:{exp_id}:expected={exp_expected}:actual={records_count}"
+        )
 
     # 6. Seal verification
     seal_file = exp_dir / "seal.json"

@@ -5,6 +5,20 @@
     "title": "Two-Model Large Context Replication",
     "primary_unit": "subject",
     "enrolled_subjects": 384,
+    "pilot_live_probe_ledger": {
+      "total_requests": 48,
+      "cases": 8,
+      "conditions": 2,
+      "models": 3,
+      "purpose": "latency, error taxonomy, and schema compliance validation",
+      "power_status": "underpowered_n_lt_384_tost_not_claimable"
+    },
+    "full_prospective_powered_cohort": {
+      "n_subjects": 384,
+      "strata": 8,
+      "subjects_per_stratum": 48,
+      "purpose": "powered Schuirmann TOST equivalence testing"
+    },
     "model_families": [
       "claude-sonnet-4.6",
       "gemini-3.6-flash-high"

@@ -1,8 +1,8 @@
-"""Execution module for E13 (External / Independent Validation).
+"""Execution module for E13 (Synthetic Source-Derived Task Suite).
 
-Executes external longitudinal validation across curated corpora (eICU, Synthea,
-MIMIC-on-FHIR, Diabetes 130) using GLHS state reconstruction and blinded dual-annotator
-review packets.
+Executes synthetic source-derived longitudinal task suite (derived from eICU/Synthea/MIMIC/Diabetes
+schemas) with human review as NOT_RUN_HUMAN_UNAVAILABLE, adjudication_type = "SYNTHETIC_MODEL_ADJUDICATION",
+and independent_human_claim_eligible = False.
 """
 
 from __future__ import annotations

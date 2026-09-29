@@ -204,23 +204,23 @@ def _breakdown_by_dimension(
     for group_key, items in sorted(groups.items()):
         total = len(items)
         forbidden = sum(
-            1 for r in items if r.get("forbidden") or r.get("oracle_classification") == "FORBIDDEN_COMMIT" or r.get("oracle_classification") == "FORBIDDEN"
+            1 for r in items if r.get("forbidden") or (r.get("oracle_classification") or r.get("safety_status")) in ("FORBIDDEN_COMMIT", "FORBIDDEN") or r.get("forbidden_commit_observed") is True
         )
         safe_rej = sum(
             1 for r in items
-            if (r.get("oracle_classification") in ("SAFE", "SAFE_REJECTED_AFTER_GOVERNANCE_MUTATION"))
-            and r.get("commit_outcome") not in COMMITTED_OUTCOMES
+            if ((r.get("oracle_classification") or r.get("safety_status")) in ("SAFE", "SAFE_REJECTED_AFTER_GOVERNANCE_MUTATION"))
+            and (r.get("commit_outcome") or r.get("actual_outcome")) not in COMMITTED_OUTCOMES
         )
         indet = sum(
-            1 for r in items if r.get("indeterminate") or r.get("oracle_classification") in ("INDETERMINATE", "INDETERMINATE_ORDERING")
+            1 for r in items if r.get("indeterminate") or (r.get("oracle_classification") or r.get("safety_status")) in ("INDETERMINATE", "INDETERMINATE_ORDERING")
         )
         ops = sum(
-            1 for r in items if r.get("operational") or r.get("oracle_classification") in ("OPERATIONAL", "OPERATIONAL_DEADLOCK")
+            1 for r in items if r.get("operational") or (r.get("oracle_classification") or r.get("safety_status")) in ("OPERATIONAL", "OPERATIONAL_DEADLOCK")
         )
         admit = sum(
             1 for r in items
-            if (r.get("oracle_classification") in ("SAFE", "COMMITTED_BEFORE_GOVERNANCE_MUTATION"))
-            and r.get("commit_outcome") in COMMITTED_OUTCOMES
+            if ((r.get("oracle_classification") or r.get("safety_status")) in ("SAFE", "COMMITTED_BEFORE_GOVERNANCE_MUTATION"))
+            and (r.get("commit_outcome") or r.get("actual_outcome")) in COMMITTED_OUTCOMES
         )
         rate = forbidden / total if total > 0 else 0.0
         upper = compute_one_sided_wilson_upper(forbidden, total)
@@ -283,23 +283,23 @@ def analyze_campaign_results(
         repeat_record = None
 
     forbidden_count = sum(
-        1 for r in results if r.get("forbidden") or r.get("oracle_classification") in ("FORBIDDEN", "FORBIDDEN_COMMIT") or r.get("forbidden_commit_observed") is True
+        1 for r in results if r.get("forbidden") or (r.get("oracle_classification") or r.get("safety_status")) in ("FORBIDDEN", "FORBIDDEN_COMMIT") or r.get("forbidden_commit_observed") is True
     )
     safe_rejection_count = sum(
         1 for r in results
-        if r.get("oracle_classification") in ("SAFE", "SAFE_REJECTED_AFTER_GOVERNANCE_MUTATION")
-        and r.get("commit_outcome") not in COMMITTED_OUTCOMES
+        if ((r.get("oracle_classification") or r.get("safety_status")) in ("SAFE", "SAFE_REJECTED_AFTER_GOVERNANCE_MUTATION"))
+        and (r.get("commit_outcome") or r.get("actual_outcome")) not in COMMITTED_OUTCOMES
     )
     indeterminate_count = sum(
-        1 for r in results if r.get("indeterminate") or r.get("oracle_classification") in ("INDETERMINATE", "INDETERMINATE_ORDERING")
+        1 for r in results if r.get("indeterminate") or (r.get("oracle_classification") or r.get("safety_status")) in ("INDETERMINATE", "INDETERMINATE_ORDERING")
     )
     operational_count = sum(
-        1 for r in results if r.get("operational") or r.get("oracle_classification") in ("OPERATIONAL", "OPERATIONAL_DEADLOCK")
+        1 for r in results if r.get("operational") or (r.get("oracle_classification") or r.get("safety_status")) in ("OPERATIONAL", "OPERATIONAL_DEADLOCK")
     )
     admit_count = sum(
         1 for r in results
-        if r.get("oracle_classification") in ("SAFE", "COMMITTED_BEFORE_GOVERNANCE_MUTATION")
-        and r.get("commit_outcome") in COMMITTED_OUTCOMES
+        if ((r.get("oracle_classification") or r.get("safety_status")) in ("SAFE", "COMMITTED_BEFORE_GOVERNANCE_MUTATION"))
+        and (r.get("commit_outcome") or r.get("actual_outcome")) in COMMITTED_OUTCOMES
     )
 
     forbidden_commit_rate = forbidden_count / executed_schedules if executed_schedules > 0 else 0.0
@@ -314,7 +314,7 @@ def analyze_campaign_results(
     primary_endpoint_pass = forbidden_count == 0
 
     timing_bd = _breakdown_by_dimension(results, lambda r: r.get("timing", "unknown"))
-    mutation_bd = _breakdown_by_dimension(results, lambda r: r.get("mutations_applied", ["unknown"]))
+    mutation_bd = _breakdown_by_dimension(results, lambda r: r.get("mutations_applied", r.get("mutations", ["unknown"])))
     entity_bd = _breakdown_by_dimension(results, lambda r: r.get("entity", "unknown"))
     modifier_bd = _breakdown_by_dimension(results, lambda r: r.get("modifier", "unknown"))
 

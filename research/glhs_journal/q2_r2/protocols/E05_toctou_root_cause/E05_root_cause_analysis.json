@@ -1,7 +1,7 @@
 {
   "analysis_id": "E05-TOCTOU-ROOT-CAUSE-20260928",
   "schema_version": "glhs-e05-root-cause-analysis-v1",
-  "executed_at": "2026-09-28T14:43:05.456815+00:00",
+  "executed_at": "2026-09-29T04:38:07.315263+00:00",
   "historical_run_id": "GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01",
   "historical_run_status": "EXECUTED_V2_OBSERVATION_MISMATCH",
   "mismatches_investigated": [
@@ -70,13 +70,14 @@
       "replay_statistics": {
         "perturbation_count": 100,
         "classification_distribution": {
-          "rejected_after_or_during_governance_race": 100
+          "rejected_after_or_during_governance_race": 68,
+          "indeterminate_ordering_proposal_committed": 32
         },
-        "rejection_count": 100,
-        "committed_count": 0,
-        "rejection_rate": 1.0,
-        "wilson_upper_bound_95": 1.0,
-        "all_trials_safety_success": true,
+        "rejection_count": 68,
+        "committed_count": 32,
+        "rejection_rate": 0.68,
+        "wilson_upper_bound_95": 0.7511,
+        "all_trials_safety_success": false,
         "all_trials_no_forbidden_commit": true
       }
     },

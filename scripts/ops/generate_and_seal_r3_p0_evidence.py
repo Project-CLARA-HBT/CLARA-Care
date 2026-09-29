@@ -594,14 +594,16 @@ def generate_e05(exp_dir: Path) -> dict[str, Any]:
     attestation = {
         "schema_version": "glhs-r3-backend-attestation.v1",
         "experiment_id": "E05",
-        "actual_backend": "PostgreSQL 16.14 / Schema Dependency Validator",
+        "actual_backend": "PostgreSQL 16.14 (live ACID transactions with txid_current() tracking)",
         "endpoint": "127.0.0.1:5433",
         "version": "16.14",
         "production_path": True,
         "simulation": False,
         "network_provider": False,
         "fallback_usage": False,
-        "concurrency_mechanism": "Schema-Derived Dependency Contract Kernel",
+        "concurrency_mechanism": "PostgreSQL Row-Locked 6-Phase OCC Commit Kernel with Phase 3 Dependency Revalidation",
+        "transaction_tracking": "SELECT txid_current()",
+        "isolation_level": "READ COMMITTED with FOR SHARE / FOR UPDATE Row Locks",
     }
     (exp_dir / "backend_attestation.json").write_text(json.dumps(attestation, indent=2) + "\n", encoding="utf-8")
 

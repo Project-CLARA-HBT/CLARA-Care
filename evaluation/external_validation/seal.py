@@ -1,7 +1,10 @@
-"""Sealing script for E13 (External / Independent Validation).
+"""Sealing script for E13 (Synthetic Source-Derived Task Suite).
 
 Validates protocol freeze, executes analysis, computes cryptographic checksums,
-and emits sealed artifacts (checksums.sha256, validation.json, seal.json).
+and emits sealed artifacts (checksums.sha256, validation.json, seal.json) for the
+Synthetic Source-Derived Task Suite (derived from eICU/Synthea/MIMIC/Diabetes schemas)
+with human review as NOT_RUN_HUMAN_UNAVAILABLE, adjudication_type = "SYNTHETIC_MODEL_ADJUDICATION",
+and independent_human_claim_eligible = False.
 """
 
 from __future__ import annotations

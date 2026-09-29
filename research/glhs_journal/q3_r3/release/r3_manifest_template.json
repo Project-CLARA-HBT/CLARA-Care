@@ -216,7 +216,7 @@
       "status": "PENDING_EXECUTION"
     },
     "E13": {
-      "name": "External / Source-Disjoint Task Validation",
+      "name": "Synthetic Source-Derived Task Suite (derived from eICU/Synthea/MIMIC/Diabetes schemas)",
       "priority": "P2",
       "backend": "External Independent Dataset Evaluator",
       "primary_question": "Does GRWC generalize to externally authored clinical schemas and workflows?",

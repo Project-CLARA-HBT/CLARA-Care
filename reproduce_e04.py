@@ -47,6 +47,10 @@ class NetworkAccessProhibitedError(RuntimeError):
     """Raised if any network activity is attempted during offline reproduction."""
 
 
+class RecordCountMismatchError(RuntimeError):
+    """Raised when raw runs record count does not match expected_records count."""
+
+
 def disable_network() -> None:
     """Prohibit all socket creation and DNS resolution."""
     def forbidden_socket(*args: Any, **kwargs: Any) -> Any:
@@ -159,7 +163,7 @@ def reproduce_and_verify(
     raw_records = [json.loads(line) for line in raw_lines if line.strip()]
 
     if len(raw_records) != len(schedules):
-        raise ValueError(
+        raise RecordCountMismatchError(
             f"execution_count_mismatch:expected={len(schedules)}:found={len(raw_records)}"
         )
 

@@ -1,8 +1,10 @@
-"""Comprehensive test suite for Phase 13 (E13: External / Independent Validation).
+"""Comprehensive test suite for Phase 13 (E13: Synthetic Source-Derived Task Suite).
 
 Validates task packets, protocol specifications, statistical calculations (Cohen's kappa,
 Krippendorff's alpha, Wilson CIs), execution pipeline, analysis, sealing, offline reproduction,
-and Red Team (E) guardrails.
+and Red Team (E) guardrails for the Synthetic Source-Derived Task Suite (derived from
+eICU/Synthea/MIMIC/Diabetes schemas) with human review as NOT_RUN_HUMAN_UNAVAILABLE,
+adjudication_type = "SYNTHETIC_MODEL_ADJUDICATION", and independent_human_claim_eligible = False.
 """
 
 from __future__ import annotations

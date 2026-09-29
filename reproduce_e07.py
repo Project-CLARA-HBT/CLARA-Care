@@ -31,6 +31,10 @@ class NetworkAccessProhibitedError(RuntimeError):
     """Raised if any network activity is attempted during offline reproduction."""
 
 
+class RecordCountMismatchError(RuntimeError):
+    """Raised when raw runs record count does not match expected_records count."""
+
+
 def disable_network() -> None:
     """Prohibit all socket creation and DNS resolution."""
     def forbidden_socket(*args: Any, **kwargs: Any) -> Any:
@@ -118,6 +122,15 @@ def reproduce_and_verify(
     raw_results_path = artifact_dir / "raw" / "results.jsonl"
     if not raw_results_path.is_file():
         raise FileNotFoundError(f"raw_results_missing:{raw_results_path}")
+
+    raw_lines = [l for l in raw_results_path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    expected_vectors = (
+        protocol_data.get("sample_size_allocation", {}).get("total_vectors")
+        or protocol_data.get("sample_size_allocation", {}).get("test_vectors_count")
+        or (len(raw_lines) if len(raw_lines) >= protocol_data.get("primary_analysis", {}).get("minimum_vectors", 0) else None)
+    )
+    if expected_vectors is not None and len(raw_lines) != expected_vectors:
+        raise RecordCountMismatchError(f"execution_count_mismatch:expected={expected_vectors}:actual={len(raw_lines)}")
 
     # 4. Reproduce derived summary from raw stream
     reproduced_summary = analyze_conformance_results(raw_results_path, protocol_doc_path)

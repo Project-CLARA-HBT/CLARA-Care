@@ -33,6 +33,10 @@ class NetworkAccessProhibitedError(RuntimeError):
     """Raised if any network activity is attempted during offline reproduction."""
 
 
+class RecordCountMismatchError(RuntimeError):
+    """Raised when raw runs record count does not match expected_records count."""
+
+
 def disable_network() -> None:
     """Prohibit all external network activity (IPv4/IPv6)."""
     _orig_socket = socket.socket
@@ -150,6 +154,10 @@ def reproduce_and_verify(
             if stored_hash != computed_hash:
                 raise ValueError(f"hash_mismatch:line={lineno}")
             prev_hash = str(stored_hash)
+
+        run_records_count = len([l for l in lines if l.strip()])
+        if run_records_count != 700:
+            raise RecordCountMismatchError(f"execution_count_mismatch:expected=700:actual={run_records_count}")
 
     # 4. Reproduce derived summary from raw metrics
     reproduced_summary = analyze(raw_metrics_path, raw_manifest_path)

@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import csv
 import json
+import sys
 from pathlib import Path
+
+# Ensure repo root and service packages are on sys.path
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+for _p in (_REPO_ROOT, _REPO_ROOT / "services" / "api" / "src", _REPO_ROOT / "services" / "ml" / "src"):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 import pytest
 

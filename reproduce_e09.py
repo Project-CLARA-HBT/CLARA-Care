@@ -46,6 +46,10 @@ class NetworkAccessProhibitedError(RuntimeError):
     """Raised if any network activity is attempted during offline reproduction."""
 
 
+class RecordCountMismatchError(RuntimeError):
+    """Raised when raw runs record count does not match expected_records count."""
+
+
 def disable_network() -> None:
     """Prohibit all socket creation and DNS resolution fail-closed (except AF_UNIX socketpairs)."""
     _orig_socket = socket.socket
@@ -180,6 +184,12 @@ def reproduce_and_verify(
         raise ValueError(f"reproduced_dag_false_stale_rate_not_zero:{reproduced_report.disjoint_false_stale_rate_dag}")
     if reproduced_report.total_deadlocks_across_all_runs != 0:
         raise ValueError(f"reproduced_deadlocks_detected:{reproduced_report.total_deadlocks_across_all_runs}")
+
+    expected_records = protocol_doc.get("sample_size_allocation", {}).get("total_transactions") or 6870
+    if runs_file.is_file():
+        r_lines = [l for l in runs_file.read_text(encoding="utf-8").splitlines() if l.strip()]
+        if len(r_lines) != 6870:
+            raise RecordCountMismatchError(f"execution_count_mismatch:expected=6870:actual={len(r_lines)}")
 
     # 4. Compare reproduced analysis against sealed derived summary
     sealed_summary_file = artifact_dir / "derived" / "summary.json"

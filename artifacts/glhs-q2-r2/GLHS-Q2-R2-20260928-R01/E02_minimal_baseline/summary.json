@@ -48,10 +48,10 @@
         "std": 67.56
       },
       "validation_cpu_stats": {
-        "mean_ms": 1.9158,
-        "median_ms": 1.8078,
-        "p95_ms": 2.6649,
-        "max_ms": 3.2906
+        "mean_ms": 2.0665,
+        "median_ms": 2.0415,
+        "p95_ms": 2.7903,
+        "max_ms": 3.2675
       },
       "per_family_breakdown": {
         "ID-SUB": {
@@ -140,10 +140,10 @@
         "std": 67.56
       },
       "validation_cpu_stats": {
-        "mean_ms": 1.9201,
-        "median_ms": 1.812,
-        "p95_ms": 2.6315,
-        "max_ms": 5.6983
+        "mean_ms": 2.0798,
+        "median_ms": 2.0682,
+        "p95_ms": 2.8155,
+        "max_ms": 7.2537
       },
       "per_family_breakdown": {
         "ID-SUB": {
@@ -232,10 +232,10 @@
         "std": 18.75
       },
       "validation_cpu_stats": {
-        "mean_ms": 1.6665,
-        "median_ms": 1.5041,
-        "p95_ms": 2.309,
-        "max_ms": 2.7979
+        "mean_ms": 1.7855,
+        "median_ms": 1.712,
+        "p95_ms": 2.4308,
+        "max_ms": 2.7756
       },
       "per_family_breakdown": {
         "ID-SUB": {
@@ -324,10 +324,10 @@
         "std": 18.75
       },
       "validation_cpu_stats": {
-        "mean_ms": 1.3832,
-        "median_ms": 1.2243,
-        "p95_ms": 1.9928,
-        "max_ms": 2.5193
+        "mean_ms": 1.4892,
+        "median_ms": 1.3941,
+        "p95_ms": 2.1368,
+        "max_ms": 2.5361
       },
       "per_family_breakdown": {
         "ID-SUB": {
@@ -400,7 +400,7 @@
       "false_positive_count": 192,
       "false_acceptance_rate": 0.75,
       "mean_serialized_metadata_bytes": 1407.54,
-      "mean_validation_cpu_time_ms": 1.9158
+      "mean_validation_cpu_time_ms": 2.0665
     },
     "GLHS_B111": {
       "total_executions": 352,
@@ -414,7 +414,7 @@
       "false_positive_count": 0,
       "false_acceptance_rate": 0.0,
       "mean_serialized_metadata_bytes": 1407.54,
-      "mean_validation_cpu_time_ms": 1.9201
+      "mean_validation_cpu_time_ms": 2.0798
     },
     "HMAC_READSET_TOKEN": {
       "total_executions": 352,
@@ -428,7 +428,7 @@
       "false_positive_count": 0,
       "false_acceptance_rate": 0.0,
       "mean_serialized_metadata_bytes": 738.51,
-      "mean_validation_cpu_time_ms": 1.6665
+      "mean_validation_cpu_time_ms": 1.7855
     },
     "MIN_READSET_TOKEN": {
       "total_executions": 352,
@@ -442,7 +442,7 @@
       "false_positive_count": 0,
       "false_acceptance_rate": 0.0,
       "mean_serialized_metadata_bytes": 595.51,
-      "mean_validation_cpu_time_ms": 1.3832
+      "mean_validation_cpu_time_ms": 1.4892
     }
   },
   "concordance_against_glhs_b111": {

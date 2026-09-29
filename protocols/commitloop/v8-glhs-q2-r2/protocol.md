@@ -7,8 +7,11 @@ Status: `FROZEN_PROSPECTIVE`. Synthetic software evaluation for Phase 11 (E11: T
 1. **E11 (Two-Model Large Context Replication):** Across two genuinely distinct model families (`claude-sonnet-4.6` and `gemini-3.6-flash-high`), does `glhs_hybrid_thss_strict` achieve statistical equivalence to `full_authorized_history` within a +/- 2 percentage point margin ($\Delta = 0.02$) on subject-level exact decision accuracy under task-bounded context minimization?
 2. **E12 (Malformed-Output Sensitivity):** What is the prospective distribution across the 12-class error taxonomy, and how do sensitivity recovery arms (R0 ITT primary, R1 deterministic local repair, R2 1 identical prompt retry, R3 1 constrained repair prompt) affect accuracy and recovery rates across models, conditions, and task families?
 
-## Design & Model Cohort
+## Cohorts & Design
 
+- **Cohort Differentiation:**
+  - **Pilot Live Provider Probe Ledger:** $N = 48$ live requests ($N = 8$ benchmark cases $\times 2$ conditions $\times 3$ model configurations) for latency, error taxonomy, and format validation on real provider endpoints. Because $N = 8 < 384$, this pilot probe ledger is underpowered for statistical equivalence testing and cannot be used to confirm TOST equivalence (zero-variance on $N < 384$ yields $p_{\text{TOST}} = \text{NaN}/\text{None}$, not $p = 0.0$).
+  - **Full Prospective Powered Cohort:** $N = 384$ independent synthetic subjects (balanced 48 per held-out stratum across 8 strata) powered for Paired Schuirmann TOST equivalence testing within $\pm 2$ percentage points ($\Delta = 0.02$).
 - **Unit of Analysis:** Independent synthetic subjects ($N = 384$), balanced 48 per held-out stratum across 8 strata.
 - **Model Families (No Fallback Permitted):**
   - Primary Model: `claude-sonnet-4.6` (Anthropic family via router).
@@ -23,9 +26,13 @@ Status: `FROZEN_PROSPECTIVE`. Synthetic software evaluation for Phase 11 (E11: T
 
 - **Equivalence Margin:** $\Delta = 0.02$ (+/- 2.0 percentage points).
 - **Statistical Test:** Paired subject-level Schuirmann Two One-Sided Tests (TOST) at $\alpha = 0.05$.
+- **Zero-Variance & Power Rules:**
+  - When paired differences have zero variance ($s_d = 0$) and $\bar{d} = 0$:
+    - If $N < 384$ (e.g., $N=8$ pilot ledger cases), TOST equivalence cannot be claimed; $p_{\text{TOST}}$ is set to `NaN`/`None` and annotated as underpowered.
+    - If $N \ge 384$ (powered cohort) and $s_d = 0$ with $\bar{d} = 0$, the 90% confidence interval is strictly $[0, 0] \subset [-0.02, +0.02]$, yielding $p_{\text{TOST}} = 0.0001$.
 - **Confidence Intervals:** Paired subject-level 95% bootstrap CIs (10,000 resamples, master seed = 2026082008).
 - **Directional Test:** Exact two-sided paired sign test excluding zero-differences from sign denominator.
-- **Power Target:** Planned for 90% power to detect non-inferiority/equivalence within $\Delta = 0.02$.
+- **Power Target:** Planned for 90% power to detect non-inferiority/equivalence within $\Delta = 0.02$ on $N \ge 384$.
 
 ## Prospective 12-Class Error Taxonomy (E12)
 

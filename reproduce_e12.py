@@ -31,6 +31,7 @@ from evaluation.commitloop.fixtures import controlled_benchmark_bundles
 from evaluation.commitloop.fhir_ingest import ingest_bundle
 from evaluation.commitloop.candidate_mining import mine_candidates
 from evaluation.commitloop.oracle import compile_construction_gold
+from evaluation.commitloop.v8_runner import MODEL_ALIAS_MAP, audit_provider_run_ledger
 from evaluation.commitloop.malformed_sensitivity import (
     TAXONOMY_12_CLASSES,
     classify_error_12_class,
@@ -41,6 +42,10 @@ from evaluation.commitloop.malformed_sensitivity import (
 
 class NetworkAccessProhibitedError(RuntimeError):
     """Raised if network activity is attempted during offline reproduction."""
+
+
+class RecordCountMismatchError(RuntimeError):
+    """Raised when raw runs record count does not match expected_records count."""
 
 
 @contextmanager
@@ -135,6 +140,21 @@ def verify_sealed_evidence_bundle(evidence_dir: Path | None = None) -> dict[str,
             raise ValueError(f"Hash chain broken at line {i}")
         prev_h = h
 
+    if len(runs_lines) != 48:
+        raise RecordCountMismatchError(f"execution_count_mismatch:expected=48:actual={len(runs_lines)}")
+
+    val_path = evidence_dir / "validation.json"
+    if val_path.is_file():
+        val_doc = json.loads(val_path.read_text(encoding="utf-8"))
+        val_fallbacks = val_doc.get("fallbacks_observed")
+        e11_ledger = REPO_ROOT / "research/glhs_journal/q3_r3/evidence/E11_model_replication/raw/provider_run_ledger.json"
+        if val_fallbacks is not None and e11_ledger.is_file():
+            audit_res = audit_provider_run_ledger(e11_ledger)
+            if audit_res["fallbacks_observed"] > 0 and val_fallbacks == 0:
+                raise ValueError(f"validation.json reports false 0 fallbacks (audited={audit_res['fallbacks_observed']})")
+            if val_fallbacks != audit_res["fallbacks_observed"]:
+                raise ValueError(f"validation.json fallbacks_observed mismatch: {val_fallbacks} != {audit_res['fallbacks_observed']}")
+
     return {
         "verified": True,
         "files_verified": len(required_files),
@@ -153,9 +173,13 @@ def load_live_provider_ledger_taxonomy(ledger_path: Path | None = None) -> dict[
         return None
 
     ledger_data = json.loads(ledger_path.read_text(encoding="utf-8"))
+    audit_res = audit_provider_run_ledger(ledger_data)
     return {
         "recorded_utc": ledger_data.get("recorded_utc"),
         "total_requests": ledger_data.get("total_requests"),
+        "fallbacks_observed": audit_res["fallbacks_observed"],
+        "model_drift_breakdown": audit_res["model_drift_breakdown"],
+        "alias_normalization": audit_res.get("alias_normalization", {}),
         "error_breakdown": ledger_data.get("error_taxonomy_breakdown", {}),
     }
 
@@ -206,9 +230,13 @@ def analyze_live_provider_ledger_sensitivity(ledger_path: Path | None = None) ->
         })
 
     eval_res = evaluate_sensitivity_arms(cell_outputs, gold_by_case)
+    audit_res = audit_provider_run_ledger(ledger_data)
     return {
         "recorded_utc": ledger_data.get("recorded_utc"),
         "total_requests": ledger_data.get("total_requests"),
+        "fallbacks_observed": audit_res["fallbacks_observed"],
+        "model_drift_breakdown": audit_res["model_drift_breakdown"],
+        "alias_normalization": audit_res.get("alias_normalization", {}),
         "eval_res": eval_res,
     }
 
@@ -339,6 +367,11 @@ def main() -> int:
         live_sens = analyze_live_provider_ledger_sensitivity()
         if live_sens:
             print(f"\n--- Empirical Live Provider Run Ledger Taxonomy (Total Requests: {live_sens['total_requests']}) ---")
+            print(f"Fallbacks Observed: {live_sens.get('fallbacks_observed', 0)}")
+            if live_sens.get("model_drift_breakdown"):
+                print("Model Routing Drift Breakdown:")
+                for drift_k, count in sorted(live_sens["model_drift_breakdown"].items()):
+                    print(f"  {drift_k}: {count} occurrences")
             eval_res_live = live_sens["eval_res"]
             for err_cls, cnt in eval_res_live["taxonomy_12_class_counts"].items():
                 if cnt > 0:

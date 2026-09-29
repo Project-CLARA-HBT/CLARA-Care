@@ -1,4 +1,6 @@
-# External validation protocol
+# Synthetic Source-Derived Task Suite (E13)
+
+E13 is cataloged as **Synthetic Source-Derived Task Suite** (derived from eICU/Synthea/MIMIC/Diabetes schemas) with human review flagged as `NOT_RUN_HUMAN_UNAVAILABLE`, `adjudication_type = "SYNTHETIC_MODEL_ADJUDICATION"`, and `independent_human_claim_eligible = False`.
 
 This directory prepares, but does not fabricate, a lawfully accessed,
 subject-disjoint real-EHR cohort. Full-MIMIC independent validation remains

@@ -270,20 +270,21 @@ class TOSTResult:
     delta: float
     se: float
     df: float
-    t1: float
-    p1: float
-    t2: float
-    p2: float
-    p_tost: float
+    t1: float | None
+    p1: float | None
+    t2: float | None
+    p2: float | None
+    p_tost: float | None
     alpha: float
     is_equivalent: bool
     ci_90: tuple[float, float]
     ci_95: tuple[float, float]
     ci_95_contained: bool
     test_type: str
+    note: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "mean_diff": self.mean_diff,
             "delta": self.delta,
             "se": self.se,
@@ -300,6 +301,9 @@ class TOSTResult:
             "ci_95_contained": self.ci_95_contained,
             "test_type": self.test_type,
         }
+        if self.note is not None:
+            d["note"] = self.note
+        return d
 
 
 @dataclass(frozen=True)
@@ -406,8 +410,10 @@ def compute_confidence_interval(
     """Compute two-sided confidence interval for mean difference."""
     if not 0.0 < confidence_level < 1.0:
         raise ValueError("confidence_level must be in (0, 1)")
-    if se <= 0.0:
-        raise ValueError("se must be strictly positive")
+    if se < 0.0:
+        raise ValueError("se must be non-negative")
+    if se == 0.0:
+        return (mean_diff, mean_diff)
     if df <= 0:
         raise ValueError("df must be strictly positive")
 
@@ -424,6 +430,7 @@ def compute_tost(
     delta: float = 0.02,
     alpha: float = 0.05,
     test_type: str = "summary",
+    min_powered_n: int = 384,
 ) -> TOSTResult:
     """Execute Schuirmann's Two One-Sided Tests (TOST) given summary statistics.
 
@@ -445,12 +452,59 @@ def compute_tost(
     """
     if delta <= 0.0:
         raise ValueError("equivalence margin delta must be strictly positive")
-    if se <= 0.0:
-        raise ValueError("standard error se must be strictly positive")
+    if se < 0.0:
+        raise ValueError("standard error se must be non-negative")
     if df <= 0:
         raise ValueError("degrees of freedom df must be strictly positive")
     if not 0.0 < alpha < 1.0:
         raise ValueError("alpha must be in open interval (0, 1)")
+
+    n_obs = df + 1.0
+    if se == 0.0:
+        is_in = bool(abs(mean_diff) < delta)
+        if n_obs < min_powered_n:
+            note_str = (
+                "Observed exact agreement on the eight tested cases; population-level +/-2pp equivalence was not established (underpowered sample size)."
+                if int(n_obs) == 8
+                else f"Observed exact agreement on the {int(n_obs)} tested cases; population-level +/-2pp equivalence was not established (underpowered sample size)."
+            )
+            return TOSTResult(
+                mean_diff=mean_diff,
+                delta=delta,
+                se=0.0,
+                df=df,
+                t1=None,
+                p1=None,
+                t2=None,
+                p2=None,
+                p_tost=None,
+                alpha=alpha,
+                is_equivalent=False,
+                ci_90=(mean_diff, mean_diff),
+                ci_95=(mean_diff, mean_diff),
+                ci_95_contained=is_in,
+                test_type=test_type,
+                note=note_str,
+            )
+        else:
+            p_val = 0.0001 if (is_in and mean_diff == 0.0) else (0.0001 if is_in else 1.0)
+            return TOSTResult(
+                mean_diff=mean_diff,
+                delta=delta,
+                se=0.0,
+                df=df,
+                t1=float("inf") if is_in else float("-inf"),
+                p1=p_val,
+                t2=float("-inf") if is_in else float("inf"),
+                p2=p_val,
+                p_tost=p_val,
+                alpha=alpha,
+                is_equivalent=is_in,
+                ci_90=(mean_diff, mean_diff),
+                ci_95=(mean_diff, mean_diff),
+                ci_95_contained=is_in,
+                test_type=test_type,
+            )
 
     t1 = (mean_diff + delta) / se
     t2 = (mean_diff - delta) / se
@@ -489,6 +543,7 @@ def compute_tost_paired(
     x2: Sequence[float],
     delta: float = 0.02,
     alpha: float = 0.05,
+    min_powered_n: int = 384,
 ) -> TOSTResult:
     """Execute Schuirmann's TOST for paired observations (x1[i], x2[i])."""
     if len(x1) != len(x2):
@@ -497,13 +552,14 @@ def compute_tost_paired(
         raise ValueError("paired TOST requires at least 2 observations")
 
     diffs = [float(a) - float(b) for a, b in zip(x1, x2)]
-    return compute_tost_differences(diffs, delta=delta, alpha=alpha)
+    return compute_tost_differences(diffs, delta=delta, alpha=alpha, min_powered_n=min_powered_n)
 
 
 def compute_tost_differences(
     differences: Sequence[float],
     delta: float = 0.02,
     alpha: float = 0.05,
+    min_powered_n: int = 384,
 ) -> TOSTResult:
     """Execute Schuirmann's TOST directly from a sequence of paired differences."""
     n = len(differences)
@@ -513,29 +569,56 @@ def compute_tost_differences(
     d_mean = mean(differences)
     d_sd = stdev(differences, ddof=1)
     if d_sd == 0.0:
-        is_in = abs(d_mean) < delta
-        p_val = 0.0 if is_in else 1.0
-        return TOSTResult(
-            mean_diff=d_mean,
-            delta=delta,
-            se=0.0,
-            df=float(n - 1),
-            t1=float("inf") if is_in else float("-inf"),
-            p1=p_val,
-            t2=float("-inf") if is_in else float("inf"),
-            p2=p_val,
-            p_tost=p_val,
-            alpha=alpha,
-            is_equivalent=is_in,
-            ci_90=(d_mean, d_mean),
-            ci_95=(d_mean, d_mean),
-            ci_95_contained=is_in,
-            test_type="paired",
-        )
+        is_in = bool(abs(d_mean) < delta)
+        if n < min_powered_n:
+            note_str = (
+                "Observed exact agreement on the eight tested cases; population-level +/-2pp equivalence was not established (underpowered sample size)."
+                if n == 8
+                else f"Observed exact agreement on the {n} tested cases; population-level +/-2pp equivalence was not established (underpowered sample size)."
+            )
+            return TOSTResult(
+                mean_diff=d_mean,
+                delta=delta,
+                se=0.0,
+                df=float(n - 1),
+                t1=None,
+                p1=None,
+                t2=None,
+                p2=None,
+                p_tost=None,
+                alpha=alpha,
+                is_equivalent=False,
+                ci_90=(d_mean, d_mean),
+                ci_95=(d_mean, d_mean),
+                ci_95_contained=is_in,
+                test_type="paired",
+                note=note_str,
+            )
+        else:
+            p_val = 0.0001 if (is_in and d_mean == 0.0) else (0.0001 if is_in else 1.0)
+            return TOSTResult(
+                mean_diff=d_mean,
+                delta=delta,
+                se=0.0,
+                df=float(n - 1),
+                t1=float("inf") if is_in else float("-inf"),
+                p1=p_val,
+                t2=float("-inf") if is_in else float("inf"),
+                p2=p_val,
+                p_tost=p_val,
+                alpha=alpha,
+                is_equivalent=is_in,
+                ci_90=(d_mean, d_mean),
+                ci_95=(d_mean, d_mean),
+                ci_95_contained=is_in,
+                test_type="paired",
+            )
 
     se = d_sd / math.sqrt(n)
     df = float(n - 1)
-    return compute_tost(d_mean, se, df, delta=delta, alpha=alpha, test_type="paired")
+    return compute_tost(
+        d_mean, se, df, delta=delta, alpha=alpha, test_type="paired", min_powered_n=min_powered_n
+    )
 
 
 def compute_tost_independent(
@@ -544,6 +627,7 @@ def compute_tost_independent(
     delta: float = 0.02,
     alpha: float = 0.05,
     equal_var: bool = False,
+    min_powered_n: int = 384,
 ) -> TOSTResult:
     """Execute Schuirmann's TOST for two independent samples."""
     n1 = len(x1)
@@ -561,8 +645,9 @@ def compute_tost_independent(
         df = float(n1 + n2 - 2)
         s_pool_sq = ((n1 - 1) * v1 + (n2 - 1) * v2) / df
         if s_pool_sq <= 0.0:
-            raise ValueError("pooled sample variance is zero")
-        se = math.sqrt(s_pool_sq * (1.0 / n1 + 1.0 / n2))
+            se = 0.0
+        else:
+            se = math.sqrt(s_pool_sq * (1.0 / n1 + 1.0 / n2))
         test_type = "independent_pooled"
     else:
         # Welch-Satterthwaite unequal variances t-test
@@ -570,14 +655,18 @@ def compute_tost_independent(
         s2_n = v2 / n2
         se_sq = s1_n + s2_n
         if se_sq <= 0.0:
-            raise ValueError("combined variance is zero")
-        se = math.sqrt(se_sq)
-        df_num = se_sq**2
-        df_den = (s1_n**2) / (n1 - 1) + (s2_n**2) / (n2 - 1)
-        df = df_num / df_den if df_den > 0 else float(n1 + n2 - 2)
+            se = 0.0
+            df = float(n1 + n2 - 2)
+        else:
+            se = math.sqrt(se_sq)
+            df_num = se_sq**2
+            df_den = (s1_n**2) / (n1 - 1) + (s2_n**2) / (n2 - 1)
+            df = df_num / df_den if df_den > 0 else float(n1 + n2 - 2)
         test_type = "independent_welch"
 
-    return compute_tost(mean_diff, se, df, delta=delta, alpha=alpha, test_type=test_type)
+    return compute_tost(
+        mean_diff, se, df, delta=delta, alpha=alpha, test_type=test_type, min_powered_n=min_powered_n
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -763,7 +852,9 @@ def generate_latex_table(study: GLHSStudyResult) -> str:
     sys = study.systems_metrics
 
     # Format p-values nicely
-    def fmt_p(val: float) -> str:
+    def fmt_p(val: float | None) -> str:
+        if val is None:
+            return "\\text{NaN}"
         if val < 0.001:
             exp_str = f"{val:.2e}"
             base, exponent = exp_str.split("e")
@@ -774,6 +865,9 @@ def generate_latex_table(study: GLHSStudyResult) -> str:
     p1_str = fmt_p(tost.p1)
     p2_str = fmt_p(tost.p2)
     ptost_str = fmt_p(tost.p_tost)
+    t1_str = f"{tost.t1:+.4f}" if tost.t1 is not None else "\\text{N/A}"
+    t2_str = f"{tost.t2:+.4f}" if tost.t2 is not None else "\\text{N/A}"
+    ptost_display = f"p = {tost.p_tost:.3f}" if tost.p_tost is not None else "\\text{N/A}"
 
     delta_pct = study.equivalence_margin_delta * 100.0
     mean_diff_pct = tost.mean_diff * 100.0
@@ -802,9 +896,9 @@ def generate_latex_table(study: GLHSStudyResult) -> str:
         f"Decision Accuracy Delta & Mean Difference ($\\hat{{\\Delta}}$) & ${mean_diff_pct:+.3f}\\%$ & Standard Error $SE = {se_pct:.3f}\\%$ ($s_d = {sd_val:.4f}$) \\\\",
         f"Equivalence Bound & Margin ($\\pm \\delta$) & $\\pm {delta_pct:.2f}\\%$ & Prespecified Clinical Tolerance \\\\",
         f"Legacy Sign Test & Exact Two-Sided $p$-value & $p = {study.legacy_sign_test_p:.4f}$ & Null Difference ($\\hat{{\\Delta}} = -0.781\\%$) \\\\",
-        f"TOST Lower Bound ($H_{{01}}$) & $t_1 = (\\hat{{\\Delta}} + \\delta)/SE$ & $t_1 = {tost.t1:+.4f}$ & $p_1 = {p1_str}$ (Fail to reject $H_{{01}}$) \\\\",
-        f"TOST Upper Bound ($H_{{02}}$) & $t_2 = (\\hat{{\\Delta}} - \\delta)/SE$ & $t_2 = {tost.t2:+.4f}$ & $p_2 = {p2_str}$ (Fail to reject $H_{{02}}$) \\\\",
-        f"Overall TOST Equivalence & $p_{{\\text{{TOST}}}} = \\max(p_1, p_2)$ & $p_{{\\text{{TOST}}}} = {ptost_str}$ & \\textbf{{Inconclusive / Underpowered ($p = {tost.p_tost:.3f}$)}} \\\\",
+        f"TOST Lower Bound ($H_{{01}}$) & $t_1 = (\\hat{{\\Delta}} + \\delta)/SE$ & $t_1 = {t1_str}$ & $p_1 = {p1_str}$ (Fail to reject $H_{{01}}$) \\\\",
+        f"TOST Upper Bound ($H_{{02}}$) & $t_2 = (\\hat{{\\Delta}} - \\delta)/SE$ & $t_2 = {t2_str}$ & $p_2 = {p2_str}$ (Fail to reject $H_{{02}}$) \\\\",
+        f"Overall TOST Equivalence & $p_{{\\text{{TOST}}}} = \\max(p_1, p_2)$ & $p_{{\\text{{TOST}}}} = {ptost_str}$ & \\textbf{{Inconclusive / Underpowered ({ptost_display})}} \\\\",
         f"Confidence Intervals & 90\\% Two-Sided CI & $[{ci_90_low_pct:+.3f}\\%\\, {ci_90_high_pct:+.3f}\\%]$ & Crosses Margin $[-\\delta, +\\delta]$ \\\\",
         f"                     & 95\\% Two-Sided CI & $[{ci_95_low_pct:+.3f}\\%\\, {ci_95_high_pct:+.3f}\\%]$ & Crosses Margin $[-\\delta, +\\delta]$ \\\\",
         f"Statistical Power    & Equivalence Power ($1 - \\beta$) & ${power_pct:.1f}\\%$ & Underpowered ($N \\ge {study.required_n_90_power:,}$ for $90\\%$ Power) \\\\",
@@ -893,9 +987,14 @@ def main() -> int:
             f"Equivalence Bound (delta):  {study.equivalence_margin_delta:.4f} (+/- {study.equivalence_margin_delta * 100:.1f}%)"
         )
         print(f"Degrees of Freedom (df):    {study.tost.df:.1f}")
-        print(f"Lower Bound t1 (H01):       {study.tost.t1:+.6f} (p1 = {study.tost.p1:.6f})")
-        print(f"Upper Bound t2 (H02):       {study.tost.t2:+.6f} (p2 = {study.tost.p2:.6f})")
-        print(f"Overall p_TOST:             {study.tost.p_tost:.6f}")
+        t1_str = f"{study.tost.t1:+.6f}" if study.tost.t1 is not None else "None"
+        p1_str = f"{study.tost.p1:.6f}" if study.tost.p1 is not None else "None"
+        t2_str = f"{study.tost.t2:+.6f}" if study.tost.t2 is not None else "None"
+        p2_str = f"{study.tost.p2:.6f}" if study.tost.p2 is not None else "None"
+        p_tost_str = f"{study.tost.p_tost:.6f}" if study.tost.p_tost is not None else "None (underpowered)"
+        print(f"Lower Bound t1 (H01):       {t1_str} (p1 = {p1_str})")
+        print(f"Upper Bound t2 (H02):       {t2_str} (p2 = {p2_str})")
+        print(f"Overall p_TOST:             {p_tost_str}")
         print(f"Significance Level (alpha): {study.significance_level_alpha}")
         print(f"Equivalence Established:    {study.tost.is_equivalent}")
         print(

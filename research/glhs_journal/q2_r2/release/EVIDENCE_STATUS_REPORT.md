@@ -47,9 +47,9 @@ To ensure scientific honesty and transparency, this matrix clearly delineates:
 - **Real Requests Ledger:** Stored at `protocols/commitloop/v8-glhs-q2-r2/provider_run_ledger.json` (48 total executions).
 - **Observed Empirical Error Taxonomy:**
   - `invalid_json`: 2 instances (Claude Sonnet 4.6 under `glhs_hybrid_thss_strict` emitting chain-of-thought markdown rather than pure JSON object).
-- **Honest TOST Bounds on Live Benchmark (N=8 Cases):**
-  - **Gemini 3.6 Flash High:** Strict 1.0000, Full 1.0000, Mean Diff +0.0000, TOST $p = 0.0000$ (Equivalence confirmed within $\pm 0.02$).
-  - **Gemini 3.8 Flash Tiered:** Strict 1.0000, Full 1.0000, Mean Diff +0.0000, TOST $p = 0.0000$ (Equivalence confirmed within $\pm 0.02$).
+- **Pilot Live Benchmark Accuracy & Bounds (N=8 Cases):**
+  - **Gemini 3.6 Flash High:** Strict 1.0000, Full 1.0000, Mean Diff +0.0000, 100% exact concordance ($s_d = 0$). Under Schuirmann biostatistics, $N=8 < 384$ is underpowered for narrow-margin equivalence testing ($p_{\text{TOST}} = \text{NaN}$ / `None`); TOST equivalence testing requires $N \ge 384$ powered observations with $s_d > 0$.
+  - **Gemini 3.8 Flash Tiered:** Strict 1.0000, Full 1.0000, Mean Diff +0.0000, 100% exact concordance ($s_d = 0$). Under Schuirmann biostatistics, $N=8 < 384$ is underpowered for narrow-margin equivalence testing ($p_{\text{TOST}} = \text{NaN}$ / `None`); TOST equivalence testing requires $N \ge 384$ powered observations with $s_d > 0$.
   - **Claude Sonnet 4.6:** Strict 0.7500, Full 0.8750, Mean Diff -0.1250, TOST $p = 0.7857$, 95% CI $[-0.4206, +0.1706]$ (Equivalence rejected at $\Delta = \pm 0.02$ due to formatting unprompted reasoning tokens in 2 cases).
 
 ---

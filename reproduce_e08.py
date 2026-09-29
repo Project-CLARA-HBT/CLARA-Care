@@ -46,6 +46,10 @@ class NetworkAccessProhibitedError(RuntimeError):
     """Raised if any network activity is attempted during offline reproduction."""
 
 
+class RecordCountMismatchError(RuntimeError):
+    """Raised when raw runs record count does not match expected_records count."""
+
+
 def disable_network() -> None:
     """Prohibit all socket creation and DNS resolution fail-closed."""
     def forbidden_socket(*args: Any, **kwargs: Any) -> Any:
@@ -147,6 +151,12 @@ def reproduce_and_verify(
     sealed_d6_file = artifact_dir / "raw" / "exploration_d6.json"
     if not sealed_d5_file.is_file() or not sealed_d6_file.is_file():
         raise FileNotFoundError("sealed_raw_exploration_files_missing")
+
+    runs_file = artifact_dir / "raw" / "runs.jsonl"
+    if runs_file.is_file():
+        run_lines = [l for l in runs_file.read_text(encoding="utf-8").splitlines() if l.strip()]
+        if len(run_lines) != 2:
+            raise RecordCountMismatchError(f"execution_count_mismatch:expected=2:actual={len(run_lines)}")
 
     sealed_d5 = json.loads(sealed_d5_file.read_text(encoding="utf-8"))
     sealed_d6 = json.loads(sealed_d6_file.read_text(encoding="utf-8"))

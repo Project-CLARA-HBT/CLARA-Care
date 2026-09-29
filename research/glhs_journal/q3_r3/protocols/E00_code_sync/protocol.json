@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "schema_version": "glhs-r3-protocol.v1",
-  "protocol_id": "GLHS-R3-E00-CODE_SYNC",
+  "schema_version": "glhs-r3-protocol-e00.v1",
+  "protocol_id": "E00_code_sync",
   "title": "Phase 0 / E00: Literature/Claim Freeze, Novelty Contract & Code Synchronization Protocol",
-  "program": "GLHS R3 — Governed Read-to-Write Continuity (GRWC)",
-  "phase": "Phase 0 — Literature & Code Synchronization Baseline",
+  "program": "GLHS R3 \u2014 Governed Read-to-Write Continuity (GRWC)",
+  "phase": "Phase 0 \u2014 Literature & Code Synchronization Baseline",
   "date": "2026-09-28",
-  "curator": "Agent D — Implementation & Reproducibility",
+  "curator": "Agent D \u2014 Implementation & Reproducibility",
   "status": "PROSPECTIVE_FROZEN",
   "freeze_timestamp_utc": "2026-09-28T00:00:00Z",
   "primary_question": "What is the exact scope of novelty for Governed Read-to-Write Continuity (GRWC) relative to prior art in OCC, PBAC, PCFS, LPM, and MemTX, and are all baseline code repositories synchronized to frozen commit SHAs without dirty working trees?",
@@ -24,45 +24,45 @@
     "I15_clean_path_reachability"
   ],
   "unit_of_analysis": "One complete literature claim audit and code synchronization verification pass across the 15-experiment campaign.",
-  "experiment_id": "E00",
-  "priority": "P0",
-  "freeze_id": "GLHS-R3-E00-FREEZE-20260928-V1",
-  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
-  "backend_requirement": "static_claim_audit",
-  "scientific_unit": "literature_claim_code_anchor_cross_validation",
-  "primary_endpoints": [
+  "provenance_boundary": {
+    "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+    "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "active_branch": "research/glhs-q2-r2-experiments"
+  },
+  "prior_art_building_blocks": [
     {
-      "name": "Claim-to-Code Alignment Index",
-      "definition": "1.0 if 100% of claimed invariants map to active codebase code anchors without forbidden claims, 0.0 otherwise.",
-      "target_value": 1.0,
-      "acceptable_threshold": 1.0
+      "name": "Optimistic Concurrency Control (OCC)",
+      "reference": "Kung & Robinson (1981)",
+      "novelty_status": "PRIOR_ART"
+    },
+    {
+      "name": "Purpose-Based Access Control (PBAC)",
+      "reference": "Byun et al. (2005)",
+      "novelty_status": "PRIOR_ART"
+    },
+    {
+      "name": "Proof-Carrying File System (PCFS)",
+      "reference": "Chlipala et al. (2009)",
+      "novelty_status": "PRIOR_ART"
+    },
+    {
+      "name": "Lineage Provenance Model (LPM)",
+      "reference": "Muniswamy-Reddy et al. (2006)",
+      "novelty_status": "PRIOR_ART"
+    },
+    {
+      "name": "Transactional Agent Memory (MemTX)",
+      "reference": "MemTX Benchmark (2024)",
+      "novelty_status": "PRIOR_ART"
     }
   ],
-  "secondary_endpoints": [
-    {
-      "name": "Forbidden Claim Regex Compliance Rate",
-      "definition": "1.0 if zero forbidden overclaim terms exist in manuscript sources, 0.0 otherwise.",
-      "target_value": 1.0,
-      "acceptable_threshold": 1.0
-    }
-  ],
-  "sample_size": {
-    "total_executions_N": 47,
-    "unit_definition": "47 tracked paper claims and code anchor cross-validations"
+  "claim_budget_enforcement": {
+    "forbidden_claim_categories": 7,
+    "automated_linter": "scripts/security/check_ci_artifact_policy.py",
+    "zero_overclaim_policy": true
   },
-  "statistical_plan": {
-    "method": "Deterministic Claim-to-Code Alignment Verification",
-    "confidence_level": 0.95
-  },
-  "stopping_rules": {
-    "fail_closed_criteria": "Any unbacked or violating claim halts release gating.",
-    "missing_data_rule": "Missing anchors are recorded as UNALIGNED."
-  },
-  "artifact_layout": {
-    "required_artifacts": [
-      "protocol.json",
-      "protocol.sha256"
-    ],
-    "artifact_directory": "research/glhs_journal/q3_r3/protocols/E00_code_sync"
+  "execution_environment_and_isolation": {
+    "primary_runner": "scripts/docs/revise_manuscript_scientific_validity.py",
+    "fail_closed_criteria": "Any un-audited claim or Git mismatch halts release gating."
   }
 }

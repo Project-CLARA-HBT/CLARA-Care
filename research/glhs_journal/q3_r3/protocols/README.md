@@ -16,7 +16,7 @@ This directory contains prospective protocol specifications, cryptographic hash 
 - `E10_fullstack/` — Phase 6: HTTP / PostgreSQL Full-Stack Performance Characterization
 - `E11_model_replication/` — Phase 7: Two-Model Large Context Utility & Replication
 - `E12_malformed_sensitivity/` — Phase 7: Malformed-Output Sensitivity & Error Taxonomy Analysis
-- `E13_external_validation/` — Phase 8: External / Source-Disjoint Task Validation
+- `E13_external_validation/` — Phase 8: Synthetic Source-Derived Task Suite (derived from eICU/Synthea/MIMIC/Diabetes schemas)
 - `E14_reproducibility/` — Phase 9: Independent Reproduction Audit & Clean Checkout Verification
 
 ## Master Manifest

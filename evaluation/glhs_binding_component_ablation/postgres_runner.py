@@ -94,6 +94,11 @@ from evaluation.glhs_binding_component_ablation.validate import (
 
 ISOLATION_ATTESTATION_ENV = "GLHS_BINDING_ABLATION_ISOLATED_RESEARCH"
 DATABASE_URL_ENV = "GLHS_BINDING_ABLATION_DATABASE_URL"
+DEFAULT_DATABASE_URL = (
+    os.getenv("GLHS_DATABASE_URL")
+    or os.getenv("DATABASE_URL")
+    or "postgresql+psycopg://postgres:postgres@localhost:5432/glhs_eval_r2"
+)
 BACKENDS = frozenset({"postgres", "sqlite"})
 
 VALID_AT = datetime(2026, 8, 1, tzinfo=UTC)
@@ -146,7 +151,13 @@ def _full_git_sha() -> str:
 def _require_isolated_postgres(database_url: str | None) -> str:
     if os.environ.get(ISOLATION_ATTESTATION_ENV) != "1":
         raise RuntimeError("glhs_binding_ablation_requires_isolated_research_attestation")
-    url = database_url or os.environ.get(DATABASE_URL_ENV, "")
+    url = (
+        database_url
+        or os.getenv("GLHS_DATABASE_URL")
+        or os.getenv("DATABASE_URL")
+        or os.environ.get(DATABASE_URL_ENV)
+        or DEFAULT_DATABASE_URL
+    )
     if not url.startswith(("postgresql://", "postgresql+psycopg://", "postgresql+psycopg2://")):
         raise RuntimeError("glhs_binding_ablation_requires_postgresql_database_url")
     if make_url(url).database in {None, "postgres", "template0", "template1"}:

@@ -1,30 +1,30 @@
 {
   "artifact_inventory": {
     "derived/comparator_method_card.md": "cc5febb193d06120c83645cef6cb4259ff5c8efeb7550326aa01bc48fd14f0b0",
-    "derived/comparison_summary.json": "db9b5739d66ca3956fe5cd0727694e9fd5cbda516d86cc0136f679fa9891cedd",
+    "derived/comparison_summary.json": "08df593133be5cf5d74c487424f585d9976e883421544fe79ee0b5c43352c0d4",
     "derived/comparison_summary.md": "06169c209d2e9a86f801d045919922f36cec07c3bc880b7fe476d21af2226d32",
-    "environment.json": "8052fa33672a592abf6c90a7c7cb0978a797faba03ceaaf04d7972343f4215b5",
+    "environment.json": "ed16b9cde23ce28e8095803eb416e6e62abfa142bc07549649eb84efc67992c9",
     "protocol.json": "2ee4c66b9ded14dc1d5a0845b4a934cc026070a003d48e6f801b0cbdee0b015c",
     "protocol.sha256": "e0e9e1fa6c8337264ca35582d817d6a7892a01b9f8dd0b6bff87e744c55d8ecf",
-    "raw/runs.jsonl": "295313f761b33c60bdb778ca2559ff8cacd22ec5777ae8405301fb1243c124a7",
-    "summary.json": "d136bdf7b0f4fe6c9095ea8ea5db093d5b2e551a8a6f4c9ee3b52a04a57fe718",
-    "validation.json": "544626afb4e47ff746c20f48b041e623fff74e4113b7f15e621d6b31df810c8c"
+    "raw/runs.jsonl": "a9c4199068b9e23ae36911abf8d86dd2a05c74d496906a27aa3b2d3e56404829",
+    "summary.json": "504d2d28c8d9877145d1347fb0d0f180e5306e5b304ec07b78e67f54aba5cc81",
+    "validation.json": "834a813a006ce04cea1e43633c2fd7d18d496c821dcaff3ea697007a3e7b221f"
   },
   "backend": "isolated_sqlite",
   "claim_eligible": true,
   "comparator_method_card_sha256": "cc5febb193d06120c83645cef6cb4259ff5c8efeb7550326aa01bc48fd14f0b0",
-  "comparison_summary_sha256": "db9b5739d66ca3956fe5cd0727694e9fd5cbda516d86cc0136f679fa9891cedd",
+  "comparison_summary_sha256": "08df593133be5cf5d74c487424f585d9976e883421544fe79ee0b5c43352c0d4",
   "executed_executions": 1408,
   "expected_executions": 1408,
   "freeze_id": "GLHS-MINIMAL-BASELINE-20260928-01",
-  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "git_sha": "cd477b2a4fcb1d9ab04e6259672770b21c2827e8",
   "protocol_sha256": "2ee4c66b9ded14dc1d5a0845b4a934cc026070a003d48e6f801b0cbdee0b015c",
-  "raw_stream_sha256": "295313f761b33c60bdb778ca2559ff8cacd22ec5777ae8405301fb1243c124a7",
+  "raw_stream_sha256": "a9c4199068b9e23ae36911abf8d86dd2a05c74d496906a27aa3b2d3e56404829",
   "run_id": "GLHS-Q2-R2-20260928-R01",
   "schedules_sha256": "d2aff36f84beb51589fe411a7668b228011fd52c07e09cb8e50ebcd2d618ab5f",
   "schema_version": "glhs-minimal-baseline-seal.v1",
-  "sealed_at_utc": "2026-09-28T19:36:00.380353+00:00",
+  "sealed_at_utc": "2026-09-29T00:10:16.904867+00:00",
   "status": "SEALED",
   "total_schedules": 352,
-  "validation_sha256": "544626afb4e47ff746c20f48b041e623fff74e4113b7f15e621d6b31df810c8c"
+  "validation_sha256": "834a813a006ce04cea1e43633c2fd7d18d496c821dcaff3ea697007a3e7b221f"
 }

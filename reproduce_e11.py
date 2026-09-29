@@ -32,10 +32,15 @@ from evaluation.commitloop.fhir_ingest import ingest_bundle
 from evaluation.commitloop.candidate_mining import mine_candidates
 from evaluation.commitloop.oracle import compile_construction_gold
 from evaluation.commitloop.tost_equivalence import compute_tost_paired
+from evaluation.commitloop.v8_runner import MODEL_ALIAS_MAP, audit_provider_run_ledger
 
 
 class NetworkAccessProhibitedError(RuntimeError):
     """Raised if network activity is attempted during offline reproduction."""
+
+
+class RecordCountMismatchError(RuntimeError):
+    """Raised when raw runs record count does not match expected_records count."""
 
 
 @contextmanager
@@ -131,6 +136,22 @@ def verify_sealed_evidence_bundle(evidence_dir: Path | None = None) -> dict[str,
             raise ValueError(f"Hash chain broken at line {i}")
         prev_h = h
 
+    if len(runs_lines) != 48:
+        raise RecordCountMismatchError(f"execution_count_mismatch:expected=48:actual={len(runs_lines)}")
+
+    ledger_file = evidence_dir / "raw" / "provider_run_ledger.json"
+    if ledger_file.is_file():
+        audit_res = audit_provider_run_ledger(ledger_file)
+        val_path = evidence_dir / "validation.json"
+        if val_path.is_file():
+            val_doc = json.loads(val_path.read_text(encoding="utf-8"))
+            val_fallbacks = val_doc.get("fallbacks_observed")
+            if val_fallbacks is not None:
+                if audit_res["fallbacks_observed"] > 0 and val_fallbacks == 0:
+                    raise ValueError(f"validation.json reports false 0 fallbacks (audited={audit_res['fallbacks_observed']})")
+                if val_fallbacks != audit_res["fallbacks_observed"]:
+                    raise ValueError(f"validation.json fallbacks_observed mismatch: {val_fallbacks} != {audit_res['fallbacks_observed']}")
+
     return {
         "verified": True,
         "files_verified": len(required_files),
@@ -149,6 +170,7 @@ def analyze_live_provider_ledger(ledger_path: Path | None = None) -> dict[str, A
         return None
 
     ledger_data = json.loads(ledger_path.read_text(encoding="utf-8"))
+    audit_res = audit_provider_run_ledger(ledger_data)
     bundles = controlled_benchmark_bundles()
     valid_cutoff = datetime(2026, 2, 1, 0, 0, tzinfo=UTC)
     known_cutoff = datetime(2026, 2, 1, 0, 0, tzinfo=UTC)
@@ -193,11 +215,19 @@ def analyze_live_provider_ledger(ledger_path: Path | None = None) -> dict[str, A
             "ci_90": tost.ci_90,
             "ci_95": tost.ci_95,
             "is_equivalent": tost.is_equivalent,
+            "note": tost.note,
         }
 
     return {
         "recorded_utc": ledger_data.get("recorded_utc"),
         "total_requests": ledger_data.get("total_requests"),
+        "classification": "EXPLORATORY_PILOT_PROBE",
+        "ledger_type": "PILOT_LEDGER_EXPLORATORY",
+        "confirmatory_equivalence_claim_eligible": False,
+        "scope_note": "Exploratory format/taxonomy pilot evaluating latency, format compliance, and router routing behavior across 3 models, NOT a confirmatory prospective equivalence study. Full prospective cohort requires N=384 powered observations.",
+        "fallbacks_observed": audit_res["fallbacks_observed"],
+        "model_drift_breakdown": audit_res["model_drift_breakdown"],
+        "alias_normalization": audit_res.get("alias_normalization", {}),
         "models": results,
     }
 
@@ -218,8 +248,11 @@ def reproduce_and_verify(
                 "status": "REPRODUCED_AND_VERIFIED",
                 "experiment_id": "E11",
                 "name": "Two-Model Large Context Replication",
+                "classification": "EXPLORATORY_PILOT_PROBE",
+                "ledger_type": "PILOT_LEDGER_EXPLORATORY",
                 "models_evaluated": list(e11.keys()),
-                "tost_equivalence": True,
+                "tost_equivalence": all(v.get("is_equivalent", False) for v in e11.values()),
+                "confirmatory_equivalence_claim_eligible": False,
                 "claim_eligible": True,
                 "seal_verified": True if sealed_res else True,
             }
@@ -324,15 +357,26 @@ def main() -> int:
 
         live_res = analyze_live_provider_ledger()
         if live_res:
-            print(f"\n--- Empirical Live Provider Run Ledger (Total Requests: {live_res['total_requests']}) ---")
+            print(f"\n--- Empirical Live Provider Run Ledger (Total Requests: {live_res['total_requests']}, Classification: {live_res.get('classification', 'EXPLORATORY_PILOT_PROBE')}) ---")
+            print(f"Scope Note: {live_res.get('scope_note')}")
+            print(f"Confirmatory Equivalence Claim Eligible: {live_res.get('confirmatory_equivalence_claim_eligible', False)}")
+            print(f"Fallbacks Observed: {live_res.get('fallbacks_observed', 0)}")
+            if live_res.get("model_drift_breakdown"):
+                print("Model Routing Drift Breakdown:")
+                for drift_k, count in sorted(live_res["model_drift_breakdown"].items()):
+                    print(f"  {drift_k}: {count} occurrences")
             for m, stat in live_res["models"].items():
-                print(f"Model: {m} (N={stat['n_cases']} benchmark cases)")
+                print(f"Model: {m} (N={stat['n_cases']} pilot benchmark cases)")
                 print(f"  Strict Accuracy: {stat['strict_accuracy']:.4f}")
                 print(f"  Full Accuracy:   {stat['full_accuracy']:.4f}")
                 print(f"  Mean Difference: {stat['mean_paired_difference']:+.4f}")
-                print(f"  TOST p-value:    {stat['p_tost']:.4e} (df={stat['df']}, SE={stat['se']:.4f})")
+                p_tost_val = stat.get("p_tost")
+                p_tost_str = f"{p_tost_val:.4e}" if p_tost_val is not None else "None / NaN (N=8 pilot underpowered for TOST)"
+                print(f"  TOST p-value:    {p_tost_str} (df={stat['df']}, SE={stat['se']:.4f})")
                 print(f"  95% CI:          [{stat['ci_95'][0]:+.4f}, {stat['ci_95'][1]:+.4f}]")
                 print(f"  Equivalence (+/- 2 pp): {stat['is_equivalent']}")
+                if stat.get("note"):
+                    print(f"  Note: {stat['note']}")
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             run_dir = Path(tmp_dir) / "v8_reproduce_e11_run"
@@ -342,7 +386,7 @@ def main() -> int:
             print("Executing offline v8 analysis (Paired TOST, Bootstrap 95% CIs, Sign Test)...")
             results = analyze_v8_run(run_dir, delta=0.02, alpha=0.05, bootstrap_samples=1000)
 
-            print("\n--- E11 Replication Results ---")
+            print("\n--- E11 Replication Results (Full Prospective Powered Cohort N=384) ---")
             e11 = results["e11_two_model_replication"]
             for model, res in e11.items():
                 tost = res["tost"]
@@ -351,7 +395,13 @@ def main() -> int:
                 print(f"  Full Accuracy:   {res['full_accuracy']:.4f}")
                 print(f"  Mean Difference: {res['mean_paired_difference']:+.4f}")
                 print(f"  95% Bootstrap CI: [{res['bootstrap_95_ci'][0]:+.4f}, {res['bootstrap_95_ci'][1]:+.4f}]")
-                print(f"  TOST p-value:    {tost['p_tost']:.4e} (p1={tost['p1']:.4e}, p2={tost['p2']:.4e})")
+                p_tost_val = tost.get("p_tost")
+                p_tost_str = f"{p_tost_val:.4e}" if (p_tost_val is not None and isinstance(p_tost_val, (int, float))) else "None / NaN"
+                p1_val = tost.get('p1')
+                p1_str = f"{p1_val:.4e}" if (p1_val is not None and isinstance(p1_val, (int, float))) else "None"
+                p2_val = tost.get('p2')
+                p2_str = f"{p2_val:.4e}" if (p2_val is not None and isinstance(p2_val, (int, float))) else "None"
+                print(f"  TOST p-value:    {p_tost_str} (p1={p1_str}, p2={p2_str})")
                 print(f"  Equivalence (+/- 2 pp): {tost['is_equivalent']}")
                 print(f"  Exact Sign Test p-value: {res['exact_sign_p_value']:.4e}")
                 assert "p_tost" in tost, "TOST result missing"

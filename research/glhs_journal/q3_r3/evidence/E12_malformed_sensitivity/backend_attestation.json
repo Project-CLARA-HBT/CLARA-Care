@@ -7,6 +7,7 @@
   "production_path": true,
   "simulation": false,
   "network_provider": true,
-  "fallback_usage": false,
+  "fallback_usage": true,
+  "fallback_documentation": "Derived from provider run ledger with 9 router fallbacks on gemini-3.8-flash-tiered",
   "concurrency_mechanism": "Commitment Gateway Parser Validation & Local JSON Repair"
 }

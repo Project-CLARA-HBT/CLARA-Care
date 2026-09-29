@@ -1,0 +1,54 @@
+{
+  "schema_version": "glhs-commitloop-protocol.v1",
+  "protocol_id": "GLHS-Q2-R2-E11-E12-PROTOCOL",
+  "title": "Phase 11 (E11) & Phase 12 (E12): Two-Model Large Context Replication & Malformed-Output Sensitivity",
+  "status": "FROZEN_PROSPECTIVE",
+  "cohorts": {
+    "pilot_live_probe_ledger": {
+      "name": "Pilot Live Provider Probe Ledger",
+      "classification": "EXPLORATORY_PILOT_PROBE",
+      "ledger_type": "PILOT_LEDGER_EXPLORATORY",
+      "total_requests": 48,
+      "cases_count": 8,
+      "conditions_count": 2,
+      "models_count": 3,
+      "purpose": "Exploratory pilot evaluating latency, format compliance, error taxonomy, and router routing behavior across 3 live provider models (not a confirmatory prospective equivalence study)",
+      "claim_eligible": false,
+      "tost_equivalence_eligible": false,
+      "power_assessment": "Underpowered (N=8 < 384); TOST p-value reported as NaN/None rather than claiming equivalence. The full prospective cohort requires N=384 powered observations."
+    },
+    "full_prospective_powered_cohort": {
+      "name": "Full Prospective Powered Cohort",
+      "n_subjects": 384,
+      "strata_count": 8,
+      "subjects_per_stratum": 48,
+      "purpose": "Powered biostatistical equivalence testing under Schuirmann TOST",
+      "claim_eligible": true,
+      "tost_equivalence_eligible": true,
+      "power_assessment": "Powered for equivalence within +/- 2 percentage points (delta=0.02, alpha=0.05)"
+    }
+  },
+  "primary_contrast": {
+    "reference_condition": "glhs_hybrid_thss_strict",
+    "comparator_condition": "full_authorized_history"
+  },
+  "equivalence_testing": {
+    "framework": "schuirmann_tost",
+    "equivalence_margin_delta": 0.02,
+    "alpha": 0.05,
+    "min_powered_n": 384,
+    "zero_variance_rules": {
+      "underpowered_n_lt_384": "p_tost = NaN/None, equivalence not confirmed",
+      "powered_n_gte_384": "p_tost = 0.0001, 90% CI [0, 0]"
+    }
+  },
+  "sensitivity_analysis": {
+    "taxonomy_classes": 12,
+    "recovery_arms": [
+      "R0",
+      "R1",
+      "R2",
+      "R3"
+    ]
+  }
+}

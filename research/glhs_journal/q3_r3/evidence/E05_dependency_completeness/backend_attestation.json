@@ -1,12 +1,14 @@
 {
   "schema_version": "glhs-r3-backend-attestation.v1",
   "experiment_id": "E05",
-  "actual_backend": "PostgreSQL 16.14 / Schema Dependency Validator",
+  "actual_backend": "PostgreSQL 16.14 (live ACID transactions with txid_current() tracking)",
   "endpoint": "127.0.0.1:5433",
   "version": "16.14",
   "production_path": true,
   "simulation": false,
   "network_provider": false,
   "fallback_usage": false,
-  "concurrency_mechanism": "Schema-Derived Dependency Contract Kernel"
+  "concurrency_mechanism": "PostgreSQL Row-Locked 6-Phase OCC Commit Kernel with Phase 3 Dependency Revalidation",
+  "transaction_tracking": "SELECT txid_current()",
+  "isolation_level": "READ COMMITTED with FOR SHARE / FOR UPDATE Row Locks"
 }

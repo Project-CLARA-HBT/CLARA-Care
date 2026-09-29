@@ -1,13 +1,13 @@
 {
   "claim_eligible": true,
   "freeze_id": "GLHS-R3-E10-FREEZE-20260928-V1",
-  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "git_sha": "cd477b2a4fcb1d9ab04e6259672770b21c2827e8",
   "missing_operations_count": 0,
   "repetitions": 100,
   "run_id": "GLHS-R3-E10-20260928",
   "sample_size_sufficient": true,
   "schema_version": "glhs-r3-validation.v1",
   "status": "VALIDATED",
-  "validated_at_utc": "2026-09-28T20:17:08.645460+00:00",
+  "validated_at_utc": "2026-09-29T00:48:40.068800+00:00",
   "validation_verdict": "PASS"
 }

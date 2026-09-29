@@ -184,6 +184,15 @@ def seal_experiment(
     # 4. Perform analysis & write summary artifacts
     summary_data = analyze(dest_metrics, dest_manifest, derived_dir)
 
+    # Direct root copies for protocol conformance
+    (artifact_dir / "fullstack_metrics.csv").write_bytes(dest_metrics.read_bytes())
+    if dest_raw_latencies is not None and dest_raw_latencies.is_file():
+        (artifact_dir / "raw_latencies.json").write_bytes(dest_raw_latencies.read_bytes())
+    if dest_results is not None and dest_results.is_file():
+        (artifact_dir / "results.jsonl").write_bytes(dest_results.read_bytes())
+    (artifact_dir / "summary.json").write_bytes((derived_dir / "summary.json").read_bytes())
+    (artifact_dir / "summary.md").write_bytes((derived_dir / "summary.md").read_bytes())
+
     if not summary_data["claim_eligible"]:
         raise ValueError(
             f"experiment_not_claim_eligible: repetitions={summary_data['repetitions']} "
@@ -261,17 +270,19 @@ def main() -> int:
     parser.add_argument(
         "--protocol",
         type=Path,
-        default=Path("protocols/E10_fullstack/protocol.json"),
+        default=Path("research/glhs_journal/q3_r3/evidence/E10_fullstack/protocol.json")
+        if Path("research/glhs_journal/q3_r3/evidence/E10_fullstack/protocol.json").is_file()
+        else Path("protocols/E10_fullstack/protocol.json"),
     )
     parser.add_argument(
         "--metrics",
         type=Path,
-        required=True,
+        default=None,
     )
     parser.add_argument(
         "--manifest",
         type=Path,
-        required=True,
+        default=None,
     )
     parser.add_argument(
         "--raw-latencies",
@@ -281,17 +292,39 @@ def main() -> int:
     parser.add_argument(
         "--artifact-dir",
         type=Path,
-        default=Path("artifacts/glhs-q2-r2/GLHS-Q2-R2-20260928-R01/E10_fullstack"),
+        default=Path("research/glhs_journal/q3_r3/evidence/E10_fullstack"),
     )
-    parser.add_argument("--run-id", default="GLHS-Q2-R2-20260928-R01")
+    parser.add_argument("--run-id", default="GLHS-R3-E10-20260928")
     args = parser.parse_args()
+
+    metrics = args.metrics
+    manifest = args.manifest
+    raw_latencies = args.raw_latencies
+
+    if metrics is None:
+        if (Path("/tmp/opencode/e10_fullstack_raw/fullstack_metrics.csv")).is_file():
+            metrics = Path("/tmp/opencode/e10_fullstack_raw/fullstack_metrics.csv")
+        else:
+            metrics = args.artifact_dir / "raw" / "fullstack_metrics.csv"
+
+    if manifest is None:
+        if (Path("/tmp/opencode/e10_fullstack_raw/fullstack_manifest.json")).is_file():
+            manifest = Path("/tmp/opencode/e10_fullstack_raw/fullstack_manifest.json")
+        else:
+            manifest = args.artifact_dir / "raw" / "fullstack_manifest.json"
+
+    if raw_latencies is None:
+        if (Path("/tmp/opencode/e10_fullstack_raw/raw_latencies.json")).is_file():
+            raw_latencies = Path("/tmp/opencode/e10_fullstack_raw/raw_latencies.json")
+        elif (args.artifact_dir / "raw" / "raw_latencies.json").is_file():
+            raw_latencies = args.artifact_dir / "raw" / "raw_latencies.json"
 
     seal_doc = seal_experiment(
         artifact_dir=args.artifact_dir,
         protocol_path=args.protocol,
-        metrics_path=args.metrics,
-        manifest_path=args.manifest,
-        raw_latencies_path=args.raw_latencies,
+        metrics_path=metrics,
+        manifest_path=manifest,
+        raw_latencies_path=raw_latencies,
         run_id=args.run_id,
     )
     print(json.dumps(seal_doc, indent=2, sort_keys=True))

@@ -1,28 +1,28 @@
 {
   "artifact_inventory": {
-    "derived/summary.json": "a088c1e7d979806d12a59c8e609069b93b4c3a3525a4911e218e60bcf02ec075",
-    "derived/summary.md": "789fd7bbcf7ec47f291863a7258eb9f486278d0f75440bcc24e3b101bdc994f7",
-    "environment.json": "fbddea484a45aac73f2ada1b27d1a2802cc0e99349067b33d45569207df2d7ec",
+    "derived/summary.json": "c8ea041f6e2200ef9c6c6d4ef3417fc7aea496fd7e1c31a4062ea43e9c7eb711",
+    "derived/summary.md": "9351d2ff45d1af41dd8b77f53f28a4fa9b8db8e40cd1f1811683a55dfee6febe",
+    "environment.json": "dff204116ae2889cc401670b2d2b6093817f407e1439af9996deac27160ef2b4",
     "protocol.json": "ca2ae1fbee83e3faa6507b0e5b277f1899bf02c44f82ebcb43507ab50839202e",
-    "raw/cases.jsonl": "36a90df4ab938e7c9a6641f35a6e8f007091ccbb6efd2155cc25f0d524ec5d39",
-    "raw/mutants.jsonl": "554d8108f7562b60d4ce0ab534d70b3a7fbfc5437f831471481717cfd979856d",
-    "raw/results.jsonl": "cfe9489c818562f766a3ef86db955b473a8c91642bfdf197b2e29467210eb016",
-    "validation.json": "61a6eced551e2b5394bffe339a5f2253cc1212603f6d7bdc6f214927528cc657"
+    "raw/cases.jsonl": "c78984ddcbb75a1f9e8b2bcfe13c533f40b33c1ea58dc92ab1dbc0bd9ba105ea",
+    "raw/mutants.jsonl": "9a414675646adefe4cdd6764bfc31ad4b984670b4a0184fb9530a2b5f45cd81f",
+    "raw/results.jsonl": "3bda0166377a2677579c40e3a42ec9a516957e0ed8452a687b2a9a7708ae6a3d",
+    "validation.json": "ea0d4a5c1f0fdba53f59064ae3769e673e27fbae3adeca540890092965642bfa"
   },
   "claim_eligible": true,
   "false_stale_aborts": 0,
   "freeze_id": "GLHS-DEPENDENCY-COMPLETENESS-E06-20260928-01",
-  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "git_sha": "cd477b2a4fcb1d9ab04e6259672770b21c2827e8",
   "protocol_sha256": "ca2ae1fbee83e3faa6507b0e5b277f1899bf02c44f82ebcb43507ab50839202e",
-  "raw_cases_sha256": "36a90df4ab938e7c9a6641f35a6e8f007091ccbb6efd2155cc25f0d524ec5d39",
-  "raw_mutants_sha256": "554d8108f7562b60d4ce0ab534d70b3a7fbfc5437f831471481717cfd979856d",
-  "raw_results_sha256": "cfe9489c818562f766a3ef86db955b473a8c91642bfdf197b2e29467210eb016",
+  "raw_cases_sha256": "c78984ddcbb75a1f9e8b2bcfe13c533f40b33c1ea58dc92ab1dbc0bd9ba105ea",
+  "raw_mutants_sha256": "9a414675646adefe4cdd6764bfc31ad4b984670b4a0184fb9530a2b5f45cd81f",
+  "raw_results_sha256": "3bda0166377a2677579c40e3a42ec9a516957e0ed8452a687b2a9a7708ae6a3d",
   "run_id": "GLHS-Q2-R2-20260928-R01",
   "schema_version": "dep-completeness-seal.v1",
-  "sealed_at_utc": "2026-09-28T10:45:18.246293+00:00",
+  "sealed_at_utc": "2026-09-29T00:33:38.444356+00:00",
   "status": "SEALED",
-  "summary_sha256": "a088c1e7d979806d12a59c8e609069b93b4c3a3525a4911e218e60bcf02ec075",
+  "summary_sha256": "c8ea041f6e2200ef9c6c6d4ef3417fc7aea496fd7e1c31a4062ea43e9c7eb711",
   "total_runs": 312,
   "unsafe_commits": 0,
-  "validation_sha256": "61a6eced551e2b5394bffe339a5f2253cc1212603f6d7bdc6f214927528cc657"
+  "validation_sha256": "ea0d4a5c1f0fdba53f59064ae3769e673e27fbae3adeca540890092965642bfa"
 }

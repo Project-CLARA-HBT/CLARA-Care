@@ -245,8 +245,9 @@ def reproduce_and_verify(
     runs_lines = runs_path.read_text(encoding="utf-8").splitlines()
     runs = [json.loads(line) for line in runs_lines if line.strip()]
 
-    if len(runs) != protocol["primary_analysis"]["total_executions"]:
-        raise ValueError(f"execution_count_mismatch:expected={protocol['primary_analysis']['total_executions']}:actual={len(runs)}")
+    expected_count = protocol.get("primary_analysis", {}).get("total_executions") or protocol.get("sample_size_allocation", {}).get("total_executions") or 1408
+    if len(runs) != expected_count:
+        raise RecordCountMismatchError(f"execution_count_mismatch:expected={expected_count}:actual={len(runs)}")
 
     # 4. Compare with sealed summary
     sealed_summary_path = artifacts_dir / "derived" / "summary.json"
@@ -343,6 +344,10 @@ def verify_checksums(artifact_dir: Path) -> dict[str, str]:
 
 class NetworkAccessProhibitedError(RuntimeError):
     """Raised if any network activity is attempted during offline reproduction."""
+
+
+class RecordCountMismatchError(RuntimeError):
+    """Raised when raw runs record count does not match expected_records count."""
 
 
 def disable_network() -> None:

@@ -27,6 +27,10 @@
   "execution_environment_and_isolation": {
     "primary_runner": "evaluation/commitloop/seal_v8.py"
   },
+  "classification": "EXPLORATORY_PILOT_PROBE",
+  "ledger_type": "PILOT_LEDGER_EXPLORATORY",
+  "confirmatory_equivalence_claim_eligible": false,
+  "scope_explanation": "The 48-request live execution is an exploratory format/taxonomy pilot evaluating latency, format compliance, and router routing behavior across 3 models, NOT a confirmatory prospective equivalence study. The full prospective cohort requires N=384 powered observations.",
   "experiment_id": "E11",
   "priority": "P1",
   "freeze_id": "GLHS-R3-E11-FREEZE-20260928-V1",

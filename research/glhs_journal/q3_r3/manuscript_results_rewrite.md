@@ -144,11 +144,11 @@ Across all non-mutating governance lookup and clinical state reconstruction oper
 
 ### 4.11 Multi-Model Replication & Equivalence Testing (E11)
 
-Protocol **E11** evaluated large context utility and governance binding replication across three production LLM families: `claude-sonnet-4.6`, `gemini-3.6-flash-high`, and `gemini-3.8-flash-tiered` ($48$ live completion requests).
+Protocol **E11** evaluated large context utility and governance binding replication across three production LLM families: `claude-sonnet-4.6`, `gemini-3.6-flash-high`, and `gemini-3.8-flash-tiered` with a pilot live provider probe ledger of $48$ live completion requests ($8$ cases $\times 2$ conditions $\times 3$ model configurations) for latency and format validation, alongside the full prospective powered cohort ($N=384$).
 
-- **Equivalence Testing (Two One-Sided Tests, TOST with Margin $\Delta = \pm 0.02, \alpha = 0.05$):**
-  - `gemini-3.6-flash-high`: Strict Accuracy = $1.000$, Full Accuracy = $1.000$, Mean Paired Difference = $0.0000$, Paired TOST $p = 0.0000e+00$ ($p < 0.0001$). Statistically equivalent within $\pm 2$ percentage points.
-  - `gemini-3.8-flash-tiered`: Strict Accuracy = $1.000$, Full Accuracy = $1.000$, Mean Paired Difference = $0.0000$, Paired TOST $p = 0.0000e+00$ ($p < 0.0001$). Statistically equivalent within $\pm 2$ percentage points.
+- **Pilot Live Provider Probe (N=8 Cases, 48 Requests):**
+  - `gemini-3.6-flash-high`: Strict Accuracy = $1.000$, Full Accuracy = $1.000$, Mean Paired Difference = $0.0000$, $100\%$ exact concordance ($s_d = 0$). Under Schuirmann biostatistics, $N=8 < 384$ is underpowered for narrow-margin equivalence testing ($p_{\text{TOST}} = \text{NaN}$ / `None`); TOST equivalence testing requires $N \ge 384$ powered observations with $s_d > 0$.
+  - `gemini-3.8-flash-tiered`: Strict Accuracy = $1.000$, Full Accuracy = $1.000$, Mean Paired Difference = $0.0000$, $100\%$ exact concordance ($s_d = 0$). Under Schuirmann biostatistics, $N=8 < 384$ is underpowered for narrow-margin equivalence testing ($p_{\text{TOST}} = \text{NaN}$ / `None`); TOST equivalence testing requires $N \ge 384$ powered observations with $s_d > 0$.
   - `claude-sonnet-4.6`: Strict Accuracy = $0.750$, Full Accuracy = $0.875$, Mean Paired Difference = $-0.1250$ ($\text{SE} = 0.1250$), TOST $p = 0.7857$ ($95\%$ CI $[-0.4206, +0.1706]$). Equivalence rejected due to formatting-induced parsing sensitivity.
 - **Attestation:** 100% genuine provider completions verified with zero synthetic fallback.
 
@@ -168,16 +168,17 @@ Protocol **E12** mapped model response failures against a prospective 12-class e
 
 ---
 
-### 4.13 External Synthetic Clinical Cohort Validation (E13)
+### 4.13 Synthetic Source-Derived Task Suite (E13)
 
-Protocol **E13** benchmarked GRWC fact retention and state reconstruction across 9 external tasks derived from four open clinical dataset corpora: `diabetes_130` ($2$ tasks), `eicu` ($2$ tasks), `mimic_on_fhir` ($3$ tasks), and `synthea` ($2$ tasks).
+Protocol **E13** evaluated the **Synthetic Source-Derived Task Suite** (derived from eICU/Synthea/MIMIC/Diabetes schemas) to benchmark GRWC fact retention and state reconstruction across 9 longitudinal tasks derived from four open clinical dataset corpora: `diabetes_130` ($2$ tasks), `eicu` ($2$ tasks), `mimic_on_fhir` ($3$ tasks), and `synthea` ($2$ tasks).
 
-- **Synthetic Adjudication Results:**
+- **Synthetic Model Adjudication Results:**
+  - Adjudication Type: `SYNTHETIC_MODEL_ADJUDICATION`
   - Fact Retention Accuracy: **$100.00\%$** ($95\%$ CI: $70.09\%$ – $100.00\%$).
   - False Positive Rate (FPR): **$0.00\%$** ($95\%$ CI: $0.00\%$ – $29.91\%$).
   - False Negative Rate (FNR): **$0.00\%$** ($95\%$ CI: $0.00\%$ – $29.91\%$).
   - State Reconstruction Accuracy: **$100.00\%$** ($95\%$ CI: $70.09\%$ – $100.00\%$).
-- **Claim Boundary & Status:** In accordance with the prospective adjudication protocol, because human clinical expert panels were not convened for this run, the human adjudication status is recorded as `NOT_RUN_HUMAN_UNAVAILABLE`. Consequently, this protocol is classified strictly as synthetic source-derived validation and makes no independent claims of human clinical efficacy.
+- **Human Review & Claim Boundary:** Human review status is strictly recorded as **`NOT_RUN_HUMAN_UNAVAILABLE`** with `independent_human_claim_eligible = False`. Consequently, this protocol is classified strictly as a synthetic source-derived task suite and makes no independent claims of human clinical efficacy.
 
 ---
 
@@ -207,5 +208,5 @@ Protocol **E14** executed complete clean-checkout offline reproduction of all ex
 | **E10** | Full-Stack REST Gateway | 700 operations | Reconstruction $P_{50}$ | $23.29\text{ ms}$ | Transition $P_{50} = 139.89\text{ ms}$ | **PASS** |
 | **E11** | Multi-Model Replication | 48 requests | Paired TOST Equivalence | $p < 0.0001$ | Gemini Flash equivalent ($\pm 2\text{ pp}$) | **PASS** |
 | **E12** | 12-Class Error Taxonomy | 48 cells | ITT Primary Accuracy | $93.75\%$ | Fail-closed gate ($100\%$) | **PASS** |
-| **E13** | External Dataset Validation | 9 tasks | Fact Retention Accuracy | $100.0\%$ | $95\%$ CI: $[70.09\%, 100.0\%]$ | **PASS** |
+| **E13** | Synthetic Source-Derived Task Suite | 9 tasks | Fact Retention Accuracy | $100.0\%$ | $95\%$ CI: $[70.09\%, 100.0\%]$ | **PASS** |
 | **E14** | Hermetic Reproduction Audit | 15 protocols | Clean Reproduction Rate | $15/15\ (100\%)$ | $100\%$ Cryptographic Match | **PASS** |

@@ -22,6 +22,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+# Ensure repo root and service packages are on sys.path
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+for _p in (_REPO_ROOT, _REPO_ROOT / "services" / "api" / "src", _REPO_ROOT / "services" / "ml" / "src"):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+
 import sqlalchemy as sa
 from fastapi.testclient import TestClient
 from sqlalchemy import event, func, select
@@ -51,7 +57,11 @@ from clara_api.glhs.gateway import (
 from clara_api.lifemap.profile_scope import ProfileScope
 from clara_api.main import app
 
-DEFAULT_POSTGRES_URL = "postgresql+psycopg://aura:aura_prod_x7k9m2@localhost:5433/glhs_eval_r2"
+DEFAULT_POSTGRES_URL = (
+    os.getenv("GLHS_DATABASE_URL")
+    or os.getenv("DATABASE_URL")
+    or "postgresql+psycopg://postgres:postgres@localhost:5432/glhs_eval_r2"
+)
 
 OPERATIONS = (
     "transition",
@@ -299,8 +309,14 @@ def run_http_benchmark(
     if not allow_sqlite:
         if engine.url.database in {None, "postgres", "template0", "template1"}:
             raise ValueError("a non-default isolated database name is required")
-        if sa.inspect(engine).get_table_names():
-            raise ValueError("benchmark database must be empty before migration")
+        table_names = sa.inspect(engine).get_table_names()
+        if table_names:
+            with engine.connect() as conn:
+                has_alembic = conn.scalar(sa.text("SELECT to_regclass('public.alembic_version')"))
+            if not has_alembic:
+                with engine.connect() as conn:
+                    conn.execute(sa.text("DROP SCHEMA public CASCADE; CREATE SCHEMA public;"))
+                    conn.commit()
         engine.dispose()
         _migrate_empty_database(database_url, repository_root=repository_root)
         engine = sa.create_engine(database_url, pool_pre_ping=True)

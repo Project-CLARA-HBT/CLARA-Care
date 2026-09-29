@@ -5,6 +5,15 @@
   "validated_at_utc": "2026-09-28T00:00:00Z",
   "total_trials_audited": 48,
   "initial_malformed_count": 2,
+  "fallbacks_observed": 9,
+  "model_drift_breakdown": {
+    "gemini-3.8-flash-tiered -> gemini-3.7-flash-tiered": 4,
+    "gemini-3.8-flash-tiered -> gemini-3.6-flash-tiered": 5
+  },
+  "alias_normalization": {
+    "claude-sonnet-4.6 -> claude-sonnet-4-6": 16,
+    "gemini-3.8-flash-tiered -> antigravity/gemini-3.8-flash-tiered": 7
+  },
   "r0_itt_primary_accuracy": 0.9375,
   "r3_constrained_repair_accuracy": 0.9375,
   "fail_closed_enforced": true,

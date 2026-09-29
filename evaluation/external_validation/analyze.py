@@ -1,8 +1,9 @@
-"""Statistical analysis module for E13 (External / Independent Validation).
+"""Statistical analysis module for E13 (Synthetic Source-Derived Task Suite).
 
 Computes inter-rater agreement (Cohen's kappa, Krippendorff's alpha), external fact retention,
-false positive / negative rates with Wilson 95% CIs, and enforces Red Team (E) guardrails
-for independent human vs synthetic adjudication.
+false positive / negative rates with Wilson 95% CIs for the Synthetic Source-Derived Task Suite
+(derived from eICU/Synthea/MIMIC/Diabetes schemas) with human review as NOT_RUN_HUMAN_UNAVAILABLE,
+adjudication_type = "SYNTHETIC_MODEL_ADJUDICATION", and independent_human_claim_eligible = False.
 """
 
 from __future__ import annotations

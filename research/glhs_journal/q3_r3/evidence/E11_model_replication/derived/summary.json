@@ -31,7 +31,7 @@
       "mean_paired_difference": 0.0,
       "se": 0.0,
       "df": 7.0,
-      "p_tost": 0.0,
+      "p_tost": null,
       "ci_90": [
         0.0,
         0.0
@@ -40,7 +40,8 @@
         0.0,
         0.0
       ],
-      "is_equivalent": true
+      "is_equivalent": false,
+      "note": "TOST equivalence testing requires N >= 384 powered observations with s_d > 0"
     },
     "gemini-3.8-flash-tiered": {
       "n_cases": 8,
@@ -49,7 +50,7 @@
       "mean_paired_difference": 0.0,
       "se": 0.0,
       "df": 7.0,
-      "p_tost": 0.0,
+      "p_tost": null,
       "ci_90": [
         0.0,
         0.0
@@ -58,8 +59,22 @@
         0.0,
         0.0
       ],
-      "is_equivalent": true
+      "is_equivalent": false,
+      "note": "TOST equivalence testing requires N >= 384 powered observations with s_d > 0"
     }
   },
+  "fallbacks_observed": 9,
+  "model_routing_drift": {
+    "gemini-3.8-flash-tiered -> gemini-3.7-flash-tiered": 4,
+    "gemini-3.8-flash-tiered -> gemini-3.6-flash-tiered": 5
+  },
+  "alias_normalization": {
+    "claude-sonnet-4.6 -> claude-sonnet-4-6": 16,
+    "gemini-3.8-flash-tiered -> antigravity/gemini-3.8-flash-tiered": 7
+  },
+  "classification": "EXPLORATORY_PILOT_PROBE",
+  "ledger_type": "PILOT_LEDGER_EXPLORATORY",
+  "confirmatory_equivalence_claim_eligible": false,
+  "scope_note": "Exploratory format/taxonomy pilot evaluating latency, format compliance, and router routing behavior across 3 models, NOT a confirmatory prospective equivalence study. Full prospective cohort requires N=384 powered observations.",
   "claim_eligible": true
 }

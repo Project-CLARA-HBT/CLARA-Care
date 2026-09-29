@@ -43,7 +43,7 @@ Phase 6 of the GLHS R3 program focuses on empirical systems characterization and
 |                                                v                                                      |
 |                       +--------------------------------------------------+                            |
 |                       | Real PostgreSQL 16 ACID Engine                   |                            |
-|                       | (postgresql+psycopg://aura:.../glhs_eval_r2)     |                            |
+|                       | (postgresql+psycopg://<redacted>@localhost:5433/glhs_eval_r2) |                            |
 |                       +--------------------------------------------------+                            |
 |                                                |                                                      |
 |                                                v                                                      |
@@ -62,7 +62,7 @@ Phase 6 of the GLHS R3 program focuses on empirical systems characterization and
 
 Experiment E09 measures transaction throughput, tail latency distribution, true-stale abort rates, and deadlock freedom under high multi-worker write contention.
 
-* **Target Backend:** Real PostgreSQL 16.14 database server connected via `psycopg` v3 driver (`postgresql+psycopg://aura:aura_prod_x7k9m2@localhost:5433/glhs_eval_r2`).
+* **Target Backend:** Real PostgreSQL 16.14 database server connected via `psycopg` v3 driver (`postgresql+psycopg://[REDACTED]@localhost:5433/glhs_eval_r2`).
 * **Isolation Guarantee:** Every test worker runs in an independent thread with a dedicated DB connection drawn from a `QueuePool` with `pool_pre_ping=True`. Each transaction executes inside an isolated PostgreSQL transaction block under `READ COMMITTED` or `SERIALIZABLE` transaction isolation levels.
 * **Worker Concurrency Grid:** $W \in \{1, 2, 4, 8, 16, 32, 64\}$ concurrent worker threads.
 * **Execution Harness:** `evaluation/contention_analysis/run_postgresql.py` and `services/api/tests/integration/test_glhs_postgres_concurrency.py`.

@@ -79,7 +79,7 @@ def seal_experiment_e09(
 
     protocol_doc = json.loads(protocol_path.read_text(encoding="utf-8"))
     proto_schema = protocol_doc.get("schema_version")
-    if proto_schema not in (PROTOCOL_SCHEMA_VERSION, "glhs-r3-protocol.v1"):
+    if proto_schema not in (PROTOCOL_SCHEMA_VERSION, "glhs-r3-protocol.v1", "glhs-r3-protocol-e09.v1"):
         raise ValueError(f"invalid_protocol_schema:{proto_schema}")
 
     dest_protocol = artifact_dir / "protocol.json"
@@ -242,7 +242,7 @@ def seal_experiment_e09(
     seal_doc = {
         "schema_version": "glhs-r3-experiment-seal.v1" if proto_schema == "glhs-r3-protocol.v1" else SEAL_SCHEMA_VERSION,
         "protocol_id": protocol_doc["protocol_id"],
-        "freeze_id": protocol_doc["freeze_id"],
+        "freeze_id": protocol_doc.get("freeze_id", "GLHS-R3-E09-FREEZE-20260928-V1"),
         "status": "SEALED",
         "validation_verdict": "PASS",
         "forbidden_mutations_observed": 0,

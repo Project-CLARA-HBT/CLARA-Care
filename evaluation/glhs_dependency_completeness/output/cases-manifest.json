@@ -1,6 +1,6 @@
 {
   "case_count": 27,
-  "cases_sha256": "36a90df4ab938e7c9a6641f35a6e8f007091ccbb6efd2155cc25f0d524ec5d39",
-  "generated_at": "2026-09-27T19:39:19.891620+00:00",
+  "cases_sha256": "c78984ddcbb75a1f9e8b2bcfe13c533f40b33c1ea58dc92ab1dbc0bd9ba105ea",
+  "generated_at": "2026-09-29T00:21:13.070621+00:00",
   "schema_version": "dep-completeness-case.v1"
 }

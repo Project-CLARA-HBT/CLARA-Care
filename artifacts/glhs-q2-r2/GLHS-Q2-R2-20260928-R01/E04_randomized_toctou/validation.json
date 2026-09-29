@@ -1,6 +1,6 @@
 {
   "schema_version": "glhs-toctou-e04-validation.v1",
-  "validated_at_utc": "2026-09-27T19:34:58.093991+00:00",
+  "validated_at_utc": "2026-09-29T01:31:36.426980+00:00",
   "freeze_id": "GLHS-POSTGRES-TOCTOU-E04-20260928-01",
   "protocol_status": "FROZEN",
   "total_schedules": 2280,

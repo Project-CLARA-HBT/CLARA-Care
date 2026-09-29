@@ -6,7 +6,7 @@
   "clean_controls_total": 96,
   "exact_decision_match_with_glhs": true,
   "freeze_id": "GLHS-MINIMAL-BASELINE-20260928-01",
-  "git_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+  "git_sha": "cd477b2a4fcb1d9ab04e6259672770b21c2827e8",
   "no_forbidden_services_imports": true,
   "no_production_flags": true,
   "run_id": "GLHS-Q2-R2-20260928-R01",
@@ -14,5 +14,5 @@
   "status": "VALIDATED",
   "total_executions_audited": 1408,
   "total_schedules_audited": 352,
-  "validated_at_utc": "2026-09-28T19:36:00.372359+00:00"
+  "validated_at_utc": "2026-09-29T00:10:16.893963+00:00"
 }

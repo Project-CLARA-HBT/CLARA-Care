@@ -31,7 +31,8 @@
 | `R2_Identical_Retry` | 45 | 0.9375 | 1 | +0.0000 |
 | `R3_Constrained_Repair` | 45 | 0.9375 | 1 | +0.0000 |
 
-## 3. Invariant Verification
+## 3. Invariant Verification & Model Drift Context
 
 - **Fail-Closed Gate:** Malformed outputs fail closed with structured 12-class error reasons.
 - **Intention-To-Treat Primary:** Raw ITT performance (R0) is primary scorable metric; recovery arms (R1..R3) serve as diagnostic bounds.
+- **Provider Ledger & Model Routing Drift Auditing:** The 48 evaluated cells originate from empirical provider requests exhibiting 32 model routing drift events (16 deployment slug normalizations, 7 upstream proxy wrapper drifts, and 9 cross-generation fallbacks). Sensitivity recovery arms evaluate error recovery independently under these real provider dynamics.

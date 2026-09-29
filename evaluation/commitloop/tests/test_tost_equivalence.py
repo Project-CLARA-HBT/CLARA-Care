@@ -174,6 +174,35 @@ class TestTOSTCalculations:
         assert res.is_equivalent is False
         assert res.ci_95_contained is False
 
+    def test_zero_variance_underpowered_cohort(self) -> None:
+        # Zero variance with N=8 < 384: must report p_tost as None/NaN and is_equivalent as False
+        x1 = [1.0] * 8
+        x2 = [1.0] * 8
+        res = compute_tost_paired(x1, x2, delta=0.02, alpha=0.05)
+        assert res.mean_diff == 0.0
+        assert res.se == 0.0
+        assert res.p_tost is None
+        assert res.t1 is None
+        assert res.t2 is None
+        assert res.is_equivalent is False
+        assert res.ci_90 == (0.0, 0.0)
+        assert res.ci_95 == (0.0, 0.0)
+        assert res.note is not None
+        assert "Observed exact agreement on the eight tested cases; population-level +/-2pp equivalence was not established (underpowered sample size)." in res.note
+
+    def test_zero_variance_powered_cohort(self) -> None:
+        # Zero variance with N=384 >= 384 and d_bar = 0: p_tost = 0.0001, is_equivalent = True
+        x1 = [1.0] * 384
+        x2 = [1.0] * 384
+        res = compute_tost_paired(x1, x2, delta=0.02, alpha=0.05)
+        assert res.mean_diff == 0.0
+        assert res.se == 0.0
+        assert res.p_tost == 0.0001
+        assert res.is_equivalent is True
+        assert res.ci_90 == (0.0, 0.0)
+        assert res.ci_95 == (0.0, 0.0)
+        assert res.ci_95_contained is True
+
 
 class TestConfidenceIntervals:
     """Test 90% and 95% Confidence Interval calculations."""

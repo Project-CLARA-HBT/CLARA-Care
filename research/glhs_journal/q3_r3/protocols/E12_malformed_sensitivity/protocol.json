@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "schema_version": "glhs-r3-protocol.v1",
-  "protocol_id": "GLHS-R3-E12-MALFORMED_SENSITIVITY",
+  "schema_version": "glhs-r3-protocol-e12.v1",
+  "protocol_id": "E12_malformed_sensitivity",
   "title": "Phase 7 / E12: Malformed-Output Sensitivity & Error Taxonomy Analysis Protocol",
   "program": "GLHS R3 \u2014 Governed Read-to-Write Continuity (GRWC)",
   "phase": "Phase 7 \u2014 Malformed Provider Output & Error Taxonomy",
@@ -15,53 +15,26 @@
     "I12_exact_inference_disclosure_continuity"
   ],
   "unit_of_analysis": "One malformed provider response payload submitted to the GLHS proposal admission parser.",
+  "fault_injection_categories": [
+    "JSON structural truncation",
+    "Key name corruption",
+    "Required field omission",
+    "Enum domain violation",
+    "Numeric value overflow",
+    "Hallucinated evidence ID",
+    "Cyclic proposal pointer",
+    "Unescaped control characters"
+  ],
   "sample_size_allocation": {
     "categories_count": 8,
     "injections_per_category": 32,
     "total_injections": 256
   },
+  "statistical_estimands": {
+    "fail_closed_rate": 1.0,
+    "error_code_determinism": 1.0
+  },
   "execution_environment_and_isolation": {
     "primary_runner": "services/api/tests/test_glhs_inference_consumption.py"
-  },
-  "experiment_id": "E12",
-  "priority": "P1",
-  "freeze_id": "GLHS-R3-E12-FREEZE-20260928-V1",
-  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
-  "backend_requirement": "live_llm_provider_ledger",
-  "scientific_unit": "malformed_response_completion_trial",
-  "primary_endpoints": [
-    {
-      "name": "Intention-To-Treat R0 Primary Failure Rate",
-      "definition": "Proportion of raw LLM completions exhibiting schema mismatch, truncation, refusal, or syntax errors.",
-      "target_value": 0.0,
-      "acceptable_threshold": 0.05
-    }
-  ],
-  "secondary_endpoints": [
-    {
-      "name": "R1 Deterministic Repair Success Rate",
-      "definition": "Proportion of R0 failures resolved by single-pass JSON parser repair.",
-      "target_value": 0.95,
-      "acceptable_threshold": 0.8
-    }
-  ],
-  "sample_size": {
-    "total_executions_N": 360,
-    "unit_definition": "360 malformed completion trials covering 12 error taxonomy categories"
-  },
-  "statistical_plan": {
-    "method": "Intention-To-Treat (ITT) Pipeline Sensitivity Analysis",
-    "confidence_level": 0.95
-  },
-  "stopping_rules": {
-    "fail_closed_criteria": "Un-categorized error outputs are classified as UNKNOWN_FAILURE and fail closed.",
-    "missing_data_rule": "Missing trial data cannot be assumed repairable."
-  },
-  "artifact_layout": {
-    "required_artifacts": [
-      "protocol.json",
-      "protocol.sha256"
-    ],
-    "artifact_directory": "research/glhs_journal/q3_r3/protocols/E12_malformed_sensitivity"
   }
 }

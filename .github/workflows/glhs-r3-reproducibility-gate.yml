@@ -1,0 +1,131 @@
+name: GLHS R3 Reproducibility & Security Gate
+
+on:
+  push:
+    branches:
+      - research/glhs-q2-r2-experiments
+      - "research/glhs_journal/**"
+      - main
+  pull_request:
+    branches:
+      - main
+      - research/glhs-q2-r2-experiments
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: glhs-r3-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    name: Secret & Credential Leak Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Execute Secret Scan
+        run: |
+          python3 -c '
+          import os, re, sys
+          FORBIDDEN_PATTERNS = [
+              re.compile(r"aura_prod_x7k9m2"),
+              re.compile(r"postgresql\+psycopg://[^@:]+:[^@]+@"),
+              re.compile(r"postgresql://[^@:]+:[^@]+@"),
+              re.compile(r"(?i)api[_-]?key\s*[:=]\s*[\x27\x22]sk-[a-zA-Z0-9]{32,}[\x27\x22]"),
+          ]
+          violations = []
+          for root, dirs, files in os.walk("."):
+              if any(ignored in root for ignored in [".git", ".venv", "node_modules"]):
+                  continue
+              for f in files:
+                  if f.endswith((".py", ".json", ".md", ".csv", ".yml", ".yaml")):
+                      p = os.path.join(root, f)
+                      try:
+                          text = open(p, errors="ignore").read()
+                          for pat in FORBIDDEN_PATTERNS:
+                              if pat.search(text):
+                                  violations.append(f"{p}: matches {pat.pattern}")
+                      except Exception as e:
+                          pass
+          if violations:
+              print("SECURITY LEAK DETECTED:")
+              for v in violations:
+                  print(f"  - {v}")
+              sys.exit(1)
+          print("No credentials or secrets detected.")
+          '
+
+  chronology-audit:
+    name: Prospective Chronology Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Chronology Validator
+        run: |
+          PYTHONPATH=services/api/src:services/ml/src:. python3 research/glhs_journal/q3_r3/chronology_validator.py
+
+  unit-and-invariant-tests:
+    name: Reproducibility & Invariant Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Test Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio anyio httpx sqlalchemy pydantic scipy
+
+      - name: Run Reproducibility & Invariant Test Suites
+        run: |
+          PYTHONPATH=services/api/src:services/ml/src:. pytest -v \
+            tests/test_q3_r3_reproducibility.py \
+            evaluation/commitloop/tests/test_v8_commitloop.py \
+            services/api/tests/test_dependency_completeness_r3.py \
+            evaluation/external_validation/tests/test_e13_external.py
+
+  hermetic-reproduction:
+    name: Hermetic Zero-Network Offline Sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Runtime Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install sqlalchemy pydantic scipy
+
+      - name: Run Master Reproduction Sweep
+        run: |
+          PYTHONPATH=services/api/src:services/ml/src:. python3 reproduce_q3_r3.py --skip-git-check

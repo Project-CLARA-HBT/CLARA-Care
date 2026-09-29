@@ -15,9 +15,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 129606226,
-      "governance_txid": 5770,
-      "commit_txid": 5769,
+      "elapsed_ns": 126267862,
+      "governance_txid": 115135,
+      "commit_txid": 115134,
       "lock_waits": []
     },
     {
@@ -31,9 +31,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 93944775,
-      "governance_txid": 5774,
-      "commit_txid": 5773,
+      "elapsed_ns": 82393224,
+      "governance_txid": 115139,
+      "commit_txid": 115138,
       "lock_waits": []
     },
     {
@@ -47,9 +47,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 76695256,
-      "governance_txid": 5778,
-      "commit_txid": 5777,
+      "elapsed_ns": 76639790,
+      "governance_txid": 115143,
+      "commit_txid": 115142,
       "lock_waits": []
     },
     {
@@ -63,9 +63,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 75469604,
-      "governance_txid": 5782,
-      "commit_txid": 5781,
+      "elapsed_ns": 69279648,
+      "governance_txid": 115147,
+      "commit_txid": 115146,
       "lock_waits": []
     },
     {
@@ -79,9 +79,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 72878732,
-      "governance_txid": 5786,
-      "commit_txid": 5785,
+      "elapsed_ns": 68414140,
+      "governance_txid": 115151,
+      "commit_txid": 115150,
       "lock_waits": []
     },
     {
@@ -95,9 +95,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 70342058,
-      "governance_txid": 5790,
-      "commit_txid": 5789,
+      "elapsed_ns": 69223102,
+      "governance_txid": 115155,
+      "commit_txid": 115154,
       "lock_waits": []
     },
     {
@@ -111,9 +111,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 72100292,
-      "governance_txid": 5794,
-      "commit_txid": 5793,
+      "elapsed_ns": 70179771,
+      "governance_txid": 115159,
+      "commit_txid": 115158,
       "lock_waits": []
     },
     {
@@ -127,9 +127,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 71929761,
-      "governance_txid": 5798,
-      "commit_txid": 5797,
+      "elapsed_ns": 69674223,
+      "governance_txid": 115163,
+      "commit_txid": 115162,
       "lock_waits": []
     },
     {
@@ -143,9 +143,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69881118,
-      "governance_txid": 5802,
-      "commit_txid": 5801,
+      "elapsed_ns": 68787596,
+      "governance_txid": 115167,
+      "commit_txid": 115166,
       "lock_waits": []
     },
     {
@@ -159,9 +159,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69940497,
-      "governance_txid": 5806,
-      "commit_txid": 5805,
+      "elapsed_ns": 67852504,
+      "governance_txid": 115171,
+      "commit_txid": 115170,
       "lock_waits": []
     },
     {
@@ -175,9 +175,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 73943726,
-      "governance_txid": 5810,
-      "commit_txid": 5809,
+      "elapsed_ns": 66385205,
+      "governance_txid": 115175,
+      "commit_txid": 115174,
       "lock_waits": []
     },
     {
@@ -191,9 +191,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 78422047,
-      "governance_txid": 5814,
-      "commit_txid": 5813,
+      "elapsed_ns": 67391554,
+      "governance_txid": 115179,
+      "commit_txid": 115178,
       "lock_waits": []
     },
     {
@@ -207,9 +207,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 73294541,
-      "governance_txid": 5818,
-      "commit_txid": 5817,
+      "elapsed_ns": 69174278,
+      "governance_txid": 115183,
+      "commit_txid": 115182,
       "lock_waits": []
     },
     {
@@ -223,9 +223,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 71482561,
-      "governance_txid": 5822,
-      "commit_txid": 5821,
+      "elapsed_ns": 67924258,
+      "governance_txid": 115187,
+      "commit_txid": 115186,
       "lock_waits": []
     },
     {
@@ -239,9 +239,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 71227802,
-      "governance_txid": 5826,
-      "commit_txid": 5825,
+      "elapsed_ns": 72090030,
+      "governance_txid": 115191,
+      "commit_txid": 115190,
       "lock_waits": []
     },
     {
@@ -255,9 +255,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 70825609,
-      "governance_txid": 5830,
-      "commit_txid": 5829,
+      "elapsed_ns": 70601808,
+      "governance_txid": 115195,
+      "commit_txid": 115194,
       "lock_waits": []
     },
     {
@@ -271,9 +271,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 72248294,
-      "governance_txid": 5834,
-      "commit_txid": 5833,
+      "elapsed_ns": 72126514,
+      "governance_txid": 115199,
+      "commit_txid": 115198,
       "lock_waits": []
     },
     {
@@ -287,9 +287,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 73030147,
-      "governance_txid": 5838,
-      "commit_txid": 5837,
+      "elapsed_ns": 69301149,
+      "governance_txid": 115203,
+      "commit_txid": 115202,
       "lock_waits": []
     },
     {
@@ -303,9 +303,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 72648391,
-      "governance_txid": 5842,
-      "commit_txid": 5841,
+      "elapsed_ns": 70574454,
+      "governance_txid": 115207,
+      "commit_txid": 115206,
       "lock_waits": []
     },
     {
@@ -319,9 +319,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 70540192,
-      "governance_txid": 5846,
-      "commit_txid": 5845,
+      "elapsed_ns": 69821137,
+      "governance_txid": 115211,
+      "commit_txid": 115210,
       "lock_waits": []
     },
     {
@@ -335,9 +335,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69168263,
-      "governance_txid": 5850,
-      "commit_txid": 5849,
+      "elapsed_ns": 71174475,
+      "governance_txid": 115215,
+      "commit_txid": 115214,
       "lock_waits": []
     },
     {
@@ -351,9 +351,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69193956,
-      "governance_txid": 5854,
-      "commit_txid": 5853,
+      "elapsed_ns": 72235906,
+      "governance_txid": 115219,
+      "commit_txid": 115218,
       "lock_waits": []
     },
     {
@@ -367,9 +367,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66987365,
-      "governance_txid": 5858,
-      "commit_txid": 5857,
+      "elapsed_ns": 70274685,
+      "governance_txid": 115223,
+      "commit_txid": 115222,
       "lock_waits": []
     },
     {
@@ -383,9 +383,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 68002946,
-      "governance_txid": 5862,
-      "commit_txid": 5861,
+      "elapsed_ns": 67270800,
+      "governance_txid": 115227,
+      "commit_txid": 115226,
       "lock_waits": []
     },
     {
@@ -399,9 +399,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67967421,
-      "governance_txid": 5866,
-      "commit_txid": 5865,
+      "elapsed_ns": 68217561,
+      "governance_txid": 115231,
+      "commit_txid": 115230,
       "lock_waits": []
     },
     {
@@ -415,9 +415,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 68507166,
-      "governance_txid": 5870,
-      "commit_txid": 5869,
+      "elapsed_ns": 69635955,
+      "governance_txid": 115235,
+      "commit_txid": 115234,
       "lock_waits": []
     },
     {
@@ -431,9 +431,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 68828246,
-      "governance_txid": 5874,
-      "commit_txid": 5873,
+      "elapsed_ns": 68310067,
+      "governance_txid": 115239,
+      "commit_txid": 115238,
       "lock_waits": []
     },
     {
@@ -447,9 +447,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 68216808,
-      "governance_txid": 5878,
-      "commit_txid": 5877,
+      "elapsed_ns": 70394102,
+      "governance_txid": 115243,
+      "commit_txid": 115242,
       "lock_waits": []
     },
     {
@@ -463,9 +463,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69637561,
-      "governance_txid": 5882,
-      "commit_txid": 5881,
+      "elapsed_ns": 71283010,
+      "governance_txid": 115247,
+      "commit_txid": 115246,
       "lock_waits": []
     },
     {
@@ -479,9 +479,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69065629,
-      "governance_txid": 5886,
-      "commit_txid": 5885,
+      "elapsed_ns": 68672948,
+      "governance_txid": 115251,
+      "commit_txid": 115250,
       "lock_waits": []
     },
     {
@@ -495,9 +495,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 68583218,
-      "governance_txid": 5890,
-      "commit_txid": 5889,
+      "elapsed_ns": 68067993,
+      "governance_txid": 115255,
+      "commit_txid": 115254,
       "lock_waits": []
     },
     {
@@ -511,9 +511,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66240330,
-      "governance_txid": 5894,
-      "commit_txid": 5893,
+      "elapsed_ns": 68730912,
+      "governance_txid": 115259,
+      "commit_txid": 115258,
       "lock_waits": []
     },
     {
@@ -527,9 +527,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67091806,
-      "governance_txid": 5898,
-      "commit_txid": 5897,
+      "elapsed_ns": 67073738,
+      "governance_txid": 115263,
+      "commit_txid": 115262,
       "lock_waits": []
     },
     {
@@ -543,9 +543,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66894445,
-      "governance_txid": 5902,
-      "commit_txid": 5901,
+      "elapsed_ns": 69554445,
+      "governance_txid": 115267,
+      "commit_txid": 115266,
       "lock_waits": []
     },
     {
@@ -559,9 +559,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66056420,
-      "governance_txid": 5906,
-      "commit_txid": 5905,
+      "elapsed_ns": 70218991,
+      "governance_txid": 115271,
+      "commit_txid": 115270,
       "lock_waits": []
     },
     {
@@ -575,9 +575,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67021243,
-      "governance_txid": 5910,
-      "commit_txid": 5909,
+      "elapsed_ns": 70037949,
+      "governance_txid": 115275,
+      "commit_txid": 115274,
       "lock_waits": []
     },
     {
@@ -591,9 +591,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 65471949,
-      "governance_txid": 5914,
-      "commit_txid": 5913,
+      "elapsed_ns": 67050848,
+      "governance_txid": 115279,
+      "commit_txid": 115278,
       "lock_waits": []
     },
     {
@@ -607,9 +607,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66449031,
-      "governance_txid": 5918,
-      "commit_txid": 5917,
+      "elapsed_ns": 66881687,
+      "governance_txid": 115283,
+      "commit_txid": 115282,
       "lock_waits": []
     },
     {
@@ -623,9 +623,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66126440,
-      "governance_txid": 5922,
-      "commit_txid": 5921,
+      "elapsed_ns": 66475911,
+      "governance_txid": 115287,
+      "commit_txid": 115286,
       "lock_waits": []
     },
     {
@@ -639,9 +639,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66024557,
-      "governance_txid": 5926,
-      "commit_txid": 5925,
+      "elapsed_ns": 63231473,
+      "governance_txid": 115291,
+      "commit_txid": 115290,
       "lock_waits": []
     },
     {
@@ -655,9 +655,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 65436849,
-      "governance_txid": 5930,
-      "commit_txid": 5929,
+      "elapsed_ns": 65794551,
+      "governance_txid": 115295,
+      "commit_txid": 115294,
       "lock_waits": []
     },
     {
@@ -671,9 +671,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 68821070,
-      "governance_txid": 5934,
-      "commit_txid": 5933,
+      "elapsed_ns": 66567520,
+      "governance_txid": 115299,
+      "commit_txid": 115298,
       "lock_waits": []
     },
     {
@@ -687,9 +687,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 68227893,
-      "governance_txid": 5938,
-      "commit_txid": 5937,
+      "elapsed_ns": 65568190,
+      "governance_txid": 115303,
+      "commit_txid": 115302,
       "lock_waits": []
     },
     {
@@ -703,9 +703,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 68175557,
-      "governance_txid": 5942,
-      "commit_txid": 5941,
+      "elapsed_ns": 64720236,
+      "governance_txid": 115307,
+      "commit_txid": 115306,
       "lock_waits": []
     },
     {
@@ -719,9 +719,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 73742237,
-      "governance_txid": 5946,
-      "commit_txid": 5945,
+      "elapsed_ns": 67633527,
+      "governance_txid": 115311,
+      "commit_txid": 115310,
       "lock_waits": []
     },
     {
@@ -735,9 +735,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 70227249,
-      "governance_txid": 5950,
-      "commit_txid": 5949,
+      "elapsed_ns": 66222903,
+      "governance_txid": 115315,
+      "commit_txid": 115314,
       "lock_waits": []
     },
     {
@@ -751,9 +751,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 71179983,
-      "governance_txid": 5954,
-      "commit_txid": 5953,
+      "elapsed_ns": 68294437,
+      "governance_txid": 115319,
+      "commit_txid": 115318,
       "lock_waits": []
     },
     {
@@ -767,9 +767,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69104947,
-      "governance_txid": 5958,
-      "commit_txid": 5957,
+      "elapsed_ns": 67599403,
+      "governance_txid": 115323,
+      "commit_txid": 115322,
       "lock_waits": []
     },
     {
@@ -783,9 +783,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 70324158,
-      "governance_txid": 5962,
-      "commit_txid": 5961,
+      "elapsed_ns": 68365944,
+      "governance_txid": 115327,
+      "commit_txid": 115326,
       "lock_waits": []
     },
     {
@@ -799,9 +799,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 71720291,
-      "governance_txid": 5966,
-      "commit_txid": 5965,
+      "elapsed_ns": 71057821,
+      "governance_txid": 115331,
+      "commit_txid": 115330,
       "lock_waits": []
     },
     {
@@ -815,9 +815,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67783415,
-      "governance_txid": 5970,
-      "commit_txid": 5969,
+      "elapsed_ns": 71814758,
+      "governance_txid": 115335,
+      "commit_txid": 115334,
       "lock_waits": []
     },
     {
@@ -831,9 +831,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67002270,
-      "governance_txid": 5974,
-      "commit_txid": 5973,
+      "elapsed_ns": 70771409,
+      "governance_txid": 115339,
+      "commit_txid": 115338,
       "lock_waits": []
     },
     {
@@ -847,9 +847,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 65990661,
-      "governance_txid": 5978,
-      "commit_txid": 5977,
+      "elapsed_ns": 71910390,
+      "governance_txid": 115343,
+      "commit_txid": 115342,
       "lock_waits": []
     },
     {
@@ -863,9 +863,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66470182,
-      "governance_txid": 5982,
-      "commit_txid": 5981,
+      "elapsed_ns": 71530547,
+      "governance_txid": 115347,
+      "commit_txid": 115346,
       "lock_waits": []
     },
     {
@@ -879,9 +879,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67618213,
-      "governance_txid": 5986,
-      "commit_txid": 5985,
+      "elapsed_ns": 71459389,
+      "governance_txid": 115351,
+      "commit_txid": 115350,
       "lock_waits": []
     },
     {
@@ -895,9 +895,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67207388,
-      "governance_txid": 5990,
-      "commit_txid": 5989,
+      "elapsed_ns": 71406571,
+      "governance_txid": 115355,
+      "commit_txid": 115354,
       "lock_waits": []
     },
     {
@@ -911,9 +911,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66600100,
-      "governance_txid": 5994,
-      "commit_txid": 5993,
+      "elapsed_ns": 69039824,
+      "governance_txid": 115359,
+      "commit_txid": 115358,
       "lock_waits": []
     },
     {
@@ -927,9 +927,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 65765904,
-      "governance_txid": 5998,
-      "commit_txid": 5997,
+      "elapsed_ns": 68374263,
+      "governance_txid": 115363,
+      "commit_txid": 115362,
       "lock_waits": []
     },
     {
@@ -943,9 +943,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66609581,
-      "governance_txid": 6002,
-      "commit_txid": 6001,
+      "elapsed_ns": 72442156,
+      "governance_txid": 115367,
+      "commit_txid": 115366,
       "lock_waits": []
     },
     {
@@ -959,9 +959,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69734816,
-      "governance_txid": 6006,
-      "commit_txid": 6005,
+      "elapsed_ns": 71267636,
+      "governance_txid": 115371,
+      "commit_txid": 115370,
       "lock_waits": []
     },
     {
@@ -975,9 +975,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67608909,
-      "governance_txid": 6010,
-      "commit_txid": 6009,
+      "elapsed_ns": 71483679,
+      "governance_txid": 115375,
+      "commit_txid": 115374,
       "lock_waits": []
     },
     {
@@ -991,9 +991,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66531846,
-      "governance_txid": 6014,
-      "commit_txid": 6013,
+      "elapsed_ns": 70706491,
+      "governance_txid": 115379,
+      "commit_txid": 115378,
       "lock_waits": []
     },
     {
@@ -1007,9 +1007,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67308127,
-      "governance_txid": 6018,
-      "commit_txid": 6017,
+      "elapsed_ns": 71015376,
+      "governance_txid": 115383,
+      "commit_txid": 115382,
       "lock_waits": []
     },
     {
@@ -1023,9 +1023,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66159221,
-      "governance_txid": 6022,
-      "commit_txid": 6021,
+      "elapsed_ns": 70212852,
+      "governance_txid": 115387,
+      "commit_txid": 115386,
       "lock_waits": []
     },
     {
@@ -1039,9 +1039,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69075341,
-      "governance_txid": 6026,
-      "commit_txid": 6025,
+      "elapsed_ns": 68851089,
+      "governance_txid": 115391,
+      "commit_txid": 115390,
       "lock_waits": []
     },
     {
@@ -1055,9 +1055,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 68248992,
-      "governance_txid": 6030,
-      "commit_txid": 6029,
+      "elapsed_ns": 70198437,
+      "governance_txid": 115395,
+      "commit_txid": 115394,
       "lock_waits": []
     },
     {
@@ -1071,9 +1071,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67057796,
-      "governance_txid": 6034,
-      "commit_txid": 6033,
+      "elapsed_ns": 67714889,
+      "governance_txid": 115399,
+      "commit_txid": 115398,
       "lock_waits": []
     },
     {
@@ -1087,9 +1087,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67478478,
-      "governance_txid": 6038,
-      "commit_txid": 6037,
+      "elapsed_ns": 66868874,
+      "governance_txid": 115403,
+      "commit_txid": 115402,
       "lock_waits": []
     },
     {
@@ -1103,9 +1103,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67808795,
-      "governance_txid": 6042,
-      "commit_txid": 6041,
+      "elapsed_ns": 66941015,
+      "governance_txid": 115407,
+      "commit_txid": 115406,
       "lock_waits": []
     },
     {
@@ -1119,9 +1119,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69633361,
-      "governance_txid": 6046,
-      "commit_txid": 6045,
+      "elapsed_ns": 68289560,
+      "governance_txid": 115411,
+      "commit_txid": 115410,
       "lock_waits": []
     },
     {
@@ -1135,9 +1135,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 70239782,
-      "governance_txid": 6050,
-      "commit_txid": 6049,
+      "elapsed_ns": 66755203,
+      "governance_txid": 115415,
+      "commit_txid": 115414,
       "lock_waits": []
     },
     {
@@ -1151,9 +1151,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66804003,
-      "governance_txid": 6054,
-      "commit_txid": 6053,
+      "elapsed_ns": 66928710,
+      "governance_txid": 115419,
+      "commit_txid": 115418,
       "lock_waits": []
     },
     {
@@ -1167,9 +1167,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66116631,
-      "governance_txid": 6058,
-      "commit_txid": 6057,
+      "elapsed_ns": 64960637,
+      "governance_txid": 115423,
+      "commit_txid": 115422,
       "lock_waits": []
     },
     {
@@ -1183,9 +1183,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67775597,
-      "governance_txid": 6062,
-      "commit_txid": 6061,
+      "elapsed_ns": 66106378,
+      "governance_txid": 115427,
+      "commit_txid": 115426,
       "lock_waits": []
     },
     {
@@ -1199,9 +1199,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 70651321,
-      "governance_txid": 6066,
-      "commit_txid": 6065,
+      "elapsed_ns": 64622991,
+      "governance_txid": 115431,
+      "commit_txid": 115430,
       "lock_waits": []
     },
     {
@@ -1215,9 +1215,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69632594,
-      "governance_txid": 6070,
-      "commit_txid": 6069,
+      "elapsed_ns": 64998122,
+      "governance_txid": 115435,
+      "commit_txid": 115434,
       "lock_waits": []
     },
     {
@@ -1231,9 +1231,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 71360056,
-      "governance_txid": 6074,
-      "commit_txid": 6073,
+      "elapsed_ns": 69567024,
+      "governance_txid": 115439,
+      "commit_txid": 115438,
       "lock_waits": []
     },
     {
@@ -1247,9 +1247,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 70956055,
-      "governance_txid": 6078,
-      "commit_txid": 6077,
+      "elapsed_ns": 67486520,
+      "governance_txid": 115443,
+      "commit_txid": 115442,
       "lock_waits": []
     },
     {
@@ -1263,9 +1263,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 68969026,
-      "governance_txid": 6082,
-      "commit_txid": 6081,
+      "elapsed_ns": 67485387,
+      "governance_txid": 115447,
+      "commit_txid": 115446,
       "lock_waits": []
     },
     {
@@ -1279,9 +1279,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 70096292,
-      "governance_txid": 6086,
-      "commit_txid": 6085,
+      "elapsed_ns": 67943539,
+      "governance_txid": 115451,
+      "commit_txid": 115450,
       "lock_waits": []
     },
     {
@@ -1295,9 +1295,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 65404856,
-      "governance_txid": 6090,
-      "commit_txid": 6089,
+      "elapsed_ns": 67831349,
+      "governance_txid": 115455,
+      "commit_txid": 115454,
       "lock_waits": []
     },
     {
@@ -1311,9 +1311,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69477299,
-      "governance_txid": 6094,
-      "commit_txid": 6093,
+      "elapsed_ns": 66829607,
+      "governance_txid": 115459,
+      "commit_txid": 115458,
       "lock_waits": []
     },
     {
@@ -1327,9 +1327,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67811968,
-      "governance_txid": 6098,
-      "commit_txid": 6097,
+      "elapsed_ns": 66527302,
+      "governance_txid": 115463,
+      "commit_txid": 115462,
       "lock_waits": []
     },
     {
@@ -1343,9 +1343,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 68332621,
-      "governance_txid": 6102,
-      "commit_txid": 6101,
+      "elapsed_ns": 64963896,
+      "governance_txid": 115467,
+      "commit_txid": 115466,
       "lock_waits": []
     },
     {
@@ -1359,9 +1359,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 71175534,
-      "governance_txid": 6106,
-      "commit_txid": 6105,
+      "elapsed_ns": 65012205,
+      "governance_txid": 115471,
+      "commit_txid": 115470,
       "lock_waits": []
     },
     {
@@ -1375,9 +1375,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67954254,
-      "governance_txid": 6110,
-      "commit_txid": 6109,
+      "elapsed_ns": 65489923,
+      "governance_txid": 115475,
+      "commit_txid": 115474,
       "lock_waits": []
     },
     {
@@ -1391,9 +1391,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 64861421,
-      "governance_txid": 6114,
-      "commit_txid": 6113,
+      "elapsed_ns": 64591403,
+      "governance_txid": 115479,
+      "commit_txid": 115478,
       "lock_waits": []
     },
     {
@@ -1407,9 +1407,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 67925354,
-      "governance_txid": 6118,
-      "commit_txid": 6117,
+      "elapsed_ns": 65244697,
+      "governance_txid": 115483,
+      "commit_txid": 115482,
       "lock_waits": []
     },
     {
@@ -1423,9 +1423,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 66748831,
-      "governance_txid": 6122,
-      "commit_txid": 6121,
+      "elapsed_ns": 65243256,
+      "governance_txid": 115487,
+      "commit_txid": 115486,
       "lock_waits": []
     },
     {
@@ -1439,9 +1439,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 71340487,
-      "governance_txid": 6126,
-      "commit_txid": 6125,
+      "elapsed_ns": 64500013,
+      "governance_txid": 115491,
+      "commit_txid": 115490,
       "lock_waits": []
     },
     {
@@ -1455,9 +1455,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 72274844,
-      "governance_txid": 6130,
-      "commit_txid": 6129,
+      "elapsed_ns": 65525106,
+      "governance_txid": 115495,
+      "commit_txid": 115494,
       "lock_waits": []
     },
     {
@@ -1471,9 +1471,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 71911816,
-      "governance_txid": 6134,
-      "commit_txid": 6133,
+      "elapsed_ns": 65153425,
+      "governance_txid": 115499,
+      "commit_txid": 115498,
       "lock_waits": []
     },
     {
@@ -1487,9 +1487,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 71206127,
-      "governance_txid": 6138,
-      "commit_txid": 6137,
+      "elapsed_ns": 66741429,
+      "governance_txid": 115503,
+      "commit_txid": 115502,
       "lock_waits": []
     },
     {
@@ -1503,9 +1503,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 70405913,
-      "governance_txid": 6142,
-      "commit_txid": 6141,
+      "elapsed_ns": 67959578,
+      "governance_txid": 115507,
+      "commit_txid": 115506,
       "lock_waits": []
     },
     {
@@ -1519,9 +1519,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 73407182,
-      "governance_txid": 6146,
-      "commit_txid": 6145,
+      "elapsed_ns": 67028006,
+      "governance_txid": 115511,
+      "commit_txid": 115510,
       "lock_waits": []
     },
     {
@@ -1535,9 +1535,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 73626224,
-      "governance_txid": 6150,
-      "commit_txid": 6149,
+      "elapsed_ns": 66047795,
+      "governance_txid": 115515,
+      "commit_txid": 115514,
       "lock_waits": []
     },
     {
@@ -1551,9 +1551,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 71205570,
-      "governance_txid": 6154,
-      "commit_txid": 6153,
+      "elapsed_ns": 66721386,
+      "governance_txid": 115519,
+      "commit_txid": 115518,
       "lock_waits": []
     },
     {
@@ -1567,9 +1567,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 72327302,
-      "governance_txid": 6158,
-      "commit_txid": 6157,
+      "elapsed_ns": 69395732,
+      "governance_txid": 115523,
+      "commit_txid": 115522,
       "lock_waits": []
     },
     {
@@ -1583,9 +1583,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 74856188,
-      "governance_txid": 6162,
-      "commit_txid": 6161,
+      "elapsed_ns": 66545871,
+      "governance_txid": 115527,
+      "commit_txid": 115526,
       "lock_waits": []
     },
     {
@@ -1599,9 +1599,9 @@
       "safety_success": true,
       "governance_committed_before_commit_start": false,
       "commit_completed_before_governance_visible": false,
-      "elapsed_ns": 69635658,
-      "governance_txid": 6166,
-      "commit_txid": 6165,
+      "elapsed_ns": 66667093,
+      "governance_txid": 115531,
+      "commit_txid": 115530,
       "lock_waits": []
     }
   ],
@@ -1610,6 +1610,6 @@
   },
   "root_cause_classification": "conservative_safe_rejection_by_implementation",
   "reconciliation_note": "Executed against real PostgreSQL database. The gateway's apply_transition re-checks consent inside its own transaction. The consent_revoke writer is a single-row INSERT+COMMIT while apply_transition is a multi-step pipeline. This structural weight asymmetry means: the governance writer commits and becomes visible under PostgreSQL READ COMMITTED before apply_transition's internal consent check runs in 100% of timing perturbations. The observed rejection is SAFE.",
-  "executed_at": "2026-09-28T14:42:50.768628+00:00",
-  "database_url": "postgresql+psycopg://aura:aura_prod_x7k9m2@localhost:5433/glhs_eval_r2"
+  "executed_at": "2026-09-29T04:37:50.032848+00:00",
+  "database_url": "postgresql+psycopg://<redacted>@localhost:5433/glhs_eval_r2"
 }

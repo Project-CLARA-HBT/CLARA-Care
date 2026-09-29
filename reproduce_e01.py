@@ -32,6 +32,10 @@ class NetworkAccessProhibitedError(RuntimeError):
     """Raised if any network activity is attempted during offline reproduction."""
 
 
+class RecordCountMismatchError(RuntimeError):
+    """Raised when raw runs record count does not match expected_records count."""
+
+
 def disable_network() -> None:
     """Prohibit all socket creation and DNS resolution."""
     def forbidden_socket(*args: Any, **kwargs: Any) -> Any:
@@ -122,8 +126,9 @@ def reproduce_and_verify(
     # 4. Verify raw stream tamper-evident hash chain
     runs_path = artifact_dir / "raw" / "runs.jsonl"
     records = read_records(runs_path)
-    if len(records) != 2816:
-        raise ValueError(f"execution_count_mismatch:expected=2816:actual={len(records)}")
+    expected_recs = protocol_data.get("sample_size_allocation", {}).get("total_executions") or 2816
+    if len(records) != expected_recs:
+        raise RecordCountMismatchError(f"execution_count_mismatch:expected={expected_recs}:actual={len(records)}")
 
     # 5. Reproduce derived summaries from raw stream
     reproduced_summary = analyze(schedules_data, records, protocol_data)

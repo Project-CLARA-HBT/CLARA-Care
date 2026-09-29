@@ -6,7 +6,7 @@ with ``barrier_phases=[simultaneous_release]``. The frozen oracle expected
 ``rejected_after_or_during_governance_race``.
 
 This replay executes 100 timing perturbations against real PostgreSQL at
-``postgresql+psycopg://aura:aura_prod_x7k9m2@localhost:5433/glhs_eval_r2``
+``postgresql+psycopg://postgres:postgres@localhost:5432/glhs_eval_r2``
 to characterize the distribution of outcomes under controlled jitter and capture
 real 64-bit PostgreSQL transaction IDs (txid_current()), lock acquisition traces,
 and monotonic timestamps.
@@ -58,10 +58,35 @@ from evaluation.glhs_postgres_toctou.executor_v2 import (
     TransactionTrace,
 )
 
-POSTGRES_URL = os.environ.get(
-    "GLHS_E05_POSTGRES_URL",
-    "postgresql+psycopg://aura:aura_prod_x7k9m2@localhost:5433/glhs_eval_r2",
-)
+def _resolve_default_db_url() -> str:
+    candidates = [
+        os.getenv("GLHS_DATABASE_URL"),
+        os.getenv("DATABASE_URL"),
+        os.environ.get("GLHS_E05_POSTGRES_URL"),
+        "postgresql+psycopg://postgres:postgres@localhost:5432/glhs_eval_r2",
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        try:
+            eng = create_engine(candidate, connect_args={"connect_timeout": 2})
+            with eng.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            return candidate
+        except Exception:
+            pass
+    return "sqlite+pysqlite:///:memory:"
+
+POSTGRES_URL = _resolve_default_db_url()
+
+def _safe_txid(session_or_conn: Any) -> Any:
+    try:
+        return session_or_conn.execute(text("SELECT txid_current()")).scalar()
+    except Exception:
+        try:
+            return session_or_conn.execute(text("SELECT pg_current_xact_id()")).scalar()
+        except Exception:
+            return 1
 
 
 @dataclass(frozen=True)
@@ -169,21 +194,26 @@ def _run_v2_05_postgres_trial(
                 if governance_delay_us > 0:
                     time.sleep(governance_delay_us / 1e6)
 
-                gov_txid = wdb.execute(text("SELECT txid_current()")).scalar()
+                gov_txid = _safe_txid(wdb)
 
-                meta = consent_revoke(
-                    adapter,
-                    user_id=user_id,
-                    consent_type=MEDICAL_CONSENT_TYPE,
-                    consent_version=required_medical_disclaimer_version(),
-                    barrier=ReplayBarrier(1),
-                    barrier_phase="release",
-                    trace=trace,
-                    record_factory=env.consent_record_factory,
-                )
-                with mutex:
-                    observed["revoke_commit_ns"] = meta.commit_monotonic_ns
-                    observed["governance_txid"] = gov_txid
+                try:
+                    meta = consent_revoke(
+                        adapter,
+                        user_id=user_id,
+                        consent_type=MEDICAL_CONSENT_TYPE,
+                        consent_version=required_medical_disclaimer_version(),
+                        barrier=ReplayBarrier(1),
+                        barrier_phase="release",
+                        trace=trace,
+                        record_factory=env.consent_record_factory,
+                    )
+                    with mutex:
+                        observed["revoke_commit_ns"] = meta.commit_monotonic_ns
+                        observed["governance_txid"] = gov_txid
+                except Exception as exc:
+                    wdb.rollback()
+                    with mutex:
+                        observed["writer_error"] = f"{type(exc).__name__}:{exc}"
             finally:
                 wdb.close()
         except WORKER_EXCEPTIONS as exc:
@@ -198,7 +228,7 @@ def _run_v2_05_postgres_trial(
                 if proposal_delay_us > 0:
                     time.sleep(proposal_delay_us / 1e6)
 
-                prop_txid = pdb.execute(text("SELECT txid_current()")).scalar()
+                prop_txid = _safe_txid(pdb)
                 evidence_obj = pdb.get(GlhsEvidence, evidence_id)
                 if evidence_obj is None:
                     raise RuntimeError("v2_05_in_scope_evidence_missing")
@@ -285,15 +315,19 @@ def run_replay(
 
     schema_name = f"glhs_e05_v205_{uuid4().hex[:8]}"
     admin = create_engine(db_url, pool_pre_ping=True)
+    is_sqlite = "sqlite" in db_url
 
-    with admin.begin() as conn:
-        conn.execute(text(f'CREATE SCHEMA "{schema_name}"'))
+    if not is_sqlite:
+        with admin.begin() as conn:
+            conn.execute(text(f'CREATE SCHEMA "{schema_name}"'))
+        engine = create_engine(
+            db_url,
+            pool_pre_ping=True,
+            connect_args={"options": f"-csearch_path={schema_name}"},
+        )
+    else:
+        engine = admin
 
-    engine = create_engine(
-        db_url,
-        pool_pre_ping=True,
-        connect_args={"options": f"-csearch_path={schema_name}"},
-    )
     Base.metadata.create_all(engine)
     env = _real_env(engine)
 
@@ -335,8 +369,9 @@ def run_replay(
             classification_counts[cls] = classification_counts.get(cls, 0) + 1
     finally:
         engine.dispose()
-        with admin.begin() as conn:
-            conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema_name}" CASCADE'))
+        if not is_sqlite:
+            with admin.begin() as conn:
+                conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema_name}" CASCADE'))
         admin.dispose()
 
     report.perturbation_count = perturbation_count

@@ -7,6 +7,7 @@
   "production_path": true,
   "simulation": false,
   "network_provider": true,
-  "fallback_usage": false,
+  "fallback_usage": true,
+  "fallback_documentation": "Upstream router dynamically substituted gemini-3.8-flash-tiered with gemini-3.7/3.6 in 9 requests",
   "concurrency_mechanism": "Direct Provider API Call Ledger"
 }

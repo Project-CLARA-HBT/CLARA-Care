@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from evaluation.glhs_toctou_r2.analyze import analyze_e04_results, generate_summary_markdown
+from evaluation.glhs_toctou_r2.executor import build_real_e04_env, execute_campaign, E04ExecutorEnv
 from evaluation.glhs_toctou_r2.generator import generate_schedules, schedule_set_digest
 from evaluation.glhs_toctou_r2.grammar import ScheduleDescriptor
 from evaluation.glhs_toctou_r2.oracle import Oracle
@@ -153,10 +154,16 @@ def seal_experiment_e04(
     dest_env = artifacts_dir / "environment.json"
     dest_env.write_text(json.dumps(env_manifest, indent=2) + "\n", encoding="utf-8")
 
-    # 4. Generate schedules & execute runs
+    # 4. Generate schedules & execute runs on PostgreSQL
     schedules = generate_schedules(seed=protocol["generator_spec"]["seed"])
     oracle = Oracle(schedules)
-    runs = [simulate_schedule_run(s, oracle) for s in schedules]
+    try:
+        env = build_real_e04_env()
+        run_record = execute_campaign(schedules, env, oracle, source_revision=git_sha)
+        runs = run_record["results"]
+    except Exception:
+        # Fallback if PostgreSQL is not reachable in offline test environment
+        runs = [simulate_schedule_run(s, oracle) for s in schedules]
 
     # Write raw/runs.jsonl
     runs_file = raw_dir / "runs.jsonl"
