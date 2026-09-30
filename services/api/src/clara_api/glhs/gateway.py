@@ -48,6 +48,9 @@ from clara_api.glhs.commit_kernel import (
     GlhsCommitContext,
     execute_atomic_glhs_commit,
 )
+from clara_api.glhs.inference_envelope import (
+    build_canonical_inference_envelope,
+)
 
 __all__ = [
     "build_canonical_inference_envelope",
@@ -147,6 +150,8 @@ def _effective_policy_version(
         override = os.environ.get("GOVRED_RESEARCH_POLICY_VERSION")
         if override:
             return override
+    if policy_domain is not None:
+        return "commitloop.v1"
     return POLICY_VERSION
 
 
@@ -516,37 +521,6 @@ def validate_snapshot_manifest(
     return cast(GlhsSnapshotManifest, snapshot)
 
 
-def build_canonical_inference_envelope(
-    *,
-    snapshot: GlhsSnapshotManifest,
-    model_visible_projection: object,
-    model_route: str,
-    requested_model_id: str,
-    prompt_template_version: str,
-    system_prompt_version: str,
-    purpose: str,
-    task: str,
-) -> dict[str, object]:
-    """Build the canonical request envelope for pre-dispatch inference binding (R3)."""
-
-    proj_digest = _snapshot_fingerprint(model_visible_projection)
-    return {
-        "schema": "clara.inference-envelope.v1",
-        "model_route": model_route,
-        "requested_model_id": requested_model_id,
-        "prompt_template_version": prompt_template_version,
-        "system_prompt_version": system_prompt_version,
-        "purpose": purpose,
-        "task": task,
-        "disclosure": {
-            "snapshot_id": snapshot.public_id,
-            "projection_digest": proj_digest,
-            "manifest_digest": snapshot.manifest_digest,
-        },
-        "model_visible_projection": model_visible_projection,
-    }
-
-
 def inference_binding_envelope(binding: GlhsInferenceContextBinding) -> dict[str, object]:
     """Return every security-relevant binding field covered by its digest."""
 
@@ -829,7 +803,7 @@ def validate_inference_context_binding(
     if not binding.consumed_thss:
         raise GlhsInvariantError("inference_binding_thss_not_consumed")
     if binding.status != "COMPLETED":
-        raise GlhsInvariantError("binding_not_completed")
+        raise GlhsInvariantError("dispatch_not_attested: binding_not_completed")
     if binding.binding_schema_version != BINDING_SCHEMA_VERSION:
         raise GlhsInvariantError("inference_binding_schema_mismatch")
     if binding.digest_algorithm != DIGEST_ALGORITHM:

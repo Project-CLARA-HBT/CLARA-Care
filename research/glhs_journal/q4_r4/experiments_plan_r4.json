@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "glhs-r4-experiments-plan.v1",
+  "program": "GLHS R4 — Governed Read-to-Write Continuity (GRWC) Phase 0",
+  "phase": "Phase 0 — Prospective Experimental & Statistical Plan for R4 (E15–E22)",
+  "title": "GLHS R4 Prospective Experimental and Statistical Plan: Dispatch Attestation, Prior-Art Comparison, Insufficiency Witnesses, and Formal Assurance",
+  "curator": "Agent C — Experiment & Statistics",
+  "date": "2026-09-30",
+  "status": "PROSPECTIVELY_FROZEN",
+  "freeze_timestamp_utc": "2026-09-30T00:00:00Z",
+  "master_seeds": {
+    "E15": "20260930_15",
+    "E16": "20260930_16",
+    "E17": "20260930_17",
+    "E18": "20260930_18",
+    "E19": "20260930_19",
+    "E20": "20260930_20",
+    "E21": "20260930_21",
+    "E22": "20260930_22"
+  },
+  "global_parameters": {
+    "significance_level_alpha": 0.05,
+    "confidence_level": 0.95,
+    "primary_database_backend": "PostgreSQL 16.0 under Serializable Snapshot Isolation (SSI)",
+    "isolation_safeguard": "Jitter repetitions are strictly isolated as secondary robustness probes to eliminate pseudoreplication. Primary sample sizes represent unique, independent logical schedules.",
+    "claim_eligibility_rule": "A result is CLAIM_ELIGIBLE only when protocol freeze precedes execution, raw byte artifacts exist and pass checksum verification, backend truthfulness is attested, and claim wording strictly complies with claim budget policies."
+  },
+  "experiments": {
+    "E15": {
+      "experiment_id": "E15",
+      "protocol_id": "GLHS-R4-E15-DISPATCH_ATTESTATION",
+      "title": "Dispatch Attestation Integrity Protocol under Adversarial Perturbation",
+      "priority": "P0",
+      "scientific_unit": "unique logical adversarial dispatch attestation schedule",
+      "target_invariants": [
+        "I07_evidence_closure",
+        "I08_binding_immutability",
+        "I09_lineage_preservation",
+        "I11_no_weak_route_downgrade",
+        "I12_exact_inference_disclosure_continuity",
+        "I13_non_downgradable_human_lineage",
+        "I14_undisclosed_evidence_rejection",
+        "I15_clean_path_reachability"
+      ],
+      "primary_research_questions": [
+        "What is the invalid admission rate of the GLHS dispatch attestation kernel across 16 prespecified attack classes (A01–A16)?",
+        "Does the clean-control admission rate maintain 100.0% liveness without false-stale aborts?"
+      ],
+      "attack_classes": [
+        {"class_id": "A01", "name": "snapshot_id_substitution", "description": "Replacing source snapshot UUID with an un-attested snapshot identifier.", "expected_admission": false, "expected_error": "proposal_snapshot_scope_forbidden"},
+        {"class_id": "A02", "name": "projection_digest_corruption", "description": "Mutating projection digest H_proj while retaining valid attestation token.", "expected_admission": false, "expected_error": "proposal_manifest_digest_mismatch"},
+        {"class_id": "A03", "name": "request_envelope_digest_corruption", "description": "Mutating request envelope digest H_env while retaining valid attestation token.", "expected_admission": false, "expected_error": "proposal_envelope_digest_mismatch"},
+        {"class_id": "A04", "name": "undisclosed_evidence_injection", "description": "Injecting evidence fingerprint added at proposal time not present in attested disclosure.", "expected_admission": false, "expected_error": "proposal_evidence_not_disclosed"},
+        {"class_id": "A05", "name": "disclosed_evidence_stripping", "description": "Omitting evidence item present in snapshot from prompt payload prior to provider dispatch.", "expected_admission": false, "expected_error": "proposal_evidence_incomplete"},
+        {"class_id": "A06", "name": "cross_actor_credential_reuse", "description": "Replaying attestation token issued for Actor A1 under credentials of Actor A2.", "expected_admission": false, "expected_error": "attestation_actor_mismatch"},
+        {"class_id": "A07", "name": "cross_purpose_context_reuse", "description": "Replaying attestation token issued for Purpose P1 under Purpose P2.", "expected_admission": false, "expected_error": "attestation_purpose_mismatch"},
+        {"class_id": "A08", "name": "cross_task_context_reuse", "description": "Replaying attestation token issued for Task T1 under Task T2.", "expected_admission": false, "expected_error": "attestation_task_mismatch"},
+        {"class_id": "A09", "name": "historic_attestation_nonce_replay", "description": "Replaying an expired or already-committed attestation nonce.", "expected_admission": false, "expected_error": "attestation_nonce_replayed"},
+        {"class_id": "A10", "name": "human_review_lineage_laundering", "description": "Attempting to commit human-adapted proposal with base_version_only lineage stripping.", "expected_admission": false, "expected_error": "commitment_lineage_base_only_forbidden"},
+        {"class_id": "A11", "name": "prompt_template_version_drift", "description": "Modifying system/user prompt template version between compilation and dispatch.", "expected_admission": false, "expected_error": "attestation_template_drift"},
+        {"class_id": "A12", "name": "unbound_provider_fallback", "description": "Executing un-attested provider fallback upon primary model timeout.", "expected_admission": false, "expected_error": "attestation_fallback_unbound"},
+        {"class_id": "A13", "name": "stale_retry_context_mutation", "description": "Re-submitting retried request with mutated context under original attestation.", "expected_admission": false, "expected_error": "attestation_retry_stale"},
+        {"class_id": "A14", "name": "cross_profile_projection_mismatch", "description": "Binding patient P_A's attestation token to patient P_B's proposal.", "expected_admission": false, "expected_error": "attestation_patient_mismatch"},
+        {"class_id": "A15", "name": "signature_hmac_tampering", "description": "Modifying dispatch token HMAC signature bytes.", "expected_admission": false, "expected_error": "attestation_signature_invalid"},
+        {"class_id": "A16", "name": "malformed_attestation_payload", "description": "Truncating or corrupting CBOR/JSON attestation envelope.", "expected_admission": false, "expected_error": "attestation_payload_malformed"}
+      ],
+      "sample_size_allocation": {
+        "N_total_schedules": 1024,
+        "adversarial_schedules_N": 800,
+        "schedules_per_attack_class": 50,
+        "clean_control_schedules_N": 224
+      },
+      "estimands": {
+        "primary": {
+          "name": "Invalid Admission Rate",
+          "target_value": 0.0,
+          "statistical_bound": "1-sided Clopper-Pearson 95% upper confidence bound < 0.005",
+          "units": "proportion [0.0, 1.0]"
+        },
+        "secondary": {
+          "name": "Clean Control Liveness Rate",
+          "target_value": 1.0,
+          "statistical_bound": "1-sided Wilson 95% lower confidence bound > 0.98",
+          "units": "proportion [0.0, 1.0]"
+        }
+      },
+      "stopping_rules": "Halt immediately if any adversarial schedule in A01–A16 achieves admission (Gate 1 failure)."
+    },
+    "E16": {
+      "experiment_id": "E16",
+      "protocol_id": "GLHS-R4-E16-FIVE_WAY_COMPARATOR",
+      "title": "Five-Way Prior-Art Comparator Architecture Study",
+      "priority": "P0",
+      "scientific_unit": "unique logical schedule evaluated across all 5 comparator arms",
+      "comparator_arms": {
+        "C0": {"arm_id": "C0", "name": "CURRENT_STATE_ONLY", "description": "Re-evaluates authorization and version predicates against DB state at commit time without read-set or disclosure tracking."},
+        "C1": {"arm_id": "C1", "name": "OCC_READSET", "description": "Classical Optimistic Concurrency Control (Kung-Robinson / DynamoDB conditional writes) tracking entity key-version read-sets."},
+        "C2": {"arm_id": "C2", "name": "PROVENANCE_ONLY", "description": "W3C PROV retrospective lineage tracking entities and activity history without forward commit binding."},
+        "C3": {"arm_id": "C3", "name": "SIGNED_EXACT_DISCLOSURE_TOKEN", "description": "Macaroon/PCFS-style HMAC capability token holding exact disclosure digest H_proj, read-set entity version caveats R_readset, and contextual caveats."},
+        "C4": {"arm_id": "C4", "name": "FULL_GRWC", "description": "GLHS Governed Read-to-Write Continuity: two-digest server binding (H_proj + H_env), dependency closure, immutable proposal lineage, and same-transaction SSI commit locks."}
+      },
+      "sample_size_allocation": {
+        "N_unique_schedules": 500,
+        "total_executions": 2500,
+        "schedules_per_arm": 500
+      },
+      "estimands": [
+        {"name": "False Admission Rate", "units": "proportion", "target_C4": 0.0},
+        {"name": "False Rejection Rate", "units": "proportion", "target_C4": 0.0},
+        {"name": "Decision Disagreement Rate vs C4", "units": "proportion"},
+        {"name": "Serialized Metadata Overhead", "units": "bytes per transaction"},
+        {"name": "Database IO Operations", "units": "IOPS per commit"},
+        {"name": "Validation CPU Time", "units": "microseconds (µs)"},
+        {"name": "Forensic Lineage Reconstructability Score", "units": "score [0, 100]"}
+      ],
+      "stopping_rules": "If C3 matches C4 in decision safety (zero invalid admissions across all tested adversarial schedules), GLHS R4 explicitly surrenders any claim of decision-safety superiority over compact capability tokens and restricts its claims strictly to full-lifecycle state-machine governance, server-attested two-digest dispatch receipts, tamper-evident lineage binding, and bit-exact forensic audit reconstructability (Gate 2)."
+    },
+    "E17": {
+      "experiment_id": "E17",
+      "protocol_id": "GLHS-R4-E17-CURRENT_STATE_INSUFFICIENCY",
+      "title": "Current-State Insufficiency Witness Protocol",
+      "priority": "P0",
+      "scientific_unit": "deterministic paired proposal scenario (P_good, P_substituted)",
+      "target_invariants": [
+        "I16_current_state_insufficiency_counterexample",
+        "I12_exact_inference_disclosure_continuity"
+      ],
+      "primary_research_question": "Do deterministic proposal pairs exist where commit-time database state and governance are completely identical, causing C0 (CURRENT_STATE_ONLY) and C1 (OCC_READSET) to admit invalid substituted proposals while C3/C4 reject them?",
+      "scenario_design": "P_good is derived from disclosure D_good containing allergy disclosure. P_substituted is derived from D_bad (allergy omitted) proposing contraindicated drug. Commit-time DB state (v=1, policy epoch e=1, consent active) is identical.",
+      "sample_size_allocation": {
+        "N_paired_witness_scenarios": 100
+      },
+      "estimands": {
+        "C0_false_admission_rate": 1.0,
+        "C1_false_admission_rate": 1.0,
+        "C3_false_admission_rate": 0.0,
+        "C4_false_admission_rate": 0.0
+      },
+      "stopping_rules": "Halt if C4 fails to reject any P_substituted witness scenario."
+    },
+    "E18": {
+      "experiment_id": "E18",
+      "protocol_id": "GLHS-R4-E18-GLOBAL_VS_DISCLOSED_SUPPORT",
+      "title": "Global Source Support vs. Disclosed Support Separation Protocol",
+      "priority": "P0",
+      "scientific_unit": "logical schedule with evidence present in DB but excluded from prompt disclosure",
+      "target_invariants": [
+        "I17_disclosed_vs_source_support_separation",
+        "I07_evidence_closure",
+        "I14_undisclosed_evidence_rejection"
+      ],
+      "primary_research_question": "Does C1 (OCC_READSET) improperly admit proposals asserting evidence present in the global DB but omitted from prompt projection, whereas C4 (FULL_GRWC) strictly rejects with evidence_undisclosed?",
+      "sample_size_allocation": {
+        "N_total_schedules": 200,
+        "omitted_evidence_schedules_N": 100,
+        "disclosed_control_schedules_N": 100
+      },
+      "estimands": {
+        "C1_omission_detection_rate": 0.0,
+        "C4_omission_detection_rate": 1.0,
+        "C4_rejection_reason": "proposal_evidence_not_disclosed"
+      },
+      "stopping_rules": "Halt if C4 admits any proposal containing undisclosed evidence."
+    },
+    "E19": {
+      "experiment_id": "E19",
+      "protocol_id": "GLHS-R4-E19-TRANSPORT_SERIALIZATION_ATTACKS",
+      "title": "Transport Serialization Attack Resistance Protocol",
+      "priority": "P0",
+      "scientific_unit": "unique mutated transport serialization envelope",
+      "target_invariants": [
+        "I18_two_digest_transport_independence",
+        "I12_exact_inference_disclosure_continuity"
+      ],
+      "primary_research_question": "Does the GLHS two-digest binding (H_proj + H_env) independently detect and reject transport-level mutations while preserving projection integrity?",
+      "mutation_patterns": [
+        "envelope_whitespace_tampering",
+        "json_key_reordering",
+        "transport_header_injection",
+        "proxy_parameter_mutation",
+        "client_envelope_digest_substitution",
+        "cbor_canonicalization_tampering",
+        "utf8_surrogate_injection",
+        "float_precision_serialization_shift"
+      ],
+      "sample_size_allocation": {
+        "N_total_mutated_schedules": 256,
+        "schedules_per_pattern": 32
+      },
+      "estimands": {
+        "transport_mutation_rejection_rate": 1.0,
+        "rejection_reason": "proposal_envelope_digest_mismatch"
+      },
+      "stopping_rules": "Halt if any mutated transport payload passes gateway attestation."
+    },
+    "E20": {
+      "experiment_id": "E20",
+      "protocol_id": "GLHS-R4-E20-PROVIDER_RECEIPT_STUDY",
+      "title": "Optional Provider Verifiable Receipt Attestation Study",
+      "priority": "P2",
+      "scientific_unit": "provider-attested inference receipt payload",
+      "conditionality_rule": "Executed ONLY if live provider hardware/verifiable receipt capabilities are active in environment. Otherwise set status to NOT_RUN_PROVIDER_ATTESTATION_UNAVAILABLE.",
+      "sample_size_allocation": {
+        "N_target_receipts": 100
+      },
+      "status_if_unavailable": "NOT_RUN_PROVIDER_ATTESTATION_UNAVAILABLE"
+    },
+    "E21": {
+      "experiment_id": "E21",
+      "protocol_id": "GLHS-R4-E21-FORMAL_NOVELTY_MODEL",
+      "title": "Formal Novelty Model & State-Space Assurance (Invariants I16–I24)",
+      "priority": "P0",
+      "scientific_unit": "formal state-space state and transition step in TLA+/Alloy model checker",
+      "target_invariants": [
+        "I16_current_state_insufficiency_counterexample",
+        "I17_disclosed_vs_source_support_separation",
+        "I18_two_digest_transport_independence",
+        "I19_non_malleable_lineage_continuity",
+        "I20_anti_laundering_human_gate",
+        "I21_canonical_lock_hierarchy_deadlock_freedom",
+        "I22_dynamic_governance_precedence",
+        "I23_deterministic_replay_parity",
+        "I24_clean_path_reachability"
+      ],
+      "exploration_parameters": {
+        "search_depth_d": 6,
+        "expected_reachable_states_min": 50000,
+        "expected_transitions_min": 200000
+      },
+      "estimands": {
+        "invariant_violations_GRWC": 0,
+        "counterexample_witness_C0": "GENERATED_FOR_I16",
+        "counterexample_witness_C1": "GENERATED_FOR_I17",
+        "mutation_testing_detection_rate": 1.0
+      },
+      "stopping_rules": "Halt submission if TLC/Alloy finds any invariant violation under GRWC up to depth d=6."
+    },
+    "E22": {
+      "experiment_id": "E22",
+      "protocol_id": "GLHS-R4-E22-PUBLIC_REPRODUCIBILITY_AUDIT",
+      "title": "R4 Public Reproducibility & Fresh Checkout Audit Protocol",
+      "priority": "P0",
+      "scientific_unit": "fresh git clone checkout execution pass",
+      "steps": [
+        "1. Environment verification and Python/PostgreSQL dependency validation",
+        "2. Verification of frozen commit SHAs and protocol JSON SHA256 checksums",
+        "3. Automated re-execution of E15 through E21 experiment runners",
+        "4. Exact binary/statistical output comparison against frozen baseline",
+        "5. Automated generation of R4 Publication Audit Report"
+      ],
+      "estimands": {
+        "claim_reproducibility_rate": 1.0,
+        "checksum_concordance": 1.0
+      },
+      "stopping_rules": "Disallow public claim release if any reproduction checksum fails (Gate 5)."
+    }
+  }
+}

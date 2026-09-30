@@ -140,11 +140,11 @@ def validate_protocol_chronology_and_quality(
                     )
                     if exec_ts_raw:
                         exec_dt = parse_iso8601(exec_ts_raw)
-                        if exec_dt < freeze_dt:
+                        if exec_dt <= freeze_dt:
                             errors.append(
                                 f"CHRONOLOGICAL_INVERSION_ERROR: Execution artifact {child.name} "
-                                f"has execution timestamp {exec_dt.isoformat()} strictly BEFORE "
-                                f"protocol freeze timestamp {freeze_dt.isoformat()}! (Retroactive freeze anomaly)"
+                                f"has execution timestamp {exec_dt.isoformat()} on or before "
+                                f"protocol freeze timestamp {freeze_dt.isoformat()}! (Strict precedence freeze < exec violated)"
                             )
                 except Exception:
                     pass

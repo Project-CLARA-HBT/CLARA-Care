@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "glhs-r4-master-statistical-freeze.v1",
+  "program": "GLHS R4 — Governed Read-to-Write Continuity (GRWC)",
+  "phase": "Phase 0 — Master Prospective Statistical Freeze (E15–E22)",
+  "freeze_timestamp_utc": "2026-09-30T00:00:00Z",
+  "curator": "Agent C — Experiment & Statistics",
+  "status": "PROSPECTIVELY_FROZEN",
+  "global_parameters": {
+    "significance_level_alpha": 0.05,
+    "confidence_level": 0.95,
+    "primary_database_backend": "PostgreSQL 16.0 under Serializable Snapshot Isolation (SSI)",
+    "isolation_safeguard": "Jitter repetitions are strictly isolated as secondary robustness probes to eliminate pseudoreplication. Primary sample sizes represent unique, independent logical schedules.",
+    "claim_eligibility_rule": "A result is CLAIM_ELIGIBLE only when protocol freeze precedes execution, raw byte artifacts exist and pass checksum verification, backend truthfulness is attested, and claim wording strictly complies with claim budget policies."
+  },
+  "master_seeds": {
+    "E15": "20260930_15",
+    "E16": "20260930_16",
+    "E17": "20260930_17",
+    "E18": "20260930_18",
+    "E19": "20260930_19",
+    "E20": "20260930_20",
+    "E21": "20260930_21",
+    "E22": "20260930_22"
+  },
+  "sample_sizes_locked": {
+    "E15": 1024,
+    "E16": 2500,
+    "E17": 100,
+    "E18": 200,
+    "E19": 256,
+    "E20": 100,
+    "E21": 50000,
+    "E22": 1
+  }
+}

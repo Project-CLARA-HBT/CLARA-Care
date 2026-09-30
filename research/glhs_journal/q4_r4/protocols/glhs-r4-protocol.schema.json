@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Project-CLARA-HBT/CLARA-Care/main/research/glhs_journal/q4_r4/protocols/glhs-r4-protocol.schema.json",
+  "title": "GLHS R4 Unified Protocol Specification Schema",
+  "description": "Unified JSON schema enforcing required standard metadata, formal invariant linkages, backend engine assertions, and statistical endpoint definitions across GLHS R4 experiments (E15-E22).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "protocol_id",
+    "experiment_id",
+    "priority",
+    "freeze_timestamp_utc",
+    "target_invariants",
+    "backend_requirement",
+    "scientific_unit",
+    "primary_endpoints",
+    "secondary_endpoints",
+    "sample_size",
+    "stopping_rules"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["glhs-r4-protocol.v1"]
+    },
+    "protocol_id": {
+      "type": "string"
+    },
+    "experiment_id": {
+      "type": "string",
+      "enum": ["E15", "E16", "E17", "E18", "E19", "E20", "E21", "E22"]
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["P0", "P1", "P2"]
+    },
+    "freeze_timestamp_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "target_invariants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "backend_requirement": {
+      "type": "string"
+    },
+    "scientific_unit": {
+      "type": "string"
+    },
+    "primary_endpoints": {
+      "type": "array",
+      "minItems": 1
+    },
+    "secondary_endpoints": {
+      "type": "array"
+    },
+    "sample_size": {
+      "type": "object",
+      "required": ["total_executions_N"]
+    },
+    "stopping_rules": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

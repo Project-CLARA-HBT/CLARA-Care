@@ -1,0 +1,21 @@
+{
+  "schema_version": "glhs-r4-validation.v1",
+  "experiment_id": "E18",
+  "validated_at_utc": "2026-09-30T00:16:00Z",
+  "validation_verdict": "PASS",
+  "total_violations": 0,
+  "check_notes": "C4 achieved 100% rejection on undisclosed evidence with exact reason code proposal_evidence_not_disclosed.",
+  "chronology_check": "freeze_timestamp_utc < execution_started_utc <= execution_completed_utc <= validated_at_utc <= sealed_at_utc",
+  "provenance": {
+    "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+    "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "analysis_release_sha": "d4b641ec53fb7ed8dd5c692ec4bff98c8cd777dc",
+    "r4_baseline_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
+    "active_branch": "research/glhs-r4-novelty-hardening",
+    "freeze_timestamp_utc": "2026-09-30T00:00:00Z",
+    "execution_started_utc": "2026-09-30T00:05:00Z",
+    "execution_completed_utc": "2026-09-30T00:15:00Z",
+    "validated_at_utc": "2026-09-30T00:16:00Z",
+    "sealed_at_utc": "2026-09-30T00:18:00Z"
+  }
+}

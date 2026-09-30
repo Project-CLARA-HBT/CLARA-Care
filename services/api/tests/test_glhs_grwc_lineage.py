@@ -695,7 +695,7 @@ def test_rejection_of_lineage_depth_exceeded(db: Session) -> None:
 
     current = root
     chain: list[GlhsClinicalCommitmentProposal] = [root]
-    for i in range(MAX_PROPOSAL_LINEAGE_DEPTH + 1):
+    for _i in range(MAX_PROPOSAL_LINEAGE_DEPTH + 1):
         row = GlhsClinicalCommitmentProposal(
             public_id=str(uuid4()),
             commitment_id=commitment.id,

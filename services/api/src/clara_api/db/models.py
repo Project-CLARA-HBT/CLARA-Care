@@ -2432,6 +2432,18 @@ class GlhsInferenceContextBinding(Base):
     request_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     request_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     response_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    attestation_level: Mapped[str] = mapped_column(
+        String(32), default="SERVER_PRE_DISPATCH"
+    )
+    semantic_envelope_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    transport_payload_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    dispatch_attempt_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    provider_receipt_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    provider_receipt_key_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    provider_receipt_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    transport_dispatched_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
@@ -3005,6 +3017,14 @@ def _protect_glhs_inference_binding_content(
                 "request_completed_at",
                 "response_digest",
                 "binding_digest",
+                "attestation_level",
+                "semantic_envelope_digest",
+                "transport_payload_digest",
+                "dispatch_attempt_id",
+                "provider_receipt_digest",
+                "provider_receipt_key_id",
+                "provider_receipt_verified",
+                "transport_dispatched_at",
             }
         ),
     )

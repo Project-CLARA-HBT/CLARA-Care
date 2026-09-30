@@ -1,0 +1,171 @@
+{
+  "schema_version": "glhs-r4-release-manifest.v1",
+  "program": "GLHS R4 — Governed Read-to-Write Continuity (GRWC) / Exact-Disclosure Admission",
+  "repository": "Project-CLARA-HBT/CLARA-Care",
+  "release_id": "GLHS-R4-RELEASE-TEMPLATE-V1",
+  "provenance": {
+    "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+    "experiment_harness_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
+    "execution_harness_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
+    "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "analysis_release_sha": "d4b641ec53fb7ed8dd5c692ec4bff98c8cd777dc",
+    "active_branch": "research/glhs-r4-novelty-hardening",
+    "literature_freeze_sha": "1be28846a28b2293f84048b78730245f2f53e6b2a35a129d232f91bcd17616e7",
+    "literature_matrix_sha256": "1be28846a28b2293f84048b78730245f2f53e6b2a35a129d232f91bcd17616e7",
+    "novelty_contract_sha256": "4fb03ec67a54542fe5437c28f99e5f6b63f9131f9e45418df651801569c27c90",
+    "claim_budget_sha256": "6ae1be74a2a2a27a578ff98d0ee53ee66de5816940205edc6fe9a2cbf89519b8",
+    "experiments_plan_sha256": "4e848fe86d7cfda2a5ddc1bcbf60bef41891e429caae87b7328fec93c94d5a82",
+    "prospective_freeze_timestamp_utc": "2026-09-30T00:00:00Z"
+  },
+  "environment": {
+    "python_version": "3.12.3",
+    "nodejs_version": "v20.20.2",
+    "postgresql_version": "16.14",
+    "postgresql_endpoint": "127.0.0.1:5433",
+    "database_user": "aura",
+    "database_name": "aura",
+    "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "cpu_count": 88
+  },
+  "sealing_specification": {
+    "hash_algorithm": "SHA-256",
+    "canonicalization_scheme": "RFC-8785 JSON Canonicalization Scheme (JCS)",
+    "chronology_precedence_rule": "freeze_timestamp_utc < execution_started_utc <= execution_completed_utc <= validated_at_utc <= sealed_at_utc",
+    "required_leaf_artifacts": [
+      "protocol.json",
+      "protocol.sha256",
+      "freeze.json",
+      "environment.json",
+      "code_manifest.json",
+      "backend_attestation.json",
+      "raw/",
+      "derived/",
+      "validation.json",
+      "checksums.sha256",
+      "seal.json"
+    ],
+    "backend_attestation_contract": {
+      "required_fields": [
+        "actual_backend",
+        "version",
+        "production_path",
+        "simulation",
+        "network_provider",
+        "fallback_usage"
+      ],
+      "prohibited_substitutions": [
+        "Simulated in-memory storage must not be reported as PostgreSQL",
+        "Synthetic mocks must not be reported as real provider LLM executions"
+      ]
+    },
+    "verification_rules": [
+      "Strict chronological precedence: freeze_timestamp_utc < execution_started_utc <= execution_completed_utc <= validated_at_utc <= sealed_at_utc",
+      "Every relative path in checksums.sha256 must exist and match calculated SHA-256 hex digest",
+      "seal.json must be generated inside the artifact directory with full artifact_inventory hash map",
+      "Zero unhandled exceptions or safety invariant breaches allowed in claim-eligible runs",
+      "Two-digest binding (H_proj + H_env) must independently verify projection and transport integrity"
+    ]
+  },
+  "experiments": {
+    "E15": {
+      "name": "Dispatch Attestation Integrity Protocol under Adversarial Perturbation",
+      "priority": "P0",
+      "backend": "PostgreSQL 16.0 under Serializable Snapshot Isolation (SSI)",
+      "primary_question": "What is the invalid admission rate of the GLHS dispatch attestation kernel across 16 prespecified attack classes (A01–A16)?",
+      "protocol_path": "research/glhs_journal/q4_r4/protocols/E15_dispatch_attestation/protocol.json",
+      "protocol_sha256": "PENDING_FREEZE",
+      "artifact_dir": "artifacts/glhs-r4/<run_id>/E15",
+      "seal_sha256": "PENDING_SEAL",
+      "claim_eligible": true,
+      "status": "PENDING_EXECUTION"
+    },
+    "E16": {
+      "name": "Five-Way Prior-Art Comparator Architecture Study",
+      "priority": "P0",
+      "backend": "Multi-Arm Architecture Testbed (C0: CURRENT_STATE_ONLY, C1: OCC_READSET, C2: PROVENANCE_ONLY, C3: SIGNED_EXACT_DISCLOSURE_TOKEN, C4: FULL_GRWC)",
+      "primary_question": "How do safety, false-admission rate, overhead, and reconstructability compare across 5 prior-art architectures?",
+      "protocol_path": "research/glhs_journal/q4_r4/protocols/E16_five_way_comparator/protocol.json",
+      "protocol_sha256": "PENDING_FREEZE",
+      "artifact_dir": "artifacts/glhs-r4/<run_id>/E16",
+      "seal_sha256": "PENDING_SEAL",
+      "claim_eligible": true,
+      "status": "PENDING_EXECUTION"
+    },
+    "E17": {
+      "name": "Current-State Insufficiency Witness Protocol",
+      "priority": "P0",
+      "backend": "PostgreSQL 16.0 under Serializable Snapshot Isolation (SSI)",
+      "primary_question": "Do deterministic proposal pairs exist where commit-time database state and governance are completely identical, causing C0 (CURRENT_STATE_ONLY) and C1 (OCC_READSET) to admit invalid substituted proposals while C3/C4 reject them?",
+      "protocol_path": "research/glhs_journal/q4_r4/protocols/E17_current_state_insufficiency/protocol.json",
+      "protocol_sha256": "PENDING_FREEZE",
+      "artifact_dir": "artifacts/glhs-r4/<run_id>/E17",
+      "seal_sha256": "PENDING_SEAL",
+      "claim_eligible": true,
+      "status": "PENDING_EXECUTION"
+    },
+    "E18": {
+      "name": "Global Source Support vs. Disclosed Support Separation Protocol",
+      "priority": "P0",
+      "backend": "PostgreSQL 16.0 under Serializable Snapshot Isolation (SSI)",
+      "primary_question": "Does C1 (OCC_READSET) improperly admit proposals asserting evidence present in the global DB but omitted from prompt projection, whereas C4 (FULL_GRWC) strictly rejects with evidence_undisclosed?",
+      "protocol_path": "research/glhs_journal/q4_r4/protocols/E18_global_vs_disclosed_support/protocol.json",
+      "protocol_sha256": "PENDING_FREEZE",
+      "artifact_dir": "artifacts/glhs-r4/<run_id>/E18",
+      "seal_sha256": "PENDING_SEAL",
+      "claim_eligible": true,
+      "status": "PENDING_EXECUTION"
+    },
+    "E19": {
+      "name": "Transport Serialization Attack Resistance Protocol",
+      "priority": "P0",
+      "backend": "Two-Digest Gateway + Canonicalization Engine",
+      "primary_question": "Does the GLHS two-digest binding (H_proj + H_env) independently detect and reject transport-level mutations while preserving projection integrity?",
+      "protocol_path": "research/glhs_journal/q4_r4/protocols/E19_transport_serialization_attacks/protocol.json",
+      "protocol_sha256": "PENDING_FREEZE",
+      "artifact_dir": "artifacts/glhs-r4/<run_id>/E19",
+      "seal_sha256": "PENDING_SEAL",
+      "claim_eligible": true,
+      "status": "PENDING_EXECUTION"
+    },
+    "E20": {
+      "name": "Optional Provider Verifiable Receipt Attestation Study",
+      "priority": "P2",
+      "backend": "Live Provider Attestation Interface / Hardware Secure Enclave",
+      "primary_question": "Does end-to-end cryptographic provider receipt verification enhance auditability without introducing latency regressions?",
+      "protocol_path": "research/glhs_journal/q4_r4/protocols/E20_provider_receipt_study/protocol.json",
+      "protocol_sha256": "PENDING_FREEZE",
+      "artifact_dir": "artifacts/glhs-r4/<run_id>/E20",
+      "seal_sha256": "PENDING_SEAL",
+      "claim_eligible": true,
+      "status": "PENDING_EXECUTION"
+    },
+    "E21": {
+      "name": "Formal Novelty Model & State-Space Assurance (Invariants I16–I24)",
+      "priority": "P0",
+      "backend": "Bounded Exhaustive TLA+ / Python State-Space Explorer",
+      "primary_question": "Are GRWC safety and liveness invariants (I16–I24) counterexample-free within bounded state spaces up to depth d=6?",
+      "protocol_path": "research/glhs_journal/q4_r4/protocols/E21_formal_novelty_model/protocol.json",
+      "protocol_sha256": "PENDING_FREEZE",
+      "artifact_dir": "artifacts/glhs-r4/<run_id>/E21",
+      "seal_sha256": "PENDING_SEAL",
+      "claim_eligible": true,
+      "status": "PENDING_EXECUTION"
+    },
+    "E22": {
+      "name": "R4 Public Reproducibility & Fresh Checkout Audit Protocol",
+      "priority": "P0",
+      "backend": "Hermetic Clean-Environment Reproduction Engine",
+      "primary_question": "Can every R4 claim, invariant, and figure be deterministically reproduced on a clean git clone without manual intervention?",
+      "protocol_path": "research/glhs_journal/q4_r4/protocols/E22_public_reproducibility_audit/protocol.json",
+      "protocol_sha256": "PENDING_FREEZE",
+      "artifact_dir": "artifacts/glhs-r4/<run_id>/E22",
+      "seal_sha256": "PENDING_SEAL",
+      "claim_eligible": true,
+      "status": "PENDING_EXECUTION"
+    }
+  },
+  "total_experiments": 8,
+  "claim_eligible_experiments": 0,
+  "overall_status": "PROSPECTIVE_TEMPLATE_INITIALIZED"
+}

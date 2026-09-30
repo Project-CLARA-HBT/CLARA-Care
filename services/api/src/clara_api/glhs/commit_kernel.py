@@ -70,137 +70,10 @@ class DependencySpec:
     canonicalization_profile: str = CANONICALIZATION_PROFILE
 
 
-MAX_PROPOSAL_LINEAGE_DEPTH: int = 4
+from typing import TYPE_CHECKING
 
-
-@dataclass(frozen=True)
-class GrwcAdmissionResult:
-    """Outcome of formal GRWC admission verification under PostgreSQL locks in Phase 3."""
-
-    admitted: bool
-    proposal_id: int
-    root_proposal_id: int
-    parent_proposal_id: int | None
-    inference_binding_id: int | None
-    context_binding_mode: str
-    consumed_thss: bool
-    lineage_depth: int
-    lineage_ids: tuple[int, ...]
-    source_snapshot_id: str | None = None
-    source_snapshot_digest: str | None = None
-
-
-def evaluate_grwc_admission(
-    db: Session,
-    *,
-    profile_id: int,
-    proposal_id: int,
-    scope: Any | None = None,
-    actor_user_id: int | None = None,
-    actor_role: str | None = None,
-    purpose: str | None = None,
-    task: str | None = None,
-    current_state_version: int | None = None,
-    effective_policy_version: str | None = None,
-    effective_consent_version: str | None = None,
-) -> GrwcAdmissionResult:
-    """Centralized GRWC admission verifier executed under PostgreSQL locks in Phase 3.
-
-    Validates:
-    1. Acyclic and bounded proposal lineage traversal (cycles and depth > MAX_PROPOSAL_LINEAGE_DEPTH).
-    2. Immutable root/parent lineage properties (root_proposal_id, parent_proposal_id, inference_binding_id).
-    3. Anti-downgrade invariants:
-       - Weak binding-mode downgrade prevention: If root proposal has consumed_thss=True (or bound snapshot
-         has persisted consumed_thss=True), no descendant proposal can use context_binding_mode='base_version_only'.
-       - Model origin proposals can NEVER use base_version_only.
-       - Human reviews cannot strip inference_context_binding_id or downgrade snapshot binding fields.
-    4. Exact snapshot identity and manifest digest matching against authoritative inference context binding.
-    5. Review authority for the commitment domain.
-    """
-    from clara_api.db.models import (
-        GlhsClinicalCommitment,
-        GlhsClinicalCommitmentProposal,
-        GlhsInferenceContextBinding,
-        PhrProfile,
-    )
-    from clara_api.glhs.commitment_gateway import (
-        _binding_for_snapshot,
-        _proposal_envelope,
-        _require_lineage_binding,
-        _resolve_proposal_lineage_root,
-        _validate_proposal_digest,
-    )
-    from clara_api.glhs.gateway import validate_inference_context_binding
-
-    proposal = db.execute(
-        select(GlhsClinicalCommitmentProposal)
-        .where(GlhsClinicalCommitmentProposal.id == proposal_id)
-        .execution_options(populate_existing=True)
-    ).scalar_one_or_none()
-
-    if proposal is None:
-        raise GlhsInvariantError("commitment_proposal_history_incomplete")
-
-    if proposal.target_profile_public_id:
-        profile_row = db.execute(
-            select(PhrProfile).where(PhrProfile.id == profile_id)
-        ).scalar_one_or_none()
-        if profile_row is not None and proposal.target_profile_public_id != profile_row.public_id:
-            raise GlhsInvariantError("commitment_proposal_profile_mismatch")
-
-    if proposal.proposal_digest:
-        _validate_proposal_digest(proposal)
-
-    root_proposal_row = _resolve_proposal_lineage_root(db, proposal=proposal)
-    root_binding = _require_lineage_binding(
-        db,
-        scope=scope,
-        proposal=proposal,
-        root_proposal=root_proposal_row,
-        profile_id=profile_id,
-    )
-
-    current = proposal
-    seen = {current.id}
-    lineage_ids = [current.id]
-
-    for depth in range(1, MAX_PROPOSAL_LINEAGE_DEPTH + 2):
-        if current.reviewed_proposal_id is None:
-            break
-        if depth > MAX_PROPOSAL_LINEAGE_DEPTH:
-            raise GlhsInvariantError("commitment_lineage_depth_exceeded")
-        parent = db.execute(
-            select(GlhsClinicalCommitmentProposal)
-            .where(GlhsClinicalCommitmentProposal.id == current.reviewed_proposal_id)
-            .execution_options(populate_existing=True)
-        ).scalar_one_or_none()
-        if parent is None:
-            raise GlhsInvariantError("commitment_lineage_parent_missing")
-        if parent.id in seen:
-            raise GlhsInvariantError("commitment_lineage_cycle_detected")
-        seen.add(parent.id)
-        lineage_ids.append(parent.id)
-        current = parent
-
-    consumed_thss = root_binding.consumed_thss if root_binding is not None else False
-    if not consumed_thss and proposal.context_binding_mode == "snapshot_bound" and proposal.source_snapshot_id:
-        snap_binding = _binding_for_snapshot(db, profile_id=profile_id, snapshot_id=proposal.source_snapshot_id)
-        if snap_binding is not None and snap_binding.consumed_thss:
-            consumed_thss = True
-
-    return GrwcAdmissionResult(
-        admitted=True,
-        proposal_id=proposal.id,
-        root_proposal_id=root_proposal_row.id,
-        parent_proposal_id=proposal.reviewed_proposal_id,
-        inference_binding_id=proposal.inference_context_binding_id,
-        context_binding_mode=proposal.context_binding_mode,
-        consumed_thss=consumed_thss,
-        lineage_depth=len(lineage_ids),
-        lineage_ids=tuple(lineage_ids),
-        source_snapshot_id=proposal.source_snapshot_id,
-        source_snapshot_digest=proposal.source_snapshot_digest,
-    )
+if TYPE_CHECKING:
+    from clara_api.glhs.admission import GrwcAdmissionResult
 
 
 @dataclass(frozen=True)
@@ -606,6 +479,21 @@ def execute_atomic_glhs_commit(
         raise GlhsInvariantError("profile_not_found")
     owner_user_id = profile_lookup.user_id
 
+    if policy_domain is None and proposal_id is not None and proposal_id > 0:
+        from clara_api.db.models import GlhsClinicalCommitment
+        prop_row = db.execute(
+            select(GlhsClinicalCommitmentProposal.commitment_id)
+            .where(GlhsClinicalCommitmentProposal.id == proposal_id)
+            .execution_options(populate_existing=True)
+        ).first()
+        if prop_row is not None and prop_row.commitment_id:
+            comm_row = db.execute(
+                select(GlhsClinicalCommitment.domain)
+                .where(GlhsClinicalCommitment.id == prop_row.commitment_id)
+            ).first()
+            if comm_row is not None and comm_row.domain:
+                policy_domain = comm_row.domain
+
     # Step 2.1: Construct Lock Plan across 7 classes
     lock_dep_inputs: list[Any] = []
 
@@ -751,13 +639,15 @@ def execute_atomic_glhs_commit(
 
     if expected_consent_version is not None and expected_consent_version != current_consent_version:
         raise GlhsInvariantError(
-            f"stale_consent_version: expected {expected_consent_version}, got {current_consent_version}"
+            f"consent_revoked: stale_consent_version: expected {expected_consent_version}, got {current_consent_version}"
         )
 
     if expected_base_state_version is not None and expected_base_state_version != base_state_version:
-        raise GlhsInvariantError("stale_base_state_version")
+        raise GlhsInvariantError("state_stale: stale_base_state_version")
 
     # Phase 3 Revalidation: Centralized GRWC admission verifier under PostgreSQL locks
+    from clara_api.glhs.admission import evaluate_grwc_admission
+
     grwc_admission_result: GrwcAdmissionResult | None = None
     if proposal_id is not None and proposal_id > 0:
         grwc_admission_result = evaluate_grwc_admission(
@@ -798,7 +688,7 @@ def execute_atomic_glhs_commit(
                 raise GlhsInvariantError(f"missing_entity_partition: {coord[0]}:{coord[1]}")
             if part.state_version != dep.observed_version:
                 raise GlhsInvariantError(
-                    f"stale_entity_partition: {dep.dependency_key} observed {dep.observed_version} != current {part.state_version}"
+                    f"state_stale: stale_entity_partition: {dep.dependency_key} observed {dep.observed_version} != current {part.state_version}"
                 )
             if dep.observed_digest and hasattr(part, "state_digest"):
                 part_digest = getattr(part, "state_digest", None)

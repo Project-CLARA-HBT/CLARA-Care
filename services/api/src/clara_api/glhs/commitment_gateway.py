@@ -340,7 +340,15 @@ def _validate_current_proposal_context(
     raise GlhsInvariantError("commitment_proposal_binding_mode_invalid")
 
 
-MAX_PROPOSAL_LINEAGE_DEPTH = 4
+from clara_api.glhs.admission import (
+    MAX_PROPOSAL_LINEAGE_DEPTH as MAX_PROPOSAL_LINEAGE_DEPTH,  # noqa: F401
+)
+from clara_api.glhs.admission import (
+    evaluate_grwc_admission,
+    resolve_proposal_lineage,
+)
+
+_resolve_proposal_lineage_root = resolve_proposal_lineage
 
 
 def _binding_for_snapshot(
@@ -370,32 +378,7 @@ def _reload_proposal(
     return proposal
 
 
-def _resolve_proposal_lineage_root(
-    db: Session, *, proposal: GlhsClinicalCommitmentProposal
-) -> GlhsClinicalCommitmentProposal:
-    """Follow ``reviewed_proposal_id`` to the root with cycle/depth protection.
 
-    GLHS-B11: the lineage is acyclic and bounded (at most one human descendant
-    of a model proposal plus explicit new revisions that retain the root
-    binding).  Cycles or over-deep chains fail closed with explicit reason
-    codes instead of recursing indefinitely.
-    """
-
-    current = proposal
-    seen = {current.id}
-    for _ in range(MAX_PROPOSAL_LINEAGE_DEPTH):
-        if current.reviewed_proposal_id is None:
-            return current
-        parent = _reload_proposal(
-            db,
-            proposal_id=current.reviewed_proposal_id,
-            missing_reason="commitment_lineage_parent_missing",
-        )
-        if parent.id in seen:
-            raise GlhsInvariantError("commitment_lineage_cycle_detected")
-        seen.add(parent.id)
-        current = parent
-    raise GlhsInvariantError("commitment_lineage_depth_exceeded")
 
 
 def _require_lineage_binding(
@@ -467,7 +450,7 @@ def _require_lineage_binding(
         )
         if root_binding.consumed_thss:
             if proposal.context_binding_mode != "snapshot_bound":
-                raise GlhsInvariantError("commitment_lineage_base_only_forbidden")
+                raise GlhsInvariantError("lineage_downgrade: commitment_lineage_base_only_forbidden")
         if proposal.inference_context_binding_id is None:
             raise GlhsInvariantError("commitment_lineage_binding_mismatch: commitment_lineage_binding_required")
         if proposal.inference_context_binding_id != root_proposal.inference_context_binding_id:
@@ -1599,7 +1582,7 @@ def _validate_bound_proposal_binding(
     if binding.source_manifest_digest != source_manifest_digest:
         raise GlhsInvariantError("inference_binding_manifest_digest_mismatch")
     if not set(evidence_ids).issubset({str(item) for item in binding.disclosed_evidence_ids_json}):
-        raise GlhsInvariantError("commitment_binding_evidence_not_disclosed")
+        raise GlhsInvariantError("evidence_undisclosed: commitment_binding_evidence_not_disclosed")
 
 
 def propose_base_commitment_transition(
@@ -1782,7 +1765,7 @@ def review_model_commitment_proposal(
         or proposal.source_snapshot_digest is None
     ):
         raise GlhsInvariantError("commitment_review_downgrade_forbidden")
-    root_proposal = _resolve_proposal_lineage_root(db, proposal=proposal)
+    root_proposal = resolve_proposal_lineage(db, proposal=proposal)
     root_binding = _require_lineage_binding(
         db, scope=scope, proposal=proposal, root_proposal=root_proposal
     )
@@ -1934,7 +1917,7 @@ def apply_commitment_transition(
         raise GlhsInvariantError("commitment_proposal_evidence_mismatch")
     predicates = _validated_version(data)
     key_hash = _hash(idempotency_key)
-    root_proposal_ref = _resolve_proposal_lineage_root(db, proposal=proposal)
+    root_proposal_ref = resolve_proposal_lineage(db, proposal=proposal)
     request_digest = _commitment_request_digest(
         commitment=commitment,
         proposal=proposal,
@@ -1967,7 +1950,7 @@ def apply_commitment_transition(
     if not set(evidence_ids).issubset(set(proposal.observed_evidence_ids_json or ())):
         raise GlhsInvariantError("commitment_proposal_evidence_mismatch")
 
-    root_proposal = _resolve_proposal_lineage_root(db, proposal=proposal)
+    root_proposal = resolve_proposal_lineage(db, proposal=proposal)
     request_digest = _commitment_request_digest(
         commitment=commitment,
         proposal=proposal,
@@ -1977,6 +1960,12 @@ def apply_commitment_transition(
         expected_state_version=expected_state_version,
         transition_kind=transition_kind,
         reason_code=reason_code,
+    )
+    evaluate_grwc_admission(
+        db,
+        profile_id=scope.profile.id,
+        proposal_id=proposal.id,
+        scope=scope,
     )
     root_binding = _require_lineage_binding(
         db, scope=scope, proposal=proposal, root_proposal=root_proposal

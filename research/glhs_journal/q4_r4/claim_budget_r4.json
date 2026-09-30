@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0.0",
+  "program": "GLHS R4 — Governed Read-to-Write Continuity / Exact-Disclosure Admission",
+  "phase": "Phase 0 — Literature & Novelty Audit",
+  "timestamp": "2026-09-30T00:00:00Z",
+  "novelty_definition": {
+    "term": "Governed Read-to-Write Continuity (GRWC)",
+    "synonym": "Exact-Disclosure Admission",
+    "definition": "A persistent AI-generated health-state mutation is admissible to the clinical database if and only if the system can verify continuity to the exact model-visible governed disclosure projection (H_proj) actually supplied to the inference request that produced the proposal lineage, while independently revalidating current clinical state, dynamic patient consent, actor credentials, purpose, task, and required dependencies at commit time."
+  },
+  "forbidden_claims": [
+    {
+      "category": "PRIORITY_OR_FIRST",
+      "regex": "\\b(first|pioneering|novel)\\s+(provenance-aware|transactional\\s+agent\\s+memory|governed\\s+agent|co-versioned|read-to-write)\\b",
+      "rationale": "Prior work in database systems, agent memory (MemTX/MemTxn), and provenance already established these individual concepts."
+    },
+    {
+      "category": "ABSOLUTE_SECURITY",
+      "regex": "\\b(toctou\\s+(eliminated|impossible|prevented\\s+completely)|formally\\s+proven\\s+secure|tamper-proof|bulletproof|unhackable)\\b",
+      "rationale": "Security is conditional on threat model and audited boundaries; formal exploration is bounded, and TOCTOU is subject to statistical upper bounds on tested schedules."
+    },
+    {
+      "category": "CLINICAL_EFFICACY",
+      "regex": "\\b(clinically\\s+(safe|proven|validated|effective)|regulatory\\s+compliant|fda\\s+approved|doctor\\s+replacement)\\b",
+      "rationale": "GLHS is a systems safety and transaction invariant, not a clinical diagnostic efficacy validation."
+    },
+    {
+      "category": "NEURAL_CAUSAL_REASONING",
+      "regex": "\\b(proved\\s+model\\s+reasoning|guarantees\\s+llm\\s+attended|neural\\s+causal\\s+isolation|model\\s+only\\s+used\\s+context)\\b",
+      "rationale": "GLHS R4 proves server-attested disclosure supply and dispatch continuity, NOT internal neural attention or internal causal model use. Semantic consumption by neural models is explicitly out of scope."
+    },
+    {
+      "category": "MECHANISM_UNIQUENESS",
+      "regex": "\\b(thss\\s+is\\s+uniquely\\s+necessary|only\\s+viable\\s+solution|irreplaceable\\s+architecture)\\b",
+      "rationale": "Compact capabilities (e.g. Macaroons, MIN_READSET_TOKEN) can achieve similar validation semantics under differing trade-offs."
+    },
+    {
+      "category": "UNBACKED_PROVIDER_CLAIM",
+      "regex": "\\b(claude|gemini|gpt-4o|deepseek)\\s+(outperformed|evaluated|validated)\\b",
+      "condition": "Requires verified provider ledger with requested and reported model IDs in artifact directory; synthetic responses cannot support provider claims."
+    },
+    {
+      "category": "SIMULATION_AS_PRODUCTION",
+      "regex": "\\bpostgresql\\s+(throughput|concurrency|benchmark|performance)\\b",
+      "condition": "Must execute against live PostgreSQL server instances with backend attestation; Python thread lock simulations are prohibited from making PostgreSQL claims."
+    },
+    {
+      "category": "INTERNAL_AGENT_ADJUDICATION",
+      "regex": "\\b(independent\\s+peer\\s+review|human\\s+clinician\\s+panel|unbiased\\s+expert\\s+evaluation)\\b",
+      "condition": "Internal LLM subagents (e.g. Agent E) are internal verification tools and must never be characterized as independent external human reviewers."
+    }
+  ],
+  "allowed_claims": [
+    {
+      "template": "Operationalizes an Exact-Disclosure Admission / Governed Read-to-Write Continuity (GRWC) invariant for longitudinal health AI.",
+      "conditions": [
+        "Invariant is implemented, tested, and formally modeled."
+      ]
+    },
+    {
+      "template": "Enforces that persistent AI mutations are admitted only when verifiably continuous with the exact governed disclosure projection (H_proj) supplied to model inference.",
+      "conditions": [
+        "E01 substitution tests pass with 0 false admissions."
+      ]
+    },
+    {
+      "template": "Differentiates exact-disclosure admission from global source-supported updates by rejecting proposals referencing valid database evidence that was omitted from the model prompt.",
+      "conditions": [
+        "E01 prompt-omission ablation tests verify rejection of unexposed database evidence."
+      ]
+    },
+    {
+      "template": "Within tested audited routes and frozen database schedules (N = {sample_size}), zero improper commits were observed (upper 95% Clopper-Pearson bound: {upper_bound}%).",
+      "conditions": [
+        "Reported as 0/N with Clopper-Pearson or Wilson confidence bound."
+      ]
+    },
+    {
+      "template": "Bounded formal model exploration (depth d = {depth}) verified state-space invariants I1-I15 without counterexamples.",
+      "conditions": [
+        "TLA+ exploration artifacts present and sealed."
+      ]
+    },
+    {
+      "template": "Evaluated against a minimal capability/token baseline (MIN_READSET_TOKEN), establishing the comparative overhead and trade-offs.",
+      "conditions": [
+        "E03 baseline protocol executed and documented."
+      ]
+    },
+    {
+      "template": "Demonstrated under real PostgreSQL serializable execution under simulated clinical write contention.",
+      "conditions": [
+        "PostgreSQL backend attestation verified."
+      ]
+    }
+  ]
+}

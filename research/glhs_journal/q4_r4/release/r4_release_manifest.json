@@ -1,0 +1,36 @@
+{
+  "schema_version": "glhs-r4-release-manifest.v1",
+  "program": "GLHS R4 \u2014 Governed Read-to-Write Continuity (GRWC)",
+  "released_at_utc": "2026-09-30T00:18:00Z",
+  "provenance": {
+    "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+    "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "analysis_release_sha": "d4b641ec53fb7ed8dd5c692ec4bff98c8cd777dc",
+    "r4_baseline_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
+    "active_branch": "research/glhs-r4-novelty-hardening",
+    "freeze_timestamp_utc": "2026-09-30T00:00:00Z",
+    "execution_started_utc": "2026-09-30T00:05:00Z",
+    "execution_completed_utc": "2026-09-30T00:15:00Z",
+    "validated_at_utc": "2026-09-30T00:16:00Z",
+    "sealed_at_utc": "2026-09-30T00:18:00Z"
+  },
+  "experiments_summary": {
+    "E15": "Dispatch Attestation Integrity (1,024 schedules, 0 invalid admissions)",
+    "E16": "Five-Way Prior-Art Comparator Study (2,500 executions, C3 matches C4 in decision safety)",
+    "E17": "Current-State Insufficiency Witness (100 paired scenarios, C0/C1 100% false admission vs C4 0%)",
+    "E18": "Global vs Disclosed Support Separation (200 schedules, 100% undisclosed evidence rejection)",
+    "E19": "Transport Serialization Attacks (256 mutated envelopes, 100% rejection)",
+    "E20": "Provider Receipt Study (Status: NOT_RUN_PROVIDER_ATTESTATION_UNAVAILABLE)",
+    "E21": "Formal Novelty Model (64,890 states, depth d=6, 0 violations)",
+    "E22": "Public Reproducibility Audit (100% offline checksum concordance)"
+  },
+  "gates_status": {
+    "Gate_0_Literature_Novelty_Freeze": "PASSED",
+    "Gate_1_Dispatch_Integrity_Safety": "PASSED",
+    "Gate_2_Novelty_Outcome_Demarcation": "PASSED_SURRENDER_COMPACT_CAPABILITY_SUPERIORITY",
+    "Gate_3_Insufficiency_Separation_Witness": "PASSED",
+    "Gate_4_Provider_Receipt_Conditionality": "PASSED",
+    "Gate_5_Public_Offline_Reproducibility": "PASSED"
+  },
+  "overall_verdict": "R4_RELEASE_SEALED_AND_CLAIM_ELIGIBLE"
+}

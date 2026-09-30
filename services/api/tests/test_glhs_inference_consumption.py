@@ -15,13 +15,12 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import create_engine, select, update
+from sqlalchemy import create_engine, update
 from sqlalchemy.orm import Session
 
 from clara_api.db.base import Base
 from clara_api.db.models import (
     GlhsClinicalCommitment,
-    GlhsClinicalCommitmentProposal,
     GlhsEvidence,
     GlhsInferenceContextBinding,
     GlhsSnapshotManifest,
@@ -458,7 +457,6 @@ def test_rejection_of_tampered_projection_digest(db: Session) -> None:
     snapshot = _snapshot(db, scope, evidence, at)
 
     model_proj = {"medication": "Aspirin", "dose": "81mg"}
-    proj_digest = consistency_fingerprint(model_proj)
 
     binding = create_inference_context_binding(
         db,

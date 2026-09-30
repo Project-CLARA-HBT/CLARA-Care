@@ -23,7 +23,6 @@ from datetime import UTC, datetime
 from typing import Any
 
 from clara_api.glhs.canonical_json import (
-    CANONICALIZATION_PROFILE,
     fast_canonical_digest,
 )
 from clara_api.glhs.commit_kernel import DependencySpec

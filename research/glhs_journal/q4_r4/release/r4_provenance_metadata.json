@@ -1,0 +1,38 @@
+{
+  "schema_version": "glhs-r4-provenance-metadata.v1",
+  "program": "GLHS R4 — Governed Read-to-Write Continuity (GRWC) / Exact-Disclosure Admission",
+  "repository": "Project-CLARA-HBT/CLARA-Care",
+  "provenance": {
+    "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+    "experiment_harness_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
+    "execution_harness_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
+    "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "analysis_release_sha": "d4b641ec53fb7ed8dd5c692ec4bff98c8cd777dc",
+    "active_branch": "research/glhs-r4-novelty-hardening",
+    "literature_freeze_sha": "1be28846a28b2293f84048b78730245f2f53e6b2a35a129d232f91bcd17616e7",
+    "literature_matrix_sha256": "1be28846a28b2293f84048b78730245f2f53e6b2a35a129d232f91bcd17616e7",
+    "novelty_contract_sha256": "4fb03ec67a54542fe5437c28f99e5f6b63f9131f9e45418df651801569c27c90",
+    "claim_budget_sha256": "6ae1be74a2a2a27a578ff98d0ee53ee66de5816940205edc6fe9a2cbf89519b8",
+    "experiments_plan_sha256": "4e848fe86d7cfda2a5ddc1bcbf60bef41891e429caae87b7328fec93c94d5a82",
+    "prospective_freeze_timestamp_utc": "2026-09-30T00:00:00Z"
+  },
+  "invariants": {
+    "rule_provenance_locking": "No claim-bearing R4 experiment may execute or seal until system_under_test_sha, experiment_harness_sha, active_branch, and literature_freeze_sha are verified and prospectively frozen.",
+    "rule_chronological_precedence": "Strict chronological precedence: freeze_timestamp_utc < execution_started_utc <= execution_completed_utc <= validated_at_utc <= sealed_at_utc.",
+    "rule_backend_truthfulness": "Simulated backends must never be labeled or claimed as PostgreSQL instances; actual database executions must run against PostgreSQL 16 under Serializable Snapshot Isolation (SSI).",
+    "rule_exact_disclosure_continuity": "Persistent clinical write proposals must demonstrate cryptographic continuity to the exact model-visible projection (H_proj) supplied to inference.",
+    "rule_undisclosed_evidence_rejection": "Proposals asserting clinical evidence present in the database but omitted from the model-visible disclosure projection must be strictly rejected.",
+    "rule_anti_downgrade_lineage": "Human adaptations and reviewed proposals cannot strip root inference bindings to bypass write-admission checks."
+  },
+  "environment_baseline": {
+    "python_version": "3.12.3",
+    "nodejs_version": "v20.20.2",
+    "postgresql_version": "16.14",
+    "postgresql_endpoint": "127.0.0.1:5433",
+    "database_user": "aura",
+    "database_name": "aura",
+    "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "cpu_count": 88
+  }
+}

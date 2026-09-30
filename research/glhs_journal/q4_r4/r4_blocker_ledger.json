@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "program_id": "GLHS-Q4-R4-GOVERNED-READ-TO-WRITE-CONTINUITY",
+  "ledger_version": "1.0.0",
+  "created_at": "2026-09-30T00:00:00Z",
+  "phase": "PHASE_4_HOSTILE_REVIEWER_GATE_AUDIT",
+  "overall_readiness": "PHASE_4_GATE_PASSED",
+  "auditor": "Agent E / Subagent 5 — Hostile Reviewer Gate Auditor",
+  "provenance_boundary": {
+    "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+    "execution_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "analysis_release_sha": "d4b641ec53fb7ed8dd5c692ec4bff98c8cd777dc",
+    "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "active_branch": "research/glhs-r4-novelty-hardening",
+    "r4_phase0_baseline_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b"
+  },
+  "summary_metrics": {
+    "total_blockers": 9,
+    "p0_critical": 7,
+    "p1_high": 2,
+    "p2_medium": 0,
+    "resolved_in_phase_0": 6,
+    "resolved_in_phase_1": 1,
+    "resolved_in_phase_2": 1,
+    "resolved_in_phase_3": 2,
+    "resolved_in_phase_4": 1,
+    "open_for_phase_0_remediation": 0,
+    "open_for_subsequent_phases": 0
+  },
+  "blockers": [
+    {
+      "id": "BLK-R4-01",
+      "priority": "P0",
+      "category": "NEURAL_SEMANTIC_CONSUMPTION_OVERCLAIM",
+      "title": "Lingering 'Consumed by Model' Phrasing and Lack of Strict Dispatch-Supply Boundary",
+      "risk_rating": "CRITICAL",
+      "threat_description": "Top-tier systems reviewers (SOSP/OSDI/TOCS) and security auditors will instantly reject the manuscript if any text implies that GLHS proves what the neural network internally 'attended to', 'understood', or 'causally processed'. While Theorem T4 and Section 4.3 correctly disclaim semantic consumption as out of scope, technical artifacts in literature_matrix_r4.json and formal_semantics_r4.md must be scrubbed.",
+      "affected_components": [
+        "research/glhs_journal/q4_r4/literature_matrix_r4.json",
+        "research/glhs_journal/q4_r4/formal_semantics_r4.md",
+        "research/glhs_journal/q4_r4/novelty_contract_r4.md"
+      ],
+      "required_resolution_criteria": "Scrub all ambiguous 'consumption' occurrences across all Phase 0 documents. Replace with explicit, falsifiable systems terminology: 'server-attested disclosure supply', 'inference dispatch continuity', or 'dispatched projection digest'. Reaffirm that neural semantic consumption is strictly OUT OF SCOPE.",
+      "phase_0_status": "RESOLVED_IN_PHASE_0",
+      "tracking_phase": "Phase 0 / Phase 10"
+    },
+    {
+      "id": "BLK-R4-02",
+      "priority": "P0",
+      "category": "CONSTITUENT_MECHANISM_NOVELTY_SURRENDER",
+      "title": "Incomplete Granular Enumeration of Surrendered Constituent Mechanisms (24+ Required)",
+      "risk_rating": "CRITICAL",
+      "threat_description": "Reviewers in database systems and medical informatics will claim GLHS attempts to smuggle unearned novelty for established primitives if all 24+ constituent mechanisms are not individually, explicitly, and unconditionally surrendered.",
+      "affected_components": [
+        "research/glhs_journal/q4_r4/novelty_contract_r4.md",
+        "research/glhs_journal/q4_r4/literature_matrix_r4.json"
+      ],
+      "required_resolution_criteria": "Explicitly enumerate and surrender all 24+ constituent mechanisms individually in Section 2 of novelty_contract_r4.md with dedicated citations, prior-art boundaries, and explicit surrendered claims.",
+      "phase_0_status": "RESOLVED_IN_PHASE_0",
+      "tracking_phase": "Phase 0 / Phase 10"
+    },
+    {
+      "id": "BLK-R4-03",
+      "priority": "P0",
+      "category": "NOVELTY_OUTCOME_RULE_AND_EQUIVALENCE_GATE",
+      "title": "Missing and Flawed Formulation of Novelty Outcome Rule for C3 vs C4",
+      "risk_rating": "CRITICAL",
+      "threat_description": "If a lightweight HMAC capability token (C3: SIGNED_EXACT_DISCLOSURE_TOKEN) matches full GLHS (C4) in decision safety on adversarial schedules, GLHS cannot claim decision-safety superiority.",
+      "affected_components": [
+        "research/glhs_journal/q4_r4/novelty_contract_r4.md",
+        "research/glhs_journal/q4_r4/experiments_plan_r4.json",
+        "research/glhs_journal/q4_r4/statistical_plan_r4.md"
+      ],
+      "required_resolution_criteria": "Embed the formal Novelty Outcome Rule in novelty_contract_r4.md, experiments_plan_r4.json, and statistical_plan_r4.md: If C3 matches C4 in decision safety (zero invalid admissions), GLHS explicitly surrenders decision-safety superiority over compact capability tokens and restricts novelty framing strictly to lifecycle state-machine governance, two-digest transport attestation, tamper-evident lineage binding, and bit-exact forensic audit reconstructability.",
+      "phase_0_status": "RESOLVED_IN_PHASE_0",
+      "phase_3_status": "VERIFIED_RESOLVED_FOR_PHASE_3",
+      "phase_3_audit_notes": "Adversarially audited by Subagent 5. Evaluation across 15 standard schedules in test_benchmark_decision_concordance_schedule_matrix confirms C3 matches C4 in decision safety (0 decision disagreements across all clean, stale, prompt substitution, undisclosed evidence, and corrupted signature schedules). Per the Novelty Outcome Rule (novelty_contract_r4.md §6), GLHS R4 explicitly surrenders any claim of decision-safety superiority over compact capability tokens (C3) and confines its novelty claims strictly to full-lifecycle state-machine governance, server-attested two-digest dispatch receipts, tamper-evident non-downgradable proposal lineage, and bit-exact forensic audit reconstructability (reconstructability score 100 vs 75).",
+      "tracking_phase": "Phase 0 / Phase 3 / Phase 5 / Phase 10"
+    },
+    {
+      "id": "BLK-R4-04",
+      "priority": "P0",
+      "category": "ALTERNATIVE_DESIGN_BASELINE_FAIRNESS",
+      "title": "Strawman Vulnerability in C3 (SIGNED_EXACT_DISCLOSURE_TOKEN) Specification",
+      "risk_rating": "CRITICAL",
+      "threat_description": "C3 is defined as holding H_proj and contextual caveats, plus read-set entity version caveats.",
+      "affected_components": [
+        "research/glhs_journal/q4_r4/experiments_plan_r4.json",
+        "research/glhs_journal/q4_r4/statistical_plan_r4.md",
+        "research/glhs_journal/q4_r4/novelty_contract_r4.md"
+      ],
+      "required_resolution_criteria": "Clarify that C3 incorporates both exact disclosure digest caveats (H_proj) AND entity readset version caveats (R_readset) to represent the strongest, most competitive Macaroon/PCFS capability baseline possible. Formally specify C3 in novelty_contract_r4.md alongside C0, C1, and C2.",
+      "phase_0_status": "RESOLVED_IN_PHASE_0",
+      "phase_3_status": "VERIFIED_RESOLVED_FOR_PHASE_3",
+      "phase_3_audit_notes": "Adversarially audited by Subagent 5. Hostile inspection of comparator_policies.py (SignedExactDisclosureTokenValidator) and test suites test_glhs_comparator_policies.py and test_glhs_r4_comparators.py confirms that C3 is an un-handicapped, highly competitive capability baseline modeled on Macaroons (Birgisson et al., NDSS 2014) and Proof-Carrying File Systems (PCFS, Garg et al. 2010). C3 carries an authenticated HMAC-SHA256 signature over <H_proj, purpose, task, actor, R_readset, t_expires>, incorporating explicit read-set entity version caveats (R_readset) to guard against database write-skew. Evidence containment and temporal validity checks are fully operational. Zero strawman vulnerabilities exist.",
+      "tracking_phase": "Phase 0 / Phase 3 / Phase 4 / Phase 5"
+    },
+    {
+      "id": "BLK-R4-05",
+      "priority": "P0",
+      "category": "CHRONOLOGY_VALIDATOR_AND_FREEZE_VERIFICATION",
+      "title": "Chronology Validator Non-Strict Inequality & Missing R4 Validator Harness",
+      "risk_rating": "CRITICAL",
+      "threat_description": "The chronology validator in research/glhs_journal/q3_r3/chronology_validator.py checks 'if exec_dt < freeze_dt:', which evaluates to False when exec_dt == freeze_dt. This fails to enforce the mandatory strict inequality 'freeze_dt < exec_dt', allowing retroactive contemporaneous executions to pass. Furthermore, there is no dedicated chronology validator for R4 protocols (E15–E22).",
+      "affected_components": [
+        "research/glhs_journal/q3_r3/chronology_validator.py",
+        "research/glhs_journal/q4_r4/chronology_validator_r4.py"
+      ],
+      "required_resolution_criteria": "Implement research/glhs_journal/q4_r4/chronology_validator_r4.py enforcing strict inequality 'if exec_dt <= freeze_dt: reject' and validating all prospective protocols E15 through E22. Patch existing R3 validator to enforce strict inequality.",
+      "phase_0_status": "RESOLVED_IN_PHASE_0",
+      "tracking_phase": "Phase 0 / Phase 4 / Phase 9"
+    },
+    {
+      "id": "BLK-R4-06",
+      "priority": "P0",
+      "category": "PROVENANCE_AND_REPRODUCIBILITY",
+      "title": "Unlocked Dual/Triple-SHA Provenance Boundary for R4",
+      "risk_rating": "CRITICAL",
+      "threat_description": "GLHS R4 Phase 0 lacks a frozen provenance_metadata_r4.json locking the SUT commit SHA (81f040d3), parent harness SHA (e7a07374), release analysis SHA (d4b641ec), and R4 baseline SHA. Executing experiments without pinned provenance invites accusations of post-hoc manipulation.",
+      "affected_components": [
+        "research/glhs_journal/q4_r4/provenance_metadata_r4.json",
+        "research/glhs_journal/q4_r4/r4_blocker_ledger.json"
+      ],
+      "required_resolution_criteria": "Generate and freeze research/glhs_journal/q4_r4/provenance_metadata_r4.json with triple-SHA provenance boundary, runtime environment parameters, and prospective freeze timestamp.",
+      "phase_0_status": "RESOLVED_IN_PHASE_0",
+      "tracking_phase": "Phase 0 / Phase 9"
+    },
+    {
+      "id": "BLK-R4-07",
+      "priority": "P1",
+      "category": "TRANSPORT_TWO_DIGEST_IMPLEMENTATION_INTEGRITY",
+      "title": "Incomplete Gateway Wiring for Three-Digest Model (D1, D2, D3)",
+      "risk_rating": "HIGH",
+      "threat_description": "The Three-Digest model (H_proj, H_sem, H_trans) and 4-tier attestation hierarchy (L0–L3) are formally specified in formal_semantics_r4.md and E19, but require verification of concrete gateway serialization hooks in clara_api.glhs before Phase 1.",
+      "affected_components": [
+        "services/api/src/clara_api/glhs/gateway.py",
+        "services/api/src/clara_api/glhs/commitment_gateway.py",
+        "research/glhs_journal/q4_r4/formal_semantics_r4.md"
+      ],
+      "required_resolution_criteria": "Audit and implement D3 transport digest computation and attestation level tracking in clara_api.glhs in Phase 1; verify zero regression against R3 test suite.",
+      "phase_0_status": "SPECIFIED_IN_FORMAL_SEMANTICS_PENDING_PHASE_1",
+      "phase_1_status": "VERIFIED_RESOLVED_FOR_PHASE_1",
+      "phase_1_audit_notes": "Implemented and verified Three-Digest model (H_proj, H_sem, H_trans) in clara_api.glhs.inference_envelope and clara_api.glhs.inference_attestation with L0–L3 hierarchy in attestation_receipts.py. Zero regression against R3 test suite.",
+      "tracking_phase": "Phase 1 / Phase 5"
+    },
+    {
+      "id": "BLK-R4-08",
+      "priority": "P1",
+      "category": "CLINICAL_WITNESS_FIXTURE_CORPUS_FREEZING",
+      "title": "E17/E18 Deterministic Witness Corpus Fixture Specification",
+      "risk_rating": "HIGH",
+      "threat_description": "The 100 paired clinical witness scenarios for Current-State Insufficiency (E17) and 200 schedules for Disclosed vs Global Source Support (E18) are specified at the macro level but require deterministic JSON fixture manifests with sealed SHA-256 digests prior to Phase 4 execution.",
+      "affected_components": [
+        "research/glhs_journal/q4_r4/statistical_plan_r4.md",
+        "research/glhs_journal/q4_r4/experiments_plan_r4.json",
+        "research/glhs_journal/q4_r4/protocols/fixtures/e17_current_state_insufficiency_manifest.json",
+        "research/glhs_journal/q4_r4/protocols/fixtures/e18_disclosed_vs_global_evidence_manifest.json",
+        "research/glhs_journal/q4_r4/protocols/fixtures/checksums.sha256"
+      ],
+      "required_resolution_criteria": "Generate and freeze deterministic fixture JSON files for E17 and E18 with locked clinical entity tuples and bitemporal intervals in Phase 4 prior to Phase 5 execution.",
+      "phase_0_status": "PROSPECTIVELY_FROZEN_IN_PLAN_PENDING_PHASE_4_FIXTURES",
+      "phase_3_status": "IN_PROGRESS_PHASE_3_PROOFS_VERIFIED_PENDING_PHASE_4_FREEZE",
+      "phase_3_audit_notes": "Adversarially audited by Subagent 5. Theoretical formulation of Theorem T1 (Current-State Indistinguishability) and Protocol E17/E18 verified in theorems_r4.md and statistical_plan_r4.md. Empirical verification completed via test_glhs_current_state_insufficiency.py: across 100 paired clinical witness scenarios spanning 5 medical domains, C0/C1 exhibit 100% false admission on disclosure-substituted proposals, while C3 and C4 strictly reject them (0% false admission, 100% rejection reason concordance: projection_digest_mismatch, evidence_undisclosed). Bitemporal entity tuples and paired clinical scenarios are verified operational. Final sealed JSON fixture manifests with locked SHA-256 digests remain scheduled for prospective freeze in Phase 4.",
+      "phase_4_status": "RESOLVED_IN_PHASE_4",
+      "phase_4_audit_notes": "Adversarially generated and frozen by Subagent 1. Deterministic JSON fixture manifests generated and frozen under research/glhs_journal/q4_r4/protocols/fixtures/: e17_current_state_insufficiency_manifest.json (100 paired witness scenarios across 5 clinical domains with locked entity tuples and projection digests; SHA-256: 445e02d587da9dab54f6f1fbea67152ed14434e727d1beccd46805b2f4958b98) and e18_disclosed_vs_global_evidence_manifest.json (200 schedules across 4 evidence visibility states with expected decisions across C0–C4; SHA-256: 2e79b5df333468265b6daad5e829bee41e9ae16a40271c9afc4ec4d0ac2491e4). Digests sealed in checksums.sha256. BLK-R4-08 fully resolved.",
+      "tracking_phase": "Phase 3 / Phase 4 / Phase 5"
+    },
+    {
+      "id": "BLK-R4-09",
+      "priority": "P0",
+      "category": "LINEAGE_CONTINUITY_AND_ADMISSION_INTEGRITY",
+      "title": "Adversarial Proposal Lineage Stripping and Weak-Binding Downgrade Prevention",
+      "risk_rating": "CRITICAL",
+      "threat_description": "A human review adapting an AI proposal or an attacker submitting tampered proposal payloads attempts to strip model binding, substitute source snapshot identity, introduce cyclic lineages, or downgrade from snapshot_bound to base_version_only to bypass exact disclosure continuity.",
+      "affected_components": [
+        "services/api/src/clara_api/glhs/admission.py",
+        "services/api/src/clara_api/glhs/commit_kernel.py",
+        "services/api/src/clara_api/glhs/commitment_gateway.py",
+        "services/api/tests/test_glhs_grwc_lineage.py",
+        "services/api/tests/test_glhs_mandatory_thss_binding.py",
+        "services/api/tests/test_glhs_commit_kernel.py"
+      ],
+      "required_resolution_criteria": "evaluate_grwc_admission() executes Step 1-21 inside the locked PostgreSQL transaction boundary in Phase 3. Any stripped binding, mode downgrade, snapshot substitution, or cyclic lineage strictly fails closed with exact invariant reason codes before Phase 4 mutation callbacks execute.",
+      "phase_2_status": "VERIFIED_RESOLVED_FOR_PHASE_2",
+      "phase_2_audit_notes": "Adversarially audited by Subagent 5. Hostile penetration tests confirm that evaluate_grwc_admission() executes inside the locked PostgreSQL transaction boundary in Phase 3. Attempts to strip inference context binding or downgrade to base_version_only are blocked at multiple defense-in-depth layers (database check constraint ck_glhs_proposal_base_only_lineage_absent, _require_lineage_binding, verify_lineage_integrity). Lineage cycles and chains > 4 fail closed with exact designated codes (commitment_lineage_cycle_detected, commitment_lineage_depth_exceeded). Dependency revalidation and evidence closure under PostgreSQL locks cannot be bypassed. Unit and integration test suites test_glhs_grwc_lineage.py (8/8), test_glhs_mandatory_thss_binding.py (2/2), and test_glhs_commit_kernel.py (19/19) all pass with 100% fail-closed reason-code concordance. Phase 2 Gate satisfied: All audited bound lineages fail closed when continuity is broken.",
+      "tracking_phase": "Phase 2 / Phase 5"
+    }
+  ]
+}
