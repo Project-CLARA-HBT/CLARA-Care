@@ -134,7 +134,7 @@
       "directory": "E08_formal_assurance",
       "execution_records_verified": 2,
       "experiment_id": "E08",
-      "name": "TLA+ / TLC Bounded Exhaustive Formal Verification",
+      "name": "Bounded Python State-Space Exploration & Invariant Verification",
       "seal_sha256": "b86b19f48e93d57a6032dd443edd627edcb53952f4e859bd737046a96208a8dc",
       "seal_verified": true,
       "status": "REPRODUCED_AND_VERIFIED",
@@ -146,7 +146,7 @@
       "directory": "E09_concurrency",
       "execution_records_verified": 6870,
       "experiment_id": "E09",
-      "name": "Entity-Partitioned DAG Versioning Concurrency Benchmark",
+      "name": "In-Memory Concurrency and Partitioning Simulation",
       "seal_sha256": "c08c83dcbbfafd870c8789b83393f472c976d98b25cbb956f659358395becf7c",
       "seal_verified": true,
       "status": "REPRODUCED_AND_VERIFIED",
@@ -170,7 +170,7 @@
       "directory": "E11_model_replication",
       "execution_records_verified": 48,
       "experiment_id": "E11",
-      "name": "Two-Model Large Context Utility & TOST Equivalence",
+      "name": "Multi-Model Context Utility Exploratory Pilot Probe",
       "seal_sha256": "d7ccba6520410dff5f54ad89c3ef2ccae817149409c22e5c45b53f97f64f420c",
       "seal_verified": true,
       "status": "REPRODUCED_AND_VERIFIED",
@@ -214,12 +214,15 @@
     }
   },
   "git_state": {
+    "analysis_release_sha": "d4b641ec53fb7ed8dd5c692ec4bff98c8cd777dc",
     "audited_commit": "81f040d3e05905cc384239c5ae130f629e722d3e",
     "audited_parent_harness_commit": "e7a073749d8d3d434f6d47204238cc6655431f76",
     "audited_sut_commit": "81f040d3e05905cc384239c5ae130f629e722d3e",
     "commit_match": false,
-    "current_commit": "cd477b2a4fcb1d9ab04e6259672770b21c2827e8",
+    "current_commit": "d4b641ec53fb7ed8dd5c692ec4bff98c8cd777dc",
+    "execution_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
     "git_check_passed": true,
+    "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
     "tracked_worktree_clean": false
   },
   "network_isolation_active": true,
@@ -228,5 +231,5 @@
   "release_id": "GLHS-Q3-R3-RELEASE-20260929-V1",
   "schema_version": "glhs-r3-reproduction-report.v1",
   "total_experiments_swept": 15,
-  "verified_at_utc": "2026-09-29T11:15:54.536095+00:00"
+  "verified_at_utc": "2026-09-30T07:04:32.248425+00:00"
 }

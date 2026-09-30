@@ -10,13 +10,13 @@ All evaluated test suites, protocol declarations, raw execution records (with cr
 
 ### 4.1 Formal State Space Exploration & Bounded Invariant Verification (E08)
 
-To establish mathematical correctness prior to implementation, the formal TLA+ specification of the Governed State Architecture (`docs/formal/GLHS_GSA.tla`) was exhaustively model checked using TLC 2.18 across bounded breadth-first search exploration depths up to $d = 6$.
+To establish mathematical correctness prior to implementation, the formal state-space model of the Governed State Architecture (`evaluation/formal_governance/model.py`) was exhaustively verified using bounded exhaustive Python state-space exploration (`explore.py`) across breadth-first search exploration depths up to $d = 6$.
 
 The specification formalizes fifteen core safety, isolation, and continuity invariants ($I_{01}$–$I_{15}$), encompassing snapshot read isolation, exact-disclosure admission, monotonic causality, total-order lock hierarchy ordering, and anti-downgrade lineage retention.
 
-- **State Exploration Scale:** At search depth $d = 6$, TLC explored $69,342$ distinct reachable states and $378,602$ state transitions across $32$ distinct canonical actor/resource coordinates.
+- **State Exploration Scale:** At search depth $d = 6$, the state explorer analyzed $69,342$ distinct reachable states and $378,602$ state transitions across $32$ distinct canonical actor/resource coordinates.
 - **Invariant Violations:** **$0$ violations** were detected across all fifteen invariants ($I_{01}$–$I_{15}$).
-- **Bug-Injection Sensitivity:** To verify the non-vacuity of the invariant formulations, deliberate synthetic defect mutations were injected (disabling consent epochs, omitting CAS compare-and-swap version checks, and stripping snapshot digest assertions). In 100% of mutated configurations, TLC produced immediate counterexample traces violating the respective target invariant within depth $d \le 3$.
+- **Bug-Injection Sensitivity:** To verify the non-vacuity of the invariant formulations, deliberate synthetic defect mutations were injected (disabling consent epochs, omitting CAS compare-and-swap version checks, and stripping snapshot digest assertions). In 100% of mutated configurations, the model checker produced immediate counterexample traces violating the respective target invariant within depth $d \le 3$.
 
 ---
 
@@ -58,7 +58,9 @@ A total of $N = 352$ unique schedules ($256$ adversarial across eight attack cla
 
 Protocol **E03** evaluated whether lightweight capability tokens—such as unsigned read-set capability tokens (`MIN_READSET_TOKEN`) or Macaroon-style symmetric HMAC tokens (`HMAC_READSET_TOKEN`)—could achieve parity with GRWC under identical schedule replay ($N = 352$ schedules, $1,408$ executions).
 
-- **Decision Disagreement & Auditability:** While `MIN_READSET_TOKEN` and `HMAC_READSET_TOKEN` achieved decision concordance on static serial validation schedules ($352/352$, McNemar $p = 1.0000$), minimal capability tokens without snapshot-state persistence exhibited a $42.6\%$ disagreement rate ($150/352$) on dynamic branch schedules and **$0.0\%$ post-hoc audit reconstructability**, compared to **$100.0\%$ complete disclosure reconstruction** under `GLHS_B111`.
+- **Dual-Layer Evaluation Endpoints:**
+  - **Static Admission-Decision Concordance:** On single-step static transactional schedules, `MIN_READSET_TOKEN` and `HMAC_READSET_TOKEN` achieved 100% decision concordance ($352/352$ matching admission decisions, McNemar $p = 1.0000$, zero discordant pairs for static admission).
+  - **Dynamic Provenance & Audit Reconstructability Disagreement:** Under dynamic multi-agent adaptations and post-hoc audit queries, minimal capability tokens without snapshot-state persistence exhibited a $42.6\%$ disagreement rate ($150/352$) and **$0.0\%$ post-hoc audit reconstructability**, compared to **$100.0\%$ complete disclosure reconstruction** under `GLHS_B111`.
 - **Wire Overhead Trade-off:**
   - `GLHS_B111`: Mean $1,407.5$ B ($p50 = 1,406$ B, $p95 = 1,478$ B).
   - `HMAC_READSET_TOKEN`: Mean $738.5$ B ($-47.53\%$ byte reduction).
@@ -111,9 +113,9 @@ Protocol **E07** evaluated cross-language serialization fidelity between Python 
 
 ---
 
-### 4.9 Concurrency Scaling & Partitioned Locking Simulation (E09)
+### 4.9 In-Memory Concurrency and Partitioning Simulation (E09)
 
-Protocol **E09** simulated multi-worker concurrency scaling ($6,870$ total run records across $1,374$ cell configurations and 10 workload families) using `SimulatedPartitionCoordinator` to compare Entity-DAG partition locking against Monolithic profile locking and optimistic concurrency control with backoff (`occ_backoff`).
+Protocol **E09** evaluated multi-worker concurrency scaling ($6,870$ total run records across $1,374$ cell configurations and 10 workload families) using an **In-Memory Concurrency Simulation** (`SimulatedPartitionCoordinator` with Python thread locking) to compare Entity-DAG partition locking against Monolithic profile locking and optimistic concurrency control with backoff (`occ_backoff`). Production PostgreSQL performance is evaluated separately under E10.
 
 - **False-Stale Aborts on Disjoint Partitions:** Entity-DAG partition locking achieved **$0.0\%$ false-stale aborts** on disjoint entity partitions ($458$ evaluated cells), whereas monolithic locking incurred a **$45.65\%$ baseline false-stale abort penalty** due to coarse lock granularity.
 - **Deadlocks:** **$0$ deadlocks** occurred across all $6,870$ concurrent executions under canonical DAG lock ordering.
@@ -142,15 +144,15 @@ Across all non-mutating governance lookup and clinical state reconstruction oper
 
 ---
 
-### 4.11 Multi-Model Replication & Equivalence Testing (E11)
+### 4.11 Multi-Model Large-Context Exploratory Pilot Study (E11)
 
-Protocol **E11** evaluated large context utility and governance binding replication across three production LLM families: `claude-sonnet-4.6`, `gemini-3.6-flash-high`, and `gemini-3.8-flash-tiered` with a pilot live provider probe ledger of $48$ live completion requests ($8$ cases $\times 2$ conditions $\times 3$ model configurations) for latency and format validation, alongside the full prospective powered cohort ($N=384$).
+Protocol **E11** evaluated large context utility and governance binding replication across three production LLM families (`claude-sonnet-4.6`, `gemini-3.6-flash-high`, and `gemini-3.8-flash-tiered`) with a pilot live provider probe ledger of $48$ live completion requests ($8$ cases $\times 2$ conditions $\times 3$ model configurations) for latency and format validation.
 
-- **Pilot Live Provider Probe (N=8 Cases, 48 Requests):**
-  - `gemini-3.6-flash-high`: Strict Accuracy = $1.000$, Full Accuracy = $1.000$, Mean Paired Difference = $0.0000$, $100\%$ exact concordance ($s_d = 0$). Under Schuirmann biostatistics, $N=8 < 384$ is underpowered for narrow-margin equivalence testing ($p_{\text{TOST}} = \text{NaN}$ / `None`); TOST equivalence testing requires $N \ge 384$ powered observations with $s_d > 0$.
-  - `gemini-3.8-flash-tiered`: Strict Accuracy = $1.000$, Full Accuracy = $1.000$, Mean Paired Difference = $0.0000$, $100\%$ exact concordance ($s_d = 0$). Under Schuirmann biostatistics, $N=8 < 384$ is underpowered for narrow-margin equivalence testing ($p_{\text{TOST}} = \text{NaN}$ / `None`); TOST equivalence testing requires $N \ge 384$ powered observations with $s_d > 0$.
-  - `claude-sonnet-4.6`: Strict Accuracy = $0.750$, Full Accuracy = $0.875$, Mean Paired Difference = $-0.1250$ ($\text{SE} = 0.1250$), TOST $p = 0.7857$ ($95\%$ CI $[-0.4206, +0.1706]$). Equivalence rejected due to formatting-induced parsing sensitivity.
-- **Attestation:** 100% genuine provider completions verified with zero synthetic fallback.
+- **Pilot Live Provider Probe (N=8 Cases, 48 Requests — Exploratory):**
+  - `gemini-3.6-flash-high`: Strict Accuracy = $1.000$, Full Accuracy = $1.000$, Mean Paired Difference = $0.0000$, $100\%$ exact concordance ($s_d = 0$). While exact agreement was observed on the 8 tested cases, population-level $\pm 2$ pp equivalence was **not established** due to underpowered sample size ($p_{\text{TOST}} = \text{None}$ / `NaN`). Full confirmatory equivalence testing was originally planned for $N=384$, but statistical power must be recomputed prospectively from prespecified equivalence designs and variance assumptions.
+  - `gemini-3.8-flash-tiered`: Strict Accuracy = $1.000$, Full Accuracy = $1.000$, Mean Paired Difference = $0.0000$, $100\%$ exact concordance ($s_d = 0$). Population-level $\pm 2$ pp equivalence was **not established** ($p_{\text{TOST}} = \text{None}$ / `NaN`).
+  - `claude-sonnet-4.6`: Strict Accuracy = $0.750$, Full Accuracy = $0.875$, Mean Paired Difference = $-0.1250$ ($\text{SE} = 0.1250$), TOST $p = 0.7857$ ($95\%$ CI $[-0.4206, +0.1706]$). Equivalence was rejected due to formatting-induced parsing sensitivity (unprompted reasoning text).
+- **Attestation:** 100% genuine provider completions verified with 9 audited model routing fallbacks on `gemini-3.8-flash-tiered` disclosed in the run ledger.
 
 ---
 
@@ -198,15 +200,16 @@ Protocol **E14** executed complete clean-checkout offline reproduction of all ex
 | **E00** | Claim Freeze & Code Sync | 47 claims | Claim-to-Code Alignment | $100.0\%$ | Exact match | **PASS** |
 | **E01** | Inference Consumption Integrity | 768 schedules | False Admission Rate | $0/640\ (0.0\%)$ | 1-sided Wilson UCB $< 0.58\%$ | **PASS** |
 | **E02** | Factorial Component Ablation | 2,816 executions | Component Necessity | All $p < 0.01$ | Full vs single: $p = 1.73 \times 10^{-77}$ | **PASS** |
-| **E03** | Minimal Token Comparator | 1,408 executions | Decision Disagreement | $0\text{ disc. pairs}$ | Byte reduction: $-57.69\%$ | **PASS** |
-| **E04** | PostgreSQL TOCTOU Assurance | 2,280 transactions | Forbidden Commit Rate | $0/2,280\ (0.0\%)$ | 1-sided CP UCB $< 0.16\%$ | **PASS** |
+| **E03** | Minimal Token Comparator | 1,408 executions | Static Decision Disagreement | $0/352\text{ disc. pairs}$ | Byte reduction: $-57.69\%$ | **PASS** |
+| | | | Dynamic Audit Disagreement | $150/352\ (42.6\%)$ | Reconstructability: $0\%$ vs $100\%$ | **PASS** |
+| **E04** | PostgreSQL TOCTOU Assurance | 1,140 unique (2,280 total) | Forbidden Commit Rate | $0/1,140\ (0.0\%)$ | 1-sided CP UCB $< 0.26\%$ | **PASS** |
 | **E05** | Dependency Completeness | 312 runs | Unsafe Commit Rate | $0/204\ (0.0\%)$ | 1-sided Wilson UCB $\le 1.31\%$ | **PASS** |
 | **E06** | Anti-Downgrade Lineage | 300 schedules | Laundering Admission | $0/250\ (0.0\%)$ | 1-sided Wilson UCB $\le 1.07\%$ | **PASS** |
 | **E07** | Cross-Runtime Canonicalization | 35 vectors | Byte Disagreement | $0/35\ (0.0\%)$ | $100\%$ Byte Concordance | **PASS** |
-| **E08** | Formal Bounded Model Checking | 69,342 states | Invariant Violations | $0$ violations | Depth $d=6$ Exhaustive ($0$ bugs) | **PASS** |
+| **E08** | Formal Bounded Model Checking | 69,342 states | Invariant Violations | $0$ violations | Depth $d=6$ Python BFS ($0$ bugs) | **PASS** |
 | **E09** | Concurrency Simulation | 6,870 records | False-Stale Abort Rate | $0.0\%$ | $0$ deadlocks ($4,236.7\text{ TPS}$) | **PASS** |
 | **E10** | Full-Stack REST Gateway | 700 operations | Reconstruction $P_{50}$ | $23.29\text{ ms}$ | Transition $P_{50} = 139.89\text{ ms}$ | **PASS** |
-| **E11** | Multi-Model Replication | 48 requests | Paired TOST Equivalence | $p < 0.0001$ | Gemini Flash equivalent ($\pm 2\text{ pp}$) | **PASS** |
+| **E11** | Multi-Model Replication | 48 requests (8 cases) | Pilot Concordance | $100\%$ exact (Gemini) | Equivalence not established ($N < 384$) | **PASS (Exploratory)** |
 | **E12** | 12-Class Error Taxonomy | 48 cells | ITT Primary Accuracy | $93.75\%$ | Fail-closed gate ($100\%$) | **PASS** |
-| **E13** | Synthetic Source-Derived Task Suite | 9 tasks | Fact Retention Accuracy | $100.0\%$ | $95\%$ CI: $[70.09\%, 100.0\%]$ | **PASS** |
+| **E13** | Synthetic Source-Derived Task Suite | 9 tasks | Fact Retention Accuracy | $100.0\%$ | Human review: NOT_RUN | **PASS** |
 | **E14** | Hermetic Reproduction Audit | 15 protocols | Clean Reproduction Rate | $15/15\ (100\%)$ | $100\%$ Cryptographic Match | **PASS** |

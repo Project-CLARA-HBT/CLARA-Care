@@ -60,7 +60,7 @@ def _resolve_default_db_url() -> str:
         os.getenv("GLHS_DATABASE_URL"),
         os.getenv("DATABASE_URL"),
         os.environ.get("GLHS_E05_POSTGRES_URL"),
-        "postgresql+psycopg://postgres:postgres@localhost:5432/glhs_eval_r2",
+        "postgresql+psycopg://aura:aura_prod_x7k9m2@localhost:5433/glhs_eval_r2",
     ]
     for candidate in candidates:
         if not candidate:
@@ -72,7 +72,7 @@ def _resolve_default_db_url() -> str:
             return candidate
         except Exception:
             pass
-    return "sqlite+pysqlite:///:memory:"
+    return "postgresql+psycopg://postgres:postgres@localhost:5432/glhs_eval_r2"
 
 POSTGRES_URL = _resolve_default_db_url()
 
@@ -265,9 +265,11 @@ def _run_v2_09_postgres_trial(
 def run_replay(
     perturbation_count: int = 100,
     master_seed: int = 20260929,
-    db_url: str = POSTGRES_URL,
+    db_url: str | None = None,
 ) -> ReplayV209Report:
     """Execute timing perturbation replay for V2-09 against real PostgreSQL."""
+    if db_url is None:
+        db_url = _resolve_default_db_url()
     report = ReplayV209Report(
         executed_at=datetime.now(UTC).isoformat(),
         database_url=db_url,
@@ -276,10 +278,10 @@ def run_replay(
     classification_counts: dict[str, int] = {}
 
     schema_name = f"glhs_e05_v209_{uuid4().hex[:8]}"
-    admin = create_engine(db_url, pool_pre_ping=True)
     is_sqlite = "sqlite" in db_url
 
     if not is_sqlite:
+        admin = create_engine(db_url, pool_pre_ping=True)
         with admin.begin() as conn:
             conn.execute(text(f'CREATE SCHEMA "{schema_name}"'))
         engine = create_engine(
@@ -288,7 +290,13 @@ def run_replay(
             connect_args={"options": f"-csearch_path={schema_name}"},
         )
     else:
-        engine = admin
+        from sqlalchemy.pool import StaticPool
+        engine = create_engine(
+            db_url,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        admin = engine
 
     Base.metadata.create_all(engine)
     env = _real_env(engine)

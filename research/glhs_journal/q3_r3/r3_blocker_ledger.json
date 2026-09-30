@@ -7,6 +7,8 @@
   "overall_readiness": "PHASE_9_GATE_PASSED",
   "provenance_boundary": {
     "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+    "execution_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "analysis_release_sha": "d4b641ec53fb7ed8dd5c692ec4bff98c8cd777dc",
     "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
     "active_branch": "research/glhs-q2-r2-experiments",
     "provisional_r3_branch": "research/glhs_journal/q3_r3"

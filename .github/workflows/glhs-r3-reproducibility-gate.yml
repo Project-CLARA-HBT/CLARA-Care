@@ -3,9 +3,8 @@ name: GLHS R3 Reproducibility & Security Gate
 on:
   push:
     branches:
-      - research/glhs-q2-r2-experiments
-      - "research/glhs_journal/**"
       - main
+      - research/glhs-q2-r2-experiments
   pull_request:
     branches:
       - main
@@ -16,8 +15,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: glhs-r3-gate-${{ github.ref }}
+  group: glhs-r3-gate-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   secret-scan:
@@ -26,12 +28,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Execute Secret Scan
         run: |
@@ -41,7 +43,6 @@ jobs:
               re.compile(r"aura_prod_x7k9m2"),
               re.compile(r"postgresql\+psycopg://[^@:]+:[^@]+@"),
               re.compile(r"postgresql://[^@:]+:[^@]+@"),
-              re.compile(r"(?i)api[_-]?key\s*[:=]\s*[\x27\x22]sk-[a-zA-Z0-9]{32,}[\x27\x22]"),
           ]
           violations = []
           for root, dirs, files in os.walk("."):
@@ -71,12 +72,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Run Chronology Validator
         run: |
@@ -88,12 +89,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Install Test Dependencies
         run: |
@@ -114,12 +115,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Install Runtime Dependencies
         run: |

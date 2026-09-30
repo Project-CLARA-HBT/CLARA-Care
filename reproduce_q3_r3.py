@@ -39,6 +39,7 @@ from clara_api.glhs.canonical_json import canonical_hash
 AUDITED_GIT_COMMIT = "81f040d3e05905cc384239c5ae130f629e722d3e"
 AUDITED_SUT_COMMIT = "81f040d3e05905cc384239c5ae130f629e722d3e"
 AUDITED_HARNESS_COMMIT = "e7a073749d8d3d434f6d47204238cc6655431f76"
+AUDITED_ANALYSIS_COMMIT = "d4b641ec53fb7ed8dd5c692ec4bff98c8cd777dc"
 
 MODEL_ALIAS_MAP: dict[str, list[str]] = {
     "claude-sonnet-4.6": ["claude-sonnet-4.6", "claude-sonnet-4-6"],
@@ -60,10 +61,10 @@ EXPERIMENTS_MAP = [
     ("E05", "E05_dependency_completeness", "Schema-Derived Dependency-Completeness Contracts", 312),
     ("E06", "E06_anti_downgrade", "Anti-Downgrade & Lineage Anti-Laundering Enforcement", 300),
     ("E07", "E07_canonicalization", "RFC 8785 JSON Canonicalization Multi-Runtime Conformance", 45),
-    ("E08", "E08_formal_assurance", "TLA+ / TLC Bounded Exhaustive Formal Verification", 2),
-    ("E09", "E09_concurrency", "Entity-Partitioned DAG Versioning Concurrency Benchmark", 6870),
+    ("E08", "E08_formal_assurance", "Bounded Python State-Space Exploration & Invariant Verification", 2),
+    ("E09", "E09_concurrency", "In-Memory Concurrency and Partitioning Simulation", 6870),
     ("E10", "E10_fullstack", "FastAPI HTTP REST Gateway & PostgreSQL Tail Performance", 700),
-    ("E11", "E11_model_replication", "Two-Model Large Context Utility & TOST Equivalence", 48),
+    ("E11", "E11_model_replication", "Multi-Model Context Utility Exploratory Pilot Probe", 48),
     ("E12", "E12_malformed_sensitivity", "12-Class Malformed-Output Error Taxonomy & Sensitivity", 48),
     ("E13", "E13_external_validation", "Synthetic Source-Derived Task Suite (eICU/Synthea/MIMIC/Diabetes)", 9),
     ("E14", "E14_reproducibility", "Hermetic Clean-Environment Reproduction & Release Packaging", 15),
@@ -195,6 +196,9 @@ def verify_git_state(skip_git_check: bool = False) -> dict[str, Any]:
             )
 
     return {
+        "system_under_test_sha": AUDITED_SUT_COMMIT,
+        "execution_harness_sha": AUDITED_HARNESS_COMMIT,
+        "analysis_release_sha": AUDITED_ANALYSIS_COMMIT,
         "audited_commit": AUDITED_GIT_COMMIT,
         "audited_sut_commit": AUDITED_SUT_COMMIT,
         "audited_parent_harness_commit": AUDITED_HARNESS_COMMIT,
@@ -653,49 +657,51 @@ def update_release_checksums() -> None:
 def reproduce_q3_r3(*, skip_git_check: bool = False) -> dict[str, Any]:
     """Perform full sweep reproduction across E00–E14 and verify release root integrity."""
     disable_network()
+    try:
+        git_info = verify_git_state(skip_git_check=skip_git_check)
+        exp_results = sweep_all_r3_experiments()
 
-    git_info = verify_git_state(skip_git_check=skip_git_check)
-    exp_results = sweep_all_r3_experiments()
+        # Audit claim ledgers
+        q3_claim_csv = EVIDENCE_ROOT / "claim_to_evidence.csv"
+        q3_claim_audit = verify_claim_ledger(q3_claim_csv, budget_json_path=CLAIM_BUDGET_PATH)
 
-    # Audit claim ledgers
-    q3_claim_csv = EVIDENCE_ROOT / "claim_to_evidence.csv"
-    q3_claim_audit = verify_claim_ledger(q3_claim_csv, budget_json_path=CLAIM_BUDGET_PATH)
+        r3_legacy_csv = _REPO_ROOT / "research" / "glhs_journal" / "r3_claim_to_evidence.csv"
+        r3_legacy_audit = verify_claim_ledger(r3_legacy_csv)
 
-    r3_legacy_csv = _REPO_ROOT / "research" / "glhs_journal" / "r3_claim_to_evidence.csv"
-    r3_legacy_audit = verify_claim_ledger(r3_legacy_csv)
+        all_eligible = all(r.get("claim_eligible", False) for r in exp_results.values())
+        all_reproduced = all(r.get("status") == "REPRODUCED_AND_VERIFIED" for r in exp_results.values())
+        ledgers_valid = q3_claim_audit["is_valid"] and r3_legacy_audit["is_valid"]
 
-    all_eligible = all(r.get("claim_eligible", False) for r in exp_results.values())
-    all_reproduced = all(r.get("status") == "REPRODUCED_AND_VERIFIED" for r in exp_results.values())
-    ledgers_valid = q3_claim_audit["is_valid"] and r3_legacy_audit["is_valid"]
+        overall_passed = all_eligible and all_reproduced and ledgers_valid and git_info["git_check_passed"]
 
-    overall_passed = all_eligible and all_reproduced and ledgers_valid and git_info["git_check_passed"]
+        sweep_report = {
+            "schema_version": "glhs-r3-reproduction-report.v1",
+            "release_id": "GLHS-Q3-R3-RELEASE-20260929-V1",
+            "verified_at_utc": datetime.now(UTC).isoformat(),
+            "git_state": git_info,
+            "network_isolation_active": True,
+            "total_experiments_swept": len(exp_results),
+            "passed_experiments_count": sum(1 for r in exp_results.values() if r.get("status") == "REPRODUCED_AND_VERIFIED"),
+            "experiments": exp_results,
+            "claim_ledger_audit": q3_claim_audit,
+            "claim_ledger_audits": {
+                "q3_claim_ledger": q3_claim_audit,
+                "r3_legacy_ledger": r3_legacy_audit,
+            },
+            "overall_status": "UNIFIED_REPRODUCIBILITY_VERIFIED" if overall_passed else "REPRODUCIBILITY_FAILED",
+        }
 
-    sweep_report = {
-        "schema_version": "glhs-r3-reproduction-report.v1",
-        "release_id": "GLHS-Q3-R3-RELEASE-20260929-V1",
-        "verified_at_utc": datetime.now(UTC).isoformat(),
-        "git_state": git_info,
-        "network_isolation_active": True,
-        "total_experiments_swept": len(exp_results),
-        "passed_experiments_count": sum(1 for r in exp_results.values() if r.get("status") == "REPRODUCED_AND_VERIFIED"),
-        "experiments": exp_results,
-        "claim_ledger_audit": q3_claim_audit,
-        "claim_ledger_audits": {
-            "q3_claim_ledger": q3_claim_audit,
-            "r3_legacy_ledger": r3_legacy_audit,
-        },
-        "overall_status": "UNIFIED_REPRODUCIBILITY_VERIFIED" if overall_passed else "REPRODUCIBILITY_FAILED",
-    }
+        # Write reproduction_report.json
+        RELEASE_ROOT.mkdir(parents=True, exist_ok=True)
+        report_file = RELEASE_ROOT / "reproduction_report.json"
+        report_file.write_text(json.dumps(sweep_report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    # Write reproduction_report.json
-    RELEASE_ROOT.mkdir(parents=True, exist_ok=True)
-    report_file = RELEASE_ROOT / "reproduction_report.json"
-    report_file.write_text(json.dumps(sweep_report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        # Update master checksums for release directory
+        update_release_checksums()
 
-    # Update master checksums for release directory
-    update_release_checksums()
-
-    return sweep_report
+        return sweep_report
+    finally:
+        restore_network()
 
 
 def main() -> None:

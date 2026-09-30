@@ -5,6 +5,8 @@
   "release_id": "GLHS-R3-RELEASE-20260929-V1",
   "provenance": {
     "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+    "execution_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+    "analysis_release_sha": "d4b641ec53fb7ed8dd5c692ec4bff98c8cd777dc",
     "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
     "active_branch": "research/glhs-q2-r2-experiments",
     "provisional_r3_branch": "research/glhs_journal/q3_r3",
@@ -156,26 +158,26 @@
       "status": "SEALED_AND_VERIFIED"
     },
     "E08": {
-      "name": "Sealed Bounded Formal Assurance (TLA+ / Model Checking)",
+      "name": "Bounded Python State-Space Exploration & Invariant Verification",
       "priority": "P0",
-      "backend": "TLC Model Checker 2.18 / TLA+ State Explorer",
+      "backend": "Bounded Exhaustive Python State-Space Explorer (explore.py)",
       "primary_question": "Are GRWC safety and liveness invariants counterexample-free within bounded state spaces?",
       "protocol_path": "research/glhs_journal/q3_r3/protocols/E08_formal_assurance/protocol.json",
       "protocol_sha256": "dfa9114e5d4691f6b9b3f678eb74e96324a20f3eab7a66d29207cfc48ad1720f",
       "artifact_dir": "research/glhs_journal/q3_r3/evidence/E08_formal_assurance",
-      "seal_sha256": "ae0aa961192c4fcf09681b962039699246e88f024f98a62c33c101e5f5b8f8a5",
+      "seal_sha256": "b86b19f48e93d57a6032dd443edd627edcb53952f4e859bd737046a96208a8dc",
       "claim_eligible": true,
       "status": "SEALED_AND_VERIFIED"
     },
     "E09": {
-      "name": "Real PostgreSQL Concurrency & Contention Analysis",
+      "name": "In-Memory Concurrency and Partitioning Simulation",
       "priority": "P1",
-      "backend": "SimulatedPartitionCoordinator / thread locking (NOT production PostgreSQL benchmark)",
-      "primary_question": "What throughput, abort, and false-stale rates occur under heavy PostgreSQL contention?",
+      "backend": "SimulatedPartitionCoordinator / thread locking (In-Memory Simulation, NOT production PostgreSQL benchmark)",
+      "primary_question": "What throughput, abort, and false-stale rates occur under simulated concurrency contention?",
       "protocol_path": "research/glhs_journal/q3_r3/protocols/E09_concurrency/protocol.json",
       "protocol_sha256": "5293f64eac1f903fa8136c4827fc56602f7a776ea19e9ab3c04832545b05c4af",
       "artifact_dir": "research/glhs_journal/q3_r3/evidence/E09_concurrency",
-      "seal_sha256": "b4686275d0c028e67d129ac7cd4cbf6dd7c5fa6a7b9332fc2510c7462bfef7d2",
+      "seal_sha256": "c08c83dcbbfafd870c8789b83393f472c976d98b25cbb956f659358395becf7c",
       "claim_eligible": true,
       "status": "SEALED_AND_VERIFIED"
     },

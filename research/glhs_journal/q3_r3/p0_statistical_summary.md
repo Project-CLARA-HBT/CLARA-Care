@@ -37,13 +37,14 @@ In accordance with rigorous statistical design, **pseudoreplication is strictly 
 | **E02** | Binding Component Factorial Ablation | $I_{07}, I_{08}, I_{12}, I_{15}$ | $N = 352$ schedules $\times 8$ arms ($2,816$ executions) | Component Necessity (Factorial Logistic Regression) | All main effects significant ($p < 0.01$); $B_{111}$ admission = $0.0\%$ | Identity OR: $0.200$ ($p < 10^{-16}$); Evidence OR: $0.333$ ($p < 10^{-8}$) | **PASS** |
 | **E03** | Minimal Baseline Comparator | $I_{10}, I_{12}, I_{15}$ | $N = 352$ schedules $\times 4$ arms ($1,408$ executions) | Paired Decision Equivalence (McNemar Exact Test) | `GLHS_B111` vs `MIN_READSET`: $p = 1.0$; `GLHS_B111` vs `HMAC`: $p = 1.0$ | Exact decision match: $352/352$ ($100.0\%$); $0$ discordant pairs | **PASS** |
 | | | | | Metadata Overhead Reduction | HMAC: $-47.53\%$; MIN_READSET: $-57.69\%$ | Byte mean: GLHS $1407.5$ B, HMAC $738.5$ B, MIN $595.5$ B | **PASS** |
-| **E04** | PostgreSQL TOCTOU Assurance | $I_{01}, I_{02}, I_{03}, I_{04}, I_{05}, I_{06}, I_{15}$ | $N = 1,140$ unique schedules ($\ge 1,024$ target) | Forbidden Commit Rate ($P(\text{FORBIDDEN\_COMMIT})$) | **$0/1140$ ($0.0\%$)** ($0/2280$ with jitter) | 1-sided Wilson UCB $< 0.003$ ($0.00264$ on 1024, $0.00119$ on 2280) | **PASS** |
+| | | | | Dynamic Audit Disagreement | $150/352$ ($42.6\%$) disagreement | Reconstructability: $0.0\%$ (MIN) vs $100.0\%$ (GLHS) | **PASS** |
+| **E04** | PostgreSQL TOCTOU Assurance | $I_{01}, I_{02}, I_{03}, I_{04}, I_{05}, I_{06}, I_{15}$ | $N = 1,140$ unique schedules ($2,280$ with jitter) | Forbidden Commit Rate ($P(\text{FORBIDDEN\_COMMIT})$) | **$0/1140$ ($0.0\%$)** ($0/2280$ with jitter) | 1-sided Wilson UCB $< 0.003$ ($0.00264$ on 1024, $0.00119$ on 2280) | **PASS** |
 | **E05** | Dependency Completeness & Mutation | $I_{01}, I_{02}, I_{06}, I_{07}, I_{10}, I_{15}$ | $N = 312$ runs (108 valid, 204 invalid mutants) | Unsafe Commit Rate on Omission Mutants | **$0/204$ admitted ($0.0\%$)** | 1-sided Wilson UCB $\le 0.86\%$ on $N=312$; $\le 1.31\%$ on $N=204$ | **PASS** |
 | | | | | False-Stale Abort Rate on Supersets | **$0/108$ ($0.0\%$)** ($100.0\%$ valid liveness) | 1-sided Wilson LCB $\ge 97.56\%$ ($0.97560$) | **PASS** |
 | **E06** | Anti-Downgrade & Lineage Anti-Laundering | $I_{08}, I_{09}, I_{11}, I_{12}, I_{13}, I_{15}$ | $N = 300$ schedules (250 attack, 50 clean) | Laundering Admission Rate | **$0/250$ admitted ($0.0\%$)** | 1-sided Wilson UCB $\le 1.07\%$ ($0.01071$); CP UCB $\le 1.19\%$ | **PASS** |
 | | | | | Clean Review Liveness | **$50/50$ admitted ($100.0\%$)** | 1-sided Wilson LCB $\ge 94.87\%$ ($0.94867$) | **PASS** |
 | **E07** | Canonicalization & Cross-Runtime | $I_{08}, I_{12}$ | $N = 35$ RFC 8785 vectors ($70$ comparisons) | Cross-Runtime Byte Disagreement Rate | **$0/35$ disagreement ($0.0\%$)** | Byte Equality Rate: **$35/35 = 100.0\%$**; zero bit drift | **PASS** |
-| **E08** | Formal Bounded Model Checking | $I_{01}$–$I_{15}$ (All 15 Invariants) | $69,342$ states, $378,602$ transitions | Invariant Violation Count (TLC Bounded BFS $d \le 6$) | **$0$ violations observed** | Exhaustive state graph exploration through depth $d=6$ | **PASS** |
+| **E08** | Formal Bounded Model Checking | $I_{01}$–$I_{15}$ (All 15 Invariants) | $69,342$ states, $378,602$ transitions | Invariant Violation Count (Python BFS $d \le 6$) | **$0$ violations observed** | Exhaustive state graph exploration through depth $d=6$ | **PASS** |
 
 ---
 
@@ -211,8 +212,8 @@ In accordance with rigorous statistical design, **pseudoreplication is strictly 
 ---
 
 ### 3.8 E08: Formal Bounded Assurance & State Space Exploration
-- **Primary Scientific Question:** Are all 15 GLHS GRWC formal invariants ($I_{01}$–$I_{15}$) satisfied with zero counterexamples across exhaustive bounded state-space exploration of `docs/formal/GLHS_GSA.tla` up to search depth $d = 6$?
-- **Model Checking Environment:** TLC Model Checker executing on `docs/formal/GLHS_GSA.tla`.
+- **Primary Scientific Question:** Are all 15 GLHS GRWC formal invariants ($I_{01}$–$I_{15}$) satisfied with zero counterexamples across exhaustive bounded state-space exploration up to search depth $d = 6$?
+- **Model Checking Environment:** Bounded Exhaustive Python State-Space Explorer (`evaluation/formal_governance/explore.py`).
 - **Exploration Metrics:**
   - **Depth 5 Exploration:**
     - Unique reachable states: $21,361$.

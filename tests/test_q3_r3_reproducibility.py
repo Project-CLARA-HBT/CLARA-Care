@@ -41,6 +41,7 @@ from reproduce_q3_r3 import (
     UnattestedSimulationError,
     UnbackedProviderClaimError,
     disable_network,
+    restore_network,
     reproduce_q3_r3,
     sha256_file,
     verify_backend_attestation,
@@ -201,12 +202,14 @@ def test_n6_claim_budget_violation_fails_release(tmp_path: Path) -> None:
 def test_n7_network_access_attempt_fails_release() -> None:
     """N7: Test that network access attempted during offline reproduction MUST fail release."""
     disable_network()
+    try:
+        with pytest.raises(NetworkAccessProhibitedError):
+            socket.getaddrinfo("router.theclaracare.com", 443)
 
-    with pytest.raises(NetworkAccessProhibitedError):
-        socket.getaddrinfo("router.theclaracare.com", 443)
-
-    with pytest.raises(NetworkAccessProhibitedError):
-        socket.create_connection(("1.1.1.1", 443))
+        with pytest.raises(NetworkAccessProhibitedError):
+            socket.create_connection(("1.1.1.1", 443))
+    finally:
+        restore_network()
 
 
 def test_git_state_verification() -> None:

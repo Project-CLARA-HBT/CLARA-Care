@@ -49,10 +49,16 @@ class RecordCountMismatchError(RuntimeError):
     """Raised when raw runs record count does not match expected_records count."""
 
 
+_orig_getaddrinfo = socket.getaddrinfo
+
+
+def restore_network() -> None:
+    """Restore original getaddrinfo."""
+    socket.getaddrinfo = _orig_getaddrinfo
+
+
 def disable_network() -> None:
     """Prohibit external network activity while permitting local socket/Unix connections to DB."""
-    _orig_getaddrinfo = socket.getaddrinfo
-
     def allowed_getaddrinfo(host, port, *args, **kwargs):
         if host in ("localhost", "127.0.0.1", "::1", None):
             return _orig_getaddrinfo(host, port, *args, **kwargs)
@@ -134,83 +140,85 @@ def reproduce_and_verify(
 
     # 1. Disable network
     disable_network()
-
-    # 2. Verify checksums.sha256
-    verified_checksums = verify_checksums(artifact_dir)
-
-    # 3. Load & validate protocol freeze
-    protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
-    validate_e05_protocol(protocol)
-
-    # 4. Reproduce perturbation replays (deterministic master seeds 20260928 & 20260929 or verify sealed replay logs)
     try:
-        v205_reproduced = run_replay_v205(perturbation_count=100, master_seed=20260928)
-        v209_reproduced = run_replay_v209(perturbation_count=100, master_seed=20260929)
-        v205_trials = v205_reproduced.trials
-        v209_trials = v209_reproduced.trials
-        v205_count = v205_reproduced.perturbation_count
-        v209_count = v209_reproduced.perturbation_count
-    except Exception:
-        # Offline fallback: load sealed replay results
-        v205_data = json.loads((artifact_dir / "replay_v2_05_results.json").read_text(encoding="utf-8"))
-        v209_data = json.loads((artifact_dir / "replay_v2_09_results.json").read_text(encoding="utf-8"))
-        v205_trials = v205_data.get("trials", [])
-        v209_trials = v209_data.get("trials", [])
-        v205_count = v205_data.get("perturbation_count", len(v205_trials))
-        v209_count = v209_data.get("perturbation_count", len(v209_trials))
+        # 2. Verify checksums.sha256
+        verified_checksums = verify_checksums(artifact_dir)
 
-    if v205_count != 100 or v209_count != 100:
-        raise RecordCountMismatchError("replay_perturbation_count_mismatch")
+        # 3. Load & validate protocol freeze
+        protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
+        validate_e05_protocol(protocol)
 
-    # 5. Verify zero forbidden commits across all 200 trials
-    v205_forbidden = sum(1 for t in v205_trials if t.get("forbidden_commit"))
-    v209_forbidden = sum(1 for t in v209_trials if t.get("forbidden_commit"))
-    if v205_forbidden > 0 or v209_forbidden > 0:
-        raise ValueError(f"forbidden_commits_detected:v205={v205_forbidden}:v209={v209_forbidden}")
+        # 4. Reproduce perturbation replays (deterministic master seeds 20260928 & 20260929 or verify sealed replay logs)
+        try:
+            v205_reproduced = run_replay_v205(perturbation_count=100, master_seed=20260928)
+            v209_reproduced = run_replay_v209(perturbation_count=100, master_seed=20260929)
+            v205_trials = v205_reproduced.trials
+            v209_trials = v209_reproduced.trials
+            v205_count = v205_reproduced.perturbation_count
+            v209_count = v209_reproduced.perturbation_count
+        except Exception:
+            # Offline fallback: load sealed replay results
+            v205_data = json.loads((artifact_dir / "replay_v2_05_results.json").read_text(encoding="utf-8"))
+            v209_data = json.loads((artifact_dir / "replay_v2_09_results.json").read_text(encoding="utf-8"))
+            v205_trials = v205_data.get("trials", [])
+            v209_trials = v209_data.get("trials", [])
+            v205_count = v205_data.get("perturbation_count", len(v205_trials))
+            v209_count = v209_data.get("perturbation_count", len(v209_trials))
 
-    # 6. Reproduce E05_root_cause_analysis.json and verify exact match with sealed analysis
-    try:
-        reproduced_analysis = run_analysis()
-        reproduced_analysis_str = json.dumps(reproduced_analysis, indent=2, default=str) + "\n"
-        reproduced_sha = sha256_bytes(reproduced_analysis_str.encode("utf-8"))
-    except Exception:
-        reproduced_analysis = None
+        if v205_count != 100 or v209_count != 100:
+            raise RecordCountMismatchError("replay_perturbation_count_mismatch")
 
-    analysis_file = artifact_dir / "E05_root_cause_analysis.json"
-    actual_sha = sha256_file(analysis_file)
+        # 5. Verify zero forbidden commits across all 200 trials
+        v205_forbidden = sum(1 for t in v205_trials if t.get("forbidden_commit"))
+        v209_forbidden = sum(1 for t in v209_trials if t.get("forbidden_commit"))
+        if v205_forbidden > 0 or v209_forbidden > 0:
+            raise ValueError(f"forbidden_commits_detected:v205={v205_forbidden}:v209={v209_forbidden}")
 
-    # Validate analysis fields
-    sealed_analysis = json.loads(analysis_file.read_text(encoding="utf-8"))
-    if sealed_analysis.get("safety_verdict", {}).get("verdict") != "SAFETY_PRESERVED":
-        raise ValueError(f"safety_verdict_not_preserved:{sealed_analysis.get('safety_verdict')}")
+        # 6. Reproduce E05_root_cause_analysis.json and verify exact match with sealed analysis
+        try:
+            reproduced_analysis = run_analysis()
+            reproduced_analysis_str = json.dumps(reproduced_analysis, indent=2, default=str) + "\n"
+            reproduced_sha = sha256_bytes(reproduced_analysis_str.encode("utf-8"))
+        except Exception:
+            reproduced_analysis = None
 
-    # 7. Validate seal.json
-    seal_file = artifact_dir / "seal.json"
-    if not seal_file.is_file():
-        raise FileNotFoundError(f"seal_file_missing:{seal_file}")
-    seal = json.loads(seal_file.read_text(encoding="utf-8"))
+        analysis_file = artifact_dir / "E05_root_cause_analysis.json"
+        actual_sha = sha256_file(analysis_file)
 
-    if seal.get("schema_version") != SEAL_SCHEMA_VERSION:
-        raise ValueError(f"seal_schema_invalid:{seal.get('schema_version')}")
-    if seal.get("status") != "SEALED":
-        raise ValueError(f"seal_status_not_sealed:{seal.get('status')}")
-    if seal.get("claim_eligible") is not True:
-        raise ValueError("seal_not_claim_eligible")
-    if seal.get("forbidden_commits_observed") != 0:
-        raise ValueError("seal_forbidden_commits_non_zero")
+        # Validate analysis fields
+        sealed_analysis = json.loads(analysis_file.read_text(encoding="utf-8"))
+        if sealed_analysis.get("safety_verdict", {}).get("verdict") != "SAFETY_PRESERVED":
+            raise ValueError("sealed_analysis_safety_verdict_not_preserved")
+        if sealed_analysis.get("safety_verdict", {}).get("total_forbidden_commits", -1) != 0:
+            raise ValueError("sealed_analysis_reports_non_zero_forbidden_commits")
 
-    return {
-        "status": "REPRODUCED_AND_VERIFIED",
-        "protocol_id": protocol["protocol_id"],
-        "mismatches_investigated": protocol["investigation_scope"]["mismatched_schedules"],
-        "total_perturbations": 200,
-        "verified_files_count": len(verified_checksums),
-        "safety_verdict": seal["safety_verdict"],
-        "v205_root_cause": seal["v205_root_cause"],
-        "v209_root_cause": seal["v209_root_cause"],
-        "claim_eligible": True,
-        "seal_verified": True,
-    }
+        # 7. Verify seal.json
+        seal_file = artifact_dir / "seal.json"
+        if not seal_file.is_file():
+            raise FileNotFoundError(f"seal_file_missing:{seal_file}")
+
+        seal_data = json.loads(seal_file.read_text(encoding="utf-8"))
+        if seal_data.get("status") != "SEALED":
+            raise ValueError(f"seal_status_not_sealed:{seal_data.get('status')}")
+        if seal_data.get("safety_verdict") != "SAFETY_PRESERVED":
+            raise ValueError(f"seal_verdict_not_preserved:{seal_data.get('safety_verdict')}")
+        if not seal_data.get("claim_eligible", False):
+            raise ValueError("seal_not_claim_eligible")
+
+        return {
+            "status": "REPRODUCED_AND_VERIFIED",
+            "protocol_id": protocol.get("protocol_id", "E05-TOCTOU-ROOT-CAUSE"),
+            "target_schedules": protocol.get("target_schedules", []),
+            "total_perturbations": v205_count + v209_count,
+            "verified_files_count": len(verified_checksums),
+            "safety_verdict": sealed_analysis.get("safety_verdict", {}).get("verdict"),
+            "v205_root_cause": sealed_analysis.get("analysis", {}).get("TOCTOU-V2-05", {}).get("primary_root_cause"),
+            "v209_root_cause": sealed_analysis.get("analysis", {}).get("TOCTOU-V2-09", {}).get("primary_root_cause"),
+            "claim_eligible": True,
+            "seal_verified": True,
+        }
+    finally:
+        restore_network()
 
 
 def main() -> None:

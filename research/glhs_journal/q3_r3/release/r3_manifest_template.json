@@ -156,9 +156,9 @@
       "status": "PENDING_EXECUTION"
     },
     "E08": {
-      "name": "Sealed Bounded Formal Assurance (TLA+ / Model Checking)",
+      "name": "Bounded Python State-Space Exploration & Invariant Verification",
       "priority": "P0",
-      "backend": "TLC Model Checker / Formal Engine",
+      "backend": "Bounded Exhaustive Python State-Space Explorer (explore.py)",
       "primary_question": "Are GRWC safety and liveness invariants counterexample-free within bounded state spaces?",
       "protocol_path": "research/glhs_journal/q3_r3/protocols/E08_formal_assurance/protocol.json",
       "protocol_sha256": "9758c72b69bfdf483e7fd45f78ebd7ff24339aa313371c628468886bb0bd60f3",
@@ -168,10 +168,10 @@
       "status": "PENDING_EXECUTION"
     },
     "E09": {
-      "name": "Real PostgreSQL Concurrency & Contention Analysis",
+      "name": "In-Memory Concurrency and Partitioning Simulation",
       "priority": "P1",
-      "backend": "PostgreSQL 16.14 (Multi-Worker Concurrency)",
-      "primary_question": "What throughput, abort, and false-stale rates occur under heavy PostgreSQL contention?",
+      "backend": "SimulatedPartitionCoordinator / thread locking (In-Memory Simulation, NOT production PostgreSQL benchmark)",
+      "primary_question": "What throughput, abort, and false-stale rates occur under simulated concurrency contention?",
       "protocol_path": "research/glhs_journal/q3_r3/protocols/E09_concurrency/protocol.json",
       "protocol_sha256": "e483e83891e288ecabf4260875a5e6e63e068cb4ef87e19f2b49d94ee335ccf7",
       "artifact_dir": "artifacts/glhs-r3/<run_id>/E09",

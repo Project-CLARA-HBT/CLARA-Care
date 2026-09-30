@@ -165,12 +165,14 @@ def main() -> int:
     parser.add_argument("--protocol", type=Path, default=DEFAULT_PROTOCOL_PATH)
     parser.add_argument("--artifact-dir", type=Path, default=DEFAULT_ARTIFACT_DIR)
     parser.add_argument("--run-id", default="GLHS-E05-ROOT-CAUSE-20260928")
+    parser.add_argument("--perturbations", type=int, default=100)
     args = parser.parse_args()
 
     seal_doc = seal_experiment_e05(
         protocol_path=args.protocol,
         artifact_dir=args.artifact_dir,
         run_id=args.run_id,
+        perturbation_count=args.perturbations,
     )
     print(json.dumps(seal_doc, indent=2, sort_keys=True))
     return 0
