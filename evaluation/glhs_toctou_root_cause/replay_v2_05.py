@@ -63,7 +63,7 @@ def _resolve_default_db_url() -> str:
         os.getenv("GLHS_DATABASE_URL"),
         os.getenv("DATABASE_URL"),
         os.environ.get("GLHS_E05_POSTGRES_URL"),
-        "postgresql+psycopg://aura:aura_prod_x7k9m2@localhost:5433/glhs_eval_r2",
+        "postgresql+psycopg://postgres:postgres@localhost:5433/glhs_eval_r2",
     ]
     for candidate in candidates:
         if not candidate:
