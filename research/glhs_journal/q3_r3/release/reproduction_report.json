@@ -219,7 +219,7 @@
     "audited_parent_harness_commit": "e7a073749d8d3d434f6d47204238cc6655431f76",
     "audited_sut_commit": "81f040d3e05905cc384239c5ae130f629e722d3e",
     "commit_match": false,
-    "current_commit": "31105d9c2bb9af823bafe513c44c5b512e4dcca0",
+    "current_commit": "dc36e9f3e683bcfcda19bba901c78db0d6c4081f",
     "execution_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
     "git_check_passed": true,
     "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
@@ -231,5 +231,5 @@
   "release_id": "GLHS-Q3-R3-RELEASE-20260929-V1",
   "schema_version": "glhs-r3-reproduction-report.v1",
   "total_experiments_swept": 15,
-  "verified_at_utc": "2026-09-30T07:40:41.028338+00:00"
+  "verified_at_utc": "2026-09-30T09:07:18.897367+00:00"
 }
