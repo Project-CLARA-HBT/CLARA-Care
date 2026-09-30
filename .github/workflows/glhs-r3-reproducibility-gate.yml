@@ -103,7 +103,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install fastapi jsonschema pydantic-settings pytest pytest-asyncio anyio httpx sqlalchemy pydantic scipy psycopg
+          pip install -e "services/api[dev]" scipy jsonschema
 
       - name: Run Reproducibility & Invariant Test Suites
         run: |
@@ -129,7 +129,7 @@ jobs:
       - name: Install Runtime Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install fastapi jsonschema pydantic-settings sqlalchemy pydantic scipy psycopg
+          pip install -e "services/api[dev]" scipy jsonschema
 
       - name: Run Master Reproduction Sweep
         run: |
