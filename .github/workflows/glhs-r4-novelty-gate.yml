@@ -121,6 +121,23 @@ jobs:
             services/api/tests/test_glhs_grwc_lineage.py \
             services/api/tests/test_glhs_mandatory_thss_binding.py
 
+  r4-claim-lint:
+    name: R4 Prohibited Phrase & Claim Budget Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Run R4 Claim Lint
+        run: |
+          python3 scripts/ci/r4_claim_lint.py
+
   offline-reproducibility-sweep:
     name: Hermetic Offline Reproducibility Sweep (E22)
     runs-on: ubuntu-latest

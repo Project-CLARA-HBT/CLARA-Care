@@ -79,7 +79,15 @@ To eliminate unearned novelty claims, GLHS R4 explicitly surrenders 29 constitue
 +----+--------------------------------------------+--------------------------------------------------------+
 ```
 
-### 1.2 Formal Novelty Outcome Rule (C3 vs C4)
+### 1.2 Related Work & Source Support vs. Exact-Disclosure Boundary
+
+Recent transactional agent memory systems, notably **MemTX / MemTxn** (e.g. transactional agent-memory frameworks), introduce database isolation and transactional recovery over external LLM memories. However, these systems focus on **source support**—verifying whether an asserted fact exists anywhere within the agent's long-term memory store or underlying database.
+
+GLHS addresses a fundamentally distinct invariant: **Exact-Disclosure Admission**. In clinical decision-making, it is insufficient to prove that a piece of evidence exists in the global database; the system must guarantee that critical contraindications or updated laboratory results were present in the *exact disclosure supplied* to the inference instance that produced the proposal. 
+
+*Scope Limitation Invariant:* We explicitly note: **We do not prove semantic use by the LLM**. Server-attested dispatch continuity proves that the exact projection $M_{\text{proj}}$ was delivered to the model transport channel; neural internal causal processing remains strictly out of scope.
+
+### 1.3 Formal Novelty Outcome Rule (C3 vs C4)
 
 Our prospective plan established the **Novelty Outcome Rule**:
 > *If C3 (`SIGNED_EXACT_DISCLOSURE_TOKEN`) matches C4 (`FULL_GRWC`) in static decision safety across all adversarial schedules, GLHS explicitly surrenders decision-safety superiority over compact capability tokens and restricts its novelty claims strictly to full-lifecycle state-machine governance, server-attested two-digest dispatch receipts, tamper-evident proposal lineage, and bit-exact forensic audit reconstructability.*
@@ -209,6 +217,10 @@ TLC/Alloy bounded state-space exploration up to depth $d=6$ visited $64,890$ dis
 ### 4.7 E22 — Hermetic Offline Reproducibility Audit
 
 The master reproduction script `reproduce_q4_r4.py` executed under strict fail-closed network isolation, verifying $100.0\%$ checksum concordance across all 7 evidence bundles and passing Gate 5.
+
+### 4.8 Statistical Power & Equivalence Design
+
+Note on Sample Size & TOST Equivalence Bounds: $N=384$ was the original prospective design target for Schuirmann Two One-Sided Tests (TOST) equivalence designs under a pre-specified margin $\delta=0.05$. Actual powered sample size $N$ must be derived directly from effect size variances. Exploratory pilot probes with small sample sizes (such as $N=8$ subjects in early utility pilots) are explicitly treated as qualitative probes and do not support claims of $\pm 2\%$ statistical equivalence without a powered confirmatory sample.
 
 ---
 

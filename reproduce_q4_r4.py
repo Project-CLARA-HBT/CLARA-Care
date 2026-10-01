@@ -308,7 +308,7 @@ def run_e22_reproduction_audit() -> int:
     seal_doc = seal_experiment_bundle(e22_dir, "E22", "GLHS-R4-E22-20260930")
     print(f"[E22] Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
 
-    # Step 4: Write Release Manifest
+    # Step 4: Write Release Manifest and artifact-sha256.json
     RELEASE_DIR.mkdir(parents=True, exist_ok=True)
     release_manifest = {
         "schema_version": "glhs-r4-release-manifest.v1",
@@ -337,6 +337,26 @@ def run_e22_reproduction_audit() -> int:
     }
     (RELEASE_DIR / "r4_release_manifest.json").write_text(
         json.dumps(release_manifest, indent=2) + "\n", encoding="utf-8"
+    )
+
+    # Generate artifact-sha256.json for all R4 files
+    r4_root = REPO_ROOT / "research" / "glhs_journal" / "q4_r4"
+    artifact_hashes = {}
+    for p in sorted(r4_root.rglob("*")):
+        if p.is_file() and p.name not in ("artifact-sha256.json", ".gitkeep") and not p.name.endswith(".pyc"):
+            rel_p = str(p.relative_to(r4_root))
+            artifact_hashes[rel_p] = sha256_file(p)
+
+    artifact_inventory_doc = {
+        "schema_version": "glhs-r4-artifact-sha256.v1",
+        "program": "GLHS R4 — Governed Read-to-Write Continuity (GRWC)",
+        "generated_at_utc": PROVENANCE["sealed_at_utc"],
+        "provenance": PROVENANCE,
+        "total_artifacts": len(artifact_hashes),
+        "artifacts": artifact_hashes,
+    }
+    (RELEASE_DIR / "artifact-sha256.json").write_text(
+        json.dumps(artifact_inventory_doc, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
 
     print("\n================================================================================")
