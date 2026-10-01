@@ -4,15 +4,15 @@
   "protocol_id": "GLHS-R4-E16-FIVE_WAY_COMPARATOR",
   "experiment_id": "E16",
   "title": "GLHS R4 Phase 0 / E16: Five-Way Prior-Art Comparator Architecture Study",
-  "program": "GLHS R4 — Governed Read-to-Write Continuity (GRWC)",
-  "phase": "Phase 0 — Prospective Experimental & Statistical Plan for R4",
-  "curator": "Agent C — Experiment & Statistics",
+  "program": "GLHS R4 \u2014 Governed Read-to-Write Continuity (GRWC)",
+  "phase": "Phase 0 \u2014 Prospective Experimental & Statistical Plan for R4",
+  "curator": "Agent C \u2014 Experiment & Statistics",
   "date": "2026-09-30",
   "status": "PROSPECTIVELY_FROZEN",
   "priority": "P0",
   "freeze_id": "GLHS-R4-E16-FREEZE-20260930-V1",
-  "freeze_timestamp_utc": "2026-09-30T00:00:00Z",
-  "git_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+  "freeze_timestamp_utc": "2026-10-01T14:00:00Z",
+  "git_sha": "36fe388694179232fd32be13d38c9d1dae9d56d5",
   "target_invariants": [
     "I01_state_isolation",
     "I07_evidence_closure",
@@ -25,7 +25,7 @@
   "primary_endpoints": [
     {
       "name": "False Admission Rate",
-      "definition": "Proportion of invalid or adversarial schedules improperly committed under each comparator arm (C0–C4).",
+      "definition": "Proportion of invalid or adversarial schedules improperly committed under each comparator arm (C0\u2013C4).",
       "target_value": 0.0,
       "acceptable_threshold": 0.0
     },

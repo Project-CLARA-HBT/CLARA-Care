@@ -156,7 +156,26 @@ def verify_hash_chain(runs_file: Path, expected_count: int) -> int:
     return len(records)
 
 
-def run_e22_reproduction_audit() -> int:
+from evaluation.glhs_r4_eval.run_e15 import run_e15_experiment
+from evaluation.glhs_r4_eval.run_e16 import run_e16_experiment
+from evaluation.glhs_r4_eval.run_e17 import run_e17_experiment
+from evaluation.glhs_r4_eval.run_e18 import run_e18_experiment
+from evaluation.glhs_r4_eval.run_e19 import run_e19_experiment
+from evaluation.glhs_r4_eval.run_e20 import run_e20_experiment
+from evaluation.glhs_r4_eval.run_e21 import run_e21_experiment
+
+RUNNERS = [
+    ("E15", run_e15_experiment),
+    ("E16", run_e16_experiment),
+    ("E17", run_e17_experiment),
+    ("E18", run_e18_experiment),
+    ("E19", run_e19_experiment),
+    ("E20", run_e20_experiment),
+    ("E21", run_e21_experiment),
+]
+
+
+def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
     print("================================================================================")
     print("GLHS R4 — HERMETIC REPRODUCIBILITY & CRYPTOGRAPHIC VERIFICATION SWEEP (E22)")
     print("Program: GLHS R4 — Governed Read-to-Write Continuity (GRWC)")
@@ -167,7 +186,18 @@ def run_e22_reproduction_audit() -> int:
     disable_network()
     print("[PASS] Network isolation enforced: All socket/DNS calls disabled fail-closed.")
 
-    # Step 2: Audit all 7 prior experiments (E15–E21)
+    # Step 2: Computational Re-execution of SUT Runners (if enabled)
+    if execute_runners:
+        print("\n--- COMPUTATIONAL RE-EXECUTION OF SUT EXPERIMENT RUNNERS (E15–E21) ---")
+        for exp_id, runner_fn in RUNNERS:
+            print(f"Executing {exp_id} runner against production kernel...")
+            res = runner_fn()
+            if not res.get("claim_eligible", False):
+                if exp_id != "E20":  # E20 is allowed to be NOT_RUN_PROVIDER_ATTESTATION_UNAVAILABLE
+                    raise ValueError(f"Runner {exp_id} produced non-claim-eligible result!")
+        print("[PASS] Computational re-execution of all 7 experiment runners complete.\n")
+
+    # Step 3: Audit all 7 prior experiments (E15–E21)
     audited_results = {}
     total_executions_verified = 0
 

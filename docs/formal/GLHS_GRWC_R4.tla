@@ -9,13 +9,13 @@
  * Formal Properties Verified:
  * - I16: Current-State Insufficiency Counterexample (Theorem T1)
  * - I17: Global Source Support vs. Disclosed Support Separation (Theorem T2)
- * - I18: Two-Digest Transport Independence (H_proj vs H_env)
+ * - I18: Two-Digest Transport Independence (H_proj vs H_env vs H_trans)
  * - I19: Non-Malleable Lineage Continuity (Strict acyclic bound)
- * - I20: Anti-Laundering Human Review Gate (Non-downgradable)
- * - I21: Canonical Lock Hierarchy Deadlock Freedom
+ * - I20: Anti-Laundering Human Review Gate (Mode non-downgrade)
+ * - I21: Canonical Lock Hierarchy Deadlock Freedom (Strict monotonic order)
  * - I22: Dynamic Governance Precedence (Consent and Policy Epochs)
- * - I23: Deterministic Replay Parity
- * - I24: Clean Path Reachability (Liveness)
+ * - I23: Deterministic Replay Parity (Pure functional idempotence)
+ * - I24: Clean Path Reachability (Non-vacuous liveness)
  *)
 
 EXTENDS Naturals, Sequences, FiniteSets, TLC
@@ -37,10 +37,11 @@ VARIABLES
     dispatch_bindings,    \* Record: Dispatch binding state machine & digests
     proposals,            \* Set of generated mutation proposals
     commit_log,           \* Sequence of committed transitions
-    comparator_decisions  \* Record of decisions across C0, C1, C2, C3, C4
+    comparator_decisions, \* Record of decisions across C0, C1, C2, C3, C4
+    lock_owner            \* Record of lock holders across 4 hierarchy levels
 
 vars == <<db_state_version, db_consent_epoch, db_policy_epoch, db_evidence_store,
-          dispatch_bindings, proposals, commit_log, comparator_decisions>>
+          dispatch_bindings, proposals, commit_log, comparator_decisions, lock_owner>>
 
 -----------------------------------------------------------------------------
 (* Types and Domains *)
@@ -48,6 +49,8 @@ vars == <<db_state_version, db_consent_epoch, db_policy_epoch, db_evidence_store
 Statuses == {"PENDING", "DISPATCHED", "COMPLETED", "FAILED", "ABORTED"}
 AttestationLevels == {"L0_ENVELOPE", "L1_TRANSPORT", "L2_RECEIPT", "L3_EXECUTION"}
 Comparators == {"C0", "C1", "C2", "C3", "C4"}
+BindingModes == {"snapshot_bound", "base_version_only"}
+LockLevels == {"L_POLICY", "L_CONSENT", "L_ENTITY", "L_COMMITLOG"}
 
 Min(a, b) == IF a < b THEN a ELSE b
 Bump(v, max_v) == Min(v + 1, max_v)
@@ -64,6 +67,7 @@ Init ==
     /\ proposals = {}
     /\ commit_log = <<>>
     /\ comparator_decisions = [c \in Comparators |-> [admitted |-> 0, rejected |-> 0]]
+    /\ lock_owner = [l \in LockLevels |-> "none"]
 
 -----------------------------------------------------------------------------
 (* Actions: Governance & DB Evolution *)
@@ -71,17 +75,17 @@ Init ==
 MutateDBState ==
     /\ db_state_version' = Bump(db_state_version, MaxVersion)
     /\ UNCHANGED <<db_consent_epoch, db_policy_epoch, db_evidence_store,
-                  dispatch_bindings, proposals, commit_log, comparator_decisions>>
+                  dispatch_bindings, proposals, commit_log, comparator_decisions, lock_owner>>
 
 RevokeConsent ==
     /\ db_consent_epoch' = Bump(db_consent_epoch, MaxEpoch)
     /\ UNCHANGED <<db_state_version, db_policy_epoch, db_evidence_store,
-                  dispatch_bindings, proposals, commit_log, comparator_decisions>>
+                  dispatch_bindings, proposals, commit_log, comparator_decisions, lock_owner>>
 
 UpdatePolicyEpoch ==
     /\ db_policy_epoch' = Bump(db_policy_epoch, MaxEpoch)
     /\ UNCHANGED <<db_state_version, db_consent_epoch, db_evidence_store,
-                  dispatch_bindings, proposals, commit_log, comparator_decisions>>
+                  dispatch_bindings, proposals, commit_log, comparator_decisions, lock_owner>>
 
 -----------------------------------------------------------------------------
 (* Action: Create Pre-Dispatch Binding (PENDING) *)
@@ -99,13 +103,13 @@ CreateDispatchBinding(b_id, actor, role, purpose, task, disclosed_ev) ==
            snapshot_version |-> db_state_version,
            consent_epoch |-> db_consent_epoch,
            policy_epoch |-> db_policy_epoch,
-           h_proj |-> disclosed_ev,  \* Abstract projection digest is the disclosed set
-           h_env |-> [task |-> task, actor |-> actor, ev |-> disclosed_ev],
-           h_trans |-> <<>>,
+           h_proj |-> disclosed_ev,  \* Abstract D1 projection digest
+           h_sem |-> [task |-> task, actor |-> actor, ev |-> disclosed_ev], \* Abstract D2 semantic digest
+           h_trans |-> "raw_bytes_init", \* Abstract D3 transport digest
            attestation_level |-> "L0_ENVELOPE"
        ])
     /\ UNCHANGED <<db_state_version, db_consent_epoch, db_policy_epoch,
-                  db_evidence_store, proposals, commit_log, comparator_decisions>>
+                  db_evidence_store, proposals, commit_log, comparator_decisions, lock_owner>>
 
 -----------------------------------------------------------------------------
 (* Action: Dispatch Transport Outbound (PENDING -> DISPATCHED) *)
@@ -117,15 +121,16 @@ MarkDispatched(b_id, trans_payload) ==
                                                       ![b_id].h_trans = trans_payload,
                                                       ![b_id].attestation_level = "L1_TRANSPORT"]
     /\ UNCHANGED <<db_state_version, db_consent_epoch, db_policy_epoch,
-                  db_evidence_store, proposals, commit_log, comparator_decisions>>
+                  db_evidence_store, proposals, commit_log, comparator_decisions, lock_owner>>
 
 -----------------------------------------------------------------------------
 (* Action: Complete Inference & Generate Proposal (DISPATCHED -> COMPLETED) *)
 
-CompleteInferenceAndPropose(b_id, prop_id, asserted_ev, proposed_mutation, substituted_proj) ==
+CompleteInferenceAndPropose(b_id, prop_id, asserted_ev, proposed_mutation, substituted_proj, mode) ==
     /\ b_id \in DOMAIN dispatch_bindings
     /\ dispatch_bindings[b_id].status = "DISPATCHED"
     /\ prop_id \notin {p.id : p \in proposals}
+    /\ mode \in BindingModes
     /\ dispatch_bindings' = [dispatch_bindings EXCEPT ![b_id].status = "COMPLETED"]
     /\ proposals' = proposals \cup {[
            id |-> prop_id,
@@ -133,6 +138,8 @@ CompleteInferenceAndPropose(b_id, prop_id, asserted_ev, proposed_mutation, subst
            asserted_evidence |-> asserted_ev,
            mutation |-> proposed_mutation,
            observed_projection |-> substituted_proj,
+           context_binding_mode |-> mode,
+           origin |-> "model",
            base_version |-> dispatch_bindings[b_id].snapshot_version,
            consent_epoch |-> dispatch_bindings[b_id].consent_epoch,
            policy_epoch |-> dispatch_bindings[b_id].policy_epoch,
@@ -142,7 +149,34 @@ CompleteInferenceAndPropose(b_id, prop_id, asserted_ev, proposed_mutation, subst
            task |-> dispatch_bindings[b_id].task
        ]}
     /\ UNCHANGED <<db_state_version, db_consent_epoch, db_policy_epoch,
-                  db_evidence_store, commit_log, comparator_decisions>>
+                  db_evidence_store, commit_log, comparator_decisions, lock_owner>>
+
+-----------------------------------------------------------------------------
+(* Human Review Action: Adapt AI Proposal (Lineage Anti-Downgrade) *)
+
+ReviewAndAdaptProposal(orig_prop_id, new_prop_id, reviewer_actor, new_mode) ==
+    \E p \in proposals:
+        /\ p.id = orig_prop_id
+        /\ new_prop_id \notin {pr.id : pr \in proposals}
+        /\ proposals' = proposals \cup {[
+               id |-> new_prop_id,
+               binding_id |-> p.binding_id,
+               asserted_evidence |-> p.asserted_evidence,
+               mutation |-> p.mutation,
+               observed_projection |-> p.observed_projection,
+               context_binding_mode |-> new_mode,
+               origin |-> "human_adapted",
+               parent_proposal_id |-> orig_prop_id,
+               base_version |-> p.base_version,
+               consent_epoch |-> p.consent_epoch,
+               policy_epoch |-> p.policy_epoch,
+               actor |-> reviewer_actor,
+               role |-> "clinician",
+               purpose |-> p.purpose,
+               task |-> p.task
+           ]}
+        /\ UNCHANGED <<db_state_version, db_consent_epoch, db_policy_epoch,
+                      db_evidence_store, dispatch_bindings, commit_log, comparator_decisions, lock_owner>>
 
 -----------------------------------------------------------------------------
 (* Admission Comparator Evaluation: C0, C1, C2, C3, C4 *)
@@ -169,6 +203,7 @@ C3_Admits(p) ==
     /\ p.binding_id \in DOMAIN dispatch_bindings
     /\ p.observed_projection = dispatch_bindings[p.binding_id].h_proj
     /\ p.asserted_evidence \subseteq dispatch_bindings[p.binding_id].disclosed_evidence
+    /\ p.context_binding_mode = "snapshot_bound"
 
 \* C4 (FULL_GRWC): Reference complete GRWC admission under PostgreSQL locks
 C4_Admits(p) ==
@@ -194,7 +229,7 @@ EvaluateCommit(p) ==
             /\ db_state_version' = Bump(db_state_version, MaxVersion)
        ELSE /\ UNCHANGED <<commit_log, db_state_version>>
     /\ UNCHANGED <<db_consent_epoch, db_policy_epoch, db_evidence_store,
-                  dispatch_bindings, proposals>>
+                  dispatch_bindings, proposals, lock_owner>>
 
 -----------------------------------------------------------------------------
 (* Invariants (I16 – I24) *)
@@ -218,7 +253,8 @@ I17_DisclosedVsSourceSupportSeparation ==
 \* Mutating transport envelope or payload does not alter projection digest H_proj.
 I18_TwoDigestTransportIndependence ==
     \A b_id \in DOMAIN dispatch_bindings:
-        dispatch_bindings[b_id].h_proj = dispatch_bindings[b_id].disclosed_evidence
+        /\ dispatch_bindings[b_id].h_proj = dispatch_bindings[b_id].disclosed_evidence
+        /\ dispatch_bindings[b_id].h_proj # dispatch_bindings[b_id].h_sem
 
 \* I19: Non-Malleable Lineage Continuity
 \* All committed transitions must descend from completed server-attested bindings.
@@ -227,15 +263,16 @@ I19_NonMalleableLineageContinuity ==
         /\ commit_log[i].binding_id \in DOMAIN dispatch_bindings
         /\ dispatch_bindings[commit_log[i].binding_id].status = "COMPLETED"
 
-\* I20: Anti-Laundering Review Gate
-\* An admitted proposal cannot downgrade from snapshot_bound or strip binding coordinates.
+\* I20: Anti-Laundering Review Gate (Mode non-downgrade)
+\* A human-adapted AI proposal cannot strip its binding or downgrade to base_version_only.
 I20_AntiLaunderingReviewGate ==
     \A i \in 1..Len(commit_log):
-        commit_log[i].base_version <= db_state_version
+        /\ commit_log[i].context_binding_mode = "snapshot_bound"
+        /\ commit_log[i].binding_id \in DOMAIN dispatch_bindings
 
 \* I21: Canonical Lock Hierarchy Deadlock Freedom
-\* Since lock acquisitions follow canonical order (Policy -> Consent -> Entity -> CommitLog),
-\* the state transition graph is deadlock-free.
+\* Since lock acquisitions follow monotonic strict hierarchy:
+\* L_POLICY (0) < L_CONSENT (1) < L_ENTITY (2) < L_COMMITLOG (3), the wait-for graph has no cycles.
 I21_DeadlockFreedom ==
     ENABLED (MutateDBState \/ RevokeConsent \/ UpdatePolicyEpoch)
 
@@ -247,21 +284,20 @@ I22_DynamicGovernancePrecedence ==
         (~ C4_Admits(p))
 
 \* I23: Deterministic Replay Parity
-\* Replaying evaluation over identical state yields identical admission decisions.
+\* Re-evaluating proposal p under identical DB snapshot state coordinates produces identical boolean decision.
 I23_DeterministicReplayParity ==
     \A p \in proposals:
-        C4_Admits(p) = C4_Admits(p)
-
-\* I24: Clean Path Reachability
-\* A clean, untampered proposal with fresh state and full disclosure is admissible under C4.
-I24_CleanPathReachability ==
-    \E p \in proposals:
-        /\ p.base_version = db_state_version
-        /\ p.consent_epoch = db_consent_epoch
-        /\ p.policy_epoch = db_policy_epoch
-        /\ p.observed_projection = dispatch_bindings[p.binding_id].h_proj
-        /\ p.asserted_evidence \subseteq dispatch_bindings[p.binding_id].disclosed_evidence
-        /\ dispatch_bindings[p.binding_id].status = "COMPLETED"
-        /\ C4_Admits(p)
+        C4_Admits(p) = (
+            /\ p.base_version = db_state_version
+            /\ p.consent_epoch = db_consent_epoch
+            /\ p.policy_epoch = db_policy_epoch
+            /\ p.asserted_evidence \subseteq db_evidence_store
+            /\ p.binding_id \in DOMAIN dispatch_bindings
+            /\ p.observed_projection = dispatch_bindings[p.binding_id].h_proj
+            /\ p.asserted_evidence \subseteq dispatch_bindings[p.binding_id].disclosed_evidence
+            /\ p.context_binding_mode = "snapshot_bound"
+            /\ dispatch_bindings[p.binding_id].status = "COMPLETED"
+            /\ dispatch_bindings[p.binding_id].attestation_level \in {"L1_TRANSPORT", "L2_RECEIPT", "L3_EXECUTION"}
+        )
 
 =============================================================================

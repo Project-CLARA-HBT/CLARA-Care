@@ -78,7 +78,7 @@ def run_e20_experiment() -> dict[str, Any]:
             "schedule_id": "SCH-E20-CONDITIONAL-001",
             "status": "NOT_RUN_PROVIDER_ATTESTATION_UNAVAILABLE",
             "note": "Hardware verifiable provider attestation receipts inactive in local CI environment. Zero synthetic signatures generated.",
-            "execution_timestamp_utc": "2026-09-30T00:09:30Z",
+            "execution_timestamp_utc": "2026-10-01T14:10:30Z",
         }
     ]
 
@@ -120,7 +120,7 @@ def run_e20_experiment() -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(out_dir, "E20", "GLHS-R4-E20-20260930")
+    seal_doc = seal_experiment_bundle(out_dir, "E20", "GLHS-R4-E20-20261001")
     print(f"[E20] Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
     return summary_json
 

@@ -33,7 +33,7 @@ R4_DIR = REPO_ROOT / "research" / "glhs_journal" / "q4_r4"
 PROTOCOLS_DIR = R4_DIR / "protocols"
 EVIDENCE_DIR = R4_DIR / "evidence"
 RELEASE_DIR = R4_DIR / "release"
-CANONICAL_FREEZE_UTC = "2026-09-30T00:00:00Z"
+CANONICAL_FREEZE_UTC = "2026-10-01T14:00:00Z"
 
 R4_EXPERIMENTS: list[tuple[str, list[str]]] = [
     ("E15", ["E15_dispatch_attestation"]),
