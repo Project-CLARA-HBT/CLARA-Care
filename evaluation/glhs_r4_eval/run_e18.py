@@ -334,7 +334,7 @@ def run_e18_experiment() -> dict[str, Any]:
                 "c1_admitted": c1_admitted,
                 "c4_admitted": c4_admitted,
                 "c4_rejection_reason": res_c4.rejection_reason_code,
-                "execution_timestamp_utc": "2026-10-01T14:09:30Z",
+                "execution_timestamp_utc": "2026-10-02T01:42:00Z",
             })
 
     chained_records = build_merkle_runs(raw_records)
@@ -385,7 +385,7 @@ def run_e18_experiment() -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(out_dir, "E18", "GLHS-R4-E18-20261001")
+    seal_doc = seal_experiment_bundle(out_dir, "E18", "GLHS-R4-E18-20261002")
     print(f"[E18] SUT Support Separation Execution & Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
     return summary_json
 

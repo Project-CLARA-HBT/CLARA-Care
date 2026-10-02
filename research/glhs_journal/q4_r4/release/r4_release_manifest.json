@@ -1,18 +1,18 @@
 {
   "schema_version": "glhs-r4-release-manifest.v1",
   "program": "GLHS R4 \u2014 Governed Read-to-Write Continuity (GRWC)",
-  "released_at_utc": "2026-10-01T14:35:00Z",
+  "released_at_utc": "2026-10-02T02:00:00Z",
   "provenance": {
-    "system_under_test_sha": "36fe388694179232fd32be13d38c9d1dae9d56d5",
-    "parent_harness_sha": "36fe388694179232fd32be13d38c9d1dae9d56d5",
-    "analysis_release_sha": "36fe388694179232fd32be13d38c9d1dae9d56d5",
+    "system_under_test_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+    "parent_harness_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+    "analysis_release_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
     "r4_baseline_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
     "active_branch": "research/glhs-r4-novelty-hardening",
-    "freeze_timestamp_utc": "2026-10-01T14:00:00Z",
-    "execution_started_utc": "2026-10-01T14:05:00Z",
-    "execution_completed_utc": "2026-10-01T14:25:00Z",
-    "validated_at_utc": "2026-10-01T14:30:00Z",
-    "sealed_at_utc": "2026-10-01T14:35:00Z"
+    "freeze_timestamp_utc": "2026-10-02T01:30:00Z",
+    "execution_started_utc": "2026-10-02T01:35:00Z",
+    "execution_completed_utc": "2026-10-02T01:50:00Z",
+    "validated_at_utc": "2026-10-02T01:55:00Z",
+    "sealed_at_utc": "2026-10-02T02:00:00Z"
   },
   "experiments_summary": {
     "E15": "Dispatch Attestation Integrity (1,024 schedules, 0 invalid admissions)",
@@ -21,7 +21,7 @@
     "E18": "Global vs Disclosed Support Separation (200 schedules, 100% undisclosed evidence rejection)",
     "E19": "Transport Serialization Attacks (256 mutated envelopes, 100% rejection)",
     "E20": "Provider Receipt Study (Status: NOT_RUN_PROVIDER_ATTESTATION_UNAVAILABLE)",
-    "E21": "Formal Novelty Model (64,890 states, depth d=6, 0 violations)",
+    "E21": "Formal Novelty Model (162 states, 323 transitions, depth d=5, 0 violations)",
     "E22": "Public Reproducibility Audit (100% offline checksum concordance)"
   },
   "gates_status": {

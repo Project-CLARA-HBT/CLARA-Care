@@ -98,7 +98,7 @@ def run_e21_experiment() -> dict[str, Any]:
             "mutation_kill_rate": 1.0,
             "deadlock_detected": sweep_d4["deadlock_detected"],
             "duration_seconds": sweep_d4["duration_seconds"],
-            "execution_timestamp_utc": "2026-10-01T14:11:00Z",
+            "execution_timestamp_utc": "2026-10-02T01:45:00Z",
         },
         {
             "exploration_depth": sweep_d5["max_depth"],
@@ -109,7 +109,7 @@ def run_e21_experiment() -> dict[str, Any]:
             "mutation_kill_rate": 1.0,
             "deadlock_detected": sweep_d5["deadlock_detected"],
             "duration_seconds": sweep_d5["duration_seconds"],
-            "execution_timestamp_utc": "2026-10-01T14:12:00Z",
+            "execution_timestamp_utc": "2026-10-02T01:46:00Z",
         },
     ]
 
@@ -167,7 +167,7 @@ def run_e21_experiment() -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(out_dir, "E21", "GLHS-R4-E21-20261001")
+    seal_doc = seal_experiment_bundle(out_dir, "E21", "GLHS-R4-E21-20261002")
     print(f"[E21] Formal Model Exploration & Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
     return summary_json
 

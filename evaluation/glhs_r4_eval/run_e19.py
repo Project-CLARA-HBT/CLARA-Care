@@ -327,7 +327,7 @@ def run_e19_experiment() -> dict[str, Any]:
                     "h_env_mismatch_detected": not admitted,
                     "admitted": admitted,
                     "rejection_reason": rejection_reason,
-                    "execution_timestamp_utc": "2026-10-01T14:10:00Z",
+                    "execution_timestamp_utc": "2026-10-02T01:43:00Z",
                 })
 
     chained_records = build_merkle_runs(raw_records)
@@ -375,7 +375,7 @@ def run_e19_experiment() -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(out_dir, "E19", "GLHS-R4-E19-20261001")
+    seal_doc = seal_experiment_bundle(out_dir, "E19", "GLHS-R4-E19-20261002")
     print(f"[E19] SUT Transport Attack Execution & Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
     return summary_json
 

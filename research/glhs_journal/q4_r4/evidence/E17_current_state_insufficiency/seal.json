@@ -1,0 +1,36 @@
+{
+  "artifact_inventory": {
+    "backend_attestation.json": "c619551ce133ece73b89595d03867042193fc008709d86937bafc2dfdeb91ed6",
+    "code_manifest.json": "0a2b32bd9da64ac9521a8c769559728fa4265b59378db7c247028a7f9fea21b8",
+    "derived/summary.json": "3d056236ace4b0a28f27e51841f081f47bb97dba3f326176f648bd13f864d641",
+    "derived/summary.md": "fa6fb24e22c3935d1940d5431df978003eb89b195693d7f5ada1c6063c665ff2",
+    "environment.json": "314b72b263e15b2130682f5388e83f8a12df3e2decbd3f8def6f4b47c4c922c2",
+    "freeze.json": "b1e5be1976ab94f26f07f9420da7fa3c4b0cc9450282382e9f8bdaa93e5568a8",
+    "protocol.json": "cb64e721e75412b699c91f5750ab9179d814e1448104ffa2ac044fc4e5bba6e4",
+    "protocol.sha256": "84cc78fc68e5fab953242988d694b13ed7716d63a6fc75b819ad00f618fb6160",
+    "raw/runs.jsonl": "b815989d882d72a1a8164a593f829ebe7a7c7e03b5a12ce19c339fd3fda876e4",
+    "validation.json": "a32604ce8be795a02e642e4c0ed9040ef6847a2a0d414db7df7411ba8ff241e6"
+  },
+  "backend_attestation_sha256": "c619551ce133ece73b89595d03867042193fc008709d86937bafc2dfdeb91ed6",
+  "claim_eligible": true,
+  "experiment_id": "E17",
+  "forbidden_mutations_observed": 0,
+  "protocol_sha256": "cb64e721e75412b699c91f5750ab9179d814e1448104ffa2ac044fc4e5bba6e4",
+  "provenance": {
+    "active_branch": "research/glhs-r4-novelty-hardening",
+    "analysis_release_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+    "execution_completed_utc": "2026-10-02T01:50:00Z",
+    "execution_started_utc": "2026-10-02T01:35:00Z",
+    "freeze_timestamp_utc": "2026-10-02T01:30:00Z",
+    "parent_harness_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+    "r4_baseline_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
+    "sealed_at_utc": "2026-10-02T02:00:00Z",
+    "system_under_test_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+    "validated_at_utc": "2026-10-02T01:55:00Z"
+  },
+  "run_id": "GLHS-R4-E17-20261002",
+  "schema_version": "glhs-r4-experiment-seal.v1",
+  "sealed_at_utc": "2026-10-02T02:00:00Z",
+  "status": "SEALED",
+  "validation_verdict": "PASS"
+}

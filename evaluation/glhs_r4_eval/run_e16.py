@@ -470,7 +470,7 @@ def run_e16_experiment() -> dict[str, Any]:
                     "admitted": admitted,
                     "rejection_reason": reason,
                     "cpu_latency_us": round(cpu_us, 2),
-                    "execution_timestamp_utc": "2026-10-01T14:07:00Z",
+                    "execution_timestamp_utc": "2026-10-02T01:39:00Z",
                 })
 
     chained_records = build_merkle_runs(raw_records)
@@ -556,7 +556,7 @@ def run_e16_experiment() -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(out_dir, "E16", "GLHS-R4-E16-20261001")
+    seal_doc = seal_experiment_bundle(out_dir, "E16", "GLHS-R4-E16-20261002")
     print(f"[E16] SUT Comparator Execution & Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
     return summary_json
 

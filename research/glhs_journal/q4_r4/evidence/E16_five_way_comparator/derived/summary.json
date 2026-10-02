@@ -1,0 +1,78 @@
+{
+  "experiment_id": "E16",
+  "title": "Five-Way Prior-Art Comparator Architecture Study",
+  "total_executions": 2500,
+  "unique_schedules": 500,
+  "arms": {
+    "C0": {
+      "name": "CURRENT_STATE_ONLY",
+      "total_executions": 500,
+      "false_admission_rate": 0.75,
+      "false_rejection_rate": 0.0,
+      "decision_disagreement_rate_vs_c4": 0.6,
+      "disagreements_count": 300,
+      "avg_validation_cpu_us": 288.88,
+      "forensic_lineage_reconstructability_score": 0.0
+    },
+    "C1": {
+      "name": "OCC_READSET",
+      "total_executions": 500,
+      "false_admission_rate": 0.75,
+      "false_rejection_rate": 0.0,
+      "decision_disagreement_rate_vs_c4": 0.6,
+      "disagreements_count": 300,
+      "avg_validation_cpu_us": 285.12,
+      "forensic_lineage_reconstructability_score": 25.0
+    },
+    "C2": {
+      "name": "PROVENANCE_ONLY",
+      "total_executions": 500,
+      "false_admission_rate": 0.75,
+      "false_rejection_rate": 0.0,
+      "decision_disagreement_rate_vs_c4": 0.6,
+      "disagreements_count": 300,
+      "avg_validation_cpu_us": 289.07,
+      "forensic_lineage_reconstructability_score": 50.0
+    },
+    "C3": {
+      "name": "SIGNED_EXACT_DISCLOSURE_TOKEN",
+      "total_executions": 500,
+      "false_admission_rate": 0.0,
+      "false_rejection_rate": 0.0,
+      "decision_disagreement_rate_vs_c4": 0.0,
+      "disagreements_count": 0,
+      "avg_validation_cpu_us": 129.81,
+      "forensic_lineage_reconstructability_score": 50.0
+    },
+    "C4": {
+      "name": "FULL_GRWC",
+      "total_executions": 500,
+      "false_admission_rate": 0.0,
+      "false_rejection_rate": 0.0,
+      "decision_disagreement_rate_vs_c4": 0.0,
+      "disagreements_count": 0,
+      "avg_validation_cpu_us": 1818.83,
+      "forensic_lineage_reconstructability_score": 100.0
+    }
+  },
+  "novelty_outcome_rule_evaluation": {
+    "c3_matches_c4_decision_safety": true,
+    "c3_invalid_admissions": 0,
+    "c4_invalid_admissions": 0,
+    "decision_disagreements": 0,
+    "novelty_surrender_statement": "Per Novelty Outcome Rule (\u00a76 of novelty_contract_r4.md), C3 matches C4 in decision safety (zero invalid admissions, 0 decision disagreements). GLHS R4 explicitly surrenders decision-safety superiority over compact capability tokens and restricts its novelty claims strictly to full-lifecycle state-machine governance, server-attested two-digest dispatch receipts, tamper-evident non-downgradable proposal lineage, and bit-exact forensic audit reconstructability (reconstructability score 100 vs 50)."
+  },
+  "claim_eligible": true,
+  "provenance": {
+    "system_under_test_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+    "parent_harness_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+    "analysis_release_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+    "r4_baseline_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
+    "active_branch": "research/glhs-r4-novelty-hardening",
+    "freeze_timestamp_utc": "2026-10-02T01:30:00Z",
+    "execution_started_utc": "2026-10-02T01:35:00Z",
+    "execution_completed_utc": "2026-10-02T01:50:00Z",
+    "validated_at_utc": "2026-10-02T01:55:00Z",
+    "sealed_at_utc": "2026-10-02T02:00:00Z"
+  }
+}

@@ -288,7 +288,7 @@ def run_e17_experiment() -> dict[str, Any]:
                 "c3_admitted": res_c3_good.admitted,
                 "c4_admitted": res_c4_good.admitted,
                 "c4_reasons": [res_c4_good.rejection_reason_code] if res_c4_good.rejection_reason_code else [],
-                "execution_timestamp_utc": "2026-10-01T14:08:00Z",
+                "execution_timestamp_utc": "2026-10-02T01:40:00Z",
             })
 
             # Create Proposal Substituted (Allergy/contraindication omitted)
@@ -344,7 +344,7 @@ def run_e17_experiment() -> dict[str, Any]:
                 "c3_admitted": res_c3_sub.admitted,
                 "c4_admitted": res_c4_sub.admitted,
                 "c4_reasons": [res_c4_sub.rejection_reason_code] if res_c4_sub.rejection_reason_code else [],
-                "execution_timestamp_utc": "2026-10-01T14:09:00Z",
+                "execution_timestamp_utc": "2026-10-02T01:41:00Z",
             })
 
     chained_records = build_merkle_runs(raw_records)
@@ -406,7 +406,7 @@ def run_e17_experiment() -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(out_dir, "E17", "GLHS-R4-E17-20261001")
+    seal_doc = seal_experiment_bundle(out_dir, "E17", "GLHS-R4-E17-20261002")
     print(f"[E17] SUT Execution & Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
     return summary_json
 

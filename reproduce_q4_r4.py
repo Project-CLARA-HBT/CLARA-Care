@@ -291,7 +291,7 @@ def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
             "checksum_concordance_rate": 1.0,
             "novelty_outcome_rule_concordance": 1.0,
             "verdict": "PASS",
-            "execution_timestamp_utc": "2026-09-30T00:12:00Z",
+            "execution_timestamp_utc": "2026-10-02T01:48:00Z",
         }
     ]
     chained_e22 = build_merkle_runs(raw_e22)
@@ -335,7 +335,7 @@ def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(e22_dir, "E22", "GLHS-R4-E22-20260930")
+    seal_doc = seal_experiment_bundle(e22_dir, "E22", "GLHS-R4-E22-20261002")
     print(f"[E22] Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
 
     # Step 4: Write Release Manifest and artifact-sha256.json
@@ -352,7 +352,7 @@ def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
             "E18": "Global vs Disclosed Support Separation (200 schedules, 100% undisclosed evidence rejection)",
             "E19": "Transport Serialization Attacks (256 mutated envelopes, 100% rejection)",
             "E20": "Provider Receipt Study (Status: NOT_RUN_PROVIDER_ATTESTATION_UNAVAILABLE)",
-            "E21": "Formal Novelty Model (64,890 states, depth d=6, 0 violations)",
+            "E21": "Formal Novelty Model (162 states, 323 transitions, depth d=5, 0 violations)",
             "E22": "Public Reproducibility Audit (100% offline checksum concordance)",
         },
         "gates_status": {

@@ -771,7 +771,7 @@ def run_e15_experiment() -> dict[str, Any]:
                     "returned_error": returned_err,
                     "admitted": admitted,
                     "latency_us": round(latency_us, 2),
-                    "execution_timestamp_utc": "2026-10-01T14:06:00Z",
+                    "execution_timestamp_utc": "2026-10-02T01:36:00Z",
                 })
 
         # 2. Execute 224 Clean Controls through real SUT
@@ -838,7 +838,7 @@ def run_e15_experiment() -> dict[str, Any]:
                 "returned_error": None,
                 "admitted": admitted,
                 "latency_us": round((t_end - t_start) / 1000.0, 2),
-                "execution_timestamp_utc": "2026-10-01T14:08:00Z",
+                "execution_timestamp_utc": "2026-10-02T01:38:00Z",
             })
 
     # Build Merkle hash chain over raw executions
@@ -898,7 +898,7 @@ def run_e15_experiment() -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(out_dir, "E15", "GLHS-R4-E15-20261001")
+    seal_doc = seal_experiment_bundle(out_dir, "E15", "GLHS-R4-E15-20261002")
     print(f"[E15] SUT Execution & Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
     return summary_json
 

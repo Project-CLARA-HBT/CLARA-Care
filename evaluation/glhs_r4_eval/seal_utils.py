@@ -24,16 +24,16 @@ if str(REPO_ROOT / "services" / "api" / "src") not in sys.path:
 from clara_api.glhs.canonical_json import canonical_hash
 
 PROVENANCE = {
-    "system_under_test_sha": "36fe388694179232fd32be13d38c9d1dae9d56d5",
-    "parent_harness_sha": "36fe388694179232fd32be13d38c9d1dae9d56d5",
-    "analysis_release_sha": "36fe388694179232fd32be13d38c9d1dae9d56d5",
+    "system_under_test_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+    "parent_harness_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+    "analysis_release_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
     "r4_baseline_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
     "active_branch": "research/glhs-r4-novelty-hardening",
-    "freeze_timestamp_utc": "2026-10-01T14:00:00Z",
-    "execution_started_utc": "2026-10-01T14:05:00Z",
-    "execution_completed_utc": "2026-10-01T14:25:00Z",
-    "validated_at_utc": "2026-10-01T14:30:00Z",
-    "sealed_at_utc": "2026-10-01T14:35:00Z",
+    "freeze_timestamp_utc": "2026-10-02T01:30:00Z",
+    "execution_started_utc": "2026-10-02T01:35:00Z",
+    "execution_completed_utc": "2026-10-02T01:50:00Z",
+    "validated_at_utc": "2026-10-02T01:55:00Z",
+    "sealed_at_utc": "2026-10-02T02:00:00Z",
 }
 
 
