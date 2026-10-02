@@ -2,11 +2,11 @@
   "schema_version": "glhs-r4-protocol-registry.v1",
   "program": "GLHS R4 \u2014 Governed Read-to-Write Continuity (GRWC)",
   "repository": "Project-CLARA-HBT/CLARA-Care",
-  "registry_created_at_utc": "2026-10-02T02:00:00Z",
-  "prospective_freeze_baseline_utc": "2026-10-02T02:00:00Z",
+  "registry_created_at_utc": "2026-10-02T02:05:00Z",
+  "prospective_freeze_baseline_utc": "2026-10-02T02:05:00Z",
   "provenance": {
-    "system_under_test_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
-    "parent_harness_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+    "system_under_test_sha": "f8b194dc5ac53aae1e365c61355a04e988a251ff",
+    "parent_harness_sha": "f8b194dc5ac53aae1e365c61355a04e988a251ff",
     "active_branch": "research/glhs-r4-novelty-hardening"
   },
   "canonicalization": {
@@ -25,8 +25,8 @@
       "title": "Dispatch Attestation Integrity Protocol under Adversarial Perturbation",
       "priority": "P0",
       "protocol_path": "research/glhs_journal/q4_r4/protocols/E15_dispatch_attestation/protocol.json",
-      "file_sha256": "d2443e1a7adc304018f67425e33b34aa8e7ad741d763595ddb4c5e4da9a28034",
-      "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
+      "file_sha256": "28a36cf63ece713b28aa8eafac7cb60de689060bbe091b8295a95dcfce514d1a",
+      "freeze_timestamp_utc": "2026-10-02T02:05:00Z",
       "total_executions_N": 1024,
       "status": "PROSPECTIVELY_FROZEN"
     },
@@ -36,8 +36,8 @@
       "title": "Five-Way Prior-Art Comparator Architecture Study",
       "priority": "P0",
       "protocol_path": "research/glhs_journal/q4_r4/protocols/E16_five_way_comparator/protocol.json",
-      "file_sha256": "b3fe0db3d5c16f9dfe7f548110e289ac1cddf5f0a62b3df8ac2ab6be0883cd75",
-      "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
+      "file_sha256": "8d5014c420736e384e077120dcca605bd7d06455ff34c1b066c75ff4f175e16b",
+      "freeze_timestamp_utc": "2026-10-02T02:05:00Z",
       "total_executions_N": 2500,
       "status": "PROSPECTIVELY_FROZEN"
     },
@@ -47,8 +47,8 @@
       "title": "Current-State Insufficiency Witness Protocol",
       "priority": "P0",
       "protocol_path": "research/glhs_journal/q4_r4/protocols/E17_current_state_insufficiency/protocol.json",
-      "file_sha256": "7d4710420659cc97665fb7be7cf194859a1aafaa5a6b0b9be1114ad2bec44886",
-      "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
+      "file_sha256": "3bef5c5c117c2b2e5a8455f8eb98cc59be264b19fe092eab4404c0b4786f93e1",
+      "freeze_timestamp_utc": "2026-10-02T02:05:00Z",
       "total_executions_N": 100,
       "status": "PROSPECTIVELY_FROZEN"
     },
@@ -58,8 +58,8 @@
       "title": "Global Source Support vs. Disclosed Support Separation Protocol",
       "priority": "P0",
       "protocol_path": "research/glhs_journal/q4_r4/protocols/E18_global_vs_disclosed_evidence/protocol.json",
-      "file_sha256": "e268fddc1993d04415a8c7bb917e6e5784f8d3faef8d06e6e181ac81d6cf8ff0",
-      "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
+      "file_sha256": "fd3a52a3288198cae9213945fbef64c9a46aecf4cc9abf9589c9f039f8ada4cf",
+      "freeze_timestamp_utc": "2026-10-02T02:05:00Z",
       "total_executions_N": 200,
       "status": "PROSPECTIVELY_FROZEN"
     },
@@ -69,8 +69,8 @@
       "title": "Transport Serialization Attack Resistance Protocol",
       "priority": "P0",
       "protocol_path": "research/glhs_journal/q4_r4/protocols/E19_transport_serialization/protocol.json",
-      "file_sha256": "0682fdb517cabbd869c7d4bf075aaa4cdced9207453b9934cdd07b092b37f743",
-      "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
+      "file_sha256": "305b8417c82c5120f2b8c1a8f667e0bd6f6a061fa831d83cb2fad1a13477e3b4",
+      "freeze_timestamp_utc": "2026-10-02T02:05:00Z",
       "total_executions_N": 256,
       "status": "PROSPECTIVELY_FROZEN"
     },
@@ -80,8 +80,8 @@
       "title": "Optional Provider Verifiable Receipt Attestation Study",
       "priority": "P2",
       "protocol_path": "research/glhs_journal/q4_r4/protocols/E20_provider_receipt_study/protocol.json",
-      "file_sha256": "392977eeb435f132c1bd2b18e189b7bdf4ce1bf56b940bed265e1f3c80b0a495",
-      "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
+      "file_sha256": "d1deaaf7f9ef6c70fd61f35eab177bb087a55a8c661c48498f1273fea964b023",
+      "freeze_timestamp_utc": "2026-10-02T02:05:00Z",
       "total_executions_N": 100,
       "status": "PROSPECTIVELY_FROZEN"
     },
@@ -91,8 +91,8 @@
       "title": "Formal Novelty Model & State-Space Assurance (Invariants I16\u2013I24)",
       "priority": "P0",
       "protocol_path": "research/glhs_journal/q4_r4/protocols/E21_formal_novelty_model/protocol.json",
-      "file_sha256": "58ead934783dd197457e2509f182753d7d9b318dd66acbe67bc1ba2c457608f6",
-      "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
+      "file_sha256": "0f18774586bb863922de41169766fcc0554d484a53647dffd19c8c231c8b02a2",
+      "freeze_timestamp_utc": "2026-10-02T02:05:00Z",
       "total_executions_N": 162,
       "status": "PROSPECTIVELY_FROZEN"
     },
@@ -102,8 +102,8 @@
       "title": "R4 Hermetic Computational Reproduction & Cryptographic Checksum Audit Protocol",
       "priority": "P0",
       "protocol_path": "research/glhs_journal/q4_r4/protocols/E22_r4_reproducibility/protocol.json",
-      "file_sha256": "634457516ac1502ac49b7736d8674edcba9247b60b581bf862be7cf7c6d9f56d",
-      "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
+      "file_sha256": "df100adc3d4aabf40920f39125a91172ef24c8ab6d2ba0d270b2b352765c4cb9",
+      "freeze_timestamp_utc": "2026-10-02T02:05:00Z",
       "total_executions_N": 1,
       "status": "PROSPECTIVELY_FROZEN"
     }

@@ -11,7 +11,7 @@
       "false_rejection_rate": 0.0,
       "decision_disagreement_rate_vs_c4": 0.6,
       "disagreements_count": 300,
-      "avg_validation_cpu_us": 303.03,
+      "avg_validation_cpu_us": 298.72,
       "forensic_lineage_reconstructability_score": 0.0
     },
     "C1": {
@@ -21,7 +21,7 @@
       "false_rejection_rate": 0.0,
       "decision_disagreement_rate_vs_c4": 0.6,
       "disagreements_count": 300,
-      "avg_validation_cpu_us": 306.12,
+      "avg_validation_cpu_us": 299.48,
       "forensic_lineage_reconstructability_score": 25.0
     },
     "C2": {
@@ -31,7 +31,7 @@
       "false_rejection_rate": 0.0,
       "decision_disagreement_rate_vs_c4": 0.6,
       "disagreements_count": 300,
-      "avg_validation_cpu_us": 308.19,
+      "avg_validation_cpu_us": 301.85,
       "forensic_lineage_reconstructability_score": 50.0
     },
     "C3": {
@@ -41,7 +41,7 @@
       "false_rejection_rate": 0.0,
       "decision_disagreement_rate_vs_c4": 0.0,
       "disagreements_count": 0,
-      "avg_validation_cpu_us": 136.42,
+      "avg_validation_cpu_us": 135.64,
       "forensic_lineage_reconstructability_score": 50.0
     },
     "C4": {
@@ -51,7 +51,7 @@
       "false_rejection_rate": 0.0,
       "decision_disagreement_rate_vs_c4": 0.0,
       "disagreements_count": 0,
-      "avg_validation_cpu_us": 1928.38,
+      "avg_validation_cpu_us": 1901.04,
       "forensic_lineage_reconstructability_score": 100.0
     }
   },
@@ -64,15 +64,15 @@
   },
   "claim_eligible": true,
   "provenance": {
-    "system_under_test_sha": "f8b194dc5ac53aae1e365c61355a04e988a251ff",
-    "parent_harness_sha": "f8b194dc5ac53aae1e365c61355a04e988a251ff",
-    "analysis_release_sha": "f8b194dc5ac53aae1e365c61355a04e988a251ff",
+    "system_under_test_sha": "9006ac5c5379ead2620e47bc2c924ab4f7d45373",
+    "parent_harness_sha": "9006ac5c5379ead2620e47bc2c924ab4f7d45373",
+    "analysis_release_sha": "9006ac5c5379ead2620e47bc2c924ab4f7d45373",
     "r4_baseline_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
     "active_branch": "research/glhs-r4-novelty-hardening",
-    "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
-    "execution_started_utc": "2026-10-02T02:20:07Z",
-    "execution_completed_utc": "2026-10-02T02:20:13Z",
-    "validated_at_utc": "2026-10-02T02:20:13Z",
-    "sealed_at_utc": "2026-10-02T02:20:13Z"
+    "freeze_timestamp_utc": "2026-10-02T02:05:00Z",
+    "execution_started_utc": "2026-10-02T05:46:14Z",
+    "execution_completed_utc": "2026-10-02T05:46:20Z",
+    "validated_at_utc": "2026-10-02T05:46:20Z",
+    "sealed_at_utc": "2026-10-02T05:46:20Z"
   }
 }

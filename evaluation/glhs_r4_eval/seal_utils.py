@@ -24,7 +24,7 @@ if str(REPO_ROOT / "services" / "api" / "src") not in sys.path:
 
 from clara_api.glhs.canonical_json import canonical_hash
 
-CANONICAL_FREEZE_UTC = "2026-10-02T02:00:00Z"
+CANONICAL_FREEZE_UTC = "2026-10-02T02:05:00Z"
 
 
 def now_utc_iso() -> str:

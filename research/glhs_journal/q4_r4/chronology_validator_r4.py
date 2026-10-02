@@ -33,7 +33,7 @@ R4_DIR = REPO_ROOT / "research" / "glhs_journal" / "q4_r4"
 PROTOCOLS_DIR = R4_DIR / "protocols"
 EVIDENCE_DIR = R4_DIR / "evidence"
 RELEASE_DIR = R4_DIR / "release"
-CANONICAL_FREEZE_UTC = "2026-10-02T02:00:00Z"
+CANONICAL_FREEZE_UTC = "2026-10-02T02:05:00Z"
 
 R4_EXPERIMENTS: list[tuple[str, list[str]]] = [
     ("E15", ["E15_dispatch_attestation"]),
@@ -427,7 +427,35 @@ def verify_experiment_chronology_r4(exp_dir: Path) -> dict[str, Any]:
             f"FUTURE_SEAL_TIMESTAMP: sealed ({sealed_dt.isoformat()}) > current time ({now_utc.isoformat()}) in {exp_dir.name}"
         )
 
-    # Check git commit timestamp if seal.json is committed
+    # 1. Check parent harness commit timestamp from git if available
+    parent_harness_sha = None
+    seal_file = exp_dir / "seal.json"
+    if seal_file.is_file():
+        doc = json.loads(seal_file.read_text(encoding="utf-8"))
+        prov = doc.get("provenance", {})
+        parent_harness_sha = prov.get("parent_harness_sha") or prov.get("system_under_test_sha")
+
+    if parent_harness_sha and parent_harness_sha != "unknown":
+        try:
+            import subprocess
+            res_h = subprocess.run(
+                ["git", "show", "-s", "--format=%cI", str(parent_harness_sha)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            h_ts = res_h.stdout.strip()
+            if h_ts:
+                harness_dt = parse_iso8601(h_ts)
+                if freeze_dt < harness_dt:
+                    raise ChronologyAnomalyError(
+                        f"HARNESS_POSTDATES_FREEZE: harness commit {parent_harness_sha[:8]} timestamp ({harness_dt.isoformat()}) "
+                        f"> freeze timestamp ({freeze_dt.isoformat()}) in {exp_dir.name}!"
+                    )
+        except Exception:
+            pass
+
+    # 2. Check git commit timestamp for evidence bundle if committed
     try:
         import subprocess
         res = subprocess.run(

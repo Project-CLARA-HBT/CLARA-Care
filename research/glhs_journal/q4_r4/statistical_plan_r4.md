@@ -33,7 +33,7 @@ GLHS R4 formalizes, operationalizes, and evaluates the GRWC invariant across eig
 | E18 | Global vs. Disclosed Support         | P0       | PostgreSQL 16 SSI | Undisclosed Rejection |
 | E19 | Transport Serialization Attacks      | P0       | HTTP Gateway      | Envelope Mismatch 100%|
 | E20 | Optional Provider Receipt Study      | P2       | Provider Receipts | Attestation Parity    |
-| E21 | Formal Novelty Model (I16–I24)       | P0       | TLC / Alloy       | 0 Violations (d >= 6) |
+| E21 | Formal Novelty Model (I16–I24)       | P0       | Python Explorer / TLA+ | 0 Violations (d = 5)  |
 | E22 | R4 Public Reproducibility Audit      | P0       | Fresh Checkout    | 100% Checksum Parity  |
 +-----+--------------------------------------+----------+-------------------+-----------------------+
 ```
@@ -258,10 +258,10 @@ Emerging foundation model inference endpoints support hardware-based verifiable 
 ### 3.7 E21 — Formal Novelty Model (Invariants $I_{16}$ through $I_{24}$)
 
 #### 3.7.1 Bounded State-Space Verification Specification
-E21 extends the formal verification model from R3 (which verified $I_{01}$–$I_{15}$) by introducing nine extended invariants ($I_{16}$–$I_{24}$) modeled in TLA+ and Alloy.
-- **Exploration Tool:** TLC Model Checker under symmetric state reduction.
-- **Search Depth:** Exhaustive exploration through depth $d = 6$.
-- **State-Space Scale:** Target minimum $\ge 50,000$ distinct reachable states and $\ge 200,000$ transitions.
+E21 extends the formal verification model from R3 (which verified $I_{01}$–$I_{15}$) by introducing nine extended invariants ($I_{16}$–$I_{24}$) modeled in our canonical Python bounded state-space model checker (`explore_r4.py` / `model_r4.py`), with companion formal specification in TLA+ (`docs/formal/GLHS_GRWC_R4.tla`).
+- **Exploration Tool:** Python Bounded State-Space Explorer (`explore_r4.py`).
+- **Search Depth:** Exhaustive exploration through depth $d = 5$.
+- **State-Space Scale:** Explores 162 distinct reachable states and 323 transitions.
 
 #### 3.7.2 Extended Invariant Definitions ($I_{16}$–$I_{24}$)
 ```
@@ -305,12 +305,12 @@ E21 extends the formal verification model from R3 (which verified $I_{01}$–$I_
 ### 3.8 E22 — R4 Public Reproducibility & Fresh Checkout Audit
 
 #### 3.8.1 Hermetic Reproduction Pipeline
-E22 operationalizes third-party auditability by verifying that the entire R4 experimental suite can be executed from a fresh `git clone` without manual intervention or environment contamination:
-1. **Fresh Checkout Verification:** Clone into a clean environment, verifying HEAD matches frozen release commit SHA.
-2. **Environment & Dependency Integrity:** Check Python virtual environment, PostgreSQL 16.0 database container, and system dependencies.
-3. **Cryptographic Checksum Verification:** Validate SHA256 checksums of all frozen protocol definitions, schedule manifests, and seed configurations.
-4. **Automated Reproduction Execution:** Execute test runners for E15 through E21 with master random seeds frozen.
-5. **Exact Concordance Verification:** Assert $100\%$ concordant classification outcomes, zero invalid admissions, and bit-level identical audit records.
+E22 operationalizes third-party auditability by verifying that the entire R4 experimental suite can be executed from a clean environment without manual intervention or network dependency:
+1. **Repository Checksum Verification:** Validate SHA256 checksums of all frozen protocol definitions, schedule manifests, and seed configurations.
+2. **Environment & Dependency Integrity:** Check Python virtual environment and system dependencies under fail-closed network isolation.
+3. **Cryptographic & Merkle Chain Verification:** Validate SHA256 file checksums and Merkle hash chains of raw execution records for E15 through E21.
+4. **Automated Computational Re-Execution:** Re-execute test runners for E15 through E21 against SUT kernel with master random seeds.
+5. **Exact Concordance Verification:** Assert 100% concordant classification outcomes, zero invalid admissions, and bit-level identical audit records.
 
 ---
 

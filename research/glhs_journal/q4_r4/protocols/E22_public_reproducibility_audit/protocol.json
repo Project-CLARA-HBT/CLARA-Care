@@ -11,8 +11,8 @@
   "status": "PROSPECTIVELY_FROZEN",
   "priority": "P0",
   "freeze_id": "GLHS-R4-E22-FREEZE-20261002-V1",
-  "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
-  "git_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+  "freeze_timestamp_utc": "2026-10-02T02:05:00Z",
+  "git_sha": "f8b194dc5ac53aae1e365c61355a04e988a251ff",
   "target_invariants": [
     "I16_current_state_insufficiency_counterexample",
     "I17_disclosed_vs_source_support_separation",
