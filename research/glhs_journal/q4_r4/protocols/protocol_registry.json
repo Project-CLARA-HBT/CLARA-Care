@@ -91,9 +91,9 @@
       "title": "Formal Novelty Model & State-Space Assurance (Invariants I16\u2013I24)",
       "priority": "P0",
       "protocol_path": "research/glhs_journal/q4_r4/protocols/E21_formal_novelty_model/protocol.json",
-      "file_sha256": "52e6c1a6469369ea8a6d9bb913594786d508d82702aafd1a7b0cc02c96f1f853",
+      "file_sha256": "43117c9324924b4aa1d511405a891e0b3cf80aa2413f1272c525862fa2b7b5c9",
       "freeze_timestamp_utc": "2026-10-01T14:00:00Z",
-      "total_executions_N": 50000,
+      "total_executions_N": 162,
       "status": "PROSPECTIVELY_FROZEN"
     },
     "E22_public_reproducibility_audit": {

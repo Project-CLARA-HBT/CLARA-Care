@@ -1,9 +1,0 @@
-{
-  "schema_version": "glhs-r4-code-manifest.v1",
-  "system_under_test_sha": "36fe388694179232fd32be13d38c9d1dae9d56d5",
-  "parent_harness_sha": "36fe388694179232fd32be13d38c9d1dae9d56d5",
-  "analysis_release_sha": "36fe388694179232fd32be13d38c9d1dae9d56d5",
-  "r4_baseline_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
-  "active_branch": "research/glhs-r4-novelty-hardening",
-  "freeze_timestamp_utc": "2026-10-01T14:00:00Z"
-}

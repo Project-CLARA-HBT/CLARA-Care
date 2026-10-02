@@ -15,13 +15,13 @@ Persistent medical artificial intelligence (AI) systems execute multi-step non-d
 
 While prior art separately provides optimistic concurrency control, purpose-based access control, W3C PROV lineage, dynamic consent, and capability tokens, existing systems leave a critical systems gap: they cannot verify whether a proposed persistent write remains continuous with the exact governed disclosure actually supplied to the inference instance that produced its lineage.
 
-This paper formalizes, operationalizes, and evaluates **Governed Read-to-Write Continuity (GRWC)** (also denoted **Exact-Disclosure Admission**). Under GRWC, a persistent write proposal is admissible if and only if: (1) it descends from a server-attested inference binding proving the exact model-visible projection was consumed; (2) all declared evidence items were part of that exact disclosure; (3) schema-derived dependency requirements are fully satisfied; and (4) clinical state, dynamic consent, policy epochs, and actor permissions remain unviolated within the admission transaction under canonical database locks.
+This paper formalizes, operationalizes, and evaluates **Governed Read-to-Write Continuity (GRWC)** (also denoted **Exact-Disclosure Admission**). Under GRWC, a persistent write proposal is admissible if and only if: (1) it descends from a server-attested inference binding proving the exact model-visible projection was supplied in the dispatched request; (2) all declared evidence items were part of that exact disclosure; (3) schema-derived dependency requirements are fully satisfied; and (4) clinical state, dynamic consent, policy epochs, and actor permissions remain unviolated within the admission transaction under canonical database locks.
 
-We operationalize GRWC in GLHS, an open-source clinical systems gateway featuring: a two-digest binding separating model-visible health projections ($H_{\text{proj}}$) from request transport envelopes ($H_{\text{env}}$); an immutable proposal lineage engine; and a six-phase atomic commit kernel executing over PostgreSQL 16.
+We operationalize GRWC in GLHS, an open-source clinical systems gateway featuring: a three-digest binding separating model-visible health projections ($H_{\text{proj}}$), semantic request envelopes ($H_{\text{sem}}$), and transport payload bytes ($H_{\text{trans}}$); an immutable proposal lineage engine; and a six-phase atomic commit kernel executing over PostgreSQL 16.
 
-We evaluate GLHS across eight prospective sealed experimental protocols (**E15–E22**). In dispatch attestation integrity evaluations ($N=1,024$ schedules), GLHS achieved $0.0\%$ invalid admission across 16 adversarial attack classes ($0/800$, Clopper-Pearson 95% UCB $< 0.005$) and $100.0\%$ clean control liveness ($224/224$). In a five-way comparator architecture study ($N=2,500$ executions), compact capability tokens (C3, `SIGNED_EXACT_DISCLOSURE_TOKEN`) matched full GLHS (C4) in static decision safety ($0$ decision disagreements across all schedules). Per our prespecified **Novelty Outcome Rule**, GLHS surrenders decision-safety superiority over compact capability tokens and restricts its core novelty claims strictly to lifecycle state-machine governance, server-attested two-digest dispatch receipts, tamper-evident non-downgradable proposal lineage, and bit-exact forensic audit reconstructability (reconstructability score $100$ vs $75$). In deterministic clinical witness evaluations (E17/E18), prior-art mechanisms C0/C1 suffered $100\%$ false admission on disclosure-substituted proposals, while GLHS achieved $0\%$ false admission ($p < 10^{-40}$). Bounded state-space exploration (E21) verified 9 target invariants across 64,890 reachable states to search depth $d=6$ with zero violations and $100\%$ formal mutant kill rate. All empirical datasets, execution traces, cryptographic seals, and offline reproduction routines (E22) are 100% reproducible.
+We evaluate GLHS across eight prospective sealed experimental protocols (**E15–E22**). In dispatch attestation integrity evaluations ($N=1,024$ schedules), GLHS achieved $0.0\%$ invalid admission across 16 adversarial attack classes ($0/800$, Clopper-Pearson 95% UCB $< 0.005$) and $100.0\%$ clean control liveness ($224/224$). In a five-way comparator architecture study ($N=2,500$ executions), compact capability tokens (C3, `SIGNED_EXACT_DISCLOSURE_TOKEN`) matched full GLHS (C4) in static decision safety ($0$ decision disagreements across all schedules). Per our prespecified **Novelty Outcome Rule**, GLHS surrenders decision-safety superiority over compact capability tokens and restricts its core novelty claims strictly to lifecycle state-machine governance, server-attested three-digest dispatch receipts, tamper-evident non-downgradable proposal lineage, and bit-exact forensic audit reconstructability (reconstructability score $100$ vs $50$). In deterministic clinical witness evaluations (E17/E18), prior-art mechanisms C0/C1 suffered $100\%$ false admission on disclosure-substituted proposals, while GLHS achieved $0\%$ false admission ($p < 10^{-40}$). Bounded Python state-space exploration (E21) of the R4 formal model verified 9 target invariants across 162 reachable states to search depth $d=5$ with zero violations and 100% formal mutant kill rate. All empirical datasets, execution traces, cryptographic seals, and offline reproduction routines (E22) are 100% reproducible.
 
-**Keywords:** longitudinal health AI; governed read-to-write continuity; exact disclosure admission; two-digest attestation; prior-art comparator study; PostgreSQL serializability; forensic audit reconstructability.
+**Keywords:** longitudinal health AI; governed read-to-write continuity; exact disclosure admission; three-digest attestation; prior-art comparator study; PostgreSQL serializability; forensic audit reconstructability.
 
 ---
 
@@ -90,13 +90,13 @@ GLHS addresses a fundamentally distinct invariant: **Exact-Disclosure Admission*
 ### 1.3 Formal Novelty Outcome Rule (C3 vs C4)
 
 Our prospective plan established the **Novelty Outcome Rule**:
-> *If C3 (`SIGNED_EXACT_DISCLOSURE_TOKEN`) matches C4 (`FULL_GRWC`) in static decision safety across all adversarial schedules, GLHS explicitly surrenders decision-safety superiority over compact capability tokens and restricts its novelty claims strictly to full-lifecycle state-machine governance, server-attested two-digest dispatch receipts, tamper-evident proposal lineage, and bit-exact forensic audit reconstructability.*
+> *If C3 (`SIGNED_EXACT_DISCLOSURE_TOKEN`) matches C4 (`FULL_GRWC`) in static decision safety across all adversarial schedules, GLHS explicitly surrenders decision-safety superiority over compact capability tokens and restricts its novelty claims strictly to full-lifecycle state-machine governance, server-attested three-digest dispatch receipts, tamper-evident proposal lineage, and bit-exact forensic audit reconstructability.*
 
 In experiment E16 ($N=2,500$), C3 matched C4 with $0$ decision disagreements across all tested schedules. Consequently, GLHS R4 restricts its novelty claims to:
 1. Formalization of the **Governed Read-to-Write Continuity (GRWC)** invariant across asynchronous cognitive reasoning epochs.
-2. Server-attested **Two-Digest Transport Attestation** ($H_{\text{proj}}$ and $H_{\text{env}}$) and lifecycle state-machine governance (`PENDING` $\to$ `DISPATCHED` $\to$ `COMPLETED`).
+2. Server-attested **Three-Digest Dispatch Binding** ($H_{\text{proj}}$, $H_{\text{sem}}$, and $H_{\text{trans}}$) and lifecycle state-machine governance (`PENDING` $\to$ `DISPATCHED` $\to$ `COMPLETED`).
 3. Tamper-evident, non-downgradable **Proposal Lineage Governance** preventing human review laundering.
-4. Bit-exact **Forensic Audit Reconstructability** (Score 100/100 for C4 vs 75/100 for C3).
+4. Bit-exact **Forensic Audit Reconstructability** (Score 100/100 for C4 vs 50/100 for C3).
 
 ---
 
@@ -157,7 +157,7 @@ We define five comparative evaluation arms:
 * **C1 (`OCC_READSET`):** Classical OCC tracking entity key-version read-sets. Validates read-set freshness against current DB state.
 * **C2 (`PROVENANCE_ONLY`):** W3C PROV retrospective lineage recording entity and activity history post-commit.
 * **C3 (`SIGNED_EXACT_DISCLOSURE_TOKEN`):** Macaroon/PCFS-style HMAC capability token holding $H_{\text{proj}}$, purpose, task, actor, entity read-set version caveats $R_{\text{readset}}$, and expiration.
-* **C4 (`FULL_GRWC`):** Reference GLHS implementation incorporating two-digest server binding, dependency closure, immutable proposal lineage, and PostgreSQL SSI transaction locks.
+* **C4 (`FULL_GRWC`):** Reference GLHS implementation incorporating three-digest server binding, dependency closure, immutable proposal lineage, and PostgreSQL SSI transaction locks.
 
 ---
 
@@ -175,7 +175,7 @@ We define five comparative evaluation arms:
 | E18 | Global vs Disclosed Support      |  200  | C4 100% Rejection (C1 0%)   | SEALED (Reason Match 100%)|
 | E19 | Transport Serialization Attacks  |  256  | Rejection Rate = 100.0%     | SEALED (H_env Match 100%) |
 | E20 | Provider Receipt Study           |    1  | NOT_RUN_UNAVAILABLE         | SEALED (Gate 4 Verified)  |
-| E21 | Formal Novelty Model             |    2  | 64,890 States / 0 Violations| SEALED (Kill Rate 100%)   |
+| E21 | Formal Novelty Model             |  162  | 162 States / 0 Violations   | SEALED (Kill Rate 100%)   |
 | E22 | Public Reproducibility Audit     |    1  | Checksum Concordance 100%   | SEALED (Gate 5 Passed)    |
 +-----+----------------------------------+-------+-----------------------------+---------------------------+
 ```
@@ -190,9 +190,9 @@ Across $N=1,024$ schedules (800 adversarial across 16 attack classes A01–A16 +
 
 Across $N=2,500$ executions (500 schedules $\times$ 5 arms):
 - **C0 False Admission Rate:** $300/400$ ($75.0\%$, Forensic Score = 0/100)
-- **C1 False Admission Rate:** $300/400$ ($75.0\%$, Forensic Score = 20/100)
-- **C2 False Admission Rate:** $300/400$ ($75.0\%$, Forensic Score = 60/100)
-- **C3 False Admission Rate:** $0/400$ ($0.0\%$, Forensic Score = 75/100)
+- **C1 False Admission Rate:** $300/400$ ($75.0\%$, Forensic Score = 25/100)
+- **C2 False Admission Rate:** $300/400$ ($75.0\%$, Forensic Score = 50/100)
+- **C3 False Admission Rate:** $0/400$ ($0.0\%$, Forensic Score = 50/100)
 - **C4 False Admission Rate:** $0/400$ ($0.0\%$, Forensic Score = 100/100)
 - **Decision Disagreement (C3 vs C4):** 0/500 ($0.0\%$).
 
@@ -212,7 +212,7 @@ Live hardware attestation receipts were inactive in the local environment. Per p
 
 ### 4.6 E21 — Formal State-Space Assurance
 
-TLC/Alloy bounded state-space exploration up to depth $d=6$ visited $64,890$ distinct reachable states and $284,120$ state transitions across 9 target invariants (I16–I24) with **zero violations**. Formal mutation testing achieved a $100.0\%$ kill rate ($18/18$ mutants killed).
+Bounded Python state-space exploration of the R4 formal model (`explore_r4.py` / `model_r4.py`) up to depth $d=5$ visited $162$ distinct reachable states and $323$ state transitions across 9 target invariants (I16–I24) with **zero violations**. Formal mutation testing achieved a $100.0\%$ kill rate.
 
 ### 4.7 E22 — Hermetic Offline Reproducibility Audit
 
@@ -226,7 +226,7 @@ Note on Sample Size & TOST Equivalence Bounds: $N=384$ was the original prospect
 
 ## 5. Conclusion
 
-GLHS R4 establishes **Governed Read-to-Write Continuity (GRWC)** as a foundational system invariant for longitudinal health AI. By surrendering 29 constituent mechanisms, enforcing a strict prospective freeze, and executing a five-way prior-art comparator study, GLHS transparently demarcates its scientific contributions. While compact capability tokens (C3) match decision safety on static single-step admissions, full GLHS (C4) uniquely provides full-lifecycle state-machine governance, server-attested two-digest dispatch receipts, non-downgradable proposal lineage, and bit-exact forensic audit reconstructability.
+GLHS R4 establishes **Governed Read-to-Write Continuity (GRWC)** as a foundational system invariant for longitudinal health AI. By surrendering 29 constituent mechanisms, enforcing a strict prospective freeze, and executing a five-way prior-art comparator study, GLHS transparently demarcates its scientific contributions. While compact capability tokens (C3) match decision safety on static single-step admissions, full GLHS (C4) uniquely provides full-lifecycle state-machine governance, server-attested three-digest dispatch receipts, non-downgradable proposal lineage, and bit-exact forensic audit reconstructability.
 
 ---
 

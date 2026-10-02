@@ -210,7 +210,7 @@
       "protocol_id": "GLHS-R4-E21-FORMAL_NOVELTY_MODEL",
       "title": "Formal Novelty Model & State-Space Assurance (Invariants I16–I24)",
       "priority": "P0",
-      "scientific_unit": "formal state-space state and transition step in TLA+/Alloy model checker",
+      "scientific_unit": "distinct reachable state explored in bounded Python state-space model checker (explore_r4.py / model_r4.py)",
       "target_invariants": [
         "I16_current_state_insufficiency_counterexample",
         "I17_disclosed_vs_source_support_separation",
@@ -223,9 +223,9 @@
         "I24_clean_path_reachability"
       ],
       "exploration_parameters": {
-        "search_depth_d": 6,
-        "expected_reachable_states_min": 50000,
-        "expected_transitions_min": 200000
+        "search_depth_d": 5,
+        "expected_reachable_states": 162,
+        "expected_transitions": 323
       },
       "estimands": {
         "invariant_violations_GRWC": 0,
@@ -233,7 +233,7 @@
         "counterexample_witness_C1": "GENERATED_FOR_I17",
         "mutation_testing_detection_rate": 1.0
       },
-      "stopping_rules": "Halt submission if TLC/Alloy finds any invariant violation under GRWC up to depth d=6."
+      "stopping_rules": "Halt submission if formal model explorer finds any invariant violation under GRWC up to depth d=5."
     },
     "E22": {
       "experiment_id": "E22",

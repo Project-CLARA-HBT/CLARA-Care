@@ -247,7 +247,9 @@ def run_e19_experiment() -> dict[str, Any]:
             for idx in range(1, 33):
                 sch_id = f"SCH-E19-{pattern[:8].upper()}-{idx:03d}"
 
-                base_payload_json = json.dumps({"patient_id": profile.id, "lab": "normal", "task": "e19_transport_task"}).encode("utf-8")
+                base_payload_json = json.dumps(
+                    {"patient_id": profile.id, "lab": "normal", "score": 1.0, "task": "e19_transport_task"}
+                ).encode("utf-8")
                 base_trans_digest = compute_transport_payload_digest(base_payload_json)
 
                 binding = create_dispatch_binding(

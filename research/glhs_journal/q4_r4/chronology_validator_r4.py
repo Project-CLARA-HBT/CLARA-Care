@@ -565,7 +565,7 @@ def main() -> int:
 
     if all_passed and total_anomalies == 0:
         print("\n>>> VERDICT: PHASE 0 PROSPECTIVE PROTOCOL GATE PASSED (100% CONCORDANCE) <<<")
-        print("All 8 protocols (E15–E22) strictly frozen at 2026-09-30T00:00:00Z with explicit rules, disjoint endpoints, and positive integer sample sizes.")
+        print(f"All 8 protocols (E15–E22) strictly frozen at {CANONICAL_FREEZE_UTC} with explicit rules, disjoint endpoints, and positive integer sample sizes.")
         return 0
     else:
         print("\n>>> VERDICT: PHASE 0 PROSPECTIVE PROTOCOL GATE REJECTED <<<")

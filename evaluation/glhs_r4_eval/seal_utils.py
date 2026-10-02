@@ -103,17 +103,28 @@ def generate_backend_attestation(
     exp_id: str,
     actual_backend: str = "PostgreSQL 16.14 / FastAPI Commitment Gateway Kernel",
     endpoint: str = "127.0.0.1:5433",
+    version: str | None = None,
     production_path: bool = True,
     simulation: bool = False,
     concurrency_mechanism: str = "Exact-Disclosure Admission & Gateway Lineage Lock Kernel",
 ) -> dict[str, Any]:
     """Generate backend truthfulness attestation."""
+    resolved_version = version
+    if resolved_version is None:
+        if "sqlite" in endpoint.lower() or "sqlite" in actual_backend.lower():
+            import sqlite3
+            resolved_version = sqlite3.sqlite_version
+        elif "tla" in actual_backend.lower() or "formal" in actual_backend.lower():
+            resolved_version = "formal-model-r4-v1.0"
+        else:
+            resolved_version = "16.14"
+
     return {
         "schema_version": "glhs-r4-backend-attestation.v1",
         "experiment_id": exp_id,
         "actual_backend": actual_backend,
         "endpoint": endpoint,
-        "version": "16.14",
+        "version": resolved_version,
         "production_path": production_path,
         "simulation": simulation,
         "network_provider": False,

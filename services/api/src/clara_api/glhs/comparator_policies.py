@@ -51,6 +51,7 @@ from clara_api.glhs.canonical_json import (
     canonical_json_bytes,
 )
 from clara_api.glhs.domain import GlhsInvariantError
+from clara_api.glhs.inference_envelope import compute_projection_digest
 from clara_api.glhs.reason_codes import (
     ACTOR_MISMATCH,
     BINDING_MISSING,
@@ -790,15 +791,27 @@ class SignedExactDisclosureTokenValidator(AdmissionComparatorPolicy):
             )
 
         # 4. Exact Projection Digest Matching (H_proj)
-        prop_digest = _get_proposal_attr(prop, "source_snapshot_digest")
-        if prop_digest and prop_digest != t_proj:
-            return ComparatorDecision(
-                policy_name=self.policy_name,
-                admitted=False,
-                rejection_reason_code=PROJECTION_DIGEST_MISMATCH,
-                reason_codes=(PROJECTION_DIGEST_MISMATCH, MANIFEST_DIGEST_MISMATCH),
-                metadata={"duration_ns": time.perf_counter_ns() - t0},
-            )
+        obs_proj = kwargs.get("observed_model_visible_projection")
+        if obs_proj is not None:
+            comp_obs_d1 = compute_projection_digest(obs_proj)
+            if t_proj and comp_obs_d1 != t_proj:
+                return ComparatorDecision(
+                    policy_name=self.policy_name,
+                    admitted=False,
+                    rejection_reason_code=PROJECTION_DIGEST_MISMATCH,
+                    reason_codes=(PROJECTION_DIGEST_MISMATCH, MANIFEST_DIGEST_MISMATCH),
+                    metadata={"duration_ns": time.perf_counter_ns() - t0},
+                )
+        else:
+            prop_digest = _get_proposal_attr(prop, "source_snapshot_digest")
+            if prop_digest and prop_digest != t_proj:
+                return ComparatorDecision(
+                    policy_name=self.policy_name,
+                    admitted=False,
+                    rejection_reason_code=PROJECTION_DIGEST_MISMATCH,
+                    reason_codes=(PROJECTION_DIGEST_MISMATCH, MANIFEST_DIGEST_MISMATCH),
+                    metadata={"duration_ns": time.perf_counter_ns() - t0},
+                )
 
         # 5. Read-Set Version Caveats Revalidation (OCC Non-Strawman Protection)
         current_versions_map: dict[str, int] = _extract_context_param(
@@ -918,6 +931,29 @@ class FullGrwcValidator(AdmissionComparatorPolicy):
         now = _extract_context_param("now", context, kwargs)
 
         proposal_id_val = proposal.id if hasattr(proposal, "id") else proposal
+
+        # Verify capability token signature if capability token is attached to evaluation
+        token = _extract_context_param("token", context, kwargs)
+        if token is None:
+            token = _extract_context_param("c3_token", context, kwargs)
+        if token is not None and isinstance(token, SignedExactDisclosureToken):
+            expected_sig = compute_c3_token_signature(
+                projection_digest=token.projection_digest,
+                purpose=token.purpose,
+                task=token.task,
+                actor_user_id=token.actor_user_id,
+                readset_caveats=list(token.readset_caveats),
+                expires_at=token.expires_at,
+                secret_key=kwargs.get("secret_key", DEFAULT_C3_HMAC_SECRET),
+            )
+            if not hmac.compare_digest(str(token.signature), expected_sig):
+                return ComparatorDecision(
+                    policy_name=self.policy_name,
+                    admitted=False,
+                    rejection_reason_code=PROVIDER_RECEIPT_INVALID,
+                    reason_codes=(PROVIDER_RECEIPT_INVALID, "attestation_signature_invalid"),
+                    metadata={"duration_ns": time.perf_counter_ns() - t0, "error": "token_signature_invalid"},
+                )
 
         try:
             grwc_result = evaluate_grwc_admission(

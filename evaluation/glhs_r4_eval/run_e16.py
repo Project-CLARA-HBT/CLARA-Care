@@ -259,7 +259,8 @@ def run_e16_experiment() -> dict[str, Any]:
             purpose="self_care",
             task="e16_comp_task",
             actor_user_id=owner.id,
-            readset_caveats=[("entity:1", 1)],
+            readset_caveats=[("Observation/e16-ev", snapshot.state_version)],
+            disclosed_evidence_ids=[ev.public_id],
             expires_at=datetime.now(UTC) + timedelta(hours=1),
         )
 
@@ -295,14 +296,14 @@ def run_e16_experiment() -> dict[str, Any]:
                     observed_evidence=(ev,),
                     proposed_transition="OPEN",
                     origin="model",
-                    observed_base_state_version=0,  # Stale version 0 vs current 1
+                    observed_base_state_version=snapshot.state_version,
                     task="e16_comp_task",
                     source_snapshot_id=snapshot.public_id,
                     source_snapshot_digest=snapshot.manifest_digest,
                     model_manifest_ref="model-ref-1",
                     inference_context_binding_id=binding.public_id,
                 )
-                curr_version = 1
+                curr_version = snapshot.state_version + 1  # Stale: DB is ahead of base version
                 token_to_use = c3_clean_token
                 proj_to_eval = proj_clean
 
@@ -386,6 +387,8 @@ def run_e16_experiment() -> dict[str, Any]:
                     actor_user_id=owner.id,
                     expires_at=(datetime.now(UTC) + timedelta(hours=1)).isoformat(),
                     signature="tampered_corrupted_signature_hex",
+                    readset_caveats=[("Observation/e16-ev", snapshot.state_version)],
+                    disclosed_evidence_ids=(ev.public_id,),
                 )
                 proj_to_eval = proj_clean
 
@@ -420,6 +423,9 @@ def run_e16_experiment() -> dict[str, Any]:
             c4_admitted = c4_res.admitted
 
             # Evaluate each validator arm against this schedule
+            current_entity_versions = {"Observation/e16-ev": curr_version}
+            read_set = [{"key": "Observation/e16-ev", "observed_version": snapshot.state_version}]
+
             for arm_id, validator in validators:
                 t_start = time.perf_counter_ns()
                 res = validator.evaluate_admission(
@@ -428,6 +434,8 @@ def run_e16_experiment() -> dict[str, Any]:
                     context=scope,
                     observed_model_visible_projection=proj_to_eval,
                     current_state_version=curr_version,
+                    current_entity_versions=current_entity_versions,
+                    read_set=read_set,
                     token=token_to_use,
                 )
                 t_end = time.perf_counter_ns()

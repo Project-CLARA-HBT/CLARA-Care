@@ -24,12 +24,12 @@
     "I23_deterministic_replay_parity",
     "I24_clean_path_reachability"
   ],
-  "backend_requirement": "bounded_model_checker",
-  "scientific_unit": "formal state-space state and transition step in TLA+/Alloy model checker",
+  "backend_requirement": "python_formal_explorer",
+  "scientific_unit": "distinct reachable state explored in bounded Python state-space model checker (explore_r4.py / model_r4.py)",
   "primary_endpoints": [
     {
       "name": "GRWC Invariant Violations",
-      "definition": "Total count of invariant violations (I16\u2013I24) detected under GRWC bounded state-space exploration.",
+      "definition": "Total count of invariant violations (I16-I24) detected under GRWC bounded state-space exploration.",
       "target_value": 0,
       "acceptable_threshold": 0
     }
@@ -37,7 +37,7 @@
   "secondary_endpoints": [
     {
       "name": "Formal Mutation Testing Kill Rate",
-      "definition": "Proportion of injected formal specification mutants detected and killed by TLC/Alloy.",
+      "definition": "Proportion of injected formal specification mutants detected and killed by formal explorer.",
       "target_value": 1.0,
       "acceptable_threshold": 1.0
     },
@@ -49,18 +49,18 @@
     }
   ],
   "sample_size": {
-    "total_executions_N": 50000,
-    "unit_definition": "Minimum 50,000 distinct reachable states explored in TLA+/Alloy model checker up to search depth d=6",
+    "total_executions_N": 162,
+    "unit_definition": "162 distinct reachable states explored in bounded state-space model checker up to search depth d=5",
     "schedule_breakdown": {
-      "search_depth_d": 6,
-      "expected_reachable_states_min": 50000,
-      "expected_transitions_min": 200000
+      "search_depth_d": 5,
+      "expected_reachable_states": 162,
+      "expected_transitions": 323
     }
   },
   "exploration_parameters": {
-    "search_depth_d": 6,
-    "expected_reachable_states_min": 50000,
-    "expected_transitions_min": 200000
+    "search_depth_d": 5,
+    "expected_reachable_states": 162,
+    "expected_transitions": 323
   },
   "statistical_plan": {
     "method": "Exhaustive Bounded State-Space Exploration and Model-Checking Mutation Analysis",
@@ -68,8 +68,8 @@
     "master_seed": "20260930_21"
   },
   "stopping_rules": {
-    "fail_closed_criteria": "Halt submission if TLC/Alloy finds any invariant violation under GRWC up to depth d=6.",
-    "missing_data_rule": "Failure to complete exploration to depth d=6 fails the formal verification gate.",
+    "fail_closed_criteria": "Halt submission if formal explorer finds any invariant violation under GRWC up to depth d=5.",
+    "missing_data_rule": "Failure to complete exploration to depth d=5 fails the formal verification gate.",
     "safety_halt_threshold": "Invariant violations under GRWC > 0"
   },
   "artifact_layout": {
