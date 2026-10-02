@@ -1,1 +1,0 @@
-{"schedule_id":"SCH-E20-CONDITIONAL-001","status":"NOT_RUN_PROVIDER_ATTESTATION_UNAVAILABLE","note":"Hardware verifiable provider attestation receipts inactive in local CI environment. Zero synthetic signatures generated.","execution_timestamp_utc":"2026-10-02T01:44:00Z","prev_hash":"","hash":"0667d1a5d39dcd48029d18a669c3dc1f3a5ec44f5ad8b91b97701f441ae86a8d"}

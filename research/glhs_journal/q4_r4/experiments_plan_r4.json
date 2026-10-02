@@ -238,15 +238,15 @@
     "E22": {
       "experiment_id": "E22",
       "protocol_id": "GLHS-R4-E22-PUBLIC_REPRODUCIBILITY_AUDIT",
-      "title": "R4 Public Reproducibility & Fresh Checkout Audit Protocol",
+      "title": "R4 Hermetic Computational Reproduction & Cryptographic Checksum Audit Protocol",
       "priority": "P0",
-      "scientific_unit": "fresh git clone checkout execution pass",
+      "scientific_unit": "offline hermetic computational reproduction and cryptographic verification pass",
       "steps": [
-        "1. Environment verification and Python/PostgreSQL dependency validation",
+        "1. Environment verification and fail-closed network isolation",
         "2. Verification of frozen commit SHAs and protocol JSON SHA256 checksums",
-        "3. Automated re-execution of E15 through E21 experiment runners",
-        "4. Exact binary/statistical output comparison against frozen baseline",
-        "5. Automated generation of R4 Publication Audit Report"
+        "3. Automated computational re-execution of E15 through E21 experiment runners against SUT",
+        "4. Exact Merkle hash chain, seal, and output comparison against frozen baseline",
+        "5. Automated generation of R4 Publication Audit Report and artifact inventory"
       ],
       "estimands": {
         "claim_reproducibility_rate": 1.0,

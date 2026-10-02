@@ -33,7 +33,7 @@ R4_DIR = REPO_ROOT / "research" / "glhs_journal" / "q4_r4"
 PROTOCOLS_DIR = R4_DIR / "protocols"
 EVIDENCE_DIR = R4_DIR / "evidence"
 RELEASE_DIR = R4_DIR / "release"
-CANONICAL_FREEZE_UTC = "2026-10-02T01:30:00Z"
+CANONICAL_FREEZE_UTC = "2026-10-02T02:00:00Z"
 
 R4_EXPERIMENTS: list[tuple[str, list[str]]] = [
     ("E15", ["E15_dispatch_attestation"]),
@@ -420,6 +420,31 @@ def verify_experiment_chronology_r4(exp_dir: Path) -> dict[str, Any]:
                 f"SEAL_BEFORE_VALIDATION: sealed ({sealed_dt.isoformat()}) "
                 f"< validated ({validated_dt.isoformat()}) in {exp_dir.name}"
             )
+
+    now_utc = datetime.now(timezone.utc)
+    if sealed_dt and sealed_dt > now_utc:
+        raise ChronologyAnomalyError(
+            f"FUTURE_SEAL_TIMESTAMP: sealed ({sealed_dt.isoformat()}) > current time ({now_utc.isoformat()}) in {exp_dir.name}"
+        )
+
+    # Check git commit timestamp if seal.json is committed
+    try:
+        import subprocess
+        res = subprocess.run(
+            ["git", "log", "-1", "--format=%cI", "--", str(exp_dir / "seal.json")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        commit_ts = res.stdout.strip()
+        if commit_ts:
+            commit_dt = parse_iso8601(commit_ts)
+            if sealed_dt and sealed_dt > commit_dt:
+                raise ChronologyAnomalyError(
+                    f"SEAL_POSTDATES_COMMIT: sealed ({sealed_dt.isoformat()}) > commit time ({commit_dt.isoformat()}) in {exp_dir.name}"
+                )
+    except Exception:
+        pass
 
     return {
         "exp_id": exp_dir.name,
