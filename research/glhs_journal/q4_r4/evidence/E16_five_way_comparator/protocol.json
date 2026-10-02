@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "glhs-r4-protocol.v1",
+  "protocol_id": "GLHS-R4-E16-FIVE_WAY_COMPARATOR",
+  "experiment_id": "E16",
+  "title": "GLHS R4 Phase 0 / E16: Five-Way Prior-Art Comparator Architecture Study",
+  "program": "GLHS R4 \u2014 Governed Read-to-Write Continuity (GRWC)",
+  "phase": "Phase 0 \u2014 Prospective Experimental & Statistical Plan for R4",
+  "curator": "Agent C \u2014 Experiment & Statistics",
+  "date": "2026-09-30",
+  "status": "PROSPECTIVELY_FROZEN",
+  "priority": "P0",
+  "freeze_id": "GLHS-R4-E16-FREEZE-20260930-V1",
+  "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
+  "git_sha": "e28e357135dc34823eaf0f116119bd3f33ab4dee",
+  "target_invariants": [
+    "I01_state_isolation",
+    "I07_evidence_closure",
+    "I10_dependency_completeness",
+    "I12_exact_inference_disclosure_continuity",
+    "I15_clean_path_reachability"
+  ],
+  "backend_requirement": "real_postgresql_16",
+  "scientific_unit": "unique logical schedule evaluated across all 5 comparator arms",
+  "primary_endpoints": [
+    {
+      "name": "False Admission Rate",
+      "definition": "Proportion of invalid or adversarial schedules improperly committed under each comparator arm (C0\u2013C4).",
+      "target_value": 0.0,
+      "acceptable_threshold": 0.0
+    },
+    {
+      "name": "Forensic Lineage Reconstructability Score",
+      "definition": "Quantitative index [0, 100] measuring completeness of prompt projection and evidence source reconstruction from audit trail.",
+      "target_value": 100.0,
+      "acceptable_threshold": 75.0
+    }
+  ],
+  "secondary_endpoints": [
+    {
+      "name": "Clean False Rejection Rate",
+      "definition": "Proportion of valid proposals improperly rejected by each comparator arm.",
+      "target_value": 0.0,
+      "acceptable_threshold": 0.01
+    },
+    {
+      "name": "Serialized Metadata Overhead",
+      "definition": "Wire size of authorization, caveat, and context metadata in bytes per transaction.",
+      "target_value": 512.0,
+      "acceptable_threshold": 2048.0
+    },
+    {
+      "name": "Database IO Operations",
+      "definition": "Cumulative reads, writes, and lock acquisitions executed within admission transaction.",
+      "target_value": 4.0,
+      "acceptable_threshold": 12.0
+    },
+    {
+      "name": "Validation CPU Time",
+      "definition": "Server-side wall-clock processing time spent in cryptographic and governance verification in microseconds.",
+      "target_value": 150.0,
+      "acceptable_threshold": 1000.0
+    },
+    {
+      "name": "Decision Disagreement Rate vs C4",
+      "definition": "Proportion of schedules where comparator arm admission decision differs from C4 (FULL_GRWC).",
+      "target_value": 0.0,
+      "acceptable_threshold": 0.5
+    }
+  ],
+  "sample_size": {
+    "total_executions_N": 2500,
+    "unit_definition": "500 unique logical schedules evaluated across all 5 comparator arms yielding 2,500 total executions",
+    "schedule_breakdown": {
+      "N_unique_schedules": 500,
+      "total_executions": 2500,
+      "schedules_per_arm": 500,
+      "comparator_arms": [
+        "C0: CURRENT_STATE_ONLY",
+        "C1: OCC_READSET",
+        "C2: PROVENANCE_ONLY",
+        "C3: SIGNED_EXACT_DISCLOSURE_TOKEN",
+        "C4: FULL_GRWC"
+      ]
+    }
+  },
+  "statistical_plan": {
+    "method": "Exact Paired McNemar Tests for Decision Concordance and Schuirmann Two One-Sided Tests (TOST) Equivalence Design",
+    "confidence_level": 0.95,
+    "master_seed": "20260930_16",
+    "hypothesis_testing": {
+      "tost_margin_delta": 0.05,
+      "significance_alpha": 0.05
+    }
+  },
+  "stopping_rules": {
+    "fail_closed_criteria": "If C3 matches C4 in decision safety (zero invalid admissions across all tested adversarial schedules), GLHS R4 explicitly surrenders any claim of decision-safety superiority over compact capability tokens and restricts its claims strictly to full-lifecycle state-machine governance, server-attested two-digest dispatch receipts, tamper-evident lineage binding, and bit-exact forensic audit reconstructability (Gate 2).",
+    "missing_data_rule": "Execution aborts or database lock timeouts count as invalid non-completions.",
+    "safety_halt_threshold": "C4 invalid admission count > 0"
+  },
+  "artifact_layout": {
+    "required_artifacts": [
+      "protocol.json",
+      "protocol.sha256"
+    ],
+    "artifact_directory": "research/glhs_journal/q4_r4/protocols/E16_five_way_comparator"
+  }
+}

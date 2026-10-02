@@ -55,13 +55,14 @@ from clara_api.glhs.inference_attestation import (
 from clara_api.glhs.inference_envelope import compute_projection_digest
 from clara_api.lifemap.profile_scope import ProfileScope
 from evaluation.glhs_r4_eval.seal_utils import (
-    PROVENANCE,
     build_merkle_runs,
+    build_provenance_record,
     generate_backend_attestation,
     generate_code_manifest,
     generate_environment,
     generate_freeze,
     generate_validation,
+    now_utc_iso,
     seal_experiment_bundle,
     sha256_file,
     write_runs_jsonl,
@@ -103,6 +104,7 @@ def wilson_lower_lcb(k: int, n: int, alpha: float = 0.05) -> float:
 
 
 def run_e15_experiment() -> dict[str, Any]:
+    t_start = now_utc_iso()
     out_dir = REPO_ROOT / "research" / "glhs_journal" / "q4_r4" / "evidence" / "E15_dispatch_attestation"
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "derived").mkdir(parents=True, exist_ok=True)
@@ -219,7 +221,7 @@ def run_e15_experiment() -> dict[str, Any]:
 
             for idx in range(1, 51):
                 sch_id = f"SCH-E15-ADV-{class_id}-{idx:03d}"
-                t_start = time.perf_counter_ns()
+                t_loop_start = time.perf_counter_ns()
 
                 # Execute attack against SUT
                 admitted = False
@@ -753,7 +755,7 @@ def run_e15_experiment() -> dict[str, Any]:
                     returned_err = str(exc).split(":")[0].strip()
 
                 t_end = time.perf_counter_ns()
-                latency_us = (t_end - t_start) / 1000.0
+                latency_us = (t_end - t_loop_start) / 1000.0
 
                 if admitted:
                     adv_invalid_admitted += 1
@@ -771,14 +773,14 @@ def run_e15_experiment() -> dict[str, Any]:
                     "returned_error": returned_err,
                     "admitted": admitted,
                     "latency_us": round(latency_us, 2),
-                    "execution_timestamp_utc": "2026-10-02T01:36:00Z",
+                    "execution_timestamp_utc": now_utc_iso(),
                 })
 
         # 2. Execute 224 Clean Controls through real SUT
         clean_control_admitted = 0
         for idx in range(1, 225):
             sch_id = f"SCH-E15-CLEAN-{idx:03d}"
-            t_start = time.perf_counter_ns()
+            t_clean_start = time.perf_counter_ns()
 
             proj = {"patient_id": profile.id, "clean_idx": idx}
             b = create_dispatch_binding(
@@ -837,9 +839,52 @@ def run_e15_experiment() -> dict[str, Any]:
                 "expected_error": None,
                 "returned_error": None,
                 "admitted": admitted,
-                "latency_us": round((t_end - t_start) / 1000.0, 2),
-                "execution_timestamp_utc": "2026-10-02T01:38:00Z",
+                "latency_us": round((t_end - t_clean_start) / 1000.0, 2),
+                "execution_timestamp_utc": now_utc_iso(),
             })
+
+    t_completed = now_utc_iso()
+    t_validated = now_utc_iso()
+    t_sealed = now_utc_iso()
+    prov = build_provenance_record(
+        execution_started_utc=t_start,
+        execution_completed_utc=t_completed,
+        validated_at_utc=t_validated,
+        sealed_at_utc=t_sealed,
+    )
+
+    # Generate metadata manifests
+    (out_dir / "freeze.json").write_text(json.dumps(generate_freeze("E15"), indent=2) + "\n", encoding="utf-8")
+    (out_dir / "environment.json").write_text(
+        json.dumps(
+            generate_environment(
+                "FastAPI Commitment Gateway / SQLAlchemy SQLite Engine",
+                generated_at_utc=t_start,
+                provenance=prov,
+            ),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (out_dir / "backend_attestation.json").write_text(
+        json.dumps(
+            generate_backend_attestation(
+                "E15",
+                actual_backend="FastAPI Commitment Gateway Kernel / SQLAlchemy SQLite Engine",
+                endpoint="sqlite:///:memory:",
+                production_path=True,
+                simulation=False,
+                provenance=prov,
+            ),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (out_dir / "code_manifest.json").write_text(
+        json.dumps(generate_code_manifest(provenance=prov), indent=2) + "\n", encoding="utf-8"
+    )
 
     # Build Merkle hash chain over raw executions
     chained_records = build_merkle_runs(raw_records)
@@ -867,7 +912,7 @@ def run_e15_experiment() -> dict[str, Any]:
         "wilson_95_lower_bound": wilson_lcb,
         "attack_class_distribution": reason_distribution,
         "claim_eligible": True,
-        "provenance": PROVENANCE,
+        "provenance": prov,
     }
 
     (out_dir / "derived" / "summary.json").write_text(json.dumps(summary_json, indent=2) + "\n", encoding="utf-8")
@@ -888,9 +933,11 @@ def run_e15_experiment() -> dict[str, Any]:
         json.dumps(
             generate_validation(
                 "E15",
+                validated_at_utc=t_validated,
                 verdict="PASS",
                 total_violations=adv_invalid_admitted,
                 check_notes="Zero invalid admissions across 800 adversarial schedules. 100% clean control liveness.",
+                provenance=prov,
             ),
             indent=2,
         )
@@ -898,7 +945,9 @@ def run_e15_experiment() -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(out_dir, "E15", "GLHS-R4-E15-20261002")
+    seal_doc = seal_experiment_bundle(
+        out_dir, "E15", "GLHS-R4-E15-20261002", sealed_at_utc=t_sealed, provenance=prov
+    )
     print(f"[E15] SUT Execution & Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
     return summary_json
 

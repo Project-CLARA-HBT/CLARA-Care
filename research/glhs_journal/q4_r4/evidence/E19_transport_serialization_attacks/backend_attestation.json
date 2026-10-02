@@ -1,0 +1,24 @@
+{
+  "schema_version": "glhs-r4-backend-attestation.v1",
+  "experiment_id": "E19",
+  "actual_backend": "FastAPI Commitment Gateway Kernel / SQLAlchemy SQLite Engine",
+  "endpoint": "sqlite:///:memory:",
+  "version": "3.45.1",
+  "production_path": true,
+  "simulation": false,
+  "network_provider": false,
+  "fallback_usage": false,
+  "concurrency_mechanism": "Two-Digest Transport Payload Verification Engine",
+  "provenance": {
+    "system_under_test_sha": "f8b194dc5ac53aae1e365c61355a04e988a251ff",
+    "parent_harness_sha": "f8b194dc5ac53aae1e365c61355a04e988a251ff",
+    "analysis_release_sha": "f8b194dc5ac53aae1e365c61355a04e988a251ff",
+    "r4_baseline_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
+    "active_branch": "research/glhs-r4-novelty-hardening",
+    "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
+    "execution_started_utc": "2026-10-02T02:20:22Z",
+    "execution_completed_utc": "2026-10-02T02:20:26Z",
+    "validated_at_utc": "2026-10-02T02:20:26Z",
+    "sealed_at_utc": "2026-10-02T02:20:26Z"
+  }
+}

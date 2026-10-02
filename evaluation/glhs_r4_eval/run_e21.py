@@ -26,13 +26,14 @@ if str(REPO_ROOT / "services" / "api" / "src") not in sys.path:
 
 from evaluation.formal_governance.explore_r4 import explore_r4
 from evaluation.glhs_r4_eval.seal_utils import (
-    PROVENANCE,
     build_merkle_runs,
+    build_provenance_record,
     generate_backend_attestation,
     generate_code_manifest,
     generate_environment,
     generate_freeze,
     generate_validation,
+    now_utc_iso,
     seal_experiment_bundle,
     sha256_file,
     write_runs_jsonl,
@@ -52,6 +53,7 @@ INVARIANTS_R4 = [
 
 
 def run_e21_experiment() -> dict[str, Any]:
+    t_start = now_utc_iso()
     out_dir = REPO_ROOT / "research" / "glhs_journal" / "q4_r4" / "evidence" / "E21_formal_novelty_model"
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "derived").mkdir(parents=True, exist_ok=True)
@@ -62,27 +64,6 @@ def run_e21_experiment() -> dict[str, Any]:
     shutil.copy2(proto_src, proto_dst)
     proto_sha_dst = out_dir / "protocol.sha256"
     proto_sha_dst.write_text(f"{sha256_file(proto_dst)}  protocol.json\n", encoding="utf-8")
-
-    # Generate metadata manifests
-    (out_dir / "freeze.json").write_text(json.dumps(generate_freeze("E21"), indent=2) + "\n", encoding="utf-8")
-    (out_dir / "environment.json").write_text(
-        json.dumps(generate_environment("TLA+ Specification Engine / Python Formal State Explorer"), indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (out_dir / "backend_attestation.json").write_text(
-        json.dumps(
-            generate_backend_attestation(
-                "E21",
-                actual_backend="TLA+ Specification Engine / Python Formal State Explorer (model_r4.py)",
-                concurrency_mechanism="Formal Invariant State Transition Engine",
-                simulation=False,
-            ),
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (out_dir / "code_manifest.json").write_text(json.dumps(generate_code_manifest(), indent=2) + "\n", encoding="utf-8")
 
     # Execute actual exploration sweeps at depth 4 and depth 5
     sweep_d4 = explore_r4(max_depth=4)
@@ -98,7 +79,7 @@ def run_e21_experiment() -> dict[str, Any]:
             "mutation_kill_rate": 1.0,
             "deadlock_detected": sweep_d4["deadlock_detected"],
             "duration_seconds": sweep_d4["duration_seconds"],
-            "execution_timestamp_utc": "2026-10-02T01:45:00Z",
+            "execution_timestamp_utc": now_utc_iso(),
         },
         {
             "exploration_depth": sweep_d5["max_depth"],
@@ -109,9 +90,52 @@ def run_e21_experiment() -> dict[str, Any]:
             "mutation_kill_rate": 1.0,
             "deadlock_detected": sweep_d5["deadlock_detected"],
             "duration_seconds": sweep_d5["duration_seconds"],
-            "execution_timestamp_utc": "2026-10-02T01:46:00Z",
+            "execution_timestamp_utc": now_utc_iso(),
         },
     ]
+
+    t_completed = now_utc_iso()
+    t_validated = now_utc_iso()
+    t_sealed = now_utc_iso()
+    prov = build_provenance_record(
+        execution_started_utc=t_start,
+        execution_completed_utc=t_completed,
+        validated_at_utc=t_validated,
+        sealed_at_utc=t_sealed,
+    )
+
+    # Generate metadata manifests
+    (out_dir / "freeze.json").write_text(json.dumps(generate_freeze("E21"), indent=2) + "\n", encoding="utf-8")
+    (out_dir / "environment.json").write_text(
+        json.dumps(
+            generate_environment(
+                "Python bounded state-space explorer over GLHS R4 formal transition model; companion TLA+ specification provided separately",
+                generated_at_utc=t_start,
+                provenance=prov,
+            ),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (out_dir / "backend_attestation.json").write_text(
+        json.dumps(
+            generate_backend_attestation(
+                "E21",
+                actual_backend="Python bounded state-space explorer over GLHS R4 formal transition model; companion TLA+ specification provided separately",
+                endpoint="local_process",
+                concurrency_mechanism="Formal Invariant State Transition Engine",
+                simulation=False,
+                provenance=prov,
+            ),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (out_dir / "code_manifest.json").write_text(
+        json.dumps(generate_code_manifest(provenance=prov), indent=2) + "\n", encoding="utf-8"
+    )
 
     chained_records = build_merkle_runs(raw_records)
     write_runs_jsonl(out_dir / "raw" / "runs.jsonl", chained_records)
@@ -134,7 +158,7 @@ def run_e21_experiment() -> dict[str, Any]:
         },
         "target_invariants_verified": INVARIANTS_R4,
         "claim_eligible": True,
-        "provenance": PROVENANCE,
+        "provenance": prov,
     }
 
     (out_dir / "derived" / "summary.json").write_text(json.dumps(summary_json, indent=2) + "\n", encoding="utf-8")
@@ -157,9 +181,11 @@ def run_e21_experiment() -> dict[str, Any]:
         json.dumps(
             generate_validation(
                 "E21",
+                validated_at_utc=t_validated,
                 verdict="PASS",
                 total_violations=sweep_d5["invariant_violations"],
                 check_notes="Bounded state exploration completed with 0 invariant violations under GRWC and 100% formal mutant kill rate.",
+                provenance=prov,
             ),
             indent=2,
         )
@@ -167,7 +193,9 @@ def run_e21_experiment() -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(out_dir, "E21", "GLHS-R4-E21-20261002")
+    seal_doc = seal_experiment_bundle(
+        out_dir, "E21", "GLHS-R4-E21-20261002", sealed_at_utc=t_sealed, provenance=prov
+    )
     print(f"[E21] Formal Model Exploration & Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
     return summary_json
 

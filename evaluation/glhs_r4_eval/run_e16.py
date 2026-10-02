@@ -72,13 +72,14 @@ from clara_api.glhs.inference_attestation import (
 from clara_api.glhs.inference_envelope import compute_projection_digest
 from clara_api.lifemap.profile_scope import ProfileScope
 from evaluation.glhs_r4_eval.seal_utils import (
-    PROVENANCE,
     build_merkle_runs,
+    build_provenance_record,
     generate_backend_attestation,
     generate_code_manifest,
     generate_environment,
     generate_freeze,
     generate_validation,
+    now_utc_iso,
     seal_experiment_bundle,
     sha256_file,
     write_runs_jsonl,
@@ -104,6 +105,7 @@ def compute_objective_reconstructability_score(arm_id: str) -> float:
 
 def run_e16_experiment() -> dict[str, Any]:
     os.environ["GLHS_RESEARCH_COMPARATORS_ENABLED"] = "true"
+    t_start = now_utc_iso()
 
     out_dir = REPO_ROOT / "research" / "glhs_journal" / "q4_r4" / "evidence" / "E16_five_way_comparator"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -115,29 +117,6 @@ def run_e16_experiment() -> dict[str, Any]:
     shutil.copy2(proto_src, proto_dst)
     proto_sha_dst = out_dir / "protocol.sha256"
     proto_sha_dst.write_text(f"{sha256_file(proto_dst)}  protocol.json\n", encoding="utf-8")
-
-    # Generate metadata manifests
-    (out_dir / "freeze.json").write_text(json.dumps(generate_freeze("E16"), indent=2) + "\n", encoding="utf-8")
-    (out_dir / "environment.json").write_text(
-        json.dumps(generate_environment("FastAPI Gateway / 5-Way Comparator Engine"), indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (out_dir / "backend_attestation.json").write_text(
-        json.dumps(
-            generate_backend_attestation(
-                "E16",
-                actual_backend="FastAPI Gateway / 5-Way Comparator Policy Engine (C0-C4)",
-                endpoint="sqlite:///:memory:",
-                production_path=True,
-                simulation=False,
-                concurrency_mechanism="Five-Way Prior-Art Comparator Admission Evaluator",
-            ),
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (out_dir / "code_manifest.json").write_text(json.dumps(generate_code_manifest(), indent=2) + "\n", encoding="utf-8")
 
     engine = create_engine("sqlite://")
     Base.metadata.create_all(engine)
@@ -427,7 +406,7 @@ def run_e16_experiment() -> dict[str, Any]:
             read_set = [{"key": "Observation/e16-ev", "observed_version": snapshot.state_version}]
 
             for arm_id, validator in validators:
-                t_start = time.perf_counter_ns()
+                t_arm_start = time.perf_counter_ns()
                 res = validator.evaluate_admission(
                     db,
                     prop,
@@ -439,7 +418,7 @@ def run_e16_experiment() -> dict[str, Any]:
                     token=token_to_use,
                 )
                 t_end = time.perf_counter_ns()
-                cpu_us = (t_end - t_start) / 1000.0
+                cpu_us = (t_end - t_arm_start) / 1000.0
 
                 admitted = res.admitted
                 reason = res.rejection_reason_code
@@ -470,8 +449,50 @@ def run_e16_experiment() -> dict[str, Any]:
                     "admitted": admitted,
                     "rejection_reason": reason,
                     "cpu_latency_us": round(cpu_us, 2),
-                    "execution_timestamp_utc": "2026-10-02T01:39:00Z",
+                    "execution_timestamp_utc": now_utc_iso(),
                 })
+
+    t_completed = now_utc_iso()
+    t_validated = now_utc_iso()
+    t_sealed = now_utc_iso()
+    prov = build_provenance_record(
+        execution_started_utc=t_start,
+        execution_completed_utc=t_completed,
+        validated_at_utc=t_validated,
+        sealed_at_utc=t_sealed,
+    )
+
+    # Generate metadata manifests
+    (out_dir / "freeze.json").write_text(json.dumps(generate_freeze("E16"), indent=2) + "\n", encoding="utf-8")
+    (out_dir / "environment.json").write_text(
+        json.dumps(
+            generate_environment(
+                "FastAPI Gateway / 5-Way Comparator Engine", generated_at_utc=t_start, provenance=prov
+            ),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (out_dir / "backend_attestation.json").write_text(
+        json.dumps(
+            generate_backend_attestation(
+                "E16",
+                actual_backend="FastAPI Gateway / 5-Way Comparator Policy Engine (C0-C4)",
+                endpoint="sqlite:///:memory:",
+                production_path=True,
+                simulation=False,
+                concurrency_mechanism="Five-Way Prior-Art Comparator Admission Evaluator",
+                provenance=prov,
+            ),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (out_dir / "code_manifest.json").write_text(
+        json.dumps(generate_code_manifest(provenance=prov), indent=2) + "\n", encoding="utf-8"
+    )
 
     chained_records = build_merkle_runs(raw_records)
     write_runs_jsonl(out_dir / "raw" / "runs.jsonl", chained_records)
@@ -521,7 +542,7 @@ def run_e16_experiment() -> dict[str, Any]:
             ),
         },
         "claim_eligible": True,
-        "provenance": PROVENANCE,
+        "provenance": prov,
     }
 
     (out_dir / "derived" / "summary.json").write_text(json.dumps(summary_json, indent=2) + "\n", encoding="utf-8")
@@ -546,9 +567,11 @@ def run_e16_experiment() -> dict[str, Any]:
         json.dumps(
             generate_validation(
                 "E16",
+                validated_at_utc=t_validated,
                 verdict="PASS",
                 total_violations=arm_stats["C4"]["invalid_admissions"],
                 check_notes="C4 achieved 0 invalid admissions. Novelty Outcome Rule triggered and correctly recorded.",
+                provenance=prov,
             ),
             indent=2,
         )
@@ -556,7 +579,9 @@ def run_e16_experiment() -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(out_dir, "E16", "GLHS-R4-E16-20261002")
+    seal_doc = seal_experiment_bundle(
+        out_dir, "E16", "GLHS-R4-E16-20261002", sealed_at_utc=t_sealed, provenance=prov
+    )
     print(f"[E16] SUT Comparator Execution & Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
     return summary_json
 

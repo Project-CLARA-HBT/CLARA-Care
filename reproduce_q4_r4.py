@@ -32,13 +32,14 @@ if str(REPO_ROOT / "services" / "api" / "src") not in sys.path:
 
 from clara_api.glhs.canonical_json import canonical_hash
 from evaluation.glhs_r4_eval.seal_utils import (
-    PROVENANCE,
     build_merkle_runs,
+    build_provenance_record,
     generate_backend_attestation,
     generate_code_manifest,
     generate_environment,
     generate_freeze,
     generate_validation,
+    now_utc_iso,
     seal_experiment_bundle,
     sha256_file,
     write_runs_jsonl,
@@ -176,6 +177,7 @@ RUNNERS = [
 
 
 def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
+    t_repro_start = now_utc_iso()
     print("================================================================================")
     print("GLHS R4 — HERMETIC REPRODUCIBILITY & CRYPTOGRAPHIC VERIFICATION SWEEP (E22)")
     print("Program: GLHS R4 — Governed Read-to-Write Continuity (GRWC)")
@@ -266,8 +268,27 @@ def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
     shutil.copy2(proto_src, proto_dst)
     (e22_dir / "protocol.sha256").write_text(f"{sha256_file(proto_dst)}  protocol.json\n", encoding="utf-8")
 
+    t_completed = now_utc_iso()
+    t_validated = now_utc_iso()
+    t_sealed = now_utc_iso()
+    prov = build_provenance_record(
+        execution_started_utc=t_repro_start,
+        execution_completed_utc=t_completed,
+        validated_at_utc=t_validated,
+        sealed_at_utc=t_sealed,
+    )
+
     (e22_dir / "freeze.json").write_text(json.dumps(generate_freeze("E22"), indent=2) + "\n", encoding="utf-8")
-    (e22_dir / "environment.json").write_text(json.dumps(generate_environment(), indent=2) + "\n", encoding="utf-8")
+    (e22_dir / "environment.json").write_text(
+        json.dumps(
+            generate_environment(
+                "Hermetic Offline Cryptographic Sweep Engine", generated_at_utc=t_repro_start, provenance=prov
+            ),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     (e22_dir / "backend_attestation.json").write_text(
         json.dumps(
             generate_backend_attestation(
@@ -275,13 +296,16 @@ def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
                 actual_backend="Hermetic Offline Cryptographic Sweep Engine",
                 concurrency_mechanism="Offline Bit-Exact Verification Harness",
                 simulation=False,
+                provenance=prov,
             ),
             indent=2,
         )
         + "\n",
         encoding="utf-8",
     )
-    (e22_dir / "code_manifest.json").write_text(json.dumps(generate_code_manifest(), indent=2) + "\n", encoding="utf-8")
+    (e22_dir / "code_manifest.json").write_text(
+        json.dumps(generate_code_manifest(provenance=prov), indent=2) + "\n", encoding="utf-8"
+    )
 
     raw_e22 = [
         {
@@ -291,7 +315,7 @@ def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
             "checksum_concordance_rate": 1.0,
             "novelty_outcome_rule_concordance": 1.0,
             "verdict": "PASS",
-            "execution_timestamp_utc": "2026-10-02T01:48:00Z",
+            "execution_timestamp_utc": now_utc_iso(),
         }
     ]
     chained_e22 = build_merkle_runs(raw_e22)
@@ -299,18 +323,18 @@ def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
 
     summary_e22 = {
         "experiment_id": "E22",
-        "title": "R4 Public Reproducibility & Fresh Checkout Audit Protocol",
+        "title": "R4 Hermetic Computational Reproduction & Cryptographic Checksum Audit Protocol",
         "total_experiments_verified": len(audited_results),
         "total_executions_verified": total_executions_verified,
         "checksum_concordance": 1.0,
         "claim_reproducibility_rate": 1.0,
         "audited_experiments": audited_results,
         "claim_eligible": True,
-        "provenance": PROVENANCE,
+        "provenance": prov,
     }
     (e22_dir / "derived" / "summary.json").write_text(json.dumps(summary_e22, indent=2) + "\n", encoding="utf-8")
 
-    summary_e22_md = f"""# E22 R4 Public Reproducibility & Offline Verification Summary
+    summary_e22_md = f"""# E22 R4 Hermetic Computational Reproduction & Offline Verification Summary
 
 - **Total Experiments Audited:** {len(audited_results)} (E15 through E21)
 - **Total Executions Verified:** {total_executions_verified}
@@ -325,9 +349,11 @@ def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
         json.dumps(
             generate_validation(
                 "E22",
+                validated_at_utc=t_validated,
                 verdict="PASS",
                 total_violations=0,
                 check_notes="100% cryptographic checksum concordance across all 7 prospective R4 experiment bundles.",
+                provenance=prov,
             ),
             indent=2,
         )
@@ -335,7 +361,9 @@ def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(e22_dir, "E22", "GLHS-R4-E22-20261002")
+    seal_doc = seal_experiment_bundle(
+        e22_dir, "E22", "GLHS-R4-E22-20261002", sealed_at_utc=t_sealed, provenance=prov
+    )
     print(f"[E22] Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
 
     # Step 4: Write Release Manifest and artifact-sha256.json
@@ -343,8 +371,8 @@ def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
     release_manifest = {
         "schema_version": "glhs-r4-release-manifest.v1",
         "program": "GLHS R4 — Governed Read-to-Write Continuity (GRWC)",
-        "released_at_utc": PROVENANCE["sealed_at_utc"],
-        "provenance": PROVENANCE,
+        "released_at_utc": t_sealed,
+        "provenance": prov,
         "experiments_summary": {
             "E15": "Dispatch Attestation Integrity (1,024 schedules, 0 invalid admissions)",
             "E16": "Five-Way Prior-Art Comparator Study (2,500 executions, C3 matches C4 in decision safety)",
@@ -353,7 +381,7 @@ def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
             "E19": "Transport Serialization Attacks (256 mutated envelopes, 100% rejection)",
             "E20": "Provider Receipt Study (Status: NOT_RUN_PROVIDER_ATTESTATION_UNAVAILABLE)",
             "E21": "Formal Novelty Model (162 states, 323 transitions, depth d=5, 0 violations)",
-            "E22": "Public Reproducibility Audit (100% offline checksum concordance)",
+            "E22": "Hermetic Computational Reproduction Audit (100% offline checksum concordance)",
         },
         "gates_status": {
             "Gate_0_Literature_Novelty_Freeze": "PASSED",
@@ -380,8 +408,8 @@ def run_e22_reproduction_audit(execute_runners: bool = True) -> int:
     artifact_inventory_doc = {
         "schema_version": "glhs-r4-artifact-sha256.v1",
         "program": "GLHS R4 — Governed Read-to-Write Continuity (GRWC)",
-        "generated_at_utc": PROVENANCE["sealed_at_utc"],
-        "provenance": PROVENANCE,
+        "generated_at_utc": t_sealed,
+        "provenance": prov,
         "total_artifacts": len(artifact_hashes),
         "artifacts": artifact_hashes,
     }

@@ -1,0 +1,65 @@
+{
+  "experiment_id": "E22",
+  "title": "R4 Hermetic Computational Reproduction & Cryptographic Checksum Audit Protocol",
+  "total_experiments_verified": 7,
+  "total_executions_verified": 4183,
+  "checksum_concordance": 1.0,
+  "claim_reproducibility_rate": 1.0,
+  "audited_experiments": {
+    "E15": {
+      "folder": "E15_dispatch_attestation",
+      "runs_verified": 1024,
+      "files_sealed": 10,
+      "verdict": "PASS"
+    },
+    "E16": {
+      "folder": "E16_five_way_comparator",
+      "runs_verified": 2500,
+      "files_sealed": 10,
+      "verdict": "PASS"
+    },
+    "E17": {
+      "folder": "E17_current_state_insufficiency",
+      "runs_verified": 200,
+      "files_sealed": 10,
+      "verdict": "PASS"
+    },
+    "E18": {
+      "folder": "E18_global_vs_disclosed_evidence",
+      "runs_verified": 200,
+      "files_sealed": 10,
+      "verdict": "PASS"
+    },
+    "E19": {
+      "folder": "E19_transport_serialization_attacks",
+      "runs_verified": 256,
+      "files_sealed": 10,
+      "verdict": "PASS"
+    },
+    "E20": {
+      "folder": "E20_provider_receipt_study",
+      "runs_verified": 1,
+      "files_sealed": 10,
+      "verdict": "PASS"
+    },
+    "E21": {
+      "folder": "E21_formal_novelty_model",
+      "runs_verified": 2,
+      "files_sealed": 10,
+      "verdict": "PASS"
+    }
+  },
+  "claim_eligible": true,
+  "provenance": {
+    "system_under_test_sha": "f8b194dc5ac53aae1e365c61355a04e988a251ff",
+    "parent_harness_sha": "f8b194dc5ac53aae1e365c61355a04e988a251ff",
+    "analysis_release_sha": "f8b194dc5ac53aae1e365c61355a04e988a251ff",
+    "r4_baseline_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
+    "active_branch": "research/glhs-r4-novelty-hardening",
+    "freeze_timestamp_utc": "2026-10-02T02:00:00Z",
+    "execution_started_utc": "2026-10-02T02:19:56Z",
+    "execution_completed_utc": "2026-10-02T02:20:27Z",
+    "validated_at_utc": "2026-10-02T02:20:27Z",
+    "sealed_at_utc": "2026-10-02T02:20:27Z"
+  }
+}

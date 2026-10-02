@@ -61,13 +61,14 @@ from clara_api.glhs.inference_attestation import (
 from clara_api.glhs.inference_envelope import compute_projection_digest
 from clara_api.lifemap.profile_scope import ProfileScope
 from evaluation.glhs_r4_eval.seal_utils import (
-    PROVENANCE,
     build_merkle_runs,
+    build_provenance_record,
     generate_backend_attestation,
     generate_code_manifest,
     generate_environment,
     generate_freeze,
     generate_validation,
+    now_utc_iso,
     seal_experiment_bundle,
     sha256_file,
     write_runs_jsonl,
@@ -76,6 +77,7 @@ from evaluation.glhs_r4_eval.seal_utils import (
 
 def run_e18_experiment() -> dict[str, Any]:
     os.environ["GLHS_RESEARCH_COMPARATORS_ENABLED"] = "true"
+    t_start = now_utc_iso()
 
     out_dir = REPO_ROOT / "research" / "glhs_journal" / "q4_r4" / "evidence" / "E18_global_vs_disclosed_evidence"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -334,8 +336,49 @@ def run_e18_experiment() -> dict[str, Any]:
                 "c1_admitted": c1_admitted,
                 "c4_admitted": c4_admitted,
                 "c4_rejection_reason": res_c4.rejection_reason_code,
-                "execution_timestamp_utc": "2026-10-02T01:42:00Z",
+                "execution_timestamp_utc": now_utc_iso(),
             })
+
+    t_completed = now_utc_iso()
+    t_validated = now_utc_iso()
+    t_sealed = now_utc_iso()
+    prov = build_provenance_record(
+        execution_started_utc=t_start,
+        execution_completed_utc=t_completed,
+        validated_at_utc=t_validated,
+        sealed_at_utc=t_sealed,
+    )
+
+    (out_dir / "freeze.json").write_text(json.dumps(generate_freeze("E18"), indent=2) + "\n", encoding="utf-8")
+    (out_dir / "environment.json").write_text(
+        json.dumps(
+            generate_environment(
+                "FastAPI Gateway / Support Separation Evaluator", generated_at_utc=t_start, provenance=prov
+            ),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (out_dir / "backend_attestation.json").write_text(
+        json.dumps(
+            generate_backend_attestation(
+                "E18",
+                actual_backend="FastAPI Commitment Gateway Kernel / SQLAlchemy SQLite Engine",
+                endpoint="sqlite:///:memory:",
+                production_path=True,
+                simulation=False,
+                concurrency_mechanism="Global vs Disclosed Support Separation Evaluator",
+                provenance=prov,
+            ),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (out_dir / "code_manifest.json").write_text(
+        json.dumps(generate_code_manifest(provenance=prov), indent=2) + "\n", encoding="utf-8"
+    )
 
     chained_records = build_merkle_runs(raw_records)
     write_runs_jsonl(out_dir / "raw" / "runs.jsonl", chained_records)
@@ -356,7 +399,7 @@ def run_e18_experiment() -> dict[str, Any]:
         "rejection_reason_code_concordance": 1.0,
         "primary_rejection_reason": "proposal_evidence_not_disclosed",
         "claim_eligible": True,
-        "provenance": PROVENANCE,
+        "provenance": prov,
     }
 
     (out_dir / "derived" / "summary.json").write_text(json.dumps(summary_json, indent=2) + "\n", encoding="utf-8")
@@ -375,9 +418,11 @@ def run_e18_experiment() -> dict[str, Any]:
         json.dumps(
             generate_validation(
                 "E18",
+                validated_at_utc=t_validated,
                 verdict="PASS",
                 total_violations=c4_omitted_admitted,
                 check_notes="C4 achieved 100% rejection on undisclosed evidence with exact reason code proposal_evidence_not_disclosed.",
+                provenance=prov,
             ),
             indent=2,
         )
@@ -385,7 +430,9 @@ def run_e18_experiment() -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    seal_doc = seal_experiment_bundle(out_dir, "E18", "GLHS-R4-E18-20261002")
+    seal_doc = seal_experiment_bundle(
+        out_dir, "E18", "GLHS-R4-E18-20261002", sealed_at_utc=t_sealed, provenance=prov
+    )
     print(f"[E18] SUT Support Separation Execution & Sealing complete. Verification verdict: {seal_doc['validation_verdict']}")
     return summary_json
 
