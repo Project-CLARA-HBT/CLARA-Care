@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH01",
+  "agent_id": "A03",
+  "role": "Domain + GLHS services",
+  "task": "lock ML dependencies and domain supply-chain; audit dependencies between services/api and services/ml; verify uv.lock integrity and hermetic package resolution across GLHS, lifemap, phr, compliance.",
+  "status": "COMPLETED",
+  "frozen_head_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "verified_head_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "branch": "phase/ph01-a03",
+  "worktree_path": "/dev/shm/clara_worktrees/PH01_A03",
+  "path_lane": "services/api/src/clara_api/glhs/;services/api/src/clara_api/lifemap/;services/api/src/clara_api/phr/;services/api/src/clara_api/compliance/;services/api/src/clara_api/core/;artifacts/PH01/A03/",
+  "timestamp": "2026-10-21T18:45:00Z",
+  "files_created": [
+    "artifacts/PH01/A03/change_manifest.json",
+    "artifacts/PH01/A03/test_report.md",
+    "artifacts/PH01/A03/risk_register.md"
+  ],
+  "files_modified": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/glhs/canonical_json.py",
+      "line_start": 250,
+      "line_end": 305,
+      "symbol": "canonicalize_json, consistency_fingerprint, fast_canonical_digest",
+      "description": "Pure-standard-library RFC 8785 canonical JSON serializer and deterministic SHA-256 fingerprinting for GLHS state transitions."
+    },
+    {
+      "file": "services/api/src/clara_api/glhs/dependency_contract.py",
+      "line_start": 159,
+      "line_end": 360,
+      "symbol": "lookup_operation_rule, generate_dependency_vector, validate_proposed_dependencies",
+      "description": "Deterministic schema-derived OCC dependency derivation and LLM-proposed dependency vector validation."
+    },
+    {
+      "file": "services/api/src/clara_api/glhs/commit_kernel.py",
+      "line_start": 60,
+      "line_end": 370,
+      "symbol": "DependencySpec, execute_atomic_glhs_commit",
+      "description": "6-phase OCC multi-partition commit kernel enforcing serializable transaction order and CAS state version checks."
+    },
+    {
+      "file": "services/api/src/clara_api/glhs/attestation_receipts.py",
+      "line_start": 271,
+      "line_end": 365,
+      "symbol": "verify_provider_receipt, attestation_level_for_binding",
+      "description": "Cryptographic Ed25519 digital signature and inference receipt verification for external ML model outputs."
+    },
+    {
+      "file": "services/api/src/clara_api/glhs/lock_hierarchy.py",
+      "line_start": 868,
+      "line_end": 920,
+      "symbol": "acquire_canonical_glhs_locks",
+      "description": "Deterministic total-ordering lock acquisition preventing deadlocks across concurrent GLHS entity commits."
+    },
+    {
+      "file": "services/api/src/clara_api/glhs/reason_codes.py",
+      "line_start": 14,
+      "line_end": 50,
+      "symbol": "ReasonCategory, REASON_CODES_CATALOG",
+      "description": "Standardized canonical failure codes across binding, snapshot, coordinate, evidence, dependency, governance, lineage, and receipt."
+    },
+    {
+      "file": "services/api/src/clara_api/compliance/api.py",
+      "line_start": 80,
+      "line_end": 380,
+      "symbol": "router (/transparency-notice, /consent, /dsar, /records)",
+      "description": "Compliance API gateway managing AI transparency notices, patient consent grant/withdraw ledgers, and DSAR exports/deletions."
+    },
+    {
+      "file": "services/api/src/clara_api/compliance/service.py",
+      "line_start": 64,
+      "line_end": 145,
+      "symbol": "grant_consent, withdraw_consent, record_transfer, record_event",
+      "description": "Compliance audit and versioned consent ledger services."
+    },
+    {
+      "file": "services/api/src/clara_api/phr/migration_guard.py",
+      "line_start": 38,
+      "line_end": 65,
+      "symbol": "assert_phr_profiles_migration_managed",
+      "description": "Ensures database schema migrations for PHR profiles are properly applied and managed by Alembic."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line_start": 75,
+      "line_end": 130,
+      "symbol": "resolve_profile_scope",
+      "description": "LifeMap authorization boundary verifying actor role, profile ownership, clinical purpose, and data permissions."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/capture_domain.py",
+      "line_start": 250,
+      "line_end": 265,
+      "symbol": "emergency_fast_path",
+      "description": "Deterministic keyword-based fast-path triage for acute clinical emergency presentations."
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line_start": 92,
+      "line_end": 160,
+      "symbol": "has_valid_explicit_bearer_token, require_roles",
+      "description": "Core RBAC enforcement gating API endpoints and validating Bearer authentication tokens."
+    },
+    {
+      "file": "services/api/src/clara_api/core/consent.py",
+      "line_start": 58,
+      "line_end": 90,
+      "symbol": "ensure_medical_disclaimer_consent",
+      "description": "Guards access to medical AI capabilities by validating active user consent."
+    }
+  ],
+  "supply_chain_audit_metrics": {
+    "api_lock_package_count": 66,
+    "ml_lock_package_count": 69,
+    "shared_package_count": 38,
+    "shared_identical_versions": 31,
+    "shared_version_drift_count": 7,
+    "domain_third_party_dependencies": {
+      "glhs": ["cryptography", "sqlalchemy"],
+      "lifemap": ["cryptography", "fastapi", "pydantic", "sqlalchemy"],
+      "phr": ["sqlalchemy"],
+      "compliance": ["fastapi", "pydantic", "sqlalchemy"]
+    },
+    "direct_cross_service_couplings_detected": [
+      {
+        "source": "services/ml/src/clara_ml/lifemap/capture_evaluation.py:342",
+        "target": "clara_api.lifemap.capture_domain.emergency_fast_path",
+        "type": "direct_import"
+      },
+      {
+        "source": "services/api/src/clara_api/api/v2/medications.py:537",
+        "target": "clara_ml.agents.careguard.run_careguard_analyze",
+        "type": "lazy_in_process_fallback"
+      }
+    ]
+  },
+  "test_execution_summary": {
+    "consolidated_battery_count": 169,
+    "passed": 169,
+    "failed": 0,
+    "duration_seconds": 97.87,
+    "exit_code": 0
+  },
+  "safety_review": "VERIFIED_SAFETY_INVARIANTS_LOCKED",
+  "privacy_review": "VERIFIED_NO_PII",
+  "feature_flag": "N/A - Hermetic dependency audit and supply-chain lock verification",
+  "rollback": "Rollback steps: git reset --hard 2aa9016a57b49b53f1a433d076e1028a6ec45f64 && rm -rf artifacts/PH01/A03"
+}
