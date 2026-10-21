@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH03",
+  "agent_id": "A01",
+  "role": "API + contract",
+  "task": "auth threat inventory; inspect auth endpoints in services/api/src/clara_api/api/v1/endpoints/auth.py, schemas in schemas.py, token contracts, document threat vectors (credential stuffing, replay, JWT forgery, timing attacks).",
+  "status": "PASSED",
+  "base_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "frozen_head_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "handoff_commit": "2b563b3770a7754e5193c7ee26b9bfff8f82bb4c",
+  "branch": "phase/ph03-a01",
+  "worktree_path": "/dev/shm/clara_worktrees/PH03_A01",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;artifacts/PH03/A01/",
+  "timestamp": "2026-10-21T21:45:00Z",
+  "files_changed": [
+    "contracts/auth/token-contract.schema.json",
+    "contracts/auth/auth-threat-inventory.schema.json",
+    "contracts/auth/test_auth_contracts.py",
+    "artifacts/PH03/A01/change_manifest.json",
+    "artifacts/PH03/A01/test_report.md",
+    "artifacts/PH03/A01/risk_register.md",
+    "artifacts/PH03/A01/rollback.md"
+  ],
+  "tests_run": [
+    "pytest contracts/auth/test_auth_contracts.py",
+    "pytest contracts/agent-execution/test_agent_manifest_schema.py",
+    "pytest services/api/tests/test_auth_and_rbac.py",
+    "pytest services/api/tests/test_auth_security_hardening.py",
+    "pytest services/api/tests/test_auth_extended_flow.py",
+    "pytest services/api/tests/test_auth_email_delivery.py",
+    "pytest services/api/tests/hardening/test_authz_under_privileged.py",
+    "pytest services/api/tests/test_domain_path_boundaries.py",
+    "pytest services/api/tests/test_merge_queue_worker.py"
+  ],
+  "rollback_steps": [
+    "rm -rf artifacts/PH03/A01",
+    "rm -rf contracts/auth",
+    "git reset --hard 3b1072b98350b978b83b7ecec5c35228415759a3"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "line_start": 536,
+      "line_end": 628,
+      "symbol": "login",
+      "description": "POST /api/v1/auth/login route guarded by LoginGuard and optional login OTP challenge."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "line_start": 629,
+      "line_end": 686,
+      "symbol": "verify_login_otp",
+      "description": "POST /api/v1/auth/login-otp/verify route verifying single-use numeric action token."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "line_start": 738,
+      "line_end": 825,
+      "symbol": "refresh_token",
+      "description": "POST /api/v1/auth/refresh route with single-use consumption and refresh rotation replay detection."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "line_start": 827,
+      "line_end": 861,
+      "symbol": "forgot_password",
+      "description": "POST /api/v1/auth/forgot-password route with blind acceptance to prevent account enumeration."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "line_start": 904,
+      "line_end": 934,
+      "symbol": "reset_password",
+      "description": "POST /api/v1/auth/reset-password route consuming single-use action token and revoking active refresh sessions."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "line_start": 965,
+      "line_end": 995,
+      "symbol": "logout",
+      "description": "POST /api/v1/auth/logout route revoking refresh sessions, clearing cookies, and populating JTI denylist."
+    },
+    {
+      "file": "services/api/src/clara_api/schemas.py",
+      "line_start": 56,
+      "line_end": 180,
+      "symbol": "AuthSchemas",
+      "description": "Core auth request/response schemas: LoginRequest, RegisterRequest, RefreshTokenRequest, etc."
+    },
+    {
+      "file": "services/api/src/clara_api/core/security.py",
+      "line_start": 21,
+      "line_end": 118,
+      "symbol": "TokenSecurity",
+      "description": "JWT creation and decoding with dual-signing key rotation support and algorithm validation."
+    },
+    {
+      "file": "services/api/src/clara_api/core/login_guard.py",
+      "line_start": 19,
+      "line_end": 115,
+      "symbol": "LoginGuard",
+      "description": "In-memory and Redis distributed brute force protection engine with fail-closed support."
+    },
+    {
+      "file": "services/api/src/clara_api/core/session_security.py",
+      "line_start": 41,
+      "line_end": 182,
+      "symbol": "SessionSecurity",
+      "description": "Refresh token rotation tracking, reuse detection, and JTI denylist enforcement."
+    },
+    {
+      "file": "services/api/src/clara_api/core/passwords.py",
+      "line_start": 8,
+      "line_end": 27,
+      "symbol": "PasswordSecurity",
+      "description": "PBKDF2-HMAC-SHA256 password hashing with 390,000 iterations and constant-time comparison."
+    }
+  ],
+  "interface_assumptions": [
+    "Token contracts formalize access/refresh JWT structure with required sub, role, exp, iat, iss, jti, typ claims.",
+    "A02 (data model) manages JWT/session invalidation and rotation DB schema.",
+    "A03 (domain) enforces object-level profile scopes across PHR and LifeMap.",
+    "A04 (ML) handles CSRF bearer/cookie differential tests.",
+    "A05 (Web UX) implements OTP/login brute-force UI behaviors."
+  ]
+}

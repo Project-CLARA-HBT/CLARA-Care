@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://theclaracare.com/schemas/auth/token-contract.schema.json",
+  "title": "ClaraTokenContract",
+  "description": "Formal JSON Schema specifying JWT claims, constraints, and contracts for CLARA Care authentication tokens.",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/AccessToken" },
+    { "$ref": "#/$defs/RefreshToken" }
+  ],
+  "$defs": {
+    "RoleEnum": {
+      "type": "string",
+      "enum": ["normal", "doctor", "researcher", "admin"],
+      "description": "Authorized RBAC role assigned to the token subject"
+    },
+    "AccessToken": {
+      "type": "object",
+      "required": ["sub", "role", "exp", "iat", "iss", "jti", "typ"],
+      "properties": {
+        "sub": {
+          "type": "string",
+          "format": "email",
+          "description": "Subject identifier, strictly the normalized user email address"
+        },
+        "role": {
+          "$ref": "#/$defs/RoleEnum"
+        },
+        "exp": {
+          "type": ["integer", "number"],
+          "description": "Unix timestamp in seconds denoting token expiration"
+        },
+        "iat": {
+          "type": ["integer", "number"],
+          "description": "Unix timestamp in seconds denoting token issuance time"
+        },
+        "iss": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Issuer identifier authority (e.g., clara-api or theclaracare.com)"
+        },
+        "jti": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 64,
+          "description": "Unique cryptographic JWT identifier used for rotation and denylist tracking"
+        },
+        "typ": {
+          "type": "string",
+          "const": "access",
+          "description": "Token type discriminator strictly denoting an access token"
+        }
+      },
+      "additionalProperties": true
+    },
+    "RefreshToken": {
+      "type": "object",
+      "required": ["sub", "role", "exp", "iat", "iss", "jti", "typ"],
+      "properties": {
+        "sub": {
+          "type": "string",
+          "format": "email",
+          "description": "Subject identifier, strictly the normalized user email address"
+        },
+        "role": {
+          "$ref": "#/$defs/RoleEnum"
+        },
+        "exp": {
+          "type": ["integer", "number"],
+          "description": "Unix timestamp in seconds denoting refresh token expiration"
+        },
+        "iat": {
+          "type": ["integer", "number"],
+          "description": "Unix timestamp in seconds denoting issuance time"
+        },
+        "iss": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Issuer identifier authority"
+        },
+        "jti": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 64,
+          "description": "Unique cryptographic JWT identifier used for refresh rotation replay detection"
+        },
+        "typ": {
+          "type": "string",
+          "const": "refresh",
+          "description": "Token type discriminator strictly denoting a refresh token"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

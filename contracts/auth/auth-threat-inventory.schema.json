@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://theclaracare.com/schemas/auth/auth-threat-inventory.schema.json",
+  "title": "AuthThreatInventory",
+  "description": "Schema specifying the structured auth threat inventory vectors, defenses, and residual risk profiles for CLARA Care.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "threat_model",
+    "invariants",
+    "endpoints_audited",
+    "threat_vectors",
+    "residual_risks"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^v[0-9]+(\\.[0-9]+)*$"
+    },
+    "threat_model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "invariants": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "endpoints_audited": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["method", "path", "classification"],
+        "properties": {
+          "method": { "type": "string" },
+          "path": { "type": "string" },
+          "classification": { "type": "string" },
+          "auth_required": { "type": "boolean" },
+          "csrf_protected": { "type": "boolean" },
+          "rate_limited": { "type": "boolean" },
+          "replay_protected": { "type": "boolean" }
+        }
+      }
+    },
+    "threat_vectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "vector_id",
+          "name",
+          "stride_category",
+          "severity",
+          "likelihood",
+          "impact",
+          "attack_surface",
+          "mechanisms_in_place",
+          "gap_analysis",
+          "recommended_hardening"
+        ],
+        "properties": {
+          "vector_id": { "type": "string" },
+          "name": { "type": "string" },
+          "stride_category": { "type": "string" },
+          "severity": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
+          "likelihood": { "type": "string", "enum": ["HIGH", "MEDIUM", "LOW"] },
+          "impact": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
+          "attack_surface": { "type": "array", "items": { "type": "string" } },
+          "mechanisms_in_place": { "type": "array", "items": { "type": "string" } },
+          "gap_analysis": { "type": "string" },
+          "recommended_hardening": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "residual_risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["risk_id", "title", "severity", "status"],
+        "properties": {
+          "risk_id": { "type": "string" },
+          "title": { "type": "string" },
+          "severity": { "type": "string" },
+          "status": { "type": "string" }
+        }
+      }
+    }
+  }
+}
