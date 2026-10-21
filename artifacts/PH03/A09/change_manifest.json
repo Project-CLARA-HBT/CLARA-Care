@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH03",
+  "agent_id": "A09",
+  "role": "Docs + research evidence",
+  "task": "security negative-test suite; document and audit comprehensive negative test vectors: expired JWT, wrong signature, malformed authorization header, cross-tenant IDOR, replay of revoked tokens.",
+  "status": "COMPLETED",
+  "frozen_head_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "verified_head_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "branch": "phase/ph03-a09",
+  "worktree_path": "/dev/shm/clara_worktrees/PH03_A09",
+  "path_lane": "research/;docs/research/;docs/implementation/;docs/interoperability/;artifacts/PH03/A09/",
+  "timestamp": "2026-10-21T21:40:00Z",
+  "files_created": [
+    "research/security_audit/__init__.py",
+    "research/security_audit/test_security_negative_vectors.py",
+    "research/security_audit/run_security_audit.py",
+    "docs/research/SECURITY_NEGATIVE_TEST_SPECIFICATION.md",
+    "docs/implementation/SECURITY_NEGATIVE_TEST_GUIDE.md",
+    "artifacts/PH03/A09/change_manifest.json",
+    "artifacts/PH03/A09/test_report.md",
+    "artifacts/PH03/A09/risk_register.md",
+    "artifacts/PH03/A09/rollback.md"
+  ],
+  "files_modified": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/core/security.py",
+      "line": 89,
+      "symbol": "decode_access_token",
+      "description": "Verifies token signature, expiration (exp), issuer (iss), and typ claim, rejecting expired or tampered tokens with 401."
+    },
+    {
+      "file": "services/api/src/clara_api/core/security.py",
+      "line": 105,
+      "symbol": "decode_refresh_token",
+      "description": "Validates refresh token signature, expiration, and typ='refresh' claim with 401 on failure."
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line": 15,
+      "symbol": "_has_bearer_scheme",
+      "description": "Performs case-insensitive RFC 7235 Bearer scheme detection."
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line": 31,
+      "symbol": "extract_bearer_token",
+      "description": "Extracts raw bearer credentials without fallback to cookie transport."
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line": 80,
+      "symbol": "_extract_access_token",
+      "description": "Enforces transport anti-downgrade invariant: explicit Bearer header owns authentication; never falls back to cookie on invalid bearer."
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line": 92,
+      "symbol": "has_valid_explicit_bearer_token",
+      "description": "Verifies explicit bearer credential validity for CSRF exemption; malformed or revoked bearer headers return False."
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line": 138,
+      "symbol": "require_roles",
+      "description": "FastAPI dependency enforcing RBAC role boundaries (admin implicit access, under-privileged callers receive 403 Forbidden)."
+    },
+    {
+      "file": "services/api/src/clara_api/core/session_security.py",
+      "line": 41,
+      "symbol": "SessionSecurity",
+      "description": "Manages refresh rotation (rotate_refresh, is_refresh_reused), JTI denylist (revoke, is_revoked), and no-PII telemetry hashing."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/workspace.py",
+      "line": 236,
+      "symbol": "_get_owned_folder",
+      "description": "Enforces horizontal IDOR isolation on WorkspaceFolder by querying user_id == current_user.id (raises 404 on cross-user lookup)."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/council.py",
+      "line": 268,
+      "symbol": "_get_owned_case",
+      "description": "Enforces horizontal IDOR isolation on CouncilCase for clinicians, raising 404 when non-owner requests case_id."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/research.py",
+      "line": 822,
+      "symbol": "_get_owned_source",
+      "description": "Enforces horizontal IDOR isolation on KnowledgeSource by owner_user_id check."
+    }
+  ],
+  "interface_assumptions": [
+    "Security negative-test vectors execute completely hermetically in-memory with zero external network or database requirements.",
+    "Fail-closed paradigm: any cryptographic, temporal, scheme, or object-ownership mismatch unconditionally terminates with 401, 403, or 404.",
+    "Object-level IDOR defenses return 404 Not Found to prevent resource enumeration by unauthorized callers.",
+    "Zero plaintext PII is persisted in Redis security keys or emitted to application logs during token revocation or replay events."
+  ],
+  "test_commands_and_exit_codes": [
+    {
+      "command": "PYTHONPATH=services/api/src python3 -m pytest -v research/security_audit/test_security_negative_vectors.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Execution of 36 security negative test vectors across 6 test suites covering expired tokens, wrong signatures, malformed headers, IDOR, token revocation replay, and HTTP middleware."
+    },
+    {
+      "command": "PYTHONPATH=services/api/src python3 research/security_audit/run_security_audit.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Hermetic runner executing full security negative suite with structured JSON telemetry summary."
+    }
+  ],
+  "blockers": "None",
+  "rollback_steps": [
+    "git rm -rf research/security_audit docs/research/SECURITY_NEGATIVE_TEST_SPECIFICATION.md docs/implementation/SECURITY_NEGATIVE_TEST_GUIDE.md artifacts/PH03/A09",
+    "git reset --hard 3b1072b98350b978b83b7ecec5c35228415759a3"
+  ]
+}
