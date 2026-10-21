@@ -447,13 +447,14 @@ def test_invalid_bearer_with_valid_csrf_fails_at_auth_layer_no_downgrade(
 
 def test_csrf_disabled_flag_bypasses_enforcement(csrf_client: TestClient) -> None:
     """When AUTH_CSRF_ENABLED is false, cookie mutations without CSRF tokens pass."""
+    import clara_api.main as clara_main
     settings = get_settings()
     token = create_access_token("unprotected-user", "normal")
 
     csrf_client.cookies.clear()
     csrf_client.cookies.set(settings.auth_cookie_access_name, token)
 
-    with patch.object(settings, "auth_csrf_enabled", False):
+    with patch.object(settings, "auth_csrf_enabled", False), patch.object(clara_main.settings, "auth_csrf_enabled", False):
         response = csrf_client.post(
             "/api/v1/protected/action",
             json={"unprotected": True},

@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH03-01,A01,Contracts,Auth Token & Threat Inventory Schemas,"Validates JWT structure, claims, threat vectors",2/2 tests passed,PASS,pytest contracts/auth/test_auth_contracts.py
+TC-PH03-02,A02,DB,User/Session/AuthToken models downgrade check,64 Alembic migrations have non-empty downgrade,64/64 migrations pass,PASS,scripts/ops/check_migration_downgrade.py --strict
+TC-PH03-03,A03,Domain,RBAC object-level profile scope IDOR defense,"Denies cross-user profile access, uniform 404",10/10 passed,PASS,pytest services/api/tests/test_rbac_profile_scope_idor.py
+TC-PH03-04,A04,Security,CSRF bearer/cookie differential protection,Cookie mutation requires CSRF; bearer exempt if valid,23/23 passed,PASS,pytest evaluation/tests/test_csrf_bearer_cookie_differential.py
+TC-PH03-05,A05,Web,Brute-force protection & progressive delays,"Rate limit banner, delays, challenge gating",Vitest suites pass,PASS,vitest run app/auth/auth-pages.test.tsx
+TC-PH03-06,A06,Mobile,Secure password reset & biometric storage,"Purges cache on reset, biometric unlock gate",Flutter tests pass,PASS,flutter test test/password_reset_recovery_test.dart
+TC-PH03-07,A07,Web/API,Session UX states and silent refresh,"Silent refresh on 401, public route immunity",14/14 passed,PASS,pytest services/api/tests/test_auth_session_ux_states.py
+TC-PH03-08,A08,Mobile/Sec,Mobile token refresh & persistence audit,"No-PII analytics, secure Keystore/Keychain",5/5 passed,PASS,pytest scripts/ops/test_audit_mobile_auth_session_security.py
+TC-PH03-09,A09,Research,Security negative vectors & penetration tests,36 negative vectors pass hermetically,36/36 passed,PASS,pytest research/security_audit/test_security_negative_vectors.py
+TC-PH03-10,A10,Gate,Dual-key JWT secret rotation & overlap,Both active and previous key verify during rotation,4/4 passed,PASS,python3 scripts/ci/ph03_quality_gate.py --verify-rotation
+TC-PH03-11,A10,Gate,PH03 Quality Gate,All 7 invariants green,PH03 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph03_quality_gate.py

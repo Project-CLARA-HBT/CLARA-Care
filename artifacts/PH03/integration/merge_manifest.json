@@ -1,0 +1,180 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH03",
+  "phase_title": "Hardening auth v\u00e0 identity",
+  "base_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "concurrent_agents_count": 10,
+  "agents": [
+    {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "auth threat inventory and token contract schemas",
+      "worktree": "/dev/shm/clara_worktrees/PH03_A01",
+      "branch": "phase/ph03-a01",
+      "commit": "2023da96",
+      "status": "PASSED",
+      "files": [
+        "contracts/auth/token-contract.schema.json",
+        "contracts/auth/auth-threat-inventory.schema.json",
+        "contracts/auth/test_auth_contracts.py",
+        "artifacts/PH03/A01/*"
+      ]
+    },
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "JWT/session invalidation and rotation in DB models",
+      "worktree": "/dev/shm/clara_worktrees/PH03_A02",
+      "branch": "phase/ph03-a02",
+      "commit": "860bd30d",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/db/models.py",
+        "artifacts/PH03/A02/*"
+      ]
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "RBAC object-level profile scope & IDOR prevention",
+      "worktree": "/dev/shm/clara_worktrees/PH03_A03",
+      "branch": "phase/ph03-a03",
+      "commit": "e3ae232f",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/lifemap/profile_scope.py",
+        "services/api/src/clara_api/glhs/adapters.py",
+        "services/api/tests/test_rbac_profile_scope_idor.py",
+        "artifacts/PH03/A03/*"
+      ]
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "CSRF bearer/cookie differential test suite",
+      "worktree": "/dev/shm/clara_worktrees/PH03_A04",
+      "branch": "phase/ph03-a04",
+      "commit": "ff1891b0",
+      "status": "PASSED",
+      "files": [
+        "evaluation/tests/test_csrf_bearer_cookie_differential.py",
+        "artifacts/PH03/A04/*"
+      ]
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "OTP/login brute-force protection and progressive delays",
+      "worktree": "/dev/shm/clara_worktrees/PH03_A05",
+      "branch": "phase/ph03-a05",
+      "commit": "6eaee52c",
+      "status": "PASSED",
+      "files": [
+        "apps/web/app/login/page.tsx",
+        "apps/web/lib/auth-rate-limit.ts",
+        "apps/web/components/auth/auth-rate-limit-banner.tsx",
+        "apps/web/components/auth/auth-security-challenge.tsx",
+        "apps/web/lib/http-client.ts",
+        "apps/web/lib/i18n/catalog.ts",
+        "artifacts/PH03/A05/*"
+      ]
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "secure password reset, recovery, and biometric token protection",
+      "worktree": "/dev/shm/clara_worktrees/PH03_A06",
+      "branch": "phase/ph03-a06",
+      "commit": "99a64d87",
+      "status": "PASSED",
+      "files": [
+        "apps/mobile/lib/core/session_store.dart",
+        "apps/mobile/lib/screens/auth_flows_screen.dart",
+        "apps/mobile/lib/screens/login_screen.dart",
+        "apps/mobile/test/password_reset_recovery_test.dart",
+        "artifacts/PH03/A06/*"
+      ]
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "web session UX states and auth test audit suite",
+      "worktree": "/dev/shm/clara_worktrees/PH03_A07",
+      "branch": "phase/ph03-a07",
+      "commit": "a3906c56",
+      "status": "PASSED",
+      "files": [
+        "apps/web/e2e/session-ux.spec.ts",
+        "services/api/tests/test_auth_session_ux_states.py",
+        "artifacts/PH03/A07/*"
+      ]
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "mobile refresh rotation and session persistence security audit",
+      "worktree": "/dev/shm/clara_worktrees/PH03_A08",
+      "branch": "phase/ph03-a08",
+      "commit": "1773f1ad",
+      "status": "PASSED",
+      "files": [
+        "docs/security/mobile-auth-session-security-audit.md",
+        "docs/security/privacy-checklist.md",
+        "scripts/ops/audit_mobile_auth_session_security.py",
+        "scripts/ops/test_audit_mobile_auth_session_security.py",
+        "artifacts/PH03/A08/*"
+      ]
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "security negative-test suite and evidence audit",
+      "worktree": "/dev/shm/clara_worktrees/PH03_A09",
+      "branch": "phase/ph03-a09",
+      "commit": "d7885708",
+      "status": "PASSED",
+      "files": [
+        "research/security_audit/run_security_audit.py",
+        "research/security_audit/test_security_negative_vectors.py",
+        "docs/research/SECURITY_NEGATIVE_TEST_SPECIFICATION.md",
+        "docs/implementation/SECURITY_NEGATIVE_TEST_GUIDE.md",
+        "artifacts/PH03/A09/*"
+      ]
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "auth key rotation runbook, lane audit, and PH03 quality gate",
+      "worktree": "/dev/shm/clara_worktrees/PH03_A10",
+      "branch": "phase/ph03-a10",
+      "commit": "cf896688",
+      "status": "PASSED",
+      "files": [
+        "docs/reports/ph03-auth-hardening-and-lane-audit.md",
+        "docs/runbooks/auth-hardening-and-key-rotation.md",
+        "scripts/ci/ph03_quality_gate.py",
+        "artifacts/PH03/A10/*"
+      ]
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "remediated_defects": [
+    {
+      "id": "SEC-MED-01",
+      "status": "RESOLVED",
+      "desc": "CSRF differential verified across cookie vs bearer auth mutations"
+    },
+    {
+      "id": "SEC-MED-02",
+      "status": "RESOLVED",
+      "desc": "Refresh token rotation and single-use invalidation verified in SessionSecurity and AuthToken DB models"
+    }
+  ],
+  "next_phases": [
+    "PH04",
+    "PH05",
+    "PH40"
+  ]
+}

@@ -237,29 +237,32 @@ def check_a10_lane_boundaries() -> tuple[bool, list[str]]:
         "artifacts/PH03/A10/",
     ]
 
-    status_res = subprocess.run(
-        ["git", "status", "--porcelain", "-u"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-    )
-    changed_files: list[str] = []
-    for line in status_res.stdout.splitlines():
-        if len(line) >= 4:
-            path = line[3:].strip()
-            if " -> " in path:
-                path = path.split(" -> ")[-1]
-            changed_files.append(path)
+    target_ref = "phase/ph03-a10" if subprocess.run(["git", "rev-parse", "--verify", "phase/ph03-a10"], cwd=REPO_ROOT, capture_output=True).returncode == 0 else "HEAD"
 
-    # Check git diff against base_sha for committed files if ahead
-    diff_res = subprocess.run(
-        ["git", "diff", "--name-only", f"{FROZEN_BASE_SHA_PH03}..HEAD"],
+    # Inspect git diff against base_sha for A10
+    res = subprocess.run(
+        ["git", "diff", "--name-only", f"{FROZEN_BASE_SHA_PH03}..{target_ref}"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
     )
-    if diff_res.returncode == 0:
-        changed_files.extend(diff_res.stdout.splitlines())
+    changed_files = res.stdout.splitlines() if res.returncode == 0 else []
+
+    # If branch ref was not available and checking worktree directly
+    a10_wt = DEFAULT_WORKTREE_BASE / "PH03_A10"
+    if a10_wt.is_dir() and target_ref == "HEAD":
+        status_res = subprocess.run(
+            ["git", "status", "--porcelain", "-u"],
+            cwd=a10_wt,
+            capture_output=True,
+            text=True,
+        )
+        for line in status_res.stdout.splitlines():
+            if len(line) >= 4:
+                path = line[3:].strip()
+                if " -> " in path:
+                    path = path.split(" -> ")[-1]
+                changed_files.append(path)
 
     violations: list[str] = []
     for f in set(changed_files):
