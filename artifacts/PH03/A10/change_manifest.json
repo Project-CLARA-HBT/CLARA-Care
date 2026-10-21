@@ -1,0 +1,76 @@
+{
+  "schema_version": "clara-phase-change-manifest.v1",
+  "phase_id": "PH03",
+  "agent_id": "A10",
+  "role": "Adversarial audit + integration proposals",
+  "task": "auth migration/recovery documentation and PH03 quality gate; audit all 9 domain lanes for auth hardening completeness, verify zero-downtime key rotation runbook, compile PH03 quality gate and acceptance criteria.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH03_A10",
+  "branch": "phase/ph03-a10",
+  "base_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "status": "COMPLETED",
+  "path_lane": [
+    "docs/reports/",
+    "docs/runbooks/",
+    "scripts/ci/",
+    "artifacts/PH03/A10/"
+  ],
+  "changed_paths": [
+    "docs/runbooks/auth-hardening-and-key-rotation.md",
+    "docs/reports/ph03-auth-hardening-and-lane-audit.md",
+    "scripts/ci/ph03_quality_gate.py",
+    "artifacts/PH03/A10/change_manifest.json",
+    "artifacts/PH03/A10/test_report.md",
+    "artifacts/PH03/A10/risk_register.md",
+    "artifacts/PH03/A10/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/core/security.py:21",
+    "services/api/src/clara_api/core/security.py:53",
+    "services/api/src/clara_api/core/security.py:71",
+    "services/api/src/clara_api/core/config.py:75",
+    "services/api/src/clara_api/core/config.py:86",
+    "services/api/src/clara_api/core/session_security.py:41",
+    "services/api/src/clara_api/core/session_security.py:85",
+    "services/api/src/clara_api/core/rbac.py:41",
+    "services/api/src/clara_api/core/rbac.py:92",
+    "services/api/src/clara_api/core/rbac.py:138",
+    "services/api/src/clara_api/main.py:62",
+    "services/api/src/clara_api/api/v1/endpoints/auth.py:184",
+    "services/api/src/clara_api/api/v1/endpoints/auth.py:965",
+    "services/api/tests/test_auth_security_hardening.py:17"
+  ],
+  "test_results": [
+    {
+      "command": "python3 scripts/ci/ph03_quality_gate.py",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ci/ph03_quality_gate.py --verify-rotation",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m unittest scripts/ci/ph03_quality_gate.py",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m compileall -q scripts/ci/ph03_quality_gate.py services/api/src",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py --selftest",
+      "status": "PASS",
+      "exit_code": 0
+    }
+  ],
+  "rollback": "Non-destructive documentation and gate additions; git reset --hard 3b1072b98350b978b83b7ecec5c35228415759a3 cleanly returns worktree to baseline.",
+  "blockers": []
+}
