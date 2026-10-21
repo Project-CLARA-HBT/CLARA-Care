@@ -17,8 +17,33 @@ abstract class SessionSecureStorage {
 
 /// Default [SessionSecureStorage] backed by `flutter_secure_storage`.
 class FlutterSecureSessionStorage implements SessionSecureStorage {
-  FlutterSecureSessionStorage([FlutterSecureStorage? storage])
-      : _storage = storage ?? const FlutterSecureStorage();
+  FlutterSecureSessionStorage([
+    FlutterSecureStorage? storage,
+    bool biometricProtection = false,
+  ]) : _storage =
+            storage ?? defaultStorage(biometricProtection: biometricProtection);
+
+  /// Hardened hardware-backed storage options:
+  /// - Android: EncryptedSharedPreferences backed by Android Keystore MasterKey (AES-256-GCM)
+  ///   with auto-reset on cryptographic error to prevent unrecoverable crashes.
+  /// - iOS: Non-synchronizable Keychain (disabled iCloud backup sync) with
+  ///   KeychainAccessibility.first_unlock_this_device (or unlocked_this_device when biometric is active).
+  static FlutterSecureStorage defaultStorage({
+    bool biometricProtection = false,
+  }) {
+    return FlutterSecureStorage(
+      aOptions: const AndroidOptions(
+        encryptedSharedPreferences: true,
+        resetOnError: true,
+      ),
+      iOptions: IOSOptions(
+        accessibility: biometricProtection
+            ? KeychainAccessibility.unlocked_this_device
+            : KeychainAccessibility.first_unlock_this_device,
+        synchronizable: false,
+      ),
+    );
+  }
 
   final FlutterSecureStorage _storage;
 
@@ -53,6 +78,7 @@ class PersistentSessionStore extends ChangeNotifier {
   static const String accessTokenKey = 'clara.session.access_token';
   static const String refreshTokenKey = 'clara.session.refresh_token';
   static const String roleKey = 'clara.session.role';
+  static const String biometricEnabledKey = 'clara.settings.biometric_enabled';
 
   // Offline cache storage keys (kept in sync with CareguardOfflineCache and LifeMapReadCache).
   static const String careguardOfflineCacheKey =
@@ -74,6 +100,8 @@ class PersistentSessionStore extends ChangeNotifier {
   String? _accessToken;
   String? _refreshToken;
   String? _role;
+  bool _biometricEnabled = false;
+  bool _biometricLocked = false;
 
   String? get email => _email;
   String? get accessToken => _accessToken;
@@ -90,12 +118,47 @@ class PersistentSessionStore extends ChangeNotifier {
   Future<void> clearLifeMapCaptureSessionId() =>
       _storage.delete(lifeMapCaptureSessionKey);
 
-  /// Whether an access token is currently held in memory.
+  /// Whether biometric authentication is enabled for token protection.
+  bool get isBiometricEnabled => _biometricEnabled;
+
+  /// Whether credentials are held in memory but locked behind biometric local unlock.
+  bool get isBiometricLocked => _biometricLocked;
+
+  /// Whether credentials exist in memory regardless of biometric lock status.
+  bool get hasStoredCredentials =>
+      _accessToken != null && _accessToken!.isNotEmpty;
+
+  /// Whether an access token is currently held in memory and unlocked.
   ///
-  /// Preserves the original semantics (token presence). Launch [hydrate] is
-  /// responsible for clearing expired/invalid tokens, so an authenticated
-  /// store always holds a usable token after hydration.
-  bool get isAuthenticated => _accessToken != null && _accessToken!.isNotEmpty;
+  /// If biometric protection is enabled and the session is locked,
+  /// this evaluates to false until [unlockBiometric] is called.
+  bool get isAuthenticated => hasStoredCredentials && !_biometricLocked;
+
+  /// Locks the session behind biometrics if biometric protection is enabled.
+  void lockBiometric() {
+    if (_biometricEnabled && !_biometricLocked) {
+      _biometricLocked = true;
+      notifyListeners();
+    }
+  }
+
+  /// Unlocks the session upon successful biometric verification.
+  void unlockBiometric() {
+    if (_biometricLocked) {
+      _biometricLocked = false;
+      notifyListeners();
+    }
+  }
+
+  /// Updates and persists the biometric authentication preference.
+  Future<void> setBiometricEnabled(bool enabled) async {
+    _biometricEnabled = enabled;
+    if (!enabled) {
+      _biometricLocked = false;
+    }
+    await _storage.write(biometricEnabledKey, enabled ? 'true' : 'false');
+    notifyListeners();
+  }
 
   /// Whether the in-memory access token is expired, missing, or unparseable.
   ///
@@ -110,6 +173,9 @@ class PersistentSessionStore extends ChangeNotifier {
   /// * Valid stored token -> restores the authenticated session (10.2).
   /// * Expired/invalid stored token -> clears the store (10.3).
   Future<void> hydrate() async {
+    final storedBio = await _storage.read(biometricEnabledKey);
+    _biometricEnabled = storedBio == 'true';
+
     final storedEmail = await _storage.read(emailKey);
     final storedAccessToken = await _storage.read(accessTokenKey);
     final storedRefreshToken = await _storage.read(refreshTokenKey);
@@ -133,6 +199,10 @@ class PersistentSessionStore extends ChangeNotifier {
       return;
     }
 
+    if (_biometricEnabled) {
+      _biometricLocked = true;
+    }
+
     notifyListeners();
   }
 
@@ -151,6 +221,7 @@ class PersistentSessionStore extends ChangeNotifier {
     _accessToken = accessToken;
     _refreshToken = refreshToken;
     _role = role;
+    _biometricLocked = false;
     // Notify synchronously (before awaiting persistence) so listeners react
     // immediately, matching the previous in-memory behavior.
     notifyListeners();
@@ -175,6 +246,13 @@ class PersistentSessionStore extends ChangeNotifier {
     await _purgeOfflineCaches(email: prevEmail, token: prevToken);
   }
 
+  /// Explicitly purges all stored credentials, refresh tokens, and offline caches
+  /// upon password reset or account recovery. Ensures zero stale tokens or
+  /// cached medical data remain accessible on this device.
+  Future<void> purgeOnPasswordReset() async {
+    await clear();
+  }
+
   Future<void> _purgeOfflineCaches({String? email, String? token}) async {
     await _storage.delete(careguardOfflineCacheKey);
     await _storage.delete(lifeMapReadCacheKey);
@@ -197,6 +275,7 @@ class PersistentSessionStore extends ChangeNotifier {
     _accessToken = null;
     _refreshToken = null;
     _role = null;
+    _biometricLocked = false;
   }
 
   /// Parses the `sub` (user identifier) claim from a JWT [token], returning

@@ -230,6 +230,12 @@ class _ClaraAppState extends State<ClaraApp> {
                 child: _authenticatedRoot(),
               );
             }
+            if (widget.sessionStore.hasStoredCredentials &&
+                widget.sessionStore.isBiometricLocked) {
+              return _BiometricUnlockScreen(
+                sessionStore: widget.sessionStore,
+              );
+            }
             // Experience_V3 redesign / Unified: the polished, light-first
             // sign-in (shared by both).
             if (kMobileUnifiedEnabled || kMobileRedesignEnabled) {
@@ -350,6 +356,61 @@ class _ClaraAppState extends State<ClaraApp> {
         children: [
           LanguageToggle(controller: controller),
         ],
+      ),
+    );
+  }
+}
+
+/// Biometric local unlock prompt for returning authenticated sessions (Spec 12).
+class _BiometricUnlockScreen extends StatelessWidget {
+  const _BiometricUnlockScreen({required this.sessionStore});
+
+  final SessionStore sessionStore;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.fingerprint_rounded,
+                size: 64,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Mở khóa ứng dụng',
+                style: theme.textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Xác thực sinh trắc học để tiếp tục sử dụng CLARA.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                key: const Key('biometric-unlock-button'),
+                onPressed: sessionStore.unlockBiometric,
+                icon: const Icon(Icons.lock_open_rounded),
+                label: const Text('Mở khóa bằng sinh trắc học'),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                key: const Key('biometric-switch-account-button'),
+                onPressed: sessionStore.clear,
+                child: const Text('Đăng nhập bằng tài khoản khác'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

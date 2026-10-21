@@ -156,7 +156,10 @@ class _LoginScreenV3State extends State<LoginScreenV3> {
   void _openForgotPassword() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ForgotPasswordScreen(apiClient: widget.apiClient),
+        builder: (_) => ForgotPasswordScreen(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/api_client.dart';
+import '../core/session_store.dart';
 
 /// Auth-lifecycle parity screens (clara-mobile-feature-parity Req 6.1).
 ///
@@ -352,9 +353,14 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
 /// Requests a password-reset email then routes to the reset step (Req 6.1).
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key, required this.apiClient});
+  const ForgotPasswordScreen({
+    super.key,
+    required this.apiClient,
+    this.sessionStore,
+  });
 
   final ApiClient apiClient;
+  final SessionStore? sessionStore;
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -428,7 +434,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           onPressed: () => Navigator.of(context).push(
                             MaterialPageRoute<void>(
                               builder: (_) => ResetPasswordScreen(
-                                  apiClient: widget.apiClient),
+                                apiClient: widget.apiClient,
+                                sessionStore: widget.sessionStore,
+                              ),
                             ),
                           ),
                           child: const Text('Tôi đã có mã đặt lại'),
@@ -474,7 +482,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               : () => Navigator.of(context).push(
                                     MaterialPageRoute<void>(
                                       builder: (_) => ResetPasswordScreen(
-                                          apiClient: widget.apiClient),
+                                        apiClient: widget.apiClient,
+                                        sessionStore: widget.sessionStore,
+                                      ),
                                     ),
                                   ),
                           child: const Text('Tôi đã có mã đặt lại'),
@@ -499,9 +509,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
 /// Resets a password using a reset token (Req 6.1).
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key, required this.apiClient});
+  const ResetPasswordScreen({
+    super.key,
+    required this.apiClient,
+    this.sessionStore,
+  });
 
   final ApiClient apiClient;
+  final SessionStore? sessionStore;
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -536,6 +551,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     try {
       await widget.apiClient
           .resetPassword(token: token, newPassword: newPassword);
+      // Hardening: purge any active or stale session tokens and cached health
+      // data upon successful password reset so the user authenticates fresh.
+      if (widget.sessionStore != null) {
+        await widget.sessionStore!.purgeOnPasswordReset();
+      }
       if (!mounted) return;
       setState(() => _reset = true);
     } on ApiException catch (error) {

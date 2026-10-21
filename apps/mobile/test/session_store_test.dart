@@ -422,4 +422,92 @@ void main() {
       expect(store.accessToken, isNull);
     });
   });
+
+  group('Password reset recovery & biometric token protection', () {
+    test('purgeOnPasswordReset() purges session tokens and offline caches', () async {
+      final storage = InMemorySessionSecureStorage();
+      final accessToken = buildJwt(
+        exp: _epochSecondsFromNow(const Duration(days: 10)),
+        extraClaims: {'sub': 'reset-user-1'},
+      );
+      final store = PersistentSessionStore(storage: storage);
+      await store.setSession(
+        email: 'reset-user@example.com',
+        accessToken: accessToken,
+        refreshToken: 'refresh-reset',
+        role: 'normal',
+      );
+      await storage.write(PersistentSessionStore.careguardScopedKey('reset-user-1'), 'cached-data');
+
+      expect(store.isAuthenticated, isTrue);
+
+      await store.purgeOnPasswordReset();
+
+      expect(store.isAuthenticated, isFalse);
+      expect(store.accessToken, isNull);
+      expect(store.email, isNull);
+      expect(storage.isEmpty, isTrue);
+    });
+
+    test('biometric protection locks session until unlockBiometric is invoked', () async {
+      final storage = InMemorySessionSecureStorage();
+      final accessToken = buildJwt(
+        exp: _epochSecondsFromNow(const Duration(days: 10)),
+      );
+
+      final store1 = PersistentSessionStore(storage: storage);
+      await store1.setSession(
+        email: 'bio@example.com',
+        accessToken: accessToken,
+        refreshToken: 'bio-ref',
+        role: 'normal',
+      );
+      await store1.setBiometricEnabled(true);
+
+      expect(store1.isBiometricEnabled, isTrue);
+      expect(store1.isAuthenticated, isTrue);
+
+      // Simulate app restart / foreground lock: fresh store hydrating
+      final store2 = PersistentSessionStore(storage: storage);
+      await store2.hydrate();
+
+      expect(store2.isBiometricEnabled, isTrue);
+      expect(store2.hasStoredCredentials, isTrue);
+      // Because biometric is enabled, hydrate marks it biometric-locked:
+      expect(store2.isBiometricLocked, isTrue);
+      expect(store2.isAuthenticated, isFalse);
+
+      // Unlock with biometrics
+      store2.unlockBiometric();
+      expect(store2.isBiometricLocked, isFalse);
+      expect(store2.isAuthenticated, isTrue);
+
+      // Manual lock
+      store2.lockBiometric();
+      expect(store2.isBiometricLocked, isTrue);
+      expect(store2.isAuthenticated, isFalse);
+    });
+
+    test('disabling biometric removes lock state', () async {
+      final storage = InMemorySessionSecureStorage();
+      final accessToken = buildJwt(
+        exp: _epochSecondsFromNow(const Duration(days: 10)),
+      );
+      final store = PersistentSessionStore(storage: storage);
+      await store.setSession(
+        email: 'bio2@example.com',
+        accessToken: accessToken,
+        refreshToken: 'bio2-ref',
+        role: 'normal',
+      );
+      await store.setBiometricEnabled(true);
+      store.lockBiometric();
+      expect(store.isBiometricLocked, isTrue);
+
+      await store.setBiometricEnabled(false);
+      expect(store.isBiometricEnabled, isFalse);
+      expect(store.isBiometricLocked, isFalse);
+      expect(store.isAuthenticated, isTrue);
+    });
+  });
 }

@@ -1,0 +1,24 @@
+{
+  "phase": "PH03",
+  "agent": "A06",
+  "role": "Mobile Flutter",
+  "base_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "files_changed": [
+    "apps/mobile/lib/core/session_store.dart",
+    "apps/mobile/lib/screens/auth_flows_screen.dart",
+    "apps/mobile/lib/screens/login_screen.dart",
+    "apps/mobile/lib/experience/redesign/login_screen_v3.dart",
+    "apps/mobile/lib/experience/unified/settings_surface.dart",
+    "apps/mobile/lib/app.dart",
+    "apps/mobile/test/session_store_test.dart",
+    "apps/mobile/test/api_client_auth_lifecycle_test.dart",
+    "apps/mobile/test/fakes/fake_api_client.dart",
+    "apps/mobile/test/password_reset_recovery_test.dart"
+  ],
+  "deliverables": [
+    "artifacts/PH03/A06/change_manifest.json",
+    "artifacts/PH03/A06/test_report.md",
+    "artifacts/PH03/A06/risk_register.md",
+    "artifacts/PH03/A06/rollback.md"
+  ]
+}

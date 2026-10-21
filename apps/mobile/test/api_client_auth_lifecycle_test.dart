@@ -209,6 +209,27 @@ void main() {
         ),
       );
     });
+
+    test('resetPassword with weak password surfaces 422 policy error', () async {
+      final mock = MockClient((request) async {
+        return http.Response(
+          jsonEncode({'detail': 'Mật khẩu phải có ít nhất 8 ký tự'}),
+          422,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+      final api = ApiClient(baseUrl: base, httpClient: mock);
+
+      expect(
+        () => api.resetPassword(token: 'valid-tok', newPassword: 'short'),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.statusCode, 'statusCode', 422)
+              .having((e) => e.message, 'message',
+                  'Mật khẩu phải có ít nhất 8 ký tự'),
+        ),
+      );
+    });
   });
 
   group('logout', () {

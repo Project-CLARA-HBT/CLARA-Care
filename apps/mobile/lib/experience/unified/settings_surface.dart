@@ -83,13 +83,15 @@ class SettingsSurface extends StatefulWidget {
 }
 
 class _SettingsSurfaceState extends State<SettingsSurface> {
-  late bool _biometricEnabled = widget.initialBiometricEnabled;
+  late bool _biometricEnabled = widget.sessionStore.isBiometricEnabled ||
+      widget.initialBiometricEnabled;
   bool _isPurgingCache = false;
 
   Future<void> _toggleBiometric(bool value) async {
     setState(() {
       _biometricEnabled = value;
     });
+    await widget.sessionStore.setBiometricEnabled(value);
   }
 
   Future<void> _purgeOfflineCache(ConsumerTerminology copy) async {

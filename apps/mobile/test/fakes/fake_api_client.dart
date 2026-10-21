@@ -173,6 +173,22 @@ class FakeApiClient extends ApiClient {
   }
 
   @override
+  Future<Map<String, dynamic>> forgotPassword({
+    required String email,
+  }) {
+    return _dispatch('forgotPassword', {'email': email});
+  }
+
+  @override
+  Future<Map<String, dynamic>> resetPassword({
+    required String token,
+    required String newPassword,
+  }) {
+    return _dispatch(
+        'resetPassword', {'token': token, 'newPassword': newPassword});
+  }
+
+  @override
   Future<Map<String, dynamic>> getConsentStatus({required String accessToken}) {
     return _dispatch('getConsentStatus', const {}, accessToken: accessToken);
   }
