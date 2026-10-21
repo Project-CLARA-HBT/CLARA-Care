@@ -1,5 +1,6 @@
 import re
 from datetime import date, datetime
+from enum import Enum
 from typing import Any, Literal
 
 from pydantic import (
@@ -1637,3 +1638,203 @@ def validate_agent_manifest_dict(payload: dict[str, Any]) -> AgentManifest:
 def validate_agent_manifest_json(json_content: str) -> AgentManifest:
     """Validate a JSON string against the canonical AgentManifest contract schema."""
     return AgentManifest.model_validate_json(json_content)
+
+
+# ==============================================================================
+# Multi-Tenant Organization & Workspace Schemas (Phase PH04 / Subagent A01)
+# ==============================================================================
+
+class OrganizationRole(str, Enum):
+    """Authorized roles within a multi-tenant organization."""
+
+    OWNER = "owner"
+    ADMIN = "admin"
+    WORKSPACE_LEAD = "workspace_lead"
+    CLINICIAN = "clinician"
+    RESEARCHER = "researcher"
+    AUDITOR = "auditor"
+    MEMBER = "member"
+    VIEWER = "viewer"
+
+
+class OrganizationTier(str, Enum):
+    """Subscription / deployment tier for a tenant organization."""
+
+    FREE = "free"
+    STANDARD = "standard"
+    PROFESSIONAL = "professional"
+    ENTERPRISE = "enterprise"
+    RESEARCH_PILOT = "research_pilot"
+
+
+class OrganizationStatus(str, Enum):
+    """Lifecycle status of a tenant organization."""
+
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+    MAINTENANCE = "maintenance"
+    QUARANTINED = "quarantined"
+    DEPROVISIONED = "deprovisioned"
+
+
+class WorkspaceRole(str, Enum):
+    """Authorized roles within a collaborative tenant workspace."""
+
+    WORKSPACE_ADMIN = "workspace_admin"
+    CLINICIAN = "clinician"
+    RESEARCHER = "researcher"
+    MEMBER = "member"
+    VIEWER = "viewer"
+
+
+TenantWorkspaceRole = WorkspaceRole
+
+
+class OrganizationCreateRequest(BaseModel):
+    """Payload to create a new tenant organization."""
+
+    name: str = Field(min_length=2, max_length=150, description="Legal / organizational display name")
+    slug: str = Field(
+        min_length=3,
+        max_length=64,
+        pattern=r"^[a-z0-9_-]+$",
+        description="Immutable URL-safe tenant slug",
+    )
+    description: str = Field(default="", max_length=500)
+    tier: OrganizationTier = OrganizationTier.STANDARD
+    contact_email: EmailStr | None = None
+    settings: dict[str, Any] = Field(default_factory=dict)
+
+
+class OrganizationUpdateRequest(BaseModel):
+    """Payload to update tenant organization details."""
+
+    name: str | None = Field(default=None, min_length=2, max_length=150)
+    description: str | None = None
+    status: OrganizationStatus | None = None
+    tier: OrganizationTier | None = None
+    contact_email: EmailStr | None = None
+    settings: dict[str, Any] | None = None
+
+
+class OrganizationResponse(BaseModel):
+    """Public tenant organization representation."""
+
+    id: str = Field(description="Unique tenant identifier (e.g., org_...)")
+    name: str
+    slug: str
+    description: str
+    tier: str
+    status: str
+    contact_email: str | None = None
+    member_count: int = 1
+    workspace_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class OrganizationListResponse(BaseModel):
+    """List envelope for accessible organizations."""
+
+    items: list[OrganizationResponse] = Field(default_factory=list)
+    total: int = 0
+
+
+class OrganizationMemberAddRequest(BaseModel):
+    """Payload to add or invite a member to an organization."""
+
+    user_email: EmailStr
+    role: OrganizationRole = OrganizationRole.MEMBER
+
+
+class OrganizationMemberUpdateRequest(BaseModel):
+    """Payload to update an organization member's role."""
+
+    role: OrganizationRole
+
+
+class OrganizationMemberResponse(BaseModel):
+    """Public representation of an organization member."""
+
+    id: str = Field(description="Unique membership record ID (e.g., mem_...)")
+    org_id: str
+    user_id: int | None = None
+    user_email: str
+    role: str
+    status: str = Field(default="active", description="'invited', 'active', or 'suspended'")
+    joined_at: datetime | None = None
+    created_at: datetime
+
+
+class OrganizationMemberListResponse(BaseModel):
+    """List envelope for organization members."""
+
+    items: list[OrganizationMemberResponse] = Field(default_factory=list)
+    total: int = 0
+
+
+class TenantWorkspaceCreateRequest(BaseModel):
+    """Payload to create a collaborative workspace within a tenant organization."""
+
+    name: str = Field(min_length=1, max_length=120)
+    slug: str = Field(
+        min_length=2,
+        max_length=64,
+        pattern=r"^[a-z0-9_-]+$",
+        description="URL-safe workspace identifier within the tenant",
+    )
+    description: str = Field(default="", max_length=500)
+    is_restricted: bool = Field(default=False, description="When true, access requires explicit assignment")
+    default_role: WorkspaceRole = WorkspaceRole.MEMBER
+
+
+class TenantWorkspaceUpdateRequest(BaseModel):
+    """Payload to update a tenant workspace."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = None
+    is_archived: bool | None = None
+    is_restricted: bool | None = None
+
+
+class TenantWorkspaceResponse(BaseModel):
+    """Public representation of a collaborative tenant workspace."""
+
+    id: str = Field(description="Unique workspace identifier (e.g., ws_...)")
+    org_id: str
+    name: str
+    slug: str
+    description: str
+    is_restricted: bool = False
+    is_archived: bool = False
+    member_count: int = 0
+    conversation_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class TenantWorkspaceListResponse(BaseModel):
+    """List envelope for tenant workspaces."""
+
+    items: list[TenantWorkspaceResponse] = Field(default_factory=list)
+    total: int = 0
+
+
+class TenantAuditLogItem(BaseModel):
+    """Non-PII audit record for multi-tenant administrative and lifecycle events."""
+
+    event_id: str
+    org_id: str
+    actor_id: str
+    action: str
+    resource_type: str
+    resource_id: str
+    timestamp: datetime
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class TenantAuditResponse(BaseModel):
+    """List envelope for tenant compliance audit trail."""
+
+    items: list[TenantAuditLogItem] = Field(default_factory=list)
+    total: int = 0

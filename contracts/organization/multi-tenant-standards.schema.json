@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://theclaracare.com/schemas/organization/multi-tenant-standards.schema.json",
+  "title": "MultiTenantApiStandards",
+  "description": "Formal specification for multi-tenant API standards, defense-in-depth isolation invariants, anti-IDOR rules, and audit logging in CLARA Care.",
+  "type": "object",
+  "required": [
+    "standard_version",
+    "isolation_invariants",
+    "header_specifications",
+    "authorization_boundaries",
+    "error_handling_standards",
+    "telemetry_and_audit_rules"
+  ],
+  "properties": {
+    "standard_version": {
+      "type": "string",
+      "pattern": "^v[0-9]+(\\.[0-9]+)*$"
+    },
+    "isolation_invariants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["invariant_id", "name", "description", "enforcement_level", "fail_mode"],
+        "properties": {
+          "invariant_id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "enforcement_level": { "type": "string", "enum": ["GATEWAY", "APPLICATION", "DATABASE", "STORAGE", "CACHE"] },
+          "fail_mode": { "type": "string", "enum": ["FAIL_CLOSED_401", "FAIL_CLOSED_403", "FAIL_CLOSED_404"] }
+        }
+      }
+    },
+    "header_specifications": {
+      "type": "object",
+      "required": ["tenant_claim", "untrusted_headers_stripped", "idempotency_header"],
+      "properties": {
+        "tenant_claim": {
+          "type": "string",
+          "description": "JWT claim name carrying the verified tenant identifier (e.g. org_id, tenant_id)"
+        },
+        "untrusted_headers_stripped": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Client-supplied headers stripped at gateway to prevent identifier spoofing"
+        },
+        "idempotency_header": {
+          "type": "string",
+          "description": "Standard HTTP header used for mutation deduplication"
+        }
+      }
+    },
+    "authorization_boundaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role", "hierarchy_level", "allowed_scopes"],
+        "properties": {
+          "role": { "type": "string" },
+          "hierarchy_level": { "type": "integer" },
+          "allowed_scopes": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "error_handling_standards": {
+      "type": "object",
+      "required": ["non_enumeration_status_code", "uniform_error_code", "timing_profile"],
+      "properties": {
+        "non_enumeration_status_code": { "type": "integer", "const": 404 },
+        "uniform_error_code": { "type": "string" },
+        "timing_profile": { "type": "string" }
+      }
+    },
+    "telemetry_and_audit_rules": {
+      "type": "object",
+      "required": ["pii_phi_redaction", "required_audit_fields", "forbidden_keys"],
+      "properties": {
+        "pii_phi_redaction": { "type": "boolean", "const": true },
+        "required_audit_fields": { "type": "array", "items": { "type": "string" } },
+        "forbidden_keys": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

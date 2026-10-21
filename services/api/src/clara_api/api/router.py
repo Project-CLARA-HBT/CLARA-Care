@@ -25,6 +25,7 @@ from clara_api.api.v1.endpoints import (
     lifemap_review,
     medications,
     mobile,
+    organization,
     phr,
     profiles,
     research,
@@ -76,6 +77,7 @@ api_router.include_router(council.router, prefix="/council", tags=["council"])
 api_router.include_router(scribe.router, prefix="/scribe", tags=["scribe"])
 api_router.include_router(system.router, prefix="/system", tags=["system"])
 api_router.include_router(system.admin_router, prefix="/admin", tags=["admin-system"])
+api_router.include_router(organization.router, prefix="/organizations", tags=["organizations"])
 api_router.include_router(workspace.router, prefix="/workspace", tags=["workspace"])
 api_router.include_router(social.router, prefix="/social", tags=["social"])
 api_router.include_router(admin_users.router, prefix="/admin/users", tags=["admin-users"])

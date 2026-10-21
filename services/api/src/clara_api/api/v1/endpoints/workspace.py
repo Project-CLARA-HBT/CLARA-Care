@@ -1,4 +1,12 @@
 # ruff: noqa: B008
+"""Personal Workspace API Endpoints.
+
+Audit Note (Phase PH04 / Subagent A01):
+These endpoints govern personal, user-scoped workspaces (folders, channels, conversations, notes, shares).
+All resources are strictly isolated by `user_id == user.id` with anti-IDOR non-enumeration (404 Not Found).
+Multi-tenant organizational workspaces (team wards, clinical departments, study groups) and tenant
+lifecycle management are handled via `organization.py` at `/api/v1/organizations`.
+"""
 
 import hashlib
 import json

@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH04",
+  "agent_id": "A01",
+  "role": "API + contract",
+  "task": "organization/workspace API design; audit organization & workspace endpoints in services/api/src/clara_api/api/v1/endpoints/organization.py (and workspace.py), schemas in schemas.py, tenant CRUD contracts, and document multi-tenant API standards.",
+  "status": "PASSED",
+  "base_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "frozen_head_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "handoff_commit": "cd516734c1fee8eb3a454b3578b702a5f85b4a68",
+  "branch": "phase/ph04-a01",
+  "worktree_path": "/dev/shm/clara_worktrees/PH04_A01",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;artifacts/PH04/A01/",
+  "timestamp": "2026-10-22T00:30:00Z",
+  "files_changed": [
+    "contracts/organization/organization-tenant-contract.schema.json",
+    "contracts/organization/multi-tenant-standards.schema.json",
+    "contracts/organization/test_organization_contracts.py",
+    "services/api/src/clara_api/api/v1/endpoints/organization.py",
+    "services/api/src/clara_api/api/v1/endpoints/workspace.py",
+    "services/api/src/clara_api/api/router.py",
+    "services/api/src/clara_api/schemas.py",
+    "artifacts/PH04/A01/change_manifest.json",
+    "artifacts/PH04/A01/test_report.md",
+    "artifacts/PH04/A01/risk_register.md",
+    "artifacts/PH04/A01/rollback.md",
+    "artifacts/PH04/A01/DEPENDENCY_REQUEST.md"
+  ],
+  "tests_run": [
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/clara-test-ws.db\" pytest -v contracts/organization/test_organization_contracts.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 6.31
+    },
+    {
+      "command": "pytest contracts/auth/test_auth_contracts.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 0.20
+    },
+    {
+      "command": "pytest contracts/agent-execution/test_agent_manifest_schema.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 0.58
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/clara-test-ws.db\" pytest -q services/api/tests/test_route_inventory_public_boundaries.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 25.28
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/clara-test-ws.db\" pytest -q services/api/tests/test_workspace_endpoints.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 20.25
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py --agent-id A01 --phase-id PH04",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 0.05
+    }
+  ],
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH04_A01/artifacts/PH04/A01",
+    "rm -rf /dev/shm/clara_worktrees/PH04_A01/contracts/organization",
+    "rm -f /dev/shm/clara_worktrees/PH04_A01/services/api/src/clara_api/api/v1/endpoints/organization.py",
+    "git -C /dev/shm/clara_worktrees/PH04_A01 checkout 7f458c915a59a75568e344b670d2f12ce9133a4e -- services/api/src/clara_api/api/router.py services/api/src/clara_api/api/v1/endpoints/workspace.py services/api/src/clara_api/schemas.py",
+    "git -C /dev/shm/clara_worktrees/PH04_A01 reset --hard 7f458c915a59a75568e344b670d2f12ce9133a4e"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/organization.py",
+      "line_start": 1,
+      "line_end": 540,
+      "symbol": "OrganizationRouter",
+      "description": "Multi-tenant organization lifecycle, collaborative workspace CRUD, membership IAM, and non-PII audit trail."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/workspace.py",
+      "line_start": 1,
+      "line_end": 60,
+      "symbol": "PersonalWorkspaceRouter",
+      "description": "Personal, user-scoped workspace CRUD (folders, channels, notes, shares) audited and disambiguated from multi-tenant orgs."
+    },
+    {
+      "file": "services/api/src/clara_api/schemas.py",
+      "line_start": 1640,
+      "line_end": 1837,
+      "symbol": "MultiTenantSchemas",
+      "description": "Pydantic models for Organization, OrganizationMember, TenantWorkspace, TenantAuditLogItem, and lifecycle enums."
+    },
+    {
+      "file": "services/api/src/clara_api/api/router.py",
+      "line_start": 30,
+      "line_end": 85,
+      "symbol": "api_router",
+      "description": "FastAPI router mounting /organizations endpoint alongside /workspace."
+    },
+    {
+      "file": "contracts/organization/organization-tenant-contract.schema.json",
+      "line_start": 1,
+      "line_end": 95,
+      "symbol": "OrganizationTenantContract",
+      "description": "Formal JSON schema specifying tenant organization entities, CRUD contracts, and RBAC role invariants."
+    },
+    {
+      "file": "contracts/organization/multi-tenant-standards.schema.json",
+      "line_start": 1,
+      "line_end": 80,
+      "symbol": "MultiTenantApiStandards",
+      "description": "Formal JSON schema defining anti-IDOR non-enumeration (404), untrusted header stripping, and zero-PII audit invariants."
+    }
+  ]
+}
