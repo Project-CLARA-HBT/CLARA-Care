@@ -1,0 +1,112 @@
+{
+  "agent_id": "A04",
+  "phase_id": "PH03",
+  "role": "ML + retrieval",
+  "task": "CSRF bearer/cookie differential tests; audit services/api/src/clara_api/main.py enforce_csrf_for_cookie_session middleware, verify cookie mutations require valid X-CSRF-Token, verify Bearer tokens are exempt only if valid and non-revoked.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH03_A04",
+  "branch": "phase/ph03-a04",
+  "base_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "status": "COMPLETED",
+  "verified_source_anchors": [
+    "services/api/src/clara_api/main.py:133-144",
+    "services/api/src/clara_api/main.py:150",
+    "services/api/src/clara_api/main.py:315-346",
+    "services/api/src/clara_api/core/rbac.py:15-28",
+    "services/api/src/clara_api/core/rbac.py:31-38",
+    "services/api/src/clara_api/core/rbac.py:41-57",
+    "services/api/src/clara_api/core/rbac.py:80-89",
+    "services/api/src/clara_api/core/rbac.py:92-107",
+    "services/api/src/clara_api/core/session_security.py:148-164",
+    "services/api/src/clara_api/core/config.py:105-114"
+  ],
+  "path_lane": [
+    "services/ml/src/clara_ml/",
+    "evaluation/",
+    "services/ocr/",
+    "services/asr/",
+    "artifacts/PH03/A04/"
+  ],
+  "files_changed": [
+    "evaluation/tests/test_csrf_bearer_cookie_differential.py",
+    "artifacts/PH03/A04/change_manifest.json",
+    "artifacts/PH03/A04/test_report.md",
+    "artifacts/PH03/A04/risk_register.md",
+    "artifacts/PH03/A04/rollback.md"
+  ],
+  "csrf_specifications": {
+    "cookie_enforcement_verbs": [
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE"
+    ],
+    "safe_verbs_exempt": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "bearer_exemption_conditions": [
+      "Authorization header specifies case-insensitive Bearer scheme (RFC 7235)",
+      "Token parses and cryptographically validates signature via decode_access_token",
+      "Token jti is unrevoked in SessionSecurity denylist",
+      "No silent fallback/downgrade to cookie session on invalid/revoked Bearer credential"
+    ],
+    "cookie_validation_mechanism": "Double-submit cookie matching: X-CSRF-Token header matches clara_csrf_token cookie via secrets.compare_digest",
+    "exempt_paths": [
+      "/api/v1/auth/login",
+      "/api/v1/auth/login-otp/verify",
+      "/api/v1/auth/register",
+      "/api/v1/auth/callback",
+      "/api/v1/auth/refresh",
+      "/api/v1/auth/logout",
+      "/api/v1/auth/forgot-password",
+      "/api/v1/auth/reset-password",
+      "/api/v1/auth/verify-email",
+      "/api/v1/auth/resend-verification"
+    ],
+    "exempt_prefixes": [
+      "/api/v1/phr/shared/"
+    ]
+  },
+  "interface_assumptions": [
+    "Cookie sessions authenticate via clara_access_token or clara_refresh_token HttpOnly cookies.",
+    "Mutating requests using session cookies must supply a matching readable clara_csrf_token cookie and X-CSRF-Token header.",
+    "Bearer token authentication is inherently immune to browser cross-site request forgery because browsers never auto-attach Authorization headers across origins.",
+    "A Bearer token exempts a request from CSRF validation only if it is cryptographically valid and unrevoked; malformed or revoked Bearer headers fail closed rather than falling back to cookie session.",
+    "Auth error responses and CSRF rejections are constant-time and emit zero PII/PHI (static detail strings)."
+  ],
+  "test_commands_and_exit_codes": [
+    {
+      "command": "PYTHONPATH=\"services/api/src:services/ml/src:.\" python3 -m pytest -v evaluation/tests/test_csrf_bearer_cookie_differential.py",
+      "exit_code": 0,
+      "purpose": "Comprehensive CSRF bearer/cookie differential test suite (23 tests covering allow, deny, verbs, case insensitivity, revocation, transport confusion)"
+    },
+    {
+      "command": "uvx ruff check evaluation/tests/test_csrf_bearer_cookie_differential.py",
+      "exit_code": 0,
+      "purpose": "Static code style and lint verification across newly created evaluation test suite"
+    },
+    {
+      "command": "PYTHONPATH=\"services/api/src:services/ml/src:.\" uvx mypy evaluation/tests/test_csrf_bearer_cookie_differential.py --ignore-missing-imports",
+      "exit_code": 0,
+      "purpose": "Type check verification across differential test suite"
+    },
+    {
+      "command": "DATABASE_URL=sqlite+pysqlite:////tmp/clara_api_ci.db AUTH_AUTO_PROVISION_USERS=true AUTH_BOOTSTRAP_ADMIN_ENABLED=true pytest -q tests/test_auth_and_rbac.py",
+      "exit_code": 0,
+      "purpose": "Existing API auth and RBAC suite verification (4 passed)"
+    },
+    {
+      "command": "DATABASE_URL=sqlite+pysqlite:////tmp/clara_api_ci.db AUTH_AUTO_PROVISION_USERS=true AUTH_BOOTSTRAP_ADMIN_ENABLED=true pytest -q -k \"test_p10_csrf_rejected_for_cookie_auth_mutation\" tests/test_compliance_dsar_csrf.py",
+      "exit_code": 0,
+      "purpose": "Existing compliance CSRF preservation property test verification (1 passed)"
+    }
+  ],
+  "blockers": [],
+  "rollback_steps": [
+    "Live bypass: set AUTH_CSRF_ENABLED=false in environment configuration to disable CSRF middleware enforcement dynamically.",
+    "File revert: git rm -f evaluation/tests/test_csrf_bearer_cookie_differential.py",
+    "Artifact revert: git rm -rf artifacts/PH03/A04/",
+    "Reset branch to pinned base SHA: git reset --hard 3b1072b98350b978b83b7ecec5c35228415759a3"
+  ]
+}
