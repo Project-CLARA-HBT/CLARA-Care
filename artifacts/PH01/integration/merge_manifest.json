@@ -1,0 +1,210 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH01",
+  "phase_title": "Toolchain t\u00e1i l\u1eadp v\u00e0 dependency supply-chain",
+  "base_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "concurrent_agents_count": 10,
+  "agents": [
+    {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "Python 3.12 env bootstrap & public route boundary fix",
+      "worktree": "/dev/shm/clara_worktrees/PH01_A01",
+      "branch": "phase/ph01-a01",
+      "commit": "f8c35f91",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/core/route_inventory.py",
+        "artifacts/PH01/A01/change_manifest.json",
+        "artifacts/PH01/A01/risk_register.md",
+        "artifacts/PH01/A01/rollback.md",
+        "artifacts/PH01/A01/test_report.md"
+      ],
+      "remediations": [
+        "DEFECT-01: added POST /api/v1/auth/callback to INTENTIONAL_PUBLIC_ROUTES"
+      ]
+    },
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "lock API dependencies & migration 0062 SQLite batch constraint fix",
+      "worktree": "/dev/shm/clara_worktrees/PH01_A02",
+      "branch": "phase/ph01-a02",
+      "commit": "3d71b4da",
+      "status": "PASSED",
+      "files": [
+        "services/api/alembic/versions/20260824_0062_social_bookmarks_and_threading.py",
+        "artifacts/PH01/A02/change_manifest.json",
+        "artifacts/PH01/A02/risk_register.md",
+        "artifacts/PH01/A02/test_report.md"
+      ],
+      "remediations": [
+        "DEFECT-02: explicit fk_social_comments_parent_id constraint in migration 0062 for SQLite batch mode"
+      ]
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "lock ML dependencies & domain supply-chain audit",
+      "worktree": "/dev/shm/clara_worktrees/PH01_A03",
+      "branch": "phase/ph01-a03",
+      "commit": "d7a66a21",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH01/A03/change_manifest.json",
+        "artifacts/PH01/A03/risk_register.md",
+        "artifacts/PH01/A03/test_report.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "Node 20 npm ci parity & auxiliary services verification",
+      "worktree": "/dev/shm/clara_worktrees/PH01_A04",
+      "branch": "phase/ph01-a04",
+      "commit": "02317135",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH01/A04/change_manifest.json",
+        "artifacts/PH01/A04/risk_register.md",
+        "artifacts/PH01/A04/test_report.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "Flutter/Dart pinned SDK & Web toolchain integration",
+      "worktree": "/dev/shm/clara_worktrees/PH01_A05",
+      "branch": "phase/ph01-a05",
+      "commit": "42e8ceb3",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH01/A05/DEPENDENCY_REQUEST.md",
+        "artifacts/PH01/A05/change_manifest.json",
+        "artifacts/PH01/A05/risk_register.md",
+        "artifacts/PH01/A05/rollback.md",
+        "artifacts/PH01/A05/test_report.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "postgres & redis compose smoke & android network config",
+      "worktree": "/dev/shm/clara_worktrees/PH01_A06",
+      "branch": "phase/ph01-a06",
+      "commit": "f4c19d3a",
+      "status": "PASSED",
+      "files": [
+        "apps/mobile/android/app/src/debug/AndroidManifest.xml",
+        "artifacts/PH01/A06/change_manifest.json",
+        "artifacts/PH01/A06/risk_register.md",
+        "artifacts/PH01/A06/rollback.md",
+        "artifacts/PH01/A06/test_report.md"
+      ],
+      "remediations": [
+        "Added usesCleartextTraffic=true to Android debug manifest for local dev against loopback"
+      ]
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "SBOM generator & dependency integrity audit",
+      "worktree": "/dev/shm/clara_worktrees/PH01_A07",
+      "branch": "phase/ph01-a07",
+      "commit": "607f82c0",
+      "status": "PASSED",
+      "files": [
+        "scripts/ops/generate_sbom.py",
+        "scripts/ops/check_dependency_integrity.py",
+        "services/api/tests/test_sbom_and_dependency_integrity.py",
+        ".github/workflows/ci.yml",
+        "artifacts/PH01/A07/sbom.cyclonedx.json",
+        "artifacts/PH01/A07/dependency_audit_report.json"
+      ],
+      "remediations": [
+        "Implemented CycloneDX 1.5 SBOM generator and dependency integrity checker"
+      ]
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "remediate SEC-CRIT-01 & hermetic secret scanning",
+      "worktree": "/dev/shm/clara_worktrees/PH01_A08",
+      "branch": "phase/ph01-a08",
+      "commit": "505b9e1d",
+      "status": "PASSED",
+      "files": [
+        "scripts/ops/run_v8_provider_probe_ledger.py",
+        "research/glhs_journal/q3_r3/provider_run_ledger_spec.md",
+        "artifacts/PH00/A08/change_manifest.json",
+        "artifacts/PH00/A08/risk_register.md",
+        "artifacts/PH01/A08/*"
+      ],
+      "remediations": [
+        "SEC-CRIT-01: removed hardcoded sk-2a0a31f... token, now using os.environ.get(CLARA_ROUTER_API_KEY)"
+      ]
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "developer local bootstrap script & offline research runner verification",
+      "worktree": "/dev/shm/clara_worktrees/PH01_A09",
+      "branch": "phase/ph01-a09",
+      "commit": "3fd474de",
+      "status": "PASSED",
+      "files": [
+        "scripts/ops/bootstrap_dev.sh",
+        "scripts/ops/test_bootstrap_dev.sh",
+        "docs/implementation/DEVELOPER_LOCAL_BOOTSTRAP.md",
+        "artifacts/PH01/A09/*"
+      ],
+      "remediations": [
+        "Created non-destructive bootstrap_dev.sh script and 7 unit tests in test_bootstrap_dev.sh"
+      ]
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "reproducibility/rollback runbook and PH01 quality gate",
+      "worktree": "/dev/shm/clara_worktrees/PH01_A10",
+      "branch": "phase/ph01-a10",
+      "commit": "76d067c2",
+      "status": "PASSED",
+      "files": [
+        "docs/runbooks/ph01-reproducibility-and-rollback.md",
+        "scripts/ci/ph01_reproducibility_gate.py",
+        "artifacts/PH01/A10/*"
+      ],
+      "remediations": [
+        "Constructed automated reproducibility gate script and multi-tier rollback runbook"
+      ]
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "remediated_defects": [
+    {
+      "id": "DEFECT-01",
+      "status": "RESOLVED",
+      "desc": "POST /api/v1/auth/callback added to INTENTIONAL_PUBLIC_ROUTES in route_inventory.py"
+    },
+    {
+      "id": "DEFECT-02",
+      "status": "RESOLVED",
+      "desc": "Alembic migration 0062 batch_alter_table constraint named fk_social_comments_parent_id"
+    },
+    {
+      "id": "SEC-CRIT-01",
+      "status": "RESOLVED",
+      "desc": "Hardcoded API token sk-2a0a31f... completely purged from code/specs, secret scan passes 100%"
+    }
+  ],
+  "next_phases": [
+    "PH02",
+    "PH03"
+  ]
+}

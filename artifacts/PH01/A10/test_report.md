@@ -57,7 +57,7 @@ Key objectives executed:
 ## 3. Review of P0 Remediation Workstreams
 
 ### 3.1 SEC-CRIT-01: Hardcoded Router API Key Remediation (Subagent A08)
-- **Problem Anchor:** `scripts/ops/run_v8_provider_probe_ledger.py:37` and `research/glhs_journal/q3_r3/provider_run_ledger_spec.md:32` contained hardcoded API key literal `sk-2a0a31f1216bad84-66fc8c-5b3da166`.
+- **Problem Anchor:** `scripts/ops/run_v8_provider_probe_ledger.py:37` and `research/glhs_journal/q3_r3/provider_run_ledger_spec.md:32` contained hardcoded API key literal `<REDACTED_API_KEY>`.
 - **A08 Remediation:**
   1. `scripts/ops/run_v8_provider_probe_ledger.py`: Replaced literal with `os.environ.get("CLARA_ROUTER_API_KEY", "")`.
   2. `research/glhs_journal/q3_r3/provider_run_ledger_spec.md`: Redacted token to `<REDACTED_API_KEY>`.

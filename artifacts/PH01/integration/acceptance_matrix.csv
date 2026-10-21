@@ -1,0 +1,14 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH01-01,A01,API,Public boundary allowlist check,All unauthenticated routes classified,2 passed (100%),PASS,pytest services/api/tests/test_route_inventory_public_boundaries.py
+TC-PH01-02,A02,DB,Alembic migration 0062 bidirectional roundtrip,Upgrade & Downgrade on SQLite without syntax error,Upgrade/Downgrade pass,PASS,alembic upgrade 20260824_0062 && alembic downgrade 20260824_0061
+TC-PH01-03,A02,DB,Strict downgrade completeness across all 64 migrations,Zero empty downgrade() functions,64/64 non-empty,PASS,scripts/ops/check_migration_downgrade.py services/api/alembic/versions --strict
+TC-PH01-04,A03,GLHS,Hermetic dependency resolution,uv.lock files consistent without external network,Resolved and synced hermetically,PASS,uv lock --check
+TC-PH01-05,A04,Web,Node 20 npm ci dependency parity,All 826 npm packages resolve cleanly without error,Resolved cleanly (lockfileVersion 3),PASS,npm ci --dry-run
+TC-PH01-06,A06,Infra,PostgreSQL 16 + pgvector container verification,PostgreSQL 16.15 with vector extension,Extension created and distance calculated,PASS,docker exec clara-postgres psql
+TC-PH01-07,A06,Infra,Redis 7.4.8 standalone persistence,Ping PONG and AOF enabled,PONG and appendonly yes verified,PASS,docker exec clara-redis redis-cli ping
+TC-PH01-08,A07,Supply-Chain,CycloneDX 1.5 SBOM generation,"Output valid SBOM for Python, Node, Flutter",Generated artifacts/PH01/A07/sbom.cyclonedx.json,PASS,python3 scripts/ops/generate_sbom.py
+TC-PH01-09,A07,Supply-Chain,Automated dependency integrity check,Zero unpinned/tampered packages,"Audit clean, 10 passed",PASS,pytest services/api/tests/test_sbom_and_dependency_integrity.py
+TC-PH01-10,A08,Security,Fail-closed secret scanning,Zero secret leaks across tracked files,secret_scan_passed,PASS,python3 -m evaluation.commitloop.secret_scan --repo-root .
+TC-PH01-11,A09,Developer,Bootstrap script unit tests,7/7 verification tests pass,"7 passed, 0 failed",PASS,bash scripts/ops/test_bootstrap_dev.sh
+TC-PH01-12,A09,Research,Offline research runner determinism,Reproduce E01 and E07 fail-closed without network,REPRODUCED_AND_VERIFIED,PASS,python3 reproduce_e01.py && python3 reproduce_e07.py
+TC-PH01-13,A10,CI Gate,PH01 reproducibility gate,"Lockfiles, AST, migrations, and claims verified",PH01 GATE VERDICT: PASSED,PASS,python3 scripts/ci/ph01_reproducibility_gate.py
