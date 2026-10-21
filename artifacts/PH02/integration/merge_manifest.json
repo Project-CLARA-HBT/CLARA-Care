@@ -1,0 +1,161 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH02",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "concurrent_agents_count": 10,
+  "agents": [
+    {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "agent contract JSON schema",
+      "worktree": "/dev/shm/clara_worktrees/PH02_A01",
+      "branch": "phase/ph02-a01",
+      "commit": "a560a8c5",
+      "status": "PASSED",
+      "files": [
+        "contracts/agent-execution/agent-manifest.schema.json",
+        "contracts/agent-execution/test_agent_manifest_schema.py",
+        "services/api/src/clara_api/schemas.py",
+        "artifacts/PH02/A01/*"
+      ]
+    },
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "git worktree creation tool",
+      "worktree": "/dev/shm/clara_worktrees/PH02_A02",
+      "branch": "phase/ph02-a02",
+      "commit": "8b0f73e0",
+      "status": "PASSED",
+      "files": [
+        "scripts/ops/worktree_manager.py",
+        "scripts/ops/test_worktree_manager.py",
+        "artifacts/PH02/A02/*"
+      ]
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "ten task-scoped worktree paths & path governance",
+      "worktree": "/dev/shm/clara_worktrees/PH02_A03",
+      "branch": "phase/ph02-a03",
+      "commit": "0bec5f8d",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/core/path_governance.py",
+        "services/api/tests/test_domain_path_boundaries.py",
+        "artifacts/PH02/A03/*"
+      ]
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "resource quotas and semaphore 10",
+      "worktree": "/dev/shm/clara_worktrees/PH02_A04",
+      "branch": "phase/ph02-a04",
+      "commit": "9df52892",
+      "status": "PASSED",
+      "files": [
+        "scripts/ops/agent_concurrency_limiter.py",
+        "services/ml/src/clara_ml/agent_concurrency.py",
+        "evaluation/tests/test_agent_concurrency_limiter.py",
+        "artifacts/PH02/A04/*"
+      ]
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "ownership and path ACL checker",
+      "worktree": "/dev/shm/clara_worktrees/PH02_A05",
+      "branch": "phase/ph02-a05",
+      "commit": "749f8c4c",
+      "status": "PASSED",
+      "files": [
+        "scripts/ci/check_agent_path_acl.py",
+        "artifacts/PH02/A05/*"
+      ]
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "agent prompt and bounded context pack",
+      "worktree": "/dev/shm/clara_worktrees/PH02_A06",
+      "branch": "phase/ph02-a06",
+      "commit": "0cc4d3d4",
+      "status": "PASSED",
+      "files": [
+        "scripts/ops/generate_agent_prompts.py",
+        "scripts/ops/test_generate_agent_prompts.py",
+        "artifacts/PH02/A06/*"
+      ]
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "merge queue and integration worker",
+      "worktree": "/dev/shm/clara_worktrees/PH02_A07",
+      "branch": "phase/ph02-a07",
+      "commit": "852f7b00",
+      "status": "PASSED",
+      "files": [
+        "scripts/ops/merge_queue_worker.py",
+        "services/api/tests/test_merge_queue_worker.py",
+        "artifacts/PH02/A07/*"
+      ]
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "deterministic red-team checker",
+      "worktree": "/dev/shm/clara_worktrees/PH02_A08",
+      "branch": "phase/ph02-a08",
+      "commit": "26dce3ab",
+      "status": "PASSED",
+      "files": [
+        "scripts/security/redteam_manifest_checker.py",
+        "scripts/security/test_redteam_manifest_checker.py",
+        "artifacts/PH02/A08/*"
+      ]
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "checkpoint/progress dashboard",
+      "worktree": "/dev/shm/clara_worktrees/PH02_A09",
+      "branch": "phase/ph02-a09",
+      "commit": "21e3c090",
+      "status": "PASSED",
+      "files": [
+        "scripts/ops/progress_dashboard.py",
+        "scripts/ops/test_progress_dashboard.py",
+        "docs/implementation/PROGRESS_DASHBOARD.md",
+        "artifacts/PH02/A09/*"
+      ]
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "failure recovery and resume tool",
+      "worktree": "/dev/shm/clara_worktrees/PH02_A10",
+      "branch": "phase/ph02-a10",
+      "commit": "7ca7d1dd",
+      "status": "PASSED",
+      "files": [
+        "scripts/ops/phase_recovery.py",
+        "scripts/ops/test_phase_recovery.py",
+        "scripts/ci/ph02_quality_gate.py",
+        "docs/runbooks/ph02-failure-recovery-and-checkpoint-resume.md",
+        "docs/reports/ph02-a10-failure-recovery-audit.md",
+        "artifacts/PH02/A10/*"
+      ]
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "next_phases": [
+    "PH03",
+    "PH04"
+  ]
+}

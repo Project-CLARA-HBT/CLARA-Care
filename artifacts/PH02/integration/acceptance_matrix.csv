@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH02-01,A01,Contracts,Manifest Schema validation,"Validates A01..A10, fields, regex, status",50/50 unit tests passed,PASS,pytest contracts/agent-execution/test_agent_manifest_schema.py
+TC-PH02-02,A02,Tooling,Worktree Manager lifecycle,"Create, status, cleanup without cross-talk",6/6 passed,PASS,pytest scripts/ops/test_worktree_manager.py
+TC-PH02-03,A03,Domain,Domain path boundary isolation,"Zero overlap across 45 agent pairs, 0 ML direct imports",7/7 passed,PASS,pytest services/api/tests/test_domain_path_boundaries.py
+TC-PH02-04,A04,Orchestration,Agent Concurrency Limiter semaphore 10,Strict slot bounding and lock cleanup,12/12 passed,PASS,pytest evaluation/tests/test_agent_concurrency_limiter.py
+TC-PH02-05,A05,CI,Agent Path ACL Checker,Detects within-lane vs cross-lane writes,10/10 self-tests passed,PASS,python3 scripts/ci/check_agent_path_acl.py --selftest
+TC-PH02-06,A06,Orchestration,Agent Prompt Generator,Generates 10 isolated prompts with 0 unpopulated brackets,9/9 passed,PASS,pytest scripts/ops/test_generate_agent_prompts.py
+TC-PH02-07,A07,CI,Merge Queue Worker orchestration,Deterministic dependency order cherry-pick & rollback,17/17 passed,PASS,pytest services/api/tests/test_merge_queue_worker.py
+TC-PH02-08,A08,Security,Deterministic Red-Team Checker,"Audits credentials, fake results, commit signatures",28/28 passed,PASS,pytest scripts/security/test_redteam_manifest_checker.py
+TC-PH02-09,A09,Observability,Progress Dashboard,Real-time terminal dashboard of DAG & agent state,20/20 passed,PASS,pytest scripts/ops/test_progress_dashboard.py
+TC-PH02-10,A10,Recovery,Phase Recovery and Resume Tool,"Diagnose, isolate, retry single agent, gate",10/10 passed,PASS,pytest scripts/ops/test_phase_recovery.py
+TC-PH02-11,A10,Gate,PH02 Quality Gate,All 7 invariants green,PH02 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph02_quality_gate.py
