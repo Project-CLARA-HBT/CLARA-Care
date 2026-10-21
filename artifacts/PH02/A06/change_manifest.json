@@ -1,0 +1,134 @@
+{
+  "$schema": "https://theclaracare.com/schemas/agent-execution/agent-manifest.schema.json",
+  "manifest_version": "1.0.0",
+  "phase_id": "PH02",
+  "agent_id": "A06",
+  "role": "Mobile Flutter",
+  "task": "agent prompt and bounded context pack generator; implement scripts/ops/generate_agent_prompts.py to take phase_id from machine/PHASE_TASKS.json, populate templates/AGENT_TASK_PROMPT.md with exact owned paths, role, base SHA, and produce isolated task prompts for A01-A10.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH02_A06",
+  "branch": "phase/ph02-a06",
+  "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "frozen_head_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "status": "PASSED",
+  "path_lane": "apps/mobile/;scripts/ops/;artifacts/PH02/A06/",
+  "files_changed": [
+    "scripts/ops/generate_agent_prompts.py",
+    "scripts/ops/test_generate_agent_prompts.py",
+    "artifacts/PH02/A06/change_manifest.json",
+    "artifacts/PH02/A06/test_report.md",
+    "artifacts/PH02/A06/risk_register.md",
+    "artifacts/PH02/A06/rollback.md",
+    "artifacts/PH02/A06/generated_prompts_ph02/A01_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph02/A02_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph02/A03_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph02/A04_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph02/A05_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph02/A06_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph02/A07_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph02/A08_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph02/A09_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph02/A10_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph02/bounded_context_pack.json",
+    "artifacts/PH02/A06/generated_prompts_ph02/INDEX.md",
+    "artifacts/PH02/A06/generated_prompts_ph03/A01_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph03/A02_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph03/A03_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph03/A04_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph03/A05_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph03/A06_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph03/A07_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph03/A08_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph03/A09_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph03/A10_task_prompt.md",
+    "artifacts/PH02/A06/generated_prompts_ph03/bounded_context_pack.json",
+    "artifacts/PH02/A06/generated_prompts_ph03/INDEX.md"
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ops/generate_agent_prompts.py --selftest",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Ran 3 tests in 0.037s - OK"
+    },
+    {
+      "command": "python3 scripts/ops/test_generate_agent_prompts.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Ran 9 tests in 0.501s - OK"
+    },
+    {
+      "command": "pytest scripts/ops/test_generate_agent_prompts.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "9 passed in 0.71s"
+    },
+    {
+      "command": "ruff check scripts/ops/generate_agent_prompts.py scripts/ops/test_generate_agent_prompts.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "All checks passed!"
+    },
+    {
+      "command": "python3 scripts/ops/generate_agent_prompts.py --phase PH02 --output-dir artifacts/PH02/A06/generated_prompts_ph02",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Successfully generated 12 deliverables for PH02"
+    },
+    {
+      "command": "python3 scripts/ops/generate_agent_prompts.py --phase PH03 --output-dir artifacts/PH02/A06/generated_prompts_ph03",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Successfully generated 12 deliverables for PH03"
+    }
+  ],
+  "artifacts": [
+    "artifacts/PH02/A06/change_manifest.json",
+    "artifacts/PH02/A06/test_report.md",
+    "artifacts/PH02/A06/risk_register.md",
+    "artifacts/PH02/A06/rollback.md"
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/templates/AGENT_TASK_PROMPT.md",
+      "line_start": 1,
+      "line_end": 19,
+      "description": "Standard subagent prompt template with parameter placeholders [AGENT_ID], [PHASE_ID], [EXACT_WRITE_PATHS], [EXACT_READ_PATHS], [BASE_SHA], [ONE_SPECIFIC_TASK_FROM_PHASE]"
+    },
+    {
+      "file": "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/machine/PHASE_TASKS.json",
+      "line_start": 245,
+      "line_end": 366,
+      "description": "PH02 phase definition, priorities, dependencies, and agent roles/tasks A01-A10"
+    },
+    {
+      "file": "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/phases/PH02_thi-t-l-p-t-ch-c-t-c-nh-n-v-10-worktree-song-son.md",
+      "line_start": 22,
+      "line_end": 36,
+      "description": "PH02 10-subagent parallel matrix, lane assignments, and deliverable specifications"
+    },
+    {
+      "file": "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/specs/24_10_AGENT_EXECUTION.md",
+      "line_start": 1,
+      "line_end": 26,
+      "description": "10-concurrent-subagent execution protocol and micro-loop invariants"
+    },
+    {
+      "file": "contracts/agent-execution/agent-manifest.schema.json",
+      "line_start": 1,
+      "line_end": 126,
+      "description": "JSON schema for subagent task completion manifest"
+    }
+  ],
+  "interface_assumptions": [
+    "machine/PHASE_TASKS.json remains the source of truth for phases, roles, tasks, and path lanes",
+    "templates/AGENT_TASK_PROMPT.md specifies exact bracket tokens to substitute without leaking unfilled tokens",
+    "Every agent A01-A10 has write ownership strictly over its designated path lane and its own artifacts/PHxx/Ayy/ directory",
+    "Sequential integration worker merges branches in deterministic order: A02 -> A01 -> A03 -> A04 -> A05 -> A06 -> A07 -> A08 -> A09 -> A10"
+  ],
+  "blockers": [],
+  "rollback_steps": [
+    "git rm -f scripts/ops/generate_agent_prompts.py scripts/ops/test_generate_agent_prompts.py",
+    "rm -rf artifacts/PH02/A06/",
+    "git reset --hard 879dc5dcfcaae91b3626e28062043d934294478b"
+  ]
+}

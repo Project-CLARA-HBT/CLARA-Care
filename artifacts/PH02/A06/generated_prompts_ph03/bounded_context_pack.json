@@ -1,0 +1,367 @@
+{
+  "schema_version": "clara-bounded-context-pack.v1",
+  "phase_id": "PH03",
+  "phase_number": 3,
+  "phase_title": "Hardening auth và identity",
+  "priority": "P0",
+  "dependencies": [
+    1
+  ],
+  "frozen_base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "generated_at_utc": "2026-10-21T13:26:54.539382+00:00",
+  "worktree_root": "/dev/shm/clara_worktrees",
+  "agents_count": 10,
+  "isolation_rules": {
+    "concurrent_isolated_worktrees": true,
+    "disjoint_write_lanes": true,
+    "no_cross_worktree_edits": true,
+    "immutable_base_sha_verification": true,
+    "serial_integration_order": [
+      "A02",
+      "A01",
+      "A03",
+      "A04",
+      "A05",
+      "A06",
+      "A07",
+      "A08",
+      "A09",
+      "A10"
+    ]
+  },
+  "agents": {
+    "A01": {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "auth threat inventory",
+      "phase_id": "PH03",
+      "phase_title": "Hardening auth và identity",
+      "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+      "worktree_path": "/dev/shm/clara_worktrees/PH03_A01",
+      "branch": "phase/ph03-a01",
+      "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py",
+      "exact_write_paths": [
+        "services/api/src/clara_api/api/",
+        "contracts/",
+        "services/api/src/clara_api/schemas.py",
+        "artifacts/PH03/A01/"
+      ],
+      "exact_read_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "contracts/",
+        "services/api/src/clara_api/api/",
+        "services/api/src/clara_api/schemas.py",
+        "services/api/src/clara_api/main.py",
+        "artifacts/PH03/A01/"
+      ],
+      "acceptance_artifacts": [
+        "artifacts/PH03/A01/change_manifest.json",
+        "artifacts/PH03/A01/test_report.md",
+        "artifacts/PH03/A01/risk_register.md"
+      ],
+      "prompt_filename": "A01_task_prompt.md"
+    },
+    "A02": {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "JWT/session invalidation and rotation",
+      "phase_id": "PH03",
+      "phase_title": "Hardening auth và identity",
+      "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+      "worktree_path": "/dev/shm/clara_worktrees/PH03_A02",
+      "branch": "phase/ph03-a02",
+      "path_lane": "services/api/src/clara_api/db/;services/api/alembic/versions/",
+      "exact_write_paths": [
+        "services/api/src/clara_api/db/",
+        "services/api/alembic/versions/",
+        "artifacts/PH03/A02/"
+      ],
+      "exact_read_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "contracts/",
+        "services/api/src/clara_api/db/",
+        "services/api/alembic/",
+        "services/api/src/clara_api/models/",
+        "services/api/alembic/versions/",
+        "artifacts/PH03/A02/"
+      ],
+      "acceptance_artifacts": [
+        "artifacts/PH03/A02/change_manifest.json",
+        "artifacts/PH03/A02/test_report.md",
+        "artifacts/PH03/A02/risk_register.md"
+      ],
+      "prompt_filename": "A02_task_prompt.md"
+    },
+    "A03": {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "RBAC object-level profile scope",
+      "phase_id": "PH03",
+      "phase_title": "Hardening auth và identity",
+      "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+      "worktree_path": "/dev/shm/clara_worktrees/PH03_A03",
+      "branch": "phase/ph03-a03",
+      "path_lane": "services/api/src/clara_api/glhs/;services/api/src/clara_api/lifemap/;services/api/src/clara_api/phr/;services/api/src/clara_api/compliance/;services/api/src/clara_api/core/",
+      "exact_write_paths": [
+        "services/api/src/clara_api/glhs/",
+        "services/api/src/clara_api/lifemap/",
+        "services/api/src/clara_api/phr/",
+        "services/api/src/clara_api/compliance/",
+        "services/api/src/clara_api/core/",
+        "artifacts/PH03/A03/"
+      ],
+      "exact_read_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "contracts/",
+        "services/api/src/clara_api/glhs/",
+        "services/api/src/clara_api/lifemap/",
+        "services/api/src/clara_api/phr/",
+        "services/api/src/clara_api/compliance/",
+        "services/api/src/clara_api/core/",
+        "artifacts/PH03/A03/"
+      ],
+      "acceptance_artifacts": [
+        "artifacts/PH03/A03/change_manifest.json",
+        "artifacts/PH03/A03/test_report.md",
+        "artifacts/PH03/A03/risk_register.md"
+      ],
+      "prompt_filename": "A03_task_prompt.md"
+    },
+    "A04": {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "CSRF bearer/cookie differential tests",
+      "phase_id": "PH03",
+      "phase_title": "Hardening auth và identity",
+      "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+      "worktree_path": "/dev/shm/clara_worktrees/PH03_A04",
+      "branch": "phase/ph03-a04",
+      "path_lane": "services/ml/src/clara_ml/;evaluation/;services/ocr/;services/asr/",
+      "exact_write_paths": [
+        "services/ml/src/clara_ml/",
+        "evaluation/",
+        "services/ocr/",
+        "services/asr/",
+        "artifacts/PH03/A04/"
+      ],
+      "exact_read_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "contracts/",
+        "services/ml/src/clara_ml/",
+        "evaluation/",
+        "services/ocr/",
+        "services/asr/",
+        "artifacts/PH03/A04/"
+      ],
+      "acceptance_artifacts": [
+        "artifacts/PH03/A04/change_manifest.json",
+        "artifacts/PH03/A04/test_report.md",
+        "artifacts/PH03/A04/risk_register.md"
+      ],
+      "prompt_filename": "A04_task_prompt.md"
+    },
+    "A05": {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "OTP/login brute-force protection",
+      "phase_id": "PH03",
+      "phase_title": "Hardening auth và identity",
+      "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+      "worktree_path": "/dev/shm/clara_worktrees/PH03_A05",
+      "branch": "phase/ph03-a05",
+      "path_lane": "apps/web/app/;apps/web/components/;apps/web/lib/",
+      "exact_write_paths": [
+        "apps/web/app/",
+        "apps/web/components/",
+        "apps/web/lib/",
+        "artifacts/PH03/A05/"
+      ],
+      "exact_read_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "contracts/",
+        "apps/web/app/",
+        "apps/web/components/",
+        "apps/web/lib/",
+        "contracts/consumer-terminology/",
+        "artifacts/PH03/A05/"
+      ],
+      "acceptance_artifacts": [
+        "artifacts/PH03/A05/change_manifest.json",
+        "artifacts/PH03/A05/test_report.md",
+        "artifacts/PH03/A05/risk_register.md"
+      ],
+      "prompt_filename": "A05_task_prompt.md"
+    },
+    "A06": {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "secure password reset and recovery",
+      "phase_id": "PH03",
+      "phase_title": "Hardening auth và identity",
+      "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+      "worktree_path": "/dev/shm/clara_worktrees/PH03_A06",
+      "branch": "phase/ph03-a06",
+      "path_lane": "apps/mobile/",
+      "exact_write_paths": [
+        "apps/mobile/",
+        "artifacts/PH03/A06/"
+      ],
+      "exact_read_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "contracts/",
+        "apps/mobile/lib/",
+        "apps/mobile/pubspec.yaml",
+        "contracts/consumer-terminology/",
+        "apps/mobile/",
+        "artifacts/PH03/A06/"
+      ],
+      "acceptance_artifacts": [
+        "artifacts/PH03/A06/change_manifest.json",
+        "artifacts/PH03/A06/test_report.md",
+        "artifacts/PH03/A06/risk_register.md"
+      ],
+      "prompt_filename": "A06_task_prompt.md"
+    },
+    "A07": {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "web session UX states",
+      "phase_id": "PH03",
+      "phase_title": "Hardening auth và identity",
+      "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+      "worktree_path": "/dev/shm/clara_worktrees/PH03_A07",
+      "branch": "phase/ph03-a07",
+      "path_lane": "services/api/tests/;services/ml/tests/;apps/web/e2e/;.github/workflows/",
+      "exact_write_paths": [
+        "services/api/tests/",
+        "services/ml/tests/",
+        "apps/web/e2e/",
+        ".github/workflows/",
+        "artifacts/PH03/A07/"
+      ],
+      "exact_read_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "contracts/",
+        "services/api/tests/",
+        "services/ml/tests/",
+        "apps/web/e2e/",
+        ".github/workflows/",
+        "artifacts/PH03/A07/"
+      ],
+      "acceptance_artifacts": [
+        "artifacts/PH03/A07/change_manifest.json",
+        "artifacts/PH03/A07/test_report.md",
+        "artifacts/PH03/A07/risk_register.md"
+      ],
+      "prompt_filename": "A07_task_prompt.md"
+    },
+    "A08": {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "mobile refresh/session persistence",
+      "phase_id": "PH03",
+      "phase_title": "Hardening auth và identity",
+      "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+      "worktree_path": "/dev/shm/clara_worktrees/PH03_A08",
+      "branch": "phase/ph03-a08",
+      "path_lane": "docs/security/;docs/compliance/;scripts/ops/",
+      "exact_write_paths": [
+        "docs/security/",
+        "docs/compliance/",
+        "scripts/ops/",
+        "artifacts/PH03/A08/"
+      ],
+      "exact_read_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "contracts/",
+        "docs/security/",
+        "docs/compliance/",
+        "scripts/ops/",
+        "artifacts/PH03/A08/"
+      ],
+      "acceptance_artifacts": [
+        "artifacts/PH03/A08/change_manifest.json",
+        "artifacts/PH03/A08/test_report.md",
+        "artifacts/PH03/A08/risk_register.md"
+      ],
+      "prompt_filename": "A08_task_prompt.md"
+    },
+    "A09": {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "security negative-test suite",
+      "phase_id": "PH03",
+      "phase_title": "Hardening auth và identity",
+      "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+      "worktree_path": "/dev/shm/clara_worktrees/PH03_A09",
+      "branch": "phase/ph03-a09",
+      "path_lane": "research/;docs/research/;docs/implementation/;docs/interoperability/",
+      "exact_write_paths": [
+        "research/",
+        "docs/research/",
+        "docs/implementation/",
+        "docs/interoperability/",
+        "artifacts/PH03/A09/"
+      ],
+      "exact_read_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "contracts/",
+        "research/",
+        "docs/research/",
+        "docs/implementation/",
+        "protocols/",
+        "docs/interoperability/",
+        "artifacts/PH03/A09/"
+      ],
+      "acceptance_artifacts": [
+        "artifacts/PH03/A09/change_manifest.json",
+        "artifacts/PH03/A09/test_report.md",
+        "artifacts/PH03/A09/risk_register.md"
+      ],
+      "prompt_filename": "A09_task_prompt.md"
+    },
+    "A10": {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "auth migration/recovery documentation",
+      "phase_id": "PH03",
+      "phase_title": "Hardening auth và identity",
+      "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+      "worktree_path": "/dev/shm/clara_worktrees/PH03_A10",
+      "branch": "phase/ph03-a10",
+      "path_lane": "docs/reports/;docs/runbooks/;scripts/ci/",
+      "exact_write_paths": [
+        "docs/reports/",
+        "docs/runbooks/",
+        "scripts/ci/",
+        "artifacts/PH03/A10/"
+      ],
+      "exact_read_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "contracts/",
+        "docs/reports/",
+        "docs/runbooks/",
+        "scripts/ci/",
+        "artifacts/",
+        "artifacts/PH03/A10/"
+      ],
+      "acceptance_artifacts": [
+        "artifacts/PH03/A10/change_manifest.json",
+        "artifacts/PH03/A10/test_report.md",
+        "artifacts/PH03/A10/risk_register.md"
+      ],
+      "prompt_filename": "A10_task_prompt.md"
+    }
+  },
+  "write_lane_conflicts": []
+}
