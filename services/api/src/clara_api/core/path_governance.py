@@ -23,6 +23,9 @@ from typing import Any
 #: Frozen Ground-Truth SHA for PH02
 FROZEN_BASE_SHA = "879dc5dcfcaae91b3626e28062043d934294478b"
 
+#: Frozen Ground-Truth SHA for PH04
+FROZEN_BASE_SHA_PH04 = "7f458c915a59a75568e344b670d2f12ce9133a4e"
+
 
 @dataclass(frozen=True)
 class LaneAllocation:
@@ -104,9 +107,7 @@ PH02_AGENT_ALLOCATIONS: dict[str, LaneAllocation] = {
         agent_id="A06",
         role="Mobile Flutter",
         task_summary="agent prompt and bounded context pack",
-        path_lanes=(
-            "apps/mobile/",
-        ),
+        path_lanes=("apps/mobile/",),
     ),
     "A07": LaneAllocation(
         agent_id="A07",
@@ -152,6 +153,110 @@ PH02_AGENT_ALLOCATIONS: dict[str, LaneAllocation] = {
     ),
 }
 
+#: Authoritative 10-role path lane allocations for Phase PH04 (Multi-tenant organizations & workspaces)
+PH04_AGENT_ALLOCATIONS: dict[str, LaneAllocation] = {
+    "A01": LaneAllocation(
+        agent_id="A01",
+        role="API + contract",
+        task_summary="organization/workspace API design",
+        path_lanes=(
+            "services/api/src/clara_api/api/",
+            "contracts/",
+            "services/api/src/clara_api/schemas.py",
+        ),
+    ),
+    "A02": LaneAllocation(
+        agent_id="A02",
+        role="Data model + migration",
+        task_summary="tenant membership and role schema",
+        path_lanes=(
+            "services/api/src/clara_api/db/",
+            "services/api/alembic/versions/",
+        ),
+    ),
+    "A03": LaneAllocation(
+        agent_id="A03",
+        role="Domain + GLHS services",
+        task_summary="row-scoped query adapters",
+        path_lanes=(
+            "services/api/src/clara_api/glhs/",
+            "services/api/src/clara_api/lifemap/",
+            "services/api/src/clara_api/phr/",
+            "services/api/src/clara_api/compliance/",
+            "services/api/src/clara_api/core/",
+        ),
+    ),
+    "A04": LaneAllocation(
+        agent_id="A04",
+        role="ML + retrieval",
+        task_summary="workspace membership invitations",
+        path_lanes=(
+            "services/ml/src/clara_ml/",
+            "evaluation/",
+            "services/ocr/",
+            "services/asr/",
+        ),
+    ),
+    "A05": LaneAllocation(
+        agent_id="A05",
+        role="Web UX",
+        task_summary="provider/patient organization linking",
+        path_lanes=(
+            "apps/web/app/",
+            "apps/web/components/",
+            "apps/web/lib/",
+        ),
+    ),
+    "A06": LaneAllocation(
+        agent_id="A06",
+        role="Mobile Flutter",
+        task_summary="tenant-aware web navigation",
+        path_lanes=("apps/mobile/",),
+    ),
+    "A07": LaneAllocation(
+        agent_id="A07",
+        role="Tests + CI",
+        task_summary="mobile org switch and deep-link",
+        path_lanes=(
+            "services/api/tests/",
+            "services/ml/tests/",
+            "apps/web/e2e/",
+            ".github/workflows/",
+        ),
+    ),
+    "A08": LaneAllocation(
+        agent_id="A08",
+        role="Security + privacy",
+        task_summary="cross-tenant isolation regression",
+        path_lanes=(
+            "docs/security/",
+            "docs/compliance/",
+            "scripts/ops/",
+        ),
+    ),
+    "A09": LaneAllocation(
+        agent_id="A09",
+        role="Docs + research evidence",
+        task_summary="billing/tenant boundary privacy audit",
+        path_lanes=(
+            "research/",
+            "docs/research/",
+            "docs/implementation/",
+            "docs/interoperability/",
+        ),
+    ),
+    "A10": LaneAllocation(
+        agent_id="A10",
+        role="Adversarial audit + integration proposals",
+        task_summary="tenant onboarding and migration playbook",
+        path_lanes=(
+            "docs/reports/",
+            "docs/runbooks/",
+            "scripts/ci/",
+        ),
+    ),
+}
+
 #: Safety-critical domain module boundaries assigned exclusively to Agent A03
 DOMAIN_MODULE_PATHS: tuple[str, ...] = (
     "services/api/src/clara_api/glhs/",
@@ -170,7 +275,9 @@ def normalize_lane_path(raw_path: str) -> str:
     if not p:
         return ""
     # File extensions preserve exact path; directories require trailing slash
-    has_ext = any(p.endswith(ext) for ext in (".py", ".json", ".ts", ".dart", ".md", ".yml", ".yaml"))
+    has_ext = any(
+        p.endswith(ext) for ext in (".py", ".json", ".ts", ".dart", ".md", ".yml", ".yaml")
+    )
     if not has_ext and not p.endswith("/"):
         p += "/"
     return p
@@ -187,7 +294,9 @@ def paths_have_overlap(path_a: str, path_b: str) -> bool:
     return norm_a.startswith(norm_b) or norm_b.startswith(norm_a)
 
 
-def check_two_lanes_overlap(lane_a: list[str] | tuple[str, ...], lane_b: list[str] | tuple[str, ...]) -> list[tuple[str, str]]:
+def check_two_lanes_overlap(
+    lane_a: list[str] | tuple[str, ...], lane_b: list[str] | tuple[str, ...]
+) -> list[tuple[str, str]]:
     """Return all overlapping path pairs between two agent lanes."""
     overlaps: list[tuple[str, str]] = []
     for p_a in lane_a:
@@ -197,9 +306,17 @@ def check_two_lanes_overlap(lane_a: list[str] | tuple[str, ...], lane_b: list[st
     return overlaps
 
 
-def audit_ph02_lane_disjointness() -> dict[str, Any]:
-    """Audit all 45 agent pairs in PH02 for path disjointness."""
-    agents = sorted(PH02_AGENT_ALLOCATIONS.keys())
+def get_phase_allocations(phase_id: str = "PH04") -> dict[str, LaneAllocation]:
+    """Retrieve authoritative lane allocations for the specified phase."""
+    if phase_id.upper() == "PH02":
+        return PH02_AGENT_ALLOCATIONS
+    return PH04_AGENT_ALLOCATIONS
+
+
+def audit_phase_lane_disjointness(phase_id: str = "PH04") -> dict[str, Any]:
+    """Audit all 45 agent pairs in the given phase for path disjointness."""
+    allocations = get_phase_allocations(phase_id)
+    agents = sorted(allocations.keys())
     overlaps: list[dict[str, Any]] = []
     pair_count = 0
 
@@ -208,19 +325,21 @@ def audit_ph02_lane_disjointness() -> dict[str, Any]:
             a1, a2 = agents[i], agents[j]
             pair_count += 1
             colls = check_two_lanes_overlap(
-                PH02_AGENT_ALLOCATIONS[a1].path_lanes,
-                PH02_AGENT_ALLOCATIONS[a2].path_lanes,
+                allocations[a1].path_lanes,
+                allocations[a2].path_lanes,
             )
             for p1, p2 in colls:
-                overlaps.append({
-                    "agent_1": a1,
-                    "agent_2": a2,
-                    "path_1": p1,
-                    "path_2": p2,
-                })
+                overlaps.append(
+                    {
+                        "agent_1": a1,
+                        "agent_2": a2,
+                        "path_1": p1,
+                        "path_2": p2,
+                    }
+                )
 
     return {
-        "phase_id": "PH02",
+        "phase_id": phase_id,
         "total_agents": len(agents),
         "total_pairs_evaluated": pair_count,
         "is_disjoint": len(overlaps) == 0,
@@ -231,10 +350,20 @@ def audit_ph02_lane_disjointness() -> dict[str, Any]:
     }
 
 
+def audit_ph02_lane_disjointness() -> dict[str, Any]:
+    """Audit all 45 agent pairs in PH02 for path disjointness."""
+    return audit_phase_lane_disjointness("PH02")
+
+
+def audit_ph04_lane_disjointness() -> dict[str, Any]:
+    """Audit all 45 agent pairs in PH04 for path disjointness."""
+    return audit_phase_lane_disjointness("PH04")
+
+
 def is_path_allowed_for_agent(
     agent_id: str,
     target_path: str,
-    phase_id: str = "PH02",
+    phase_id: str = "PH04",
 ) -> tuple[bool, str]:
     """Verify whether target_path is authorized for modification by agent_id.
 
@@ -249,15 +378,29 @@ def is_path_allowed_for_agent(
         return False, "EMPTY_PATH"
 
     # Agent is always authorized to write to its own artifacts path
+    if norm_target.startswith("artifacts/"):
+        parts = [p for p in norm_target.split("/") if p]
+        if len(parts) >= 3:
+            _path_phase, path_agent = parts[1], parts[2]
+            if path_agent == agent_id:
+                return True, "AUTHORIZED_ARTIFACT_LANE"
+            return False, "CROSS_AGENT_ARTIFACT_WRITE_PROHIBITED"
+        elif len(parts) == 2 and parts[1].startswith("PH"):
+            # Root of phase artifact dir
+            return False, "CROSS_AGENT_ARTIFACT_WRITE_PROHIBITED"
+
     artifact_prefix = f"artifacts/{phase_id}/{agent_id}/"
     if norm_target == artifact_prefix or norm_target.startswith(artifact_prefix):
         return True, "AUTHORIZED_ARTIFACT_LANE"
 
     # Reject writing to another agent's artifact directory
-    if norm_target.startswith(f"artifacts/{phase_id}/") and not norm_target.startswith(artifact_prefix):
+    if norm_target.startswith(f"artifacts/{phase_id}/") and not norm_target.startswith(
+        artifact_prefix
+    ):
         return False, "CROSS_AGENT_ARTIFACT_WRITE_PROHIBITED"
 
-    alloc = PH02_AGENT_ALLOCATIONS.get(agent_id)
+    allocations = get_phase_allocations(phase_id)
+    alloc = allocations.get(agent_id)
     if not alloc:
         return False, "UNKNOWN_AGENT_ID"
 
@@ -273,9 +416,12 @@ def locate_phase_tasks_json() -> Path | None:
         # Explicit env override
         Path(os.environ.get("PHASE_TASKS_PATH", "")),
         # Unpacked spec package in parent repo
-        Path("/home/clue/Documents/CLARA-Care/CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/machine/PHASE_TASKS.json"),
+        Path(
+            "/home/clue/Documents/CLARA-Care/CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/machine/PHASE_TASKS.json"
+        ),
         # Relative to current file
-        Path(__file__).resolve().parents[5] / "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/machine/PHASE_TASKS.json",
+        Path(__file__).resolve().parents[5]
+        / "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/machine/PHASE_TASKS.json",
         # Relative to worktree
         Path(__file__).resolve().parents[4] / "machine/PHASE_TASKS.json",
     ]
@@ -387,19 +533,23 @@ def audit_domain_import_boundaries(src_root: Path | str | None = None) -> dict[s
                 if isinstance(node, ast.Import):
                     for alias in node.names:
                         if alias.name == "clara_ml" or alias.name.startswith("clara_ml."):
-                            forbidden_imports.append({
-                                "file": str(py_file.relative_to(src_root)),
-                                "line": node.lineno,
-                                "imported": alias.name,
-                            })
+                            forbidden_imports.append(
+                                {
+                                    "file": str(py_file.relative_to(src_root)),
+                                    "line": node.lineno,
+                                    "imported": alias.name,
+                                }
+                            )
                 elif isinstance(node, ast.ImportFrom):
                     mod = node.module or ""
                     if mod == "clara_ml" or mod.startswith("clara_ml."):
-                        forbidden_imports.append({
-                            "file": str(py_file.relative_to(src_root)),
-                            "line": node.lineno,
-                            "imported": mod,
-                        })
+                        forbidden_imports.append(
+                            {
+                                "file": str(py_file.relative_to(src_root)),
+                                "line": node.lineno,
+                                "imported": mod,
+                            }
+                        )
 
     return {
         "scanned_domain_files": scanned_files,

@@ -1969,6 +1969,7 @@ def apply_transition(
             idempotency_key=idempotency_key,
             proposal_id=None,
             assertion_id=assertion.id,
+            tenant_id=getattr(scope, "tenant_id", "default"),
             operation_kind="APPLY_TRANSITION",
             request_digest=request_digest,
             disclosure_digest=assertion.source_snapshot_digest or "",

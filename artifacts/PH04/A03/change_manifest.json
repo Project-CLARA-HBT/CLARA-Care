@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH04",
+  "agent_id": "A03",
+  "role": "Domain + GLHS services",
+  "task": "row-scoped query adapters; audit domain services across GLHS, lifemap, phr, compliance, core for row-level tenant isolation, ensuring queries explicitly scope by tenant_id / organization_id and never leak across organizations.",
+  "status": "COMPLETED",
+  "frozen_head_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "verified_head_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "branch": "phase/ph04-a03",
+  "worktree_path": "/dev/shm/clara_worktrees/PH04_A03",
+  "path_lane": "services/api/src/clara_api/glhs/;services/api/src/clara_api/lifemap/;services/api/src/clara_api/phr/;services/api/src/clara_api/compliance/;services/api/src/clara_api/core/;artifacts/PH04/A03/",
+  "timestamp": "2026-10-22T00:15:00Z",
+  "files_created": [
+    "services/api/src/clara_api/core/tenant.py",
+    "artifacts/PH04/A03/test_row_scoped_query_adapters.py",
+    "artifacts/PH04/A03/change_manifest.json",
+    "artifacts/PH04/A03/test_report.md",
+    "artifacts/PH04/A03/risk_register.md",
+    "artifacts/PH04/A03/rollback.md"
+  ],
+  "files_modified": [
+    "services/api/src/clara_api/core/path_governance.py",
+    "services/api/src/clara_api/lifemap/profile_scope.py",
+    "services/api/src/clara_api/glhs/commit_kernel.py",
+    "services/api/src/clara_api/glhs/commitment_gateway.py",
+    "services/api/src/clara_api/glhs/gateway.py",
+    "services/api/src/clara_api/glhs/adapters.py",
+    "services/api/src/clara_api/compliance/service.py",
+    "services/api/src/clara_api/compliance/dsar.py",
+    "services/api/src/clara_api/compliance/redaction.py",
+    "services/api/src/clara_api/phr/audit.py"
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/core/tenant.py",
+      "line_start": 35,
+      "line_end": 175,
+      "symbol": "TenantContext, RowScopedQueryAdapter, validate_tenant_identifier, tenant_scope",
+      "description": "Foundational multi-tenant query adapter engine and thread-safe context scoping enforcing row-level tenant isolation."
+    },
+    {
+      "file": "services/api/src/clara_api/core/path_governance.py",
+      "line_start": 154,
+      "line_end": 358,
+      "symbol": "PH04_AGENT_ALLOCATIONS, audit_ph04_lane_disjointness, is_path_allowed_for_agent",
+      "description": "Multi-agent path lane allocations and 100% disjointness verification (45/45 pairs) for Phase PH04."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line_start": 23,
+      "line_end": 280,
+      "symbol": "ProfileScope, resolve_profile_scope, require_profile_scope",
+      "description": "ProfileScope augmented with tenant_id and organization_id coordinates, defending against cross-tenant IDOR and enumeration."
+    },
+    {
+      "file": "services/api/src/clara_api/glhs/commit_kernel.py",
+      "line_start": 393,
+      "line_end": 575,
+      "symbol": "execute_atomic_glhs_commit",
+      "description": "Enforced multi-tenant isolation in idempotency pre-check, locking, and proposal lookups, partitioning transitions by tenant_id."
+    },
+    {
+      "file": "services/api/src/clara_api/glhs/commitment_gateway.py",
+      "line_start": 2130,
+      "line_end": 2145,
+      "symbol": "apply_commitment_transition",
+      "description": "Propagated tenant_id from scope or active context to execute_atomic_glhs_commit rather than hardcoding default."
+    },
+    {
+      "file": "services/api/src/clara_api/glhs/adapters.py",
+      "line_start": 827,
+      "line_end": 850,
+      "symbol": "owner_profile_scope",
+      "description": "Passed tenant_id and organization_id to ProfileScope construction."
+    },
+    {
+      "file": "services/api/src/clara_api/compliance/service.py",
+      "line_start": 131,
+      "line_end": 165,
+      "symbol": "ComplianceService.record_event",
+      "description": "Added tenant_id support to compliance event logging without exposing PII."
+    },
+    {
+      "file": "services/api/src/clara_api/compliance/redaction.py",
+      "line_start": 23,
+      "line_end": 48,
+      "symbol": "_ALLOWED_STRING_KEYS",
+      "description": "Added tenant_id and organization_id to safe compliance metadata string keys."
+    },
+    {
+      "file": "services/api/src/clara_api/compliance/dsar.py",
+      "line_start": 481,
+      "line_end": 505,
+      "symbol": "DsarService.admin_queue",
+      "description": "Added tenant_id row-level filtering to DSAR admin queues."
+    },
+    {
+      "file": "services/api/src/clara_api/phr/audit.py",
+      "line_start": 150,
+      "line_end": 175,
+      "symbol": "scoped_list_versions",
+      "description": "Row-scoped PHR version listing validating profile tenant membership before returning snapshot records."
+    }
+  ],
+  "audit_findings": {
+    "tenant_isolation_posture": "VERIFIED_ROW_SCOPED",
+    "glhs_idempotency_partitioning": "ISOLATED_BY_TENANT_AND_OP_KIND",
+    "profile_scope_idor_defense": "HARDENED_WITH_TENANT_COORDINATES",
+    "path_governance_disjointness": "45_OF_45_PAIRS_DISJOINT"
+  },
+  "tests_run": [
+    {
+      "command": "git rev-parse HEAD",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "7f458c915a59a75568e344b670d2f12ce9133a4e"
+    },
+    {
+      "command": "PYTHONPATH=src CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/clara-test.db\" pytest -vv artifacts/PH04/A03/test_row_scoped_query_adapters.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "30 passed in 4.13s"
+    },
+    {
+      "command": "PYTHONPATH=src CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/clara-test.db\" pytest -q tests/test_domain_path_boundaries.py tests/test_rbac_profile_scope_idor.py tests/test_glhs_commit_kernel.py tests/test_phr_audit_service.py artifacts/PH04/A03/test_row_scoped_query_adapters.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "75 passed, 9 warnings in 28.25s"
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py --agent A03 --phase PH04",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Evaluated Files: 11, Allowed Lanes: 9, Result: All touched files conform strictly to the designated path lane."
+    },
+    {
+      "command": "uvx ruff check src/clara_api/core/tenant.py src/clara_api/core/path_governance.py src/clara_api/lifemap/profile_scope.py src/clara_api/glhs/adapters.py src/clara_api/compliance/service.py src/clara_api/compliance/dsar.py src/clara_api/compliance/redaction.py src/clara_api/phr/audit.py ../../artifacts/PH04/A03/test_row_scoped_query_adapters.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "All checks passed!"
+    },
+    {
+      "command": "uvx ruff format --check src/clara_api/core/tenant.py src/clara_api/core/path_governance.py src/clara_api/lifemap/profile_scope.py src/clara_api/glhs/adapters.py src/clara_api/compliance/service.py src/clara_api/compliance/dsar.py src/clara_api/compliance/redaction.py src/clara_api/phr/audit.py ../../artifacts/PH04/A03/test_row_scoped_query_adapters.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "9 files already formatted"
+    }
+  ],
+  "safety_review": "VERIFIED_SAFETY_INVARIANTS_LOCKED",
+  "privacy_review": "VERIFIED_NO_PII_AND_TENANT_ISOLATED"
+}

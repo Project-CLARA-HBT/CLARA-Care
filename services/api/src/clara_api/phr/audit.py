@@ -146,3 +146,25 @@ def list_versions(db: Session, *, profile_id: int) -> list[PhrVersion]:
             .order_by(PhrVersion.version_no.desc())
         ).scalars()
     )
+
+
+def scoped_list_versions(
+    db: Session,
+    *,
+    profile_id: int,
+    tenant_id: str = "default",
+) -> list[PhrVersion]:
+    """Return version snapshots newest-first, enforcing that profile belongs to tenant."""
+    from clara_api.core.tenant import CrossTenantAccessViolation
+    from clara_api.db.models import PhrProfile
+
+    profile = db.execute(select(PhrProfile).where(PhrProfile.id == profile_id)).scalar_one_or_none()
+    if profile is None:
+        return []
+
+    profile_tenant = getattr(profile, "tenant_id", "default")
+    if profile_tenant != tenant_id:
+        raise CrossTenantAccessViolation(
+            f"Cannot list PHR versions: profile belongs to tenant '{profile_tenant}', requested under '{tenant_id}'"
+        )
+    return list_versions(db, profile_id=profile_id)

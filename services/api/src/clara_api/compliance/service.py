@@ -137,6 +137,7 @@ class ComplianceService:
         processor: str | None = None,
         severity: str | None = None,
         meta: dict | None = None,
+        tenant_id: str | None = None,
     ) -> ComplianceEvent:
         """Append a PII-free compliance event row.
 
@@ -151,12 +152,17 @@ class ComplianceService:
 
         if subject_ref is None:
             subject_ref = hash_user_ref(user_id) if user_id is not None else None
+
+        event_meta = dict(meta or {})
+        if tenant_id:
+            event_meta["tenant_id"] = tenant_id
+
         row = ComplianceEvent(
             event_type=event_type,
             subject_ref=subject_ref,
             processor=processor,
             severity=severity,
-            meta_json=redact_meta(meta),
+            meta_json=redact_meta(event_meta),
         )
         self._db.add(row)
         self._db.flush()

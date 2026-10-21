@@ -2127,13 +2127,19 @@ def apply_commitment_transition(
         db.flush()
         return trans
 
+    # Determine tenant_id from scope or active context
+    tenant_id = getattr(scope, "tenant_id", "default")
+    if not tenant_id:
+        from clara_api.core.tenant import get_current_tenant_context
+        tenant_id = get_current_tenant_context().tenant_id
+
     try:
         result = execute_atomic_glhs_commit(
             db,
             profile_id=scope.profile.id,
             idempotency_key=idempotency_key,
             proposal_id=proposal.id,
-            tenant_id="default",
+            tenant_id=tenant_id,
             operation_kind="COMMIT_COMMITMENT_TRANSITION",
             request_digest=request_digest,
             disclosure_digest=proposal.source_snapshot_digest or "",

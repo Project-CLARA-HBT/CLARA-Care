@@ -41,6 +41,8 @@ _ALLOWED_STRING_KEYS = frozenset(
         "category",
         "policy_version",
         "notice_version",
+        "tenant_id",
+        "organization_id",
     }
 )
 

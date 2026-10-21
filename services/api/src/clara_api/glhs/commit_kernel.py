@@ -387,6 +387,17 @@ def execute_atomic_glhs_commit(
     if not operation_kind or not str(operation_kind).strip():
         raise GlhsInvariantError("missing_operation_kind")
 
+    if tenant_id == "default":
+        if scope is not None:
+            scope_tenant = getattr(scope, "tenant_id", None)
+            if scope_tenant:
+                tenant_id = str(scope_tenant)
+        if tenant_id == "default":
+            from clara_api.core.tenant import get_current_tenant_context
+            active_ctx = get_current_tenant_context()
+            if active_ctx and active_ctx.tenant_id != "default":
+                tenant_id = active_ctx.tenant_id
+
     # =========================================================================
     # Phase 1: Fast idempotency pre-check with GlhsAppliedTransition
     # =========================================================================
@@ -400,7 +411,8 @@ def execute_atomic_glhs_commit(
     if existing is None and proposal_id is not None and proposal_id > 0 and operation_kind == "COMMIT_PROPOSAL":
         existing = db.execute(
             select(GlhsAppliedTransition).where(
-                GlhsAppliedTransition.proposal_id == proposal_id
+                GlhsAppliedTransition.tenant_id == tenant_id,
+                GlhsAppliedTransition.proposal_id == proposal_id,
             )
         ).scalar_one_or_none()
 
@@ -558,7 +570,8 @@ def execute_atomic_glhs_commit(
     if existing_locked is None and proposal_id is not None and proposal_id > 0 and operation_kind == "COMMIT_PROPOSAL":
         existing_locked = db.execute(
             select(GlhsAppliedTransition).where(
-                GlhsAppliedTransition.proposal_id == proposal_id
+                GlhsAppliedTransition.tenant_id == tenant_id,
+                GlhsAppliedTransition.proposal_id == proposal_id,
             )
         ).scalar_one_or_none()
 

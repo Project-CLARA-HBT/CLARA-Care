@@ -824,7 +824,14 @@ def retire_visit_document_assertions(
     return last_transition
 
 
-def owner_profile_scope(*, profile, actor: User, purpose: str = "self_care") -> ProfileScope:
+def owner_profile_scope(
+    *,
+    profile,
+    actor: User,
+    purpose: str = "self_care",
+    tenant_id: str = "default",
+    organization_id: str | None = None,
+) -> ProfileScope:
     """Construct the same owner-only scope used after PHR's direct ownership check."""
 
     if profile.user_id != actor.id:
@@ -837,6 +844,8 @@ def owner_profile_scope(*, profile, actor: User, purpose: str = "self_care") -> 
         profile=profile,
         actor_role="owner",
         purpose=purpose,
+        tenant_id=tenant_id,
+        organization_id=organization_id,
         allowed_actions=frozenset(
             {
                 "view",

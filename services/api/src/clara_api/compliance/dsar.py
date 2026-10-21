@@ -377,9 +377,7 @@ class DsarService:
 
         return export_bundle(self._db, user=user)
 
-    def delete(
-        self, *, user: User, request_id: int | None = None
-    ) -> DsarAcknowledgement:
+    def delete(self, *, user: User, request_id: int | None = None) -> DsarAcknowledgement:
         """Irreversibly anonymise the subject's data, transactionally (Req 3.7).
 
         Surfaces the module-level :func:`fulfil_deletion`. Guarantees
@@ -419,9 +417,7 @@ class DsarService:
         self._db.commit()
         return self.acknowledgement_for(dsar)
 
-    def _resolve_delete_request(
-        self, *, user_id: int, request_id: int | None
-    ) -> DsarRequest:
+    def _resolve_delete_request(self, *, user_id: int, request_id: int | None) -> DsarRequest:
         """Return the ``delete`` DSAR row to drive, appending one if needed.
 
         When ``request_id`` is supplied it must reference this subject's own
@@ -431,23 +427,23 @@ class DsarService:
 
         if request_id is not None:
             row = self._db.get(DsarRequest, request_id)
-            if (
-                row is None
-                or row.user_ref != hash_user_ref(user_id)
-                or row.kind != "delete"
-            ):
+            if row is None or row.user_ref != hash_user_ref(user_id) or row.kind != "delete":
                 raise ValueError("delete request not found for subject")
             return row
 
-        existing = self._db.execute(
-            select(DsarRequest)
-            .where(
-                DsarRequest.user_ref == hash_user_ref(user_id),
-                DsarRequest.kind == "delete",
-                DsarRequest.status.notin_(tuple(RESOLVED_STATUSES)),
+        existing = (
+            self._db.execute(
+                select(DsarRequest)
+                .where(
+                    DsarRequest.user_ref == hash_user_ref(user_id),
+                    DsarRequest.kind == "delete",
+                    DsarRequest.status.notin_(tuple(RESOLVED_STATUSES)),
+                )
+                .order_by(DsarRequest.created_at.desc(), DsarRequest.id.desc())
             )
-            .order_by(DsarRequest.created_at.desc(), DsarRequest.id.desc())
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if existing is not None:
             return existing
         return record_request(self._db, user_id=user_id, kind="delete")
@@ -478,7 +474,12 @@ class DsarService:
         ).scalars()
         return list(rows)
 
-    def admin_queue(self, *, limit: int = 200) -> list[DsarRequest]:
+    def admin_queue(
+        self,
+        *,
+        limit: int = 200,
+        tenant_id: str | None = None,
+    ) -> list[DsarRequest]:
         """Return the global DSAR queue for the admin surface (Req 3.6).
 
         Unresolved requests are surfaced first (ordered by their statutory
@@ -487,11 +488,13 @@ class DsarService:
         the endpoint (admin-only / Correctness Property 7). Rows contain no PII.
         """
 
+        stmt = select(DsarRequest)
+        if tenant_id and hasattr(DsarRequest, "tenant_id"):
+            stmt = stmt.where(DsarRequest.tenant_id == tenant_id)
+
         rows = list(
             self._db.execute(
-                select(DsarRequest)
-                .order_by(DsarRequest.created_at.desc(), DsarRequest.id.desc())
-                .limit(limit)
+                stmt.order_by(DsarRequest.created_at.desc(), DsarRequest.id.desc()).limit(limit)
             ).scalars()
         )
 

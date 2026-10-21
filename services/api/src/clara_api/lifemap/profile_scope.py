@@ -29,10 +29,17 @@ class ProfileScope:
     allowed_data_classes: frozenset[str]
     grant_id: int | None = None
     valid_until: datetime | None = None
+    tenant_id: str = "default"
+    organization_id: str | None = None
 
     def __post_init__(self) -> None:
         if self.actor_role == "owner" and self.profile.user_id != self.actor.id:
             raise ValueError("actor_role 'owner' requires profile.user_id == actor.id")
+        profile_tenant = getattr(self.profile, "tenant_id", None)
+        if profile_tenant is not None and profile_tenant != self.tenant_id:
+            raise ValueError(
+                f"profile.tenant_id '{profile_tenant}' mismatches ProfileScope.tenant_id '{self.tenant_id}'"
+            )
 
     @property
     def is_owner(self) -> bool:
@@ -84,11 +91,23 @@ def resolve_profile_scope(
     action: str = "view",
     data_class: str = "lifemap",
     purpose: str = "self_care",
+    tenant_id: str | None = None,
+    organization_id: str | None = None,
 ) -> ProfileScope:
     """Resolve one profile and prove the requested action before data access."""
 
     if requested_profile is not None:
         requested_profile = requested_profile.strip() or None
+
+    resolved_tenant_id = (
+        tenant_id or getattr(token, "tenant_id", None) or token.get("tenant_id") or "default"
+    )
+    resolved_org_id = (
+        organization_id
+        or getattr(token, "organization_id", None)
+        or token.get("organization_id")
+        or token.get("org_id")
+    )
 
     actor = current_user(db, token)
     policy = ProfileAccessPolicy(token_role=token.role, account_role=actor.role)
@@ -125,6 +144,8 @@ def resolve_profile_scope(
             profile=profile,
             actor_role="owner",
             purpose=purpose,
+            tenant_id=resolved_tenant_id,
+            organization_id=resolved_org_id,
             allowed_actions=frozenset(
                 {
                     "view",
@@ -202,6 +223,8 @@ def resolve_profile_scope(
                 allowed_data_classes=classes,
                 grant_id=grant.id,
                 valid_until=grant.expires_at,
+                tenant_id=resolved_tenant_id,
+                organization_id=resolved_org_id,
             )
 
     # Do not reveal whether the profile exists to an unauthorized actor.
@@ -219,6 +242,8 @@ def require_profile_scope(
     action: str = "view",
     data_class: str = "lifemap",
     purpose: str = "self_care",
+    tenant_id: str | None = None,
+    organization_id: str | None = None,
     **kwargs,
 ) -> ProfileScope:
     """Resolve one profile and authorize requested action for a User entity."""
@@ -233,6 +258,13 @@ def require_profile_scope(
         profile_id = kwargs.get("profile_id")
     if profile_id is not None:
         profile_id = profile_id.strip() or None
+
+    resolved_tenant_id = (
+        tenant_id or kwargs.get("tenant_id") or getattr(user, "tenant_id", None) or "default"
+    )
+    resolved_org_id = (
+        organization_id or kwargs.get("organization_id") or getattr(user, "organization_id", None)
+    )
 
     policy = ProfileAccessPolicy(token_role=user.role, account_role=user.role)
     owned = list(
@@ -267,6 +299,8 @@ def require_profile_scope(
             profile=profile,
             actor_role="owner",
             purpose=purpose,
+            tenant_id=resolved_tenant_id,
+            organization_id=resolved_org_id,
             allowed_actions=frozenset(
                 {
                     "view",
@@ -343,6 +377,8 @@ def require_profile_scope(
                 allowed_data_classes=classes,
                 grant_id=grant.id,
                 valid_until=grant.expires_at,
+                tenant_id=resolved_tenant_id,
+                organization_id=resolved_org_id,
             )
 
     raise HTTPException(
