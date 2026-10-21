@@ -2,7 +2,15 @@ import re
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import AliasChoices, BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 Role = Literal["normal", "researcher", "doctor", "admin"]
 
@@ -1477,3 +1485,155 @@ class PhrReminderDispatchRequest(BaseModel):
 
     now: datetime | None = None
     dose_states: dict[str, PhrReminderDoseState] = Field(default_factory=dict)
+
+
+# ============================================================================
+# Multi-Agent Execution & Contract Manifest Schemas (PH02)
+# ============================================================================
+
+AgentId = Literal[
+    "A01",
+    "A02",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10",
+]
+
+AgentManifestStatus = Literal["PASSED", "FAILED", "BLOCKED"]
+
+
+class AgentTestRunItem(BaseModel):
+    """Execution record for an individual test command or test suite."""
+
+    command: str = Field(min_length=1, description="The test command executed")
+    exit_code: int = Field(default=0, description="Process exit code (0 indicates success)")
+    status: Literal["PASSED", "FAILED", "NOT_RUN", "PASS", "FAIL"] = Field(
+        default="PASSED", description="Result status of the test"
+    )
+    output: str | None = Field(default=None, description="Truncated test output or execution summary")
+    duration_seconds: float | None = Field(default=None, ge=0, description="Execution duration in seconds")
+
+    model_config = ConfigDict(extra="allow")
+
+
+class AgentManifest(BaseModel):
+    """Canonical validation schema for subagent task execution manifests.
+
+    Verifies the contract across 10 parallel subagents (A01-A10) executing
+    isolated phase worktrees, tracking base SHA, branch, changed files,
+    executed test suites, terminal status, and rollback steps.
+    """
+
+    phase_id: str = Field(
+        ...,
+        pattern=r"^PH[0-9]{2}$",
+        description="Phase identifier (e.g., PH00, PH01, PH02)",
+    )
+    agent_id: AgentId = Field(
+        ...,
+        description="Subagent identifier, strictly one of A01 through A10",
+    )
+    base_sha: str = Field(
+        ...,
+        pattern=r"^[0-9a-fA-F]{40}$",
+        validation_alias=AliasChoices("base_sha", "frozen_head_sha"),
+        description="Ground-truth 40-character hexadecimal git commit SHA",
+    )
+    branch: str = Field(
+        ...,
+        min_length=1,
+        pattern=r"^[a-zA-Z0-9_\-./]+$",
+        description="Git branch name assigned to the subagent worktree",
+    )
+    files_changed: list[str] = Field(
+        default_factory=list,
+        description="List of repository file paths created, modified, or deleted by this agent",
+    )
+    tests_run: list[AgentTestRunItem | str] = Field(
+        default_factory=list,
+        description="List of test commands or structured test execution objects",
+    )
+    status: AgentManifestStatus = Field(
+        ...,
+        description="Terminal status of the subagent task (PASSED, FAILED, or BLOCKED)",
+    )
+    rollback_steps: list[str] = Field(
+        ...,
+        min_length=1,
+        description="Ordered procedural commands or steps to completely revert changes",
+    )
+    role: str | None = Field(default=None, description="Assigned subagent role description")
+    task: str | None = Field(default=None, description="Assigned task description")
+    worktree_path: str | None = Field(default=None, description="Filesystem path of the isolated worktree")
+    path_lane: str | None = Field(default=None, description="Authorized path lane for the subagent")
+    handoff_commit: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-fA-F]{7,40}$",
+        description="Git commit SHA delivered by this agent on its branch",
+    )
+    blockers: list[str] = Field(
+        default_factory=list,
+        description="List of blocker descriptions if status is BLOCKED",
+    )
+    artifacts: list[str] = Field(
+        default_factory=list,
+        description="Deliverable artifact paths produced by the subagent",
+    )
+    interface_assumptions: list[str] = Field(
+        default_factory=list,
+        description="Interface assumptions made regarding other agents or contracts",
+    )
+    verified_source_anchors: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Inspected or modified source code anchors",
+    )
+    timestamp: str | None = Field(
+        default=None,
+        description="ISO 8601 timestamp of manifest generation",
+    )
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    @field_validator("rollback_steps", mode="before")
+    @classmethod
+    def normalize_rollback_steps(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            lines = [line.strip().lstrip("-* ").strip() for line in v.strip().splitlines() if line.strip()]
+            if not lines:
+                raise ValueError("rollback_steps string cannot be empty")
+            return lines
+        if isinstance(v, list):
+            if not v:
+                raise ValueError("rollback_steps list must contain at least one step")
+            return [str(item) for item in v]
+        raise ValueError("rollback_steps must be a list of strings or a non-empty string")
+
+    @model_validator(mode="before")
+    @classmethod
+    def aggregate_files_changed(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if not data.get("files_changed"):
+                files: list[str] = []
+                for key in ("files_created", "files_modified", "files_deleted"):
+                    val = data.get(key)
+                    if isinstance(val, list):
+                        files.extend(val)
+                if files:
+                    data = dict(data)
+                    data["files_changed"] = files
+        return data
+
+
+def validate_agent_manifest_dict(payload: dict[str, Any]) -> AgentManifest:
+    """Validate a dictionary against the canonical AgentManifest contract schema."""
+    return AgentManifest.model_validate(payload)
+
+
+def validate_agent_manifest_json(json_content: str) -> AgentManifest:
+    """Validate a JSON string against the canonical AgentManifest contract schema."""
+    return AgentManifest.model_validate_json(json_content)

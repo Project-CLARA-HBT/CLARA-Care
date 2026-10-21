@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH02",
+  "agent_id": "A01",
+  "role": "API + contract",
+  "task": "agent contract JSON schema; design and implement contracts/agent-execution/agent-manifest.schema.json and Pydantic validation schema in services/api/src/clara_api/schemas.py verifying phase_id, agent_id (A01-A10), base_sha, branch, files_changed, tests_run, status (PASSED|FAILED|BLOCKED), and rollback_steps.",
+  "status": "PASSED",
+  "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "frozen_head_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "branch": "phase/ph02-a01",
+  "worktree_path": "/dev/shm/clara_worktrees/PH02_A01",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;artifacts/PH02/A01/",
+  "timestamp": "2026-10-21T20:25:00Z",
+  "files_changed": [
+    "contracts/agent-execution/agent-manifest.schema.json",
+    "contracts/agent-execution/test_agent_manifest_schema.py",
+    "services/api/src/clara_api/schemas.py",
+    "artifacts/PH02/A01/change_manifest.json",
+    "artifacts/PH02/A01/test_report.md",
+    "artifacts/PH02/A01/risk_register.md",
+    "artifacts/PH02/A01/rollback.md",
+    "artifacts/PH02/A01/DEPENDENCY_REQUEST.md"
+  ],
+  "tests_run": [
+    {
+      "command": "python -m pytest -v ../../contracts/agent-execution/test_agent_manifest_schema.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.60
+    },
+    {
+      "command": "ruff check src/clara_api/schemas.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.05
+    },
+    {
+      "command": "mypy src/clara_api/schemas.py --ignore-missing-imports",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.40
+    },
+    {
+      "command": "ruff check ../../contracts/agent-execution/test_agent_manifest_schema.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.05
+    },
+    {
+      "command": "mypy ../../contracts/agent-execution/test_agent_manifest_schema.py --ignore-missing-imports",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.35
+    },
+    {
+      "command": "python -m pytest -q tests/test_validation_error_serialization.py tests/test_api_v2_conventions.py tests/test_auth_and_rbac.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 49.71
+    }
+  ],
+  "rollback_steps": [
+    "git checkout 879dc5dcfcaae91b3626e28062043d934294478b -- services/api/src/clara_api/schemas.py",
+    "rm -rf contracts/agent-execution",
+    "rm -rf artifacts/PH02/A01",
+    "git reset --hard 879dc5dcfcaae91b3626e28062043d934294478b"
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "contracts/agent-execution/agent-manifest.schema.json",
+      "line_start": 1,
+      "line_end": 178,
+      "symbol": "AgentExecutionManifest",
+      "description": "Canonical contract JSON schema draft 2020-12 validating required invariants (phase_id, agent_id A01-A10, base_sha, branch, files_changed, tests_run, status, rollback_steps)."
+    },
+    {
+      "file": "services/api/src/clara_api/schemas.py",
+      "line_start": 1481,
+      "line_end": 1582,
+      "symbol": "AgentId, AgentManifestStatus, AgentTestRunItem, AgentManifest, validate_agent_manifest_dict, validate_agent_manifest_json",
+      "description": "Pydantic v2 schemas and validation functions enforcing multi-agent contract integrity across isolated subagent executions."
+    },
+    {
+      "file": "contracts/agent-execution/test_agent_manifest_schema.py",
+      "line_start": 1,
+      "line_end": 286,
+      "symbol": "test_agent_manifest_schema",
+      "description": "Comprehensive pytest suite executing 50 automated test cases across schema contract invariants, allow/deny boundary conditions, alias resolution, and normalization."
+    }
+  ],
+  "artifacts": [
+    "contracts/agent-execution/agent-manifest.schema.json",
+    "contracts/agent-execution/test_agent_manifest_schema.py",
+    "services/api/src/clara_api/schemas.py",
+    "artifacts/PH02/A01/change_manifest.json",
+    "artifacts/PH02/A01/test_report.md",
+    "artifacts/PH02/A01/risk_register.md",
+    "artifacts/PH02/A01/rollback.md",
+    "artifacts/PH02/A01/DEPENDENCY_REQUEST.md"
+  ],
+  "interface_assumptions": [
+    "All subagents in PH02 (A01-A10) will emit change_manifest.json conforming strictly to contracts/agent-execution/agent-manifest.schema.json.",
+    "Phase identifier must follow ^PH[0-9]{2}$ regex pattern (e.g. PH00, PH01, PH02).",
+    "Base SHA must be the 40-character hexadecimal starting commit SHA (frozen HEAD 879dc5dcfcaae91b3626e28062043d934294478b).",
+    "Status must be strictly one of PASSED, FAILED, or BLOCKED.",
+    "Rollback steps must contain at least one actionable recovery command or step.",
+    "The schema permits extra fields (such as role, task, worktree_path, blockers, artifacts, audit_findings) for extensibility without breaking validation."
+  ]
+}
