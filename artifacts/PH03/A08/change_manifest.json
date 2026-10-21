@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH03",
+  "agent_id": "A08",
+  "role": "Security + privacy",
+  "task": "mobile refresh/session persistence security audit; audit token refresh rotation in mobile client (prevent reuse of refresh tokens), secure key storage, token leak risks in logs.",
+  "status": "PASSED",
+  "base_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "frozen_head_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "branch": "phase/ph03-a08",
+  "worktree_path": "/dev/shm/clara_worktrees/PH03_A08",
+  "path_lane": "docs/security/;docs/compliance/;scripts/ops/;artifacts/PH03/A08/",
+  "timestamp": "2026-10-21T21:45:00Z",
+  "files_changed": [
+    "docs/security/privacy-checklist.md",
+    "docs/security/mobile-auth-session-security-audit.md",
+    "scripts/ops/audit_mobile_auth_session_security.py",
+    "scripts/ops/test_audit_mobile_auth_session_security.py",
+    "artifacts/PH03/A08/change_manifest.json",
+    "artifacts/PH03/A08/test_report.md",
+    "artifacts/PH03/A08/risk_register.md",
+    "artifacts/PH03/A08/rollback.md"
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m evaluation.commitloop.secret_scan --repo-root .",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.80
+    },
+    {
+      "command": "python3 scripts/security/redteam_manifest_checker.py artifacts/PH00 artifacts/PH01 artifacts/PH02",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.20
+    },
+    {
+      "command": "python3 scripts/ops/audit_mobile_auth_session_security.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.30
+    },
+    {
+      "command": "pytest -v scripts/ops/test_audit_mobile_auth_session_security.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.35
+    },
+    {
+      "command": "python3 -m py_compile scripts/ops/audit_mobile_auth_session_security.py scripts/ops/test_audit_mobile_auth_session_security.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.10
+    },
+    {
+      "command": "python3 scripts/security/check_ci_artifact_policy.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.10
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.20
+    }
+  ],
+  "rollback_steps": [
+    "git reset --hard 3b1072b98350b978b83b7ecec5c35228415759a3",
+    "rm -f scripts/ops/audit_mobile_auth_session_security.py scripts/ops/test_audit_mobile_auth_session_security.py docs/security/mobile-auth-session-security-audit.md",
+    "rm -rf artifacts/PH03/A08",
+    "git checkout 3b1072b98350b978b83b7ecec5c35228415759a3 -- docs/security/privacy-checklist.md",
+    "git clean -fd"
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "apps/mobile/lib/core/api_client.dart",
+      "line_start": 2736,
+      "line_end": 2810,
+      "symbol": "_attemptRefresh, _doRefresh",
+      "description": "Token refresh coalescing via _refreshInFlight and single 401 retry state machine."
+    },
+    {
+      "file": "apps/mobile/lib/core/session_store.dart",
+      "line_start": 18,
+      "line_end": 177,
+      "symbol": "FlutterSecureSessionStorage, PersistentSessionStore",
+      "description": "Secure storage abstraction and launch hydration/purge lifecycle."
+    },
+    {
+      "file": "apps/mobile/lib/core/analytics.dart",
+      "line_start": 286,
+      "line_end": 374,
+      "symbol": "_deniedExactKeys, _deniedSubstrings, _isPiiKey",
+      "description": "Analytics property denylist and PII sanitization engine."
+    },
+    {
+      "file": "apps/mobile/lib/core/public_share_link.dart",
+      "line_start": 27,
+      "line_end": 50,
+      "symbol": "phrShareTokenFromLink",
+      "description": "In-memory bounded token parser for public PHR share deep links."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "line_start": 757,
+      "line_end": 824,
+      "symbol": "refresh_token",
+      "description": "Server-side refresh rotation, replay detection, and no-PII logging."
+    },
+    {
+      "file": "services/api/src/clara_api/core/session_security.py",
+      "line_start": 85,
+      "line_end": 179,
+      "symbol": "SessionSecurity.rotate_refresh, is_refresh_reused, record_reuse",
+      "description": "Redis-backed refresh token rotation and replay detection engine."
+    }
+  ],
+  "artifacts": [
+    "docs/security/privacy-checklist.md",
+    "docs/security/mobile-auth-session-security-audit.md",
+    "scripts/ops/audit_mobile_auth_session_security.py",
+    "scripts/ops/test_audit_mobile_auth_session_security.py",
+    "artifacts/PH03/A08/change_manifest.json",
+    "artifacts/PH03/A08/test_report.md",
+    "artifacts/PH03/A08/risk_register.md",
+    "artifacts/PH03/A08/rollback.md"
+  ],
+  "interface_assumptions": [
+    "Subagent A08 operates strictly within path lanes: docs/security/;docs/compliance/;scripts/ops/;artifacts/PH03/A08/.",
+    "Mobile token refresh rotation must conform to RFC 6749 §10.4 and OWASP MASVS-AUTH-1.",
+    "Mobile credentials must be isolated in hardware-backed platform keystores (OWASP MASVS-STORAGE-1/2).",
+    "Logging, telemetry, and analytics must never emit Bearer tokens, refresh tokens, or user credentials (OWASP MASVS-CODE-2)."
+  ]
+}

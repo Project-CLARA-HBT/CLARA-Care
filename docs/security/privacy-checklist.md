@@ -50,3 +50,14 @@ Use this operational checklist before a release; it is not a certification.
       release blocker, not a reason to lower the audit threshold or add a broad
       scanner suppression.
 - [ ] Release locked suite is measured, not merely structurally green.
+- [ ] Mobile credentials (access and refresh tokens) are persisted exclusively in
+      hardware-backed secure storage (`FlutterSecureStorage`) with `encryptedSharedPreferences`
+      and `resetOnError` on Android, and `KeychainAccessibility.first_unlock_this_device` on iOS.
+- [ ] Mobile `AndroidManifest.xml` explicitly enforces `android:allowBackup="false"`
+      and configures data extraction rules to prevent credential exfiltration via cloud/ADB backups.
+- [ ] Mobile token refresh coalesces concurrent requests and rotates refresh tokens
+      without reusing prior grants; server detects token replay and rejects with HTTP 401.
+- [ ] Mobile analytics and logging pipelines denylist token and credential keys (`token`,
+      `bearer`, `accesstoken`, `refreshtoken`, `auth`, `secret`) to prevent telemetry leakage.
+- [ ] Public share capability tokens (`/phr/shared/{token}`) remain strictly bounded (≤512 chars),
+      in-memory only, and excluded from persistence, logs, and analytics.
