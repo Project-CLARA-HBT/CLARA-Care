@@ -14,6 +14,8 @@ import api from "@/lib/http-client";
 import { formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
+import { OrganizationLinkBadge } from "@/components/organization/organization-link-badge";
+import { OrganizationSwitcher } from "@/components/organization/organization-switcher";
 
 export type PatientRiskTier = "critical" | "high" | "moderate" | "low";
 export type ConsultationStatus =
@@ -94,6 +96,12 @@ export interface PatientRecord {
   ddiAlerts: PatientDdiAlert[];
   recentNotes: PatientNote[];
   admissionTime: string;
+  organizationId?: string;
+  organizationName?: string;
+  clinicTier?: "hospital" | "clinic" | "practice" | "standard";
+  doctorCchn?: string;
+  isEmrLinked?: boolean;
+  isTransfer?: boolean;
 }
 
 export const CANONICAL_TRIAGE_PATIENTS: PatientRecord[] = [
@@ -136,7 +144,12 @@ export const CANONICAL_TRIAGE_PATIENTS: PatientRecord[] = [
     recentNotes: [
       { date: "2026-08-24 07:30", author: "BS. Trực Cấp cứu", summary: "BN đau ngực tăng dần, đã cho ngậm Nitroglycerin 0.5mg, điện tâm đồ ST chênh xuống V4-V6." }
     ],
-    admissionTime: "2026-08-24T07:15:00Z"
+    admissionTime: "2026-08-24T07:15:00Z",
+    organizationId: "org_bach_mai",
+    organizationName: "Bệnh viện Bạch Mai",
+    clinicTier: "hospital",
+    doctorCchn: "Mã CCHN: 014829/HCM-CCHN",
+    isEmrLinked: true,
   },
   {
     id: "PT-9402",
@@ -783,6 +796,7 @@ export default function PatientRoster() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <OrganizationSwitcher compact align="right" />
           <Button
             variant="secondary"
             size="sm"
@@ -1008,8 +1022,13 @@ export default function PatientRoster() {
 
                       {/* Department & Location */}
                       <td className="py-3.5 px-3">
-                        <div className="font-medium text-[var(--text-primary)]">
-                          {language === "vi" ? patient.departmentLabel.vi : patient.departmentLabel.en}
+                        <div className="font-medium text-[var(--text-primary)] flex items-center gap-1.5">
+                          <span>{language === "vi" ? patient.departmentLabel.vi : patient.departmentLabel.en}</span>
+                          {patient.clinicTier === "hospital" && (
+                            <span className="rounded bg-red-500/15 text-red-300 px-1 py-0.2 text-[9px] font-bold border border-red-500/30">
+                              BV
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-[var(--text-muted)]">
                           {patient.roomBed}
@@ -1204,6 +1223,18 @@ export default function PatientRoster() {
       >
         {selectedPatient && (
           <div className="space-y-6 text-sm">
+            {/* Organization Link & Clinician Affiliation Dossier */}
+            <OrganizationLinkBadge
+              organizationName={selectedPatient.organizationName ?? "Bệnh viện Bạch Mai"}
+              departmentName={language === "vi" ? selectedPatient.departmentLabel.vi : selectedPatient.departmentLabel.en}
+              doctorName={selectedPatient.attendingDoctor}
+              doctorCchn={selectedPatient.doctorCchn ?? "Mã CCHN: 014829/HCM-CCHN"}
+              clinicTier={selectedPatient.clinicTier ?? "hospital"}
+              isEmrLinked={selectedPatient.isEmrLinked ?? true}
+              isTransfer={selectedPatient.isTransfer ?? false}
+              variant="full"
+            />
+
             {/* Clinical Alert & Safety Highlights */}
             {selectedPatient.ddiAlerts.length > 0 && (
               <div className="rounded-[var(--radius-lg)] border border-red-500/40 bg-red-500/10 p-3.5 space-y-1.5">

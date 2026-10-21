@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH04",
+  "agent_id": "A05",
+  "role": "Web UX",
+  "task": "provider/patient organization linking; audit Web clinic/hospital portal navigation, organization switcher components, tenant context providers in apps/web.",
+  "status": "PASSED",
+  "base_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "frozen_head_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "worktree_path": "/dev/shm/clara_worktrees/PH04_A05",
+  "branch": "phase/ph04-a05",
+  "path_lane": "apps/web/app/;apps/web/components/;apps/web/lib/;artifacts/PH04/A05/",
+  "timestamp": "2026-10-22T01:30:00Z",
+  "files_changed": [
+    "apps/web/app/clinical/clinical-pages.test.tsx",
+    "apps/web/components/clinical/patient-roster.tsx",
+    "apps/web/components/organization/organization-link-badge.test.tsx",
+    "apps/web/components/organization/organization-link-badge.tsx",
+    "apps/web/components/organization/organization-provider.test.tsx",
+    "apps/web/components/organization/organization-provider.tsx",
+    "apps/web/components/organization/organization-switcher.test.tsx",
+    "apps/web/components/organization/organization-switcher.tsx",
+    "apps/web/lib/api/v2-client.ts",
+    "apps/web/lib/http-client.ts",
+    "apps/web/lib/organization-api.test.ts",
+    "apps/web/lib/organization-api.ts",
+    "apps/web/lib/organization-context.test.ts",
+    "apps/web/lib/organization-context.ts",
+    "artifacts/PH04/A05/change_manifest.json",
+    "artifacts/PH04/A05/test_report.md",
+    "artifacts/PH04/A05/risk_register.md",
+    "artifacts/PH04/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH04/A05/change_manifest.json",
+    "artifacts/PH04/A05/test_report.md",
+    "artifacts/PH04/A05/risk_register.md",
+    "artifacts/PH04/A05/rollback.md"
+  ],
+  "verified_source_anchors": [
+    {
+      "path": "apps/web/lib/http-client.ts",
+      "lines": "285-296",
+      "symbol": "api.interceptors.request",
+      "description": "Request interceptor injecting X-CLARA-Organization-Id alongside X-CLARA-Profile-Context and CSRF tokens"
+    },
+    {
+      "path": "apps/web/lib/api/v2-client.ts",
+      "lines": "1511-1520",
+      "symbol": "ApiV2Client.buildHeaders",
+      "description": "API v2 header builder injecting X-CLARA-Organization-Id from active tenant context or explicit options"
+    },
+    {
+      "path": "apps/web/lib/organization-context.ts",
+      "lines": "1-140",
+      "symbol": "OrganizationContextBoundary",
+      "description": "Client-side tenant context manager with secure storage, automated cache purge, and change event dispatch"
+    },
+    {
+      "path": "apps/web/lib/organization-api.ts",
+      "lines": "1-125",
+      "symbol": "OrganizationApiClient",
+      "description": "Typed client for multi-tenant organizations, workspaces, and membership management endpoints"
+    },
+    {
+      "path": "apps/web/components/organization/organization-provider.tsx",
+      "lines": "1-190",
+      "symbol": "OrganizationProvider",
+      "description": "React context provider for tenant organizations, active organization state, and cache partition switching"
+    },
+    {
+      "path": "apps/web/components/organization/organization-switcher.tsx",
+      "lines": "1-320",
+      "symbol": "OrganizationSwitcher",
+      "description": "Healthcare facility dropdown switcher using ChromeSurface overlay with tier badges and keyboard navigation"
+    },
+    {
+      "path": "apps/web/components/organization/organization-link-badge.tsx",
+      "lines": "1-160",
+      "symbol": "OrganizationLinkBadge",
+      "description": "Provider-patient organization linking badge showing hospital affiliation, CCHN practitioner code, and EMR sync status"
+    },
+    {
+      "path": "apps/web/components/clinical/patient-roster.tsx",
+      "lines": "795-802, 1022-1033, 1220-1234",
+      "symbol": "PatientRoster",
+      "description": "Clinical patient roster integrated with OrganizationSwitcher and OrganizationLinkBadge in patient dossier inspector"
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "cd apps/web && npm run route-matrix:check",
+      "status": "PASSED",
+      "exit_code": 0,
+      "description": "Verified all 123 web page routes match route-capability-matrix without drift"
+    },
+    {
+      "command": "cd apps/web && npm run consumer-terminology:check",
+      "status": "PASSED",
+      "exit_code": 0,
+      "description": "Verified cross-platform consumer terminology contract matches canonical 19-key schema"
+    },
+    {
+      "command": "cd apps/web && npx vitest run lib/organization-context.test.ts lib/organization-api.test.ts",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 1.54,
+      "description": "16 unit tests for organization context boundary, cache purging, and typed API endpoints"
+    },
+    {
+      "command": "cd apps/web && npx vitest run components/organization/organization-link-badge.test.tsx components/organization/organization-provider.test.tsx components/organization/organization-switcher.test.tsx",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 2.32,
+      "description": "10 unit tests for OrganizationProvider, OrganizationSwitcher, and OrganizationLinkBadge components"
+    },
+    {
+      "command": "cd apps/web && npx vitest run app/clinical/clinical-pages.test.tsx",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 3.49,
+      "description": "7 clinical workflow tests verifying patient roster, vital trends, and organization link inspector badge"
+    },
+    {
+      "command": "cd apps/web && npx vitest run lib/api/v2-client.test.ts",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 1.84,
+      "description": "24 API v2 client tests confirming header injection and request handling"
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py --agent-id A05 --phase-id PH04",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 0.05,
+      "description": "Enforced strict path lane isolation across all 18 touched and deliverable files"
+    }
+  ],
+  "audit_findings": {
+    "organization_routing": {
+      "status": "COMPLETED",
+      "finding": "Clinical portal navigation (/clinical, /clinical/overview, /clinical/patients, /dashboard, /council, /scribe) audited. Pre-existing routes used static mock patients without organization context. Integrated OrganizationSwitcher in header strip and OrganizationLinkBadge in patient dossier inspector, preserving existing 123 routes."
+    },
+    "organization_switcher": {
+      "status": "COMPLETED",
+      "finding": "Distinguished WorkspaceSwitcher (role/persona switching: Personal, Clinical, Research, Admin) from OrganizationSwitcher (multi-tenant B2B clinic / hospital switching). OrganizationSwitcher uses ChromeSurface overlay, accessible ARIA attributes, Escape key handling, and 1-click active tenant switching with automated cache purging."
+    },
+    "tenant_context_boundary": {
+      "status": "COMPLETED",
+      "finding": "Implemented organization-context.ts and OrganizationProvider. Enforces clearOrganizationScopedClientState() upon organization switch to purge clara_org_cache:* and clara_tenant_cache:* keys, preventing cross-tenant leakage. Automatically attaches X-CLARA-Organization-Id in http-client.ts and ApiV2Client."
+    },
+    "provider_patient_linking": {
+      "status": "COMPLETED",
+      "finding": "Implemented OrganizationLinkBadge surfacing hospital/clinic affiliation, CCHN practitioner certification code (e.g. CCHN: 014829/HCM-CCHN), clinic tier (Hospital, Clinic, Practice, Facility), and EMR sync status across patient dossier and clinical command workflows."
+    }
+  },
+  "blockers": [],
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH04_A05/artifacts/PH04/A05",
+    "rm -rf /dev/shm/clara_worktrees/PH04_A05/apps/web/components/organization",
+    "rm -f /dev/shm/clara_worktrees/PH04_A05/apps/web/lib/organization-context.ts",
+    "rm -f /dev/shm/clara_worktrees/PH04_A05/apps/web/lib/organization-context.test.ts",
+    "rm -f /dev/shm/clara_worktrees/PH04_A05/apps/web/lib/organization-api.ts",
+    "rm -f /dev/shm/clara_worktrees/PH04_A05/apps/web/lib/organization-api.test.ts",
+    "git -C /dev/shm/clara_worktrees/PH04_A05 checkout 7f458c915a59a75568e344b670d2f12ce9133a4e -- apps/web/app/clinical/clinical-pages.test.tsx apps/web/components/clinical/patient-roster.tsx apps/web/lib/api/v2-client.ts apps/web/lib/http-client.ts",
+    "git -C /dev/shm/clara_worktrees/PH04_A05 reset --hard 7f458c915a59a75568e344b670d2f12ce9133a4e"
+  ]
+}

@@ -1,6 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { clearTokens, getCsrfToken } from "@/lib/auth-store";
 import { getActiveProfileId } from "@/lib/profile-context";
+import { getActiveOrganizationId } from "@/lib/organization-context";
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
@@ -287,6 +288,12 @@ api.interceptors.request.use(async (config) => {
   const activeProfileId = getActiveProfileId();
   if (activeProfileId) {
     config.headers["X-CLARA-Profile-Context"] = activeProfileId;
+  }
+
+  // Tenant / Organization partition hint for multi-tenant services.
+  const activeOrgId = getActiveOrganizationId();
+  if (activeOrgId) {
+    config.headers["X-CLARA-Organization-Id"] = activeOrgId;
   }
 
   if (isUnsafe) {

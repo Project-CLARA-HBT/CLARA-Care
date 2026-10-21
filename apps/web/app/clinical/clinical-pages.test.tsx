@@ -285,6 +285,9 @@ describe("Clinical Workflows (/clinical, /clinical/overview, /clinical/patients)
 
       expect(screen.getByText("Hội chẩn AI cho ca này")).toBeInTheDocument();
       expect(screen.getAllByText("Ghi chép SOAP").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByTestId("org-link-badge-full")).toBeInTheDocument();
+      expect(screen.getAllByText("Bệnh viện Bạch Mai").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("Mã CCHN: 014829/HCM-CCHN")).toBeInTheDocument();
       expect(screen.getByText("Biểu đồ Xu hướng Sinh hiệu")).toBeInTheDocument();
       expect(screen.getByText("HA & Nhịp tim")).toBeInTheDocument();
       expect(screen.getByText("SpO2 & Hô hấp")).toBeInTheDocument();

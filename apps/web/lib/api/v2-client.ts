@@ -13,6 +13,7 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { getCsrfToken } from "@/lib/auth-store";
 import { getActiveProfileId } from "@/lib/profile-context";
+import { getActiveOrganizationId } from "@/lib/organization-context";
 
 export const DEFAULT_TIMEOUT_MS = 60000;
 
@@ -57,11 +58,13 @@ export interface ApiV2RequestOptions {
   signal?: AbortSignal;
   timeout?: number;
   profileId?: string | null;
+  organizationId?: string | null;
   etag?: string | number | null;
   ifMatch?: string | number | null;
   baseVersion?: string | number | null;
   idempotencyKey?: string | null;
   skipProfileContext?: boolean;
+  skipOrganizationContext?: boolean;
   skipCsrf?: boolean;
   withCredentials?: boolean;
 }
@@ -1505,6 +1508,14 @@ export class ApiV2Client {
       const targetProfileId = options?.profileId ?? getActiveProfileId();
       if (targetProfileId && !headers["X-CLARA-Profile-Context"]) {
         headers["X-CLARA-Profile-Context"] = targetProfileId;
+      }
+    }
+
+    // 1b. Organization context injection (X-CLARA-Organization-Id)
+    if (!options?.skipOrganizationContext) {
+      const targetOrgId = options?.organizationId ?? getActiveOrganizationId();
+      if (targetOrgId && !headers["X-CLARA-Organization-Id"]) {
+        headers["X-CLARA-Organization-Id"] = targetOrgId;
       }
     }
 
