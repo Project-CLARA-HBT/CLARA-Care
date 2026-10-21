@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "manifest_version": "1.0.0",
+  "agent_id": "A05",
+  "phase_id": "PH02",
+  "role": "Web UX",
+  "worktree_path": "/dev/shm/clara_worktrees/PH02_A05",
+  "branch": "phase/ph02-a05",
+  "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "head_sha_verified": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "status": "COMPLETED",
+  "task": "ownership and path ACL checker; implement scripts/ci/check_agent_path_acl.py to verify git diff against assigned path_lane for each agent; fail if an agent touches any file outside its designated path lane.",
+  "path_lane": [
+    "apps/web/app/",
+    "apps/web/components/",
+    "apps/web/lib/",
+    "scripts/ci/",
+    "artifacts/PH02/A05/"
+  ],
+  "changed_paths": [
+    "scripts/ci/check_agent_path_acl.py",
+    "artifacts/PH02/A05/change_manifest.json",
+    "artifacts/PH02/A05/test_report.md",
+    "artifacts/PH02/A05/risk_register.md",
+    "artifacts/PH02/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH02/A05/change_manifest.json",
+    "artifacts/PH02/A05/test_report.md",
+    "artifacts/PH02/A05/risk_register.md",
+    "artifacts/PH02/A05/rollback.md"
+  ],
+  "verified_source_anchors": [
+    {
+      "path": "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/machine/PHASE_TASKS.json",
+      "lines": "300-309",
+      "description": "PH02 Agent A05 task definition and path_lane specification"
+    },
+    {
+      "path": "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/phases/PH02_thi-t-l-p-t-ch-c-t-c-nh-n-v-10-worktree-song-son.md",
+      "lines": "24-36",
+      "description": "PH02 10-agent concurrent worktree matrix and path ownership rules"
+    },
+    {
+      "path": "scripts/ci/ph01_reproducibility_gate.py",
+      "lines": "22",
+      "description": "REPO_ROOT resolution pattern in CI script hierarchy"
+    },
+    {
+      "path": "scripts/ci/r4_claim_lint.py",
+      "lines": "16",
+      "description": "Path resolution and static audit runner pattern"
+    },
+    {
+      "path": "artifacts/PH01/A10/change_manifest.json",
+      "lines": "11-16",
+      "description": "Canonical path_lane representation in completed phase manifests"
+    }
+  ],
+  "acl_checker_features": {
+    "cli_interface": [
+      "--agent-id / -a",
+      "--phase-id / -p",
+      "--files",
+      "--diff",
+      "--base / --base-sha",
+      "--head / --head-sha",
+      "--path-lane",
+      "--extra-lane",
+      "--phase-tasks",
+      "--json",
+      "--selftest",
+      "stdin piping (- or piped stream)"
+    ],
+    "verification_guarantees": [
+      "Directory boundary enforcement (no false positive substring matches across folders)",
+      "Strict agent artifact isolation (agent cannot write to another agent's artifact folder)",
+      "Automated extraction from unified git diffs, name-only diffs, and status porcelain",
+      "Path traversal rejection (guards against '../' escaping repository root)",
+      "Zero-external-dependency standard library implementation"
+    ],
+    "test_coverage": "10 test cases in AgentPathAclTestCase, pytest and standalone --selftest verified"
+  }
+}
