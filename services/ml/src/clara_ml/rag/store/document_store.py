@@ -97,6 +97,7 @@ class IngestDocument:
     effective_date: date | None = None
     raw_meta: dict[str, Any] = field(default_factory=dict)
     is_active: bool = True
+    tenant_id: str | None = None
 
 
 @dataclass(slots=True)
@@ -261,10 +262,12 @@ class DocumentStore:
                     existing.effective_date = doc.effective_date
                     existing.raw_meta_json = dict(doc.raw_meta)
                     existing.is_active = doc.is_active
+                    existing.tenant_id = doc.tenant_id
                     s.flush()
                 return int(existing.id)
 
             row = KbDocument(
+                tenant_id=doc.tenant_id,
                 source_id=doc.source_id,
                 external_id=doc.external_id,
                 title=doc.title,

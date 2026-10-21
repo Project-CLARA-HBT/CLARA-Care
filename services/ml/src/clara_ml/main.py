@@ -1115,6 +1115,16 @@ def rag_poc(payload: dict) -> dict:
     query = str(payload.get("query", "")).strip()
     pii = redact_pii(query)
 
+    tenant_id_raw = payload.get("tenant_id")
+    tenant_id = str(tenant_id_raw).strip() if tenant_id_raw else None
+    if tenant_id:
+        from clara_ml.tenant_boundary import enforce_workspace_ml_membership
+
+        enforce_workspace_ml_membership(
+            tenant_id=tenant_id,
+            membership_status=payload.get("membership_status"),
+        )
+
     scientific_retrieval_enabled = _as_bool(payload.get("scientific_retrieval_enabled"), False)
     web_retrieval_enabled = _as_bool(payload.get("web_retrieval_enabled"), False)
     file_retrieval_enabled = _as_bool(payload.get("file_retrieval_enabled"), True)
@@ -1128,6 +1138,7 @@ def rag_poc(payload: dict) -> dict:
         file_retrieval_enabled=file_retrieval_enabled,
         rag_sources=rag_sources,
         uploaded_documents=uploaded_documents,
+        tenant_id=tenant_id,
     )
     return {
         "query": query,
@@ -1173,6 +1184,18 @@ def routed_chat_infer(payload: dict) -> dict:
     protocol = str(payload.get("protocol", "clinical_answer")).strip().lower()
     if protocol not in {"chat", "clinical_answer", "medication_review", "evidence_brief"}:
         protocol = "clinical_answer"
+    tenant_id_raw = payload.get("tenant_id") or rag_flow.get("tenant_id")
+    tenant_id = str(tenant_id_raw).strip() if tenant_id_raw else None
+    if tenant_id:
+        from clara_ml.tenant_boundary import enforce_workspace_ml_membership
+
+        enforce_workspace_ml_membership(
+            tenant_id=tenant_id,
+            membership_status=payload.get("membership_status") or rag_flow.get("membership_status"),
+            required_roles=None,
+            caller_role=role_hint,
+        )
+
     clinical_context_raw = payload.get("clinical_context")
     clinical_context = clinical_context_raw if isinstance(clinical_context_raw, dict) else None
     llm_runtime = _resolve_llm_runtime_from_rag_flow(rag_flow)
@@ -1491,6 +1514,7 @@ def routed_chat_infer(payload: dict) -> dict:
             rag_reranker_enabled=rag_reranker_enabled_override,
             rag_graphrag_enabled=rag_graphrag_enabled_override,
             llm_runtime=llm_runtime,
+            tenant_id=tenant_id,
         )
     except Exception as exc:
         if settings.deepseek_required or not deepseek_fallback_enabled:
@@ -1514,6 +1538,7 @@ def routed_chat_infer(payload: dict) -> dict:
             rag_reranker_enabled=rag_reranker_enabled_override,
             rag_graphrag_enabled=rag_graphrag_enabled_override,
             llm_runtime=llm_runtime,
+            tenant_id=tenant_id,
         )
     factcheck = None
     if rule_verification_enabled:

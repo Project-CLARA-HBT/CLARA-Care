@@ -322,8 +322,8 @@ class SemanticQueryCache:
         self._embed_fn = embed_fn
         self._similarity_threshold = float(similarity_threshold)
         self._exact: dict[str, Any] = {}
-        # Vector-similarity seam: parallel list of (query_vector, result).
-        self._vector_entries: list[tuple[list[float], Any]] = []
+        # Vector-similarity seam: parallel list of (query_vector, result, tenant_id).
+        self._vector_entries: list[tuple[Any, ...]] = []
         self._lock = Lock()
 
     def _is_enabled(self) -> bool:
@@ -335,26 +335,35 @@ class SemanticQueryCache:
         self,
         query: str,
         embed_fn: Callable[[str], Sequence[float]] | None = None,
+        *,
+        tenant_id: str | None = None,
     ) -> Any | None:
         """Return a cached result for ``query`` or ``None``.
 
         Always ``None`` when the semantic-cache flag is off. Tries the exact
         normalized-key path first, then the cosine-similarity seam when an
         ``embed_fn`` (argument or constructor default) and stored vectors exist.
+        Scoped strictly by ``tenant_id`` to prevent cross-tenant cache retrieval.
         """
 
         if not self._is_enabled():
             return None
 
+        clean_tenant = str(tenant_id).strip() if tenant_id else ""
         norm = normalize_text(query)
+        exact_key = f"{clean_tenant}::{norm}" if clean_tenant else norm
         with self._lock:
-            if norm in self._exact:
-                return self._exact[norm]
+            if exact_key in self._exact:
+                return self._exact[exact_key]
             fn = embed_fn or self._embed_fn
             if fn is None or not self._vector_entries:
                 return None
-            # Snapshot under lock; embed and compare without holding it.
-            candidates = list(self._vector_entries)
+            # Snapshot under lock filtered by tenant scope; embed and compare without holding it.
+            candidates = [
+                (entry[0], entry[1])
+                for entry in self._vector_entries
+                if (len(entry) > 2 and entry[2] == clean_tenant) or (len(entry) <= 2 and not clean_tenant)
+            ]
 
         try:
             query_vector = list(fn(query))
@@ -378,18 +387,21 @@ class SemanticQueryCache:
         *,
         vector: Sequence[float] | None = None,
         embed_fn: Callable[[str], Sequence[float]] | None = None,
+        tenant_id: str | None = None,
     ) -> None:
         """Cache ``result`` for ``query``; a no-op when the flag is off.
 
         Stores the exact normalized-key entry. If a ``vector`` is provided (or an
         ``embed_fn`` can produce one) the entry is also indexed for the
-        cosine-similarity seam.
+        cosine-similarity seam. Scoped by ``tenant_id`` for tenant isolation.
         """
 
         if not self._is_enabled():
             return
 
+        clean_tenant = str(tenant_id).strip() if tenant_id else ""
         norm = normalize_text(query)
+        exact_key = f"{clean_tenant}::{norm}" if clean_tenant else norm
         vec = list(vector) if vector is not None else None
         if vec is None:
             fn = embed_fn or self._embed_fn
@@ -401,6 +413,6 @@ class SemanticQueryCache:
                     vec = None
 
         with self._lock:
-            self._exact[norm] = result
+            self._exact[exact_key] = result
             if vec is not None:
-                self._vector_entries.append(([float(value) for value in vec], result))
+                self._vector_entries.append(([float(value) for value in vec], result, clean_tenant))

@@ -321,9 +321,11 @@ class KbSourceRegistry(Base):
     __table_args__ = (
         CheckConstraint("trust_tier BETWEEN 1 AND 4", name="ck_kb_source_registry_trust_tier"),
         Index("idx_kb_source_registry_tier", "trust_tier"),
+        Index("idx_kb_source_registry_tenant", "tenant_id"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     source_key: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     display_name: Mapped[str] = mapped_column(Text, nullable=False)
     trust_tier: Mapped[int] = mapped_column(SmallInteger, nullable=False)
@@ -363,9 +365,11 @@ class KbDocument(Base):
         CheckConstraint("trust_tier BETWEEN 1 AND 4", name="ck_kb_documents_trust_tier"),
         Index("idx_kb_documents_hash", "content_hash"),
         Index("idx_kb_documents_tier_date", "trust_tier", "effective_date"),
+        Index("idx_kb_documents_tenant", "tenant_id"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     source_id: Mapped[int] = mapped_column(
         BigInteger,
         ForeignKey("kb_source_registry.id", ondelete="CASCADE"),

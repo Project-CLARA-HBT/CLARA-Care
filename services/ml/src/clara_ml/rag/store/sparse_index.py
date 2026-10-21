@@ -108,6 +108,7 @@ class SparseFilters:
     trust_tier_max: int | None = None
     section_type: str | None = None
     document_id: int | None = None
+    tenant_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -285,6 +286,19 @@ class SparseIndex:
             stmt = stmt.where(KbChunk.section_type == str(filters.section_type))
         if filters.document_id is not None:
             stmt = stmt.where(KbChunk.document_id == int(filters.document_id))
+        if filters.tenant_id:
+            from sqlalchemy import or_
+
+            from clara_ml.rag.store.schema import KbDocument
+
+            clean_tenant = str(filters.tenant_id).strip()
+            stmt = stmt.join(KbDocument, KbDocument.id == KbChunk.document_id).where(
+                or_(
+                    KbDocument.tenant_id.is_(None),
+                    KbDocument.tenant_id == "global",
+                    KbDocument.tenant_id == clean_tenant,
+                )
+            )
         return stmt
 
     def build_search_statement(

@@ -1,0 +1,88 @@
+{
+  "agent_id": "A04",
+  "phase_id": "PH04",
+  "role": "ML + retrieval",
+  "task": "workspace membership invitations & tenant ML boundaries; audit tenant isolation in ML inference and persistent RAG store (kb_sources, kb_documents partitioned per tenant), ensure no cross-tenant knowledge retrieval leakage.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH04_A04",
+  "branch": "phase/ph04-a04",
+  "base_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "status": "COMPLETED",
+  "verified_source_anchors": [
+    "services/ml/src/clara_ml/tenant_boundary.py:28-208",
+    "services/ml/src/clara_ml/rag/store/schema.py:317-380",
+    "services/ml/src/clara_ml/rag/store/document_store.py:82-101",
+    "services/ml/src/clara_ml/rag/store/document_store.py:265-285",
+    "services/ml/src/clara_ml/rag/store/sparse_index.py:97-112",
+    "services/ml/src/clara_ml/rag/store/sparse_index.py:280-305",
+    "services/ml/src/clara_ml/rag/store/hybrid_retriever.py:103-127",
+    "services/ml/src/clara_ml/rag/store/hybrid_retriever.py:141-160",
+    "services/ml/src/clara_ml/rag/store/hybrid_retriever.py:380-400",
+    "services/ml/src/clara_ml/rag/store/cache.py:330-415",
+    "services/ml/src/clara_ml/rag/pipeline.py:2150-2175",
+    "services/ml/src/clara_ml/rag/pipeline.py:2340-2388",
+    "services/ml/src/clara_ml/rag/pipeline.py:2400-2410",
+    "services/ml/src/clara_ml/rag/pipeline.py:2645-2725",
+    "services/ml/src/clara_ml/main.py:1113-1135",
+    "services/ml/src/clara_ml/main.py:1180-1200",
+    "services/ml/src/clara_ml/main.py:1505-1545"
+  ],
+  "files_changed": [
+    "services/ml/src/clara_ml/tenant_boundary.py",
+    "services/ml/src/clara_ml/rag/store/schema.py",
+    "services/ml/src/clara_ml/rag/store/document_store.py",
+    "services/ml/src/clara_ml/rag/store/sparse_index.py",
+    "services/ml/src/clara_ml/rag/store/hybrid_retriever.py",
+    "services/ml/src/clara_ml/rag/store/cache.py",
+    "services/ml/src/clara_ml/rag/pipeline.py",
+    "services/ml/src/clara_ml/main.py",
+    "evaluation/tests/test_tenant_rag_isolation.py",
+    "artifacts/PH04/A04/change_manifest.json",
+    "artifacts/PH04/A04/test_report.md",
+    "artifacts/PH04/A04/risk_register.md",
+    "artifacts/PH04/A04/rollback.md"
+  ],
+  "interface_assumptions": [
+    "Tenant identifiers are alphanumeric strings up to 128 characters without path traversal (..) or path separators.",
+    "Un-tenanted/public queries (tenant_id is empty or None) access only public/global knowledge; private tenant knowledge is never exposed.",
+    "Workspace membership invitation lifecycle states: active, invited, pending, expired, revoked, suspended.",
+    "Pending or invited status strictly denies tenant-scoped inference access with HTTP 403; invitations do not grant ML capability until accepted.",
+    "KbSourceRegistry and KbDocument tables support nullable tenant_id with idx_kb_source_registry_tenant and idx_kb_documents_tenant indexes.",
+    "HybridRetriever dense search and SparseIndex BM25 search strictly filter documents by tenant_id, allowing only the requested tenant or global knowledge.",
+    "SemanticQueryCache exact keys and vector-similarity candidate matches are isolated by tenant_id, preventing cross-tenant retrieval cache leakage.",
+    "Error envelopes for tenant boundary violations return HTTP 403 with zero PII or PHI."
+  ],
+  "test_commands_and_exit_codes": [
+    {
+      "command": "PYTHONPATH=\"services/ml/src:services/api/src:.\" python3 -m pytest -v evaluation/tests/test_tenant_rag_isolation.py",
+      "exit_code": 0,
+      "purpose": "Comprehensive multi-tenant isolation, workspace invitation boundaries, and RAG retrieval test suite (32 tests passing)"
+    },
+    {
+      "command": "uvx ruff check services/ml/src/clara_ml/tenant_boundary.py services/ml/src/clara_ml/rag/store/schema.py services/ml/src/clara_ml/rag/store/document_store.py services/ml/src/clara_ml/rag/store/hybrid_retriever.py services/ml/src/clara_ml/rag/store/sparse_index.py services/ml/src/clara_ml/rag/store/cache.py services/ml/src/clara_ml/rag/pipeline.py services/ml/src/clara_ml/main.py evaluation/tests/test_tenant_rag_isolation.py",
+      "exit_code": 0,
+      "purpose": "Static code style and lint verification across all modified and new files"
+    },
+    {
+      "command": "PYTHONPATH=\"services/ml/src:services/api/src:.\" uvx mypy services/ml/src/clara_ml/tenant_boundary.py services/ml/src/clara_ml/rag/store/schema.py services/ml/src/clara_ml/rag/store/document_store.py services/ml/src/clara_ml/rag/store/hybrid_retriever.py services/ml/src/clara_ml/rag/store/sparse_index.py services/ml/src/clara_ml/rag/store/cache.py services/ml/src/clara_ml/rag/pipeline.py evaluation/tests/test_tenant_rag_isolation.py --ignore-missing-imports",
+      "exit_code": 0,
+      "purpose": "Type check verification across tenant boundary, RAG store, cache, and test modules"
+    },
+    {
+      "command": "PYTHONPATH=services/ml/src python3 -m pytest -q services/ml/tests/test_router.py services/ml/tests/test_model_router.py services/ml/tests/test_rag_pipeline.py services/ml/tests/test_admin_rag_handlers.py services/ml/tests/test_task_9_9_wiring.py services/ml/tests/test_migration_idempotency.py services/ml/tests/test_schema_validators.py",
+      "exit_code": 0,
+      "purpose": "Existing ML router, pipeline, admin RAG, migration idempotency, and schema validators test suites (123 passed)"
+    },
+    {
+      "command": "PYTHONPATH=services/ml/src python3 -m pytest -q services/ml/tests/test_hybrid_retriever_provenance_property.py services/ml/tests/test_hybrid_retriever_query_only_embed_property.py services/ml/tests/test_document_store_rejections.py services/ml/tests/test_ingestion_atomic_property.py services/ml/tests/test_ingestion_backfill.py services/ml/tests/test_ingestion_idempotent_property.py services/ml/tests/test_ingestion_no_degraded_persistence_property.py",
+      "exit_code": 0,
+      "purpose": "Existing hybrid retriever, document store, and ingestion property test suites (49 passed)"
+    }
+  ],
+  "blockers": [],
+  "rollback_steps": [
+    "git checkout 7f458c915a59a75568e344b670d2f12ce9133a4e -- services/ml/src/clara_ml/rag/store/schema.py services/ml/src/clara_ml/rag/store/document_store.py services/ml/src/clara_ml/rag/store/hybrid_retriever.py services/ml/src/clara_ml/rag/store/sparse_index.py services/ml/src/clara_ml/rag/store/cache.py services/ml/src/clara_ml/rag/pipeline.py services/ml/src/clara_ml/main.py",
+    "rm -f services/ml/src/clara_ml/tenant_boundary.py evaluation/tests/test_tenant_rag_isolation.py",
+    "rm -rf artifacts/PH04/A04",
+    "git reset --hard 7f458c915a59a75568e344b670d2f12ce9133a4e"
+  ]
+}

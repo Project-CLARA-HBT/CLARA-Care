@@ -2149,6 +2149,7 @@ class RagPipelineP1:
         rag_reranker_enabled: bool | None,
         scientific_retrieval_enabled: bool,
         web_retrieval_enabled: bool,
+        tenant_id: str | None = None,
     ) -> list[Document] | None:
         """Persistent (embed-query-only) retrieval with live-connector gap-fill.
 
@@ -2159,7 +2160,7 @@ class RagPipelineP1:
         retrieval, satisfying Requirement 3.3 (exactly one path, no mixed
         embedding semantics). When the persistent result is short on coverage,
         live-connector gap-fill (Requirement 3.5) tops it up and a best-effort
-        async-persist seam is triggered.
+        async-persist seam is triggered. Scoped by ``tenant_id`` to prevent cross-tenant retrieval.
         """
 
         retriever = self._get_hybrid_retriever()
@@ -2169,7 +2170,10 @@ class RagPipelineP1:
         try:
             from clara_ml.rag.store.hybrid_retriever import RetrievalFilters
 
-            filters = RetrievalFilters(trust_tier_max=int(settings.rag_trust_floor))
+            filters = RetrievalFilters(
+                trust_tier_max=int(settings.rag_trust_floor),
+                tenant_id=tenant_id,
+            )
             docs = list(retriever.retrieve(query, top_k=max(int(top_k), 1), filters=filters))
         except Exception as exc:
             # Never crash the request path: degrade to the legacy retriever.
@@ -2287,7 +2291,7 @@ class RagPipelineP1:
         return list(client.embed_query(query))
 
     @staticmethod
-    def _semantic_cache_lookup(cache: Any, query: str) -> list[Document] | None:
+    def _semantic_cache_lookup(cache: Any, query: str, *, tenant_id: str | None = None) -> list[Document] | None:
         """Return cached retrieval docs for ``query`` or ``None`` (defensive).
 
         A non-list / empty cached value is treated as a miss so an empty result
@@ -2296,7 +2300,12 @@ class RagPipelineP1:
         """
 
         try:
-            cached = cache.get(query)
+            cached = cache.get(query, tenant_id=tenant_id)
+        except TypeError:
+            try:
+                cached = cache.get(query)
+            except Exception:
+                return None
         except Exception:  # pragma: no cover - cache lookup must never crash run()
             return None
         if not cached:
@@ -2307,7 +2316,7 @@ class RagPipelineP1:
             return None
 
     @staticmethod
-    def _semantic_cache_store(cache: Any, query: str, docs: list[Document]) -> None:
+    def _semantic_cache_store(cache: Any, query: str, docs: list[Document], *, tenant_id: str | None = None) -> None:
         """Populate the semantic cache with a retrieval result (best-effort).
 
         A *shallow copy* of ``docs`` is stored so a later request cannot mutate
@@ -2317,9 +2326,15 @@ class RagPipelineP1:
 
         if not docs:
             return
+
         try:
-            cache.put(query, list(docs))
-        except Exception:  # pragma: no cover - cache write must never crash run()
+            cache.put(query, list(docs), tenant_id=tenant_id)
+        except TypeError:
+            try:
+                cache.put(query, list(docs))
+            except Exception:
+                pass
+        except Exception:  # pragma: no cover - cache population must never crash run()
             pass
 
     @staticmethod
@@ -2335,6 +2350,7 @@ class RagPipelineP1:
         file_retrieval_enabled: bool,
         rag_reranker_enabled: bool,
         scientific_provider_query_overrides: dict[str, Any],
+        tenant_id: str | None = None,
     ) -> str:
         """Build a policy/version-aware exact cache key.
 
@@ -2342,11 +2358,12 @@ class RagPipelineP1:
         share wording while using different source policies, provider queries,
         top-k values, rerankers, or corpus/index versions.  Only the digest is
         stored, so source selections and planner details are not exposed as a
-        cache key.
+        cache key. Incorporates tenant_id for strict cross-tenant cache isolation.
         """
 
         payload = {
             "schema": "retrieval-cache-v2",
+            "tenant_id": str(tenant_id or "global"),
             "internal_query": internal_query,
             "ranking_query": ranking_query,
             "query_plan": query_plan,
@@ -2389,6 +2406,7 @@ class RagPipelineP1:
         rag_reranker_enabled: bool | None = None,
         rag_graphrag_enabled: bool | None = None,
         llm_runtime: dict[str, Any] | None = None,
+        tenant_id: str | None = None,
     ) -> RagResult:
         run_started = perf_counter()
         planner_active = isinstance(planner_hints, dict) and bool(planner_hints)
@@ -2639,11 +2657,12 @@ class RagPipelineP1:
             file_retrieval_enabled=file_retrieval_enabled,
             rag_reranker_enabled=rag_reranker_runtime,
             scientific_provider_query_overrides=scientific_provider_query_overrides,
+            tenant_id=tenant_id,
         )
         semantic_cache_hit = False
         try:
             cached_docs = (
-                self._semantic_cache_lookup(semantic_cache, semantic_cache_key)
+                self._semantic_cache_lookup(semantic_cache, semantic_cache_key, tenant_id=tenant_id)
                 if semantic_cache is not None
                 else None
             )
@@ -2667,6 +2686,7 @@ class RagPipelineP1:
                         rag_reranker_enabled=rag_reranker_enabled,
                         scientific_retrieval_enabled=scientific_retrieval_enabled,
                         web_retrieval_enabled=web_retrieval_enabled,
+                        tenant_id=tenant_id,
                     )
                 if persistent_docs is not None:
                     # Persistent embed-query-only path (Req 3.1/3.2): exactly one
@@ -2701,7 +2721,7 @@ class RagPipelineP1:
                 # equivalent query can be served from cache (Req 12.2). No-op when
                 # the cache is disabled (``semantic_cache`` is None).
                 if semantic_cache is not None:
-                    self._semantic_cache_store(semantic_cache, semantic_cache_key, docs)
+                    self._semantic_cache_store(semantic_cache, semantic_cache_key, docs, tenant_id=tenant_id)
         except Exception as exc:
             retrieval_trace["internal_error"] = exc.__class__.__name__
             retrieval_trace["source_errors"] = {"internal_retrieval": [exc.__class__.__name__]}

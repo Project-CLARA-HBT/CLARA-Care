@@ -114,6 +114,7 @@ class RetrievalFilters:
     lang: str | None = None
     section_type: str | None = None
     document_id: int | None = None
+    tenant_id: str | None = None
 
     def to_sparse_filters(self) -> SparseFilters:
         """Project onto the :class:`SparseFilters` shape the BM25 arm consumes."""
@@ -123,6 +124,7 @@ class RetrievalFilters:
             trust_tier_max=self.trust_tier_max,
             section_type=self.section_type,
             document_id=self.document_id,
+            tenant_id=self.tenant_id,
         )
 
 
@@ -149,10 +151,12 @@ _DENSE_SQL = text(
            c.text          AS text
     FROM kb_chunk_embeddings e
     JOIN kb_chunks c ON c.id = e.chunk_id
+    JOIN kb_documents d ON d.id = c.document_id
     WHERE (CAST(:tier_floor AS integer) IS NULL OR c.trust_tier <= CAST(:tier_floor AS integer))
       AND (CAST(:lang_filter AS text) IS NULL OR c.lang = CAST(:lang_filter AS text))
       AND (CAST(:section_type AS text) IS NULL OR c.section_type = CAST(:section_type AS text))
       AND (CAST(:document_id AS bigint) IS NULL OR c.document_id = CAST(:document_id AS bigint))
+      AND (CAST(:tenant_id AS text) IS NULL OR d.tenant_id IS NULL OR d.tenant_id = 'global' OR d.tenant_id = CAST(:tenant_id AS text))
     ORDER BY e.embedding <=> CAST(:qvec AS vector)
     LIMIT :n
     """
@@ -384,6 +388,7 @@ class HybridRetriever:
             "lang_filter": filters.lang if filters else None,
             "section_type": filters.section_type if filters else None,
             "document_id": filters.document_id if filters else None,
+            "tenant_id": filters.tenant_id if filters else None,
             "n": int(n),
         }
 
