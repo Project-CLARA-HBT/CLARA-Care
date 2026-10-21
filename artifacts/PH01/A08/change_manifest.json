@@ -1,0 +1,81 @@
+{
+  "agent_id": "A08",
+  "phase": "PH01",
+  "role": "Security + privacy",
+  "task": "CI matrix and hermetic eval; REMEDIATE SEC-CRIT-01: remove the hardcoded router API key sk-2a0a31f... from scripts/ops/run_v8_provider_probe_ledger.py (use os.environ.get('CLARA_ROUTER_API_KEY')) and sanitize research/glhs_journal/q3_r3/provider_run_ledger_spec.md; then verify that python3 -m evaluation.commitloop.secret_scan --repo-root . passes with exit code 0!",
+  "path_lane": [
+    "docs/security/",
+    "docs/compliance/",
+    "scripts/ops/",
+    "research/glhs_journal/q3_r3/provider_run_ledger_spec.md",
+    "artifacts/PH01/A08/"
+  ],
+  "frozen_head_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "worktree_path": "/dev/shm/clara_worktrees/PH01_A08",
+  "branch": "phase/ph01-a08",
+  "timestamp": "2026-10-21T19:15:00Z",
+  "status": "COMPLETED",
+  "deliverables": [
+    "artifacts/PH01/A08/change_manifest.json",
+    "artifacts/PH01/A08/test_report.md",
+    "artifacts/PH01/A08/risk_register.md"
+  ],
+  "files_changed": [
+    "scripts/ops/run_v8_provider_probe_ledger.py",
+    "research/glhs_journal/q3_r3/provider_run_ledger_spec.md",
+    "artifacts/PH00/A08/change_manifest.json",
+    "artifacts/PH00/A08/risk_register.md",
+    "artifacts/PH01/A08/change_manifest.json",
+    "artifacts/PH01/A08/test_report.md",
+    "artifacts/PH01/A08/risk_register.md"
+  ],
+  "verified_source_anchors": {
+    "remediated_secrets": [
+      "scripts/ops/run_v8_provider_probe_ledger.py:38",
+      "research/glhs_journal/q3_r3/provider_run_ledger_spec.md:32",
+      "artifacts/PH00/A08/change_manifest.json:84",
+      "artifacts/PH00/A08/risk_register.md:204"
+    ],
+    "secret_scanning_engine": [
+      "evaluation/commitloop/secret_scan.py:10-17",
+      "evaluation/commitloop/tests/test_secret_scan.py:8-36"
+    ],
+    "ci_artifact_policy": [
+      "scripts/security/check_ci_artifact_policy.py:22-38"
+    ],
+    "migration_downgrade_guard": [
+      "scripts/ops/check_migration_downgrade.py:21-45"
+    ]
+  },
+  "key_findings": [
+    {
+      "id": "SEC-CRIT-01",
+      "severity": "CRITICAL",
+      "title": "Hardcoded router API key committed to ops script and research spec",
+      "anchors": [
+        "scripts/ops/run_v8_provider_probe_ledger.py:38",
+        "research/glhs_journal/q3_r3/provider_run_ledger_spec.md:32"
+      ],
+      "status": "REMEDIATED",
+      "remediation": "Replaced hardcoded API key with os.environ.get('CLARA_ROUTER_API_KEY', '') in scripts/ops/run_v8_provider_probe_ledger.py and redacted literal token to <REDACTED_API_KEY> in research/glhs_journal/q3_r3/provider_run_ledger_spec.md. Also cleansed historical citation anchors in artifacts/PH00/A08/."
+    }
+  ],
+  "verification_commands_summary": [
+    {
+      "command": "python3 -m evaluation.commitloop.secret_scan --repo-root .",
+      "exit_code": 0
+    },
+    {
+      "command": "pytest evaluation/commitloop/tests/test_secret_scan.py",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/security/check_ci_artifact_policy.py",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0
+    }
+  ]
+}

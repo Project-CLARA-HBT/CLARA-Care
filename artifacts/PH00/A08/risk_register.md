@@ -201,7 +201,7 @@ The automated secret scan (`python3 -m evaluation.commitloop.secret_scan`) disco
 ## 5. Summary of Recommended Actions
 
 1. **Immediate (P0):**
-   - Rotate router API key `sk-2a0a31f1216bad84-66fc8c-5b3da166`.
+   - Rotate router API key `<REDACTED_API_KEY>`.
    - Update `scripts/ops/run_v8_provider_probe_ledger.py` to ingest `ROUTER_API_KEY` from the environment.
    - Redact the plain text token in `research/glhs_journal/q3_r3/provider_run_ledger_spec.md`.
 2. **Next Release (P1):**

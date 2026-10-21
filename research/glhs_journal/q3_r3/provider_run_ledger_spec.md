@@ -29,7 +29,7 @@ All live provider benchmark requests are dispatched through the centralized CLAR
 
 - **Router Base Endpoint:** `https://router.theclaracare.com/v1`
 - **Chat Completion Endpoint:** `https://router.theclaracare.com/v1/chat/completions`
-- **Authentication Header:** `Authorization: Bearer sk-2a0a31f1216bad84-66fc8c-5b3da166`
+- **Authentication Header:** `Authorization: Bearer <REDACTED_API_KEY>`
 - **Content Type:** `application/json`
 - **Execution Concurrency:** `ThreadPoolExecutor` with `max_workers = 6`
 - **Request Timeout:** 35 seconds per network HTTP socket connection

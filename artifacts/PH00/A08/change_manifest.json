@@ -81,7 +81,7 @@
         "research/glhs_journal/q3_r3/provider_run_ledger_spec.md:32"
       ],
       "status": "OPEN",
-      "remediation": "Revoke key sk-2a0a31f1216bad84-66fc8c-5b3da166, replace with ROUTER_API_KEY environment variable"
+      "remediation": "Revoke key <REDACTED_API_KEY>, replace with ROUTER_API_KEY environment variable"
     },
     {
       "id": "SEC-HIGH-01",

@@ -9,6 +9,7 @@ import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
+import os
 from pathlib import Path
 import sys
 
@@ -34,7 +35,7 @@ from evaluation.commitloop.provider import parse_json_object_content
 from evaluation.commitloop.solver_packets import build_solver_packets
 
 BASE_URL = "https://router.theclaracare.com/v1"
-API_KEY = "sk-2a0a31f1216bad84-66fc8c-5b3da166"
+API_KEY = os.environ.get("CLARA_ROUTER_API_KEY", "")
 
 SYSTEM_PROMPT_PATH = REPO_ROOT / "evaluation/commitloop/prompts/solver_system.txt"
 SYSTEM_PROMPT = SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
