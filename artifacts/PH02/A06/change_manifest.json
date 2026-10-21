@@ -10,6 +10,7 @@
   "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
   "frozen_head_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
   "status": "PASSED",
+  "handoff_commit": "982d0055c2e3614848adacb403a6a660ff42e423",
   "path_lane": "apps/mobile/;scripts/ops/;artifacts/PH02/A06/",
   "files_changed": [
     "scripts/ops/generate_agent_prompts.py",
