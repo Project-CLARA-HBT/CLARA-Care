@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH02",
+  "agent_id": "A02",
+  "role": "Data model + migration",
+  "task": "git worktree creation tool; implement scripts/ops/worktree_manager.py providing create_worktrees(phase_id, base_sha), cleanup_worktrees(phase_id), list_worktrees(), ensuring isolated /dev/shm or local paths, branch naming `phase/<phase_id>-<agent_id>`, and zero data cross-talk.",
+  "status": "PASSED",
+  "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "frozen_head_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "branch": "phase/ph02-a02",
+  "worktree_path": "/dev/shm/clara_worktrees/PH02_A02",
+  "path_lane": "services/api/src/clara_api/db/;services/api/alembic/versions/;scripts/ops/;artifacts/PH02/A02/",
+  "timestamp": "2026-10-21T20:30:00Z",
+  "files_changed": [
+    "scripts/ops/worktree_manager.py",
+    "scripts/ops/test_worktree_manager.py",
+    "artifacts/PH02/A02/change_manifest.json",
+    "artifacts/PH02/A02/test_report.md",
+    "artifacts/PH02/A02/risk_register.md",
+    "artifacts/PH02/A02/rollback.md"
+  ],
+  "tests_run": [
+    {
+      "command": "git rev-parse HEAD",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.05
+    },
+    {
+      "command": "uv run --with pytest pytest -v scripts/ops/test_worktree_manager.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 6.05
+    },
+    {
+      "command": "uv run --with ruff ruff check scripts/ops/worktree_manager.py scripts/ops/test_worktree_manager.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.08
+    },
+    {
+      "command": "uv run --with ruff ruff format --check scripts/ops/worktree_manager.py scripts/ops/test_worktree_manager.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.04
+    },
+    {
+      "command": "uv run --with mypy --with pytest mypy --ignore-missing-imports scripts/ops/worktree_manager.py scripts/ops/test_worktree_manager.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.35
+    },
+    {
+      "command": "python3 scripts/ops/worktree_manager.py --list",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.12
+    },
+    {
+      "command": "python3 scripts/ops/worktree_manager.py --status --phase PH02 --json",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.15
+    }
+  ],
+  "rollback_steps": [
+    "rm -f scripts/ops/worktree_manager.py",
+    "rm -f scripts/ops/test_worktree_manager.py",
+    "rm -rf artifacts/PH02/A02",
+    "git reset --hard 879dc5dcfcaae91b3626e28062043d934294478b"
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "scripts/ops/worktree_manager.py",
+      "line_start": 1,
+      "line_end": 745,
+      "symbol": "create_worktrees, cleanup_worktrees, list_worktrees, get_worktree_status",
+      "description": "Canonical Git worktree manager implementing isolated multi-agent environments, ramdisk /dev/shm allocation, zero data cross-talk, non-destructive safety gates, and status reporting."
+    },
+    {
+      "file": "scripts/ops/test_worktree_manager.py",
+      "line_start": 1,
+      "line_end": 220,
+      "symbol": "test_create_isolation_scaffolding_and_cleanup",
+      "description": "End-to-end integration and unit tests validating creation, zero cross-talk, dirty worktree protection, and CLI invocations."
+    },
+    {
+      "file": "templates/AGENT_TASK_PROMPT.md",
+      "line_start": 1,
+      "line_end": 19,
+      "symbol": "AGENT_TASK_PROMPT",
+      "description": "Subagent prompt protocol specifying path lanes, base SHA verification, deliverable schemas, and handoff criteria."
+    }
+  ],
+  "artifacts": [
+    "scripts/ops/worktree_manager.py",
+    "scripts/ops/test_worktree_manager.py",
+    "artifacts/PH02/A02/change_manifest.json",
+    "artifacts/PH02/A02/test_report.md",
+    "artifacts/PH02/A02/risk_register.md",
+    "artifacts/PH02/A02/rollback.md"
+  ],
+  "interface_assumptions": [
+    "All concurrent subagents execute in dedicated worktrees created at /dev/shm/clara_worktrees/<PHASE>_<AGENT> or .worktrees/<PHASE>_<AGENT>.",
+    "Branch naming follows standard pattern phase/<phase_id>-<agent_id>.",
+    "Worktrees are anchored to the ground-truth base commit SHA (879dc5dcfcaae91b3626e28062043d934294478b).",
+    "Deliverables must be placed in artifacts/<PHASE>/<AGENT>/ containing change_manifest.json, test_report.md, risk_register.md, and rollback.md.",
+    "Teardown of worktrees protects uncommitted changes unless explicit --force is supplied."
+  ]
+}
