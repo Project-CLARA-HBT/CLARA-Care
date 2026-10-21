@@ -1,0 +1,72 @@
+{
+  "schema_version": "clara-phase-change-manifest.v1",
+  "phase_id": "PH02",
+  "agent_id": "A10",
+  "role": "Adversarial audit + integration proposals",
+  "task": "failure recovery and resume tool & PH02 quality gate; implement scripts/ops/phase_recovery.py to inspect failed agents in a phase, diagnose worktree state, isolate broken worktrees, allow retrying a single failed agent without discarding passed agents, and resume from last safe checkpoint.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH02_A10",
+  "branch": "phase/ph02-a10",
+  "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "status": "COMPLETED",
+  "path_lane": [
+    "docs/reports/",
+    "docs/runbooks/",
+    "scripts/ci/",
+    "scripts/ops/",
+    "artifacts/PH02/A10/"
+  ],
+  "changed_paths": [
+    "scripts/ops/phase_recovery.py",
+    "scripts/ops/test_phase_recovery.py",
+    "scripts/ci/ph02_quality_gate.py",
+    "docs/runbooks/ph02-failure-recovery-and-checkpoint-resume.md",
+    "docs/reports/ph02-a10-failure-recovery-audit.md",
+    "artifacts/PH02/A10/change_manifest.json",
+    "artifacts/PH02/A10/test_report.md",
+    "artifacts/PH02/A10/risk_register.md",
+    "artifacts/PH02/A10/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "AGENTS.md:5",
+    "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/phases/PH02_thi-t-l-p-t-ch-c-t-c-nh-n-v-10-worktree-song-son.md:35",
+    "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/reference/old_chapters/02_10_SUBAGENT_ORCHESTRATION.md:73",
+    "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/reference/old_chapters/02_10_SUBAGENT_ORCHESTRATION.md:101",
+    "scripts/ops/check_migration_downgrade.py:27",
+    "scripts/ci/ph01_reproducibility_gate.py:94",
+    "artifacts/PH01/A10/change_manifest.json:1"
+  ],
+  "test_results": [
+    {
+      "command": "python3 scripts/ops/test_phase_recovery.py -v",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "pytest scripts/ops/test_phase_recovery.py -v",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ci/ph02_quality_gate.py",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ops/phase_recovery.py status --phase PH02",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m compileall -q scripts/ops/phase_recovery.py scripts/ops/test_phase_recovery.py scripts/ci/ph02_quality_gate.py",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "status": "PASS",
+      "exit_code": 0
+    }
+  ],
+  "rollback": "Non-destructive operational scripts and runbook located in path lane; git reset --hard 879dc5dcfcaae91b3626e28062043d934294478b restores worktree to clean baseline.",
+  "blockers": []
+}
