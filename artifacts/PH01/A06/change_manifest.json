@@ -1,0 +1,94 @@
+{
+  "manifest_version": "1.0.0",
+  "subagent_id": "A06",
+  "phase": "PH01",
+  "role": "Mobile Flutter",
+  "frozen_head_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "branch": "phase/ph01-a06",
+  "worktree": "/dev/shm/clara_worktrees/PH01_A06",
+  "path_lane": [
+    "apps/mobile/",
+    "deploy/",
+    "artifacts/PH01/A06/"
+  ],
+  "audit_timestamp_utc": "2026-10-21T19:15:00Z",
+  "task": "postgres and Redis compose smoke; audit docker-compose files (docker-compose.yml, deploy/docker-compose.*), check PostgreSQL 16 + pgvector container definition, Redis cache service, and Mobile network configuration.",
+  "summary": {
+    "compose_files_audited": [
+      "deploy/docker/docker-compose.yml",
+      "deploy/docker/docker-compose.app.yml",
+      "deploy/docker/docker-compose.deploy.yml",
+      "deploy/docker/docker-compose.govred-isolated.yml"
+    ],
+    "postgres_pgvector_container": {
+      "image": "pgvector/pgvector:pg16",
+      "postgres_version": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2)",
+      "pgvector_version": "0.8.7",
+      "healthcheck": "pg_isready -U clara -d clara",
+      "smoke_status": "PASS (container started, healthcheck healthy, pgvector extension created, vector distance query executed)"
+    },
+    "redis_cache_service": {
+      "image": "redis:7-alpine",
+      "redis_version": "7.4.8 standalone",
+      "appendonly": "yes",
+      "healthcheck": "redis-cli ping",
+      "smoke_status": "PASS (container started, healthcheck healthy, PONG, SET/GET/DEL operational)"
+    },
+    "mobile_network_configuration": {
+      "base_url_default": "String.fromEnvironment('CLARA_API_BASE_URL', defaultValue: kReleaseMode ? 'https://theclaracare.com' : 'http://localhost:8100')",
+      "android_emulator_loopback": "http://10.0.2.2:8100",
+      "ios_simulator_loopback": "http://127.0.0.1:8100",
+      "adb_reverse_binding": "adb reverse tcp:8100 tcp:8100 (allows physical device to use http://localhost:8100)",
+      "production_endpoint": "https://theclaracare.com/api/ -> proxied via Nginx to http://127.0.0.1:8100",
+      "auth_header": "Bearer <accessToken> in Authorization header; CSRF exempted via services/api/.../core/csrf.py for valid Bearer credentials",
+      "android_cleartext_traffic_fix": "Added android:usesCleartextTraffic=\"true\" to apps/mobile/android/app/src/debug/AndroidManifest.xml to unblock local dev over HTTP on Android 9+ while release remains HTTPS-only"
+    },
+    "mobile_target_platforms": {
+      "android": "PRESENT (Gradle 9.1.0, AGP 9.0.1, Kotlin 2.3.20, Java 17, EnableImpeller=false)",
+      "ios": "ABSENT (apps/mobile/ios uncommitted by design per apps/mobile/README.md:261-265)"
+    }
+  },
+  "verified_source_anchors": [
+    "deploy/docker/docker-compose.yml:10-44",
+    "deploy/docker/docker-compose.app.yml:10-141",
+    "deploy/docker/docker-compose.deploy.yml:4-156",
+    "deploy/docker/docker-compose.govred-isolated.yml:7-33",
+    "deploy/nginx/clara.thiennn.icu.conf:1-99",
+    "scripts/start-clara.sh:48-58",
+    "scripts/ops/validate_runtime_env.sh:87-100",
+    "apps/mobile/lib/main.dart:16-34",
+    "apps/mobile/lib/core/api_client.dart:14-60",
+    "apps/mobile/android/app/build.gradle.kts:7-66",
+    "apps/mobile/android/settings.gradle.kts:20-24",
+    "apps/mobile/android/gradle/wrapper/gradle-wrapper.properties:5",
+    "apps/mobile/android/app/src/main/AndroidManifest.xml:1-71",
+    "apps/mobile/android/app/src/debug/AndroidManifest.xml:1-8"
+  ],
+  "files_changed": [
+    {
+      "path": "apps/mobile/android/app/src/debug/AndroidManifest.xml",
+      "action": "modified",
+      "rationale": "Added android:usesCleartextTraffic=\"true\" to allow Android debug builds to communicate with local development API (http://localhost:8100 or http://10.0.2.2:8100) on Android 9+ (API 28+) without impacting production release builds."
+    },
+    {
+      "path": "artifacts/PH01/A06/change_manifest.json",
+      "action": "created",
+      "rationale": "Subagent A06 task manifest for phase PH01."
+    },
+    {
+      "path": "artifacts/PH01/A06/test_report.md",
+      "action": "created",
+      "rationale": "Comprehensive test report for Docker compose smoke, PostgreSQL 16 + pgvector verification, Redis 7 verification, and Mobile network configuration."
+    },
+    {
+      "path": "artifacts/PH01/A06/risk_register.md",
+      "action": "created",
+      "rationale": "Risk register documenting infrastructure port collisions, SDK constraints, cleartext traffic policies, and mobile network security."
+    },
+    {
+      "path": "artifacts/PH01/A06/rollback.md",
+      "action": "created",
+      "rationale": "Rollback runbook to revert lane changes cleanly."
+    }
+  ]
+}
