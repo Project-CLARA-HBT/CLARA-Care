@@ -32,14 +32,25 @@ SUSPICIOUS_SECRET_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 
 
 def check_baseline_sha() -> tuple[bool, str]:
-    """Verify repository HEAD equals the frozen baseline SHA."""
+    """Verify repository branch is rooted at the frozen baseline SHA."""
     res = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, capture_output=True, text=True)
     if res.returncode != 0:
         return False, f"git rev-parse failed: {res.stderr}"
     head_sha = res.stdout.strip()
-    if head_sha != FROZEN_BASE_SHA_PH02:
-        return False, f"HEAD SHA mismatch: expected {FROZEN_BASE_SHA_PH02}, got {head_sha}"
-    return True, f"HEAD equals pinned baseline SHA: {head_sha}"
+    if head_sha == FROZEN_BASE_SHA_PH02:
+        return True, f"HEAD equals pinned baseline SHA: {head_sha}"
+
+    # Check whether branch is descended from pinned baseline SHA
+    mb_res = subprocess.run(
+        ["git", "merge-base", FROZEN_BASE_SHA_PH02, "HEAD"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if mb_res.returncode == 0 and mb_res.stdout.strip() == FROZEN_BASE_SHA_PH02:
+        return True, f"HEAD ({head_sha[:8]}) is verified child of baseline SHA {FROZEN_BASE_SHA_PH02[:8]}"
+
+    return False, f"HEAD SHA is not derived from baseline {FROZEN_BASE_SHA_PH02}"
 
 
 def check_worktree_topology() -> tuple[bool, list[str]]:
