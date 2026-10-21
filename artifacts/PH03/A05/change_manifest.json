@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "manifest_version": "1.0.0",
+  "agent_id": "A05",
+  "phase_id": "PH03",
+  "role": "Web UX",
+  "worktree_path": "/dev/shm/clara_worktrees/PH03_A05",
+  "branch": "phase/ph03-a05",
+  "base_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "head_sha_verified": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "status": "COMPLETED",
+  "task": "OTP/login brute-force protection; audit web auth client, login rate limiting, progressive delays, captcha/lockout behavior on failed attempts.",
+  "path_lane": [
+    "apps/web/app/",
+    "apps/web/components/",
+    "apps/web/lib/",
+    "artifacts/PH03/A05/"
+  ],
+  "changed_paths": [
+    "apps/web/app/auth/auth-pages.test.tsx",
+    "apps/web/app/login/page.tsx",
+    "apps/web/components/auth/auth-rate-limit-banner.test.tsx",
+    "apps/web/components/auth/auth-rate-limit-banner.tsx",
+    "apps/web/components/auth/auth-security-challenge.test.tsx",
+    "apps/web/components/auth/auth-security-challenge.tsx",
+    "apps/web/lib/auth-rate-limit.test.ts",
+    "apps/web/lib/auth-rate-limit.ts",
+    "apps/web/lib/http-client.ts",
+    "apps/web/lib/i18n/catalog.ts",
+    "artifacts/PH03/A05/change_manifest.json",
+    "artifacts/PH03/A05/test_report.md",
+    "artifacts/PH03/A05/risk_register.md",
+    "artifacts/PH03/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH03/A05/change_manifest.json",
+    "artifacts/PH03/A05/test_report.md",
+    "artifacts/PH03/A05/risk_register.md",
+    "artifacts/PH03/A05/rollback.md"
+  ],
+  "verified_source_anchors": [
+    {
+      "path": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "lines": "549-554",
+      "description": "Backend login brute-force guard check and 429 response structure"
+    },
+    {
+      "path": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "lines": "638-641",
+      "description": "Backend login-otp verify endpoint action rate limiting"
+    },
+    {
+      "path": "services/api/src/clara_api/core/login_guard.py",
+      "lines": "43-63",
+      "description": "Backend LoginGuard blocked state and progressive lockout duration"
+    },
+    {
+      "path": "apps/web/lib/http-client.ts",
+      "lines": "346-361",
+      "description": "Axios response interceptor error resolution and 429 rate limit metadata preservation"
+    },
+    {
+      "path": "apps/web/app/login/page.tsx",
+      "lines": "67-117",
+      "description": "Login and OTP submission flow with rate limit and progressive delay handling"
+    }
+  ],
+  "implementation_summary": {
+    "auth_client_audit": "Enriched http-client.ts response interceptor to preserve HTTP 429 status, retry_after_seconds body values, and Retry-After response headers on rejected client errors without breaking error.message backward compatibility.",
+    "client_rate_limiting": "Implemented apps/web/lib/auth-rate-limit.ts offering tiered progressive delays (0s, 1s, 3s, 5s, 30s), retry-after extraction, rate limit error detection, separate context accounting for login and OTP flows, and session storage persistence.",
+    "progressive_delays_and_lockout": "Integrated live countdown timer, cooldown banner, and form lockout in LoginPage, disabling inputs and the submit button during active cooldowns and server lockouts.",
+    "security_challenge": "Implemented AuthSecurityChallenge, an accessible, privacy-preserving client-side arithmetic verification challenge that triggers after 3 consecutive failures to block automated credential stuffing and OTP guessing.",
+    "otp_brute_force_protection": "Tracked failed OTP verification attempts independently with warning banners and delay escalation to prevent automated 6-digit guessing.",
+    "state_reset": "All failure records, cooldowns, and challenge requirements are completely wiped upon successful authentication."
+  }
+}

@@ -14,6 +14,7 @@ import { ProfileBoundary } from "@/components/shell/profile-boundary";
 import { ShellModeProvider } from "@/components/shell/shell-mode-provider";
 import { CommandPaletteProvider } from "@/components/shell/command-palette-provider";
 import api from "@/lib/http-client";
+import { clearAllAuthRateLimits, recordAuthFailure } from "@/lib/auth-rate-limit";
 
 const mocks = vi.hoisted(() => {
   const routerReplace = vi.fn();
@@ -93,10 +94,17 @@ function renderInShell(ui: ReactNode, pathname: string) {
   );
 }
 
+beforeEach(() => {
+  clearAllAuthRateLimits();
+  vi.mocked(api.post).mockReset();
+});
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.mocked(api.post).mockReset();
   mocks.searchParams.clear();
+  clearAllAuthRateLimits();
 });
 
 describe("Public Auth Pages — Spec v5 Section 6.2, 6.3, 6.4, 6.5 (PUBLIC_AUTH Shell)", () => {
@@ -237,6 +245,144 @@ describe("Public Auth Pages — Spec v5 Section 6.2, 6.3, 6.4, 6.5 (PUBLIC_AUTH 
 
       await waitFor(() => {
         expect(screen.getByRole("alert")).toHaveTextContent("Email hoặc mật khẩu không chính xác");
+      });
+    });
+
+    it("enforces progressive delay and countdown after repeated failed login attempts", async () => {
+      vi.mocked(api.post)
+        .mockRejectedValueOnce(new Error("Email hoặc mật khẩu không chính xác"))
+        .mockRejectedValueOnce(new Error("Email hoặc mật khẩu không chính xác"));
+
+      render(<LoginPage />);
+
+      const emailInput = screen.getByLabelText(/Email/i);
+      const passwordInput = screen.getByLabelText(/Mật khẩu/i);
+      const submitButton = screen.getByRole("button", { name: /Đăng nhập/i });
+
+      // First failure (0s delay)
+      fireEvent.change(emailInput, { target: { value: "brute@example.com" } });
+      fireEvent.change(passwordInput, { target: { value: "wrong1" } });
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(api.post).toHaveBeenCalledTimes(1);
+      });
+
+      // Second failure (1s progressive cooling delay)
+      fireEvent.change(passwordInput, { target: { value: "wrong2" } });
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(api.post).toHaveBeenCalledTimes(2);
+        expect(screen.getByTestId("auth-rate-limit-banner")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Thử lại sau/i })).toBeDisabled();
+      });
+    });
+
+    it("handles server 429 lockout by disabling submission and showing lockout countdown", async () => {
+      const rateLimitError = new Error("Tạm khóa đăng nhập do quá nhiều lần thử sai. Thử lại sau 60s") as Error & {
+        status?: number;
+        retryAfter?: number;
+      };
+      rateLimitError.status = 429;
+      rateLimitError.retryAfter = 60;
+
+      vi.mocked(api.post).mockRejectedValueOnce(rateLimitError);
+
+      render(<LoginPage />);
+
+      fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: "locked@example.com" } });
+      fireEvent.change(screen.getByLabelText(/Mật khẩu/i), { target: { value: "lockedpass" } });
+      fireEvent.click(screen.getByRole("button", { name: /Đăng nhập/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("auth-rate-limit-banner")).toBeInTheDocument();
+        expect(screen.getByText(/Tài khoản tạm thời bị khóa do nhiều lần thử không thành công/i)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Thử lại sau \(60s\)/i })).toBeDisabled();
+        expect(screen.getByLabelText(/Email/i)).toBeDisabled();
+        expect(screen.getByLabelText(/Mật khẩu/i)).toBeDisabled();
+      });
+    });
+
+    it("requires security verification challenge after reaching failure threshold and blocks submission until solved", async () => {
+      // Pre-seed 3 failures to trigger the CAPTCHA threshold
+      recordAuthFailure("login", "captcha-user@example.com");
+      recordAuthFailure("login", "captcha-user@example.com");
+      recordAuthFailure("login", "captcha-user@example.com");
+
+      render(<LoginPage />);
+
+      const emailInput = screen.getByLabelText(/Email/i);
+      fireEvent.change(emailInput, { target: { value: "captcha-user@example.com" } });
+
+      // Security challenge must be rendered
+      await waitFor(() => {
+        expect(screen.getByTestId("auth-security-challenge")).toBeInTheDocument();
+      });
+
+      // Submit button is disabled while challenge is unsolved
+      const submitBtn = screen.getByRole("button", { name: /(Đăng nhập|Thử lại sau)/i });
+      expect(submitBtn).toBeDisabled();
+    });
+
+    it("mitigates OTP brute-force attacks with failure tracking and attempt warnings", async () => {
+      // First setup: password step transitions to OTP
+      vi.mocked(api.post).mockResolvedValueOnce({
+        data: {
+          otp_required: true,
+          otp_delivery_status: "sent",
+          otp_expires_in_seconds: 300,
+        },
+      });
+
+      render(<LoginPage />);
+
+      fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: "otpbrute@example.com" } });
+      fireEvent.change(screen.getByLabelText(/Mật khẩu/i), { target: { value: "CorrectPass123!" } });
+      fireEvent.click(screen.getByRole("button", { name: /Đăng nhập/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { level: 1, name: /Xác thực OTP/i })).toBeInTheDocument();
+      });
+
+      // Fail OTP code attempt
+      vi.mocked(api.post).mockRejectedValueOnce(new Error("Mã OTP không hợp lệ hoặc đã hết hạn"));
+
+      fireEvent.change(screen.getByLabelText(/Mã OTP/i), { target: { value: "000000" } });
+      fireEvent.click(screen.getByRole("button", { name: /Xác thực OTP/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("auth-otp-attempt-warning")).toBeInTheDocument();
+        expect(screen.getByText(/Bạn đã nhập sai 1 lần/i)).toBeInTheDocument();
+      });
+    });
+
+    it("resets rate limit and cooldown state upon successful authentication", async () => {
+      // 1 failed attempt followed by success
+      vi.mocked(api.post)
+        .mockRejectedValueOnce(new Error("Sai mật khẩu"))
+        .mockResolvedValueOnce({ data: { role: "normal" } });
+
+      render(<LoginPage />);
+
+      const emailInput = screen.getByLabelText(/Email/i);
+      const passwordInput = screen.getByLabelText(/Mật khẩu/i);
+      const submitButton = screen.getByRole("button", { name: /Đăng nhập/i });
+
+      fireEvent.change(emailInput, { target: { value: "reset@example.com" } });
+      fireEvent.change(passwordInput, { target: { value: "wrong" } });
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(api.post).toHaveBeenCalledTimes(1);
+      });
+
+      fireEvent.change(passwordInput, { target: { value: "correct" } });
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(api.post).toHaveBeenCalledTimes(2);
+        expect(mocks.routerReplace).toHaveBeenCalledWith("/home");
       });
     });
   });

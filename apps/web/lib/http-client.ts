@@ -344,7 +344,26 @@ api.interceptors.response.use(
     }
 
     const message = await resolveErrorMessage(error);
-    return Promise.reject(new Error(message));
+    const enrichedError = new Error(message) as Error & {
+      status?: number;
+      retryAfter?: number;
+      isRateLimited?: boolean;
+      response?: typeof error.response;
+    };
+    enrichedError.status = error.response?.status;
+    enrichedError.response = error.response;
+    if (error.response?.status === 429) {
+      enrichedError.isRateLimited = true;
+      const retryHeader = error.response.headers?.["retry-after"];
+      const responseData = error.response.data as { retry_after_seconds?: number } | undefined;
+      const retryBody = responseData?.retry_after_seconds;
+      if (typeof retryBody === "number" && retryBody > 0) {
+        enrichedError.retryAfter = retryBody;
+      } else if (typeof retryHeader === "string" && !Number.isNaN(Number(retryHeader))) {
+        enrichedError.retryAfter = Number(retryHeader);
+      }
+    }
+    return Promise.reject(enrichedError);
   }
 );
 
