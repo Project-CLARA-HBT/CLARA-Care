@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH03",
+  "agent_id": "A02",
+  "role": "Data model + migration",
+  "task": "JWT/session invalidation and rotation; audit User, Session models in services/api/src/clara_api/db/models.py, token revocation, refresh token rotation in database, check Alembic migrations.",
+  "status": "PASSED",
+  "base_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "frozen_head_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "branch": "phase/ph03-a02",
+  "worktree_path": "/dev/shm/clara_worktrees/PH03_A02",
+  "path_lane": "services/api/src/clara_api/db/;services/api/alembic/versions/;artifacts/PH03/A02/",
+  "timestamp": "2026-10-21T21:45:00Z",
+  "files_changed": [
+    "services/api/src/clara_api/db/models.py",
+    "artifacts/PH03/A02/change_manifest.json",
+    "artifacts/PH03/A02/test_report.md",
+    "artifacts/PH03/A02/risk_register.md",
+    "artifacts/PH03/A02/rollback.md",
+    "artifacts/PH03/A02/DEPENDENCY_REQUEST.md"
+  ],
+  "artifacts": [
+    "artifacts/PH03/A02/change_manifest.json",
+    "artifacts/PH03/A02/test_report.md",
+    "artifacts/PH03/A02/risk_register.md",
+    "artifacts/PH03/A02/rollback.md",
+    "artifacts/PH03/A02/DEPENDENCY_REQUEST.md"
+  ],
+  "tests_run": [
+    {
+      "command": "git rev-parse HEAD",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "3b1072b98350b978b83b7ecec5c35228415759a3"
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions --strict",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "scanned 64 migration(s) in services/api/alembic/versions; 64 define a non-empty downgrade()"
+    },
+    {
+      "command": "alembic upgrade head",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Linear upgrade across 64 migrations completed successfully"
+    },
+    {
+      "command": "alembic downgrade -1 && alembic upgrade head",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Downgrade from head and re-upgrade completed successfully"
+    },
+    {
+      "command": "python3 -m pytest tests/test_auth_security_hardening.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "6 passed in 8.72s"
+    },
+    {
+      "command": "python3 -m pytest tests/test_auth_and_rbac.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "4 passed in 9.18s"
+    },
+    {
+      "command": "python3 -m pytest tests/test_auth_extended_flow.py tests/test_auth_me_and_mobile_summary.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "18 passed in 22.29s"
+    },
+    {
+      "command": "services/api/.venv/bin/ruff check services/api/src/clara_api/db/models.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "All checks passed!"
+    },
+    {
+      "command": "services/api/.venv/bin/mypy services/api/src/clara_api/db/models.py --ignore-missing-imports",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Success: no issues found in 1 source file"
+    }
+  ],
+  "rollback_steps": [
+    "git checkout 3b1072b98350b978b83b7ecec5c35228415759a3 -- services/api/src/clara_api/db/models.py",
+    "rm -rf artifacts/PH03/A02",
+    "git reset --hard 3b1072b98350b978b83b7ecec5c35228415759a3"
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line_start": 39,
+      "line_end": 59,
+      "symbol": "User",
+      "description": "User account identity entity with status, role, email verification, optimistic concurrency resource_version, and login audit tracking."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line_start": 61,
+      "line_end": 78,
+      "symbol": "SessionModel",
+      "description": "Conversational chat session model anchoring dialogue queries, distinct from HTTP auth sessions."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line_start": 418,
+      "line_end": 435,
+      "symbol": "AuthToken",
+      "description": "Cryptographic token storage for action tokens and refresh session tokens with single-use used_at consumption semantics."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "line_start": 168,
+      "line_end": 182,
+      "symbol": "_issue_refresh_session_token",
+      "description": "Issues and stores SHA-256 hashed refresh tokens in auth_tokens table with token_type='refresh_jwt'."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "line_start": 240,
+      "line_end": 263,
+      "symbol": "_consume_refresh_session_token and _revoke_refresh_sessions",
+      "description": "Enforces single-use rotation and bulk logout revocation by marking used_at=now on active refresh_jwt tokens."
+    },
+    {
+      "file": "scripts/ops/check_migration_downgrade.py",
+      "line_start": 1,
+      "line_end": 100,
+      "symbol": "check_migration_downgrade",
+      "description": "Strict verification that every Alembic revision defines a functional downgrade routine."
+    }
+  ],
+  "audit_findings": {
+    "user_model": {
+      "status": "SOUND",
+      "table": "users",
+      "features": [
+        "Status field (active/suspended) indexed and checked on all token refresh and authenticated operations.",
+        "Email verification (is_email_verified) indexed and enforced when auth_require_email_verification is enabled.",
+        "Resource version (resource_version) available for optimistic concurrency control.",
+        "Last login timestamp (last_login_at) accurately updated on user authentication."
+      ]
+    },
+    "session_model": {
+      "status": "SOUND",
+      "table": "sessions",
+      "features": [
+        "Explicitly documented as conversational chat sessions (dialogue parent container).",
+        "Disambiguated from HTTP authentication sessions and refresh tokens managed by AuthToken.",
+        "Foreign key cascade on users.id ensures proper cleanup on account deletion."
+      ]
+    },
+    "auth_token_model": {
+      "status": "SOUND",
+      "table": "auth_tokens",
+      "features": [
+        "Cryptographically secure token hashing: plaintext tokens are never stored in the database.",
+        "Single-use consumption: used_at is set to current timestamp upon rotation, preventing token replay.",
+        "TTL expiration: expires_at is indexed and checked on every token query.",
+        "Authoritative revocation: logout marks active refresh_jwt tokens as used_at = now."
+      ]
+    },
+    "alembic_migrations": {
+      "status": "SOUND",
+      "total_revisions": 64,
+      "strict_downgrade_check": "PASS",
+      "sqlite_upgrade_head": "PASS",
+      "sqlite_downgrade_reversibility": "PASS",
+      "schema_parity": "100% schema match on users, sessions, and auth_tokens tables between Alembic and Base.metadata"
+    }
+  },
+  "interface_assumptions": [
+    "SessionModel represents conversational chat trees (queries.session_id); authentication session tokens are stored in AuthToken.",
+    "Refresh tokens in auth.py are stored as token_type='refresh_jwt' with SHA-256 hashes in token_hash.",
+    "Single-use consumption is enforced by checking used_at.is_(None) and updating used_at=now in the database transaction.",
+    "Alembic migrations must define non-empty downgrade() routines verified under scripts/ops/check_migration_downgrade.py --strict."
+  ]
+}

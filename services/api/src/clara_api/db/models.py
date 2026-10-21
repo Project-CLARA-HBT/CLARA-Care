@@ -37,6 +37,13 @@ def _public_id() -> str:
 
 
 class User(Base):
+    """User account entity and identity anchor.
+
+    Tracks authentication credentials, authorization role, email verification,
+    account status (active/suspended), resource_version for optimistic concurrency,
+    and login audit history.
+    """
+
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -52,6 +59,13 @@ class User(Base):
 
 
 class SessionModel(Base):
+    """Conversational chat session entity (distinguished from auth tokens).
+
+    Acts as the parent container for user dialogue queries and assistant responses.
+    Stateful authentication sessions and refresh rotation tokens are managed
+    independently by AuthToken.
+    """
+
     __tablename__ = "sessions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -404,6 +418,14 @@ class ResearchUploadedFile(Base):
 
 
 class AuthToken(Base):
+    """Opaque cryptographic token storage for authentication actions and sessions.
+
+    Maintains salted/hashed action tokens (token_type='verify_email', 'reset_password',
+    'login_otp') and stateful refresh rotation tokens (token_type='refresh_jwt').
+    Enforces single-use consumption semantics via used_at and TTL enforcement via expires_at.
+    Authoritative session revocation marks used_at=now.
+    """
+
     __tablename__ = "auth_tokens"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
