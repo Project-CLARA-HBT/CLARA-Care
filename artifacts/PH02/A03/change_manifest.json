@@ -1,0 +1,88 @@
+{
+  "schema_version": "clara-phase-change-manifest.v1",
+  "phase_id": "PH02",
+  "agent_id": "A03",
+  "role": "Domain + GLHS services",
+  "task": "ten task-scoped worktree paths & path governance; audit and formalize path lane allocations for all 10 agent roles across domain modules (glhs, lifemap, phr, compliance, core); verify that no two roles have overlapping write paths in PHASE_TASKS.json.",
+  "status": "COMPLETED",
+  "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "commit_sha": "de3aff8c0a040e2ee2f53f40b1477c3d926cad84",
+  "changed_paths": [
+    "services/api/src/clara_api/core/path_governance.py",
+    "services/api/tests/test_domain_path_boundaries.py",
+    "artifacts/PH02/A03/change_manifest.json",
+    "artifacts/PH02/A03/test_report.md",
+    "artifacts/PH02/A03/risk_register.md"
+  ],
+  "path_lane": "services/api/src/clara_api/glhs/;services/api/src/clara_api/lifemap/;services/api/src/clara_api/phr/;services/api/src/clara_api/compliance/;services/api/src/clara_api/core/;artifacts/PH02/A03/",
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/core/path_governance.py",
+      "line_start": 44,
+      "line_end": 158,
+      "symbol": "PH02_AGENT_ALLOCATIONS, DOMAIN_MODULE_PATHS",
+      "description": "Authoritative path lane mapping and safety domain boundary definitions for subagents A01..A10."
+    },
+    {
+      "file": "services/api/src/clara_api/core/path_governance.py",
+      "line_start": 160,
+      "line_end": 235,
+      "symbol": "normalize_lane_path, paths_have_overlap, check_two_lanes_overlap, audit_ph02_lane_disjointness",
+      "description": "Deterministic path prefix collision engine and comprehensive 45-pair disjointness auditor."
+    },
+    {
+      "file": "services/api/src/clara_api/core/path_governance.py",
+      "line_start": 238,
+      "line_end": 272,
+      "symbol": "is_path_allowed_for_agent",
+      "description": "Per-agent path access validator enforcing task boundaries, artifact isolation, and directory traversal rejection."
+    },
+    {
+      "file": "services/api/src/clara_api/core/path_governance.py",
+      "line_start": 352,
+      "line_end": 395,
+      "symbol": "audit_domain_import_boundaries",
+      "description": "AST-based zero-coupling import boundary verifier confirming zero clara_ml dependencies across domain modules."
+    },
+    {
+      "file": "services/api/tests/test_domain_path_boundaries.py",
+      "line_start": 28,
+      "line_end": 175,
+      "symbol": "test_repo_frozen_head_sha_integrity, test_ph02_path_lane_disjointness_all_45_pairs, test_domain_modules_exclusively_allocated_to_a03, test_path_access_check_matrix, test_domain_import_boundaries_zero_ml_imports, test_phase_tasks_json_audit_and_governance",
+      "description": "Automated regression suite verifying SHA baseline, 45-pair PH02 lane disjointness, domain boundary AST isolation, and PHASE_TASKS.json audit."
+    }
+  ],
+  "invariants_tested": [
+    "HEAD commit equals frozen base SHA 879dc5dcfcaae91b3626e28062043d934294478b",
+    "Zero path collisions across all 45 subagent pairs in Phase PH02",
+    "Exclusive domain module ownership (glhs, lifemap, phr, compliance, core) for Agent A03",
+    "Zero cross-agent artifact directory mutation permitted",
+    "Zero AST-level imports of clara_ml across all domain packages (HTTP gateway only)",
+    "PHASE_TASKS.json cross-phase lane analysis and domain preservation audit"
+  ],
+  "test_results": [
+    {
+      "command": "pytest tests/test_domain_path_boundaries.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "total_tests": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "command": "uv run --extra dev ruff check src/clara_api/core/path_governance.py tests/test_domain_path_boundaries.py",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "uv run --extra dev mypy src/clara_api/core/path_governance.py tests/test_domain_path_boundaries.py --ignore-missing-imports",
+      "status": "PASS",
+      "exit_code": 0
+    }
+  ],
+  "feature_flag": "N/A - Hermetic path governance, lane formalization and architectural boundary audit",
+  "rollback": "Rollback steps: git checkout 879dc5dcfcaae91b3626e28062043d934294478b -- services/api/src/clara_api/core/path_governance.py services/api/tests/test_domain_path_boundaries.py && rm -rf artifacts/PH02/A03",
+  "blockers": [],
+  "privacy_review": "VERIFIED_NO_PII",
+  "safety_review": "VERIFIED_SAFETY_INVARIANTS_LOCKED"
+}
