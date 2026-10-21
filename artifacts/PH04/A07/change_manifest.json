@@ -1,0 +1,129 @@
+{
+  "$schema": "https://theclaracare.com/schemas/agent-execution/agent-manifest.schema.json",
+  "phase_id": "PH04",
+  "agent_id": "A07",
+  "role": "Tests + CI",
+  "task": "mobile org switch and deep-link test suite; audit tests in services/api/tests/ for organization and workspace operations, cross-organization switching, invitation acceptance deep links.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH04_A07",
+  "path_lane": "services/api/tests/;services/ml/tests/;apps/web/e2e/;.github/workflows/;artifacts/PH04/A07/",
+  "base_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "frozen_head_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "branch": "phase/ph04-a07",
+  "status": "PASSED",
+  "timestamp": "2026-10-21T22:30:00Z",
+  "files_changed": [
+    "services/api/tests/test_mobile_org_switching_and_deep_links.py",
+    "apps/web/e2e/org-switch-deep-link.spec.ts",
+    "artifacts/PH04/A07/change_manifest.json",
+    "artifacts/PH04/A07/test_report.md",
+    "artifacts/PH04/A07/risk_register.md",
+    "artifacts/PH04/A07/rollback.md"
+  ],
+  "artifacts": [
+    "artifacts/PH04/A07/change_manifest.json",
+    "artifacts/PH04/A07/test_report.md",
+    "artifacts/PH04/A07/risk_register.md",
+    "artifacts/PH04/A07/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/family.py",
+      "line_start": 86,
+      "line_end": 100,
+      "symbol": "_invitation_capability",
+      "description": "Reads capability from JSON payload or X-Family-Invitation-Token header, strictly barring URL-based token delivery."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/family.py",
+      "line_start": 295,
+      "line_end": 317,
+      "symbol": "preview_invitation",
+      "description": "Non-mutating preview returning metadata without consuming or auditing single-use invitation capability."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/family.py",
+      "line_start": 319,
+      "line_end": 335,
+      "symbol": "accept_invitation_legacy_url",
+      "description": "Rejects invitation token in URL path with HTTP 410 Gone and does not echo secret."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/workspace.py",
+      "line_start": 565,
+      "line_end": 618,
+      "symbol": "workspace_summary",
+      "description": "Returns counts of user-scoped folders, channels, and notes without cross-tenant disclosures."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/workspace.py",
+      "line_start": 622,
+      "line_end": 674,
+      "symbol": "list_folders, create_folder",
+      "description": "Enforces user-scoped ownership guard for workspace folder resources."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/profiles.py",
+      "line_start": 104,
+      "line_end": 107,
+      "symbol": "_set_context_cache_headers",
+      "description": "Sets Cache-Control: no-store, private and Vary: Authorization, X-CLARA-Profile-Context to prevent multi-tenant cache poisoning."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/profiles.py",
+      "line_start": 133,
+      "line_end": 182,
+      "symbol": "_resolved_context",
+      "description": "Resolves active context safely with automatic fallback and reset_required on stale/foreign context header."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/mobile.py",
+      "line_start": 58,
+      "line_end": 97,
+      "symbol": "mobile_summary",
+      "description": "Mobile summary route returning API health, quick links, and role-scoped feature flags."
+    },
+    {
+      "file": "apps/mobile/lib/core/public_share_link.dart",
+      "line_start": 27,
+      "line_end": 50,
+      "symbol": "phrShareTokenFromLink",
+      "description": "Parses public capability tokens from approved canonical HTTPS links while rejecting malicious schemes and foreign domains."
+    },
+    {
+      "file": "apps/mobile/lib/experience/presentation_mode.dart",
+      "line_start": 17,
+      "line_end": 61,
+      "symbol": "enum PresentationMode, defaultModeForRole",
+      "description": "Presentation mode switching is strictly a client layout context and never overrides backend RBAC."
+    }
+  ],
+  "interface_assumptions": [
+    "Invitation capability tokens are opaque 32-512 character strings transmitted via JSON body or request headers (X-Organization-Invitation-Token, X-Family-Invitation-Token).",
+    "Deep links in mobile and web must be validated against HTTPS canonical hosts (theclaracare.com, www.theclaracare.com) or approved native scheme (clara://).",
+    "Accepting an invitation via URL path (POST /invitations/{token}/accept) is permanently deprecated and responds with HTTP 410 Gone without echoing secret.",
+    "Context switching endpoints must set Cache-Control: no-store, private and Vary: Authorization, X-CLARA-Org-Context / X-CLARA-Profile-Context.",
+    "Stale or unpermitted organization context headers fail safe with reset_required=True, preventing cross-tenant leakage or internal server errors.",
+    "Presentation mode changes (Personal, Clinical, Research, Admin) alter only client layout and navigation, leaving backend RBAC strictly enforced."
+  ],
+  "tests_run": [
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/clara_test_a07.db\" python3 -m pytest -v tests/test_mobile_org_switching_and_deep_links.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "output": "21 passed, 1 warning in 24.56s"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/clara_test_a07.db\" python3 -m pytest -q tests/test_mobile_org_switching_and_deep_links.py tests/test_workspace_endpoints.py tests/test_family_circle_v2.py tests/test_auth_me_and_mobile_summary.py tests/test_auth_and_rbac.py tests/test_auth_security_hardening.py tests/test_profile_context_notifications.py tests/test_rbac_profile_scope_idor.py tests/hardening/test_authz_under_privileged.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "output": "83 passed, 1 warning in 80.08s"
+    }
+  ],
+  "rollback_steps": [
+    "git rm -f services/api/tests/test_mobile_org_switching_and_deep_links.py",
+    "git rm -f apps/web/e2e/org-switch-deep-link.spec.ts",
+    "git rm -rf artifacts/PH04/A07",
+    "git commit -m 'revert(ph04-a07): rollback mobile org switch and deep-link test suite'"
+  ]
+}
