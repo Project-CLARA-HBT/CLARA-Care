@@ -31,9 +31,15 @@ def upgrade() -> None:
                     sa.Column(
                         "parent_id",
                         sa.Integer(),
-                        sa.ForeignKey("social_comments.id", ondelete="CASCADE"),
                         nullable=True,
                     )
+                )
+                batch.create_foreign_key(
+                    "fk_social_comments_parent_id",
+                    "social_comments",
+                    ["parent_id"],
+                    ["id"],
+                    ondelete="CASCADE",
                 )
                 batch.create_index("ix_social_comments_parent_id", ["parent_id"])
 
@@ -81,4 +87,5 @@ def downgrade() -> None:
         if "parent_id" in columns:
             with op.batch_alter_table("social_comments") as batch:
                 batch.drop_index("ix_social_comments_parent_id")
+                batch.drop_constraint("fk_social_comments_parent_id", type_="foreignkey")
                 batch.drop_column("parent_id")
