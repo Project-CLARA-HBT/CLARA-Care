@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "agent_id": "A08",
+  "phase": "PH02",
+  "phase_id": "PH02",
+  "role": "Security + privacy",
+  "task": "deterministic red-team checker; implement scripts/security/redteam_manifest_checker.py to audit all agent deliverables for simulated/fake test results, hardcoded credentials, PHI leakage, bypassed safety invariants, and verify commit signatures/hashes.",
+  "path_lane": [
+    "docs/security/",
+    "docs/compliance/",
+    "scripts/ops/",
+    "scripts/security/",
+    "artifacts/PH02/A08/"
+  ],
+  "frozen_head_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "verified_head_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "worktree_path": "/dev/shm/clara_worktrees/PH02_A08",
+  "branch": "phase/ph02-a08",
+  "timestamp": "2026-10-21T20:30:00Z",
+  "status": "COMPLETED",
+  "deliverables": [
+    "artifacts/PH02/A08/change_manifest.json",
+    "artifacts/PH02/A08/test_report.md",
+    "artifacts/PH02/A08/risk_register.md",
+    "artifacts/PH02/A08/rollback.md"
+  ],
+  "files_created": [
+    "scripts/security/redteam_manifest_checker.py",
+    "scripts/security/test_redteam_manifest_checker.py",
+    "artifacts/PH02/A08/change_manifest.json",
+    "artifacts/PH02/A08/test_report.md",
+    "artifacts/PH02/A08/risk_register.md",
+    "artifacts/PH02/A08/rollback.md"
+  ],
+  "files_changed": [
+    "scripts/security/redteam_manifest_checker.py",
+    "scripts/security/test_redteam_manifest_checker.py",
+    "artifacts/PH02/A08/change_manifest.json",
+    "artifacts/PH02/A08/test_report.md",
+    "artifacts/PH02/A08/risk_register.md",
+    "artifacts/PH02/A08/rollback.md"
+  ],
+  "files_modified": [],
+  "verified_source_anchors": {
+    "rbac_csrf_invariants": [
+      "services/api/src/clara_api/core/rbac.py:15-39",
+      "services/api/src/clara_api/core/rbac.py:92-108",
+      "services/api/src/clara_api/core/rbac.py:138-148",
+      "services/api/src/clara_api/main.py:133-150"
+    ],
+    "phi_redaction_patterns": [
+      "services/ml/src/clara_ml/nlp/pii_filter.py:6-28",
+      "scripts/security/check_ci_artifact_safety.py:18-31",
+      "services/api/src/clara_api/compliance/redaction.py:1-49"
+    ],
+    "secret_scanning_engine": [
+      "evaluation/commitloop/secret_scan.py:10-22",
+      "scripts/security/check_ci_artifact_policy.py:22-38"
+    ],
+    "gate_orchestration_patterns": [
+      "scripts/ops/check_migration_downgrade.py:21-45",
+      "scripts/ci/ph01_reproducibility_gate.py:25-93"
+    ]
+  },
+  "verification_commands_summary": [
+    {
+      "command": "python3 scripts/security/redteam_manifest_checker.py artifacts/PH00 artifacts/PH01",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Deterministic audit of 20 historical subagent deliverables across PH00 and PH01: 0 findings, 100% clean."
+    },
+    {
+      "command": "pytest -v scripts/security/test_redteam_manifest_checker.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "28 comprehensive unit and negative test cases verifying deterministic detection of fake results, secrets, PHI, safety bypasses, and invalid commit hashes."
+    },
+    {
+      "command": "python3 -m py_compile scripts/security/redteam_manifest_checker.py scripts/security/test_redteam_manifest_checker.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "AST bytecode compilation of security checker modules."
+    },
+    {
+      "command": "python3 -m evaluation.commitloop.secret_scan --repo-root .",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Hermetic fail-closed secret scanner check across entire tracked repository tree."
+    },
+    {
+      "command": "python3 scripts/security/check_ci_artifact_policy.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "CI artifact upload safety and SearXNG production secret verification."
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Verification of non-empty downgrade() across all 64 Alembic migrations."
+    },
+    {
+      "command": "python3 scripts/ci/ph01_reproducibility_gate.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Verification of reproducible toolchain lockfiles and supply-chain integrity."
+    }
+  ]
+}
