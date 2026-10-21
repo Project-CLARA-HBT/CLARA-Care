@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "manifest_version": "1.0.0",
+  "phase_id": "PH02",
+  "agent_id": "A07",
+  "role": "Tests + CI",
+  "task": "merge queue and integration worker; implement scripts/ops/merge_queue_worker.py to sequentially validate manifests, check path ACLs, cherry-pick commits in deterministic dependency order (A02->A01->A03->A04->A05->A06->A07->A08->A09->A10), run test suites, and generate merge_manifest.json.",
+  "path_lane": "services/api/tests/;services/ml/tests/;apps/web/e2e/;.github/workflows/;scripts/ops/;artifacts/PH02/A07/",
+  "frozen_head_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "worktree_path": "/dev/shm/clara_worktrees/PH02_A07",
+  "branch": "phase/ph02-a07",
+  "status": "COMPLETE",
+  "timestamp": "2026-10-21T20:25:00Z",
+  "files_changed": [
+    "scripts/ops/merge_queue_worker.py",
+    "services/api/tests/test_merge_queue_worker.py",
+    "artifacts/PH02/A07/change_manifest.json",
+    "artifacts/PH02/A07/test_report.md",
+    "artifacts/PH02/A07/risk_register.md",
+    "artifacts/PH02/A07/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/templates/AGENT_TASK_PROMPT.md:1-19",
+    "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/phases/PH02_thi-t-l-p-t-ch-c-t-c-nh-n-v-10-worktree-song-son.md:24-36",
+    "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/phases/PH02_thi-t-l-p-t-ch-c-t-c-nh-n-v-10-worktree-song-son.md:63",
+    "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/machine/PHASE_TASKS.json:246-366",
+    "artifacts/PH01/integration/merge_manifest.json:1-210",
+    "artifacts/PH01/A07/change_manifest.json:1-120",
+    "scripts/ops/merge_queue_worker.py:1-490",
+    "services/api/tests/test_merge_queue_worker.py:1-350"
+  ],
+  "interface_assumptions": {
+    "deterministic_dependency_order": [
+      "A02",
+      "A01",
+      "A03",
+      "A04",
+      "A05",
+      "A06",
+      "A07",
+      "A08",
+      "A09",
+      "A10"
+    ],
+    "manifest_standards": {
+      "path_pattern": "artifacts/<PHASE>/<AGENT_ID>/change_manifest.json",
+      "required_companion_deliverables": [
+        "test_report.md",
+        "risk_register.md"
+      ],
+      "required_status_values": [
+        "COMPLETE",
+        "COMPLETED",
+        "PASSED"
+      ]
+    },
+    "path_acl_policy": {
+      "private_artifact_ownership": "artifacts/<phase_id>/<agent_id>/ exclusively owned by that agent",
+      "cross_agent_file_collision": "Zero tolerance for non-artifact file overlap across agents",
+      "out_of_lane_mutation": "Fail-closed on any modified file outside designated path_lane"
+    },
+    "cherry_pick_policy": {
+      "order": "Strictly deterministic A02->A01->A03->A04->A05->A06->A07->A08->A09->A10",
+      "conflict_handling": "Immediate git cherry-pick --abort and fail-closed exit",
+      "noop_commits": "Base SHA matching commits handled without git error"
+    }
+  },
+  "test_execution_results": {
+    "test_merge_queue_worker": {
+      "command": "pytest tests/test_merge_queue_worker.py",
+      "exit_code": 0,
+      "passed": 17,
+      "failed": 0
+    },
+    "cli_help_invocation": {
+      "command": "python3 scripts/ops/merge_queue_worker.py --help",
+      "exit_code": 0
+    },
+    "py_compile_merge_queue_worker": {
+      "command": "python3 -m py_compile scripts/ops/merge_queue_worker.py",
+      "exit_code": 0
+    }
+  },
+  "blockers": [],
+  "rollback_steps": [
+    "To rollback PH02 A07 deliverables on branch phase/ph02-a07:",
+    "1. git rm -f scripts/ops/merge_queue_worker.py services/api/tests/test_merge_queue_worker.py",
+    "2. git rm -rf artifacts/PH02/A07",
+    "3. git commit -m 'Rollback PH02 A07 merge queue worker implementation'"
+  ],
+  "remediations": [
+    "Implemented automated merge queue worker script (scripts/ops/merge_queue_worker.py) with schema validation, path ACL gating, cross-agent collision detection, deterministic cherry-pick orchestration, and canonical merge manifest generation.",
+    "Delivered full pytest test suite (services/api/tests/test_merge_queue_worker.py) verifying all 17 positive, negative, and edge test cases."
+  ]
+}
