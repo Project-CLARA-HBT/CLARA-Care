@@ -61,3 +61,11 @@ Use this operational checklist before a release; it is not a certification.
       `bearer`, `accesstoken`, `refreshtoken`, `auth`, `secret`) to prevent telemetry leakage.
 - [ ] Public share capability tokens (`/phr/shared/{token}`) remain strictly bounded (≤512 chars),
       in-memory only, and excluded from persistence, logs, and analytics.
+- [ ] Multi-tenant isolation boundary verified: Tenant A cannot view, query, or mutate Tenant B
+      records even if the actor holds an `admin` role in Tenant A.
+- [ ] Cross-tenant object queries fail closed with non-enumerating HTTP 404 responses for foreign
+      or non-existent entity IDs across Workspaces, Council Cases, PHR Profiles, and Research Sources.
+- [ ] GLHS transition kernels enforce strict tenant namespacing on idempotency locks and transition
+      ledgers (`idempotency:{tenant_id}:{operation_kind}:{key}`).
+- [ ] Clinical workbench patient rosters and consultation feeds strictly enforce tenant/care-team
+      scoping with masked display labels (`BN-XXXXXXXX`).

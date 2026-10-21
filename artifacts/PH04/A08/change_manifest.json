@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH04",
+  "agent_id": "A08",
+  "role": "Security + privacy",
+  "task": "cross-tenant isolation regression audit; audit multi-tenant boundaries to ensure zero cross-tenant data leakage (Tenant A cannot view, query, or mutate Tenant B records even if role is admin in Tenant A), verify secret scanning.",
+  "status": "PASSED",
+  "base_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "frozen_head_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "branch": "phase/ph04-a08",
+  "worktree_path": "/dev/shm/clara_worktrees/PH04_A08",
+  "path_lane": "docs/security/;docs/compliance/;scripts/ops/;artifacts/PH04/A08/",
+  "timestamp": "2026-10-21T23:25:00Z",
+  "files_changed": [
+    "docs/security/cross-tenant-isolation-threat-model.md",
+    "docs/security/privacy-checklist.md",
+    "docs/compliance/cross-tenant-privacy-assessment.md",
+    "scripts/ops/audit_cross_tenant_isolation.py",
+    "scripts/ops/test_audit_cross_tenant_isolation.py",
+    "artifacts/PH04/A08/change_manifest.json",
+    "artifacts/PH04/A08/test_report.md",
+    "artifacts/PH04/A08/risk_register.md",
+    "artifacts/PH04/A08/rollback.md"
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m evaluation.commitloop.secret_scan --repo-root .",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.82
+    },
+    {
+      "command": "python3 scripts/ops/audit_cross_tenant_isolation.py --repo-root .",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.25
+    },
+    {
+      "command": "pytest -v scripts/ops/test_audit_cross_tenant_isolation.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.26
+    },
+    {
+      "command": "python3 -m py_compile scripts/ops/audit_cross_tenant_isolation.py scripts/ops/test_audit_cross_tenant_isolation.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.08
+    },
+    {
+      "command": "PYTHONPATH=services/api/src pytest -v services/api/tests/test_rbac_profile_scope_idor.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 62.79
+    },
+    {
+      "command": "PYTHONPATH=services/api/src python3 research/security_audit/run_security_audit.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 4.25
+    },
+    {
+      "command": "python3 scripts/security/check_ci_artifact_policy.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.10
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "duration_seconds": 0.20
+    }
+  ],
+  "rollback_steps": [
+    "git reset --hard 7f458c915a59a75568e344b670d2f12ce9133a4e",
+    "rm -f scripts/ops/audit_cross_tenant_isolation.py scripts/ops/test_audit_cross_tenant_isolation.py docs/security/cross-tenant-isolation-threat-model.md docs/compliance/cross-tenant-privacy-assessment.md",
+    "rm -rf artifacts/PH04/A08",
+    "git checkout 7f458c915a59a75568e344b670d2f12ce9133a4e -- docs/security/privacy-checklist.md",
+    "git clean -fd"
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/glhs/commit_kernel.py",
+      "line_start": 530,
+      "line_end": 556,
+      "symbol": "build_lock_plan, existing_locked",
+      "description": "Tenant-partitioned idempotency key namespace idempotency:{tenant_id}:{operation_kind}:{idempotency_key} and GlhsAppliedTransition.tenant_id scoping."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line_start": 103,
+      "line_end": 177,
+      "symbol": "resolve_profile_scope, policy.administrative",
+      "description": "Administrative containment invariant: admin role cannot access patient profiles without audited break-glass flow (raises 404 scope_forbidden)."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/workspace.py",
+      "line_start": 236,
+      "line_end": 285,
+      "symbol": "_get_owned_folder, _get_owned_channel, _get_owned_conversation, _get_owned_note",
+      "description": "Object-level IDOR protection enforcing exact user_id ownership predicates with uniform 404 Not Found non-enumeration responses."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/council.py",
+      "line_start": 268,
+      "line_end": 278,
+      "symbol": "_get_owned_case",
+      "description": "Clinical council case horizontal isolation enforcing CouncilCase.user_id == user_id with 404 rejection."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/research.py",
+      "line_start": 822,
+      "line_end": 846,
+      "symbol": "_get_owned_source, _get_owned_document",
+      "description": "Research knowledge source and proprietary document scoping enforcing KnowledgeSource.owner_user_id == owner_user_id."
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line_start": 138,
+      "line_end": 149,
+      "symbol": "require_roles",
+      "description": "Role gate dependency enforcing role boundary within authenticated tenant context."
+    }
+  ],
+  "artifacts": [
+    "docs/security/cross-tenant-isolation-threat-model.md",
+    "docs/security/privacy-checklist.md",
+    "docs/compliance/cross-tenant-privacy-assessment.md",
+    "scripts/ops/audit_cross_tenant_isolation.py",
+    "scripts/ops/test_audit_cross_tenant_isolation.py",
+    "artifacts/PH04/A08/change_manifest.json",
+    "artifacts/PH04/A08/test_report.md",
+    "artifacts/PH04/A08/risk_register.md",
+    "artifacts/PH04/A08/rollback.md"
+  ],
+  "interface_assumptions": [
+    "Subagent A08 operates strictly within path lanes: docs/security/;docs/compliance/;scripts/ops/;artifacts/PH04/A08/.",
+    "Multi-tenant isolation invariant: Tenant A cannot view, query, or mutate Tenant B records, even if role is admin in Tenant A.",
+    "Object lookup failures on foreign-tenant records must return HTTP 404 (non-enumerating) rather than 403 Forbidden.",
+    "GLHS idempotency lock namespaces and transition verification must explicitly partition by tenant_id.",
+    "Administrative roles must not confer ambient clinical or personal health data access without an explicit break-glass workflow."
+  ]
+}
