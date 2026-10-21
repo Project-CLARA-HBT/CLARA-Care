@@ -1,0 +1,107 @@
+{
+  "schema_version": "clara-phase-change-manifest.v1",
+  "phase_id": "PH01",
+  "agent_id": "A10",
+  "role": "Adversarial audit + integration proposals",
+  "task": "reproducibility/rollback runbook and PH01 gate; inspect toolchain reproducibility, review secret scan remediation (SEC-CRIT-01), public boundary fix (DEFECT-01), verify no supply-chain poison or unpinned malicious packages, compile defect status and gate criteria.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH01_A10",
+  "branch": "phase/ph01-a10",
+  "base_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "status": "COMPLETED",
+  "path_lane": [
+    "docs/reports/",
+    "docs/runbooks/",
+    "scripts/ci/",
+    "artifacts/PH01/A10/"
+  ],
+  "changed_paths": [
+    "scripts/ci/ph01_reproducibility_gate.py",
+    "docs/runbooks/ph01-reproducibility-and-rollback.md",
+    "artifacts/PH01/A10/change_manifest.json",
+    "artifacts/PH01/A10/test_report.md",
+    "artifacts/PH01/A10/risk_register.md"
+  ],
+  "verified_source_anchors": [
+    "services/api/uv.lock:1",
+    "services/ml/uv.lock:1",
+    "apps/web/package-lock.json:1",
+    "apps/mobile/pubspec.lock:368",
+    "scripts/ops/run_v8_provider_probe_ledger.py:37",
+    "research/glhs_journal/q3_r3/provider_run_ledger_spec.md:32",
+    "services/api/src/clara_api/core/route_inventory.py:106",
+    "services/api/alembic/versions/20260824_0062_social_bookmarks_and_threading.py:34",
+    "scripts/ops/check_migration_downgrade.py:21",
+    "scripts/ci/r4_claim_lint.py:10",
+    "evaluation/commitloop/secret_scan.py:10"
+  ],
+  "defect_reviews": [
+    {
+      "id": "SEC-CRIT-01",
+      "severity": "CRITICAL",
+      "owner": "A08",
+      "title": "Hardcoded test router API key in scripts/ops/run_v8_provider_probe_ledger.py and spec",
+      "status": "REMEDIATED",
+      "audit_verdict": "Verified in PH01_A08 worktree: API_KEY now resolves from os.environ.get('CLARA_ROUTER_API_KEY', '') and spec token replaced with <REDACTED_API_KEY>. python3 -m evaluation.commitloop.secret_scan passes cleanly with exit code 0."
+    },
+    {
+      "id": "DEFECT-01",
+      "severity": "MEDIUM",
+      "owner": "A01",
+      "title": "POST /api/v1/auth/callback missing from INTENTIONAL_PUBLIC_ROUTES in route_inventory.py",
+      "status": "REMEDIATED",
+      "audit_verdict": "Verified in PH01_A01 worktree: Added ('POST', '/api/v1/auth/callback') to INTENTIONAL_PUBLIC_ROUTES. test_route_inventory_public_boundaries.py passes 2/2 cleanly with exit code 0."
+    },
+    {
+      "id": "DEFECT-02",
+      "severity": "HIGH",
+      "owner": "A02",
+      "title": "Alembic migration 0062 batch_alter_table on SQLite fails with unnamed foreign key constraint",
+      "status": "REMEDIATED",
+      "audit_verdict": "Verified in PH01_A02 worktree: Added explicit constraint name fk_social_comments_parent_id and explicit drop in downgrade. Full SQLite upgrade/downgrade/re-upgrade sequence passes with exit code 0."
+    }
+  ],
+  "supply_chain_audit": {
+    "api_packages_count": 66,
+    "ml_packages_count": 69,
+    "web_packages_count": 827,
+    "mobile_packages_count": 52,
+    "untrusted_registries": [],
+    "git_url_dependencies": [],
+    "wildcard_unpinned_dependencies": [],
+    "verdict": "PASS (All dependencies pinned with cryptographic hashes; zero supply-chain poisoning)"
+  },
+  "test_results": [
+    {
+      "command": "python3 scripts/ci/ph01_reproducibility_gate.py",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m compileall -q services/api/src services/ml/src",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ci/r4_claim_lint.py",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m evaluation.commitloop.secret_scan --repo-root /dev/shm/clara_worktrees/PH01_A08",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL='sqlite+pysqlite:////dev/shm/clara_test_a01.db' pytest services/api/tests/test_route_inventory_public_boundaries.py",
+      "status": "PASS",
+      "exit_code": 0
+    }
+  ],
+  "rollback": "Non-destructive operational runbook and gate script located in path lane; git reset --hard 2aa9016a57b49b53f1a433d076e1028a6ec45f64 restores worktree to clean baseline.",
+  "blockers": []
+}
