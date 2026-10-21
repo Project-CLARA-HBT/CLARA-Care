@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH01",
+  "agent_id": "A01",
+  "role": "API + contract",
+  "task": "Python 3.12 env bootstrap, audit pyproject.toml and Python >=3.11/3.12 compatibility; fix DEFECT-01 by adding POST /api/v1/auth/callback to INTENTIONAL_PUBLIC_ROUTES in services/api/src/clara_api/core/route_inventory.py so that tests/test_route_inventory_public_boundaries.py passes 100%!",
+  "status": "COMPLETED",
+  "frozen_head_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "verified_head_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "branch": "phase/ph01-a01",
+  "worktree_path": "/dev/shm/clara_worktrees/PH01_A01",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;services/api/src/clara_api/core/route_inventory.py;artifacts/PH01/A01/",
+  "timestamp": "2026-10-21T18:50:00Z",
+  "files_created": [
+    "artifacts/PH01/A01/change_manifest.json",
+    "artifacts/PH01/A01/test_report.md",
+    "artifacts/PH01/A01/risk_register.md",
+    "artifacts/PH01/A01/rollback.md"
+  ],
+  "files_modified": [
+    "services/api/src/clara_api/core/route_inventory.py"
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/core/route_inventory.py",
+      "line_start": 106,
+      "line_end": 140,
+      "symbol": "INTENTIONAL_PUBLIC_ROUTES",
+      "description": "Authoritative deny-by-default allowlist for unauthenticated API endpoints; added ('POST', '/api/v1/auth/callback') to pre-authentication auth surface."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "line_start": 688,
+      "line_end": 735,
+      "symbol": "auth_callback",
+      "description": "POST /api/v1/auth/callback route handler exchanging OAuth callback code for user session tokens."
+    },
+    {
+      "file": "services/api/src/clara_api/main.py",
+      "line_start": 133,
+      "line_end": 150,
+      "symbol": "_CSRF_EXEMPT_PATHS",
+      "description": "CSRF exempt paths list explicitly exempting /api/v1/auth/callback from CSRF checks."
+    },
+    {
+      "file": "services/api/tests/test_route_inventory_public_boundaries.py",
+      "line_start": 20,
+      "line_end": 42,
+      "symbol": "test_every_unauthenticated_route_has_an_explicit_public_reason",
+      "description": "Route boundary regression test validating unclassified_public_routes(app) == []."
+    },
+    {
+      "file": "services/api/pyproject.toml",
+      "line_start": 10,
+      "line_end": 70,
+      "symbol": "clara-api build & tool configuration",
+      "description": "Package specification requiring Python >=3.11 with ruff/mypy py311 targets, fully compatible with Python 3.12.3 runtime."
+    },
+    {
+      "file": "services/ml/pyproject.toml",
+      "line_start": 10,
+      "line_end": 57,
+      "symbol": "clara-ml build & tool configuration",
+      "description": "Package specification requiring Python >=3.11, fully compatible with Python 3.12.3 runtime."
+    }
+  ],
+  "audit_findings": {
+    "python_environment": {
+      "python_version": "3.12.3",
+      "uv_version": "0.13.4",
+      "uv_path": "/home/clue/.local/bin/uv",
+      "compatibility_status": "COMPATIBLE",
+      "pyproject_requires_python": ">=3.11",
+      "findings": [
+        "Python 3.12.3 runtime is fully functional across services/api dependencies.",
+        "FastAPI 0.116.0+, Pydantic 2.9+, SQLAlchemy 2.0.36+, aiosqlite 0.22.1+, and python-jose[cryptography] operate cleanly on Python 3.12.",
+        "Deprecation warnings from Starlette testclient regarding HTTP_422_UNPROCESSABLE_ENTITY and httpx testclient are noted as non-blocking.",
+        "SQLite tests benefit significantly from tmpfs via CLARA_TEST_DATABASE_URL=sqlite+pysqlite:////dev/shm/clara-test.db to prevent D-state serialization delays on saturated host disks."
+      ]
+    },
+    "defect_resolution": {
+      "defect_id": "DEFECT-01",
+      "description": "Missing ('POST', '/api/v1/auth/callback') in INTENTIONAL_PUBLIC_ROUTES in services/api/src/clara_api/core/route_inventory.py",
+      "resolution": "Added ('POST', '/api/v1/auth/callback') to INTENTIONAL_PUBLIC_ROUTES set.",
+      "verification": "pytest tests/test_route_inventory_public_boundaries.py passes 2/2 (100%)."
+    }
+  }
+}
