@@ -750,67 +750,54 @@ def print_status_table(diags: dict[str, AgentDiagnostic], phase_id: str, base_sh
 
 
 def build_parser() -> argparse.ArgumentParser:
+    sub_common = argparse.ArgumentParser(add_help=False)
+    sub_common.add_argument("--phase", default=argparse.SUPPRESS, help=f"Phase identifier (default: {DEFAULT_PHASE_ID})")
+    sub_common.add_argument("--worktree-base", default=argparse.SUPPRESS, help=f"Base directory (default: {DEFAULT_WORKTREE_BASE})")
+    sub_common.add_argument("--base-sha", default=argparse.SUPPRESS, help=f"Pinned base SHA (default: {FROZEN_BASE_SHA_PH02})")
+    sub_common.add_argument("--repo-root", default=argparse.SUPPRESS, help=f"Root repository path (default: {DEFAULT_REPO_ROOT})")
+    sub_common.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit output in machine-readable JSON format")
+
     parser = argparse.ArgumentParser(
         description="CLARA Care Phase Recovery & Resume Tool (PH02 Quality Gate)",
     )
-    parser.add_argument(
-        "--phase",
-        default=DEFAULT_PHASE_ID,
-        help=f"Phase identifier (default: {DEFAULT_PHASE_ID})",
-    )
-    parser.add_argument(
-        "--worktree-base",
-        default=str(DEFAULT_WORKTREE_BASE),
-        help=f"Base directory containing agent worktrees (default: {DEFAULT_WORKTREE_BASE})",
-    )
-    parser.add_argument(
-        "--base-sha",
-        default=FROZEN_BASE_SHA_PH02,
-        help=f"Pinned base SHA (default: {FROZEN_BASE_SHA_PH02})",
-    )
-    parser.add_argument(
-        "--repo-root",
-        default=str(DEFAULT_REPO_ROOT),
-        help=f"Root repository path (default: {DEFAULT_REPO_ROOT})",
-    )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Emit output in machine-readable JSON format",
-    )
+    parser.add_argument("--phase", default=DEFAULT_PHASE_ID, help=f"Phase identifier (default: {DEFAULT_PHASE_ID})")
+    parser.add_argument("--worktree-base", default=str(DEFAULT_WORKTREE_BASE), help=f"Base directory (default: {DEFAULT_WORKTREE_BASE})")
+    parser.add_argument("--base-sha", default=FROZEN_BASE_SHA_PH02, help=f"Pinned base SHA (default: {FROZEN_BASE_SHA_PH02})")
+    parser.add_argument("--repo-root", default=str(DEFAULT_REPO_ROOT), help=f"Root repository path (default: {DEFAULT_REPO_ROOT})")
+    parser.add_argument("--json", action="store_true", default=False, help="Emit output in machine-readable JSON format")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Subcommand: status
-    subparsers.add_parser("status", help="Inspect status of all 10 agents in the phase")
+    subparsers.add_parser("status", parents=[sub_common], help="Inspect status of all 10 agents in the phase")
 
     # Subcommand: diagnose
-    diag_parser = subparsers.add_parser("diagnose", help="Detailed root-cause diagnosis of worktree state")
+    diag_parser = subparsers.add_parser("diagnose", parents=[sub_common], help="Detailed root-cause diagnosis of worktree state")
     diag_parser.add_argument("--agent", help="Specific agent ID to diagnose (e.g. A03). If omitted, diagnoses all.")
 
     # Subcommand: isolate
-    iso_parser = subparsers.add_parser("isolate", help="Isolate broken worktree into quarantine snapshot")
+    iso_parser = subparsers.add_parser("isolate", parents=[sub_common], help="Isolate broken worktree into quarantine snapshot")
     iso_group = iso_parser.add_mutually_exclusive_group(required=True)
     iso_group.add_argument("--agent", help="Specific agent ID to isolate (e.g. A03)")
     iso_group.add_argument("--all-failed", action="store_true", help="Isolate all failed or dirty agents")
     iso_parser.add_argument("--reason", default="Manual operator isolation", help="Quarantine reason note")
 
     # Subcommand: retry
-    retry_parser = subparsers.add_parser("retry", help="Safely reset a single failed agent without discarding passed agents")
+    retry_parser = subparsers.add_parser("retry", parents=[sub_common], help="Safely reset a single failed agent without discarding passed agents")
     retry_parser.add_argument("--agent", required=True, help="Specific agent ID to retry (e.g. A03)")
     retry_parser.add_argument("--no-quarantine", action="store_true", help="Skip saving pre-reset state to quarantine")
     retry_parser.add_argument("--force", action="store_true", help="Force reset even if agent is marked passed")
 
     # Subcommand: checkpoint
-    ckpt_parser = subparsers.add_parser("checkpoint", help="Save current phase execution checkpoint")
+    ckpt_parser = subparsers.add_parser("checkpoint", parents=[sub_common], help="Save current phase execution checkpoint")
     ckpt_parser.add_argument("--output", help="Optional custom checkpoint file path")
 
     # Subcommand: resume
-    resume_parser = subparsers.add_parser("resume", help="Resume phase execution from last safe checkpoint")
+    resume_parser = subparsers.add_parser("resume", parents=[sub_common], help="Resume phase execution from last safe checkpoint")
     resume_parser.add_argument("--checkpoint-file", help="Optional path to checkpoint file")
 
     # Subcommand: gate
-    subparsers.add_parser("gate", help="Evaluate PH02 Quality Gate criteria")
+    subparsers.add_parser("gate", parents=[sub_common], help="Evaluate PH02 Quality Gate criteria")
 
     return parser
 
