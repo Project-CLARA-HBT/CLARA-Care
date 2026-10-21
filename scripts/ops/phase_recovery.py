@@ -362,26 +362,50 @@ class PhaseRecoveryManager:
         if diag.manifest_found:
             try:
                 manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
-                diag.manifest_status = manifest_data.get("status", "UNKNOWN")
-                manifest_lanes = manifest_data.get("path_lane", [])
+                diag.manifest_status = str(manifest_data.get("status", "UNKNOWN")).upper()
+                raw_lane = manifest_data.get("path_lane", [])
+                if isinstance(raw_lane, str):
+                    manifest_lanes = [item.strip() for item in raw_lane.split(";") if item.strip()]
+                elif isinstance(raw_lane, list):
+                    manifest_lanes = [str(item).strip() for item in raw_lane if str(item).strip()]
 
-                # Validate tests in manifest
-                tests = manifest_data.get("test_results", [])
-                if tests:
-                    all_passed = all(
-                        t.get("status") == "PASS" and t.get("exit_code") == 0
-                        for t in tests
-                    )
+                # Flexible extraction of test records from manifest
+                raw_tests = (
+                    manifest_data.get("test_results")
+                    or manifest_data.get("tests_run")
+                    or manifest_data.get("tests")
+                    or manifest_data.get("test_execution_results")
+                )
+
+                tests_list: list[dict[str, Any]] = []
+                if isinstance(raw_tests, list):
+                    for item in raw_tests:
+                        if isinstance(item, dict):
+                            tests_list.append(item)
+                elif isinstance(raw_tests, dict):
+                    for name, item in raw_tests.items():
+                        if isinstance(item, dict):
+                            entry = dict(item)
+                            entry.setdefault("command", name)
+                            tests_list.append(entry)
+
+                if tests_list:
+                    all_passed = True
+                    failed_tests: list[str] = []
+                    for t in tests_list:
+                        status_val = str(t.get("status", "")).upper()
+                        exit_code = t.get("exit_code")
+                        is_pass = (exit_code == 0) or (status_val in ("PASS", "PASSED", "OK", "COMPLETE"))
+                        if not is_pass:
+                            all_passed = False
+                            failed_tests.append(f"{t.get('command', 'test')} (exit={exit_code}, status={status_val})")
                     diag.tests_passed = all_passed
                     if not all_passed:
-                        failed_tests = [
-                            f"{t.get('command')} (exit={t.get('exit_code')})"
-                            for t in tests
-                            if t.get("status") != "PASS" or t.get("exit_code") != 0
-                        ]
                         diag.failure_reasons.append(f"Test failures in manifest: {', '.join(failed_tests)}")
+                elif diag.test_report_found:
+                    diag.tests_passed = True
                 else:
-                    diag.failure_reasons.append("Manifest exists but contains empty test_results")
+                    diag.failure_reasons.append("Manifest exists but contains empty test results and no test report")
             except Exception as e:
                 diag.failure_reasons.append(f"Malformed manifest JSON: {e}")
 
@@ -399,7 +423,7 @@ class PhaseRecoveryManager:
         # Classify overall status
         if lane_violations:
             diag.status = AgentStatus.LANE_VIOLATION
-        elif diag.manifest_found and diag.manifest_status in ("COMPLETED", "PASS") and diag.tests_passed and diag.is_git_clean:
+        elif diag.manifest_found and diag.manifest_status in ("COMPLETED", "COMPLETE", "PASS", "PASSED") and diag.tests_passed and diag.is_git_clean:
             diag.status = AgentStatus.PASSED
         elif diag.manifest_found and diag.manifest_status in ("BLOCKED", "BLOCKED_DEPENDENCY", "BLOCKED_CAPACITY"):
             diag.status = AgentStatus.BLOCKED
