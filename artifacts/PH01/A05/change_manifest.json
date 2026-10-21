@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "manifest_version": "1.0.0",
+  "agent_id": "A05",
+  "phase_id": "PH01",
+  "role": "Web UX",
+  "worktree_path": "/dev/shm/clara_worktrees/PH01_A05",
+  "branch": "phase/ph01-a05",
+  "base_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "head_sha_verified": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "task": "Flutter/Dart pinned SDK and Web toolchain integration; audit apps/mobile/pubspec.yaml SDK constraints (>=3.3.0 <4.0.0), analyze Dart ^3.9 markdown dependency requirement, document containerized or local Flutter 3.47+ upgrade path.",
+  "path_lane": [
+    "apps/web/app/",
+    "apps/web/components/",
+    "apps/web/lib/",
+    "artifacts/PH01/A05/"
+  ],
+  "deliverables": [
+    "artifacts/PH01/A05/change_manifest.json",
+    "artifacts/PH01/A05/test_report.md",
+    "artifacts/PH01/A05/risk_register.md",
+    "artifacts/PH01/A05/rollback.md",
+    "artifacts/PH01/A05/DEPENDENCY_REQUEST.md"
+  ],
+  "source_anchors": [
+    {
+      "path": "apps/mobile/pubspec.yaml",
+      "lines": "6-7",
+      "description": "Environment SDK declaration sdk: '>=3.3.0 <4.0.0' allowing legacy Dart 3.3 runtime"
+    },
+    {
+      "path": "apps/mobile/pubspec.yaml",
+      "lines": "16",
+      "description": "Dependency declaration markdown: ^7.3.1 used for on-device pure-Dart Markdown AST rendering"
+    },
+    {
+      "path": "apps/mobile/pubspec.lock",
+      "lines": "368-375",
+      "description": "Resolved package:markdown version 7.3.1 with sha256 checksum"
+    },
+    {
+      "path": "apps/mobile/pubspec.lock",
+      "lines": "621-623",
+      "description": "Lockfile SDK constraints pinning dart: '>=3.12.0 <4.0.0' and flutter: '>=3.44.0'"
+    },
+    {
+      "path": "apps/mobile/lib/widgets/markdown_view.dart",
+      "lines": "9-25",
+      "description": "AST-based markdown parser implementation importing package:markdown/markdown.dart"
+    },
+    {
+      "path": "apps/web/package.json",
+      "lines": "5-8, 14-16, 25",
+      "description": "Web engines (node >=20 <21, npm >=10), consumer-terminology scripts, and bundle budget check script"
+    },
+    {
+      "path": "apps/web/scripts/generate-consumer-terminology.mjs",
+      "lines": "27-30, 71-93",
+      "description": "Cross-platform generator projecting canonical terminology contract into Flutter Dart generated file"
+    },
+    {
+      "path": "apps/web/scripts/check-consumer-terminology-contract.mjs",
+      "lines": "25-36",
+      "description": "Hermetic cross-client terminology contract verifier inspecting web and mobile files"
+    },
+    {
+      "path": "apps/web/scripts/check-bundle-budget.mjs",
+      "lines": "5-31",
+      "description": "Bundle budget validator asserting .next/static size against baseline (9,624,869 bytes +/- 5%)"
+    },
+    {
+      "path": "packages/design-tokens/generate.js",
+      "lines": "397-410",
+      "description": "Design token cross-generator producing CSS variables and Flutter Dart ClaraGeneratedTokens class"
+    },
+    {
+      "path": ".github/workflows/mobile-apk.yml",
+      "lines": "36-47",
+      "description": "CI workflow downloading unpinned Flutter stable branch via git clone --depth 1 -b stable"
+    },
+    {
+      "path": "scripts/release/build_mobile_apk.sh",
+      "lines": "10-16, 39-50",
+      "description": "Mobile APK release build script requiring FLUTTER_BIN executable"
+    }
+  ],
+  "audit_findings": {
+    "pubspec_yaml_sdk_drift": {
+      "declared_constraint": ">=3.3.0 <4.0.0",
+      "lockfile_constraint": "dart: >=3.12.0 <4.0.0, flutter: >=3.44.0",
+      "status": "DRIFT_DETECTED",
+      "analysis": "pubspec.yaml specifies >=3.3.0, corresponding to Flutter 3.19.0. However, resolved transitive dependencies in pubspec.lock require at least Flutter >=3.44.0 and Dart >=3.12.0. Environments with Dart 3.3.0 will fail pub solve or produce unpinned package downgrades."
+    },
+    "markdown_dependency_requirement": {
+      "declared_version": "^7.3.1",
+      "role": "Pure-Dart AST markdown parser in apps/mobile/lib/widgets/markdown_view.dart",
+      "dart_sdk_requirement": "Dart ^3.9 / Flutter 3.47+",
+      "status": "PINNING_REQUIRED",
+      "analysis": "The markdown package ecosystem (versions >=7.3.1 and subsequent maintenance releases) and accompanying tooling packages (flutter_lints 5.0.0, meta 1.18.0) require modern Dart language features and SDK bounds aligned with Dart ^3.9 (Flutter 3.47+). Retaining sdk: '>=3.3.0' in pubspec.yaml contradicts this requirement."
+    },
+    "web_toolchain_integration": {
+      "consumer_terminology_sync": "PASS (19 keys, contract version 2026-07-30.v1 verified across web and mobile)",
+      "design_tokens_cross_compilation": "PASS (Generated tokens.css and clara_tokens.g.dart successfully; hash 0e438d4f0908af78)",
+      "bundle_budget_check": "VERIFIED_STRUCTURE (Baseline 9,624,869 bytes, requires preceding next build to generate .next/static; correctly reports ENOENT in unbuilt worktree without build artifacts)"
+    }
+  },
+  "upgrade_path_architecture": {
+    "target_flutter_version": "3.47.0+",
+    "target_dart_version": "^3.9.0",
+    "local_path": {
+      "fvm_config": ".fvm/fvm_config.json pinning 3.47.0",
+      "git_pin": "git clone -b 3.47.0 --depth 1 https://github.com/flutter/flutter.git /opt/flutter-3.47.0",
+      "pubspec_update": "sdk: '>=3.9.0 <4.0.0' with flutter: '>=3.47.0'"
+    },
+    "containerized_path": {
+      "dockerfile_target": "deploy/docker/flutter-builder.Dockerfile",
+      "base_image": "ubuntu:24.04 with OpenJDK 17, Android SDK cmdline-tools 34, Flutter 3.47.0",
+      "hermetic_execution": "docker run --rm -v $(pwd):/workspace -w /workspace/apps/mobile clara-flutter-builder:3.47.0 flutter test"
+    }
+  }
+}
