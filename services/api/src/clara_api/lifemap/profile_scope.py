@@ -30,6 +30,10 @@ class ProfileScope:
     grant_id: int | None = None
     valid_until: datetime | None = None
 
+    def __post_init__(self) -> None:
+        if self.actor_role == "owner" and self.profile.user_id != self.actor.id:
+            raise ValueError("actor_role 'owner' requires profile.user_id == actor.id")
+
     @property
     def is_owner(self) -> bool:
         return self.profile.user_id == self.actor.id
@@ -82,6 +86,9 @@ def resolve_profile_scope(
     purpose: str = "self_care",
 ) -> ProfileScope:
     """Resolve one profile and prove the requested action before data access."""
+
+    if requested_profile is not None:
+        requested_profile = requested_profile.strip() or None
 
     actor = current_user(db, token)
     policy = ProfileAccessPolicy(token_role=token.role, account_role=actor.role)
@@ -224,6 +231,8 @@ def require_profile_scope(
         )
     if profile_id is None:
         profile_id = kwargs.get("profile_id")
+    if profile_id is not None:
+        profile_id = profile_id.strip() or None
 
     policy = ProfileAccessPolicy(token_role=user.role, account_role=user.role)
     owned = list(
@@ -236,9 +245,7 @@ def require_profile_scope(
 
     if profile_id:
         profile = db.execute(
-            select(PhrProfile).where(
-                _profile_selector(profile_id), PhrProfile.status == "active"
-            )
+            select(PhrProfile).where(_profile_selector(profile_id), PhrProfile.status == "active")
         ).scalar_one_or_none()
     else:
         profile = owned[0] if owned else None

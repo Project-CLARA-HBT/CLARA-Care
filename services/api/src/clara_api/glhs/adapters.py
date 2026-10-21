@@ -545,9 +545,12 @@ def ingest_connected_health_observation(
             )
         ).scalars()
     )
-    key_prefix = "glhs-connected:" + hashlib.sha256(
-        f"{idempotency_key}:{observation.id}:{observation.version_no}".encode()
-    ).hexdigest()
+    key_prefix = (
+        "glhs-connected:"
+        + hashlib.sha256(
+            f"{idempotency_key}:{observation.id}:{observation.version_no}".encode()
+        ).hexdigest()
+    )
     if not observation.is_active:
         last_id = str(observation.id)
         for index, active in enumerate(active_assertions):
@@ -824,6 +827,11 @@ def retire_visit_document_assertions(
 def owner_profile_scope(*, profile, actor: User, purpose: str = "self_care") -> ProfileScope:
     """Construct the same owner-only scope used after PHR's direct ownership check."""
 
+    if profile.user_id != actor.id:
+        raise ValueError(
+            f"owner_profile_scope requires profile.user_id ({profile.user_id}) == actor.id ({actor.id})"
+        )
+
     return ProfileScope(
         actor=actor,
         profile=profile,
@@ -981,11 +989,11 @@ def ingest_phr_record_entries(
             if not activate:
                 candidate_rows = list(
                     db.execute(
-                    select(GlhsAssertion).where(
-                        GlhsAssertion.profile_id == scope.profile.id,
-                        GlhsAssertion.semantic_key == semantic_key,
-                        GlhsAssertion.lifecycle_status == "candidate",
-                    )
+                        select(GlhsAssertion).where(
+                            GlhsAssertion.profile_id == scope.profile.id,
+                            GlhsAssertion.semantic_key == semantic_key,
+                            GlhsAssertion.lifecycle_status == "candidate",
+                        )
                     ).scalars()
                 )
                 if any(row.value_fingerprint == value_fingerprint for row in candidate_rows):
@@ -1050,9 +1058,7 @@ def ingest_phr_record_entries(
                     effective_at=occurred_at,
                 )
                 transition_ids.append(transition.public_id)
-            assertion = _rebase_same_transaction_proposal(
-                db, scope=scope, assertion=assertion
-            )
+            assertion = _rebase_same_transaction_proposal(db, scope=scope, assertion=assertion)
             transition = apply_transition(
                 db,
                 scope=scope,
@@ -1089,9 +1095,7 @@ def ingest_phr_record_entries(
                     f"{idempotency_key}:{active_row.public_id}:removed".encode()
                 ).hexdigest(),
                 transition_kind=(
-                    "phr_record_entry_removed"
-                    if activate
-                    else "phr_unresolved_medication_removed"
+                    "phr_record_entry_removed" if activate else "phr_unresolved_medication_removed"
                 ),
                 reason_code="phr_record_entry_removed",
                 effective_at=datetime.now(UTC),

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH03",
+  "agent_id": "A03",
+  "role": "Domain + GLHS services",
+  "task": "RBAC object-level profile scope; audit services/api/src/clara_api/lifemap/profile_scope.py, phr authorization, core/rbac.py; verify object-level isolation (prevent IDOR where user A reads user B's records).",
+  "status": "PASSED",
+  "base_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "frozen_head_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "branch": "phase/ph03-a03",
+  "worktree_path": "/dev/shm/clara_worktrees/PH03_A03",
+  "path_lane": "services/api/src/clara_api/glhs/;services/api/src/clara_api/lifemap/;services/api/src/clara_api/phr/;services/api/src/clara_api/compliance/;services/api/src/clara_api/core/;artifacts/PH03/A03/",
+  "timestamp": "2026-10-21T21:55:00Z",
+  "files_changed": [
+    "services/api/src/clara_api/lifemap/profile_scope.py",
+    "services/api/src/clara_api/glhs/adapters.py",
+    "services/api/tests/test_rbac_profile_scope_idor.py",
+    "artifacts/PH03/A03/change_manifest.json",
+    "artifacts/PH03/A03/test_report.md",
+    "artifacts/PH03/A03/risk_register.md",
+    "artifacts/PH03/A03/rollback.md"
+  ],
+  "artifacts": [
+    "artifacts/PH03/A03/change_manifest.json",
+    "artifacts/PH03/A03/test_report.md",
+    "artifacts/PH03/A03/risk_register.md",
+    "artifacts/PH03/A03/rollback.md"
+  ],
+  "tests_run": [
+    {
+      "command": "git rev-parse HEAD",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "3b1072b98350b978b83b7ecec5c35228415759a3"
+    },
+    {
+      "command": ".venv/bin/pytest tests/test_rbac_profile_scope_idor.py -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "10 passed in 31.08s"
+    },
+    {
+      "command": ".venv/bin/pytest tests/test_auth_and_rbac.py -k test_invalid_token_is_rejected -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "1 passed, 3 deselected in 18.20s"
+    },
+    {
+      "command": ".venv/bin/pytest tests/test_auth_and_rbac.py -k test_role_inference_researcher -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "1 passed, 3 deselected in 28.00s"
+    },
+    {
+      "command": ".venv/bin/pytest tests/test_lifemap_v2_safety_contracts.py -k test_profile_context_cannot_be_used_as_an_idor_or_enumeration_oracle -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "1 passed, 17 deselected in 29.96s"
+    },
+    {
+      "command": ".venv/bin/pytest tests/test_lifemap_v2_safety_contracts.py -k test_every_lifemap_object_route_enforces_profile_non_interference -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "1 passed, 17 deselected, 1 warning in 57.23s"
+    },
+    {
+      "command": ".venv/bin/ruff check src/clara_api/lifemap/profile_scope.py src/clara_api/glhs/adapters.py tests/test_rbac_profile_scope_idor.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "All checks passed!"
+    },
+    {
+      "command": ".venv/bin/ruff format --check src/clara_api/lifemap/profile_scope.py src/clara_api/glhs/adapters.py tests/test_rbac_profile_scope_idor.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "3 files already formatted"
+    },
+    {
+      "command": ".venv/bin/mypy src/clara_api/lifemap/profile_scope.py src/clara_api/glhs/adapters.py --ignore-missing-imports",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Success: no issues found in 2 source files"
+    }
+  ],
+  "rollback_steps": [
+    "git checkout 3b1072b98350b978b83b7ecec5c35228415759a3 -- services/api/src/clara_api/lifemap/profile_scope.py services/api/src/clara_api/glhs/adapters.py",
+    "rm -f services/api/tests/test_rbac_profile_scope_idor.py",
+    "rm -rf artifacts/PH03/A03",
+    "git reset --hard 3b1072b98350b978b83b7ecec5c35228415759a3"
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line_start": 22,
+      "line_end": 40,
+      "symbol": "ProfileScope",
+      "description": "Dataclass representing authorized health profile access scope; enforces actor_role == 'owner' requires profile.user_id == actor.id."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line_start": 80,
+      "line_end": 215,
+      "symbol": "resolve_profile_scope",
+      "description": "Server-side resolver for health-profile scope; enforces account ownership or purpose-bound Family grant before any data query."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line_start": 217,
+      "line_end": 357,
+      "symbol": "require_profile_scope",
+      "description": "User-entity variant of profile scope resolution; normalizes requested profile identifier and prevents IDOR."
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line_start": 138,
+      "line_end": 149,
+      "symbol": "require_roles",
+      "description": "Route-level RBAC dependency enforcing role requirements; admin has implicit role bypass for route-level authorization only, NOT for profile-level health data."
+    },
+    {
+      "file": "services/api/src/clara_api/glhs/adapters.py",
+      "line_start": 827,
+      "line_end": 868,
+      "symbol": "owner_profile_scope",
+      "description": "GLHS adapter utility constructing an owner-only ProfileScope; asserts profile.user_id == actor.id to prevent unauthorized cross-profile mutation."
+    }
+  ]
+}
