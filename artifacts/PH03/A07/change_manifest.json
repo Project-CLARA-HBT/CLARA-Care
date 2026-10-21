@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "manifest_version": "1.0.0",
+  "phase_id": "PH03",
+  "agent_id": "A07",
+  "role": "Tests + CI",
+  "task": "web session UX states; audit tests in services/api/tests/test_auth_*.py, web e2e session handling, expired session redirections, silent refresh behavior.",
+  "path_lane": "services/api/tests/;services/ml/tests/;apps/web/e2e/;.github/workflows/;artifacts/PH03/A07/",
+  "frozen_head_sha": "3b1072b98350b978b83b7ecec5c35228415759a3",
+  "worktree_path": "/dev/shm/clara_worktrees/PH03_A07",
+  "branch": "phase/ph03-a07",
+  "status": "COMPLETE",
+  "timestamp": "2026-10-21T21:40:00Z",
+  "files_changed": [
+    "services/api/tests/test_auth_session_ux_states.py",
+    "apps/web/e2e/session-ux.spec.ts",
+    "artifacts/PH03/A07/change_manifest.json",
+    "artifacts/PH03/A07/test_report.md",
+    "artifacts/PH03/A07/risk_register.md",
+    "artifacts/PH03/A07/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "apps/web/lib/session/session.contract.ts:12-20",
+    "apps/web/lib/session/session-provider.tsx:86-102",
+    "apps/web/lib/http-client.ts:303-340",
+    "apps/web/components/shell/session-boundary.tsx:228-249",
+    "apps/web/middleware.ts:82-104",
+    "services/api/src/clara_api/api/v1/endpoints/auth.py:738-786",
+    "services/api/src/clara_api/core/security.py:71-118",
+    "services/api/tests/test_auth_and_rbac.py:8-17",
+    "services/api/tests/test_auth_security_hardening.py:17-53",
+    "services/api/tests/test_auth_extended_flow.py:112-155",
+    "services/api/tests/test_auth_me_and_mobile_summary.py:67-179"
+  ],
+  "interface_assumptions": {
+    "silent_refresh_flow": {
+      "trigger": "Axios interceptor intercepts 401 on non-bypass, non-refresh request",
+      "action": "Single-flight POST /api/v1/auth/refresh with HttpOnly cookies or rotated token",
+      "success_outcome": "Seamless request retry with fresh credentials; no UI disruption",
+      "failure_outcome": "bestEffortServerLogout, local token purge, redirect to /login?next=<encoded_path>"
+    },
+    "public_routes_isolation": {
+      "rule": "Public surfaces (landing, /login, /legal/*, /huong-dan) must NEVER bounce on background 401s",
+      "implementation": "AUTH_FAILURE_REDIRECT_SKIP_PREFIXES in http-client.ts and isPublicRoute in SessionBoundary"
+    },
+    "token_security_and_rotation": {
+      "key_rotation": "JWT_SECRET_KEY and JWT_SECRET_KEY_PREVIOUS dual-key verification grace period",
+      "reuse_prevention": "Single-use refresh token invalidation; replay immediately revokes session and rejects with 401",
+      "bearer_cookie_separation": "Malformed or invalid Bearer tokens fail-closed with 401; no fallback to cookie credentials"
+    }
+  },
+  "test_execution_results": {
+    "pytest_auth_session_ux_states": {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/clara_test_auth.db\" python3 -m pytest -v tests/test_auth_session_ux_states.py",
+      "exit_code": 0,
+      "passed": 14,
+      "failed": 0
+    },
+    "pytest_full_auth_suite": {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/clara_test_auth.db\" python3 -m pytest -q tests/test_auth_and_rbac.py tests/test_auth_security_hardening.py tests/test_auth_extended_flow.py tests/test_auth_me_and_mobile_summary.py tests/test_auth_email_delivery.py tests/hardening/test_authz_under_privileged.py tests/test_auth_session_ux_states.py",
+      "exit_code": 0,
+      "passed": 54,
+      "failed": 0
+    },
+    "ruff_lint_auth_tests": {
+      "command": "ruff check tests/test_auth_session_ux_states.py",
+      "exit_code": 0
+    }
+  },
+  "blockers": [],
+  "rollback_steps": [
+    "To rollback PH03 A07 changes on branch phase/ph03-a07:",
+    "1. git rm -f services/api/tests/test_auth_session_ux_states.py apps/web/e2e/session-ux.spec.ts",
+    "2. git rm -rf artifacts/PH03/A07",
+    "3. git commit -m 'revert(ph03-a07): rollback web session UX tests and deliverables'"
+  ],
+  "remediations": [
+    "Created services/api/tests/test_auth_session_ux_states.py to audit backend contracts for expired tokens, silent refresh lifecycle, CSRF cookie rotation, secret rotation dual-key grace periods, and bearer/cookie boundary isolation.",
+    "Created apps/web/e2e/session-ux.spec.ts to test Playwright E2E scenarios for silent refresh recovery, expired session ?next= redirection, public route 401 immunity, and clean logout handling."
+  ]
+}
