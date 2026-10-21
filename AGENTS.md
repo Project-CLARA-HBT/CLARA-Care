@@ -25,9 +25,11 @@ Request path: **Web (`apps/web`) → API (`services/api`, port 8000/8100) → ML
 
 ## Environment & Toolchain Gotchas
 
-- **Python Runners**: `make lint`, `make type-check`, and `make test` look for `services/api/.venv` first, then fall back to `uv` or system PATH. If missing, set up a venv (`python3 -m venv services/api/.venv && services/api/.venv/bin/pip install -e ".[dev]"`) or run via system `pytest`.
-- **Web Dependencies**: Run `cd apps/web && npm ci` before executing any web scripts if `node_modules` is missing.
+- **Python**: Requires `>=3.11`. Both `services/api` and `services/ml` use **`uv`** for dependency management with checked-in `uv.lock` files. CI installs via `uv sync --frozen --extra dev --no-editable`. To set up locally: `cd services/api && uv sync --extra dev` (creates `.venv` automatically). Makefile targets (`make lint`, `make test`, etc.) look for `<service>/.venv` first, then fall back to `uv run`, then system PATH.
+- **Node**: Requires **Node 20** (`.nvmrc` pin; `package.json` enforces `>=20 <21`). Run `cd apps/web && npm ci` before executing any web scripts if `node_modules` is missing.
+- **Pre-commit**: Runs `ruff --fix` (lint) + `ruff-format` (format) + mypy on commit; pytest on pre-push. Install via `make precommit-install`.
 - **Alembic Migrations**: Run via `(cd services/api && alembic upgrade head)` with versions in `services/api/alembic/versions/`. **Every migration must define a non-empty `downgrade()`**; verified by `python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions`.
+- **Async test mode**: API service sets `asyncio_mode = "auto"` with `pytest-asyncio` — async test functions run without explicit `@pytest.mark.asyncio` decorators.
 - **LLM Runtime**: DeepSeek-only by default (`LLM_DEEPSEEK_ONLY=true`). Task registry maps tasks to `DEEPSEEK_PRO_MODEL` and `DEEPSEEK_FLASH_MODEL`. Audio models use `DEEPSEEK_AUDIO_MODEL=whisper-1` / ASR service, never V4 text. Request-level `llm_runtime` payloads are discarded server-side.
 - **Startup Timeout Guard**: Enforces `ML_SERVICE_TIMEOUT_SECONDS >= DEEPSEEK_TIMEOUT_SECONDS` and sync-research `>= ML_RESEARCH_TIMEOUT_SECONDS`.
 
@@ -36,7 +38,7 @@ Request path: **Web (`apps/web`) → API (`services/api`, port 8000/8100) → ML
 Run checks closest to your changes before widening:
 
 ### Python Services (`services/api`, `services/ml`)
-- Linting: `make lint` or `ruff check services/api/src services/api/tests services/ml/src services/ml/tests scripts --extend-ignore B008`
+- Linting: `make lint` (or manually: `ruff check services/api/src services/api/tests services/ml/src services/ml/tests scripts` — `B008` is already ignored in `ruff.toml`)
 - Type checking: `make type-check` or `mypy services/api/src services/ml/src --ignore-missing-imports`
 - All tests: `make test`
 - Single API test: `(cd services/api && pytest tests/test_auth_and_rbac.py)`
@@ -56,6 +58,8 @@ Run checks closest to your changes before widening:
   - Regenerate: `cd apps/web && npm run consumer-terminology:generate` (updates `apps/web/lib/i18n/consumer-terminology.generated.ts` and `apps/mobile/lib/core/consumer_terminology.generated.dart`)
 - **i18n Contract**: `cd apps/web && npm run i18n:check` (ensures migrated surfaces use `t(locale, key)` from `lib/i18n/catalog.ts`).
 - **Route Matrix**: `cd apps/web && npm run route-matrix:check` (every new `app/**/page.tsx` must be added to `docs/ui-modernization/route-capability-matrix.md`).
+- **Route Layout Registry**: `cd apps/web && npm run route-layout:check`.
+- **Bundle Budget**: `cd apps/web && npm run bundle:check`.
 - **Docs Check**: `make docs-check` (`scripts/docs/check-docs-links.sh`). In active `docs/*.md`, absolute machine paths (`/home/*`, `/Users/*`, `/private/*`) and root-relative leading `/` paths are forbidden.
 
 ### Evaluations (CLARA-Eval VN)
