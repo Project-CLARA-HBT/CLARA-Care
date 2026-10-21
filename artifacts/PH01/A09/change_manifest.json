@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH01",
+  "agent_id": "A09",
+  "role": "Docs + research evidence",
+  "task": "developer local bootstrap script; create/verify scripts/ops/bootstrap_dev.sh to guide local setup of uv, python 3.12, node 20, pre-commit hooks, and environment check; verify research script offline runners.",
+  "status": "COMPLETED",
+  "frozen_head_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "verified_head_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "branch": "phase/ph01-a09",
+  "worktree_path": "/dev/shm/clara_worktrees/PH01_A09",
+  "path_lane": "research/;docs/research/;docs/implementation/;docs/interoperability/;scripts/ops/;artifacts/PH01/A09/",
+  "timestamp": "2026-10-21T18:45:00Z",
+  "files_created": [
+    "scripts/ops/bootstrap_dev.sh",
+    "scripts/ops/test_bootstrap_dev.sh",
+    "docs/implementation/DEVELOPER_LOCAL_BOOTSTRAP.md",
+    "artifacts/PH01/A09/change_manifest.json",
+    "artifacts/PH01/A09/test_report.md",
+    "artifacts/PH01/A09/risk_register.md",
+    "artifacts/PH01/A09/rollback.md"
+  ],
+  "files_modified": [],
+  "verified_source_anchors": [
+    {
+      "file": "AGENTS.md",
+      "line": 27,
+      "symbol": "Python toolchain requirements",
+      "description": "Specifies Python >=3.11 requirement and uv dependency management with uv sync --frozen --extra dev --no-editable."
+    },
+    {
+      "file": "AGENTS.md",
+      "line": 28,
+      "symbol": "Node.js toolchain requirements",
+      "description": "Specifies Node 20 requirement (.nvmrc pin; package.json enforces >=20 <21)."
+    },
+    {
+      "file": "AGENTS.md",
+      "line": 29,
+      "symbol": "Pre-commit hook gates",
+      "description": "Specifies ruff --fix + ruff-format + mypy on commit, pytest on pre-push."
+    },
+    {
+      "file": "Makefile",
+      "line": 53,
+      "symbol": "check-env target",
+      "description": "Invokes scripts/setup/check-env.sh to validate docker and environment state."
+    },
+    {
+      "file": "Makefile",
+      "line": 236,
+      "symbol": "precommit-install target",
+      "description": "Executes pre-commit install for developer git hook configuration."
+    },
+    {
+      "file": "services/api/pyproject.toml",
+      "line": 10,
+      "symbol": "requires-python",
+      "description": "Defines requires-python = '>=3.11' for backend API service."
+    },
+    {
+      "file": "services/ml/pyproject.toml",
+      "line": 10,
+      "symbol": "requires-python",
+      "description": "Defines requires-python = '>=3.11' for ML/RAG service."
+    },
+    {
+      "file": "apps/web/package.json",
+      "line": 6,
+      "symbol": "engines.node",
+      "description": "Enforces Node.js version >=20 <21 and npm >=10."
+    },
+    {
+      "file": ".pre-commit-config.yaml",
+      "line": 1,
+      "symbol": "repos",
+      "description": "Configures git pre-commit hooks for ruff lint, ruff format, mypy, and pre-push pytest-check."
+    },
+    {
+      "file": "reproduce_e01.py",
+      "line": 39,
+      "symbol": "disable_network",
+      "description": "Enforces fail-closed network isolation for offline research reproduction."
+    },
+    {
+      "file": "reproduce_e07.py",
+      "line": 1,
+      "symbol": "reproduce_e07",
+      "description": "RFC 8785 Canonical JSON cross-runtime determinism offline reproduction runner."
+    },
+    {
+      "file": "reproduce_q3_r3.py",
+      "line": 1,
+      "symbol": "reproduce_q3_r3",
+      "description": "GLHS Q3/R3 prospective 15-experiment offline reproduction and cryptographic verification sweep."
+    },
+    {
+      "file": "reproduce_q4_r4.py",
+      "line": 66,
+      "symbol": "disable_network",
+      "description": "GLHS Q4/R4 prospective 8-experiment offline reproduction and cryptographic verification suite."
+    }
+  ],
+  "interface_assumptions": [
+    "scripts/ops/bootstrap_dev.sh is non-destructive: it never overwrites existing .env or user configuration.",
+    "--check mode operates in read-only diagnostic mode, verifying Python 3.12, Node 20, uv, git, pre-commit, and research reproduction availability.",
+    "Reproduction suites operate strictly offline fail-closed without network sockets or DNS queries.",
+    "Python service environments are synchronized using Astral uv (uv sync --extra dev).",
+    "Web frontend dependencies are managed via npm ci adhering to Node 20 engine constraint."
+  ],
+  "test_commands_and_exit_codes": [
+    {
+      "command": "bash scripts/ops/test_bootstrap_dev.sh",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "7 unit/functional test cases covering help, check, verify-research, error handling, version enforcement, and non-destructive idempotency."
+    },
+    {
+      "command": "bash scripts/ops/bootstrap_dev.sh --check",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Preflight inspection verifying Python 3.12, Node 20, uv, git, and workspace configuration."
+    },
+    {
+      "command": "bash scripts/ops/bootstrap_dev.sh --verify-research",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Execution of hermetic offline research runners reproduce_e01.py and reproduce_e07.py."
+    },
+    {
+      "command": "python3 reproduce_e01.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "E01 hermetic offline seal verification with network disabled (status: REPRODUCED_AND_VERIFIED)."
+    },
+    {
+      "command": "python3 reproduce_e07.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "E07 RFC 8785 Canonical JSON determinism verification (status: REPRODUCED_AND_VERIFIED, byte_equality_rate: 1.0)."
+    }
+  ],
+  "blockers": "None",
+  "rollback_steps": [
+    "git rm -f scripts/ops/bootstrap_dev.sh scripts/ops/test_bootstrap_dev.sh docs/implementation/DEVELOPER_LOCAL_BOOTSTRAP.md artifacts/PH01/A09/change_manifest.json artifacts/PH01/A09/test_report.md artifacts/PH01/A09/risk_register.md",
+    "git reset --hard 2aa9016a57b49b53f1a433d076e1028a6ec45f64"
+  ]
+}
