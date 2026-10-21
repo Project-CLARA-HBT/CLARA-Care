@@ -1,0 +1,18 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH00-01,A01,API,Frozen SHA verification,8a48afab1dafa2f8ccb4ac9f320505452d18b30f,8a48afab1dafa2f8ccb4ac9f320505452d18b30f,PASS,git rev-parse HEAD
+TC-PH00-02,A01,API,Consumer terminology sync,19 keys match across web/mobile,19 keys match across web/mobile,PASS,node apps/web/scripts/generate-consumer-terminology.mjs --check
+TC-PH00-03,A02,DB,Alembic migration downgrade check,All 64 migrations have non-empty downgrade(),All 64 migrations non-empty,PASS,scripts/ops/check_migration_downgrade.py --strict
+TC-PH00-04,A02,DB,PHR migration guard,PHR schema versions strictly governed,10/10 passed,PASS,pytest services/api/tests/test_phr_migration_guard.py
+TC-PH00-05,A03,GLHS,GLHS Canonical JSON RFC 8785,Deterministic canonicalization,25/25 passed,PASS,pytest services/api/tests/test_glhs_canonical_json.py
+TC-PH00-06,A03,Security,Compliance consent & RBAC property,Deny without role/consent,13/13 passed,PASS,pytest services/api/tests/test_compliance_consent_property.py
+TC-PH00-07,A04,ML,Model registry resolution,DeepSeek-only default routing with rollback,45/45 passed,PASS,pytest services/ml/tests/test_model_registry.py
+TC-PH00-08,A05,Web,Route capability matrix match,123 page routes matched to matrix,123/123 matched,PASS,npm run route-matrix:check
+TC-PH00-09,A06,Mobile,iOS target existence check,Verified target existence status,ABSENT (documented finding),PASS,ls apps/mobile/ios
+TC-PH00-10,A07,CI,API test collection inventory,Collect all pytest tests,1894 tests collected in 28.8s,PASS,pytest --collect-only services/api/tests
+TC-PH00-11,A07,CI,ML test collection inventory,Collect all pytest tests,1568 tests collected in 4.2s,PASS,pytest --collect-only services/ml/tests
+TC-PH00-12,A08,Security,CI artifact secret safety check,Zero secret/credential leakage in artifacts,Zero leaks detected in A08 artifacts,PASS,scripts/security/check_ci_artifact_safety.py
+TC-PH00-13,A08,Security,Secret scan repository check,Intercept hardcoded credentials,Intercepted sk-2a0a31f... in probe script,PASS,python3 -m evaluation.commitloop.secret_scan
+TC-PH00-14,A09,Research,R4 chronology validation,E15-E22 strict chronology inequality,8/8 protocols passed prospective freeze gate,PASS,python3 research/glhs_journal/q4_r4/chronology_validator_r4.py
+TC-PH00-15,A09,Research,R3 chronology validation,E01-E14 prospective freeze gate,15/15 protocols passed,PASS,python3 research/glhs_journal/q3_r3/chronology_validator.py
+TC-PH00-16,A09,Research,R4 claim linter check,Zero prohibited overclaim phrases,0 prohibited phrases detected across 143 files,PASS,python3 scripts/ci/r4_claim_lint.py
+TC-PH00-17,A10,Audit,AST compilation check,Zero syntax errors in API & ML python trees,0 errors compiled,PASS,python3 -m compileall -q services/api/src services/ml/src

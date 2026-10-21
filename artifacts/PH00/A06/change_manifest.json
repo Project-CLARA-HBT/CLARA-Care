@@ -1,0 +1,865 @@
+{
+  "manifest_version": "1.0.0",
+  "subagent_id": "A06",
+  "phase": "PH00",
+  "role": "Mobile Flutter",
+  "frozen_head_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "branch": "phase/ph00-a06",
+  "worktree": "/dev/shm/clara_worktrees/PH00_A06",
+  "path_lane": [
+    "apps/mobile/",
+    "artifacts/PH00/A06/"
+  ],
+  "audit_timestamp_utc": "2026-10-21T17:40:00Z",
+  "summary": {
+    "target_platform_android": "PRESENT (Gradle 9.1.0, Kotlin 2.3.20, AGP 9.0.1, Java 17, app links for /phr/shared/*)",
+    "target_platform_ios": "ABSENT (apps/mobile/ios directory does not exist on disk)",
+    "active_app_experience": "Unified Experience (kMobileUnifiedEnabled=true default, supersedes Redesign V3 and Experience V2)",
+    "screens_total": 46,
+    "unit_and_widget_test_files": 94,
+    "mock_vs_real_api": "Production code uses real HTTP calls via http.Client against gateway (port 8100/production); mock/fake clients exist exclusively in test/fakes/"
+  },
+  "target_platforms": {
+    "android": {
+      "status": "PRESENT",
+      "path": "apps/mobile/android",
+      "package_name": "com.theclaracare.app",
+      "gradle_version": "9.1.0",
+      "gradle_wrapper": "apps/mobile/android/gradle/wrapper/gradle-wrapper.properties:5",
+      "agp_plugin_version": "9.0.1",
+      "kotlin_version": "2.3.20",
+      "java_compatibility": "JavaVersion.VERSION_17",
+      "min_sdk": "flutter.minSdkVersion",
+      "target_sdk": "flutter.targetSdkVersion",
+      "compile_sdk": "flutter.compileSdkVersion",
+      "permissions": [
+        "android.permission.INTERNET"
+      ],
+      "app_links": [
+        {
+          "scheme": "https",
+          "host": "theclaracare.com",
+          "pathPrefix": "/phr/shared/",
+          "autoVerify": true,
+          "anchor": "apps/mobile/android/app/src/main/AndroidManifest.xml:30"
+        },
+        {
+          "scheme": "https",
+          "host": "www.theclaracare.com",
+          "pathPrefix": "/phr/shared/",
+          "autoVerify": true,
+          "anchor": "apps/mobile/android/app/src/main/AndroidManifest.xml:39"
+        }
+      ],
+      "impeller_flag": "EnableImpeller=false (forces Skia backend for screencap capture compatibility, AndroidManifest.xml:57)"
+    },
+    "ios": {
+      "status": "ABSENT",
+      "path": "apps/mobile/ios",
+      "exists_on_disk": false,
+      "readme_directive": "apps/mobile/README.md:261-265 notes platform folders are intentionally excluded from git; operator generates via 'flutter create . --platforms=android,ios,web' locally"
+    }
+  },
+  "route_parity_inventory": [
+    {
+      "web_route": "/",
+      "web_access": "public",
+      "mobile_surface": "LoginScreenV3 / ClaraApp auto-hydration",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/app.dart:205"
+    },
+    {
+      "web_route": "/login",
+      "web_access": "public",
+      "mobile_surface": "LoginScreenV3 (Redesign/Unified) / LoginScreen (legacy)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/redesign/login_screen_v3.dart:1"
+    },
+    {
+      "web_route": "/register",
+      "web_access": "public",
+      "mobile_surface": "AuthFlowsScreen (Register tab)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/screens/auth_flows_screen.dart:19"
+    },
+    {
+      "web_route": "/forgot-password",
+      "web_access": "public",
+      "mobile_surface": "AuthFlowsScreen (Forgot Password tab)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/screens/auth_flows_screen.dart:21"
+    },
+    {
+      "web_route": "/reset-password",
+      "web_access": "public",
+      "mobile_surface": "AuthFlowsScreen (Reset Password tab)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/screens/auth_flows_screen.dart:22"
+    },
+    {
+      "web_route": "/verify-email",
+      "web_access": "public",
+      "mobile_surface": "AuthFlowsScreen (Verify Email tab)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/screens/auth_flows_screen.dart:20"
+    },
+    {
+      "web_route": "/auth/callback",
+      "web_access": "public",
+      "mobile_surface": "In-app token exchange (SessionStore.setSession)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/core/session_store.dart:140"
+    },
+    {
+      "web_route": "/legal, /legal/consent, /legal/privacy, /legal/terms, /consent, /privacy, /terms, /safety",
+      "web_access": "public",
+      "mobile_surface": "ConsentGate, ConsentCenterScreen, ProfileHub Help Surface",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/widgets/consent_gate.dart:1"
+    },
+    {
+      "web_route": "/clinical-standards",
+      "web_access": "public",
+      "mobile_surface": "LivingEvidenceSurface (Standards section) / ProfileHub",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/living_evidence_surface.dart:1"
+    },
+    {
+      "web_route": "/share/[token], /phr/shared/[token]",
+      "web_access": "public capability",
+      "mobile_surface": "SharedResourceScreen via PublicShareLinkController",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/screens/shared_resource_screen.dart:1"
+    },
+    {
+      "web_route": "/today",
+      "web_access": "authenticated all roles",
+      "mobile_surface": "TodaySurface (UnifiedRoot destination 0)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/today_surface.dart:1"
+    },
+    {
+      "web_route": "/today/tasks/[taskId]",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "TodaySurface task completion modal dialog",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/today_surface.dart:180"
+    },
+    {
+      "web_route": "/lifemap",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "LifeMapSurface (UnifiedRoot destination 1)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/lifemap_surface.dart:1"
+    },
+    {
+      "web_route": "/lifemap/new",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "LifeMapSurface._showCreateEpisodeDialog",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/lifemap_surface.dart:314"
+    },
+    {
+      "web_route": "/lifemap/new/[draftId]/[step]",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "LifeMapSurface._startTextCapture & _startArtifactCapture",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/lifemap_surface.dart:366"
+    },
+    {
+      "web_route": "/lifemap/timeline",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "LifeMapSurface timeline view tab",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/lifemap_surface.dart:200"
+    },
+    {
+      "web_route": "/lifemap/visit-prep",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "VisitsSurface (LifeMap visit-prep draft integration)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/visits_surface.dart:1"
+    },
+    {
+      "web_route": "/visits",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "VisitsSurface (ProfileHub sub-surface)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/visits_surface.dart:1"
+    },
+    {
+      "web_route": "/visits/new",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "VisitsSurface._showCreateDialog",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/visits_surface.dart:210"
+    },
+    {
+      "web_route": "/visits/[visitId]",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "VisitDetailSurface (documents, scribe consent, plan extraction)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/visit_detail_surface.dart:1"
+    },
+    {
+      "web_route": "/family",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "FamilySurface (ProfileHub sub-surface)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/family_surface.dart:1"
+    },
+    {
+      "web_route": "/family/invite",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "FamilySurface._showCreateInviteDialog",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/family_surface.dart:198"
+    },
+    {
+      "web_route": "/family/accept",
+      "web_access": "authenticated recipient capability",
+      "mobile_surface": "FamilyInvitationAcceptanceFlow",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/family_invitation_acceptance_flow.dart:1"
+    },
+    {
+      "web_route": "/phr",
+      "web_access": "authenticated permitted profile",
+      "mobile_surface": "PhrSurfaceV3 (ProfileHub) & PhrScreen (legacy)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/redesign/phr_surface_v3.dart:1"
+    },
+    {
+      "web_route": "/phr/[section]",
+      "web_access": "authenticated permitted profile",
+      "mobile_surface": "PhrSurfaceV3 focused section editors & completeness cards",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/redesign/phr_surface_v3.dart:145"
+    },
+    {
+      "web_route": "/medicines",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "MedicinesHub (UnifiedRoot destination 2)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/medicines_hub.dart:1"
+    },
+    {
+      "web_route": "/medicines/[id]",
+      "web_access": "authenticated owner/profile + consent",
+      "mobile_surface": "CabinetMedicineDetailSheet",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/redesign/cabinet_medicine_detail.dart:1"
+    },
+    {
+      "web_route": "/medicines/add, /medicines/cabinet/add",
+      "web_access": "authenticated owner/profile + consent",
+      "mobile_surface": "CabinetOcrSheet & manual medication add dialog",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/redesign/cabinet_ocr_sheet.dart:1"
+    },
+    {
+      "web_route": "/medicines/cabinet",
+      "web_access": "authenticated owner/profile + consent",
+      "mobile_surface": "CabinetScreenV3 & MedicinesHub Cabinet tab",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/redesign/cabinet_screen_v3.dart:1"
+    },
+    {
+      "web_route": "/selfmed, /selfmed/ddi, /careguard",
+      "web_access": "authenticated owner/profile + consent",
+      "mobile_surface": "MedicinesHub / SelfMedCabinetScreen / CareguardScreen",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/medicines_hub.dart:1"
+    },
+    {
+      "web_route": "/chat",
+      "web_access": "authenticated all roles",
+      "mobile_surface": "ChatSurfaceV3 (centered Ask-CLARA action) & ChatScreen",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/redesign/chat_surface_v3.dart:1"
+    },
+    {
+      "web_route": "/chat/[chatId]",
+      "web_access": "authenticated all roles",
+      "mobile_surface": "ChatSurfaceV3 active chat session",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/redesign/chat_surface_v3.dart:1"
+    },
+    {
+      "web_route": "/evidence",
+      "web_access": "authenticated permitted role",
+      "mobile_surface": "LivingEvidenceSurface (Research mode destination 0 / ProfileHub)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/living_evidence_surface.dart:1"
+    },
+    {
+      "web_route": "/research, /research/*",
+      "web_access": "authenticated permitted role",
+      "mobile_surface": "ResearchScreen (Research mode destination 1)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/screens/research_screen.dart:1"
+    },
+    {
+      "web_route": "/council, /council/new, /council/result",
+      "web_access": "authenticated doctor/admin",
+      "mobile_surface": "CouncilSurfaceV3 (Clinical mode destination 1) & CouncilCaseScreen",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/redesign/council_surface_v3.dart:1"
+    },
+    {
+      "web_route": "/scribe",
+      "web_access": "authenticated doctor/admin",
+      "mobile_surface": "ScribeSurfaceV3 (Clinical mode destination 2) & ScribeScreen",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/redesign/scribe_surface_v3.dart:1"
+    },
+    {
+      "web_route": "/clinical, /clinical/overview, /clinical/patients",
+      "web_access": "authenticated doctor/admin",
+      "mobile_surface": "ClinicalOverviewSurface (Clinical mode destination 0)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/clinical_overview_surface.dart:1"
+    },
+    {
+      "web_route": "/community",
+      "web_access": "authenticated all + social flag",
+      "mobile_surface": "SocialSurfaceV3 (ProfileHub entry behind kMobileSocialEnabled)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/redesign/social_surface_v3.dart:1"
+    },
+    {
+      "web_route": "/welcome, /welcome/[step], /onboarding",
+      "web_access": "authenticated utility",
+      "mobile_surface": "OnboardingFlow (UnifiedRoot) & OnboardingGate (V2)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/onboarding_flow.dart:1"
+    },
+    {
+      "web_route": "/account/consent",
+      "web_access": "authenticated all + compliance",
+      "mobile_surface": "ConsentCenterScreen (ProfileHub sub-surface)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/screens/consent_center_screen.dart:1"
+    },
+    {
+      "web_route": "/account/data, /account/data/delete/[step]",
+      "web_access": "authenticated owner + explicit confirmation",
+      "mobile_surface": "DsarScreen (ProfileHub sub-surface)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/screens/dsar_screen.dart:1"
+    },
+    {
+      "web_route": "/you/integrations",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "ConnectedHealthScreen (ProfileHub sub-surface)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/connected_health/connected_health_screen.dart:1"
+    },
+    {
+      "web_route": "/you/notifications",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "NotificationsSurface (ProfileHub sub-surface)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/notifications_surface.dart:1"
+    },
+    {
+      "web_route": "/you/settings",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "SettingsSurface (Unified) & SettingsScreenV3 (Redesign)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/settings_surface.dart:1"
+    },
+    {
+      "web_route": "/you/profile",
+      "web_access": "authenticated owner/profile",
+      "mobile_surface": "ProfileHub (Unified destination 3)",
+      "parity_status": "full_parity",
+      "anchor": "apps/mobile/lib/experience/unified/profile_hub.dart:1"
+    },
+    {
+      "web_route": "/admin/overview, /admin/system, /dashboard/control-tower",
+      "web_access": "authenticated admin",
+      "mobile_surface": "ClinicalOverviewSurface / DashboardScreen system metrics",
+      "parity_status": "partial_parity",
+      "anchor": "apps/mobile/lib/screens/dashboard_screen.dart:58"
+    },
+    {
+      "web_route": "/admin/knowledge-sources, /admin/answer-flow, /admin/observability, /admin/experiments, /admin/feedback, /admin/analytics, /admin/rag-eval, /admin/rag-ingestion",
+      "web_access": "authenticated admin",
+      "mobile_surface": "None (desktop admin backoffice only)",
+      "parity_status": "web_only_admin",
+      "anchor": "docs/ui-modernization/route-capability-matrix.md:87"
+    }
+  ],
+  "screen_inventory": {
+    "unified_surfaces": [
+      {
+        "name": "UnifiedRoot",
+        "file": "apps/mobile/lib/experience/unified/unified_root.dart",
+        "purpose": "Authenticated root adapting dynamically to Personal, Clinical, Research, and Admin modes",
+        "anchor": "apps/mobile/lib/experience/unified/unified_root.dart:60"
+      },
+      {
+        "name": "TodaySurface",
+        "file": "apps/mobile/lib/experience/unified/today_surface.dart",
+        "purpose": "Consumer Today agenda, LifeMap tasks, quick actions, encrypted read cache",
+        "anchor": "apps/mobile/lib/experience/unified/today_surface.dart:36"
+      },
+      {
+        "name": "LifeMapSurface",
+        "file": "apps/mobile/lib/experience/unified/lifemap_surface.dart",
+        "purpose": "Health journey episodes, tasks, timeline, guided capture, dispute resolution",
+        "anchor": "apps/mobile/lib/experience/unified/lifemap_surface.dart:28"
+      },
+      {
+        "name": "MedicinesHub",
+        "file": "apps/mobile/lib/experience/unified/medicines_hub.dart",
+        "purpose": "Tabbed medicines hub: Personal cabinet, OCR scan & DDI check, safety guidance",
+        "anchor": "apps/mobile/lib/experience/unified/medicines_hub.dart:29"
+      },
+      {
+        "name": "ProfileHub",
+        "file": "apps/mobile/lib/experience/unified/profile_hub.dart",
+        "purpose": "User profile navigation taxonomy (PHR, Visits, Family, Evidence, Connected Health, Consent, Settings, Help)",
+        "anchor": "apps/mobile/lib/experience/unified/profile_hub.dart:50"
+      },
+      {
+        "name": "VisitsSurface",
+        "file": "apps/mobile/lib/experience/unified/visits_surface.dart",
+        "purpose": "Clinical visits list, intake concerns, appointment preparation, visit drafts",
+        "anchor": "apps/mobile/lib/experience/unified/visits_surface.dart:22"
+      },
+      {
+        "name": "VisitDetailSurface",
+        "file": "apps/mobile/lib/experience/unified/visit_detail_surface.dart",
+        "purpose": "Visit encounter details, clinical documents, Scribe consent, plan extraction",
+        "anchor": "apps/mobile/lib/experience/unified/visit_detail_surface.dart:23"
+      },
+      {
+        "name": "FamilySurface",
+        "file": "apps/mobile/lib/experience/unified/family_surface.dart",
+        "purpose": "Family sharing relationships, revocable access grants, invitation creation",
+        "anchor": "apps/mobile/lib/experience/unified/family_surface.dart:24"
+      },
+      {
+        "name": "FamilyInvitationAcceptanceFlow",
+        "file": "apps/mobile/lib/experience/unified/family_invitation_acceptance_flow.dart",
+        "purpose": "Flow for previewing and accepting family access invitations",
+        "anchor": "apps/mobile/lib/experience/unified/family_invitation_acceptance_flow.dart:18"
+      },
+      {
+        "name": "LivingEvidenceSurface",
+        "file": "apps/mobile/lib/experience/unified/living_evidence_surface.dart",
+        "purpose": "Living evidence questions, synthesis runs, subscriptions, notification alerts",
+        "anchor": "apps/mobile/lib/experience/unified/living_evidence_surface.dart:26"
+      },
+      {
+        "name": "ClinicalOverviewSurface",
+        "file": "apps/mobile/lib/experience/unified/clinical_overview_surface.dart",
+        "purpose": "Clinician command center: patient roster queue, active consultations, recent transcripts",
+        "anchor": "apps/mobile/lib/experience/unified/clinical_overview_surface.dart:42"
+      },
+      {
+        "name": "NotificationsSurface",
+        "file": "apps/mobile/lib/experience/unified/notifications_surface.dart",
+        "purpose": "Notification channels and preference management",
+        "anchor": "apps/mobile/lib/experience/unified/notifications_surface.dart:18"
+      },
+      {
+        "name": "SettingsSurface",
+        "file": "apps/mobile/lib/experience/unified/settings_surface.dart",
+        "purpose": "Unified app settings (theme, language, workspace mode, compliance links, logout)",
+        "anchor": "apps/mobile/lib/experience/unified/settings_surface.dart:26"
+      },
+      {
+        "name": "OnboardingFlow",
+        "file": "apps/mobile/lib/experience/unified/onboarding_flow.dart",
+        "purpose": "Multi-step server-backed first-run onboarding (welcome, basic info, consent)",
+        "anchor": "apps/mobile/lib/experience/unified/onboarding_flow.dart:26"
+      }
+    ],
+    "redesign_v3_surfaces": [
+      {
+        "name": "RedesignRoot",
+        "file": "apps/mobile/lib/experience/redesign/redesign_root.dart",
+        "purpose": "Redesign V3 authenticated root gating on mobile summary and onboarding",
+        "anchor": "apps/mobile/lib/experience/redesign/redesign_root.dart:36"
+      },
+      {
+        "name": "RedesignShell",
+        "file": "apps/mobile/lib/experience/redesign_shell.dart",
+        "purpose": "Centered circular chat action navigation scaffold",
+        "anchor": "apps/mobile/lib/experience/redesign_shell.dart:30"
+      },
+      {
+        "name": "LoginScreenV3",
+        "file": "apps/mobile/lib/experience/redesign/login_screen_v3.dart",
+        "purpose": "Light-mode-first sign-in with language toggle and branding",
+        "anchor": "apps/mobile/lib/experience/redesign/login_screen_v3.dart:29"
+      },
+      {
+        "name": "HomeScreenV3",
+        "file": "apps/mobile/lib/experience/redesign/home_screen_v3.dart",
+        "purpose": "Role-aware landing with quick actions, recent activity, system status",
+        "anchor": "apps/mobile/lib/experience/redesign/home_screen_v3.dart:33"
+      },
+      {
+        "name": "ChatSurfaceV3",
+        "file": "apps/mobile/lib/experience/redesign/chat_surface_v3.dart",
+        "purpose": "Polished conversational chat surface with SSE streaming, model disclosure, emergency escalation",
+        "anchor": "apps/mobile/lib/experience/redesign/chat_surface_v3.dart:33"
+      },
+      {
+        "name": "CabinetScreenV3",
+        "file": "apps/mobile/lib/experience/redesign/cabinet_screen_v3.dart",
+        "purpose": "Medication cabinet management, OCR scanning integration, CareGuard DDI verification",
+        "anchor": "apps/mobile/lib/experience/redesign/cabinet_screen_v3.dart:35"
+      },
+      {
+        "name": "CabinetOcrSheet",
+        "file": "apps/mobile/lib/experience/redesign/cabinet_ocr_sheet.dart",
+        "purpose": "Camera and gallery image intake with prescription/label OCR detection review",
+        "anchor": "apps/mobile/lib/experience/redesign/cabinet_ocr_sheet.dart:35"
+      },
+      {
+        "name": "CabinetMedicineDetailSheet",
+        "file": "apps/mobile/lib/experience/redesign/cabinet_medicine_detail.dart",
+        "purpose": "Detailed view of individual cabinet item, dosage notes, safety warnings",
+        "anchor": "apps/mobile/lib/experience/redesign/cabinet_medicine_detail.dart:18"
+      },
+      {
+        "name": "CabinetInsightsSheet",
+        "file": "apps/mobile/lib/experience/redesign/cabinet_insights.dart",
+        "purpose": "Cabinet health safety insights and interaction summaries",
+        "anchor": "apps/mobile/lib/experience/redesign/cabinet_insights.dart:18"
+      },
+      {
+        "name": "PhrSurfaceV3",
+        "file": "apps/mobile/lib/experience/redesign/phr_surface_v3.dart",
+        "purpose": "Personal health record: profile, allergies, conditions, metrics, emergency card, PDF export",
+        "anchor": "apps/mobile/lib/experience/redesign/phr_surface_v3.dart:31"
+      },
+      {
+        "name": "ScribeSurfaceV3",
+        "file": "apps/mobile/lib/experience/redesign/scribe_surface_v3.dart",
+        "purpose": "Ambient clinical scribe with per-session consent, microphone recording, audio transcription, SOAP note review",
+        "anchor": "apps/mobile/lib/experience/redesign/scribe_surface_v3.dart:34"
+      },
+      {
+        "name": "CouncilSurfaceV3",
+        "file": "apps/mobile/lib/experience/redesign/council_surface_v3.dart",
+        "purpose": "AI multidisciplinary council 4-step wizard (Intake, Specialists, Review, Execution)",
+        "anchor": "apps/mobile/lib/experience/redesign/council_surface_v3.dart:32"
+      },
+      {
+        "name": "MoreScreenV3",
+        "file": "apps/mobile/lib/experience/redesign/more_screen_v3.dart",
+        "purpose": "Secondary tools hub: Council, Scribe, Evidence, Sources, Connected Health, Consent, Settings",
+        "anchor": "apps/mobile/lib/experience/redesign/more_screen_v3.dart:55"
+      },
+      {
+        "name": "SettingsScreenV3",
+        "file": "apps/mobile/lib/experience/redesign/settings_screen_v3.dart",
+        "purpose": "Redesign V3 settings: theme mode selection, language switch, account identity",
+        "anchor": "apps/mobile/lib/experience/redesign/settings_screen_v3.dart:30"
+      },
+      {
+        "name": "SocialSurfaceV3",
+        "file": "apps/mobile/lib/experience/redesign/social_surface_v3.dart",
+        "purpose": "CLARA Health Social community feed, post creation, comments, bookmarking (gated by kMobileSocialEnabled)",
+        "anchor": "apps/mobile/lib/experience/redesign/social_surface_v3.dart:28"
+      }
+    ],
+    "legacy_and_shared_screens": [
+      {
+        "name": "DashboardScreen",
+        "file": "apps/mobile/lib/screens/dashboard_screen.dart",
+        "purpose": "Legacy tile-based dashboard root",
+        "anchor": "apps/mobile/lib/screens/dashboard_screen.dart:18"
+      },
+      {
+        "name": "LoginScreen",
+        "file": "apps/mobile/lib/screens/login_screen.dart",
+        "purpose": "Legacy credential authentication screen",
+        "anchor": "apps/mobile/lib/screens/login_screen.dart:10"
+      },
+      {
+        "name": "AuthFlowsScreen",
+        "file": "apps/mobile/lib/screens/auth_flows_screen.dart",
+        "purpose": "Secondary auth operations: registration, email verification, password reset",
+        "anchor": "apps/mobile/lib/screens/auth_flows_screen.dart:12"
+      },
+      {
+        "name": "ChatScreen",
+        "file": "apps/mobile/lib/screens/chat_screen.dart",
+        "purpose": "Legacy chat surface",
+        "anchor": "apps/mobile/lib/screens/chat_screen.dart:19"
+      },
+      {
+        "name": "CouncilScreen",
+        "file": "apps/mobile/lib/screens/council_screen.dart",
+        "purpose": "Legacy council execution runner",
+        "anchor": "apps/mobile/lib/screens/council_screen.dart:12"
+      },
+      {
+        "name": "CouncilCaseScreen",
+        "file": "apps/mobile/lib/screens/council_case_screen.dart",
+        "purpose": "Case-based council flow with intake submission and specialist deliberations",
+        "anchor": "apps/mobile/lib/screens/council_case_screen.dart:27"
+      },
+      {
+        "name": "CareguardScreen",
+        "file": "apps/mobile/lib/screens/careguard_screen.dart",
+        "purpose": "Direct drug-drug interaction safety checker",
+        "anchor": "apps/mobile/lib/screens/careguard_screen.dart:16"
+      },
+      {
+        "name": "CareguardCabinetScreen",
+        "file": "apps/mobile/lib/screens/careguard_cabinet_screen.dart",
+        "purpose": "CareGuard medication cabinet CRUD surface",
+        "anchor": "apps/mobile/lib/screens/careguard_cabinet_screen.dart:23"
+      },
+      {
+        "name": "SelfMedCabinetScreen",
+        "file": "apps/mobile/lib/screens/selfmed_cabinet_screen.dart",
+        "purpose": "Self-med cabinet CRUD feeding the DDI safety check",
+        "anchor": "apps/mobile/lib/screens/selfmed_cabinet_screen.dart:24"
+      },
+      {
+        "name": "DdiResultView",
+        "file": "apps/mobile/lib/screens/ddi_result_view.dart",
+        "purpose": "Structured presentation of DDI alerts, severity badges, and clinical recommendations",
+        "anchor": "apps/mobile/lib/screens/ddi_result_view.dart:17"
+      },
+      {
+        "name": "PhrScreen",
+        "file": "apps/mobile/lib/screens/phr_screen.dart",
+        "purpose": "Legacy personal health record surface",
+        "anchor": "apps/mobile/lib/screens/phr_screen.dart:23"
+      },
+      {
+        "name": "ScribeScreen",
+        "file": "apps/mobile/lib/screens/scribe_screen.dart",
+        "purpose": "Legacy ambient scribe surface",
+        "anchor": "apps/mobile/lib/screens/scribe_screen.dart:25"
+      },
+      {
+        "name": "ResearchScreen",
+        "file": "apps/mobile/lib/screens/research_screen.dart",
+        "purpose": "Tier 2 asynchronous research jobs with SSE streaming",
+        "anchor": "apps/mobile/lib/screens/research_screen.dart:18"
+      },
+      {
+        "name": "ConsentCenterScreen",
+        "file": "apps/mobile/lib/screens/consent_center_screen.dart",
+        "purpose": "PDPD granular compliance consent manager (append-only ledger mutations)",
+        "anchor": "apps/mobile/lib/screens/consent_center_screen.dart:21"
+      },
+      {
+        "name": "DsarScreen",
+        "file": "apps/mobile/lib/screens/dsar_screen.dart",
+        "purpose": "PDPD data rights management: export, correction, restriction, two-step verified deletion",
+        "anchor": "apps/mobile/lib/screens/dsar_screen.dart:24"
+      },
+      {
+        "name": "SharedResourceScreen",
+        "file": "apps/mobile/lib/screens/shared_resource_screen.dart",
+        "purpose": "Unauthenticated, read-only viewer for public capability PHR share tokens",
+        "anchor": "apps/mobile/lib/screens/shared_resource_screen.dart:21"
+      },
+      {
+        "name": "ConnectedHealthScreen",
+        "file": "apps/mobile/lib/experience/connected_health/connected_health_screen.dart",
+        "purpose": "IoT and synced personal device connections (Apple Health, Health Connect, Garmin)",
+        "anchor": "apps/mobile/lib/experience/connected_health/connected_health_screen.dart:18"
+      },
+      {
+        "name": "PresentationModeScreen",
+        "file": "apps/mobile/lib/experience/presentation_mode.dart",
+        "purpose": "Workspace mode switcher (Personal, Clinical, Research, Admin) with role-scoped permissions",
+        "anchor": "apps/mobile/lib/experience/presentation_mode.dart:161"
+      }
+    ]
+  },
+  "state_management_audit": {
+    "controllers": [
+      {
+        "class": "SessionStore",
+        "file": "apps/mobile/lib/core/session_store.dart:98",
+        "type": "ChangeNotifier",
+        "responsibilities": "Tracks authenticated state, access token, refresh token, role, email, user ID; handles secure storage persistence; purges offline caches on logout or token change"
+      },
+      {
+        "class": "ThemeController",
+        "file": "apps/mobile/lib/experience/theme_controller.dart:18",
+        "type": "ChangeNotifier",
+        "responsibilities": "Manages ThemeMode (light-first default, dark, system), loads and persists to ThemePreferenceStore"
+      },
+      {
+        "class": "LanguageController",
+        "file": "apps/mobile/lib/experience/language_controller.dart:26",
+        "type": "ChangeNotifier",
+        "responsibilities": "Manages Locale ('vi' default, 'en'), loads and persists to LanguageStore"
+      },
+      {
+        "class": "PresentationModeController",
+        "file": "apps/mobile/lib/experience/presentation_mode.dart:124",
+        "type": "ChangeNotifier",
+        "responsibilities": "Manages active PresentationMode; enforces role-scoped permitted modes; purely presentation-layer, server RBAC remains authoritative"
+      },
+      {
+        "class": "PublicShareLinkController",
+        "file": "apps/mobile/lib/core/public_share_link.dart:67",
+        "type": "ChangeNotifier",
+        "responsibilities": "Listens for Android MethodChannel App Link intents (https://theclaracare.com/phr/shared/*) and exposes the capability token"
+      }
+    ],
+    "stores": [
+      {
+        "class": "OnboardingStore",
+        "file": "apps/mobile/lib/experience/onboarding/onboarding_store.dart:43",
+        "backing": "FlutterSecureStorage ('clara_onboarding_seen_v2')",
+        "contract": "Fails open to 'not seen' on storage failure"
+      },
+      {
+        "class": "ThemePreferenceStore",
+        "file": "apps/mobile/lib/experience/theme_store.dart:38",
+        "backing": "FlutterSecureStorage ('clara_theme_mode_v3')",
+        "contract": "Fails safe to ThemeMode.light on storage failure"
+      },
+      {
+        "class": "LanguageStore",
+        "file": "apps/mobile/lib/experience/language_store.dart:43",
+        "backing": "FlutterSecureStorage ('clara_language_v2')",
+        "contract": "Fails safe to 'vi' default on storage failure"
+      }
+    ],
+    "scopes_and_inherited": [
+      {
+        "class": "GlassScopeProvider",
+        "file": "apps/mobile/lib/theme/glass/glass_scope.dart:36",
+        "type": "InheritedWidget",
+        "responsibilities": "Provides ambient glass configuration and degrades translucent materials to opaque based on DeviceCapabilitySnapshot (low RAM / reduced transparency)"
+      }
+    ],
+    "local_state": "Standard StatefulWidget setState across all individual surfaces for pagination, form state, tab selection, and transient network errors"
+  },
+  "offline_cache_audit": {
+    "careguard_offline_cache": {
+      "file": "apps/mobile/lib/core/careguard_offline_cache.dart",
+      "flag": "CAREGUARD_OFFLINE_FALLBACK_ENABLED (default false)",
+      "storage": "FlutterSecureStorage (scoped per user sub/email)",
+      "payload_sanitization": "Re-projects DDI payload strictly to 4 End_User fields (riskLevel, alerts, recommendations, sources); internal mode, fallback flag, connector ID, source errors are stripped",
+      "validity": "24 hours",
+      "stale_label": "offline / không phải thời gian thực",
+      "anchor": "apps/mobile/lib/core/careguard_offline_cache.dart:71"
+    },
+    "lifemap_read_cache": {
+      "file": "apps/mobile/lib/core/lifemap_read_cache.dart",
+      "flag": "LIFEMAP_OFFLINE_READ_CACHE_ENABLED (default false)",
+      "storage": "FlutterSecureStorage (scoped per user sub/email)",
+      "payload_sanitization": "Encrypted projection of tasks, episodes, and pending confirmation count; excludes credentials, source documents, and freeform notes",
+      "validity": "15 minutes",
+      "anchor": "apps/mobile/lib/core/lifemap_read_cache.dart:31"
+    },
+    "session_store_purge": {
+      "file": "apps/mobile/lib/core/session_store.dart",
+      "trigger": "clear() on logout or setSession() on user switch",
+      "action": "Purges all user-scoped CareGuard and LifeMap offline cache entries and capture session IDs from secure storage",
+      "anchor": "apps/mobile/lib/core/session_store.dart:178"
+    },
+    "connectivity_service": {
+      "file": "apps/mobile/lib/core/connectivity_service.dart",
+      "contract": "ConnectivityService interface with broadcast Stream<bool> isOnline and bool currentValue; DefaultConnectivityService supports bounded polling probe or direct push",
+      "anchor": "apps/mobile/lib/core/connectivity_service.dart:16"
+    },
+    "offline_widgets": {
+      "file": "apps/mobile/lib/widgets/offline_banner.dart",
+      "components": [
+        "OfflineBanner (displays Vietnamese-first non-PII offline banner)",
+        "OfflineMutationGuard (intercepts mutating user actions while offline, blocks network roundtrip, and preserves entered form data for retry)"
+      ],
+      "anchor": "apps/mobile/lib/widgets/offline_banner.dart:48"
+    }
+  },
+  "api_client_audit": {
+    "implementation": "apps/mobile/lib/core/api_client.dart (ApiClient class)",
+    "http_library": "package:http/http.dart",
+    "base_url": "String.fromEnvironment('CLARA_API_BASE_URL', defaultValue: kReleaseMode ? 'https://theclaracare.com' : 'http://localhost:8100')",
+    "mock_vs_real": {
+      "production_code": "100% real HTTP calls (GET, POST, PUT, PATCH, DELETE, multipart, SSE streaming); zero synthetic mocks or hardcoded fake responses",
+      "test_code": "FakeApiClient in apps/mobile/test/fakes/fake_api_client.dart extends ApiClient and injects _UnusableHttpClient to strictly prohibit unintended network I/O in automated tests"
+    },
+    "token_refresh_lifecycle": {
+      "pre_flight_check": "Checks isAccessTokenExpired before executing authenticated requests (SessionStoreAuthHooks)",
+      "retry_on_401": "Catches HTTP 401, attempts single refresh against POST /api/v1/auth/refresh with refresh token, updates SessionStore on success, or clears session on failure",
+      "concurrency_protection": "_refreshInFlight future deduplicates concurrent refresh attempts across multiple simultaneous requests",
+      "anchor": "apps/mobile/lib/core/api_client.dart:1190"
+    },
+    "key_endpoints_wired": [
+      "POST /api/v1/auth/login",
+      "POST /api/v1/auth/refresh",
+      "POST /api/v1/auth/register",
+      "POST /api/v1/auth/verify-email",
+      "POST /api/v1/auth/forgot-password",
+      "POST /api/v1/auth/reset-password",
+      "POST /api/v1/auth/logout",
+      "GET /api/v1/mobile/summary",
+      "POST /api/v1/chat",
+      "POST /api/v1/chat/stream (SSE)",
+      "POST /api/v1/careguard/analyze",
+      "GET /api/v1/careguard/cabinet",
+      "POST /api/v1/careguard/cabinet/items",
+      "POST /api/v1/careguard/cabinet/scan",
+      "POST /api/v1/council/run",
+      "GET /api/v1/council/cases",
+      "POST /api/v1/scribe/transcribe",
+      "POST /api/v1/scribe/sessions",
+      "GET /api/v1/phr/record",
+      "PATCH /api/v1/phr/record",
+      "GET /api/v1/phr/onboarding",
+      "PATCH /api/v1/phr/onboarding",
+      "GET /api/v1/lifemap/today",
+      "POST /api/v1/lifemap/tasks",
+      "POST /api/v1/lifemap/episodes",
+      "GET /api/v1/visits",
+      "POST /api/v1/visits",
+      "GET /api/v1/family/relationships",
+      "POST /api/v1/family/invitations",
+      "GET /api/v1/evidence/runs",
+      "GET /api/v1/connected-health/sources"
+    ]
+  },
+  "verified_source_anchors": [
+    "apps/mobile/pubspec.yaml:6-25",
+    "apps/mobile/pubspec.lock:232-260",
+    "apps/mobile/android/settings.gradle.kts:20-24",
+    "apps/mobile/android/build.gradle.kts:1-24",
+    "apps/mobile/android/app/build.gradle.kts:7-66",
+    "apps/mobile/android/app/src/main/AndroidManifest.xml:1-71",
+    "apps/mobile/android/app/src/main/kotlin/com/theclaracare/app/MainActivity.kt:1-5",
+    "apps/mobile/lib/main.dart:16-68",
+    "apps/mobile/lib/app.dart:26-382",
+    "apps/mobile/lib/core/feature_flags.dart:38-240",
+    "apps/mobile/lib/core/api_client.dart:14-1380",
+    "apps/mobile/lib/core/session_store.dart:98-225",
+    "apps/mobile/lib/core/careguard_offline_cache.dart:28-120",
+    "apps/mobile/lib/core/lifemap_read_cache.dart:6-120",
+    "apps/mobile/lib/core/connectivity_service.dart:16-90",
+    "apps/mobile/lib/experience/unified/unified_root.dart:60-384",
+    "apps/mobile/lib/experience/unified/today_surface.dart:36-180",
+    "apps/mobile/lib/experience/unified/lifemap_surface.dart:28-366",
+    "apps/mobile/lib/experience/unified/medicines_hub.dart:29-120",
+    "apps/mobile/lib/experience/unified/profile_hub.dart:50-405",
+    "apps/mobile/lib/experience/unified/clinical_overview_surface.dart:42-100",
+    "apps/mobile/lib/experience/redesign/chat_surface_v3.dart:33-120",
+    "apps/mobile/lib/experience/redesign/cabinet_screen_v3.dart:35-150",
+    "apps/mobile/lib/experience/redesign/phr_surface_v3.dart:31-150",
+    "apps/mobile/lib/experience/redesign/scribe_surface_v3.dart:34-120",
+    "apps/mobile/lib/experience/redesign/council_surface_v3.dart:32-120",
+    "apps/mobile/lib/experience/redesign/more_screen_v3.dart:55-150",
+    "apps/mobile/lib/experience/presentation_mode.dart:17-158",
+    "apps/mobile/test/fakes/fake_api_client.dart:64-100",
+    "docs/ui-modernization/route-capability-matrix.md:1-139"
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "agent_id": "A02",
+  "phase_id": "PH00",
+  "role": "Data model + migration",
+  "task": "git/worktree snapshot discipline; inventory DB models, Alembic migrations, upgrade/downgrade non-empty verification, connection pool & transaction isolation settings.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH00_A02",
+  "branch": "phase/ph00-a02",
+  "base_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "status": "COMPLETED",
+  "verified_source_anchors": [
+    "services/api/src/clara_api/db/base.py:4",
+    "services/api/src/clara_api/db/session.py:14",
+    "services/api/src/clara_api/db/session.py:47",
+    "services/api/src/clara_api/db/session.py:69",
+    "services/api/src/clara_api/db/session.py:112",
+    "services/api/src/clara_api/db/session.py:113",
+    "services/api/src/clara_api/db/session.py:116",
+    "services/api/src/clara_api/core/config.py:30",
+    "services/api/src/clara_api/core/config.py:35",
+    "services/api/src/clara_api/core/config.py:41",
+    "services/api/src/clara_api/core/config.py:48",
+    "services/api/src/clara_api/core/config.py:53",
+    "services/api/alembic/env.py:16",
+    "services/api/alembic/env.py:31",
+    "scripts/ops/check_migration_downgrade.py:64",
+    "services/api/alembic/versions/20260324_0001_init_users_sessions_queries.py:11",
+    "services/api/alembic/versions/20260826_0064_glhs_r4_inference_attestation.py:14",
+    "services/api/src/clara_api/db/models.py:39",
+    "services/api/src/clara_api/db/models.py:845",
+    "services/api/src/clara_api/db/models.py:2013",
+    "services/api/src/clara_api/db/models.py:2452",
+    "services/api/src/clara_api/db/models.py:4545"
+  ],
+  "path_lane": [
+    "services/api/src/clara_api/db/",
+    "services/api/alembic/versions/",
+    "artifacts/PH00/A02/"
+  ],
+  "db_inventory": {
+    "orm_base": "clara_api.db.base.Base (SQLAlchemy DeclarativeBase)",
+    "total_models_in_models_py": 147,
+    "additional_models_in_observability": 3,
+    "total_declarative_models": 150,
+    "connection_pool": {
+      "pool_class_server": "QueuePool (SQLAlchemy default for PostgreSQL / networked DBs)",
+      "pool_class_sqlite": "NullPool / StaticPool (QueuePool sizing disabled)",
+      "db_pool_size": 20,
+      "db_max_overflow": 30,
+      "db_pool_recycle_seconds": 1800,
+      "db_pool_timeout_seconds": 30,
+      "db_pool_pre_ping": true,
+      "migration_runner_pool": "NullPool (services/api/alembic/env.py:31)",
+      "sqlite_connect_args": {
+        "check_same_thread": false
+      }
+    },
+    "transaction_isolation": {
+      "session_maker": {
+        "autocommit": false,
+        "autoflush": false,
+        "class": "sqlalchemy.orm.Session"
+      },
+      "default_backend_isolation": {
+        "postgresql": "READ COMMITTED (database driver default)",
+        "sqlite": "SERIALIZABLE (database engine default)"
+      },
+      "explicit_concurrency_controls": {
+        "glhs_dag_partition_locks": "FOR UPDATE / FOR SHARE row-level locks on glhs_state_versions and glhs_entity_version_partitions",
+        "toctou_prevention": "Version-checked atomic compare-and-swap transitions and parent state lineage enforcement",
+        "eval_and_benchmarks": "SERIALIZABLE isolation level verified in evaluation/glhs_postgres_toctou and research/glhs_journal"
+      }
+    },
+    "alembic_migrations": {
+      "total_versions": 64,
+      "root_revision": "20260324_0001",
+      "head_revision": "20260826_0064",
+      "topology": "linear_single_chain",
+      "downgrade_non_empty_check": {
+        "tool": "scripts/ops/check_migration_downgrade.py",
+        "mode": "--strict",
+        "scanned": 64,
+        "non_empty_downgrades": 64,
+        "exit_code": 0,
+        "status": "PASS"
+      }
+    }
+  },
+  "deliverables": [
+    "artifacts/PH00/A02/change_manifest.json",
+    "artifacts/PH00/A02/test_report.md",
+    "artifacts/PH00/A02/risk_register.md"
+  ],
+  "interface_assumptions": [
+    "Alembic migrations are executed using `(cd services/api && alembic upgrade head)` with env configured through `clara_api.core.config.get_settings()`.",
+    "Every migration defines a non-empty `downgrade()` verified by `scripts/ops/check_migration_downgrade.py`.",
+    "SessionLocal is created with `autoflush=False, autocommit=False` requiring explicit transaction commit or context rollback.",
+    "Primary database failure falls back to SQLite fallback URL only if `DATABASE_FALLBACK_ENABLED=true` (refused by default in production)."
+  ],
+  "rollback_steps": [
+    "Discard untracked deliverables in artifacts/PH00/A02/ via `git clean -fd artifacts/PH00/A02/`.",
+    "Reset branch pointer via `git reset --hard 8a48afab1dafa2f8ccb4ac9f320505452d18b30f`."
+  ]
+}

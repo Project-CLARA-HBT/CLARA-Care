@@ -1,0 +1,209 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH00",
+  "phase_title": "\u0110\u00f3ng b\u0103ng baseline v\u00e0 l\u1eadp traceability",
+  "frozen_head_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "concurrent_agents_count": 10,
+  "agents": [
+    {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "baseline/source tree & frozen SHA",
+      "worktree": "/dev/shm/clara_worktrees/PH00_A01",
+      "branch": "phase/ph00-a01",
+      "commit": "c048c1ba0a590c1ef7b47fc2b6b57a17f2ce89cd",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH00/A01/change_manifest.json",
+        "artifacts/PH00/A01/risk_register.md",
+        "artifacts/PH00/A01/test_report.md"
+      ],
+      "blockers": []
+    },
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "git/worktree snapshot discipline",
+      "worktree": "/dev/shm/clara_worktrees/PH00_A02",
+      "branch": "phase/ph00-a02",
+      "commit": "b518dc8d6060aabd53a5812a3bda8c76fd7ce0f9",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH00/A02/change_manifest.json",
+        "artifacts/PH00/A02/risk_register.md",
+        "artifacts/PH00/A02/test_report.md"
+      ],
+      "blockers": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "API route inventory",
+      "worktree": "/dev/shm/clara_worktrees/PH00_A03",
+      "branch": "phase/ph00-a03",
+      "commit": "7004320954b88868f8909e17449298aec4a3a29a",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH00/A03/change_manifest.json",
+        "artifacts/PH00/A03/risk_register.md",
+        "artifacts/PH00/A03/test_report.md"
+      ],
+      "blockers": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "DB table and migration graph",
+      "worktree": "/dev/shm/clara_worktrees/PH00_A04",
+      "branch": "phase/ph00-a04",
+      "commit": "5a39a6eba925f2b4991adf35909e1363ce916e78",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH00/A04/change_manifest.json",
+        "artifacts/PH00/A04/risk_register.md",
+        "artifacts/PH00/A04/test_report.md"
+      ],
+      "blockers": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "ML model/provider inventory",
+      "worktree": "/dev/shm/clara_worktrees/PH00_A05",
+      "branch": "phase/ph00-a05",
+      "commit": "70d5e1eb2b51bafec39a7e81ffa69ccecda915ac",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH00/A05/change_manifest.json",
+        "artifacts/PH00/A05/risk_register.md",
+        "artifacts/PH00/A05/test_report.md"
+      ],
+      "blockers": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "web/mobile route parity inventory",
+      "worktree": "/dev/shm/clara_worktrees/PH00_A06",
+      "branch": "phase/ph00-a06",
+      "commit": "63e859147ed201a31839f7cbb6ff2996552b2bc0",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH00/A06/change_manifest.json",
+        "artifacts/PH00/A06/risk_register.md",
+        "artifacts/PH00/A06/test_report.md"
+      ],
+      "blockers": [
+        "Toolchain version discrepancy: Flutter 3.29 host vs Dart ^3.9 locked markdown",
+        "iOS platform runner missing in git (needs flutter create . --platforms=ios)"
+      ]
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "existing tests and fixture inventory",
+      "worktree": "/dev/shm/clara_worktrees/PH00_A07",
+      "branch": "phase/ph00-a07",
+      "commit": "e10b1f36432012bad604a3fef404702e541305b8",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH00/A07/change_manifest.json",
+        "artifacts/PH00/A07/risk_register.md",
+        "artifacts/PH00/A07/test_report.md"
+      ],
+      "blockers": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "secret/PHI risk inventory",
+      "worktree": "/dev/shm/clara_worktrees/PH00_A08",
+      "branch": "phase/ph00-a08",
+      "commit": "c9806cc37e164c6e1e695fe88cd9393a5ee35630",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH00/A08/change_manifest.json",
+        "artifacts/PH00/A08/risk_register.md",
+        "artifacts/PH00/A08/test_report.md"
+      ],
+      "blockers": [
+        "Hardcoded test router key sk-2a0a31f... in run_v8_provider_probe_ledger.py (SEC-CRIT-01)"
+      ]
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "R4 E01-E22 evidence provenance audit",
+      "worktree": "/dev/shm/clara_worktrees/PH00_A09",
+      "branch": "phase/ph00-a09",
+      "commit": "9bdd9315c100962a43b035cc91a9c0805f2cbadd",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH00/A09/change_manifest.json",
+        "artifacts/PH00/A09/risk_register.md",
+        "artifacts/PH00/A09/test_report.md"
+      ],
+      "blockers": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "baseline summary and quality gate",
+      "worktree": "/dev/shm/clara_worktrees/PH00_A10",
+      "branch": "phase/ph00-a10",
+      "commit": "546b1932c946b468bc2ae5b155a5bd9373776439",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH00/A10/change_manifest.json",
+        "artifacts/PH00/A10/risk_register.md",
+        "artifacts/PH00/A10/test_report.md"
+      ],
+      "blockers": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "baseline_defect_ledger": [
+    {
+      "id": "DEFECT-01",
+      "origin": "A01",
+      "severity": "MEDIUM",
+      "desc": "POST /api/v1/auth/callback missing from INTENTIONAL_PUBLIC_ROUTES in route_inventory.py causing test failure"
+    },
+    {
+      "id": "DEFECT-02",
+      "origin": "A02",
+      "severity": "HIGH",
+      "desc": "Alembic migration 0062 batch_alter_table on SQLite fails with unnamed foreign key constraint"
+    },
+    {
+      "id": "DEFECT-03",
+      "origin": "A06",
+      "severity": "HIGH",
+      "desc": "apps/mobile/ios directory absent in git checkout; requires platform scaffolding"
+    },
+    {
+      "id": "DEFECT-04",
+      "origin": "A06",
+      "severity": "MEDIUM",
+      "desc": "Flutter host toolchain Dart 3.7.0 is below locked markdown 7.3.1 requirement (Dart ^3.9.0)"
+    },
+    {
+      "id": "DEFECT-05",
+      "origin": "A08",
+      "severity": "HIGH",
+      "desc": "Hardcoded test router API key in scripts/ops/run_v8_provider_probe_ledger.py and spec (SEC-CRIT-01)"
+    },
+    {
+      "id": "DEFECT-06",
+      "origin": "A10",
+      "severity": "HIGH",
+      "desc": "Consumer web /care screens catch API errors and display synthetic doctor consultations"
+    }
+  ],
+  "next_phases": [
+    "PH01",
+    "PH02"
+  ]
+}

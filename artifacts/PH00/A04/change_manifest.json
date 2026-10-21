@@ -1,0 +1,307 @@
+{
+  "agent_id": "A04",
+  "phase_id": "PH00",
+  "role": "ML + retrieval",
+  "task": "DB table and migration graph vs ML pipelines; inventory ML model registry, provider fallbacks, RAG pipeline, OCR, ASR, synthesis v2, and evaluation suites.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH00_A04",
+  "branch": "phase/ph00-a04",
+  "base_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "status": "COMPLETED",
+  "verified_source_anchors": [
+    "services/ml/src/clara_ml/main.py:150",
+    "services/ml/src/clara_ml/main.py:160",
+    "services/ml/src/clara_ml/main.py:1075",
+    "services/ml/src/clara_ml/main.py:1144",
+    "services/ml/src/clara_ml/main.py:1713",
+    "services/ml/src/clara_ml/main.py:1784",
+    "services/ml/src/clara_ml/main.py:2191",
+    "services/ml/src/clara_ml/main.py:2341",
+    "services/ml/src/clara_ml/rag/pipeline.py:191",
+    "services/ml/src/clara_ml/rag/pipeline.py:289",
+    "services/ml/src/clara_ml/rag/pipeline.py:307",
+    "services/ml/src/clara_ml/agents/research_tier2.py:39",
+    "services/ml/src/clara_ml/agents/research_tier2.py:46",
+    "services/ml/src/clara_ml/agents/research_tier2.py:67",
+    "services/ml/src/clara_ml/agents/research_tier2.py:2021",
+    "services/ml/src/clara_ml/agents/research_tier2.py:3666",
+    "services/ml/src/clara_ml/agents/research_tier2.py:4800",
+    "services/ml/src/clara_ml/agents/research_tier2.py:9198",
+    "services/ml/src/clara_ml/llm/model_registry.py:29",
+    "services/ml/src/clara_ml/llm/model_registry.py:56",
+    "services/ml/src/clara_ml/llm/model_registry.py:74",
+    "services/ml/src/clara_ml/llm/model_registry.py:432",
+    "services/ml/src/clara_ml/llm/model_registry.py:502",
+    "services/ml/src/clara_ml/llm/model_registry.py:563",
+    "services/ml/src/clara_ml/llm/model_registry.py:594",
+    "services/ml/src/clara_ml/llm/model_gateway.py:51",
+    "services/ml/src/clara_ml/llm/model_gateway.py:88",
+    "services/ml/src/clara_ml/llm/model_gateway.py:119",
+    "services/ml/src/clara_ml/llm/model_gateway.py:321",
+    "services/ml/src/clara_ml/llm/provider_adapters.py:227",
+    "services/ml/src/clara_ml/llm/provider_adapters.py:338",
+    "services/ml/src/clara_ml/rag/store/schema.py:306",
+    "services/ml/src/clara_ml/rag/store/schema.py:317",
+    "services/ml/src/clara_ml/rag/store/schema.py:357",
+    "services/ml/src/clara_ml/rag/store/schema.py:399",
+    "services/ml/src/clara_ml/rag/store/schema.py:454",
+    "services/ml/src/clara_ml/rag/store/schema.py:476",
+    "services/ml/src/clara_ml/rag/store/schema.py:496",
+    "services/ml/src/clara_ml/rag/store/schema.py:523",
+    "services/ml/src/clara_ml/rag/store/schema.py:544",
+    "services/ml/src/clara_ml/rag/store/schema.py:571",
+    "services/ml/src/clara_ml/rag/store/schema.py:594",
+    "services/ml/src/clara_ml/rag/store/migrations.py:130",
+    "services/ml/src/clara_ml/rag/store/migrations.py:191",
+    "services/ml/src/clara_ml/rag/store/health.py:150",
+    "services/ml/src/clara_ml/rag/store/health.py:204",
+    "services/ml/src/clara_ml/rag/store/health.py:334",
+    "services/ocr/server.py:44",
+    "services/ocr/server.py:248",
+    "services/ocr/server.py:260",
+    "services/asr/server.py:32",
+    "services/asr/server.py:52",
+    "services/asr/server.py:63",
+    "services/asr/server.py:78",
+    "evaluation/clara_eval/tracks.py:13",
+    "evaluation/clara_eval/run.py:29"
+  ],
+  "path_lane": [
+    "services/ml/src/clara_ml/",
+    "evaluation/",
+    "services/ocr/",
+    "services/asr/",
+    "artifacts/PH00/A04/"
+  ],
+  "inventory": {
+    "db_table_and_migration_graph": {
+      "service_boundary": "Decoupled FastAPI service architecture. API gateway interacts with ML service strictly over HTTP with X-ML-Internal-Key header; services/api never executes direct SQL on ML tables.",
+      "orm_declarative_base": "clara_ml.rag.store.schema.Base (local to services/ml, no shared Base with services/api)",
+      "total_tables": 10,
+      "tables": [
+        {
+          "table_name": "kb_source_registry",
+          "model_class": "KbSourceRegistry",
+          "purpose": "Authoritative registry of knowledge sources with trust_tier (1-4), license, robots.txt policy, and fetch metadata."
+        },
+        {
+          "table_name": "kb_documents",
+          "model_class": "KbDocument",
+          "purpose": "Source document headers with SHA-256 content_hash for idempotent re-ingestion, title, URL, language, and effective_date."
+        },
+        {
+          "table_name": "kb_chunks",
+          "model_class": "KbChunk",
+          "purpose": "Hierarchical text chunks with parent_id foreign key, token count, trust_tier, and PostgreSQL tsvector full-text index."
+        },
+        {
+          "table_name": "kb_chunk_embeddings",
+          "model_class": "KbChunkEmbedding",
+          "purpose": "Dense vector embeddings parameterized by RAG_EMBEDDING_DIM (default 3072), model_id discriminator, and ANN index (HNSW/IVFFlat)."
+        },
+        {
+          "table_name": "kb_chunk_sparse_terms",
+          "model_class": "KbChunkSparseTerm",
+          "purpose": "Learned-lexical (bge-m3) sparse terms with per-term float weights for hybrid sparse-dense retrieval."
+        },
+        {
+          "table_name": "kb_entities",
+          "model_class": "KbEntity",
+          "purpose": "RxNorm and UMLS normalized medical entities (CUI, RXCUI, canonical Vietnamese/English names) with pg_trgm GIN index."
+        },
+        {
+          "table_name": "kb_chunk_entities",
+          "model_class": "KbChunkEntity",
+          "purpose": "Bipartite link table binding text chunks to recognized entities with span text and confidence score."
+        },
+        {
+          "table_name": "kb_entity_edges",
+          "model_class": "KbEntityEdge",
+          "purpose": "Clinical relation edges (drug-interaction, contraindication) powering GraphRAG multi-hop retrieval."
+        },
+        {
+          "table_name": "eval_set",
+          "model_class": "EvalSet",
+          "purpose": "Golden Vietnamese medical Q&A evaluation dataset with qid, questions, gold answers, expected RXCUIs, and required citations."
+        },
+        {
+          "table_name": "eval_run_result",
+          "model_class": "EvalRunResult",
+          "purpose": "Per-question evaluation run execution metrics: recall@k, ndcg@k, faithfulness, citation_acc, and latency_ms."
+        }
+      ],
+      "migration_runner": {
+        "module": "clara_ml.rag.store.migrations",
+        "entrypoint": "run_migrations(engine, settings, force=False)",
+        "ddl_strategy": "Extension-aware, additive-only DDL using CREATE ... IF NOT EXISTS semantics. Never drops or alters existing tables.",
+        "extensions": ["vector", "pg_trgm"],
+        "ann_indexes": {
+          "hnsw": "idx_kb_chunk_emb_hnsw (vector_cosine_ops, m=16, ef_construction=64)",
+          "ivfflat": "idx_kb_chunk_emb_ivff (vector_cosine_ops, lists=100)"
+        },
+        "gin_indexes": [
+          "idx_kb_chunks_fts (GIN on fts tsvector)",
+          "idx_kb_entities_name_trgm (GIN on canonical_name gin_trgm_ops)"
+        ],
+        "startup_self_check": "clara_ml.rag.store.health.run_startup_self_check validates pgvector extension and 8 required kb_* tables; gracefully degrades to in-memory store if DB is unready, preventing crash on boot."
+      }
+    },
+    "ml_model_registry": {
+      "contract_file": "services/ml/config/task_contracts/contracts.json",
+      "schema_version": "clara.task-contracts.v2",
+      "total_tasks": 21,
+      "governance_rule": "DeepSeek-only baseline with explicit ModelTask contracts. Temperature=0.0 across all clinical and safety tasks. Pro/Flash model profiles.",
+      "tasks": [
+        {"task": "medical_safety_router", "risk_level": "critical", "route_class": "text_reasoning", "model_profile": "pro", "max_tokens": 240, "shadow_only": false},
+        {"task": "lifemap_ask_router", "risk_level": "critical", "route_class": "text_reasoning", "model_profile": "pro", "max_tokens": 220, "shadow_only": false},
+        {"task": "lifemap_capture_triage", "risk_level": "critical", "route_class": "fast_multimodal", "model_profile": "pro", "max_tokens": 240, "shadow_only": false},
+        {"task": "lifemap_text_draft_extraction", "risk_level": "high", "route_class": "fast_multimodal", "model_profile": "flash", "max_tokens": 700, "shadow_only": false},
+        {"task": "lifemap_review_proposals", "risk_level": "high", "route_class": "fast_multimodal", "model_profile": "flash", "max_tokens": 500, "shadow_only": false},
+        {"task": "clinical_language_extraction", "risk_level": "high", "route_class": "fast_multimodal", "model_profile": "flash", "max_tokens": 1400, "shadow_only": false},
+        {"task": "lifemap_visit_extraction", "risk_level": "high", "route_class": "fast_multimodal", "model_profile": "flash", "max_tokens": 1200, "shadow_only": false},
+        {"task": "careguard_wording_draft", "risk_level": "high", "route_class": "fast_multimodal", "model_profile": "flash", "max_tokens": 420, "shadow_only": false},
+        {"task": "scribe_note", "risk_level": "high", "route_class": "quality_multimodal", "model_profile": "pro", "max_tokens": 1800, "shadow_only": false},
+        {"task": "scribe_transcription", "risk_level": "high", "route_class": "asr", "model_profile": "flash", "max_tokens": 0, "shadow_only": false},
+        {"task": "scribe_asr_correction", "risk_level": "high", "route_class": "fast_multimodal", "model_profile": "flash", "max_tokens": 900, "shadow_only": false},
+        {"task": "council_intake", "risk_level": "high", "route_class": "fast_multimodal", "model_profile": "flash", "max_tokens": 1200, "shadow_only": false},
+        {"task": "council_shadow", "risk_level": "high", "route_class": "quality_multimodal", "model_profile": "pro", "max_tokens": 1600, "shadow_only": true},
+        {"task": "council_claim_verification", "risk_level": "high", "route_class": "text_reasoning", "model_profile": "pro", "max_tokens": 900, "shadow_only": true},
+        {"task": "council_adjudication", "risk_level": "high", "route_class": "quality_multimodal", "model_profile": "pro", "max_tokens": 900, "shadow_only": true},
+        {"task": "rag_reranking", "risk_level": "medium", "route_class": "fast_multimodal", "model_profile": "flash", "max_tokens": 800, "shadow_only": false},
+        {"task": "factcheck_nli", "risk_level": "high", "route_class": "text_reasoning", "model_profile": "pro", "max_tokens": 1000, "shadow_only": false},
+        {"task": "rag_synthesis", "risk_level": "high", "route_class": "quality_multimodal", "model_profile": "pro", "max_tokens": 2000, "shadow_only": false},
+        {"task": "research_query_planning", "risk_level": "medium", "route_class": "fast_multimodal", "model_profile": "flash", "max_tokens": 900, "shadow_only": false},
+        {"task": "research_reasoning", "risk_level": "high", "route_class": "quality_multimodal", "model_profile": "pro", "max_tokens": 12288, "shadow_only": false},
+        {"task": "encoder_slm_shadow", "risk_level": "medium", "route_class": "embedding", "model_profile": "flash", "max_tokens": 0, "shadow_only": true}
+      ]
+    },
+    "provider_fallbacks": {
+      "failover_architecture": "Multi-tier resilience in DeepSeekClient and ModelGateway.",
+      "base_url_pool_failover": "DeepSeekClient parses comma-separated DEEPSEEK_BASE_URL endpoints, cycling through replicas on 5xx errors before tripping the circuit breaker.",
+      "circuit_breaker": "clara_ml.llm.circuit_breaker.CircuitBreaker tracks failure rates across 3 states (CLOSED, OPEN, HALF_OPEN) with cooldown retry window.",
+      "model_gateway_adapters": {
+        "deepseek": "Primary reasoning and generative adapter for text and clinical tasks.",
+        "unofficial_gemini_gateway": "Fast multimodal and vision gateway for extraction and OCR bridging.",
+        "deepseek_audio": "ASR transcription adapter routing to Whisper endpoint."
+      },
+      "asr_provider_selection": {
+        "primary": "Configured via SCRIBE_ASR_PRIMARY (defaults to whisper/deepseek_audio).",
+        "fallback": "Configured via SCRIBE_ASR_FALLBACK (options: google_stt_v2_chirp3, phowhisper). Deduplicates identical providers to avoid redundant failure loops."
+      },
+      "safety_fallback_invariant": "In clinical safety routes (medical_safety_router, lifemap_ask_router), model failure never falls back to an unverified smaller LLM; it deterministically executes hard legal/emergency guards and returns safe fail-closed guidance."
+    },
+    "rag_pipeline": {
+      "class": "clara_ml.rag.pipeline.RagPipelineP1",
+      "architecture": "Hybrid multi-stage retrieval with Reciprocal Rank Fusion (RRF) and Cross-Encoder Re-ranking.",
+      "retrieval_modes": {
+        "persistent": "HybridRetriever querying PostgreSQL pgvector (dense cosine similarity) and FTS tsvector / bge-m3 sparse terms, fused via RRF.",
+        "in_memory": "InMemoryRetriever using token-overlap and cosine similarity over seed documents (safe offline fallback)."
+      },
+      "reranking": "clara_ml.rag.retrieval.reranker.EvidenceReranker applies contextual relevance scoring on candidate chunks.",
+      "graphrag": "clara_ml.rag.graphrag.GraphRagSidecar traverses multi-hop entity relationships (drug interactions, disease associations) from kb_entity_edges.",
+      "authority_ranking": "4-tier hierarchy (Tier 1: MOH/regulator, Tier 2: clinical guidelines, Tier 3: peer-reviewed literature, Tier 4: general health).",
+      "fides_tighten_only_contract": "tighten_fides_verdict_with_trust ensures low-authority (Tier >= 3) or stale (> 5 years) retrieved evidence can only escalate/tighten borderline 'warn' verdicts to 'fail', never loosen a blocking critical gate."
+    },
+    "ocr_service": {
+      "directory": "services/ocr/",
+      "server_file": "services/ocr/server.py",
+      "version": "2.0.0",
+      "technology": "Multimodal Gemini Vision bridge (Gemini 3.7 Flash Tiered / 3.6 Flash High via router gateway) with Google Cloud Vision fallback.",
+      "endpoints": [
+        "GET /health",
+        "POST /ocr",
+        "POST /api/ocr",
+        "POST /api/extract"
+      ],
+      "input_handling": "Multipart form file upload or JSON base64 with auto MIME-detection (PNG, JPEG, GIF, WEBP).",
+      "output_contract": "Extracted prescription/lab text, bounding boxes, and normalized drug entity candidates."
+    },
+    "asr_service": {
+      "directory": "services/asr/",
+      "server_file": "services/asr/server.py",
+      "engine": "faster-whisper (CTranslate2)",
+      "default_model": "small",
+      "device": "cpu",
+      "compute_type": "int8",
+      "endpoints": [
+        "GET /health",
+        "GET /ready",
+        "POST /v1/audio/transcriptions"
+      ],
+      "contract": "OpenAI-compatible multipart audio transcriptions API with voice activity detection (vad_filter=True)."
+    },
+    "synthesis_v2": {
+      "source_module": "clara_ml.agents.research_tier2",
+      "budget_resolver": "_resolve_adaptive_report_word_budget (line 3666)",
+      "configuration_flag": "settings.synthesis_v2_enabled (defaults to False)",
+      "correctness_properties": {
+        "P1": "Budget invariant: min_words <= target <= max_words <= 15000",
+        "P2": "Scope monotonicity: broader scope => target non-decreasing",
+        "P3": "Density monotonicity: more evidence => target non-decreasing",
+        "P4": "Broad-query band: broad + high-density deep_beta yields target >= 8000",
+        "P5": "No-pad floor: narrow + sparse query yields target < floor, not appendix-padded",
+        "P6": "Convergence: expansion stops only on target-met OR round/timeout exhaustion",
+        "P7": "Word-count consistency: single shared word counter across pipeline",
+        "P8": "Flags-off equivalence: with flag False, behavior is identical to legacy baseline",
+        "P9": "Guardrail preservation: never prescribe/diagnose; emergency fast-path intact",
+        "P10": "deep != deep_beta mode differentiation"
+      },
+      "verification_suite": "services/ml/tests/test_synthesis_v2_*.py (8 test modules)"
+    },
+    "evaluation_suites": {
+      "directory": "evaluation/",
+      "total_suites": 36,
+      "clara_eval_vn": {
+        "framework": "evaluation/clara_eval",
+        "dataset_manifest": "evaluation/clara_eval/datasets/manifest.json",
+        "tracks": [
+          "vietnamese_clinical_understanding",
+          "medical_qa_patient_communication",
+          "research_rag",
+          "careguard_drugbank",
+          "scribe_asr",
+          "lifemap_invariants",
+          "council_ablation",
+          "wording_usability",
+          "model_routing_latency_cost"
+        ],
+        "smoke_fixtures": [
+          "evaluation/clara_eval/datasets/fixtures/careguard_drugbank.smoke.jsonl",
+          "evaluation/clara_eval/datasets/fixtures/council_ablation.smoke.jsonl",
+          "evaluation/clara_eval/datasets/fixtures/lifemap_invariants.smoke.jsonl",
+          "evaluation/clara_eval/datasets/fixtures/medical_qa_patient_communication.smoke.jsonl",
+          "evaluation/clara_eval/datasets/fixtures/model_routing_latency_cost.smoke.jsonl",
+          "evaluation/clara_eval/datasets/fixtures/research_rag.smoke.jsonl",
+          "evaluation/clara_eval/datasets/fixtures/scribe_asr.smoke.jsonl",
+          "evaluation/clara_eval/datasets/fixtures/vietnamese_clinical_understanding.smoke.jsonl",
+          "evaluation/clara_eval/datasets/fixtures/wording_usability.smoke.jsonl"
+        ]
+      },
+      "specialized_evaluation_programs": [
+        "glhs_assurance (microbench governance and SLA profiles)",
+        "glhs_systems_benchmark (concurrency, deadlock, fault recovery)",
+        "glhs_toctou_r2 & glhs_postgres_toctou (state machine race conditions under PostgreSQL serializable)",
+        "canonicalization (RFC 8785 cross-runtime JSON canonicalization)",
+        "contract_clause_ablation (governance clause ablation testing)",
+        "careguard_external (pharmacopeia benchmarking: DAV, DailyMed, DDInter, RxNorm)",
+        "model_adjudication (v1 and v2 multi-specialist council consensus)",
+        "property_assurance (state machine mutation testing and invariant proofs)"
+      ]
+    }
+  },
+  "deliverables": [
+    "artifacts/PH00/A04/change_manifest.json",
+    "artifacts/PH00/A04/test_report.md",
+    "artifacts/PH00/A04/risk_register.md"
+  ],
+  "interface_assumptions": [
+    "services/api communicates with services/ml strictly through HTTP proxy (endpoints mounted at /v1/*) authenticated via X-ML-Internal-Key header.",
+    "services/ml maintains independent schema models in clara_ml.rag.store.schema.Base; no shared database foreign keys exist between API and ML services.",
+    "Persistent RAG requires PostgreSQL with pgvector and pg_trgm extensions; in development/CI without pgvector, RAG automatically degrades to InMemoryRetriever.",
+    "Model Gateway enforces DeepSeek-only generative routing by default; unofficial Gemini gateway is restricted to fast multimodal/OCR routes.",
+    "Synthesis v2 remains behind the feature flag SYNTHESIS_V2_ENABLED=false until clinical review passes."
+  ],
+  "rollback_steps": [
+    "Discard untracked deliverables in artifacts/PH00/A04/ via `git clean -fd artifacts/PH00/A04/`.",
+    "Reset branch pointer via `git reset --hard 8a48afab1dafa2f8ccb4ac9f320505452d18b30f`."
+  ]
+}

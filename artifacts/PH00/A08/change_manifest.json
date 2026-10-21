@@ -1,0 +1,164 @@
+{
+  "agent_id": "A08",
+  "phase": "PH00",
+  "role": "Security + privacy",
+  "task": "secret/PHI risk inventory; audit code and sample configs for hardcoded credentials, API keys, unredacted patient data, CSRF enforcement, RBAC boundaries, and privacy policies",
+  "path_lane": [
+    "docs/security/",
+    "docs/compliance/",
+    "scripts/ops/",
+    "artifacts/PH00/A08/"
+  ],
+  "frozen_head_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "worktree_path": "/dev/shm/clara_worktrees/PH00_A08",
+  "branch": "phase/ph00-a08",
+  "timestamp": "2026-10-21T00:00:00Z",
+  "status": "COMPLETED",
+  "deliverables": [
+    "artifacts/PH00/A08/risk_register.md",
+    "artifacts/PH00/A08/test_report.md",
+    "artifacts/PH00/A08/change_manifest.json"
+  ],
+  "verified_source_anchors": {
+    "secret_leakage": [
+      "scripts/ops/run_v8_provider_probe_ledger.py:37",
+      "research/glhs_journal/q3_r3/provider_run_ledger_spec.md:32",
+      ".env.example:89",
+      ".env.example:96",
+      "deploy/docker/searxng/settings.yml:17",
+      "scripts/deploy/redeploy_app_stack.sh:386"
+    ],
+    "csrf_enforcement": [
+      "services/api/src/clara_api/main.py:133-150",
+      "services/api/src/clara_api/main.py:315-347",
+      "services/api/src/clara_api/core/rbac.py:15-39",
+      "services/api/src/clara_api/core/rbac.py:92-108"
+    ],
+    "rbac_boundaries": [
+      "services/api/src/clara_api/core/rbac.py:138-148",
+      "services/api/src/clara_api/api/deps.py:1-7",
+      "services/api/src/clara_api/core/session_security.py:48-52",
+      "services/api/src/clara_api/core/session_security.py:148-157",
+      "services/api/src/clara_api/lifemap/profile_scope.py:1-120",
+      "docs/security/lifemap-v2-threat-model.md:19-27"
+    ],
+    "phi_redaction_retention": [
+      "services/api/src/clara_api/main.py:274-290",
+      "services/api/src/clara_api/core/metrics.py:1-150",
+      "services/ml/src/clara_ml/nlp/pii_filter.py:6-28",
+      "services/api/src/clara_api/compliance/redaction.py:1-80",
+      "services/api/src/clara_api/compliance/retention.py:1-180",
+      "scripts/ops/run_retention_sweep.sh:1-61",
+      "scripts/ops/RUNBOOK_retention_sweep.md:1-103",
+      "scripts/security/check_ci_artifact_safety.py:18-31"
+    ],
+    "privacy_compliance_docs": [
+      "docs/compliance/dpia.md:1-87",
+      "docs/compliance/ropa.md:1-131",
+      "docs/compliance/transfer-impact-assessments.md:1-104",
+      "docs/compliance/risk-management-file.md:1-79",
+      "docs/compliance/incident-log.md:1-57",
+      "docs/security/accepted-findings.md:1-183",
+      "docs/security/privacy-checklist.md:1-52",
+      "docs/security/security-remediation-2026-04-03.md:1-112",
+      "apps/web/app/legal/privacy/page.tsx:1-649"
+    ],
+    "service_boundaries_configs": [
+      "deploy/nginx/clara.thiennn.icu.conf:10-23",
+      "deploy/nginx/clara.thiennn.icu.conf:72-82",
+      "deploy/docker/docker-compose.deploy.yml:9-25",
+      "services/ml/src/clara_ml/main.py:1051-1072",
+      "scripts/security/check_ci_artifact_policy.py:22-38"
+    ]
+  },
+  "key_findings": [
+    {
+      "id": "SEC-CRIT-01",
+      "severity": "CRITICAL",
+      "title": "Hardcoded router API key committed to ops script and research spec",
+      "anchors": [
+        "scripts/ops/run_v8_provider_probe_ledger.py:37",
+        "research/glhs_journal/q3_r3/provider_run_ledger_spec.md:32"
+      ],
+      "status": "OPEN",
+      "remediation": "Revoke key sk-2a0a31f1216bad84-66fc8c-5b3da166, replace with ROUTER_API_KEY environment variable"
+    },
+    {
+      "id": "SEC-HIGH-01",
+      "severity": "HIGH",
+      "title": "Direct public reverse proxy exposure of ML service via Nginx /ml/ location",
+      "anchors": [
+        "deploy/nginx/clara.thiennn.icu.conf:72-82"
+      ],
+      "status": "OPEN",
+      "remediation": "Remove /ml/ proxy block from Nginx ingress; restrict ML service to internal container network"
+    },
+    {
+      "id": "SEC-MED-01",
+      "severity": "MEDIUM",
+      "title": "CSRF exemption on /api/v1/auth/refresh",
+      "anchors": [
+        "services/api/src/clara_api/main.py:138"
+      ],
+      "status": "ACCEPTED",
+      "remediation": "Documented compatibility exception; follow-up to require CSRF token for browser refresh requests"
+    },
+    {
+      "id": "SEC-MED-02",
+      "severity": "MEDIUM",
+      "title": "Fail-open fallback behavior when Redis security store is unavailable",
+      "anchors": [
+        "services/api/src/clara_api/core/login_guard.py:35-50",
+        "services/api/src/clara_api/core/session_security.py:128-135"
+      ],
+      "status": "ACCEPTED",
+      "remediation": "Add SECURITY_FAIL_CLOSED setting for high-security deployments requiring strict lockout"
+    }
+  ],
+  "verification_commands_summary": [
+    {
+      "command": "python3 scripts/security/check_ci_artifact_policy.py",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0
+    },
+    {
+      "command": "pytest tests/compliance/test_records_rbac.py",
+      "exit_code": 0
+    },
+    {
+      "command": "pytest tests/test_compliance_dsar_csrf.py",
+      "exit_code": 0
+    },
+    {
+      "command": "pytest tests/compliance/test_no_pii_logs.py",
+      "exit_code": 0
+    },
+    {
+      "command": "pytest tests/careguard_upgrade/test_rbac_owner_scope_csrf.py",
+      "exit_code": 0
+    },
+    {
+      "command": "pytest tests/test_compliance_rbac_flags.py",
+      "exit_code": 0
+    },
+    {
+      "command": "pytest tests/test_metrics_no_pii.py",
+      "exit_code": 0
+    },
+    {
+      "command": "pytest tests/test_analytics_rbac.py",
+      "exit_code": 0
+    },
+    {
+      "command": "pytest tests/test_admin_rag_rbac_property.py",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m evaluation.commitloop.secret_scan --repo-root .",
+      "exit_code": 1
+    }
+  ]
+}

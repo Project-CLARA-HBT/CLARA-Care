@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH00",
+  "agent_id": "A01",
+  "role": "API + contract",
+  "task": "baseline/source tree & frozen SHA; inventory API schemas, route contracts, verify frozen SHA, document contract state and schema drift.",
+  "status": "COMPLETED",
+  "frozen_head_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "verified_head_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "branch": "phase/ph00-a01",
+  "worktree_path": "/dev/shm/clara_worktrees/PH00_A01",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;artifacts/PH00/A01/",
+  "timestamp": "2026-10-21T18:00:00Z",
+  "files_created": [
+    "artifacts/PH00/A01/change_manifest.json",
+    "artifacts/PH00/A01/test_report.md",
+    "artifacts/PH00/A01/risk_register.md"
+  ],
+  "files_modified": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/api/router.py",
+      "line_start": 1,
+      "line_end": 100,
+      "symbol": "api_router",
+      "description": "FastAPI v1 root APIRouter with prefix '/api/v1' mounting 38 endpoint modules, including dual alias /clinical-workbench and /clinical/workbench (lines 64-69) and gated /govred-research (lines 97-100)."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v2/router.py",
+      "line_start": 1,
+      "line_end": 38,
+      "symbol": "api_v2_router",
+      "description": "FastAPI v2 root APIRouter with prefix '/api/v2' mounting 8 subrouters (home, health, care, medications, ask, capture, you) and v2_health_check endpoint wrapped in ApiV2ResponseEnvelope."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v2/conventions.py",
+      "line_start": 22,
+      "line_end": 173,
+      "symbol": "ApiV2ResponseEnvelope, ApiV2ErrorEnvelope, ApiV2HTTPException, MessageMetadata",
+      "description": "API v2 contract envelope primitives enforcing standardized JSON envelopes, localization keys, severity, idempotency, and concurrency controls."
+    },
+    {
+      "file": "services/api/src/clara_api/schemas.py",
+      "line_start": 7,
+      "line_end": 1205,
+      "symbol": "Role, User, Session, Query, LoginRequest, PhrRecordResponse, VnDrugMappingResponse, etc.",
+      "description": "Central Pydantic v2 schema module containing 137 BaseModel classes spanning Auth, PHR, Lifemap, Cabinet/Careguard, Council, Research, Scribe, Workspace, and Knowledge Sources."
+    },
+    {
+      "file": "contracts/consumer-terminology/consumer-terminology.v1.json",
+      "line_start": 1,
+      "line_end": 32,
+      "symbol": "clara.consumer-terminology",
+      "description": "Canonical contract v2026-07-30.v1 with 19 static UI keys in 'vi' and 'en', verified strictly against web and mobile code projections."
+    },
+    {
+      "file": "contracts/design-tokens/tokens.json",
+      "line_start": 1,
+      "line_end": 341,
+      "symbol": "clara.design-tokens",
+      "description": "Platform-neutral semantic design tokens v2026-08-19.v1 covering surface, content, border, radius, spacing, and elevation."
+    },
+    {
+      "file": "services/api/src/clara_api/main.py",
+      "line_start": 133,
+      "line_end": 150,
+      "symbol": "_CSRF_EXEMPT_PATHS, _CSRF_EXEMPT_PREFIXES",
+      "description": "CSRF configuration exempting pre-auth endpoints including /api/v1/auth/callback and shared read prefix /api/v1/phr/shared/."
+    },
+    {
+      "file": "services/api/src/clara_api/main.py",
+      "line_start": 388,
+      "line_end": 392,
+      "symbol": "app.include_router",
+      "description": "Mounting of api_router at root, duplicate backward-compatibility mount with prefix='/api/v1' (producing /api/v1/api/v1/* paths), and api_v2_router."
+    },
+    {
+      "file": "services/api/src/clara_api/core/route_inventory.py",
+      "line_start": 106,
+      "line_end": 138,
+      "symbol": "INTENTIONAL_PUBLIC_ROUTES",
+      "description": "Deny-by-default allowlist for unauthenticated API endpoints. Note: missing ('POST', '/api/v1/auth/callback'), causing regression test failure."
+    },
+    {
+      "file": "services/api/src/clara_api/core/seed_admin_data.py",
+      "line_start": 104,
+      "line_end": 110,
+      "symbol": "seed_admin_clinical_data",
+      "description": "PhrProfile instantiation passing invalid keyword argument 'version_no=5', resulting in startup/test warning log."
+    }
+  ],
+  "inventory_metrics": {
+    "total_base_model_schemas_in_schemas_py": 137,
+    "total_classes_in_schemas_py": 143,
+    "total_openapi_registered_paths": 793,
+    "distinct_single_v1_paths": 372,
+    "double_mounted_v1_paths": 372,
+    "distinct_v2_paths": 46,
+    "root_system_paths": 3,
+    "route_inventory_classified_entries": 485,
+    "route_classification_breakdown": {
+      "role": 396,
+      "public": 25,
+      "authenticated": 64
+    },
+    "consumer_terminology_keys_count": 19,
+    "consumer_terminology_locales": ["vi", "en"]
+  },
+  "drift_findings": [
+    {
+      "id": "DRIFT-A01-01",
+      "severity": "HIGH",
+      "category": "Route Allowlist Omission",
+      "description": "POST /api/v1/auth/callback is implemented in auth.py and CSRF-exempted in main.py, but omitted from INTENTIONAL_PUBLIC_ROUTES in route_inventory.py, causing test_every_unauthenticated_route_has_an_explicit_public_reason to fail.",
+      "remediation_phase": "PH01/PH02"
+    },
+    {
+      "id": "DRIFT-A01-02",
+      "severity": "MEDIUM",
+      "category": "OpenAPI Operation ID Collision",
+      "description": "FastAPI warns on duplicate Operation IDs due to clinical_workbench being mounted at both /clinical-workbench and /clinical/workbench, and api_router being double-mounted with prefix='/api/v1' in main.py.",
+      "remediation_phase": "PH01/PH02"
+    },
+    {
+      "id": "DRIFT-A01-03",
+      "severity": "MEDIUM",
+      "category": "ORM Keyword Mismatch",
+      "description": "PhrProfile in db/models.py lacks 'version_no', but core/seed_admin_data.py passes version_no=5 during admin seed, triggering runtime warning 'Failed to seed admin clinical data'.",
+      "remediation_phase": "PH01/PH02"
+    },
+    {
+      "id": "DRIFT-A01-04",
+      "severity": "LOW",
+      "category": "Contract Dual-Source",
+      "description": "Design tokens exist in both contracts/design-tokens/tokens.json (v2026-08-19.v1) and packages/design-tokens/clara.tokens.json. Web and mobile code generators utilize packages/design-tokens/.",
+      "remediation_phase": "PH01"
+    }
+  ]
+}

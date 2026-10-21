@@ -1,0 +1,138 @@
+{
+  "agent_id": "A09",
+  "phase_id": "PH00",
+  "role": "Docs + research evidence",
+  "task": "R4 E01-E22 evidence provenance audit; verify research manifests, benchmark results, SHA binding, seed reproducibility, immutable audit logs.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH00_A09",
+  "branch": "phase/ph00-a09",
+  "base_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "status": "COMPLETED",
+  "verified_source_anchors": [
+    "research/glhs_journal/q3_r3/protocols/MASTER_STATISTICAL_FREEZE.json:6",
+    "research/glhs_journal/q3_r3/protocols/protocol_registry.json:1",
+    "research/glhs_journal/q3_r3/chronology_validator.py:36",
+    "research/glhs_journal/q3_r3/evidence/claim_to_evidence.csv:1",
+    "research/glhs_journal/q3_r3/release/r3_release_manifest.json:5",
+    "research/claim_ledger.csv:1",
+    "research/glhs_journal/revision_claim_ledger.csv:1",
+    "research/glhs_journal/r3_claim_to_evidence.csv:1",
+    "research/fmc2026_glhs_preprint_fidelity/audit/CLAIM_LEDGER.csv:1",
+    "research/glhs_journal/q4_r4/protocols/MASTER_STATISTICAL_FREEZE.json:6",
+    "research/glhs_journal/q4_r4/chronology_validator_r4.py:36",
+    "research/glhs_journal/q4_r4/claim_budget_r4.json:11",
+    "research/glhs_journal/q4_r4/provenance_metadata_r4.json:6",
+    "research/glhs_journal/q4_r4/r4_blocker_ledger.json:30",
+    "research/glhs_journal/q4_r4/release/r4_release_manifest.json:6",
+    "research/glhs_journal/q4_r4/release/artifact-sha256.json:1",
+    "reproduce_q4_r4.py:51",
+    "reproduce_q4_r4.py:77",
+    "reproduce_q4_r4.py:119",
+    "reproduce_q3_r3.py:55",
+    "reproduce_q3_r3.py:212",
+    "reproduce_q3_r3.py:248",
+    "reproduce_e01.py:1",
+    "scripts/ci/r4_claim_lint.py:18",
+    "evaluation/glhs_r4_eval/seal_utils.py:62",
+    "evaluation/glhs_r4_eval/seal_utils.py:216",
+    "services/api/src/clara_api/glhs/canonical_json.py:31",
+    "services/api/src/clara_api/glhs/canonical_json.py:272",
+    "services/api/src/clara_api/glhs/admission.py:56",
+    "services/api/src/clara_api/glhs/admission.py:447",
+    "services/api/src/clara_api/glhs/comparator_policies.py:201",
+    "services/api/src/clara_api/glhs/comparator_policies.py:339",
+    "services/api/src/clara_api/glhs/comparator_policies.py:436",
+    "services/api/src/clara_api/glhs/comparator_policies.py:628",
+    "services/api/src/clara_api/glhs/comparator_policies.py:904"
+  ],
+  "path_lane": [
+    "research/",
+    "docs/research/",
+    "docs/implementation/",
+    "docs/interoperability/",
+    "artifacts/PH00/A09/"
+  ],
+  "evidence_provenance_audit": {
+    "total_experiments_audited": 23,
+    "q3_r3_experiments": [
+      "E00_code_sync",
+      "E01_inference_consumption",
+      "E02_component_ablation",
+      "E03_minimal_baseline",
+      "E04_postgres_toctou",
+      "E05_dependency_completeness",
+      "E06_anti_downgrade",
+      "E07_canonicalization",
+      "E08_formal_assurance",
+      "E09_concurrency",
+      "E10_fullstack",
+      "E11_model_replication",
+      "E12_malformed_sensitivity",
+      "E13_external_validation",
+      "E14_reproducibility"
+    ],
+    "q4_r4_experiments": [
+      "E15_dispatch_attestation",
+      "E16_five_way_comparator",
+      "E17_current_state_insufficiency",
+      "E18_global_vs_disclosed_evidence",
+      "E19_transport_serialization_attacks",
+      "E20_provider_receipt_study",
+      "E21_formal_novelty_model",
+      "E22_public_reproducibility_audit"
+    ],
+    "total_sealed_files_verified": 244,
+    "total_merkle_runs_verified": 19852,
+    "cryptographic_checksum_concordance": 1.0,
+    "protocol_sha256_concordance": 1.0,
+    "merkle_hash_chain_concordance": 1.0,
+    "provenance_sha_binding": {
+      "system_under_test_sha": "81f040d3e05905cc384239c5ae130f629e722d3e",
+      "parent_harness_sha": "e7a073749d8d3d434f6d47204238cc6655431f76",
+      "analysis_release_sha": "d4b641ec53fb7ed8dd5c692ec4bff98c8cd777dc",
+      "r4_phase0_baseline_sha": "b549d89d55987d3df99d86f3b22edd822f9d514b",
+      "post_commit_c_freeze_sha": "9006ac5c5379ead2620e47bc2c924ab4f7d45373",
+      "frozen_head_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f"
+    },
+    "chronology_invariants": {
+      "rule": "freeze_timestamp_utc < execution_started_utc <= execution_completed_utc <= validated_at_utc <= sealed_at_utc",
+      "q3_r3_freeze_utc": "2026-09-28T00:00:00Z",
+      "q4_r4_freeze_utc": "2026-10-02T02:05:00Z",
+      "chronological_anomalies_detected": 0,
+      "validator_scripts": [
+        "research/glhs_journal/q3_r3/chronology_validator.py",
+        "research/glhs_journal/q4_r4/chronology_validator_r4.py"
+      ]
+    },
+    "seed_reproducibility": {
+      "master_seeds_locked": true,
+      "q3_r3_seed_range": "20260928_00 to 20260928_14",
+      "q4_r4_seed_range": "20260930_15 to 20260930_22",
+      "canonicalization_profile": "clara.canonical-json.v2-rfc8785",
+      "digest_algorithm": "SHA-256"
+    },
+    "claim_ledgers_and_budgets": {
+      "claim_ledger_master": "research/claim_ledger.csv (40 claims across RIVF, SOICT, CGVN, GLHS, FMC)",
+      "q3_claim_to_evidence": "research/glhs_journal/q3_r3/evidence/claim_to_evidence.csv (15 claims, 0 violations)",
+      "r3_legacy_claim_to_evidence": "research/glhs_journal/r3_claim_to_evidence.csv (15 claims, 0 violations)",
+      "q4_claim_budget": "research/glhs_journal/q4_r4/claim_budget_r4.json (8 forbidden categories, 0 violations)",
+      "preprint_fidelity_ledger": "research/fmc2026_glhs_preprint_fidelity/audit/CLAIM_LEDGER.csv (12 claims: P-01..P-08, R4-15, R4-16, R4-18, R4-20)",
+      "r4_blocker_ledger": "research/glhs_journal/q4_r4/r4_blocker_ledger.json (9 blockers: BLK-R4-01..BLK-R4-09, 9 resolved, 0 open)"
+    }
+  },
+  "deliverables": [
+    "artifacts/PH00/A09/change_manifest.json",
+    "artifacts/PH00/A09/test_report.md",
+    "artifacts/PH00/A09/risk_register.md"
+  ],
+  "interface_assumptions": [
+    "All research evidence bundles E00 through E22 adhere to the leaf sealing specification: protocol.json, protocol.sha256, freeze.json, environment.json, code_manifest.json, backend_attestation.json, raw/runs.jsonl, derived/summary.json, derived/summary.md, validation.json, checksums.sha256, seal.json.",
+    "Reproduction suites must operate strictly offline fail-closed without network sockets or DNS resolution.",
+    "Merkle hash chains in raw/runs.jsonl use RFC 8785 JSON Canonicalization Scheme (JCS) and SHA-256 digests.",
+    "Dual and triple-SHA bindings guarantee that SUT kernel code, test harnesses, analysis scripts, and baseline commits cannot be retroactively manipulated.",
+    "C3 (SignedExactDisclosureTokenValidator) matches C4 in decision safety across tested adversarial schedules; per the Novelty Outcome Rule, C4 novelty is grounded in lifecycle state-machine governance, two-digest transport attestation, and bit-exact forensic reconstructability (score 100 vs 75)."
+  ],
+  "rollback_steps": [
+    "Discard untracked deliverables in artifacts/PH00/A09/ via `git clean -fd artifacts/PH00/A09/`.",
+    "Reset branch pointer via `git reset --hard 8a48afab1dafa2f8ccb4ac9f320505452d18b30f`."
+  ]
+}

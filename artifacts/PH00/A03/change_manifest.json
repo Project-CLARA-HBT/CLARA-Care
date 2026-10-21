@@ -1,0 +1,129 @@
+{
+  "schema_version": "clara-phase-change-manifest.v1",
+  "phase_id": "PH00",
+  "agent_id": "A03",
+  "status": "COMPLETE",
+  "base_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "commit_sha": null,
+  "changed_paths": [
+    "artifacts/PH00/A03/change_manifest.json",
+    "artifacts/PH00/A03/test_report.md",
+    "artifacts/PH00/A03/risk_register.md"
+  ],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/core/route_inventory.py:270 (classify_route)",
+    "services/api/src/clara_api/core/route_inventory.py:315 (build_route_inventory)",
+    "services/api/src/clara_api/core/route_inventory.py:106 (INTENTIONAL_PUBLIC_ROUTES)",
+    "services/api/src/clara_api/core/rbac.py:138 (require_roles)",
+    "services/api/src/clara_api/core/rbac.py:92 (has_valid_explicit_bearer_token)",
+    "services/api/src/clara_api/main.py:315 (enforce_csrf_for_cookie_session)",
+    "services/api/src/clara_api/core/consent.py:58 (ensure_medical_disclaimer_consent)",
+    "services/api/src/clara_api/core/care_navigation/detector.py:39 (EmergencyRedFlagDetector)",
+    "services/api/src/clara_api/glhs/commit_kernel.py:343 (execute_atomic_glhs_commit)",
+    "services/api/src/clara_api/glhs/lock_hierarchy.py:868 (acquire_canonical_glhs_locks)",
+    "services/api/src/clara_api/glhs/commitment_thss.py:262 (compile_commitment_thss)",
+    "services/api/src/clara_api/glhs/gateway.py:2033 (compile_thss)",
+    "services/api/src/clara_api/glhs/attestation_receipts.py:271 (verify_provider_receipt)",
+    "services/api/src/clara_api/glhs/canonical_json.py:250 (canonicalize_json)",
+    "services/api/src/clara_api/lifemap/profile_scope.py:75 (resolve_profile_scope)",
+    "services/api/src/clara_api/phr/migration_guard.py:38 (assert_phr_profiles_migration_managed)",
+    "services/api/src/clara_api/compliance/api.py:34 (router /api/v1/compliance)"
+  ],
+  "invariants_tested": [
+    "RBAC: require_roles gates routes; admin has implicit access, others get 403",
+    "CSRF: Enforced on cookie-authenticated mutations; Bearer exemption requires valid, non-revoked credential",
+    "Consent Gate: Versioned medical consent precedes medical content on End_User surfaces",
+    "Emergency Fast-Path: Acute-symptom queries return escalation immediately, skipping diagnostic reasoning",
+    "GLHS Linearizable OCC: Multi-phase commit kernel ensures deterministic ordering and state non-repudiation",
+    "No-PII Telemetry: System metrics, flow events, and error logs exclude PII/PHI"
+  ],
+  "test_results": [
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_glhs_canonical_json.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-1-canonical-json--deterministic-hashing-test_glhs_canonical_jsonpy"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_glhs_reason_codes.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-2-glhs-reason-codes--rejection-semantics-test_glhs_reason_codespy"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_compliance_consent_property.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-3-compliance-consent-property-tests-test_compliance_consent_propertypy"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_compliance_rbac_flags.py services/api/tests/test_compliance_dsar_csrf.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-4-compliance-rbac-flags--dsar-csrf-test_compliance_rbac_flagspy-test_compliance_dsar_csrfpy"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_auth_and_rbac.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-5-core-auth--rbac-security-boundaries-test_auth_and_rbacpy"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_phr_migration_guard.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-6-phr-schema-migration-guard-test_phr_migration_guardpy"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_lifemap_v2_safety_contracts.py services/api/tests/test_lifemap_client_contract.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-7-lifemap-v2-safety-contracts--client-contract-test_lifemap_v2_safety_contractspy-test_lifemap_client_contractpy"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_glhs_attestation_receipts.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-8-non-repudiation-attestation-receipts-test_glhs_attestation_receiptspy"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_glhs_commit_kernel.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-9-atomic-glhs-commit-kernel-test_glhs_commit_kernelpy"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_glhs_dynamic_ww_locking.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-10-dynamic-write-write-partition-locking-test_glhs_dynamic_ww_lockingpy"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_route_inventory_public_boundaries.py",
+      "status": "FAIL_BASELINE_DRIFT",
+      "exit_code": 1,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-11-route-inventory-public-boundaries-test_route_inventory_public_boundariespy"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_glhs_lock_hierarchy.py -k test_acquire_canonical_glhs_locks_strict_total_order",
+      "status": "FAIL_BASELINE_DRIFT",
+      "exit_code": 1,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-12-glhs-lock-hierarchy-strict-total-order-test_glhs_lock_hierarchypy"
+    },
+    {
+      "command": "CLARA_TEST_DATABASE_URL=\"sqlite+pysqlite:////dev/shm/test.db\" python3 -m pytest services/api/tests/test_glhs_gateway.py",
+      "status": "FAIL_BASELINE_DRIFT",
+      "exit_code": 1,
+      "log_path": "artifacts/PH00/A03/test_report.md#test-suite-13-glhs-gateway-core-test_glhs_gatewaypy"
+    }
+  ],
+  "evidence_artifact_hashes": {
+    "artifacts/PH00/A03/test_report.md": "dc8a248d1c034e311462849b6f014b1565cff3c7c6c6c8d9cc55d800f204f681",
+    "artifacts/PH00/A03/risk_register.md": "8f4170e4d5b507d5e1a14396d9a54052888c5ae78dcf6993a4edfbde3269e723"
+  },
+  "feature_flag": "N/A - Non-destructive audit and route inventory baseline",
+  "rollback": "Baseline audit phase. No code modified. Rollback: git reset --hard 8a48afab1dafa2f8ccb4ac9f320505452d18b30f && rm -rf artifacts/PH00/A03",
+  "blockers": [],
+  "privacy_review": "VERIFIED_NO_PII",
+  "safety_review": "VERIFIED_SAFETY_INVARIANTS_LOCKED"
+}

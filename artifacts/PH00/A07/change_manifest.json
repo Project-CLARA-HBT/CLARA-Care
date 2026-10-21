@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "manifest_version": "1.0.0",
+  "phase_id": "PH00",
+  "agent_id": "A07",
+  "role": "Tests + CI",
+  "task": "existing tests and fixture inventory",
+  "path_lane": "services/api/tests/;services/ml/tests/;apps/web/e2e/;.github/workflows/;artifacts/PH00/A07/",
+  "frozen_head_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "worktree_path": "/dev/shm/clara_worktrees/PH00_A07",
+  "branch": "phase/ph00-a07",
+  "status": "COMPLETE",
+  "timestamp": "2026-10-21T17:35:00Z",
+  "files_changed": [
+    "artifacts/PH00/A07/change_manifest.json",
+    "artifacts/PH00/A07/test_report.md",
+    "artifacts/PH00/A07/risk_register.md"
+  ],
+  "verified_source_anchors": [
+    "services/api/pyproject.toml:60-63",
+    "services/api/tests/conftest.py:18-24",
+    "services/api/tests/conftest.py:56-78",
+    "services/api/tests/conftest.py:80-87",
+    "services/api/tests/conftest.py:89-97",
+    "services/api/tests/admin_observability/conftest.py:1-45",
+    "services/api/tests/compliance/conftest.py:1-45",
+    "services/api/tests/council_upgrade/conftest.py:1-45",
+    "services/ml/pyproject.toml:41-45",
+    "services/ml/tests/conftest.py:3-10",
+    "services/ml/tests/safety/fixtures.py:41-50",
+    "services/ml/tests/safety/fixtures.py:57-79",
+    "apps/web/vitest.config.ts:18-33",
+    "apps/web/playwright.config.ts:3-14",
+    "apps/web/playwright.config.ts:36-55",
+    "apps/web/package.json:20-25",
+    "apps/mobile/pubspec.yaml:19-23",
+    "apps/mobile/test/fakes/fakes.dart:1-15",
+    "Makefile:135-148",
+    ".github/workflows/ci.yml:365-414",
+    ".github/workflows/ci.yml:458-502",
+    ".github/workflows/ci.yml:542-573",
+    ".github/workflows/ci.yml:574-625",
+    ".github/workflows/ci.yml:907-1040",
+    ".github/workflows/mobile-apk.yml:22-120",
+    ".github/workflows/glhs-r4-novelty-gate.yml:87-123",
+    ".github/workflows/glhs-r3-reproducibility-gate.yml:90-115",
+    ".github/workflows/clara-eval-vn.yml:27-70"
+  ],
+  "interface_assumptions": {
+    "api_pytest": {
+      "framework": "pytest-9.1.1",
+      "async_mode": "auto via pytest-asyncio",
+      "db_fixture": "isolated SQLite in temporary directory (CLARA_TEST_DATABASE_URL or tempfile clara-test.db)",
+      "auth_bootstrap": "session autouse bootstrap admin (admin@example.com)",
+      "rate_limiter_reset": "per-test autouse _clear_process_rate_limit_buckets"
+    },
+    "ml_pytest": {
+      "framework": "pytest-9.1.1",
+      "api_keys": "hermetic blanks defaulted in conftest.py (DEEPSEEK_API_KEY, ROUTER_API_KEY, OPENAI_API_KEY, etc.)",
+      "safety_fixtures": "deterministic roles, consent states, emergency keywords, DDI rules in safety/fixtures.py"
+    },
+    "web_vitest": {
+      "framework": "vitest-2.1.8",
+      "environment": "jsdom",
+      "setup": "apps/web/vitest.setup.ts",
+      "alias": "@/* to apps/web"
+    },
+    "web_e2e": {
+      "framework": "@playwright/test-1.62.0",
+      "webserver_mode": "production standalone build (npm run build && node .next/standalone/server.js)",
+      "projects": ["desktop-chromium", "laptop-chromium", "tablet-chromium", "mobile-chromium"],
+      "auth_mode": "AUTH_BYPASS=true and NEXT_PUBLIC_AUTH_BYPASS=true"
+    },
+    "mobile_flutter": {
+      "framework": "flutter_test (Dart SDK >=3.3.0 <4.0.0)",
+      "fakes_layer": "apps/mobile/test/fakes/ (fake_api_client, fake_secure_storage, fake_session_store, fake_connectivity_service, recording_analytics_transport)",
+      "ci_status": "NOT executed in .github/workflows/ (gap identified in mobile-apk.yml)"
+    },
+    "ci_coordination": {
+      "consolidated_gate": "required-ci-gates in .github/workflows/ci.yml",
+      "pr_mode": "advisory core checks unless STRICT_PR_HARDENING=true",
+      "main_mode": "blocking production gates"
+    }
+  },
+  "inventory_metrics": {
+    "api_test_files": 245,
+    "api_collected_tests": 1894,
+    "ml_test_files": 161,
+    "ml_collected_tests": 1568,
+    "root_test_files": 4,
+    "root_collected_tests": 36,
+    "evaluation_test_files": 173,
+    "web_vitest_files": 304,
+    "web_playwright_specs": 6,
+    "mobile_flutter_test_files": 94,
+    "github_actions_workflows": 10
+  },
+  "test_execution_results": {
+    "services_api_pytest_collect": {
+      "command": "DATABASE_URL=sqlite+pysqlite:////tmp/clara_api_ci.db AUTH_AUTO_PROVISION_USERS=true AUTH_BOOTSTRAP_ADMIN_ENABLED=true pytest --collect-only -q",
+      "exit_code": 0,
+      "items_collected": 1894
+    },
+    "services_ml_pytest_collect": {
+      "command": "pytest --collect-only -q",
+      "exit_code": 0,
+      "items_collected": 1568
+    },
+    "tests_root_pytest_collect": {
+      "command": "pytest --collect-only tests/test_dependency_completeness.py tests/test_q3_r3_reproducibility.py tests/test_q2_r2_reproducibility.py tests/test_fullstack_performance.py",
+      "exit_code": 0,
+      "items_collected": 36
+    },
+    "web_vitest_list": {
+      "command": "npx vitest list --filesOnly",
+      "exit_code": 1,
+      "reason": "NOT_RUN_ENV_BLOCKER: apps/web/node_modules not installed in clean checkout; requires npm ci (assigned to PH01)"
+    },
+    "mobile_flutter_test": {
+      "command": "flutter test",
+      "exit_code": 127,
+      "reason": "NOT_RUN_ENV_BLOCKER: flutter SDK not in system PATH on host; requires Flutter toolchain bootstrap (assigned to PH01)"
+    }
+  },
+  "blockers": [],
+  "rollback_steps": [
+    "No production runtime code modified (inventory deliverables only).",
+    "To rollback artifact deliverables: git rm -rf artifacts/PH00/A07 && git commit -m 'Revert PH00 A07 test inventory deliverables'"
+  ]
+}

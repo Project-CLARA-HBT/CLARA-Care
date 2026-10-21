@@ -1,0 +1,121 @@
+{
+  "schema_version": "clara-phase-change-manifest.v1",
+  "phase_id": "PH00",
+  "agent_id": "A10",
+  "status": "COMPLETED",
+  "base_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "commit_sha": null,
+  "changed_paths": [
+    "artifacts/PH00/A10/change_manifest.json",
+    "artifacts/PH00/A10/test_report.md",
+    "artifacts/PH00/A10/risk_register.md"
+  ],
+  "verified_source_anchors": [
+    "services/api/alembic/versions/20260824_0062_social_bookmarks_and_threading.py:34",
+    "apps/web/lib/admin-system.ts:463",
+    "apps/web/lib/admin-system.ts:548",
+    "apps/web/app/(consumer)/care/page.tsx:117",
+    "apps/web/app/(consumer)/care/prepare/page.tsx:223",
+    "apps/web/app/(consumer)/care/visits/page.tsx:278",
+    "services/api/src/clara_api/api/router.py:65",
+    "services/api/src/clara_api/core/bootstrap_admin.py:84",
+    "services/api/src/clara_api/core/seed_admin_data.py:28",
+    "services/api/src/clara_api/glhs/gateway.py:150",
+    "services/ml/src/clara_ml/nlp/bge_adapter.py:37",
+    "services/ml/src/clara_ml/agents/council_intake.py:496",
+    "apps/mobile/lib/experience/redesign/scribe_surface_v3.dart:288",
+    "docs/security/accepted-findings.md:88",
+    "docs/research/glhs_claim_ledger.yaml:10",
+    "scripts/docs/check-docs-links.sh:106",
+    "apps/web/scripts/check-route-layout-registry.mjs:133"
+  ],
+  "invariants_tested": [
+    "RBAC authorization enforcement (doctor/admin/consumer)",
+    "Alembic migration downgrade completeness across all 64 revisions",
+    "Bytecode compilation integrity across API and ML packages",
+    "R4 claim lint and forbidden phrase sweep",
+    "Consumer terminology contract conformance",
+    "Route capability matrix matching across 123 Next.js pages",
+    "Bundle budget limit constraints"
+  ],
+  "test_results": [
+    {
+      "command": "python3 -m compileall -q services/api/src services/ml/src",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": null
+    },
+    {
+      "command": "python3 scripts/ci/r4_claim_lint.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": null
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": null
+    },
+    {
+      "command": "python3 -m pytest -q services/api/tests/test_auth_and_rbac.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": null
+    },
+    {
+      "command": "python3 -m pytest -q services/api/tests/test_analytics_rbac.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": null
+    },
+    {
+      "command": "python3 -m pytest -q services/ml/tests/test_router.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": null
+    },
+    {
+      "command": "npm run consumer-terminology:check",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": null
+    },
+    {
+      "command": "npm run route-matrix:check",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": null
+    },
+    {
+      "command": "npm run bundle:check",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_path": null
+    },
+    {
+      "command": "make docs-check",
+      "status": "FAIL",
+      "exit_code": 1,
+      "log_path": null
+    },
+    {
+      "command": "npm run route-layout:check",
+      "status": "FAIL",
+      "exit_code": 1,
+      "log_path": null
+    }
+  ],
+  "evidence_artifact_hashes": {},
+  "feature_flag": null,
+  "rollback": "Read-only adversarial audit deliverables located in artifacts/PH00/A10/; no production runtime modifications; git reset --hard HEAD removes audit artifacts if rejected.",
+  "blockers": [
+    "Alembic migration 0062 fails on SQLite due to unnamed foreign key in batch_alter_table (DEF-001)",
+    "make docs-check fails due to machine-path match in TLC log and false regex hits on markdown routes (DEF-008)",
+    "apps/web npm run route-layout:check fails under Node ESM due to TypeScript import without loader (DEF-009)",
+    "Accepted security finding GHSA-wj6h-64fc-37mp expired on 2026-09-24 (DEF-006)",
+    "GLHS Research Claims C-001 through C-010 blocked or withdrawn in glhs_claim_ledger.yaml (DEF-007)"
+  ],
+  "privacy_review": "PASSED (Zero PII/PHI in audit deliverables)",
+  "safety_review": "PASSED (No safety bypasses; identified critical false-healthy risks in DEF-002, DEF-003, DEF-004)"
+}

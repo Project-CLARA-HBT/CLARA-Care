@@ -1,0 +1,287 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "manifest_version": "1.0.0",
+  "agent_id": "A05",
+  "phase_id": "PH00",
+  "role": "Web UX",
+  "worktree_path": "/dev/shm/clara_worktrees/PH00_A05",
+  "branch": "phase/ph00-a05",
+  "base_sha": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "head_sha_verified": "8a48afab1dafa2f8ccb4ac9f320505452d18b30f",
+  "task": "ML model/provider inventory from Web client perspective, web routes inventory, Next.js page structure, admin routes in web app, mock data usage vs real API endpoints.",
+  "path_lane": [
+    "apps/web/app/",
+    "apps/web/components/",
+    "apps/web/lib/",
+    "artifacts/PH00/A05/"
+  ],
+  "deliverables": [
+    "artifacts/PH00/A05/change_manifest.json",
+    "artifacts/PH00/A05/test_report.md",
+    "artifacts/PH00/A05/risk_register.md"
+  ],
+  "ml_model_provider_inventory": {
+    "providers": [
+      {
+        "provider": "DeepSeek / YEScale",
+        "description": "Primary high-reasoning LLM provider accessed via internal gateway and external secure endpoints with Zero Data Retention (ZDR)",
+        "models": [
+          {
+            "model_id": "deepseek-v4-pro",
+            "role": "Deep clinical reasoning, expert Council multi-agent deliberations, complex medical synthesis",
+            "source_anchors": [
+              "apps/web/lib/council.ts:602",
+              "apps/web/next.config.mjs:55",
+              "apps/web/app/legal/privacy/page.tsx:46"
+            ]
+          },
+          {
+            "model_id": "deepseek-v4-flash",
+            "role": "Interactive conversational chat, quick clinical triage, low-latency summarization",
+            "source_anchors": [
+              "apps/web/app/legal/privacy/page.tsx:46"
+            ]
+          },
+          {
+            "model_id": "deepseek-r1-distill-qwen-32b",
+            "role": "Local/edge reasoning verification reported in system telemetry and inspector views",
+            "source_anchors": [
+              "apps/web/lib/admin-system.ts:534",
+              "apps/web/components/shell/context-rail-drawer.test.tsx:153"
+            ]
+          },
+          {
+            "model_id": "deepseek_fallback",
+            "role": "Deterministic fallback pathway when multi-stage RAG reasoning or primary inference times out",
+            "source_anchors": [
+              "apps/web/lib/research.ts:1051",
+              "apps/web/lib/system.ts:120",
+              "apps/web/lib/system.ts:201",
+              "apps/web/lib/system.ts:644",
+              "apps/web/components/admin/admin-flow-debugger.tsx:84"
+            ]
+          }
+        ],
+        "compliance_gate": "Decree 13/2023/ND-CP Article 25 Transfer Impact Assessment (TIA) & Zero-CoT ephemeral storage (apps/web/components/legal/consent-status-preview-widget.tsx:85)"
+      },
+      {
+        "provider": "Whisper / Faster-Whisper ASR Sidecar",
+        "description": "Acoustic speech-to-text sidecar service running faster-whisper exposing POST /v1/audio/transcriptions and /scribe/transcribe",
+        "models": [
+          {
+            "model_id": "faster-whisper-large-v3-vi",
+            "role": "Vietnamese multi-dialect speech transcription (Northern, Central, Southern dialects)",
+            "source_anchors": [
+              "apps/web/public/llms-full.txt:319"
+            ]
+          },
+          {
+            "model_id": "faster-whisper-large-v3-turbo",
+            "role": "Low-latency ASR sidecar inference for real-time SOAP scribe note creation",
+            "source_anchors": [
+              "apps/web/lib/admin-system.ts:634",
+              "apps/web/app/admin/system/page.tsx:937",
+              "apps/web/lib/scribe.ts:266"
+            ]
+          }
+        ]
+      },
+      {
+        "provider": "OpenAI / Compatible Embedding Gateway",
+        "description": "High-dimensional text embedding for RAG knowledge corpus indexing",
+        "models": [
+          {
+            "model_id": "text-embedding-3-large",
+            "role": "Dense vector representations for national guidelines, PubMed articles, and clinical documents",
+            "source_anchors": [
+              "apps/web/lib/admin-audit.ts:183"
+            ]
+          }
+        ]
+      },
+      {
+        "provider": "Clinical NLI & Reranker Service",
+        "description": "Cross-Encoder and Entailment models integrated into ML RAG pipeline",
+        "models": [
+          {
+            "model_id": "cross-encoder-reranker",
+            "role": "Reranking multi-source evidence (PubMed, Web, User files, GraphRAG)",
+            "source_anchors": [
+              "apps/web/lib/research.ts:2769",
+              "apps/web/lib/system.ts:198",
+              "apps/web/components/admin/admin-flow-debugger.tsx:80"
+            ]
+          },
+          {
+            "model_id": "clinical-nli-model",
+            "role": "Natural Language Inference for medical claim verification against retrieved evidence",
+            "source_anchors": [
+              "apps/web/lib/system.ts:196",
+              "apps/web/components/admin/admin-flow-debugger.tsx:79"
+            ]
+          }
+        ]
+      },
+      {
+        "provider": "Google Cloud Vision OCR",
+        "description": "Thin adapter over Cloud Vision DOCUMENT_TEXT_DETECTION for medical document & prescription parsing",
+        "models": [
+          {
+            "model_id": "cloud-vision-document-text",
+            "role": "Extracting text and tabular data from prescription photos and laboratory reports",
+            "source_anchors": [
+              "apps/web/lib/phr.ts:443",
+              "apps/web/lib/selfmed.ts:171"
+            ]
+          }
+        ]
+      }
+    ],
+    "client_side_safety_boundaries": {
+      "zero_cot_enforcement": "apps/web/lib/user-facing-text.ts:42-52 strips CoT reasoning, scratchpad tags, thought markers, model confidence, and provider identifiers before rendering",
+      "telemetry_scrubbing": "apps/web/lib/user-facing-text.ts:33-40 strips internal labels (research mode, rag mode, fallback mode, retrieval, policy) from end-user views",
+      "calm_vietnamese_fallbacks": "apps/web/lib/user-facing-text.ts:18, 21-22 replaces upstream error traces with calm Vietnamese copy ('Hệ thống đang bận, vui lòng thử lại.')"
+    }
+  },
+  "web_routes_inventory": {
+    "total_filesystem_routes": 123,
+    "route_capability_matrix_match": true,
+    "nextjs_page_structure": {
+      "root_layout": "apps/web/app/layout.tsx",
+      "route_groups": [
+        {
+          "group": "(consumer)",
+          "layout": "apps/web/app/(consumer)/layout.tsx",
+          "context_value": "consumer",
+          "route_count": 18
+        },
+        {
+          "group": "(professional)",
+          "layout": "apps/web/app/(professional)/layout.tsx",
+          "context_value": "professional",
+          "route_count": 0
+        },
+        {
+          "group": "(public)",
+          "layout": "apps/web/app/(public)/layout.tsx",
+          "context_value": "public",
+          "route_count": 0
+        }
+      ],
+      "middleware": {
+        "file": "apps/web/middleware.ts",
+        "session_cookies": [
+          "clara_access_token",
+          "clara_refresh_token",
+          "clara_client_session"
+        ],
+        "public_paths_count": 23,
+        "legacy_redirects_count": 10
+      }
+    },
+    "route_categories": {
+      "public_marketing_legal": 20,
+      "public_auth": 7,
+      "public_token_share": 3,
+      "consumer_personal": 34,
+      "clinical_professional": 16,
+      "research_professional": 8,
+      "universal_chat": 2,
+      "administrative_command": 19,
+      "professional_dashboard": 3,
+      "compliance_account": 3,
+      "social_onboarding": 8
+    }
+  },
+  "admin_routes_inventory": {
+    "total_admin_routes": 21,
+    "routes": [
+      { "route": "/admin", "file": "apps/web/app/admin/page.tsx", "disposition": "redirect -> /admin/overview" },
+      { "route": "/admin/overview", "file": "apps/web/app/admin/overview/page.tsx", "disposition": "Primary Admin Dashboard", "endpoints": ["/health", "/system/dependencies", "/system/control-tower/config", "/admin/audit"] },
+      { "route": "/admin/analytics", "file": "apps/web/app/admin/analytics/page.tsx", "disposition": "System Telemetry & Platform Analytics", "endpoints": ["/system/metrics", "/system/analytics/product"] },
+      { "route": "/admin/analytics/clinical", "file": "apps/web/app/admin/analytics/clinical/page.tsx", "disposition": "Clinical Analytics & FIDES Verification", "endpoints": ["/system/analytics/clinical"] },
+      { "route": "/admin/answer-flow", "file": "apps/web/app/admin/answer-flow/page.tsx", "disposition": "Inference Pipeline & Flow Flag Configuration", "endpoints": ["/system/control-tower/config"] },
+      { "route": "/admin/audit", "file": "apps/web/app/admin/audit/page.tsx", "disposition": "Security Audit Log Explorer", "endpoints": ["/admin/audit"] },
+      { "route": "/admin/audit-log", "file": "apps/web/app/admin/audit-log/page.tsx", "disposition": "Security Audit Log Alias", "endpoints": ["/admin/audit"] },
+      { "route": "/admin/community-moderation", "file": "apps/web/app/admin/community-moderation/page.tsx", "disposition": "Community Content Moderation Queue", "endpoints": ["/social/moderation/reports", "/social/moderation/reports/{id}/action"] },
+      { "route": "/admin/dsar", "file": "apps/web/app/admin/dsar/page.tsx", "disposition": "Data Subject Access Request (DSAR) Queue", "endpoints": ["/compliance/dsar/admin/queue", "/compliance/dsar/admin/status"] },
+      { "route": "/admin/experiments", "file": "apps/web/app/admin/experiments/page.tsx", "disposition": "Feature Flag Rollout & Experimentation Workbench", "endpoints": ["/admin/experiments", "/admin/experiments/{id}/rollout", "/admin/experiments/{id}/kill"] },
+      { "route": "/admin/feedback", "file": "apps/web/app/admin/feedback/page.tsx", "disposition": "Clinical Feedback Triage Queue & Benchmark Export", "endpoints": ["/admin/feedback", "/admin/feedback/{id}/status", "/admin/feedback/{id}/resolution"] },
+      { "route": "/admin/knowledge-sources", "file": "apps/web/app/admin/knowledge-sources/page.tsx", "disposition": "Knowledge Source Registry & Living Evidence Workbench", "endpoints": ["/admin/rag/sources", "/api/v1/research/knowledge-sources"] },
+      { "route": "/admin/observability", "file": "apps/web/app/admin/observability/page.tsx", "disposition": "Service Health & SLA Observability", "endpoints": ["/health", "/system/metrics", "/system/dependencies"] },
+      { "route": "/admin/rag-eval", "file": "apps/web/app/admin/rag-eval/page.tsx", "disposition": "Golden Benchmark Evaluation Workbench", "endpoints": ["/api/v1/admin/rag/eval/run", "/api/v1/admin/rag/eval/results/{run_id}"] },
+      { "route": "/admin/rag-ingestion", "file": "apps/web/app/admin/rag-ingestion/page.tsx", "disposition": "RAG Corpus Ingestion & ETL Monitor", "endpoints": ["/admin/rag/sources", "/admin/rag/ingestion/run", "/admin/rag/ingestion/status/{job_id}", "/admin/rag/stats"] },
+      { "route": "/admin/rag-sources", "file": "apps/web/app/admin/rag-sources/page.tsx", "disposition": "redirect -> /admin/knowledge-sources" },
+      { "route": "/admin/source-hub", "file": "apps/web/app/admin/source-hub/page.tsx", "disposition": "redirect -> /admin/knowledge-sources" },
+      { "route": "/admin/system", "file": "apps/web/app/admin/system/page.tsx", "disposition": "Multi-Service Architecture & Subsystem Health", "endpoints": ["/health", "/system/metrics", "/system/dependencies", "/system/dashboard"] },
+      { "route": "/admin/users", "file": "apps/web/app/admin/users/page.tsx", "disposition": "User Administration & Role Elevation Registry", "endpoints": ["/admin/users", "/admin/users/{id}/role", "/admin/users/{id}/lock", "/admin/users/{id}/unlock", "/admin/users/{id}/sessions/revoke"] },
+      { "route": "/dashboard/control-tower", "file": "apps/web/app/dashboard/control-tower/page.tsx", "disposition": "Admin Control Tower & RAG Flow Tuning", "endpoints": ["/system/control-tower/config", "/system/metrics"] },
+      { "route": "/dashboard/ecosystem", "file": "apps/web/app/dashboard/ecosystem/page.tsx", "disposition": "Federation Ecosystem Partner & Trust Monitoring", "endpoints": ["/system/ecosystem"] }
+    ]
+  },
+  "mock_data_vs_real_endpoints": {
+    "real_endpoints_connected": 46,
+    "mock_or_simulation_patterns": [
+      {
+        "id": "MOCK-001",
+        "location": "apps/web/lib/admin-audit.ts:361-366",
+        "description": "SEED_ADMIN_AUDIT_LOGS static fallback array served when GET /admin/audit returns 404 or network error",
+        "type": "degraded_fallback"
+      },
+      {
+        "id": "MOCK-002",
+        "location": "apps/web/lib/admin-system.ts:241-295, 467-475",
+        "description": "buildDefaultRouteMetrics and fallback system telemetry (requestCount: 21500, errorCount: 16) when /system/metrics endpoint fails",
+        "type": "telemetry_fallback"
+      },
+      {
+        "id": "MOCK-003",
+        "location": "apps/web/components/medicines/quick-interaction-checker.tsx:114-118, 154-157",
+        "description": "Local deterministic Vietnamese drug interaction matrix (VIETNAMESE_DRUGS_CATALOG) provides instant browser-side check and serves as offline fallback if backend API is unavailable",
+        "type": "hybrid_instant_fallback"
+      },
+      {
+        "id": "MOCK-004",
+        "location": "apps/web/app/medicines/[id]/page.tsx:97-109",
+        "description": "Hardcoded mock medication course object generated if user navigates to an ID not found in current course list",
+        "type": "route_fallback"
+      },
+      {
+        "id": "MOCK-005",
+        "location": "apps/web/app/contact/contact-form.tsx:241-258",
+        "description": "Client-side ticket ID generation simulation (TKT-YYYY-XXXXXX) using setTimeout(..., 600) adhering to Zero-PII pipeline rather than calling a backend CRM endpoint",
+        "type": "simulation"
+      },
+      {
+        "id": "MOCK-006",
+        "location": "apps/web/components/legal/consent-status-preview-widget.tsx:147-148, 162-165",
+        "description": "Fallback simulation generating random SHA-256 audit hashes (SHA256:XXXX) when granular consent API is unreachable or flag is disabled",
+        "type": "simulation"
+      },
+      {
+        "id": "MOCK-007",
+        "location": "apps/web/components/admin/admin-flow-debugger.tsx:200-222",
+        "description": "Pre-configured simulated run history entries (run-1, run-2, run-3) for pipeline node visualization and threshold demonstration",
+        "type": "ui_demonstration"
+      },
+      {
+        "id": "MOCK-008",
+        "location": "apps/web/components/shell/workspace-switcher.tsx:438",
+        "description": "Admin Preview toggle labeled 'UI Mock Only' allowing administrative role to preview consumer/clinician workspace layouts without mutating auth session",
+        "type": "preview_mode"
+      },
+      {
+        "id": "MOCK-009",
+        "location": "apps/web/components/health/allergy-editor-modal.tsx:116-123",
+        "description": "Synthesized server state (serverMock) constructed on ETag precondition failure to drive field diff resolution dialog",
+        "type": "optimistic_concurrency_diff"
+      },
+      {
+        "id": "MOCK-010",
+        "location": "apps/web/lib/careguard-offline.ts:46-56",
+        "description": "Last-known DDI user view cached in localStorage under CAREGUARD_OFFLINE_CACHE_KEY, rendered with 'offline / không phải thời gian thực' warning label",
+        "type": "offline_cache"
+      }
+    ]
+  }
+}
