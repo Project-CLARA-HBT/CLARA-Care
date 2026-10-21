@@ -1,0 +1,72 @@
+{
+  "schema_version": "clara-phase-change-manifest.v1",
+  "phase_id": "PH04",
+  "agent_id": "A10",
+  "role": "Adversarial audit + integration proposals",
+  "task": "tenant onboarding and migration playbook & PH04 quality gate; document multi-tenant organization onboarding runbook in docs/runbooks/tenant-onboarding-and-organization-management.md, audit all 9 domain lanes for cross-tenant isolation, create scripts/ci/ph04_quality_gate.py.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH04_A10",
+  "branch": "phase/ph04-a10",
+  "base_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "status": "COMPLETED",
+  "path_lane": [
+    "docs/reports/",
+    "docs/runbooks/",
+    "scripts/ci/",
+    "artifacts/PH04/A10/"
+  ],
+  "changed_paths": [
+    "docs/runbooks/tenant-onboarding-and-organization-management.md",
+    "docs/reports/ph04-tenant-isolation-and-lane-audit.md",
+    "scripts/ci/ph04_quality_gate.py",
+    "artifacts/PH04/A10/change_manifest.json",
+    "artifacts/PH04/A10/test_report.md",
+    "artifacts/PH04/A10/risk_register.md",
+    "artifacts/PH04/A10/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/db/models.py:2845",
+    "services/api/src/clara_api/db/models.py:2871",
+    "services/api/src/clara_api/glhs/commit_kernel.py:80",
+    "services/api/src/clara_api/glhs/commit_kernel.py:91",
+    "services/api/src/clara_api/glhs/commit_kernel.py:531",
+    "services/api/src/clara_api/lifemap/profile_scope.py:23",
+    "services/api/src/clara_api/lifemap/profile_scope.py:79",
+    "services/api/src/clara_api/core/rbac.py:138",
+    "services/api/src/clara_api/api/v1/endpoints/workspace.py:424",
+    "scripts/ops/check_migration_downgrade.py:1"
+  ],
+  "test_results": [
+    {
+      "command": "python3 scripts/ci/ph04_quality_gate.py",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ci/ph04_quality_gate.py --verify-isolation",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m unittest scripts/ci/ph04_quality_gate.py",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m compileall -q scripts/ci/ph04_quality_gate.py services/api/src",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py --agent-id A10 --phase-id PH04",
+      "status": "PASS",
+      "exit_code": 0
+    }
+  ],
+  "rollback": "Non-destructive documentation and gate script additions; git reset --hard 7f458c915a59a75568e344b670d2f12ce9133a4e cleanly returns worktree to baseline.",
+  "blockers": []
+}
