@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH02",
+  "agent_id": "A09",
+  "role": "Docs + research evidence",
+  "task": "checkpoint/progress dashboard; implement scripts/ops/progress_dashboard.py to parse machine/DAG_TOPOLOGICAL_ORDER.json, machine/PHASE_TASKS.json, and artifacts/ to output a real terminal dashboard of phase completion, agent statuses, defect counts, and DAG execution state.",
+  "status": "COMPLETED",
+  "frozen_head_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "verified_head_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "branch": "phase/ph02-a09",
+  "worktree_path": "/dev/shm/clara_worktrees/PH02_A09",
+  "path_lane": "research/;docs/research/;docs/implementation/;docs/interoperability/;scripts/ops/;artifacts/PH02/A09/",
+  "timestamp": "2026-10-21T20:25:00Z",
+  "files_created": [
+    "scripts/ops/progress_dashboard.py",
+    "scripts/ops/test_progress_dashboard.py",
+    "docs/implementation/PROGRESS_DASHBOARD.md",
+    "artifacts/PH02/A09/change_manifest.json",
+    "artifacts/PH02/A09/test_report.md",
+    "artifacts/PH02/A09/risk_register.md",
+    "artifacts/PH02/A09/rollback.md"
+  ],
+  "files_modified": [],
+  "verified_source_anchors": [
+    {
+      "file": "machine/DAG_TOPOLOGICAL_ORDER.json",
+      "line": 1,
+      "symbol": "order",
+      "description": "Authoritative topological DAG execution order across all 101 roadmap phases (PH00 to PH100)."
+    },
+    {
+      "file": "machine/PHASE_TASKS.json",
+      "line": 4,
+      "symbol": "phases",
+      "description": "Specification ledger containing 101 phase objects, priority ratings, prerequisite dependencies, and 10-agent subtask assignments."
+    },
+    {
+      "file": "machine/PHASE_TASKS.json",
+      "line": 253,
+      "symbol": "PH02",
+      "description": "Phase PH02 definition: Thiết lập tổ chức tác nhân và 10 worktree song song with 10 concurrent agents (A01 to A10)."
+    },
+    {
+      "file": "machine/PHASE_TASKS.json",
+      "line": 344,
+      "symbol": "PH02.A09",
+      "description": "A09 role definition: Docs + research evidence, task: checkpoint/progress dashboard, acceptance artifacts: change_manifest.json, test_report.md, risk_register.md."
+    },
+    {
+      "file": "artifacts/PH00/integration/merge_manifest.json",
+      "line": 170,
+      "symbol": "baseline_defect_ledger",
+      "description": "Discovered baseline defect registry capturing DEFECT-01 through DEFECT-06."
+    },
+    {
+      "file": "artifacts/PH01/integration/merge_manifest.json",
+      "line": 189,
+      "symbol": "remediated_defects",
+      "description": "Remediation log confirming DEFECT-01, DEFECT-02, and SEC-CRIT-01 resolution."
+    },
+    {
+      "file": "templates/AGENT_TASK_PROMPT.md",
+      "line": 1,
+      "symbol": "Subagent Protocol",
+      "description": "Strict contract constraints: path lane bounding, frozen SHA verification, deliverable emission, and test verification."
+    },
+    {
+      "file": "AGENTS.md",
+      "line": 27,
+      "symbol": "Python toolchain requirements",
+      "description": "Specifies Python >=3.11 requirement and uv dependency management."
+    }
+  ],
+  "interface_assumptions": [
+    "DAG_TOPOLOGICAL_ORDER.json and PHASE_TASKS.json are authoritative machine representations of the execution roadmap.",
+    "Dependency entries in PHASE_TASKS.json may be expressed either as integer phase indices (e.g., 0, 1) or phase ID strings ('PH00').",
+    "scripts/ops/progress_dashboard.py operates non-destructively in read-only mode, safe for concurrent background execution.",
+    "The dashboard automatically inspects /dev/shm/clara_worktrees/ to surface live, unmerged subagent progress.",
+    "Zero external Python dependencies are required; execution relies solely on the Python 3.12 standard library."
+  ],
+  "test_commands_and_exit_codes": [
+    {
+      "command": "python3 /dev/shm/clara_worktrees/PH02_A09/scripts/ops/progress_dashboard.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Default rich terminal dashboard execution with ANSI colors and Unicode box-drawing."
+    },
+    {
+      "command": "python3 /dev/shm/clara_worktrees/PH02_A09/scripts/ops/progress_dashboard.py --ascii --no-color",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Plain ASCII / non-color execution suitable for minimal terminals and non-TTY redirection."
+    },
+    {
+      "command": "python3 /dev/shm/clara_worktrees/PH02_A09/scripts/ops/progress_dashboard.py --phase PH01",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Phase drill-down inspecting historical phase PH01 completion and agent statuses."
+    },
+    {
+      "command": "python3 /dev/shm/clara_worktrees/PH02_A09/scripts/ops/progress_dashboard.py --format json",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Machine-readable JSON serialization covering all 101 phases, defects, and DAG state."
+    },
+    {
+      "command": "python3 /dev/shm/clara_worktrees/PH02_A09/scripts/ops/progress_dashboard.py --format markdown",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Markdown summary report generation for PRs and documentation."
+    },
+    {
+      "command": "python3 /dev/shm/clara_worktrees/PH02_A09/scripts/ops/progress_dashboard.py --strict-exit",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Strict CI quality gate verification ensuring current phase has no active blockers."
+    },
+    {
+      "command": "pytest -v scripts/ops/test_progress_dashboard.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Full test suite: 20 passed test cases in 2.66s."
+    }
+  ],
+  "blockers": "None",
+  "rollback_steps": [
+    "git rm -f scripts/ops/progress_dashboard.py scripts/ops/test_progress_dashboard.py docs/implementation/PROGRESS_DASHBOARD.md artifacts/PH02/A09/change_manifest.json artifacts/PH02/A09/test_report.md artifacts/PH02/A09/risk_register.md artifacts/PH02/A09/rollback.md",
+    "git reset --hard 879dc5dcfcaae91b3626e28062043d934294478b"
+  ]
+}
