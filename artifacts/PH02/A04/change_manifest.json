@@ -1,0 +1,98 @@
+{
+  "agent_id": "A04",
+  "phase_id": "PH02",
+  "role": "ML + retrieval",
+  "task": "resource quotas and semaphore 10; implement scripts/ops/agent_concurrency_limiter.py (or python module) to manage asyncio / process semaphore = 10, memory monitoring, RAM disk headroom checks, preventing OOM when 10 subagents run in parallel.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH02_A04",
+  "branch": "phase/ph02-a04",
+  "base_sha": "879dc5dcfcaae91b3626e28062043d934294478b",
+  "status": "COMPLETED",
+  "verified_source_anchors": [
+    "AGENTS.md:7-14",
+    "CLARA_CARE_MODULAR_MASTER_MOBILE_V2_NO_MOCK/phases/PH02_thi-t-l-p-t-ch-c-t-c-nh-n-v-10-worktree-song-son.md:29",
+    "services/ml/src/clara_ml/llm/deepseek_client.py:53",
+    "services/ml/src/clara_ml/config.py:215",
+    "services/ml/src/clara_ml/ingestion/live_gap_fill.py:54",
+    "scripts/ops/cleanup_disk.sh:5",
+    "scripts/ops/cleanup_disk.sh:103"
+  ],
+  "path_lane": [
+    "services/ml/src/clara_ml/",
+    "evaluation/",
+    "services/ocr/",
+    "services/asr/",
+    "scripts/ops/",
+    "artifacts/PH02/A04/"
+  ],
+  "files_changed": [
+    "scripts/ops/agent_concurrency_limiter.py",
+    "services/ml/src/clara_ml/agent_concurrency.py",
+    "evaluation/tests/test_agent_concurrency_limiter.py",
+    "artifacts/PH02/A04/change_manifest.json",
+    "artifacts/PH02/A04/test_report.md",
+    "artifacts/PH02/A04/risk_register.md",
+    "artifacts/PH02/A04/rollback.md"
+  ],
+  "quota_specifications": {
+    "default_max_concurrency": 10,
+    "concurrency_mechanism": "POSIX fcntl.flock advisory slot locks with automatic kernel cleanup on exit",
+    "min_ram_available_mb": 1024.0,
+    "max_ram_used_pct": 90.0,
+    "min_ramdisk_free_mb": 512.0,
+    "max_ramdisk_used_pct": 90.0,
+    "max_agent_rss_mb": 4096.0,
+    "slot_directory": "/dev/shm/.clara_agent_concurrency",
+    "slot_dir_fallback": "/tmp/.clara_agent_concurrency_<uid>",
+    "supported_execution_models": [
+      "ProcessSlotLimiter (cross-process CLI & subprocess isolation)",
+      "AsyncAgentLimiter (asyncio.Semaphore with pre-flight headroom)",
+      "ThreadAgentLimiter (threading.BoundedSemaphore with pre-flight headroom)"
+    ]
+  },
+  "interface_assumptions": [
+    "Up to 10 subagents (A01..A10) run concurrently in independent Git worktrees mounted on RAM disk /dev/shm.",
+    "File locks on /dev/shm/.clara_agent_concurrency/slot_*.lock safely isolate slots across concurrent processes and threads.",
+    "Process crashes or kills automatically release kernel-level flock descriptors, preventing orphan locks or deadlock.",
+    "Host memory and RAM disk headroom are verified prior to slot acquisition and during command execution.",
+    "Zero PII/PHI is logged or stored in slot metadata or telemetry outputs."
+  ],
+  "test_commands_and_exit_codes": [
+    {
+      "command": "python3 /dev/shm/clara_worktrees/PH02_A04/scripts/ops/agent_concurrency_limiter.py check",
+      "exit_code": 0,
+      "purpose": "Verify host memory and RAM disk headroom inspection"
+    },
+    {
+      "command": "python3 /dev/shm/clara_worktrees/PH02_A04/scripts/ops/agent_concurrency_limiter.py simulate --agents 10 --concurrency 10 --duration 0.2",
+      "exit_code": 0,
+      "purpose": "Simulate 10 concurrent agents acquiring slots in parallel"
+    },
+    {
+      "command": "python3 /dev/shm/clara_worktrees/PH02_A04/scripts/ops/agent_concurrency_limiter.py simulate --agents 20 --concurrency 5 --duration 0.1",
+      "exit_code": 0,
+      "purpose": "Verify strict queueing and throttling when agents exceed concurrency ceiling"
+    },
+    {
+      "command": "PYTHONPATH=\"services/ml/src:.\" python3 -m pytest evaluation/tests/test_agent_concurrency_limiter.py -v",
+      "exit_code": 0,
+      "purpose": "Full unit test suite (12 passed in 3.7s)"
+    },
+    {
+      "command": "uvx ruff check scripts/ops/agent_concurrency_limiter.py services/ml/src/clara_ml/agent_concurrency.py evaluation/tests/test_agent_concurrency_limiter.py",
+      "exit_code": 0,
+      "purpose": "Static linting across all modified Python modules"
+    },
+    {
+      "command": "uvx mypy scripts/ops/agent_concurrency_limiter.py services/ml/src/clara_ml/agent_concurrency.py evaluation/tests/test_agent_concurrency_limiter.py --ignore-missing-imports",
+      "exit_code": 0,
+      "purpose": "Type checking across all modified Python modules"
+    }
+  ],
+  "blockers": [],
+  "rollback_steps": [
+    "Remove slot locks and run directory: rm -rf /dev/shm/.clara_agent_concurrency /tmp/.clara_agent_concurrency*",
+    "Remove created files: git rm -f scripts/ops/agent_concurrency_limiter.py services/ml/src/clara_ml/agent_concurrency.py evaluation/tests/test_agent_concurrency_limiter.py",
+    "Remove deliverables: git rm -rf artifacts/PH02/A04/",
+    "Reset branch to pinned base SHA: git reset --hard 879dc5dcfcaae91b3626e28062043d934294478b"
+  ]
+}
