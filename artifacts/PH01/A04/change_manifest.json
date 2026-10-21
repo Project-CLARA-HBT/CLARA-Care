@@ -1,0 +1,143 @@
+{
+  "agent_id": "A04",
+  "phase_id": "PH01",
+  "role": "ML + retrieval",
+  "task": "Node 20 npm ci parity; audit package-lock.json and .nvmrc in apps/web, check ML services Python dependencies (faster-whisper, sentence-transformers, pgvector), OCR/ASR requirements.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH01_A04",
+  "branch": "phase/ph01-a04",
+  "base_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "status": "COMPLETED",
+  "verified_source_anchors": [
+    ".nvmrc:1",
+    "apps/web/package.json:6",
+    "apps/web/package.json:27",
+    "apps/web/package-lock.json:4",
+    "services/ml/pyproject.toml:10",
+    "services/ml/pyproject.toml:27",
+    "services/ml/uv.lock:1026",
+    "services/ml/src/clara_ml/routing.py:17",
+    "services/ml/src/clara_ml/model_router/router.py:20",
+    "services/ml/src/clara_ml/rag/embedder.py:78",
+    "services/ml/src/clara_ml/rag/retrieval/reranker.py:35",
+    "services/ml/src/clara_ml/rag/store/schema.py:357",
+    "services/ml/src/clara_ml/rag/store/migrations.py:130",
+    "services/ml/src/clara_ml/rag/store/health.py:150",
+    "services/ocr/Dockerfile:4",
+    "services/ocr/server.py:44",
+    "services/ocr/server.py:248",
+    "services/asr/pyproject.toml:5",
+    "services/asr/pyproject.toml:10",
+    "services/asr/requirements.lock:8",
+    "services/asr/server.py:32",
+    "services/asr/server.py:44"
+  ],
+  "path_lane": [
+    "services/ml/src/clara_ml/",
+    "evaluation/",
+    "services/ocr/",
+    "services/asr/",
+    "artifacts/PH01/A04/"
+  ],
+  "audit_findings": {
+    "node20_and_web_parity": {
+      "root_nvmrc": {
+        "file": ".nvmrc",
+        "pinned_version": "20",
+        "runtime_version": "v20.20.2",
+        "match": true
+      },
+      "web_package_json": {
+        "file": "apps/web/package.json",
+        "engines": {
+          "node": ">=20 <21",
+          "npm": ">=10"
+        },
+        "node_satisfied": true,
+        "npm_version": "10.8.2",
+        "npm_satisfied": true
+      },
+      "web_package_lock": {
+        "file": "apps/web/package-lock.json",
+        "lockfile_version": 3,
+        "dry_run_command": "npm ci --dry-run",
+        "dry_run_exit_code": 0,
+        "total_packages_resolved": 826,
+        "lockfile_integrity": "VALID"
+      }
+    },
+    "ml_python_dependencies": {
+      "pgvector": {
+        "pyproject_spec": "pgvector>=0.2.5",
+        "uv_lock_version": "0.5.0",
+        "status": "PINNED_AND_VERIFIED",
+        "usage": [
+          "clara_ml.rag.store.schema:357 (Vector column in kb_chunk_embeddings)",
+          "clara_ml.rag.store.migrations:130 (CREATE EXTENSION IF NOT EXISTS vector)",
+          "clara_ml.rag.store.health:150 (startup pgvector availability probe with in-memory degradation)"
+        ]
+      },
+      "sentence_transformers": {
+        "status": "VERIFIED_ABSENT_BY_DESIGN",
+        "rationale": "Heavyweight in-process HuggingFace/PyTorch models are intentionally excluded from services/ml to eliminate cold-start lag, excessive RAM/VRAM consumption, and CUDA runtime drift. Embeddings are delegated via HttpEmbeddingClient to external embedding servers (TEI/OpenAI/bge-m3), and reranking is handled via EvidenceReranker (cosine scoring) and LLM task contracts (rag_reranking)."
+      },
+      "faster_whisper": {
+        "status": "DECOUPLED_IN_SIDECAR",
+        "rationale": "faster-whisper is not a direct dependency of services/ml. It is isolated in the services/asr sidecar container to protect the core ML service from native CTranslate2 and PyAV binary dependencies. Scribe calls ASR over HTTP/OpenAI-compatible /v1/audio/transcriptions."
+      }
+    },
+    "auxiliary_services": {
+      "services_ocr": {
+        "service_name": "clara-ocr-multimodal-gemini",
+        "version": "2.0.0",
+        "architecture": "Lightweight Vision bridge via Router Gateway (gemini-3.7-flash-tiered / gemini-3.6-flash-high) with Google Cloud Vision fallback.",
+        "dependencies": [
+          "fastapi",
+          "uvicorn",
+          "httpx",
+          "python-multipart"
+        ],
+        "endpoints": [
+          "GET /health",
+          "POST /ocr",
+          "POST /api/ocr",
+          "POST /api/extract"
+        ],
+        "import_and_route_verification": "PASS"
+      },
+      "services_asr": {
+        "service_name": "clara-asr-whisper",
+        "architecture": "Local Whisper sidecar running faster-whisper with CTranslate2 CPU int8 quantization and PyAV audio decoding.",
+        "dependencies": [
+          "fastapi==0.139.2",
+          "uvicorn==0.51.0",
+          "python-multipart==0.0.32",
+          "faster-whisper==1.2.1"
+        ],
+        "pinned_lockfile": "services/asr/requirements.lock",
+        "python_requires": ">=3.12,<3.13",
+        "endpoints": [
+          "GET /health",
+          "GET /ready",
+          "POST /v1/audio/transcriptions"
+        ],
+        "import_and_route_verification": "PASS"
+      }
+    }
+  },
+  "deliverables": [
+    "artifacts/PH01/A04/change_manifest.json",
+    "artifacts/PH01/A04/test_report.md",
+    "artifacts/PH01/A04/risk_register.md"
+  ],
+  "interface_assumptions": [
+    "apps/web strictly runs and builds against Node 20.x with npm 10.x, verified via package-lock.json v3.",
+    "services/ml maintains a zero-in-process-PyTorch invariant: dense embeddings and heavy neural passes are strictly handled through HTTP endpoints or external microservices.",
+    "PostgreSQL pgvector extension provides production dense vector search, with automatic fallback to InMemoryRetriever if pgvector is absent.",
+    "services/asr runs as an isolated sidecar container on port 8090, serving OpenAI-compatible audio transcription for Scribe consultations.",
+    "services/ocr operates on port 8080 as a thin Gemini Vision proxy, receiving prescription/lab document images and returning structured drug entities."
+  ],
+  "rollback_steps": [
+    "Remove PH01 deliverables: `git rm -rf artifacts/PH01/A04/`",
+    "Reset working tree and branch HEAD to frozen base SHA: `git reset --hard 2aa9016a57b49b53f1a433d076e1028a6ec45f64`"
+  ]
+}
