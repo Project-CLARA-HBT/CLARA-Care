@@ -1,0 +1,648 @@
+{
+  "generated_at": "2026-10-21T12:26:26.457615+00:00",
+  "repo_root": "/dev/shm/clara_worktrees/PH01_A07",
+  "total_components_checked": 1048,
+  "direct_dependencies_count": 85,
+  "unpinned_count": 67,
+  "unpinned_dependencies": [
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "aiosqlite",
+      "declared_constraint": ">=0.22.1",
+      "resolved_version": "0.22.1",
+      "severity": "MEDIUM",
+      "recommendation": "Pin aiosqlite in services/api to exact version '==0.22.1'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "alembic",
+      "declared_constraint": ">=1.13.2",
+      "resolved_version": "1.18.4",
+      "severity": "MEDIUM",
+      "recommendation": "Pin alembic in services/api to exact version '==1.18.4'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "email-validator",
+      "declared_constraint": ">=2.2.0",
+      "resolved_version": "2.3.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin email-validator in services/api to exact version '==2.3.0'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "fastapi",
+      "declared_constraint": ">=0.116.0",
+      "resolved_version": "0.135.2",
+      "severity": "MEDIUM",
+      "recommendation": "Pin fastapi in services/api to exact version '==0.135.2'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "httpx",
+      "declared_constraint": ">=0.27.2",
+      "resolved_version": "0.28.1",
+      "severity": "MEDIUM",
+      "recommendation": "Pin httpx in services/api to exact version '==0.28.1'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "hypothesis",
+      "declared_constraint": ">=6.100.0",
+      "resolved_version": "6.163.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin hypothesis in services/api to exact version '==6.163.0'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "markdown-it-py",
+      "declared_constraint": ">=3.0.0",
+      "resolved_version": "4.0.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin markdown-it-py in services/api to exact version '==4.0.0'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "mypy",
+      "declared_constraint": ">=1.13.0",
+      "resolved_version": "1.20.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin mypy in services/api to exact version '==1.20.0'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "pillow",
+      "declared_constraint": ">=10.4.0",
+      "resolved_version": "12.3.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin pillow in services/api to exact version '==12.3.0'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "psycopg",
+      "declared_constraint": ">=3.2.3",
+      "resolved_version": "3.3.3",
+      "severity": "MEDIUM",
+      "recommendation": "Pin psycopg in services/api to exact version '==3.3.3'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "pydantic",
+      "declared_constraint": ">=2.9.2",
+      "resolved_version": "2.12.5",
+      "severity": "MEDIUM",
+      "recommendation": "Pin pydantic in services/api to exact version '==2.12.5'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "pydantic-settings",
+      "declared_constraint": ">=2.6.1",
+      "resolved_version": "2.13.1",
+      "severity": "MEDIUM",
+      "recommendation": "Pin pydantic-settings in services/api to exact version '==2.13.1'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "pytesseract",
+      "declared_constraint": ">=0.3.13",
+      "resolved_version": "0.3.13",
+      "severity": "MEDIUM",
+      "recommendation": "Pin pytesseract in services/api to exact version '==0.3.13'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "pytest",
+      "declared_constraint": ">=8.3.3",
+      "resolved_version": "9.0.2",
+      "severity": "MEDIUM",
+      "recommendation": "Pin pytest in services/api to exact version '==9.0.2'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "pytest-asyncio",
+      "declared_constraint": ">=0.24.0",
+      "resolved_version": "1.3.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin pytest-asyncio in services/api to exact version '==1.3.0'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "python-docx",
+      "declared_constraint": ">=1.1.2",
+      "resolved_version": "1.2.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin python-docx in services/api to exact version '==1.2.0'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "python-jose",
+      "declared_constraint": ">=3.4.0",
+      "resolved_version": "3.5.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin python-jose in services/api to exact version '==3.5.0'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "python-multipart",
+      "declared_constraint": ">=0.0.18",
+      "resolved_version": "0.0.22",
+      "severity": "MEDIUM",
+      "recommendation": "Pin python-multipart in services/api to exact version '==0.0.22'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "redis",
+      "declared_constraint": ">=5.2.0",
+      "resolved_version": "7.4.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin redis in services/api to exact version '==7.4.0'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "ruff",
+      "declared_constraint": ">=0.7.1",
+      "resolved_version": "0.15.8",
+      "severity": "MEDIUM",
+      "recommendation": "Pin ruff in services/api to exact version '==0.15.8'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "sqlalchemy",
+      "declared_constraint": ">=2.0.36",
+      "resolved_version": "2.0.48",
+      "severity": "MEDIUM",
+      "recommendation": "Pin sqlalchemy in services/api to exact version '==2.0.48'"
+    },
+    {
+      "surface": "services/api",
+      "ecosystem": "pypi",
+      "package": "uvicorn",
+      "declared_constraint": ">=0.32.0",
+      "resolved_version": "0.42.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin uvicorn in services/api to exact version '==0.42.0'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "fastapi",
+      "declared_constraint": ">=0.115.0",
+      "resolved_version": "0.135.2",
+      "severity": "MEDIUM",
+      "recommendation": "Pin fastapi in services/ml to exact version '==0.135.2'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "google-cloud-speech",
+      "declared_constraint": ">=2.27.0",
+      "resolved_version": "2.40.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin google-cloud-speech in services/ml to exact version '==2.40.0'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "httpx",
+      "declared_constraint": ">=0.27.2",
+      "resolved_version": "0.28.1",
+      "severity": "MEDIUM",
+      "recommendation": "Pin httpx in services/ml to exact version '==0.28.1'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "hypothesis",
+      "declared_constraint": ">=6.100.0",
+      "resolved_version": "6.163.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin hypothesis in services/ml to exact version '==6.163.0'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "langchain",
+      "declared_constraint": ">=0.3.0",
+      "resolved_version": "1.2.14",
+      "severity": "MEDIUM",
+      "recommendation": "Pin langchain in services/ml to exact version '==1.2.14'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "langgraph",
+      "declared_constraint": ">=0.2.0",
+      "resolved_version": "1.1.4",
+      "severity": "MEDIUM",
+      "recommendation": "Pin langgraph in services/ml to exact version '==1.1.4'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "numpy",
+      "declared_constraint": ">=2.1.0",
+      "resolved_version": "2.4.4",
+      "severity": "MEDIUM",
+      "recommendation": "Pin numpy in services/ml to exact version '==2.4.4'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "pgvector",
+      "declared_constraint": ">=0.2.5",
+      "resolved_version": "0.5.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin pgvector in services/ml to exact version '==0.5.0'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "psycopg",
+      "declared_constraint": ">=3.1.0",
+      "resolved_version": "3.3.4",
+      "severity": "MEDIUM",
+      "recommendation": "Pin psycopg in services/ml to exact version '==3.3.4'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "pydantic",
+      "declared_constraint": ">=2.9.0",
+      "resolved_version": "2.12.5",
+      "severity": "MEDIUM",
+      "recommendation": "Pin pydantic in services/ml to exact version '==2.12.5'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "pydantic-settings",
+      "declared_constraint": ">=2.6.0",
+      "resolved_version": "2.13.1",
+      "severity": "MEDIUM",
+      "recommendation": "Pin pydantic-settings in services/ml to exact version '==2.13.1'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "pytest",
+      "declared_constraint": ">=8.3.0",
+      "resolved_version": "9.0.2",
+      "severity": "MEDIUM",
+      "recommendation": "Pin pytest in services/ml to exact version '==9.0.2'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "pytest-asyncio",
+      "declared_constraint": ">=0.24.0",
+      "resolved_version": "1.3.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin pytest-asyncio in services/ml to exact version '==1.3.0'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "python-multipart",
+      "declared_constraint": ">=0.0.18",
+      "resolved_version": "0.0.22",
+      "severity": "MEDIUM",
+      "recommendation": "Pin python-multipart in services/ml to exact version '==0.0.22'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "pyyaml",
+      "declared_constraint": ">=6.0.2",
+      "resolved_version": "6.0.3",
+      "severity": "MEDIUM",
+      "recommendation": "Pin pyyaml in services/ml to exact version '==6.0.3'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "sqlalchemy",
+      "declared_constraint": ">=2.0.0",
+      "resolved_version": "2.0.51",
+      "severity": "MEDIUM",
+      "recommendation": "Pin sqlalchemy in services/ml to exact version '==2.0.51'"
+    },
+    {
+      "surface": "services/ml",
+      "ecosystem": "pypi",
+      "package": "uvicorn",
+      "declared_constraint": ">=0.32.0",
+      "resolved_version": "0.42.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin uvicorn in services/ml to exact version '==0.42.0'"
+    },
+    {
+      "surface": "services/ocr",
+      "ecosystem": "pypi",
+      "package": "fastapi",
+      "declared_constraint": "unpinned",
+      "resolved_version": "unpinned",
+      "severity": "HIGH",
+      "recommendation": "Replace unpinned 'RUN pip install ...' in Dockerfile with a versioned pyproject.toml or requirements.lock"
+    },
+    {
+      "surface": "services/ocr",
+      "ecosystem": "pypi",
+      "package": "uvicorn",
+      "declared_constraint": "unpinned",
+      "resolved_version": "unpinned",
+      "severity": "HIGH",
+      "recommendation": "Replace unpinned 'RUN pip install ...' in Dockerfile with a versioned pyproject.toml or requirements.lock"
+    },
+    {
+      "surface": "services/ocr",
+      "ecosystem": "pypi",
+      "package": "httpx",
+      "declared_constraint": "unpinned",
+      "resolved_version": "unpinned",
+      "severity": "HIGH",
+      "recommendation": "Replace unpinned 'RUN pip install ...' in Dockerfile with a versioned pyproject.toml or requirements.lock"
+    },
+    {
+      "surface": "services/ocr",
+      "ecosystem": "pypi",
+      "package": "python-multipart",
+      "declared_constraint": "unpinned",
+      "resolved_version": "unpinned",
+      "severity": "HIGH",
+      "recommendation": "Replace unpinned 'RUN pip install ...' in Dockerfile with a versioned pyproject.toml or requirements.lock"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "@axe-core/playwright",
+      "declared_constraint": "^4.12.1",
+      "resolved_version": "4.12.1",
+      "severity": "MEDIUM",
+      "recommendation": "Pin @axe-core/playwright in apps/web to exact version '==4.12.1'"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "@tanstack/react-virtual",
+      "declared_constraint": "^3.13.23",
+      "resolved_version": "3.13.23",
+      "severity": "MEDIUM",
+      "recommendation": "Pin @tanstack/react-virtual in apps/web/package.json to exact semver '3.13.23' without '^' prefix"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "@testing-library/jest-dom",
+      "declared_constraint": "^6.6.3",
+      "resolved_version": "6.9.1",
+      "severity": "MEDIUM",
+      "recommendation": "Pin @testing-library/jest-dom in apps/web to exact version '==6.9.1'"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "@testing-library/react",
+      "declared_constraint": "^16.1.0",
+      "resolved_version": "16.3.2",
+      "severity": "MEDIUM",
+      "recommendation": "Pin @testing-library/react in apps/web to exact version '==16.3.2'"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "@vitejs/plugin-react",
+      "declared_constraint": "^4.3.4",
+      "resolved_version": "4.7.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin @vitejs/plugin-react in apps/web to exact version '==4.7.0'"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "axios",
+      "declared_constraint": "^1.14.0",
+      "resolved_version": "1.19.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin axios in apps/web/package.json to exact semver '1.19.0' without '^' prefix"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "docx",
+      "declared_constraint": "^9.1.1",
+      "resolved_version": "9.1.1",
+      "severity": "MEDIUM",
+      "recommendation": "Pin docx in apps/web/package.json to exact semver '9.1.1' without '^' prefix"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "eslint",
+      "declared_constraint": "^8.57.1",
+      "resolved_version": "8.57.1",
+      "severity": "MEDIUM",
+      "recommendation": "Pin eslint in apps/web to exact version '==8.57.1'"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "fast-check",
+      "declared_constraint": "^3.23.2",
+      "resolved_version": "3.23.2",
+      "severity": "MEDIUM",
+      "recommendation": "Pin fast-check in apps/web to exact version '==3.23.2'"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "html-to-image",
+      "declared_constraint": "^1.11.11",
+      "resolved_version": "1.11.11",
+      "severity": "MEDIUM",
+      "recommendation": "Pin html-to-image in apps/web/package.json to exact semver '1.11.11' without '^' prefix"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "jsdom",
+      "declared_constraint": "^25.0.1",
+      "resolved_version": "25.0.1",
+      "severity": "MEDIUM",
+      "recommendation": "Pin jsdom in apps/web to exact version '==25.0.1'"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "material-symbols",
+      "declared_constraint": "^0.44.2",
+      "resolved_version": "0.44.2",
+      "severity": "MEDIUM",
+      "recommendation": "Pin material-symbols in apps/web/package.json to exact semver '0.44.2' without '^' prefix"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "react-markdown",
+      "declared_constraint": "^9.0.1",
+      "resolved_version": "9.1.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin react-markdown in apps/web/package.json to exact semver '9.1.0' without '^' prefix"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "remark-gfm",
+      "declared_constraint": "^4.0.0",
+      "resolved_version": "4.0.1",
+      "severity": "MEDIUM",
+      "recommendation": "Pin remark-gfm in apps/web/package.json to exact semver '4.0.1' without '^' prefix"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "vite",
+      "declared_constraint": "^5.4.11",
+      "resolved_version": "5.4.21",
+      "severity": "MEDIUM",
+      "recommendation": "Pin vite in apps/web to exact version '==5.4.21'"
+    },
+    {
+      "surface": "apps/web",
+      "ecosystem": "npm",
+      "package": "vitest",
+      "declared_constraint": "^2.1.8",
+      "resolved_version": "2.1.9",
+      "severity": "MEDIUM",
+      "recommendation": "Pin vitest in apps/web to exact version '==2.1.9'"
+    },
+    {
+      "surface": "apps/mobile",
+      "ecosystem": "pub",
+      "package": "flutter",
+      "declared_constraint": "{'sdk': 'flutter'}",
+      "resolved_version": "0.0.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin flutter in apps/mobile/pubspec.yaml to exact version '0.0.0' without '^' prefix"
+    },
+    {
+      "surface": "apps/mobile",
+      "ecosystem": "pub",
+      "package": "flutter_lints",
+      "declared_constraint": "^5.0.0",
+      "resolved_version": "5.0.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin flutter_lints in apps/mobile to exact version '==5.0.0'"
+    },
+    {
+      "surface": "apps/mobile",
+      "ecosystem": "pub",
+      "package": "flutter_localizations",
+      "declared_constraint": "{'sdk': 'flutter'}",
+      "resolved_version": "0.0.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin flutter_localizations in apps/mobile/pubspec.yaml to exact version '0.0.0' without '^' prefix"
+    },
+    {
+      "surface": "apps/mobile",
+      "ecosystem": "pub",
+      "package": "flutter_secure_storage",
+      "declared_constraint": "^9.2.2",
+      "resolved_version": "9.2.4",
+      "severity": "MEDIUM",
+      "recommendation": "Pin flutter_secure_storage in apps/mobile/pubspec.yaml to exact version '9.2.4' without '^' prefix"
+    },
+    {
+      "surface": "apps/mobile",
+      "ecosystem": "pub",
+      "package": "flutter_test",
+      "declared_constraint": "{'sdk': 'flutter'}",
+      "resolved_version": "0.0.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin flutter_test in apps/mobile to exact version '==0.0.0'"
+    },
+    {
+      "surface": "apps/mobile",
+      "ecosystem": "pub",
+      "package": "http",
+      "declared_constraint": "^1.2.2",
+      "resolved_version": "1.6.0",
+      "severity": "MEDIUM",
+      "recommendation": "Pin http in apps/mobile/pubspec.yaml to exact version '1.6.0' without '^' prefix"
+    },
+    {
+      "surface": "apps/mobile",
+      "ecosystem": "pub",
+      "package": "image_picker",
+      "declared_constraint": "^1.1.2",
+      "resolved_version": "1.2.3",
+      "severity": "MEDIUM",
+      "recommendation": "Pin image_picker in apps/mobile/pubspec.yaml to exact version '1.2.3' without '^' prefix"
+    },
+    {
+      "surface": "apps/mobile",
+      "ecosystem": "pub",
+      "package": "markdown",
+      "declared_constraint": "^7.3.1",
+      "resolved_version": "7.3.1",
+      "severity": "MEDIUM",
+      "recommendation": "Pin markdown in apps/mobile/pubspec.yaml to exact version '7.3.1' without '^' prefix"
+    }
+  ],
+  "missing_lockfiles": [
+    "services/asr/uv.lock",
+    "services/ocr/Dockerfile (direct unpinned pip install)"
+  ],
+  "lockfile_hash_coverage": {
+    "components_with_cryptographic_hashes": 1033,
+    "total_components": 1048,
+    "hash_coverage_percentage": 98.57
+  },
+  "accepted_findings": [
+    {
+      "advisory_id": "GHSA-wj6h-64fc-37mp (CVE-2024-23342)",
+      "package": "ecdsa (0.19.2, pip)",
+      "surface": "services/api",
+      "severity": "HIGH",
+      "disposition": "accepted",
+      "justification": "No fix is available: the `ecdsa` maintainers have stated the Minerva timing side-channel is not fixable in pure Python and will not be patched, so no upgrade clears it. It is pulled in only transitively by `python-jose[cryptography]` (which is itself on the patched `>=3.4.0` floor); CLARA signs/verifies JWTs with the HMAC (`HS*`) algorithms via the `cryptography` backend, not the ECDSA (`ES*`) code path that the advisory affects.",
+      "compensating_control": "The vulnerable ECDSA signing/verification path is not exercised: JWT issuance/validation uses HMAC keys, and token signing happens server-side over a managed secret (not attacker-timed across a network boundary). The internal-key guard and TLS-terminated ingress further bound any timing-oracle exposure. Tracked for removal if `python-jose` drops the `ecdsa` dependency.",
+      "owner": "@TBD",
+      "accepted_on": "2026-06-26",
+      "review_date": "2026-09-24",
+      "revisit_condition": "fixed version verified (ecdsa publishes a constant-time fix, or python-jose removes the ecdsa dependency)",
+      "suppression_ref": "pip-audit --ignore-vuln GHSA-wj6h-64fc-37mp",
+      "is_expired": true,
+      "validation_errors": []
+    }
+  ],
+  "expired_findings_count": 1,
+  "findings_validation_errors": [],
+  "passed": true,
+  "warnings": [
+    "Surface lacks hermetic lockfile: services/asr/uv.lock",
+    "Surface lacks hermetic lockfile: services/ocr/Dockerfile (direct unpinned pip install)",
+    "Accepted finding GHSA-wj6h-64fc-37mp (CVE-2024-23342) (ecdsa (0.19.2, pip)) review date expired on 2026-09-24"
+  ],
+  "errors": []
+}

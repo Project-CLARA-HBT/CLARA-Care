@@ -699,6 +699,30 @@ jobs:
           npm audit --audit-level=high || true
           echo "::endgroup::"
 
+      - name: Audit dependency integrity and CVE triage
+        run: |
+          mkdir -p artifacts/security
+          python3 scripts/ops/check_dependency_integrity.py \
+            --report-file artifacts/security/dependency_audit_report.json
+
+      - name: Generate CycloneDX SBOM and supply chain manifest
+        run: |
+          mkdir -p artifacts/sbom
+          python3 scripts/ops/generate_sbom.py \
+            --output-dir artifacts/sbom \
+            --summary
+
+      - name: Upload SBOM and dependency audit evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: sbom-and-dependency-audit-${{ github.run_id }}
+          path: |
+            artifacts/sbom
+            artifacts/security
+          if-no-files-found: ignore
+          retention-days: 14
+
   docker-compose-smoke:
     name: docker compose smoke build
     runs-on: ubuntu-latest

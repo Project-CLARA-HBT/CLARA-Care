@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "manifest_version": "1.0.0",
+  "phase_id": "PH01",
+  "agent_id": "A07",
+  "role": "Tests + CI",
+  "task": "SBOM generator and CVE triage; audit package dependencies across Python, Node, Flutter; write or verify an automated SBOM generator / dependency integrity script; check for known vulnerabilities and unpinned direct dependencies.",
+  "path_lane": "services/api/tests/;services/ml/tests/;apps/web/e2e/;.github/workflows/;scripts/ops/;artifacts/PH01/A07/",
+  "frozen_head_sha": "2aa9016a57b49b53f1a433d076e1028a6ec45f64",
+  "worktree_path": "/dev/shm/clara_worktrees/PH01_A07",
+  "branch": "phase/ph01-a07",
+  "status": "COMPLETE",
+  "timestamp": "2026-10-21T18:30:00Z",
+  "files_changed": [
+    "scripts/ops/generate_sbom.py",
+    "scripts/ops/check_dependency_integrity.py",
+    "services/api/tests/test_sbom_and_dependency_integrity.py",
+    ".github/workflows/ci.yml",
+    "artifacts/PH01/A07/change_manifest.json",
+    "artifacts/PH01/A07/test_report.md",
+    "artifacts/PH01/A07/risk_register.md",
+    "artifacts/PH01/A07/rollback.md",
+    "artifacts/PH01/A07/sbom.cyclonedx.json",
+    "artifacts/PH01/A07/sbom_manifest.json",
+    "artifacts/PH01/A07/dependency_audit_report.json"
+  ],
+  "verified_source_anchors": [
+    "services/api/pyproject.toml:10-35",
+    "services/api/pyproject.toml:37-45",
+    "services/api/uv.lock:1-26",
+    "services/ml/pyproject.toml:12-29",
+    "services/ml/pyproject.toml:31-36",
+    "services/ml/uv.lock:1-27",
+    "services/asr/pyproject.toml:6-11",
+    "services/ocr/Dockerfile:4",
+    "apps/web/package.json:27-39",
+    "apps/web/package.json:40-59",
+    "apps/web/package-lock.json:6-43",
+    "apps/mobile/pubspec.yaml:9-18",
+    "apps/mobile/pubspec.yaml:19-23",
+    "apps/mobile/pubspec.lock:3-36",
+    "docs/security/accepted-findings.md:87-90",
+    ".github/workflows/ci.yml:626-725",
+    "scripts/ops/generate_sbom.py:1-630",
+    "scripts/ops/check_dependency_integrity.py:1-350",
+    "services/api/tests/test_sbom_and_dependency_integrity.py:1-246"
+  ],
+  "interface_assumptions": {
+    "sbom_standards": {
+      "cyclonedx_version": "1.5",
+      "purl_spec": "Package URL specification (pkg:pypi/..., pkg:npm/..., pkg:pub/...)",
+      "serial_format": "urn:uuid:<uuid4>"
+    },
+    "python_supply_chain": {
+      "api_lockfile": "services/api/uv.lock (TOML format, sha256 hashes for sdist/wheels)",
+      "ml_lockfile": "services/ml/uv.lock (TOML format, sha256 hashes for sdist/wheels)",
+      "asr_manifest": "services/asr/pyproject.toml (pinned exact with ==, no uv.lock)",
+      "ocr_manifest": "services/ocr/Dockerfile (unpinned pip install, flagged in audit)"
+    },
+    "node_supply_chain": {
+      "web_manifest": "apps/web/package.json (11 direct runtime, 17 dev dependencies)",
+      "web_lockfile": "apps/web/package-lock.json (npm lockfile v3, sha512 integrity hashes)"
+    },
+    "flutter_supply_chain": {
+      "mobile_manifest": "apps/mobile/pubspec.yaml (4 direct third-party, 1 dev, Flutter SDK)",
+      "mobile_lockfile": "apps/mobile/pubspec.lock (YAML format, sha256 checksums from pub.dev)"
+    },
+    "security_and_cve_governance": {
+      "register_path": "docs/security/accepted-findings.md",
+      "active_findings_table": "12 required columns (Advisory ID, Package, Surface, Severity, Disposition, Justification, Compensating control, Owner, Accepted on, Review date, Revisit condition, Suppression ref)",
+      "active_accepted_advisories": ["GHSA-wj6h-64fc-37mp (CVE-2024-23342)"]
+    }
+  },
+  "audit_metrics": {
+    "total_components_cataloged": 1048,
+    "ecosystems": {
+      "python_pypi": 143,
+      "node_npm": 826,
+      "flutter_pub": 79
+    },
+    "direct_dependencies_total": 85,
+    "direct_dependencies_pinned": 18,
+    "direct_dependencies_unpinned_or_range": 67,
+    "lockfile_hash_coverage_percentage": 98.57,
+    "missing_lockfile_surfaces": [
+      "services/asr/uv.lock",
+      "services/ocr/Dockerfile (direct unpinned pip install)"
+    ],
+    "active_accepted_cve_findings": 1,
+    "expired_cve_review_dates": 1
+  },
+  "test_execution_results": {
+    "test_sbom_and_dependency_integrity": {
+      "command": "pytest tests/test_sbom_and_dependency_integrity.py",
+      "exit_code": 0,
+      "passed": 10,
+      "failed": 0
+    },
+    "cli_generate_sbom": {
+      "command": "python3 scripts/ops/generate_sbom.py --output-dir artifacts/PH01/A07 --summary",
+      "exit_code": 0
+    },
+    "cli_check_dependency_integrity": {
+      "command": "python3 scripts/ops/check_dependency_integrity.py --report-file artifacts/PH01/A07/dependency_audit_report.json",
+      "exit_code": 0
+    },
+    "ruff_linter": {
+      "command": "ruff check scripts/ops/generate_sbom.py scripts/ops/check_dependency_integrity.py services/api/tests/test_sbom_and_dependency_integrity.py",
+      "exit_code": 0
+    }
+  },
+  "blockers": [],
+  "rollback_steps": [
+    "To rollback A07 changes on phase/ph01-a07:",
+    "1. git rm -f scripts/ops/generate_sbom.py scripts/ops/check_dependency_integrity.py services/api/tests/test_sbom_and_dependency_integrity.py",
+    "2. git rm -rf artifacts/PH01/A07",
+    "3. git checkout .github/workflows/ci.yml",
+    "4. git commit -m 'Rollback PH01 A07 SBOM and dependency integrity tooling'"
+  ]
+}
