@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH05",
+  "agent_id": "A02",
+  "role": "Data model + migration",
+  "task": "consent snapshot/version persistence",
+  "status": "PASSED",
+  "branch": "phase/ph05-a02",
+  "base_sha": "1c626f461ce20f8c050ca161a09d300062b9f939",
+  "frozen_head_sha": "1c626f461ce20f8c050ca161a09d300062b9f939",
+  "path_lane": "services/api/src/clara_api/db/;services/api/alembic/versions/;artifacts/PH05/A02/",
+  "files_changed": [
+    "services/api/src/clara_api/db/models.py",
+    "services/api/alembic/versions/20260827_0065_consent_policy_snapshots.py",
+    "artifacts/PH05/A02/change_manifest.json",
+    "artifacts/PH05/A02/test_report.md",
+    "artifacts/PH05/A02/risk_register.md",
+    "artifacts/PH05/A02/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH05/A02/change_manifest.json",
+    "artifacts/PH05/A02/test_report.md",
+    "artifacts/PH05/A02/risk_register.md",
+    "artifacts/PH05/A02/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "symbol": "ConsentPolicySnapshot",
+      "description": "Immutable versioned consent policy model recording policy type, version, body text, content hash, and authority level."
+    },
+    {
+      "file": "services/api/alembic/versions/20260827_0065_consent_policy_snapshots.py",
+      "symbol": "upgrade, downgrade",
+      "description": "Alembic migration 0065 creating consent_policy_snapshots with verified non-empty downgrade."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/db/models.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated models.py."
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 65 migrations have verified non-empty downgrade routines."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A02 -p PH05",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/db/, alembic, and artifacts/PH05/A02/."
+    }
+  ],
+  "audit_findings": {
+    "consent_snapshot_persistence": {
+      "status": "COMPLETED",
+      "finding": "Declared ConsentPolicySnapshot model and created migration 0065. Ensures immutable tracking of consent policy text versions, purpose scopes, and authority thresholds."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH05_A02 checkout 1c626f461ce20f8c050ca161a09d300062b9f939 -- services/api/src/clara_api/db/models.py",
+    "rm -f /dev/shm/clara_worktrees/PH05_A02/services/api/alembic/versions/20260827_0065_consent_policy_snapshots.py",
+    "rm -rf /dev/shm/clara_worktrees/PH05_A02/artifacts/PH05/A02"
+  ],
+  "timestamp": "2026-10-22T11:20:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH05_A02"
+}

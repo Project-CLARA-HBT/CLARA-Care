@@ -459,6 +459,25 @@ class UserConsent(Base):
     user: Mapped[User] = relationship("User")
 
 
+class ConsentPolicySnapshot(Base):
+    """Immutable snapshot of a versioned medical or compliance consent policy."""
+
+    __tablename__ = "consent_policy_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    policy_type: Mapped[str] = mapped_column(String(64), index=True)
+    policy_version: Mapped[str] = mapped_column(String(32), index=True)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    title_vi: Mapped[str] = mapped_column(String(255))
+    title_en: Mapped[str] = mapped_column(String(255))
+    policy_body: Mapped[str] = mapped_column(Text)
+    purposes: Mapped[str] = mapped_column(String(255), default="")
+    authority_level: Mapped[str] = mapped_column(String(32), default="self")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class MedicineCabinet(Base):
     __tablename__ = "medicine_cabinets"
 
