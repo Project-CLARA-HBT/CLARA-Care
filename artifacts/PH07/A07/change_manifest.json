@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH07",
+  "agent_id": "A07",
+  "role": "Tests + CI",
+  "task": "user-facing attestation disclosure",
+  "status": "PASSED",
+  "branch": "phase/ph07-a07",
+  "base_sha": "e8533cb029a1470ce2d1bc027a421b47664871c5",
+  "frozen_head_sha": "e8533cb029a1470ce2d1bc027a421b47664871c5",
+  "path_lane": "services/api/tests/;services/ml/tests/;apps/web/e2e/;.github/workflows/;artifacts/PH07/A07/",
+  "files_changed": [
+    "services/api/tests/test_glhs_attestation_disclosure.py",
+    "artifacts/PH07/A07/change_manifest.json",
+    "artifacts/PH07/A07/test_report.md",
+    "artifacts/PH07/A07/risk_register.md",
+    "artifacts/PH07/A07/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH07/A07/change_manifest.json",
+    "artifacts/PH07/A07/test_report.md",
+    "artifacts/PH07/A07/risk_register.md",
+    "artifacts/PH07/A07/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/tests/test_glhs_attestation_disclosure.py",
+      "symbol": "GlhsAttestationDisclosureTestCase",
+      "description": "Integration unit test suite asserting verified receipt elevation and fail-closed base envelope fallback on unverified receipts."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m unittest services/api/tests/test_glhs_attestation_disclosure.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 3 attestation disclosure unit tests passed cleanly."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A07 -p PH07",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/tests/ and artifacts/PH07/A07/."
+    }
+  ],
+  "audit_findings": {
+    "attestation_disclosure_tests": {
+      "status": "COMPLETED",
+      "finding": "Implemented test_glhs_attestation_disclosure.py verifying receipt verification rules and preventing fraudulent level elevation."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH07_A07/services/api/tests/test_glhs_attestation_disclosure.py",
+    "rm -rf /dev/shm/clara_worktrees/PH07_A07/artifacts/PH07/A07"
+  ],
+  "timestamp": "2026-10-22T14:48:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH07_A07"
+}
