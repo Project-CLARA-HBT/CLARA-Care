@@ -384,6 +384,11 @@ def validate_agent_manifest(
     if not risk_register_file.is_file():
         errors.append(f"Missing required deliverable: {risk_register_file}")
 
+    raw_commit = data.get("commit") or data.get("commit_sha") or data.get("handoff_commit") or ""
+    raw_base = data.get("base_sha") or data.get("frozen_head_sha") or ""
+    if raw_commit and raw_commit == raw_base:
+        raw_commit = ""
+
     manifest_obj = AgentManifest(
         agent_id=expected_agent,
         phase_id=phase_id or expected_phase,
@@ -392,7 +397,7 @@ def validate_agent_manifest(
         status=status,
         worktree=data.get("worktree_path") or data.get("worktree", ""),
         branch=data.get("branch", f"phase/{expected_phase.lower()}-{expected_agent.lower()}"),
-        commit=data.get("commit") or data.get("commit_sha") or data.get("frozen_head_sha", ""),
+        commit=raw_commit,
         files_changed=[str(f) for f in files_changed],
         verified_source_anchors=[str(a) for a in anchors],
         test_execution_results=data.get("test_execution_results", {}),
