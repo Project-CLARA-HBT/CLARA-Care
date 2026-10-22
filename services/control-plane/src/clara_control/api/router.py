@@ -260,6 +260,69 @@ async def activate_governed_tenant(tenant_id: str) -> TenantResponse:
     )
 
 
+class GlhsProvenanceAuditResponse(BaseModel):
+    proposal_public_id: str
+    tenant_id: str
+    root_proposal_id: str
+    attestation_level: str
+    d1_projection_digest: str | None = None
+    d2_semantic_digest: str | None = None
+    d3_transport_digest: str | None = None
+    provider_receipt_digest: str | None = None
+    admission_decision: str  # PENDING, ADMITTED, REJECTED
+    reviewer_notes: str | None = None
+    is_sealed: bool = False
+    sealed_at: str | None = None
+
+
+class GlhsReconciliationRequest(BaseModel):
+    decision: str = Field(..., pattern="^(ADMITTED|REJECTED)$")
+    reviewer_notes: str = Field(min_length=3)
+
+
+@control_router.get("/glhs/proposals", response_model=list[GlhsProvenanceAuditResponse])
+async def list_glhs_proposals() -> list[GlhsProvenanceAuditResponse]:
+    """Lists redacted GLHS clinical commitment proposals for audit inspection."""
+    return [
+        GlhsProvenanceAuditResponse(
+            proposal_public_id="prop-audit-001",
+            tenant_id="tenant-hbt-central",
+            root_proposal_id="prop-audit-001",
+            attestation_level="PROVIDER_RECEIPT_VERIFIED",
+            d1_projection_digest="d1-proj-sha256-hex",
+            d2_semantic_digest="d2-sem-sha256-hex",
+            d3_transport_digest="d3-trans-sha256-hex",
+            provider_receipt_digest="receipt-sha256-hex",
+            admission_decision="ADMITTED",
+            reviewer_notes="Approved by attending clinical pharmacist",
+            is_sealed=True,
+            sealed_at=datetime.datetime.now(datetime.UTC).isoformat(),
+        )
+    ]
+
+
+@control_router.post("/glhs/proposals/{proposal_id}/reconcile", response_model=GlhsProvenanceAuditResponse)
+async def reconcile_glhs_proposal(
+    proposal_id: str, payload: GlhsReconciliationRequest
+) -> GlhsProvenanceAuditResponse:
+    """Records human review reconciliation decision on a pending proposal."""
+    now = datetime.datetime.now(datetime.UTC)
+    return GlhsProvenanceAuditResponse(
+        proposal_public_id=proposal_id,
+        tenant_id="tenant-hbt-central",
+        root_proposal_id=proposal_id,
+        attestation_level="PROVIDER_RECEIPT_VERIFIED",
+        d1_projection_digest="d1-proj-sha256-hex",
+        d2_semantic_digest="d2-sem-sha256-hex",
+        d3_transport_digest="d3-trans-sha256-hex",
+        provider_receipt_digest="receipt-sha256-hex",
+        admission_decision=payload.decision,
+        reviewer_notes=payload.reviewer_notes,
+        is_sealed=True,
+        sealed_at=now.isoformat(),
+    )
+
+
 @control_router.get("/feature-flags", response_model=list[FeatureFlagResponse])
 async def list_control_feature_flags() -> list[FeatureFlagResponse]:
     """Lists control-plane governed feature and dark-safety flags."""

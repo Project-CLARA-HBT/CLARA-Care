@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "CLARA Control-Plane API",
-    "version": "1.2.0"
+    "version": "1.3.0"
   },
   "paths": {
     "/control/v1/sessions/issue": {
@@ -412,6 +412,85 @@
         }
       }
     },
+    "/control/v1/glhs/proposals": {
+      "get": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "List Glhs Proposals",
+        "description": "Lists redacted GLHS clinical commitment proposals for audit inspection.",
+        "operationId": "list_glhs_proposals_control_v1_glhs_proposals_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GlhsProvenanceAuditResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Glhs Proposals Control V1 Glhs Proposals Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/glhs/proposals/{proposal_id}/reconcile": {
+      "post": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Reconcile Glhs Proposal",
+        "description": "Records human review reconciliation decision on a pending proposal.",
+        "operationId": "reconcile_glhs_proposal_control_v1_glhs_proposals__proposal_id__reconcile_post",
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Proposal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GlhsReconciliationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlhsProvenanceAuditResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/control/v1/feature-flags": {
       "get": {
         "tags": [
@@ -589,6 +668,130 @@
           "description"
         ],
         "title": "FeatureFlagResponse"
+      },
+      "GlhsProvenanceAuditResponse": {
+        "properties": {
+          "proposal_public_id": {
+            "type": "string",
+            "title": "Proposal Public Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "root_proposal_id": {
+            "type": "string",
+            "title": "Root Proposal Id"
+          },
+          "attestation_level": {
+            "type": "string",
+            "title": "Attestation Level"
+          },
+          "d1_projection_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "D1 Projection Digest"
+          },
+          "d2_semantic_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "D2 Semantic Digest"
+          },
+          "d3_transport_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "D3 Transport Digest"
+          },
+          "provider_receipt_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Receipt Digest"
+          },
+          "admission_decision": {
+            "type": "string",
+            "title": "Admission Decision"
+          },
+          "reviewer_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Notes"
+          },
+          "is_sealed": {
+            "type": "boolean",
+            "title": "Is Sealed",
+            "default": false
+          },
+          "sealed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sealed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposal_public_id",
+          "tenant_id",
+          "root_proposal_id",
+          "attestation_level",
+          "admission_decision"
+        ],
+        "title": "GlhsProvenanceAuditResponse"
+      },
+      "GlhsReconciliationRequest": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "pattern": "^(ADMITTED|REJECTED)$",
+            "title": "Decision"
+          },
+          "reviewer_notes": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Reviewer Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision",
+          "reviewer_notes"
+        ],
+        "title": "GlhsReconciliationRequest"
       },
       "HTTPValidationError": {
         "properties": {
