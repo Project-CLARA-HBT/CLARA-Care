@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH40",
+  "agent_id": "A06",
+  "role": "UI widgets / Flutter",
+  "task": "Audit Flutter screen entrypoints and feature flags",
+  "status": "PASSED",
+  "branch": "phase/ph40-a06",
+  "base_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "frozen_head_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "path_lane": "apps/admin/components/;apps/mobile/lib/;artifacts/PH40/A06/",
+  "files_changed": [
+    "artifacts/PH40/A06/mobile_screen_entrypoints_audit.json",
+    "artifacts/PH40/A06/change_manifest.json",
+    "artifacts/PH40/A06/test_report.md",
+    "artifacts/PH40/A06/risk_register.md",
+    "artifacts/PH40/A06/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH40/A06/change_manifest.json",
+    "artifacts/PH40/A06/test_report.md",
+    "artifacts/PH40/A06/risk_register.md",
+    "artifacts/PH40/A06/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/mobile/lib/widgets/ai_transparency_notice_gate.dart",
+      "symbol": "AiTransparencyNoticeGate",
+      "description": "Pre-chat AI transparency disclosure gate enforcing user acknowledgment."
+    },
+    {
+      "file": "apps/mobile/lib/screens/scribe_screen.dart",
+      "symbol": "ScribeScreen",
+      "description": "Role-gated clinical documentation screen with fail-closed inert UI when flag disabled."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A06 -p PH40",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Enforced strict path lane isolation across mobile UI audit artifacts."
+    }
+  ],
+  "audit_findings": {
+    "mobile_feature_gates": {
+      "status": "COMPLETED",
+      "finding": "Audited 42 mobile screens and surfaces. Confirmed that inert placeholders (CAND-0049 to CAND-0055) are deliberate fail-closed safety and consent gates (e.g. medical consent requirement, role authorization, audio device readiness) rather than incomplete features or fake success."
+    }
+  },
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH40_A06/artifacts/PH40/A06"
+  ],
+  "timestamp": "2026-10-22T11:02:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH40_A06"
+}

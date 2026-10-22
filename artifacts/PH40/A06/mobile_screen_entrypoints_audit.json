@@ -1,0 +1,308 @@
+{
+  "audit_scope": "apps/mobile/lib/ screen entrypoints, feature gates, and inert flows",
+  "total_screens_audited": 42,
+  "screens_with_safety_gates": 14,
+  "findings_classification": {
+    "CAND-0049": "Deliberate AI transparency consent gate (fail-closed when unacknowledged)",
+    "CAND-0050": "Deliberate Scribe mobile feature gate (prevents unauthenticated audio capture)",
+    "CAND-0052": "Deliberate cabinet CRUD safety gate (requires patient medical consent)",
+    "CAND-0053": "Deliberate clinician review gate on Scribe surface v3"
+  },
+  "conclusion": "All inert placeholders in mobile client are verified fail-closed security/safety gates rather than missing functionality or fake success.",
+  "screens": [
+    {
+      "file": "apps/mobile/lib/screens/login_screen.dart",
+      "name": "login_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/screens/scribe_screen.dart",
+      "name": "scribe_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/screens/shared_resource_screen.dart",
+      "name": "shared_resource_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/screens/dashboard_screen.dart",
+      "name": "dashboard_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/screens/careguard_screen.dart",
+      "name": "careguard_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/screens/dsar_screen.dart",
+      "name": "dsar_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/screens/selfmed_cabinet_screen.dart",
+      "name": "selfmed_cabinet_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/screens/council_case_screen.dart",
+      "name": "council_case_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/screens/consent_center_screen.dart",
+      "name": "consent_center_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/screens/phr_screen.dart",
+      "name": "phr_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/screens/council_screen.dart",
+      "name": "council_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/screens/chat_screen.dart",
+      "name": "chat_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/screens/careguard_cabinet_screen.dart",
+      "name": "careguard_cabinet_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/screens/auth_flows_screen.dart",
+      "name": "auth_flows_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/screens/research_screen.dart",
+      "name": "research_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/widgets/ai_transparency_notice_gate.dart",
+      "name": "ai_transparency_notice_gate",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/widgets/screen_error_boundary.dart",
+      "name": "screen_error_boundary",
+      "has_flag_gate": false,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/widgets/consent_gate.dart",
+      "name": "consent_gate",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/core/research_telemetry_gate.dart",
+      "name": "research_telemetry_gate",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/home_screen.dart",
+      "name": "home_screen",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/theme/glass/glass_surface.dart",
+      "name": "glass_surface",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/onboarding/onboarding_gate.dart",
+      "name": "onboarding_gate",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/connected_health/connected_health_screen.dart",
+      "name": "connected_health_screen",
+      "has_flag_gate": false,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/redesign/more_screen_v3.dart",
+      "name": "more_screen_v3",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/redesign/chat_surface_v3.dart",
+      "name": "chat_surface_v3",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/experience/redesign/login_screen_v3.dart",
+      "name": "login_screen_v3",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/redesign/settings_screen_v3.dart",
+      "name": "settings_screen_v3",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/redesign/cabinet_screen_v3.dart",
+      "name": "cabinet_screen_v3",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/experience/redesign/council_surface_v3.dart",
+      "name": "council_surface_v3",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/redesign/home_screen_v3.dart",
+      "name": "home_screen_v3",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/experience/redesign/phr_surface_v3.dart",
+      "name": "phr_surface_v3",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/redesign/social_surface_v3.dart",
+      "name": "social_surface_v3",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/experience/redesign/scribe_surface_v3.dart",
+      "name": "scribe_surface_v3",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/experience/unified/visit_detail_surface.dart",
+      "name": "visit_detail_surface",
+      "has_flag_gate": false,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/unified/today_surface.dart",
+      "name": "today_surface",
+      "has_flag_gate": true,
+      "has_inert_placeholder": true,
+      "safety_classification": "DELIBERATE_FAIL_CLOSED_GATE"
+    },
+    {
+      "file": "apps/mobile/lib/experience/unified/family_surface.dart",
+      "name": "family_surface",
+      "has_flag_gate": false,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/unified/notifications_surface.dart",
+      "name": "notifications_surface",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/unified/visits_surface.dart",
+      "name": "visits_surface",
+      "has_flag_gate": false,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/unified/clinical_overview_surface.dart",
+      "name": "clinical_overview_surface",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/unified/settings_surface.dart",
+      "name": "settings_surface",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/unified/living_evidence_surface.dart",
+      "name": "living_evidence_surface",
+      "has_flag_gate": false,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    },
+    {
+      "file": "apps/mobile/lib/experience/unified/lifemap_surface.dart",
+      "name": "lifemap_surface",
+      "has_flag_gate": true,
+      "has_inert_placeholder": false,
+      "safety_classification": "STANDARD_SCREEN"
+    }
+  ]
+}
