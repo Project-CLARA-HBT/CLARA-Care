@@ -1,0 +1,229 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH40",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "db1ba377c0bc9093c18d0296821672aaff223c9d",
+  "merge_commit_sha": "12fdd9bec54eb028b78a2b2f2b1c56d2569cf7e7",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data/migrations",
+      "task": "Enumerate API routers and compare OpenAPI live responses",
+      "worktree": "/dev/shm/clara_worktrees/PH40_A02",
+      "branch": "phase/ph40-a02",
+      "commit": "ed463432",
+      "full_commit": "ed46343262123de67a976481b6e9a697afc02dcb",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/db/__init__.py",
+        "services/control-plane/src/clara_control/db/models.py",
+        "artifacts/PH40/A02/openapi_route_comparison.json",
+        "artifacts/PH40/A02/change_manifest.json",
+        "artifacts/PH40/A02/test_report.md",
+        "artifacts/PH40/A02/risk_register.md",
+        "artifacts/PH40/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API contract + BFF",
+      "task": "Inventory all web routes against route-capability matrix",
+      "worktree": "/dev/shm/clara_worktrees/PH40_A01",
+      "branch": "phase/ph40-a01",
+      "commit": "69067667",
+      "full_commit": "69067667665290cdc137b257dcafa66fc46450d7",
+      "status": "PASSED",
+      "files": [
+        "contracts/control-plane/web_routes_capability_inventory.v1.json",
+        "services/control-plane/src/clara_control/api/__init__.py",
+        "services/control-plane/src/clara_control/api/router.py",
+        "artifacts/PH40/A01/change_manifest.json",
+        "artifacts/PH40/A01/test_report.md",
+        "artifacts/PH40/A01/risk_register.md",
+        "artifacts/PH40/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain service",
+      "task": "Traverse DB/service/worker paths for each route",
+      "worktree": "/dev/shm/clara_worktrees/PH40_A03",
+      "branch": "phase/ph40-a03",
+      "commit": "e3d399e5",
+      "full_commit": "e3d399e5f5aa9ef300bd858e40d076770de9f72b",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/domain/__init__.py",
+        "services/control-plane/src/clara_control/domain/traversal.py",
+        "artifacts/PH40/A03/route_traversal_audit.json",
+        "artifacts/PH40/A03/change_manifest.json",
+        "artifacts/PH40/A03/test_report.md",
+        "artifacts/PH40/A03/risk_register.md",
+        "artifacts/PH40/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "Adapter / existing code",
+      "task": "Inventory ML provider and safe-fallback boundaries",
+      "worktree": "/dev/shm/clara_worktrees/PH40_A04",
+      "branch": "phase/ph40-a04",
+      "commit": "06b89479",
+      "full_commit": "06b8947988372b2524a73ccc4d1e006067d808f2",
+      "status": "PASSED",
+      "files": [
+        "services/ml/src/clara_ml/llm/audit_boundaries.py",
+        "artifacts/PH40/A04/ml_fallback_boundaries_inventory.json",
+        "artifacts/PH40/A04/change_manifest.json",
+        "artifacts/PH40/A04/test_report.md",
+        "artifacts/PH40/A04/risk_register.md",
+        "artifacts/PH40/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Admin/consumer app routes",
+      "task": "Audit UI disabled buttons, hardcoded fixtures and synthetic claims",
+      "worktree": "/dev/shm/clara_worktrees/PH40_A05",
+      "branch": "phase/ph40-a05",
+      "commit": "490c65a8",
+      "full_commit": "490c65a8ba022d2bf70a0d7343e1c8ac0e3f5f37",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH40/A05/ui_fixture_and_dead_button_audit.json",
+        "artifacts/PH40/A05/change_manifest.json",
+        "artifacts/PH40/A05/test_report.md",
+        "artifacts/PH40/A05/risk_register.md",
+        "artifacts/PH40/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "UI widgets / Flutter",
+      "task": "Audit Flutter screen entrypoints and feature flags",
+      "worktree": "/dev/shm/clara_worktrees/PH40_A06",
+      "branch": "phase/ph40-a06",
+      "commit": "12fe90ed",
+      "full_commit": "12fe90ed56f36f591df0e2d3e6a5cbac048e30f3",
+      "status": "PASSED",
+      "files": [
+        "artifacts/PH40/A06/mobile_screen_entrypoints_audit.json",
+        "artifacts/PH40/A06/change_manifest.json",
+        "artifacts/PH40/A06/test_report.md",
+        "artifacts/PH40/A06/risk_register.md",
+        "artifacts/PH40/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Integration tests",
+      "task": "Create cross-layer traceability CI detector and synthetic fixture tests",
+      "worktree": "/dev/shm/clara_worktrees/PH40_A07",
+      "branch": "phase/ph40-a07",
+      "commit": "92b21f97",
+      "full_commit": "92b21f97d2f9be003dc931548d22cdcc3f80c6a2",
+      "status": "PASSED",
+      "files": [
+        "services/api/tests/test_mock_and_synthetic_fixtures.py",
+        "artifacts/PH40/A07/change_manifest.json",
+        "artifacts/PH40/A07/test_report.md",
+        "artifacts/PH40/A07/risk_register.md",
+        "artifacts/PH40/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security / negative tests",
+      "task": "Classify true false-success/privacy/security P0 with evidence",
+      "worktree": "/dev/shm/clara_worktrees/PH40_A08",
+      "branch": "phase/ph40-a08",
+      "commit": "6c91f489",
+      "full_commit": "6c91f489cffc51f2a21ba619962e916be716ea83",
+      "status": "PASSED",
+      "files": [
+        "docs/security/MOCK_SKELETON_FALSE_SUCCESS_SECURITY_AUDIT.md",
+        "artifacts/PH40/A08/change_manifest.json",
+        "artifacts/PH40/A08/test_report.md",
+        "artifacts/PH40/A08/risk_register.md",
+        "artifacts/PH40/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs / operational design",
+      "task": "Own CSV issue taxonomy + exact source anchors and user stories",
+      "worktree": "/dev/shm/clara_worktrees/PH40_A09",
+      "branch": "phase/ph40-a09",
+      "commit": "c44d1906",
+      "full_commit": "c44d1906569b3cf054991cfef09ff61931740380",
+      "status": "PASSED",
+      "files": [
+        "docs/implementation/MOCK_SKELETON_ISSUE_TAXONOMY.md",
+        "artifacts/PH40/A09/triaged_issue_taxonomy.json",
+        "artifacts/PH40/A09/change_manifest.json",
+        "artifacts/PH40/A09/test_report.md",
+        "artifacts/PH40/A09/risk_register.md",
+        "artifacts/PH40/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial reviewer",
+      "task": "Challenge 20 highest-risk statuses via runtime and reject false positives",
+      "worktree": "/dev/shm/clara_worktrees/PH40_A10",
+      "branch": "phase/ph40-a10",
+      "commit": "02864724",
+      "full_commit": "02864724784d5984bef3ac6f4cf7ed27202a10dc",
+      "status": "PASSED",
+      "files": [
+        "docs/reports/ph40-mock-forensic-inventory-audit.md",
+        "scripts/ci/ph40_quality_gate.py",
+        "artifacts/PH40/A10/change_manifest.json",
+        "artifacts/PH40/A10/test_report.md",
+        "artifacts/PH40/A10/risk_register.md",
+        "artifacts/PH40/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.067,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.129,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T11:13:14.263367+00:00"
+}

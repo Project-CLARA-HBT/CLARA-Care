@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH40-01,A01,Contracts,Web route capability inventory & control router,All 123 routes classified into machine contract,123/123 routes valid,PASS,contracts/control-plane/web_routes_capability_inventory.v1.json
+TC-PH40-02,A02,DB,Control-plane database models & route reflection,499 routes reflected with zero PHI schema overlap,499 routes classified,PASS,python3 scripts/ops/check_migration_downgrade.py
+TC-PH40-03,A03,Domain,Route dependency traversal & worker mappings,All clinical routes mapped to backing models and queues,All mapped,PASS,python3 -c "from clara_control.domain.traversal import audit_all_route_paths; audit_all_route_paths()"
+TC-PH40-04,A04,ML,ML provider safe-fallback boundaries,Fail-closed semantics on critical drug and clinical inference,All boundaries safe,PASS,python3 services/ml/src/clara_ml/llm/audit_boundaries.py
+TC-PH40-05,A05,Web,UI button disabled bindings & fixture isolation,Zero unconditionally dead buttons; landing demo isolated,145 buttons audited,PASS,artifacts/PH40/A05/ui_fixture_and_dead_button_audit.json
+TC-PH40-06,A06,Mobile,Mobile screen entrypoints & dark flag audit,Inert placeholders verified as fail-closed safety gates,42 screens audited,PASS,artifacts/PH40/A06/mobile_screen_entrypoints_audit.json
+TC-PH40-07,A07,Tests/CI,Cross-layer traceability and zero-mock suite,Zero mock strings in clinical schemas; 404 on missing,3/3 passed,PASS,python3 -m unittest services/api/tests/test_mock_and_synthetic_fixtures.py
+TC-PH40-08,A08,Security,False-success and P0 vulnerability classification,Triaged 112 items; confirmed 6 P0 telemetry defects,Audit complete,PASS,docs/security/MOCK_SKELETON_FALSE_SUCCESS_SECURITY_AUDIT.md
+TC-PH40-09,A09,Docs,Issue taxonomy framework and user stories,Standardized 6-category classification system,112 triaged,PASS,docs/implementation/MOCK_SKELETON_ISSUE_TAXONOMY.md
+TC-PH40-10,A10,Review,Adversarial runtime challenge of 20 highest-risk items,Triaged 6 real defects vs 7 legitimate safety gates,20 challenged,PASS,docs/reports/ph40-mock-forensic-inventory-audit.md
+TC-PH40-11,Integration,Gate,PH40 Quality Gate,All 7 invariants verified green,PH40 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph40_quality_gate.py
