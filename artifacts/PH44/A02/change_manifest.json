@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH44",
+  "agent_id": "A02",
+  "role": "Data/migrations",
+  "task": "Org slug and unique member/role schema migration",
+  "status": "PASSED",
+  "branch": "phase/ph44-a02",
+  "base_sha": "ad759178619bc5bebe867d34199c93a0bcf5f1cf",
+  "frozen_head_sha": "ad759178619bc5bebe867d34199c93a0bcf5f1cf",
+  "path_lane": "services/control-plane/src/clara_control/db/;services/control-plane/alembic/versions/;artifacts/PH44/A02/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/db/models.py",
+    "services/control-plane/alembic/versions/20260907_0004_tenant_lifecycle_status.py",
+    "artifacts/PH44/A02/change_manifest.json",
+    "artifacts/PH44/A02/test_report.md",
+    "artifacts/PH44/A02/risk_register.md",
+    "artifacts/PH44/A02/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH44/A02/change_manifest.json",
+    "artifacts/PH44/A02/test_report.md",
+    "artifacts/PH44/A02/risk_register.md",
+    "artifacts/PH44/A02/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/db/models.py",
+      "symbol": "ControlTenant.status",
+      "description": "Lifecycle state column (ONBOARDING, ACTIVE, SUSPENDED, DECOMMISSIONED) on control_tenants table."
+    },
+    {
+      "file": "services/control-plane/alembic/versions/20260907_0004_tenant_lifecycle_status.py",
+      "symbol": "upgrade, downgrade",
+      "description": "Control-plane migration 0004 adding indexed status column to control_tenants with verified downgrade."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/db",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated control models."
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/control-plane/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All control plane migrations define verified non-empty downgrade."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A02 -p PH44",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across control-plane db and alembic paths."
+    }
+  ],
+  "audit_findings": {
+    "org_slug_and_status_migration": {
+      "status": "COMPLETED",
+      "finding": "Added indexed lifecycle status column to ControlTenant with migration 0004, enabling explicit suspension and onboarding state progression."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH44_A02 checkout ad759178619bc5bebe867d34199c93a0bcf5f1cf -- services/control-plane/src/clara_control/db/models.py",
+    "rm -f /dev/shm/clara_worktrees/PH44_A02/services/control-plane/alembic/versions/20260907_0004_tenant_lifecycle_status.py",
+    "rm -rf /dev/shm/clara_worktrees/PH44_A02/artifacts/PH44/A02"
+  ],
+  "timestamp": "2026-10-22T18:10:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH44_A02"
+}

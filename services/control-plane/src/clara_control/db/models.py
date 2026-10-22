@@ -39,6 +39,7 @@ class ControlTenant(ControlBase):
     name = Column(String(255), nullable=False)
     tier = Column(String(32), default="standard", nullable=False)  # enterprise, clinic, hospital
     is_active = Column(Boolean, default=True, nullable=False)
+    status = Column(String(32), default="ACTIVE", nullable=False, index=True)  # ONBOARDING, ACTIVE, SUSPENDED, DECOMMISSIONED
     max_workspaces = Column(Integer, default=5, nullable=False)
     max_users = Column(Integer, default=50, nullable=False)
     created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow, nullable=False)
