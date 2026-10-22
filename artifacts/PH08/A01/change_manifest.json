@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH08",
+  "agent_id": "A01",
+  "role": "API + contract",
+  "task": "clinical dependency schema registry",
+  "status": "PASSED",
+  "branch": "phase/ph08-a01",
+  "base_sha": "94ec2c1e2f7535b4430e3bb45f913d9a0d1e39a3",
+  "frozen_head_sha": "94ec2c1e2f7535b4430e3bb45f913d9a0d1e39a3",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;artifacts/PH08/A01/",
+  "files_changed": [
+    "contracts/glhs/clinical_dependency_registry.v1.json",
+    "artifacts/PH08/A01/change_manifest.json",
+    "artifacts/PH08/A01/test_report.md",
+    "artifacts/PH08/A01/risk_register.md",
+    "artifacts/PH08/A01/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH08/A01/change_manifest.json",
+    "artifacts/PH08/A01/test_report.md",
+    "artifacts/PH08/A01/risk_register.md",
+    "artifacts/PH08/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "contracts/glhs/clinical_dependency_registry.v1.json",
+      "symbol": "registered_partitions",
+      "description": "Standardized registry mapping clinical domains to key patterns, access modes, and CAS increment rules."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A01 -p PH08",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across contracts/ and artifacts/PH08/A01/."
+    }
+  ],
+  "audit_findings": {
+    "dependency_schema_registry": {
+      "status": "COMPLETED",
+      "finding": "Published clinical dependency schema registry defining partition key formats, access modes, and lexicographical lock invariants."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH08_A01/contracts/glhs/clinical_dependency_registry.v1.json",
+    "rm -rf /dev/shm/clara_worktrees/PH08_A01/artifacts/PH08/A01"
+  ],
+  "timestamp": "2026-10-22T15:12:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH08_A01"
+}

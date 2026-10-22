@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClinicalDependencySchemaRegistry",
+  "version": "1.0.0",
+  "phase_id": "PH08",
+  "dependency_kinds": [
+    "GOVERNANCE",
+    "ENTITY",
+    "EVIDENCE",
+    "LEASE"
+  ],
+  "registered_partitions": {
+    "medications": {
+      "key_pattern": "medications:{patient_id}",
+      "access_modes": ["READ", "WRITE"],
+      "cas_increment_required": true
+    },
+    "vitals": {
+      "key_pattern": "vitals:{patient_id}",
+      "access_modes": ["READ", "WRITE"],
+      "cas_increment_required": true
+    },
+    "clinical_notes": {
+      "key_pattern": "notes:{session_id}",
+      "access_modes": ["READ", "WRITE"],
+      "cas_increment_required": true
+    },
+    "governance_epoch": {
+      "key_pattern": "policy_epoch:{domain}",
+      "access_modes": ["READ"],
+      "cas_increment_required": false
+    }
+  },
+  "invariants": {
+    "lexicographical_lock_order_mandatory": true,
+    "observed_version_non_negative": true,
+    "write_skew_detection_active": true
+  }
+}
