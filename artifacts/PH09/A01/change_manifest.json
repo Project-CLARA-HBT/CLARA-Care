@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH09",
+  "agent_id": "A01",
+  "role": "API + contract",
+  "task": "outbox domain event schema",
+  "status": "PASSED",
+  "branch": "phase/ph09-a01",
+  "base_sha": "4c6621242a3cfef1d7ef46f204360e28f3cb6957",
+  "frozen_head_sha": "4c6621242a3cfef1d7ef46f204360e28f3cb6957",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;artifacts/PH09/A01/",
+  "files_changed": [
+    "contracts/events/outbox_domain_events.v1.json",
+    "artifacts/PH09/A01/change_manifest.json",
+    "artifacts/PH09/A01/test_report.md",
+    "artifacts/PH09/A01/risk_register.md",
+    "artifacts/PH09/A01/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH09/A01/change_manifest.json",
+    "artifacts/PH09/A01/test_report.md",
+    "artifacts/PH09/A01/risk_register.md",
+    "artifacts/PH09/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "contracts/events/outbox_domain_events.v1.json",
+      "symbol": "supported_event_types",
+      "description": "Standardized contract defining event types, envelope attributes, and zero-raw-PHI guarantees."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A01 -p PH09",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across contracts/ and artifacts/PH09/A01/."
+    }
+  ],
+  "audit_findings": {
+    "outbox_domain_event_contract": {
+      "status": "COMPLETED",
+      "finding": "Published outbox domain event schema contract in contracts/events/outbox_domain_events.v1.json defining canonical envelopes and zero-PHI constraints."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH09_A01/contracts/events/outbox_domain_events.v1.json",
+    "rm -rf /dev/shm/clara_worktrees/PH09_A01/artifacts/PH09/A01"
+  ],
+  "timestamp": "2026-10-22T15:58:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH09_A01"
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OutboxDomainEventSchemaContract",
+  "version": "1.0.0",
+  "phase_id": "PH09",
+  "supported_event_types": [
+    "lifemap.event.created",
+    "lifemap.event.corrected",
+    "medications.course.created",
+    "medications.course.reconciled",
+    "scribe.note.signed",
+    "council.consensus.admitted"
+  ],
+  "event_envelope": {
+    "event_id": "UUID / string",
+    "aggregate_type": "string (e.g. LIFEMAP_EVENT, MEDICATION_COURSE)",
+    "aggregate_id": "string",
+    "event_type": "string",
+    "payload": "object (strictly pseudonymized, zero raw PII)",
+    "timestamp": "ISO 8601 UTC"
+  },
+  "invariants": {
+    "zero_raw_phi_in_events": true,
+    "at_least_once_delivery": true,
+    "idempotent_consumer_handling": true
+  }
+}
