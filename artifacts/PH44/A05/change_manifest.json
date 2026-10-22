@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH44",
+  "agent_id": "A05",
+  "role": "Admin/consumer app routes",
+  "task": "Build org list/detail/settings UI with lifecycle states",
+  "status": "PASSED",
+  "branch": "phase/ph44-a05",
+  "base_sha": "ad759178619bc5bebe867d34199c93a0bcf5f1cf",
+  "frozen_head_sha": "ad759178619bc5bebe867d34199c93a0bcf5f1cf",
+  "path_lane": "apps/admin/app/;apps/web/app/;artifacts/PH44/A05/",
+  "files_changed": [
+    "apps/admin/app/tenants/page.tsx",
+    "artifacts/PH44/A05/change_manifest.json",
+    "artifacts/PH44/A05/test_report.md",
+    "artifacts/PH44/A05/risk_register.md",
+    "artifacts/PH44/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH44/A05/change_manifest.json",
+    "artifacts/PH44/A05/test_report.md",
+    "artifacts/PH44/A05/risk_register.md",
+    "artifacts/PH44/A05/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/admin/app/tenants/page.tsx",
+      "symbol": "AdminTenantsPage",
+      "description": "Tenant governance view presenting organization directories, quota limits, and interactive suspension/activation actions."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A05 -p PH44",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/admin/app/ and artifacts/PH44/A05/."
+    }
+  ],
+  "audit_findings": {
+    "org_management_ui": {
+      "status": "COMPLETED",
+      "finding": "Built interactive tenant governance UI in apps/admin/app/tenants supporting organization onboarding, quota inspection, and immediate suspension toggle."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH44_A05 checkout ad759178619bc5bebe867d34199c93a0bcf5f1cf -- apps/admin/app/tenants/page.tsx",
+    "rm -rf /dev/shm/clara_worktrees/PH44_A05/artifacts/PH44/A05"
+  ],
+  "timestamp": "2026-10-22T18:30:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH44_A05"
+}
