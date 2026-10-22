@@ -1,0 +1,226 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH07",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "e8533cb02932ae88e6ce32735f45e5eac48271e7",
+  "merge_commit_sha": "303d945afa74afa8ff96e4f38674dcd68d56646a",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "D2 semantic envelope digest",
+      "worktree": "/dev/shm/clara_worktrees/PH07_A02",
+      "branch": "phase/ph07-a02",
+      "commit": "6fa821d0",
+      "full_commit": "6fa821d0f95c2cb208a703aa2c3a1a5dd8ecfd74",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/db/models.py",
+        "services/api/alembic/versions/20260904_0067_glhs_d2_semantic_digest_index.py",
+        "artifacts/PH07/A02/change_manifest.json",
+        "artifacts/PH07/A02/test_report.md",
+        "artifacts/PH07/A02/risk_register.md",
+        "artifacts/PH07/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "D1 projection digest and schema",
+      "worktree": "/dev/shm/clara_worktrees/PH07_A01",
+      "branch": "phase/ph07-a01",
+      "commit": "9693aded",
+      "full_commit": "9693aded04a09c37b796d2a4c4de85e6f3e22494",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/schemas.py",
+        "contracts/glhs/d1_projection_contract.v1.json",
+        "artifacts/PH07/A01/change_manifest.json",
+        "artifacts/PH07/A01/test_report.md",
+        "artifacts/PH07/A01/risk_register.md",
+        "artifacts/PH07/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "D3 exact transport payload digest",
+      "worktree": "/dev/shm/clara_worktrees/PH07_A03",
+      "branch": "phase/ph07-a03",
+      "commit": "9fb396de",
+      "full_commit": "9fb396ded1956f889a93ec8239fd53973378a49c",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/glhs/transport_verifier.py",
+        "artifacts/PH07/A03/change_manifest.json",
+        "artifacts/PH07/A03/test_report.md",
+        "artifacts/PH07/A03/risk_register.md",
+        "artifacts/PH07/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "server-attested inference dispatch route",
+      "worktree": "/dev/shm/clara_worktrees/PH07_A04",
+      "branch": "phase/ph07-a04",
+      "commit": "9333721a",
+      "full_commit": "9333721a7a07b6ed3dee04ac834d8ae557eae60f",
+      "status": "PASSED",
+      "files": [
+        "services/ml/src/clara_ml/attested_dispatch.py",
+        "artifacts/PH07/A04/change_manifest.json",
+        "artifacts/PH07/A04/test_report.md",
+        "artifacts/PH07/A04/risk_register.md",
+        "artifacts/PH07/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "provider identity and model-registry binding",
+      "worktree": "/dev/shm/clara_worktrees/PH07_A05",
+      "branch": "phase/ph07-a05",
+      "commit": "b24db5a4",
+      "full_commit": "b24db5a48ee69b718a50e7470a13b276624ab1e5",
+      "status": "PASSED",
+      "files": [
+        "apps/web/lib/model-registry.ts",
+        "apps/web/lib/model-registry.test.ts",
+        "artifacts/PH07/A05/change_manifest.json",
+        "artifacts/PH07/A05/test_report.md",
+        "artifacts/PH07/A05/risk_register.md",
+        "artifacts/PH07/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "failed/timeout dispatch lifecycle",
+      "worktree": "/dev/shm/clara_worktrees/PH07_A06",
+      "branch": "phase/ph07-a06",
+      "commit": "ad073171",
+      "full_commit": "ad0731713c82700a8319d579af1b51d8e7d4c4ce",
+      "status": "PASSED",
+      "files": [
+        "apps/mobile/lib/core/dispatch_lifecycle.dart",
+        "apps/mobile/test/dispatch_lifecycle_test.dart",
+        "artifacts/PH07/A06/change_manifest.json",
+        "artifacts/PH07/A06/test_report.md",
+        "artifacts/PH07/A06/risk_register.md",
+        "artifacts/PH07/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "user-facing attestation disclosure",
+      "worktree": "/dev/shm/clara_worktrees/PH07_A07",
+      "branch": "phase/ph07-a07",
+      "commit": "d62212b7",
+      "full_commit": "d62212b7d1ce026f79f2f9a2704ee9adfe7c4c1e",
+      "status": "PASSED",
+      "files": [
+        "services/api/tests/test_glhs_attestation_disclosure.py",
+        "artifacts/PH07/A07/change_manifest.json",
+        "artifacts/PH07/A07/test_report.md",
+        "artifacts/PH07/A07/risk_register.md",
+        "artifacts/PH07/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "transport serialization fuzz tests",
+      "worktree": "/dev/shm/clara_worktrees/PH07_A08",
+      "branch": "phase/ph07-a08",
+      "commit": "4928be89",
+      "full_commit": "4928be89ccc7646c0dfa7373c241bc3e75a6d696",
+      "status": "PASSED",
+      "files": [
+        "docs/security/TRANSPORT_SERIALIZATION_FUZZ_TESTS.md",
+        "scripts/ops/fuzz_transport_serialization.py",
+        "artifacts/PH07/A08/change_manifest.json",
+        "artifacts/PH07/A08/test_report.md",
+        "artifacts/PH07/A08/risk_register.md",
+        "artifacts/PH07/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "cryptographic key lifecycle and audit",
+      "worktree": "/dev/shm/clara_worktrees/PH07_A09",
+      "branch": "phase/ph07-a09",
+      "commit": "c7f60e84",
+      "full_commit": "c7f60e843110dda00eb52e24101c14eac3ecf751",
+      "status": "PASSED",
+      "files": [
+        "docs/research/CRYPTOGRAPHIC_KEY_LIFECYCLE_AND_AUDIT.md",
+        "artifacts/PH07/A09/change_manifest.json",
+        "artifacts/PH07/A09/test_report.md",
+        "artifacts/PH07/A09/risk_register.md",
+        "artifacts/PH07/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "receipt tier claims and fallback disclosure",
+      "worktree": "/dev/shm/clara_worktrees/PH07_A10",
+      "branch": "phase/ph07-a10",
+      "commit": "ec3fd221",
+      "full_commit": "ec3fd221d6562832a7e82a95776b9fdce39808d8",
+      "status": "PASSED",
+      "files": [
+        "docs/reports/ph07-glhs-transport-and-receipt-audit.md",
+        "scripts/ci/ph07_quality_gate.py",
+        "artifacts/PH07/A10/change_manifest.json",
+        "artifacts/PH07/A10/test_report.md",
+        "artifacts/PH07/A10/risk_register.md",
+        "artifacts/PH07/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.152,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.139,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T15:02:00.713724+00:00"
+}

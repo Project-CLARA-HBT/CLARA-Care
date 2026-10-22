@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH07-01,A01,Contracts,D1 projection digest schema and contract,Published H_proj H_sem H_trans under RFC 8785 JCS,3 digests formalized,PASS,contracts/glhs/d1_projection_contract.v1.json
+TC-PH07-02,A02,DB,D2 semantic envelope digest indexing & migration 0067,Indexed semantic and transport digest columns,Migration 0067 passes,PASS,python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions
+TC-PH07-03,A03,Domain,GLHS transport verifier & D3 egress check,Validates exact match between wire bytes and D3 hash,Verified cleanly,PASS,services/api/src/clara_api/glhs/transport_verifier.py
+TC-PH07-04,A04,ML,Server-attested inference dispatch route,Tracks attempt ID and provider receipt digest (L2),Dispatched cleanly,PASS,services/ml/src/clara_ml/attested_dispatch.py
+TC-PH07-05,A05,Web,Model registry client & provider identity binding,Binds model selections to approved providers,3/3 tests pass,PASS,npm run test -- lib/model-registry.test.ts
+TC-PH07-06,A06,Mobile,Model dispatch lifecycle and timeout state machine,Transitions to terminal timeout with localized error,3/3 tests pass,PASS,flutter test --no-pub test/dispatch_lifecycle_test.dart
+TC-PH07-07,A07,Tests/CI,User-facing attestation disclosure & receipt gating,Verified receipt enables L2 elevation; unverified base L0,3/3 tests pass,PASS,python3 -m unittest services/api/tests/test_glhs_attestation_disclosure.py
+TC-PH07-08,A08,Security,Transport serialization fuzz tests,100% sensitivity on random bit mutations,100/100 detected,PASS,python3 scripts/ops/fuzz_transport_serialization.py
+TC-PH07-09,A09,Docs,Cryptographic key lifecycle and audit specification,14-day overlap window and dual-key rotation ceremony,Specified,PASS,docs/research/CRYPTOGRAPHIC_KEY_LIFECYCLE_AND_AUDIT.md
+TC-PH07-10,A10,Review,Receipt tier hierarchy and fallback disclosure audit,L0-L3 hierarchy formalization and quality gate,Quality gate green,PASS,docs/reports/ph07-glhs-transport-and-receipt-audit.md
+TC-PH07-11,Integration,Gate,PH07 Quality Gate,All 7 invariants verified green,PH07 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph07_quality_gate.py
