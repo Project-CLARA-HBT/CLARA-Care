@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH09",
+  "agent_id": "A04",
+  "role": "ML + retrieval",
+  "task": "API event subscriptions",
+  "status": "PASSED",
+  "branch": "phase/ph09-a04",
+  "base_sha": "4c6621242a3cfef1d7ef46f204360e28f3cb6957",
+  "frozen_head_sha": "4c6621242a3cfef1d7ef46f204360e28f3cb6957",
+  "path_lane": "services/ml/src/clara_ml/;evaluation/;services/ocr/;services/asr/;artifacts/PH09/A04/",
+  "files_changed": [
+    "services/ml/src/clara_ml/event_subscriptions.py",
+    "artifacts/PH09/A04/change_manifest.json",
+    "artifacts/PH09/A04/test_report.md",
+    "artifacts/PH09/A04/risk_register.md",
+    "artifacts/PH09/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH09/A04/change_manifest.json",
+    "artifacts/PH09/A04/test_report.md",
+    "artifacts/PH09/A04/risk_register.md",
+    "artifacts/PH09/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/ml/src/clara_ml/event_subscriptions.py",
+      "symbol": "MLEventSubscriptionRegistry.dispatch_event",
+      "description": "Event subscription engine mapping clinical domain events to background vector indexers, DDI caches, and evidence pipelines."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/ml/src/clara_ml/event_subscriptions.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of event subscriptions module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH09",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/ml/src/clara_ml/ and artifacts/PH09/A04/."
+    }
+  ],
+  "audit_findings": {
+    "ml_event_subscriptions": {
+      "status": "COMPLETED",
+      "finding": "Implemented MLEventSubscriptionRegistry routing outbox events asynchronously to ML pipeline consumers with idempotent acknowledgement."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH09_A04/services/ml/src/clara_ml/event_subscriptions.py",
+    "rm -rf /dev/shm/clara_worktrees/PH09_A04/artifacts/PH09/A04"
+  ],
+  "timestamp": "2026-10-22T16:05:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH09_A04"
+}
