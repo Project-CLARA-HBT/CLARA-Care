@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH05",
+  "agent_id": "A06",
+  "role": "Mobile Flutter",
+  "task": "consent explanation UX",
+  "status": "PASSED",
+  "branch": "phase/ph05-a06",
+  "base_sha": "1c626f461ce20f8c050ca161a09d300062b9f939",
+  "frozen_head_sha": "1c626f461ce20f8c050ca161a09d300062b9f939",
+  "path_lane": "apps/mobile/;artifacts/PH05/A06/",
+  "files_changed": [
+    "apps/mobile/lib/widgets/consent_explanation_sheet.dart",
+    "apps/mobile/test/consent_explanation_ux_test.dart",
+    "artifacts/PH05/A06/change_manifest.json",
+    "artifacts/PH05/A06/test_report.md",
+    "artifacts/PH05/A06/risk_register.md",
+    "artifacts/PH05/A06/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH05/A06/change_manifest.json",
+    "artifacts/PH05/A06/test_report.md",
+    "artifacts/PH05/A06/risk_register.md",
+    "artifacts/PH05/A06/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/mobile/lib/screens/consent_center_screen.dart",
+      "symbol": "ConsentCenterScreen",
+      "description": "Server-authoritative mobile consent center displaying append-only compliance ledger purposes."
+    },
+    {
+      "file": "apps/mobile/lib/widgets/consent_explanation_sheet.dart",
+      "symbol": "ConsentExplanationSheet",
+      "description": "Accessible modal sheet explaining statutory data protection rights under Decree 13/2023/ND-CP (PDPD Vietnam)."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "flutter analyze --no-pub lib/widgets/consent_explanation_sheet.dart test/consent_explanation_ux_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Zero static analysis issues in Flutter consent UX widgets."
+    },
+    {
+      "command": "flutter test --no-pub test/consent_explanation_ux_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "2 widget tests verifying Vietnamese and English statutory explanation rendering and dismissal."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A06 -p PH05",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/mobile/ and artifacts/PH05/A06/."
+    }
+  ],
+  "audit_findings": {
+    "consent_explanation_ux": {
+      "status": "COMPLETED",
+      "finding": "Implemented ConsentExplanationSheet providing clear statutory rights explanations in Vietnamese and English, explaining no-retaliation withdrawal rights."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH05_A06/apps/mobile/lib/widgets/consent_explanation_sheet.dart",
+    "rm -f /dev/shm/clara_worktrees/PH05_A06/apps/mobile/test/consent_explanation_ux_test.dart",
+    "rm -rf /dev/shm/clara_worktrees/PH05_A06/artifacts/PH05/A06"
+  ],
+  "timestamp": "2026-10-22T11:35:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH05_A06"
+}
