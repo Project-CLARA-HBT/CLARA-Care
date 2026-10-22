@@ -1,0 +1,231 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH04",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "merge_commit_sha": "7becd52442e934ed6e3e7a1fad7d4ae3fe229e23",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "tenant membership and role schema; audit Organization, Workspace, WorkspaceMember, OrganizationMember models in services/api/src/clara_api/db/models.py, role scoping, foreign key constraints, and check Alembic migrations.",
+      "worktree": "/dev/shm/clara_worktrees/PH04_A02",
+      "branch": "phase/ph04-a02",
+      "commit": "db492ae9",
+      "full_commit": "db492ae9e783ee9889bcbfca9cd5630d02230305",
+      "status": "PASSED",
+      "files": [],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "organization/workspace API design; audit organization & workspace endpoints in services/api/src/clara_api/api/v1/endpoints/organization.py (and workspace.py), schemas in schemas.py, tenant CRUD contracts, and document multi-tenant API standards.",
+      "worktree": "/dev/shm/clara_worktrees/PH04_A01",
+      "branch": "phase/ph04-a01",
+      "commit": "e8aae7a3",
+      "full_commit": "e8aae7a3ecd17a55a86ad9dedc18bd171c3f9481",
+      "status": "PASSED",
+      "files": [
+        "contracts/organization/organization-tenant-contract.schema.json",
+        "contracts/organization/multi-tenant-standards.schema.json",
+        "contracts/organization/test_organization_contracts.py",
+        "services/api/src/clara_api/api/v1/endpoints/organization.py",
+        "services/api/src/clara_api/api/v1/endpoints/workspace.py",
+        "services/api/src/clara_api/api/router.py",
+        "services/api/src/clara_api/schemas.py",
+        "artifacts/PH04/A01/change_manifest.json",
+        "artifacts/PH04/A01/test_report.md",
+        "artifacts/PH04/A01/risk_register.md",
+        "artifacts/PH04/A01/rollback.md",
+        "artifacts/PH04/A01/DEPENDENCY_REQUEST.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "row-scoped query adapters; audit domain services across GLHS, lifemap, phr, compliance, core for row-level tenant isolation, ensuring queries explicitly scope by tenant_id / organization_id and never leak across organizations.",
+      "worktree": "/dev/shm/clara_worktrees/PH04_A03",
+      "branch": "phase/ph04-a03",
+      "commit": "e63b5407",
+      "full_commit": "e63b5407b1c8bd55291de5f8018dec81166bb38c",
+      "status": "PASSED",
+      "files": [],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "workspace membership invitations & tenant ML boundaries; audit tenant isolation in ML inference and persistent RAG store (kb_sources, kb_documents partitioned per tenant), ensure no cross-tenant knowledge retrieval leakage.",
+      "worktree": "/dev/shm/clara_worktrees/PH04_A04",
+      "branch": "phase/ph04-a04",
+      "commit": "c8f3751b",
+      "full_commit": "c8f3751b149796dbaee33864efb146c603161ac2",
+      "status": "PASSED",
+      "files": [
+        "services/ml/src/clara_ml/tenant_boundary.py",
+        "services/ml/src/clara_ml/rag/store/schema.py",
+        "services/ml/src/clara_ml/rag/store/document_store.py",
+        "services/ml/src/clara_ml/rag/store/sparse_index.py",
+        "services/ml/src/clara_ml/rag/store/hybrid_retriever.py",
+        "services/ml/src/clara_ml/rag/store/cache.py",
+        "services/ml/src/clara_ml/rag/pipeline.py",
+        "services/ml/src/clara_ml/main.py",
+        "evaluation/tests/test_tenant_rag_isolation.py",
+        "artifacts/PH04/A04/change_manifest.json",
+        "artifacts/PH04/A04/test_report.md",
+        "artifacts/PH04/A04/risk_register.md",
+        "artifacts/PH04/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "provider/patient organization linking; audit Web clinic/hospital portal navigation, organization switcher components, tenant context providers in apps/web.",
+      "worktree": "/dev/shm/clara_worktrees/PH04_A05",
+      "branch": "phase/ph04-a05",
+      "commit": "bdf58b19",
+      "full_commit": "bdf58b19dd6a87cf5096b6dba08d9f2f7890f649",
+      "status": "PASSED",
+      "files": [
+        "apps/web/app/clinical/clinical-pages.test.tsx",
+        "apps/web/components/clinical/patient-roster.tsx",
+        "apps/web/components/organization/organization-link-badge.test.tsx",
+        "apps/web/components/organization/organization-link-badge.tsx",
+        "apps/web/components/organization/organization-provider.test.tsx",
+        "apps/web/components/organization/organization-provider.tsx",
+        "apps/web/components/organization/organization-switcher.test.tsx",
+        "apps/web/components/organization/organization-switcher.tsx",
+        "apps/web/lib/api/v2-client.ts",
+        "apps/web/lib/http-client.ts",
+        "apps/web/lib/organization-api.test.ts",
+        "apps/web/lib/organization-api.ts",
+        "apps/web/lib/organization-context.test.ts",
+        "apps/web/lib/organization-context.ts",
+        "artifacts/PH04/A05/change_manifest.json",
+        "artifacts/PH04/A05/test_report.md",
+        "artifacts/PH04/A05/risk_register.md",
+        "artifacts/PH04/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "tenant-aware web navigation & mobile org context; audit mobile organization scoping, clinic association in patient profile, presentation mode scoping, and ensure X-CLARA-Organization-Id header propagation in ApiClient.",
+      "worktree": "/dev/shm/clara_worktrees/PH04_A06",
+      "branch": "phase/ph04-a06",
+      "commit": "2ef26c76",
+      "full_commit": "2ef26c76ffab2d44cca8d8d5488397b14fdccea7",
+      "status": "PASSED",
+      "files": [
+        "apps/mobile/lib/core/api_client.dart",
+        "apps/mobile/lib/core/session_store.dart",
+        "apps/mobile/test/api_client_tenant_organization_test.dart",
+        "artifacts/PH04/A06/change_manifest.json",
+        "artifacts/PH04/A06/test_report.md",
+        "artifacts/PH04/A06/risk_register.md",
+        "artifacts/PH04/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "mobile org switch and deep-link test suite; audit tests in services/api/tests/ for organization and workspace operations, cross-organization switching, invitation acceptance deep links.",
+      "worktree": "/dev/shm/clara_worktrees/PH04_A07",
+      "branch": "phase/ph04-a07",
+      "commit": "8c1a9903",
+      "full_commit": "8c1a99032b6dfd07f886afb9913e579be22c4108",
+      "status": "PASSED",
+      "files": [
+        "services/api/tests/test_mobile_org_switching_and_deep_links.py",
+        "apps/web/e2e/org-switch-deep-link.spec.ts",
+        "artifacts/PH04/A07/change_manifest.json",
+        "artifacts/PH04/A07/test_report.md",
+        "artifacts/PH04/A07/risk_register.md",
+        "artifacts/PH04/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "cross-tenant isolation regression audit; audit multi-tenant boundaries to ensure zero cross-tenant data leakage (Tenant A cannot view, query, or mutate Tenant B records even if role is admin in Tenant A), verify secret scanning.",
+      "worktree": "/dev/shm/clara_worktrees/PH04_A08",
+      "branch": "phase/ph04-a08",
+      "commit": "1aae7761",
+      "full_commit": "1aae77614438084c46b2c2e2e363eb3787fe2d02",
+      "status": "PASSED",
+      "files": [
+        "docs/security/cross-tenant-isolation-threat-model.md",
+        "docs/security/privacy-checklist.md",
+        "docs/compliance/cross-tenant-privacy-assessment.md",
+        "scripts/ops/audit_cross_tenant_isolation.py",
+        "scripts/ops/test_audit_cross_tenant_isolation.py",
+        "artifacts/PH04/A08/change_manifest.json",
+        "artifacts/PH04/A08/test_report.md",
+        "artifacts/PH04/A08/risk_register.md",
+        "artifacts/PH04/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "billing/tenant boundary privacy audit; document and audit multi-tenant billing aggregation, ensuring telemetry and usage metrics are isolated by tenant_id without cross-tenant metadata disclosure.",
+      "worktree": "/dev/shm/clara_worktrees/PH04_A09",
+      "branch": "phase/ph04-a09",
+      "commit": "c8c22ee0",
+      "full_commit": "c8c22ee0c78e3896db601deb5b88f9f513011ef1",
+      "status": "PASSED",
+      "files": [],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "tenant onboarding and migration playbook & PH04 quality gate; document multi-tenant organization onboarding runbook in docs/runbooks/tenant-onboarding-and-organization-management.md, audit all 9 domain lanes for cross-tenant isolation, create scripts/ci/ph04_quality_gate.py.",
+      "worktree": "/dev/shm/clara_worktrees/PH04_A10",
+      "branch": "phase/ph04-a10",
+      "commit": "3a2a0779",
+      "full_commit": "3a2a07799b8e1f7b738219fc84fd24282d3566b9",
+      "status": "PASSED",
+      "files": [],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.769,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.143,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T10:37:38.585273+00:00"
+}

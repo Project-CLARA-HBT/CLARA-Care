@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH04-01,A01,Contracts,Organization and Workspace API contracts & schemas,Validates multi-tenant boundaries and contracts,All tests passed,PASS,pytest contracts/tenant/test_tenant_contracts.py
+TC-PH04-02,A02,DB,Tenant membership models & migration downgrade integrity,64 Alembic migrations have valid non-empty downgrade,64/64 migrations pass,PASS,python3 scripts/ops/check_migration_downgrade.py
+TC-PH04-03,A03,Domain,Row-scoped query adapters & tenant isolation,Partitioned by tenant_id with uniform 404 denial,All tests passed,PASS,python3 scripts/ci/ph04_quality_gate.py --verify-isolation
+TC-PH04-04,A04,ML,Workspace membership invitations & tenant ML boundaries,Zero cross-tenant context leakage in ML RAG,All tests passed,PASS,pytest services/ml/tests/
+TC-PH04-05,A05,Web,Provider/patient organization linking & switcher,Accessible facility switching with cache purge,Vitest suites pass,PASS,vitest run components/organization/
+TC-PH04-06,A06,Mobile,Tenant organization header propagation & session scoping,X-CLARA-Organization-Id propagated on REST/SSE/multipart,5/5 tests pass,PASS,flutter test test/api_client_tenant_organization_test.dart
+TC-PH04-07,A07,Tests/CI,Mobile org switch and deep-link test suite,Hermetic invitation acceptance and context switching,21/21 passed,PASS,pytest services/api/tests/test_mobile_org_switching_and_deep_links.py
+TC-PH04-08,A08,Security,Cross-tenant isolation regression audit,Strict tenant boundaries and zero unauthorized access,All vectors pass,PASS,pytest docs/security/
+TC-PH04-09,A09,Research,Multi-tenant billing boundary privacy audit,Aggregated metrics exclude cross-tenant PHI,All audits pass,PASS,pytest research/billing_tenant_privacy_audit/
+TC-PH04-10,A10,Hostile Audit,Tenant onboarding playbook & 9-lane audit,Comprehensive playbook and invariant validation,Audit green,PASS,python3 scripts/ci/ph04_quality_gate.py
+TC-PH04-11,Integration,Gate,PH04 Quality Gate,All 7 invariants green,PH04 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph04_quality_gate.py
