@@ -19,6 +19,7 @@ from clara_api.api.v1.endpoints import (
     govred_research,
     guided_flows,
     health,
+    health_adapter,
     lifemap,
     lifemap_capture,
     lifemap_insights,
@@ -93,6 +94,7 @@ api_router.include_router(
     admin_observability.router, prefix="/admin/observability", tags=["admin-observability"]
 )
 api_router.include_router(compliance_router, prefix="/compliance", tags=["compliance"])
+api_router.include_router(health_adapter.router)
 
 # This route is intentionally absent unless the process is an attested,
 # non-production isolated RIVF deployment with one explicit research arm.

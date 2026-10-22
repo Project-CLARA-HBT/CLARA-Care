@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH41",
+  "agent_id": "A04",
+  "role": "Adapter / existing code",
+  "task": "Build authenticated health API adapter without direct PHI DB access",
+  "status": "PASSED",
+  "branch": "phase/ph41-a04",
+  "base_sha": "f161b49db7c3c54117b8841da3675f92fe19543e",
+  "frozen_head_sha": "f161b49db7c3c54117b8841da3675f92fe19543e",
+  "path_lane": "services/api/src/clara_api/;services/ml/src/clara_ml/;artifacts/PH41/A04/",
+  "files_changed": [
+    "services/api/src/clara_api/api/v1/endpoints/health_adapter.py",
+    "services/api/src/clara_api/api/router.py",
+    "artifacts/PH41/A04/change_manifest.json",
+    "artifacts/PH41/A04/test_report.md",
+    "artifacts/PH41/A04/risk_register.md",
+    "artifacts/PH41/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH41/A04/change_manifest.json",
+    "artifacts/PH41/A04/test_report.md",
+    "artifacts/PH41/A04/risk_register.md",
+    "artifacts/PH41/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/health_adapter.py",
+      "symbol": "get_authenticated_system_telemetry",
+      "description": "Authenticated health API adapter validating service token and providing real component telemetry without PHI access."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/api/router.py services/api/src/clara_api/api/v1/endpoints/health_adapter.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of health adapter and router."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH41",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/ and artifacts/PH41/A04/."
+    }
+  ],
+  "audit_findings": {
+    "authenticated_health_adapter": {
+      "status": "COMPLETED",
+      "finding": "Built health_adapter endpoint validating X-Control-Service-Token header and emitting live metrics without executing any database queries against patient PHI tables."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH41_A04 checkout f161b49db7c3c54117b8841da3675f92fe19543e -- services/api/src/clara_api/api/router.py",
+    "rm -f /dev/shm/clara_worktrees/PH41_A04/services/api/src/clara_api/api/v1/endpoints/health_adapter.py",
+    "rm -rf /dev/shm/clara_worktrees/PH41_A04/artifacts/PH41/A04"
+  ],
+  "timestamp": "2026-10-22T12:02:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH41_A04"
+}
