@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH10",
+  "agent_id": "A05",
+  "role": "Web UX",
+  "task": "source and acquisition provenance",
+  "status": "PASSED",
+  "branch": "phase/ph10-a05",
+  "base_sha": "d17260aa2f70b79fcce8965615d6a2f3068e217d",
+  "frozen_head_sha": "d17260aa2f70b79fcce8965615d6a2f3068e217d",
+  "path_lane": "apps/web/app/;apps/web/components/;apps/web/lib/;artifacts/PH10/A05/",
+  "files_changed": [
+    "apps/web/lib/clinical-provenance.ts",
+    "apps/web/lib/clinical-provenance.test.ts",
+    "artifacts/PH10/A05/change_manifest.json",
+    "artifacts/PH10/A05/test_report.md",
+    "artifacts/PH10/A05/risk_register.md",
+    "artifacts/PH10/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH10/A05/change_manifest.json",
+    "artifacts/PH10/A05/test_report.md",
+    "artifacts/PH10/A05/risk_register.md",
+    "artifacts/PH10/A05/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/web/lib/clinical-provenance.ts",
+      "symbol": "ClinicalProvenanceHelper",
+      "description": "Helper mapping acquisition source types (EMR, OCR, Scribe, Self-Reported, Wearable) to localized badges and authoritativeness ratings."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "npm run test -- lib/clinical-provenance.test.ts",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "2 unit tests verifying authoritativeness rules and localized badge formatting."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A05 -p PH10",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/web/lib/ and artifacts/PH10/A05/."
+    }
+  ],
+  "audit_findings": {
+    "source_acquisition_provenance": {
+      "status": "COMPLETED",
+      "finding": "Implemented ClinicalProvenanceHelper clearly distinguishing verified hospital EMR and clinician consultation data from self-reported patient inputs."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH10_A05/apps/web/lib/clinical-provenance.ts",
+    "rm -f /dev/shm/clara_worktrees/PH10_A05/apps/web/lib/clinical-provenance.test.ts",
+    "rm -rf /dev/shm/clara_worktrees/PH10_A05/artifacts/PH10/A05"
+  ],
+  "timestamp": "2026-10-22T17:40:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH10_A05"
+}
