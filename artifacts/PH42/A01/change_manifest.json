@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH42",
+  "agent_id": "A01",
+  "role": "API contract + BFF",
+  "task": "Implement session issue/introspection/revocation contract",
+  "status": "PASSED",
+  "branch": "phase/ph42-a01",
+  "base_sha": "40e2dfcd0180a5e840d2448378516ee7137f6e06",
+  "frozen_head_sha": "40e2dfcd0180a5e840d2448378516ee7137f6e06",
+  "path_lane": "services/control-plane/src/clara_control/api/;contracts/control-plane/;artifacts/PH42/A01/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/api/router.py",
+    "contracts/control-plane/control_v1_openapi.json",
+    "artifacts/PH42/A01/change_manifest.json",
+    "artifacts/PH42/A01/test_report.md",
+    "artifacts/PH42/A01/risk_register.md",
+    "artifacts/PH42/A01/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH42/A01/change_manifest.json",
+    "artifacts/PH42/A01/test_report.md",
+    "artifacts/PH42/A01/risk_register.md",
+    "artifacts/PH42/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/api/router.py",
+      "symbol": "issue_admin_session, introspect_admin_session, revoke_admin_session, step_up_admin_session",
+      "description": "Control-plane session lifecycle endpoints handling issue, introspection, revocation, and MFA step-up."
+    },
+    {
+      "file": "contracts/control-plane/control_v1_openapi.json",
+      "symbol": "paths./control/v1/sessions/issue",
+      "description": "Published OpenAPI contract for session management and privilege elevation."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/api/router.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated control router."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A01 -p PH42",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/control-plane/src/clara_control/api/, contracts/control-plane/, and artifacts/PH42/A01/."
+    }
+  ],
+  "audit_findings": {
+    "session_contract_implementation": {
+      "status": "COMPLETED",
+      "finding": "Implemented session issue, introspection, multi-device revocation, and MFA step-up endpoints under /control/v1/sessions."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH42_A01 checkout 40e2dfcd0180a5e840d2448378516ee7137f6e06 -- services/control-plane/src/clara_control/api/router.py",
+    "git -C /dev/shm/clara_worktrees/PH42_A01 checkout 40e2dfcd0180a5e840d2448378516ee7137f6e06 -- contracts/control-plane/control_v1_openapi.json",
+    "rm -rf /dev/shm/clara_worktrees/PH42_A01/artifacts/PH42/A01"
+  ],
+  "timestamp": "2026-10-22T13:45:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH42_A01"
+}

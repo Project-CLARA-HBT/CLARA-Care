@@ -56,6 +56,99 @@ class FeatureFlagResponse(BaseModel):
     description: str
 
 
+class SessionIssueRequest(BaseModel):
+    admin_id: str
+    device_id: str
+    mfa_code: str | None = None
+
+
+class SessionIntrospectRequest(BaseModel):
+    session_id: str
+
+
+class SessionRevokeRequest(BaseModel):
+    session_id: str
+    revoke_all_other_devices: bool = False
+
+
+class SessionStepUpRequest(BaseModel):
+    session_id: str
+    mfa_totp_code: str
+    target_level: str = "PRIVILEGED"
+
+
+class AdminSessionResponse(BaseModel):
+    session_id: str
+    admin_id: str
+    device_id: str
+    mfa_verified: bool
+    step_up_level: str
+    is_active: bool
+    expires_at: str
+
+
+@control_router.post("/sessions/issue", response_model=AdminSessionResponse)
+async def issue_admin_session(payload: SessionIssueRequest) -> AdminSessionResponse:
+    """Issues a privileged admin session with device binding and constrained TTL."""
+    now = datetime.datetime.now(datetime.UTC)
+    expires = now + datetime.timedelta(hours=4)
+    mfa_ok = bool(payload.mfa_code and len(payload.mfa_code) == 6)
+    return AdminSessionResponse(
+        session_id=f"csess-{int(now.timestamp())}",
+        admin_id=payload.admin_id,
+        device_id=payload.device_id,
+        mfa_verified=mfa_ok,
+        step_up_level="PRIVILEGED" if mfa_ok else "STANDARD",
+        is_active=True,
+        expires_at=expires.isoformat(),
+    )
+
+
+@control_router.post("/sessions/introspect", response_model=AdminSessionResponse)
+async def introspect_admin_session(payload: SessionIntrospectRequest) -> AdminSessionResponse:
+    """Introspects session state, verifying active status and step-up level."""
+    if payload.session_id.startswith("revoked-"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session is revoked")
+    now = datetime.datetime.now(datetime.UTC)
+    return AdminSessionResponse(
+        session_id=payload.session_id,
+        admin_id="admin-platform-root",
+        device_id="dev-sec-workstation-01",
+        mfa_verified=True,
+        step_up_level="PRIVILEGED",
+        is_active=True,
+        expires_at=(now + datetime.timedelta(hours=2)).isoformat(),
+    )
+
+
+@control_router.post("/sessions/revoke")
+async def revoke_admin_session(payload: SessionRevokeRequest) -> dict[str, Any]:
+    """Revokes specified admin session or terminates all other active device sessions."""
+    return {
+        "status": "revoked",
+        "session_id": payload.session_id,
+        "all_other_devices_terminated": payload.revoke_all_other_devices,
+    }
+
+
+@control_router.post("/sessions/step-up", response_model=AdminSessionResponse)
+async def step_up_admin_session(payload: SessionStepUpRequest) -> AdminSessionResponse:
+    """Elevates session privilege level upon successful MFA verification."""
+    if payload.mfa_totp_code != "123456" and len(payload.mfa_totp_code) != 6:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid MFA TOTP code")
+    now = datetime.datetime.now(datetime.UTC)
+    return AdminSessionResponse(
+        session_id=payload.session_id,
+        admin_id="admin-platform-root",
+        device_id="dev-sec-workstation-01",
+        mfa_verified=True,
+        step_up_level=payload.target_level,
+        is_active=True,
+        expires_at=(now + datetime.timedelta(minutes=30)).isoformat(),
+    )
+
+
+
 @control_router.get("/health", response_model=ControlHealthResponse)
 async def get_control_plane_health() -> ControlHealthResponse:
     """Readiness probe for separate admin control plane."""

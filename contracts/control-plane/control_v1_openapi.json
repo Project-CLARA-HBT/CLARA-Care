@@ -2,9 +2,179 @@
   "openapi": "3.1.0",
   "info": {
     "title": "CLARA Control-Plane API",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "paths": {
+    "/control/v1/sessions/issue": {
+      "post": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Issue Admin Session",
+        "description": "Issues a privileged admin session with device binding and constrained TTL.",
+        "operationId": "issue_admin_session_control_v1_sessions_issue_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/sessions/introspect": {
+      "post": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Introspect Admin Session",
+        "description": "Introspects session state, verifying active status and step-up level.",
+        "operationId": "introspect_admin_session_control_v1_sessions_introspect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionIntrospectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/sessions/revoke": {
+      "post": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Revoke Admin Session",
+        "description": "Revokes specified admin session or terminates all other active device sessions.",
+        "operationId": "revoke_admin_session_control_v1_sessions_revoke_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionRevokeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Revoke Admin Session Control V1 Sessions Revoke Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/sessions/step-up": {
+      "post": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Step Up Admin Session",
+        "description": "Elevates session privilege level upon successful MFA verification.",
+        "operationId": "step_up_admin_session_control_v1_sessions_step_up_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionStepUpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/control/v1/health": {
       "get": {
         "tags": [
@@ -106,6 +276,49 @@
   },
   "components": {
     "schemas": {
+      "AdminSessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "admin_id": {
+            "type": "string",
+            "title": "Admin Id"
+          },
+          "device_id": {
+            "type": "string",
+            "title": "Device Id"
+          },
+          "mfa_verified": {
+            "type": "boolean",
+            "title": "Mfa Verified"
+          },
+          "step_up_level": {
+            "type": "string",
+            "title": "Step Up Level"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "admin_id",
+          "device_id",
+          "mfa_verified",
+          "step_up_level",
+          "is_active",
+          "expires_at"
+        ],
+        "title": "AdminSessionResponse"
+      },
       "ControlHealthDetails": {
         "properties": {
           "database": {
@@ -188,6 +401,102 @@
         ],
         "title": "FeatureFlagResponse"
       },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "SessionIntrospectRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "SessionIntrospectRequest"
+      },
+      "SessionIssueRequest": {
+        "properties": {
+          "admin_id": {
+            "type": "string",
+            "title": "Admin Id"
+          },
+          "device_id": {
+            "type": "string",
+            "title": "Device Id"
+          },
+          "mfa_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mfa Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "admin_id",
+          "device_id"
+        ],
+        "title": "SessionIssueRequest"
+      },
+      "SessionRevokeRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "revoke_all_other_devices": {
+            "type": "boolean",
+            "title": "Revoke All Other Devices",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "SessionRevokeRequest"
+      },
+      "SessionStepUpRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "mfa_totp_code": {
+            "type": "string",
+            "title": "Mfa Totp Code"
+          },
+          "target_level": {
+            "type": "string",
+            "title": "Target Level",
+            "default": "PRIVILEGED"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "mfa_totp_code"
+        ],
+        "title": "SessionStepUpRequest"
+      },
       "TenantResponse": {
         "properties": {
           "id": {
@@ -236,6 +545,46 @@
           "created_at"
         ],
         "title": "TenantResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     }
   }
