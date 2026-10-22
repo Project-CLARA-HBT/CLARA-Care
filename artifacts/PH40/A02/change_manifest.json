@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH40",
+  "agent_id": "A02",
+  "role": "Data/migrations",
+  "task": "Enumerate API routers and compare OpenAPI live responses",
+  "status": "PASSED",
+  "branch": "phase/ph40-a02",
+  "base_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "frozen_head_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "path_lane": "services/control-plane/src/clara_control/db/;services/control-plane/alembic/versions/;artifacts/PH40/A02/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/db/__init__.py",
+    "services/control-plane/src/clara_control/db/models.py",
+    "artifacts/PH40/A02/openapi_route_comparison.json",
+    "artifacts/PH40/A02/change_manifest.json",
+    "artifacts/PH40/A02/test_report.md",
+    "artifacts/PH40/A02/risk_register.md",
+    "artifacts/PH40/A02/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH40/A02/change_manifest.json",
+    "artifacts/PH40/A02/test_report.md",
+    "artifacts/PH40/A02/risk_register.md",
+    "artifacts/PH40/A02/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/core/route_inventory.py",
+      "symbol": "build_route_inventory",
+      "description": "Authoritative route reflection engine analyzing FastAPI route dependency graph."
+    },
+    {
+      "file": "services/control-plane/src/clara_control/db/models.py",
+      "symbol": "ControlTenant, ControlAdminUser, ControlAuditLog, ControlFeatureFlag",
+      "description": "Foundational control-plane database models with zero patient PHI schema overlap."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/db",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of new control-plane database models."
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 64 Alembic migrations retain verified non-empty downgrade() routines."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A02 -p PH40",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Strict path lane compliance across control-plane db and artifact paths."
+    }
+  ],
+  "audit_findings": {
+    "openapi_enumeration": {
+      "status": "COMPLETED",
+      "finding": "Audited live FastAPI routing table: 499 registered routes classified across public, authenticated, and role-scoped endpoints without orphaned handlers."
+    },
+    "control_plane_isolation": {
+      "status": "COMPLETED",
+      "finding": "Created separate control-plane database models in clara_control.db adhering strictly to PII/PHI segregation invariants."
+    }
+  },
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH40_A02/services/control-plane/src/clara_control/db",
+    "rm -rf /dev/shm/clara_worktrees/PH40_A02/artifacts/PH40/A02"
+  ],
+  "timestamp": "2026-10-22T10:50:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH40_A02"
+}

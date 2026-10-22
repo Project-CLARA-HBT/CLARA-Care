@@ -1,0 +1,4666 @@
+{
+  "total_routes": 499,
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/analytics/platform",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/evidence-applicability-rules",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/evidence-applicability-rules",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/evidence-applicability-rules/{rule_id}/review",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/evidence-change-assessments",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/evidence-change-assessments/{assessment_id}/review",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/experiments",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/experiments",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/experiments/{experiment_id}/audit",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/experiments/{experiment_id}/kill",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/experiments/{experiment_id}/rollout",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/feedback",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/feedback/{feedback_id}",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/feedback/{feedback_id}/assign",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/feedback/{feedback_id}/resolution",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/feedback/{feedback_id}/status",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/observability/alerts/{alert_id}/acknowledge",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/privacy-receipts",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/rag/eval/results/{run_id}",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/rag/eval/run",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/rag/ingestion/run",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/rag/ingestion/status/{job_id}",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/rag/sources",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/rag/sources/{source_id}",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/rag/stats",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{user_id}",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{user_id}/lock",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/users/{user_id}/role",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{user_id}/sessions/revoke",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{user_id}/unlock",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/callback",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/change-password",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/consent",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/consent-status",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/forgot-password",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login-otp/verify",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/resend-verification",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/reset-password",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/verify-email",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/baselines",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/baselines/{signal_key}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/care-tasks/{task_id}/delegations",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/careguard/analyze",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/careguard/cabinet",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/careguard/cabinet/auto-ddi-check",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/careguard/cabinet/import-detections",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/careguard/cabinet/items",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/careguard/cabinet/items/{item_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/careguard/cabinet/items/{item_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/careguard/cabinet/items/{item_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/careguard/cabinet/scan-file",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/careguard/cabinet/scan-text",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/careguard/dictionary",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/careguard/dictionary",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/careguard/dictionary/resolve",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/careguard/dictionary/{mapping_id}",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/careguard/dictionary/{mapping_id}",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/careguard/dictionary/{mapping_id}",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/careguard/dictionary/{mapping_id}/audit",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/careguard/dictionary/{mapping_id}/curation",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/careguard/drugbank/status",
+      "classification": "role",
+      "roles": [
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/careguard/metrics",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/stream",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clinical-workbench/artifacts/{artifact_id}/reviews",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clinical-workbench/cases",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clinical-workbench/cases",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clinical-workbench/cases/{case_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clinical-workbench/cases/{case_id}/context",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clinical-workbench/cases/{case_id}/context",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clinical-workbench/cases/{case_id}/runs",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clinical-workbench/patients",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clinical-workbench/runs/{run_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clinical-workbench/runs/{run_id}/execute",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clinical-workbench/runs/{run_id}/ledger",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clinical/workbench/artifacts/{artifact_id}/reviews",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clinical/workbench/cases",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clinical/workbench/cases",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clinical/workbench/cases/{case_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clinical/workbench/cases/{case_id}/context",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clinical/workbench/cases/{case_id}/context",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clinical/workbench/cases/{case_id}/runs",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clinical/workbench/patients",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clinical/workbench/runs/{run_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clinical/workbench/runs/{run_id}/execute",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clinical/workbench/runs/{run_id}/ledger",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/commitments/leases/acquire",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/commitments/leases/{lease_id}/renew",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/commitments/proposals",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/commitments/proposals/{proposal_id}/review",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/commitments/snapshots",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/commitments/{commitment_id}/cancel",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/commitments/{commitment_id}/decisions/{decision_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/commitments/{commitment_id}/transitions",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/compliance/consent",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/compliance/consent/grant",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/compliance/consent/withdraw",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/compliance/dsar/admin/queue",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/compliance/dsar/admin/status",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/compliance/dsar/delete",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/compliance/dsar/export",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/compliance/dsar/request",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/compliance/dsar/requests",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/compliance/records",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/compliance/transparency-notice",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/compliance/transparency-notice/ack",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connectors",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connectors/capabilities",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/device",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/connectors/{connector_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/connectors/{connector_id}/imported-data",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/{connector_id}/imports",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/{connector_id}/pause",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/{connector_id}/resume",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/{connector_id}/sync",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/council/cases",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/council/cases",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/council/cases/latest",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/council/cases/{case_id}",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/council/cases/{case_id}",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/council/cases/{case_id}/evidence-attachments",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/council/cases/{case_id}/evidence-snapshots",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/council/cases/{case_id}/evidence-snapshots/{job_id}/attach",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/council/cases/{case_id}/intake",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/council/cases/{case_id}/oversight",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/council/cases/{case_id}/oversight",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/council/cases/{case_id}/run",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/council/cases/{case_id}/run/stream",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/council/cases/{case_id}/runs",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/council/consult",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/council/intake",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/council/run",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/decisions/{decision_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/decisions/{decision_id}/dispute",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/episodes/{episode_id}/evidence-questions",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/episodes/{episode_id}/next-question",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/episodes/{episode_id}/questions/{question_id}/interaction",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/episodes/{episode_id}/replay",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/evidence-change-notifications",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/evidence-change-notifications/{notification_id}/read",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/evidence-questions/{question_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/evidence-questions/{question_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/evidence-questions/{question_id}/run",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/evidence-runs/{run_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/evidence-runs/{run_id}/applicability",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/evidence-runs/{run_id}/contradictions",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/evidence-runs/{run_id}/matrix",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/evidence-runs/{run_id}/subscribe",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/evidence-subscriptions",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/evidence-subscriptions/{subscription_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/evidence-subscriptions/{subscription_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/family/access-grants",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/family/access-grants/{grant_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/family/access-grants/{grant_id}/renewals",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/family/access-log",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/family/invitations",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/family/invitations/accept",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/family/invitations/preview",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/family/invitations/{invitation_token}/accept",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/family/notifications",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/family/notifications/{grant_id}/{task_id}/acknowledge",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/family/profiles/{profile_id}/care-tasks/{task_id}/complete",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/family/profiles/{profile_id}/caregiver-observations",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/family/relationships",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/family/share-options",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/guided-flows",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guided-flows",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/guided-flows/{draft_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/guided-flows/{draft_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guided-flows/{draft_id}/abandon",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guided-flows/{draft_id}/commit",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/guideline-artifacts/{artifact_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health/ready",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/leases/acquire",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/leases/{lease_id}/renew",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/admin/outbox/dead-letters",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/admin/outbox/dead-letters/{event_id}/replay",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/admin/outbox/dead-letters/{event_id}/resolve",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/admin/outbox/health",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/capture/active-session",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/capture/artifact-sessions",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/capture/artifacts/{artifact_id}/content",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/capture/candidates/{candidate_id}/duplicates",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/capture/candidates/{candidate_id}/normalization",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/capture/candidates/{candidate_id}/review",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/capture/guided-answers",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/capture/jobs/{job_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/capture/sessions",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/capture/sessions/{session_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/capture/sessions/{session_id}/abandon",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/capture/sessions/{session_id}/artifacts",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/episodes",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/episodes",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/episodes/{episode_id}/goal",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/episodes/{episode_id}/tasks",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/events",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/events/{event_id}/confirm",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/events/{event_id}/correct",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/events/{event_id}/dispute",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/events/{event_id}/history",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/events/{event_id}/invalidate",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/events/{event_id}/resolve",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/events/{event_id}/revision-comparison",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/export",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/health",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/revisions",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/schema-version",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/summary",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/tasks",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/tasks/{task_id}/accept",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/tasks/{task_id}/cancel",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/tasks/{task_id}/complete",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/tasks/{task_id}/reject",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/tasks/{task_id}/start",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/timeline",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/today",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/v2/ask",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/v2/baselines",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/v2/baselines/{signal_key}/recompute",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/v2/client-contract",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/v2/commands/{command_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/v2/digests/{level}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/v2/disputes",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/v2/export/fhir-r4",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/v2/export/ips",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/v2/fhir/conformance",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/v2/import/fhir-r4",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/v2/review-findings",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/v2/review-findings/scan",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/v2/review-findings/{finding_id}/actions",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/v2/sources/{source_id}/revoke",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifemap/v2/summaries/{level}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/v2/visit-preparation-drafts",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/medication-courses",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/medication-courses",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/medication-courses/safety/ddi",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/medication-courses/{course_id}/correct",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/medication-courses/{course_id}/end",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/medication-courses/{course_id}/history",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/mobile/summary",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/organizations",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/organizations",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/organizations/{org_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/organizations/{org_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/organizations/{org_id}/audit",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/organizations/{org_id}/members",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/organizations/{org_id}/members",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/organizations/{org_id}/members/{member_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/organizations/{org_id}/members/{member_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/organizations/{org_id}/workspaces",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/organizations/{org_id}/workspaces",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/organizations/{org_id}/workspaces/{workspace_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/organizations/{org_id}/workspaces/{workspace_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/organizations/{org_id}/workspaces/{workspace_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/body-measurements",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/phr/body-measurements",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/capabilities",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/completeness",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/consent",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/phr/consent",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/emergency-card",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/phr/emergency-card",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/emergency-card/eligibility",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/phr/emergency-card/revoke",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/phr/entries/{kind}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/phr/entries/{kind}/{entry_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/phr/entries/{kind}/{entry_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/export",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/history",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/phr/import/ocr/confirm",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/phr/import/ocr/scan",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/observations",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/phr/observations",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/onboarding",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/phr/onboarding",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/record",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/phr/record",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/record/enhanced",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/reminders",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/phr/reminders",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/phr/reminders/dispatch",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/phr/share",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/phr/share/{share_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/phr/shared/{token_value}",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/profiles",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/profiles/context",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/profiles/{profile_id}/activate",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/profiles/{profile_id}/capabilities",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/clarify",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/conversations",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/conversations",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/research/conversations/{conversation_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/conversations/{conversation_id}/messages",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/conversations/{conversation_id}/messages",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/research/documents/{document_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/knowledge-sources",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/knowledge-sources",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/research/knowledge-sources/{source_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/research/knowledge-sources/{source_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/knowledge-sources/{source_id}/documents",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/knowledge-sources/{source_id}/upload-file",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/source-hub/catalog",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/source-hub/records",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/source-hub/sync",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/tier2",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/tier2/jobs",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/tier2/jobs/{job_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/tier2/jobs/{job_id}/export",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/tier2/jobs/{job_id}/share",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/tier2/jobs/{job_id}/stream",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/upload-file",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/analytics/derived",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/analytics/quality",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/analytics/summary",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/sessions",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/sessions",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/sessions/{session_id}",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/scribe/sessions/{session_id}",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/sessions/{session_id}/amend",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/sessions/{session_id}/audit",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/sessions/{session_id}/consent",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/sessions/{session_id}/consent/revoke",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/sessions/{session_id}/export",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/sessions/{session_id}/notes",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/sessions/{session_id}/notes/draft",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/sessions/{session_id}/notes/{version_no}/addenda",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/sessions/{session_id}/notes/{version_no}/addendum",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/sessions/{session_id}/notes/{version_no}/coding",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/sessions/{session_id}/notes/{version_no}/extraction",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/sessions/{session_id}/notes/{version_no}/grounding",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/scribe/sessions/{session_id}/recording-data",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/sessions/{session_id}/recording-data/capability",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/sessions/{session_id}/regenerate",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scribe/sessions/{session_id}/review-queue",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/scribe/sessions/{session_id}/segments/{segment_index}",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/sessions/{session_id}/sign",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/sessions/{session_id}/stream",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/soap",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/transcribe",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/search/",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/social/comments/{comment_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social/communities",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social/communities/{community_id}/join",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social/communities/{community_id}/leave",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social/communities/{community_id}/posts",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/social/consent",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social/consent",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social/consent",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social/feed",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social/me/bookmarks",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social/me/profile",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/social/me/profile",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social/moderation/reports",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social/moderation/reports/{report_id}/action",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social/posts",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social/posts/search",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/social/posts/{post_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social/posts/{post_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social/posts/{post_id}/bookmark",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social/posts/{post_id}/comments",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social/posts/{post_id}/comments",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social/posts/{post_id}/reactions",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social/profiles/{handle}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social/reports",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/analytics/clinical",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/analytics/platform",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/analytics/product",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/careguard/runtime",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/system/careguard/runtime",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/control-tower/config",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/system/control-tower/config",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/dashboard",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/dependencies",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/ecosystem",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/flow-events",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/flow-events/stream",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/metrics",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/privacy-receipts",
+      "classification": "role",
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/sources",
+      "classification": "role",
+      "roles": [
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/visit-packs/shared/{share_token}",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visit-packs/{pack_id}/approve",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visit-packs/{pack_id}/shares",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/visit-packs/{pack_id}/shares/{share_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/visits",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visits",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/visits/{visit_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visits/{visit_id}/concerns",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/visits/{visit_id}/documents",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visits/{visit_id}/documents",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/visits/{visit_id}/documents/{document_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visits/{visit_id}/documents/{document_id}/withdraw",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visits/{visit_id}/episodes",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visits/{visit_id}/intake/answers",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visits/{visit_id}/pack",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/visits/{visit_id}/pack-options",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visits/{visit_id}/plan/confirm",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visits/{visit_id}/plan/extract",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visits/{visit_id}/plan/{draft_id}/withdraw",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/visits/{visit_id}/scribe-consent",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visits/{visit_id}/scribe-consents",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/visits/{visit_id}/scribe-consents/{purpose}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/visits/{visit_id}/verify",
+      "classification": "role",
+      "roles": [
+        "admin",
+        "doctor"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/channels",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspace/channels",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/workspace/channels/{channel_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/workspace/channels/{channel_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/conversations",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/workspace/conversations/meta/bulk",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/workspace/conversations/{conversation_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/workspace/conversations/{conversation_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/conversations/{conversation_id}/export",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/workspace/conversations/{conversation_id}/meta",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/workspace/conversations/{conversation_id}/share",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/conversations/{conversation_id}/share",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspace/conversations/{conversation_id}/share",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspace/export/docx",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/folders",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspace/folders",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/workspace/folders/{folder_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/workspace/folders/{folder_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/notes",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspace/notes",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/workspace/notes/{note_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/workspace/notes/{note_id}",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/public/conversations/{share_token}",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/search",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/shares",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/suggestions",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/summary",
+      "classification": "role",
+      "roles": [
+        "normal",
+        "admin",
+        "doctor",
+        "researcher"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/ask",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/ask/stream",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/capture/candidates/{candidate_id}/review",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/capture/sessions",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/capture/sessions/{session_id}",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/capture/sessions/{session_id}/artifacts",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/capture/sessions/{session_id}/commit",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/care/check-symptoms",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/care/summary",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/care/visits",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/care/visits",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/care/visits/{visit_id}/prepare",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/health",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/health-check",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/health/",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/health/allergies",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v2/health/allergies/{allergy_id}",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v2/health/allergies/{allergy_id}",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/health/conditions",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v2/health/conditions/{condition_id}",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v2/health/conditions/{condition_id}",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v2/health/demographics",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/health/measurements",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/health/medications/hub",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/health/medications/safety-check",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/health/summary",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/health/timeline",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/home",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/medications/hub",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/medications/safety-check",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/you/emergency-card",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v2/you/emergency-card",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/you/integrations",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v2/you/integrations/sources/{source_id}",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/you/integrations/sources/{source_id}/sync",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/you/integrations/sync",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/you/integrations/{provider}/action",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/you/notifications",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v2/you/notifications",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/you/overview",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/you/privacy",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v2/you/privacy/ai-preferences",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/you/privacy/ai-transparency",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/you/profile",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v2/you/profile",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/you/settings/security",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v2/you/settings/security",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/you/settings/sessions/revoke-others",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v2/you/settings/sessions/{session_id}",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/you/sharing",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/you/sharing/grants",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v2/you/sharing/grants/{grant_id}",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/you/sharing/grants/{grant_id}/revoke",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/you/sharing/logs",
+      "classification": "authenticated",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/docs",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/docs/oauth2-redirect",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/health/ready",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/openapi.json",
+      "classification": "public",
+      "roles": []
+    },
+    {
+      "method": "GET",
+      "path": "/redoc",
+      "classification": "public",
+      "roles": []
+    }
+  ]
+}
