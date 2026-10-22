@@ -2696,6 +2696,9 @@ class GlhsClinicalCommitmentProposal(Base):
     inference_run_digest: Mapped[str | None] = mapped_column(
         String(64), nullable=True, index=True
     )
+    admission_decision: Mapped[str] = mapped_column(
+        String(32), default="PENDING", server_default="PENDING", index=True
+    )
     sealed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )

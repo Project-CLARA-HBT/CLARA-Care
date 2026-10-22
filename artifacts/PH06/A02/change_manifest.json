@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH06",
+  "agent_id": "A02",
+  "role": "Data model + migration",
+  "task": "canonical proposal create endpoint",
+  "status": "PASSED",
+  "branch": "phase/ph06-a02",
+  "base_sha": "2370329965f32a7e7df48473e6a2b842ae37580b",
+  "frozen_head_sha": "2370329965f32a7e7df48473e6a2b842ae37580b",
+  "path_lane": "services/api/src/clara_api/db/;services/api/alembic/versions/;artifacts/PH06/A02/",
+  "files_changed": [
+    "services/api/src/clara_api/db/models.py",
+    "services/api/alembic/versions/20260902_0066_thss_mandatory_admission.py",
+    "artifacts/PH06/A02/change_manifest.json",
+    "artifacts/PH06/A02/test_report.md",
+    "artifacts/PH06/A02/risk_register.md",
+    "artifacts/PH06/A02/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH06/A02/change_manifest.json",
+    "artifacts/PH06/A02/test_report.md",
+    "artifacts/PH06/A02/risk_register.md",
+    "artifacts/PH06/A02/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "symbol": "GlhsClinicalCommitmentProposal.admission_decision",
+      "description": "Explicit admission_decision state machine column (PENDING, ADMITTED, REJECTED, SUPERSEDED) on GLHS clinical commitment proposals."
+    },
+    {
+      "file": "services/api/alembic/versions/20260902_0066_thss_mandatory_admission.py",
+      "symbol": "upgrade, downgrade",
+      "description": "Alembic migration 0066 adding admission_decision column and index with verified downgrade routine."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/db/models.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated models.py."
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 66 Alembic migrations have verified non-empty downgrade."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A02 -p PH06",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/db/, alembic, and artifacts/PH06/A02/."
+    }
+  ],
+  "audit_findings": {
+    "thss_admission_decision_column": {
+      "status": "COMPLETED",
+      "finding": "Added admission_decision column to GlhsClinicalCommitmentProposal with index and migration 0066, enabling explicit reviewer decision tracking."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH06_A02 checkout 2370329965f32a7e7df48473e6a2b842ae37580b -- services/api/src/clara_api/db/models.py",
+    "rm -f /dev/shm/clara_worktrees/PH06_A02/services/api/alembic/versions/20260902_0066_thss_mandatory_admission.py",
+    "rm -rf /dev/shm/clara_worktrees/PH06_A02/artifacts/PH06/A02"
+  ],
+  "timestamp": "2026-10-22T12:25:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH06_A02"
+}
