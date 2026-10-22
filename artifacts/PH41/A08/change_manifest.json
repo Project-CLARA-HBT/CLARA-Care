@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH41",
+  "agent_id": "A08",
+  "role": "Security / negative tests",
+  "task": "Threat model cookie/origin/host-only SSO and network segmentation",
+  "status": "PASSED",
+  "branch": "phase/ph41-a08",
+  "base_sha": "f161b49db7c3c54117b8841da3675f92fe19543e",
+  "frozen_head_sha": "f161b49db7c3c54117b8841da3675f92fe19543e",
+  "path_lane": "docs/security/;tests/security/;services/control-plane/tests/security/;artifacts/PH41/A08/",
+  "files_changed": [
+    "docs/security/CONTROL_PLANE_NETWORK_AND_SSO_THREAT_MODEL.md",
+    "artifacts/PH41/A08/change_manifest.json",
+    "artifacts/PH41/A08/test_report.md",
+    "artifacts/PH41/A08/risk_register.md",
+    "artifacts/PH41/A08/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH41/A08/change_manifest.json",
+    "artifacts/PH41/A08/test_report.md",
+    "artifacts/PH41/A08/risk_register.md",
+    "artifacts/PH41/A08/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "docs/security/CONTROL_PLANE_NETWORK_AND_SSO_THREAT_MODEL.md",
+      "symbol": "Threat Analysis & Countermeasures",
+      "description": "Comprehensive threat model specifying host-only cookie isolation (__Host- prefix), port segregation (8000 vs 8200), and zero-PHI RPC bridge."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A08 -p PH41",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/security/ and artifacts/PH41/A08/."
+    }
+  ],
+  "audit_findings": {
+    "network_sso_threat_model": {
+      "status": "COMPLETED",
+      "finding": "Published complete threat model for control-plane architecture establishing __Host- cookie protection and physical network segmentation from clinical databases."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH41_A08/docs/security/CONTROL_PLANE_NETWORK_AND_SSO_THREAT_MODEL.md",
+    "rm -rf /dev/shm/clara_worktrees/PH41_A08/artifacts/PH41/A08"
+  ],
+  "timestamp": "2026-10-22T12:15:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH41_A08"
+}
