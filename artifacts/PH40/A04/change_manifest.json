@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH40",
+  "agent_id": "A04",
+  "role": "Adapter / existing code",
+  "task": "Inventory ML provider and safe-fallback boundaries",
+  "status": "PASSED",
+  "branch": "phase/ph40-a04",
+  "base_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "frozen_head_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "path_lane": "services/api/src/clara_api/;services/ml/src/clara_ml/;artifacts/PH40/A04/",
+  "files_changed": [
+    "services/ml/src/clara_ml/llm/audit_boundaries.py",
+    "artifacts/PH40/A04/ml_fallback_boundaries_inventory.json",
+    "artifacts/PH40/A04/change_manifest.json",
+    "artifacts/PH40/A04/test_report.md",
+    "artifacts/PH40/A04/risk_register.md",
+    "artifacts/PH40/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH40/A04/change_manifest.json",
+    "artifacts/PH40/A04/test_report.md",
+    "artifacts/PH40/A04/risk_register.md",
+    "artifacts/PH40/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/ml/src/clara_ml/llm/circuit_breaker.py",
+      "symbol": "CircuitBreaker",
+      "description": "Fail-closed safety circuit breaker preventing ungrounded inference fallback."
+    },
+    {
+      "file": "services/ml/src/clara_ml/llm/audit_boundaries.py",
+      "symbol": "audit_ml_provider_boundaries",
+      "description": "Forensic audit engine verifying safe-fallback behaviors across ML tasks."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/ml/src/clara_ml/llm/audit_boundaries.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of ML boundary audit module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH40",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/ml/ and artifacts/PH40/A04/."
+    }
+  ],
+  "audit_findings": {
+    "ml_fallback_boundaries": {
+      "status": "COMPLETED",
+      "finding": "Audited ML tasks across clinical reasoning, FIDES drug interaction checking, Scribe ASR, and Council synthesis. Confirmed fail-closed fallback semantics and zero mock responses."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH40_A04/services/ml/src/clara_ml/llm/audit_boundaries.py",
+    "rm -rf /dev/shm/clara_worktrees/PH40_A04/artifacts/PH40/A04"
+  ],
+  "timestamp": "2026-10-22T10:58:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH40_A04"
+}

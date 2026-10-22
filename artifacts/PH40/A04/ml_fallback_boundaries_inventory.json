@@ -1,0 +1,40 @@
+{
+  "status": "audited",
+  "deepseek_only_enforced": true,
+  "total_tasks_audited": 4,
+  "zero_mock_verified": true,
+  "boundaries": [
+    {
+      "task_name": "CLINICAL_DIAGNOSTIC_REASONING",
+      "primary_provider": "deepseek",
+      "model_identifier": "deepseek-reasoner",
+      "fallback_behavior": "CIRCUIT_BREAKER_TRIP_ESCALATE",
+      "is_safe": true,
+      "notes": "Rejects diagnosis requests per Vietnamese legal hard-guard; trips circuit breaker on upstream failure."
+    },
+    {
+      "task_name": "FIDES_CRITICAL_DRUG_VERIFICATION",
+      "primary_provider": "deepseek",
+      "model_identifier": "deepseek-chat",
+      "fallback_behavior": "FAIL_CLOSED_BLOCK_RESPONSE",
+      "is_safe": true,
+      "notes": "Failed verification of critical drug interactions unconditionally blocks output response."
+    },
+    {
+      "task_name": "SCRIBE_SPEECH_TO_TEXT",
+      "primary_provider": "faster-whisper",
+      "model_identifier": "whisper-large-v3",
+      "fallback_behavior": "INERT_RETURN_AUDIO_FAILED",
+      "is_safe": true,
+      "notes": "Audio processing never returns hallucinated transcripts upon upstream ASR timeout."
+    },
+    {
+      "task_name": "COUNCIL_MULTI_PERSPECTIVE_SYNTHESIS",
+      "primary_provider": "deepseek",
+      "model_identifier": "deepseek-chat",
+      "fallback_behavior": "REQUIRE_MANUAL_CLINICIAN_REVIEW",
+      "is_safe": true,
+      "notes": "Shadow contracts flag divergence and mandate human clinician review before presentation."
+    }
+  ]
+}
