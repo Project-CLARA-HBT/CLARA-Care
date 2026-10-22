@@ -699,6 +699,12 @@ class FederatedSourceRecord(Base):
 
 
 class WorkspaceFolder(Base):
+    """Personal workspace folder entity.
+
+    Audit note (PH04): Scoped strictly to an individual user account (user_id -> users.id).
+    Does not provide collaborative multi-user tenancy or WorkspaceMember edges.
+    """
+
     __tablename__ = "workspace_folders"
     __table_args__ = (UniqueConstraint("user_id", "slug", name="uq_workspace_folders_user_slug"),)
 
@@ -725,6 +731,12 @@ class WorkspaceFolder(Base):
 
 
 class WorkspaceChannel(Base):
+    """Personal workspace channel entity.
+
+    Audit note (PH04): Scoped strictly to an individual user account (user_id -> users.id).
+    Does not provide collaborative multi-user tenancy or WorkspaceMember edges.
+    """
+
     __tablename__ = "workspace_channels"
     __table_args__ = (UniqueConstraint("user_id", "slug", name="uq_workspace_channels_user_slug"),)
 
@@ -752,6 +764,12 @@ class WorkspaceChannel(Base):
 
 
 class WorkspaceConversationMeta(Base):
+    """Personal workspace conversation metadata entity.
+
+    Audit note (PH04): Binds a single user's chat session to their personal folders/channels.
+    Foreign key cascading is anchored directly to users.id and sessions.id.
+    """
+
     __tablename__ = "workspace_conversation_meta"
     __table_args__ = (
         UniqueConstraint("session_id", name="uq_workspace_conversation_meta_session"),
@@ -2830,7 +2848,13 @@ class GlhsProposalDependency(Base):
 
 
 class GlhsAppliedTransition(Base):
-    """Immutable record of an atomically committed GLHS state transition."""
+    """Immutable record of an atomically committed GLHS state transition.
+
+    Tenancy invariant (PH04): `tenant_id` scopes idempotent state commitments via
+    `uq_glhs_applied_trans_idempotency` (tenant_id, operation_kind, idempotency_key).
+    Note: `tenant_id` defaults to 'default' and provides transition partitioning,
+    distinct from organization-level IAM authority.
+    """
 
     __tablename__ = "glhs_applied_transitions"
     __table_args__ = (

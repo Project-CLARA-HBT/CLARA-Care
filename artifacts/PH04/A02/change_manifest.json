@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "agent_id": "A02",
+  "phase_id": "PH04",
+  "role": "Data model + migration",
+  "task": "tenant membership and role schema; audit Organization, Workspace, WorkspaceMember, OrganizationMember models in services/api/src/clara_api/db/models.py, role scoping, foreign key constraints, and check Alembic migrations.",
+  "worktree_path": "/dev/shm/clara_worktrees/PH04_A02",
+  "branch": "phase/ph04-a02",
+  "frozen_head_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "verified_head_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "status": "COMPLETED",
+  "path_lane": "services/api/src/clara_api/db/;services/api/alembic/versions/;artifacts/PH04/A02/",
+  "files_modified": [
+    "services/api/src/clara_api/db/models.py"
+  ],
+  "files_created": [
+    "artifacts/PH04/A02/verify_models_audit.py",
+    "artifacts/PH04/A02/change_manifest.json",
+    "artifacts/PH04/A02/test_report.md",
+    "artifacts/PH04/A02/risk_register.md",
+    "artifacts/PH04/A02/rollback.md"
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 39,
+      "symbol": "User",
+      "description": "User account identity entity with global scalar role scoping (normal/researcher/doctor/admin)."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 701,
+      "symbol": "WorkspaceFolder",
+      "description": "Personal workspace folder entity scoped strictly to users.id."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 733,
+      "symbol": "WorkspaceChannel",
+      "description": "Personal workspace channel entity scoped strictly to users.id."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 766,
+      "symbol": "WorkspaceConversationMeta",
+      "description": "Workspace conversation metadata entity binding chat sessions to user personal folders/channels."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 812,
+      "symbol": "WorkspaceConversationShare",
+      "description": "Read-only share capability for personal workspace conversations."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 856,
+      "symbol": "WorkspaceNote",
+      "description": "Personal workspace note entity scoped to users.id."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 2850,
+      "symbol": "GlhsAppliedTransition",
+      "description": "Immutable GLHS applied state transition with string tenant_id idempotency partitioning."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 3951,
+      "symbol": "SocialMembership",
+      "description": "Join edge between user and social community (reference pattern for membership models)."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 3525,
+      "symbol": "FamilyAccessGrant",
+      "description": "Object/action/purpose scoped relationship grant with authoritative revocation."
+    },
+    {
+      "file": "scripts/ops/check_migration_downgrade.py",
+      "line": 64,
+      "symbol": "check_migration_downgrade",
+      "description": "Strict verification that every Alembic migration defines a non-empty downgrade() routine."
+    }
+  ],
+  "audit_findings": {
+    "organization_model_presence": false,
+    "workspace_member_model_presence": false,
+    "organization_member_model_presence": false,
+    "workspace_model_scoping": "Strictly single-user personal folders and channels (user_id FK to users.id)",
+    "tenancy_in_glhs_applied_transition": "tenant_id string column (default='default') participating in uq_glhs_applied_trans_idempotency",
+    "role_scoping_model": "User.role global scalar string (normal/researcher/doctor/admin)",
+    "alembic_migrations_count": 64,
+    "strict_downgrade_check": "PASS",
+    "sqlite_upgrade_downgrade_roundtrip": "PASS"
+  },
+  "interface_assumptions": [
+    "Organization, Workspace, WorkspaceMember, and OrganizationMember models are NOT present in the current clara_api baseline.",
+    "Personal workspace features (WorkspaceFolder, WorkspaceChannel, WorkspaceNote) are strictly user-owned and isolated via user_id.",
+    "Multi-tenant organization structures belong to the dedicated control plane (services/control-plane) and subsequent architecture phases (PH44).",
+    "GlhsAppliedTransition.tenant_id acts as an idempotency key partition and does not constitute full organization IAM isolation.",
+    "Alembic migrations must maintain 100% downgrade reversibility verified via scripts/ops/check_migration_downgrade.py --strict."
+  ],
+  "test_commands_and_exit_codes": [
+    {
+      "command": "python3 -m compileall -q services/api/src scripts/ci/ph04_quality_gate.py scripts/ops/check_migration_downgrade.py",
+      "description": "Python bytecode compilation across services and scripts",
+      "exit_code": 0,
+      "status": "PASS"
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions --strict",
+      "description": "Alembic migration downgrade completeness check (64 migrations)",
+      "exit_code": 0,
+      "status": "PASS"
+    },
+    {
+      "command": "DATABASE_URL=\"sqlite:////dev/shm/test_alembic_ph04.db\" uv run alembic upgrade head && DATABASE_URL=\"sqlite:////dev/shm/test_alembic_ph04.db\" uv run alembic downgrade -1 && DATABASE_URL=\"sqlite:////dev/shm/test_alembic_ph04.db\" uv run alembic upgrade head",
+      "description": "Alembic full upgrade and downgrade reversibility roundtrip on SQLite",
+      "exit_code": 0,
+      "status": "PASS"
+    },
+    {
+      "command": "python3 artifacts/PH04/A02/verify_models_audit.py",
+      "description": "Hermetic unit tests validating model presence/absence, workspace user scoping, and tenancy constraints",
+      "exit_code": 0,
+      "status": "PASS"
+    },
+    {
+      "command": "uv run --extra dev ruff check src/clara_api/db/models.py",
+      "description": "Ruff linting check on modified database models",
+      "exit_code": 0,
+      "status": "PASS"
+    },
+    {
+      "command": "uv run --extra dev mypy src/clara_api/db/models.py --ignore-missing-imports",
+      "description": "Mypy type checking on modified database models",
+      "exit_code": 0,
+      "status": "PASS"
+    },
+    {
+      "command": "DATABASE_URL=\"sqlite+pysqlite:////tmp/clara_api_ci.db\" AUTH_AUTO_PROVISION_USERS=true AUTH_BOOTSTRAP_ADMIN_ENABLED=true uv run --extra dev pytest tests/test_auth_and_rbac.py",
+      "description": "Core RBAC and authentication regression test suite",
+      "exit_code": 0,
+      "status": "PASS"
+    }
+  ],
+  "blockers": [],
+  "rollback_steps": [
+    "git checkout 7f458c915a59a75568e344b670d2f12ce9133a4e -- services/api/src/clara_api/db/models.py",
+    "rm -rf artifacts/PH04/A02",
+    "git reset --hard 7f458c915a59a75568e344b670d2f12ce9133a4e"
+  ]
+}
