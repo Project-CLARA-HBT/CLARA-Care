@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GlhsD1ProjectionDigestContract",
+  "version": "1.0.0",
+  "phase_id": "PH07",
+  "canonicalization_profile": "RFC_8785_JCS",
+  "digest_algorithm": "SHA-256",
+  "definitions": {
+    "D1_projection_digest": {
+      "symbol": "H_proj",
+      "formula": "SHA-256(JCS(model_visible_health_projection))",
+      "layer": "Clinical Data Projection Layer"
+    },
+    "D2_semantic_envelope_digest": {
+      "symbol": "H_sem",
+      "formula": "SHA-256(JCS(clara_inference_envelope_v1))",
+      "layer": "Application Semantic Layer"
+    },
+    "D3_transport_payload_digest": {
+      "symbol": "H_trans",
+      "formula": "SHA-256(exact_outbound_http_bytes)",
+      "layer": "Network Transport & Socket Egress Layer"
+    }
+  },
+  "invariants": {
+    "immutable_hash_matching": true,
+    "rfc8785_canonical_json_enforced": true,
+    "tamper_evident_non_repudiable": true
+  }
+}

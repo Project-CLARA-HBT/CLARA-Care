@@ -197,6 +197,15 @@ class ConsentPolicyListResponse(BaseModel):
     policies: list[ConsentPolicySnapshotResponse]
 
 
+class GlhsProjectionDigestResponse(BaseModel):
+    projection_digest: str = Field(..., description="D1 / H_proj: SHA-256 over JCS of clinical health projection")
+    semantic_envelope_digest: str | None = Field(None, description="D2 / H_sem: SHA-256 over JCS of application envelope")
+    transport_payload_digest: str | None = Field(None, description="D3 / H_trans: SHA-256 over outbound HTTP payload")
+    canonicalization_profile: str = "RFC_8785_JCS"
+    digest_algorithm: str = "SHA-256"
+    attestation_level: str = "SERVER_PRE_DISPATCH"
+
+
 PolicyAction = Literal["allow", "warn", "block", "escalate"]
 
 

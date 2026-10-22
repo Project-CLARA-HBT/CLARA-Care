@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH07",
+  "agent_id": "A01",
+  "role": "API + contract",
+  "task": "D1 projection digest and schema",
+  "status": "PASSED",
+  "branch": "phase/ph07-a01",
+  "base_sha": "e8533cb029a1470ce2d1bc027a421b47664871c5",
+  "frozen_head_sha": "e8533cb029a1470ce2d1bc027a421b47664871c5",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;artifacts/PH07/A01/",
+  "files_changed": [
+    "services/api/src/clara_api/schemas.py",
+    "contracts/glhs/d1_projection_contract.v1.json",
+    "artifacts/PH07/A01/change_manifest.json",
+    "artifacts/PH07/A01/test_report.md",
+    "artifacts/PH07/A01/risk_register.md",
+    "artifacts/PH07/A01/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH07/A01/change_manifest.json",
+    "artifacts/PH07/A01/test_report.md",
+    "artifacts/PH07/A01/risk_register.md",
+    "artifacts/PH07/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/schemas.py",
+      "symbol": "GlhsProjectionDigestResponse",
+      "description": "Typed Pydantic schema for D1 clinical projection digest, D2 semantic envelope digest, and D3 transport digest."
+    },
+    {
+      "file": "contracts/glhs/d1_projection_contract.v1.json",
+      "symbol": "definitions",
+      "description": "Canonical 3-digest contract formalizing H_proj, H_sem, and H_trans under RFC 8785 JCS."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/schemas.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of schemas.py."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A01 -p PH07",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/schemas.py, contracts/, and artifacts/PH07/A01/."
+    }
+  ],
+  "audit_findings": {
+    "d1_projection_schema": {
+      "status": "COMPLETED",
+      "finding": "Added GlhsProjectionDigestResponse schema and published canonical 3-digest machine contract in contracts/glhs/d1_projection_contract.v1.json."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH07_A01 checkout e8533cb029a1470ce2d1bc027a421b47664871c5 -- services/api/src/clara_api/schemas.py",
+    "rm -f /dev/shm/clara_worktrees/PH07_A01/contracts/glhs/d1_projection_contract.v1.json",
+    "rm -rf /dev/shm/clara_worktrees/PH07_A01/artifacts/PH07/A01"
+  ],
+  "timestamp": "2026-10-22T14:32:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH07_A01"
+}
