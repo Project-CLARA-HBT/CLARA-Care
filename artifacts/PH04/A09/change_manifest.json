@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH04",
+  "agent_id": "A09",
+  "role": "Docs + research evidence",
+  "task": "billing/tenant boundary privacy audit; document and audit multi-tenant billing aggregation, ensuring telemetry and usage metrics are isolated by tenant_id without cross-tenant metadata disclosure.",
+  "status": "COMPLETED",
+  "frozen_head_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "verified_head_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "branch": "phase/ph04-a09",
+  "worktree_path": "/dev/shm/clara_worktrees/PH04_A09",
+  "path_lane": "research/;docs/research/;docs/implementation/;docs/interoperability/;artifacts/PH04/A09/",
+  "timestamp": "2026-10-21T23:45:00Z",
+  "files_created": [
+    "research/billing_tenant_privacy_audit/__init__.py",
+    "research/billing_tenant_privacy_audit/audit_schemas.py",
+    "research/billing_tenant_privacy_audit/meter_aggregator.py",
+    "research/billing_tenant_privacy_audit/test_tenant_billing_boundary_audit.py",
+    "research/billing_tenant_privacy_audit/run_tenant_privacy_audit.py",
+    "docs/research/BILLING_TENANT_BOUNDARY_PRIVACY_AUDIT.md",
+    "docs/implementation/MULTI_TENANT_BILLING_ISOLATION_SPECIFICATION.md",
+    "docs/interoperability/TENANT_BILLING_TELEMETRY_CONTRACTS.md",
+    "artifacts/PH04/A09/change_manifest.json",
+    "artifacts/PH04/A09/test_report.md",
+    "artifacts/PH04/A09/risk_register.md",
+    "artifacts/PH04/A09/rollback.md"
+  ],
+  "files_modified": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/analytics.py",
+      "line": 48,
+      "symbol": "SurfaceUsage",
+      "description": "Per-surface usage counter across chat, research, scribe, careguard, council, and selfmed."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/analytics.py",
+      "line": 66,
+      "symbol": "ProductAnalytics",
+      "description": "Aggregated product and usage analytics shape with explicit has_data indicator for honest empty states."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/analytics.py",
+      "line": 297,
+      "symbol": "AnalyticsAggregator.product_metrics",
+      "description": "Aggregates usage metrics from platform tables over range windows."
+    },
+    {
+      "file": "services/api/src/clara_api/core/careguard_metrics.py",
+      "line": 4,
+      "symbol": "No-PII metrics contract",
+      "description": "Operational metrics contract enforcing allowlisted enums and bounded numeric counters."
+    },
+    {
+      "file": "services/api/src/clara_api/core/research_telemetry.py",
+      "line": 157,
+      "symbol": "_PII_KEY_DENYLIST",
+      "description": "Comprehensive denylist of clinical and identity fields stripped from telemetry rails."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 2845,
+      "symbol": "uq_glhs_applied_trans_idempotency",
+      "description": "UniqueConstraint on (tenant_id, operation_kind, idempotency_key) establishing tenant-partitioned idempotency."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 2871,
+      "symbol": "GlhsAppliedTransition.tenant_id",
+      "description": "Explicit tenant_id column supporting multi-tenant domain models."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 3850,
+      "symbol": "ComplianceEvent",
+      "description": "Append-only compliance audit event model with PII-free metadata."
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line": 4567,
+      "symbol": "PrivacyAuditReceipt",
+      "description": "Cryptographic privacy audit receipt recording scope_digest, artifact_digest, and finding counts."
+    },
+    {
+      "file": "services/api/src/clara_api/core/metrics.py",
+      "line": 15,
+      "symbol": "APIMetricsStore",
+      "description": "Thread-safe in-process HTTP metrics store recording counts and status codes."
+    }
+  ],
+  "interface_assumptions": [
+    "Tenant usage meter events are partitioned strictly by tenant_id in both in-memory buffers and database tables.",
+    "Triple-key idempotency deduplication on (tenant_id, meter_kind, idempotency_key) prevents duplicate billing without cross-tenant key collisions.",
+    "BOLA/IDOR protection on billing objects returns 404 Not Found to prevent resource enumeration and metadata disclosure.",
+    "Billing line-items and telemetry meters contain exclusively allowlisted computational units (tokens, seconds, pages, requests, cents, tier) and zero clinical or patient PHI.",
+    "Per-tenant token bucket rate limiting prevents side-channel throughput and quota exhaustion inference by peer tenants.",
+    "Audit test vectors execute completely hermetically in-memory with zero external network or persistent database requirements."
+  ],
+  "test_commands_and_exit_codes": [
+    {
+      "command": "PYTHONPATH=services/api/src:. python3 -m pytest -v research/billing_tenant_privacy_audit/test_tenant_billing_boundary_audit.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Execution of 44 multi-tenant billing boundary privacy audit vectors across 7 test suites (100% pass)."
+    },
+    {
+      "command": "python3 research/billing_tenant_privacy_audit/run_tenant_privacy_audit.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "description": "Hermetic runner executing full billing privacy audit suite with structured JSON telemetry summary."
+    }
+  ],
+  "blockers": [],
+  "rollback_steps": [
+    "git rm -rf research/billing_tenant_privacy_audit docs/research/BILLING_TENANT_BOUNDARY_PRIVACY_AUDIT.md docs/implementation/MULTI_TENANT_BILLING_ISOLATION_SPECIFICATION.md docs/interoperability/TENANT_BILLING_TELEMETRY_CONTRACTS.md artifacts/PH04/A09",
+    "git reset --hard 7f458c915a59a75568e344b670d2f12ce9133a4e"
+  ]
+}
