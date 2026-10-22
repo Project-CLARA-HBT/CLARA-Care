@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH42",
+  "agent_id": "A08",
+  "role": "Security / negative tests",
+  "task": "Threat model MFA bypass, CSRF, refresh token theft",
+  "status": "PASSED",
+  "branch": "phase/ph42-a08",
+  "base_sha": "40e2dfcd0180a5e840d2448378516ee7137f6e06",
+  "frozen_head_sha": "40e2dfcd0180a5e840d2448378516ee7137f6e06",
+  "path_lane": "docs/security/;tests/security/;services/control-plane/tests/security/;artifacts/PH42/A08/",
+  "files_changed": [
+    "docs/security/OIDC_MFA_STEP_UP_THREAT_MODEL.md",
+    "artifacts/PH42/A08/change_manifest.json",
+    "artifacts/PH42/A08/test_report.md",
+    "artifacts/PH42/A08/risk_register.md",
+    "artifacts/PH42/A08/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH42/A08/change_manifest.json",
+    "artifacts/PH42/A08/test_report.md",
+    "artifacts/PH42/A08/risk_register.md",
+    "artifacts/PH42/A08/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "docs/security/OIDC_MFA_STEP_UP_THREAT_MODEL.md",
+      "symbol": "Threat Vectors & Invariants",
+      "description": "Comprehensive threat model evaluating MFA bypass, CSRF, refresh token rotation, and device binding in control plane."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A08 -p PH42",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/security/ and artifacts/PH42/A08/."
+    }
+  ],
+  "audit_findings": {
+    "oidc_mfa_threat_model": {
+      "status": "COMPLETED",
+      "finding": "Threat modeled privileged MFA bypass, single-use refresh token rotation, CSRF defense, and device fingerprint binding."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH42_A08/docs/security/OIDC_MFA_STEP_UP_THREAT_MODEL.md",
+    "rm -rf /dev/shm/clara_worktrees/PH42_A08/artifacts/PH42/A08"
+  ],
+  "timestamp": "2026-10-22T14:02:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH42_A08"
+}
