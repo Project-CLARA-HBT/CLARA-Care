@@ -1,0 +1,22 @@
+{
+  "audit_version": "v1.0.0",
+  "phase_owner": "PH05",
+  "legal_framework": "Decree 13/2023/ND-CP (PDPD Vietnam)",
+  "retention_rules": {
+    "live_phi_erasure_hours": 72,
+    "consent_audit_ledger_retention_years": 5,
+    "ephemeral_audio_spool_retention_hours": 0,
+    "dsar_export_validity_hours": 24
+  },
+  "dsar_supported_categories": [
+    "user_consents",
+    "phr_records",
+    "medicine_cabinets",
+    "compliance_events"
+  ],
+  "invariants_verified": {
+    "zero_phi_in_retained_ledger": true,
+    "append_only_history_export": true,
+    "redaction_projection_enforced": true
+  }
+}
