@@ -21,6 +21,9 @@ abstract class AuthSessionHooks {
   /// The current role, used to preserve role when a refresh response omits it.
   String? get role;
 
+  /// The active organization/tenant identifier, or null when personal/unscoped.
+  String? get organizationId => null;
+
   /// Pre-flight check: whether the held access token is expired/invalid.
   bool get isAccessTokenExpired;
 
@@ -57,6 +60,9 @@ class SessionStoreAuthHooks implements AuthSessionHooks {
 
   @override
   String? get role => _store.role;
+
+  @override
+  String? get organizationId => _store.organizationId;
 
   @override
   bool get isAccessTokenExpired => _store.isExpired;
@@ -245,7 +251,7 @@ class LifeMapVisitPreparationSummary {
 
   factory LifeMapVisitPreparationSummary.fromJson(Map<String, dynamic> json) {
     List<T> rows<T>(Object? raw, T Function(Map<String, dynamic>) parse) {
-      if (raw is! List) return List<T>.empty(growable: false);
+      if (raw is! List) return <T>[];
       return raw
           .whereType<Map>()
           .map((item) => parse(item.cast<String, dynamic>()))
@@ -345,6 +351,7 @@ class ApiClient {
     Duration requestTimeout = const Duration(seconds: 30),
     Duration streamIdleTimeout = const Duration(seconds: 60),
     this.authHooks,
+    this.organizationId,
   })  : _baseUrl = _trimTrailingSlash(baseUrl),
         _httpClient = httpClient ?? http.Client(),
         _requestTimeout = requestTimeout,
@@ -352,6 +359,17 @@ class ApiClient {
 
   final String _baseUrl;
   final http.Client _httpClient;
+
+  /// Active organization/tenant identifier for multi-tenant context propagation.
+  String? organizationId;
+
+  /// Resolves the active organization ID from this client or attached authHooks.
+  String? get activeOrganizationId => organizationId ?? authHooks?.organizationId;
+
+  /// Updates the active organization ID context.
+  void setOrganization(String? orgId) {
+    organizationId = orgId;
+  }
 
   /// Resolved API origin used by this client.
   ///
@@ -540,10 +558,12 @@ class ApiClient {
   }) {
     final uri = Uri.parse('$_baseUrl/api/v1/research/tier2/jobs/$jobId/stream');
     final request = http.Request('GET', uri);
+    final orgId = activeOrganizationId;
     request.headers.addAll({
       'Accept': 'text/event-stream',
       'Cache-Control': 'no-cache',
       if (accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      if (orgId != null && orgId.isNotEmpty) 'X-CLARA-Organization-Id': orgId,
     });
     return _streamSse(request);
   }
@@ -673,11 +693,13 @@ class ApiClient {
   }) {
     final uri = Uri.parse('$_baseUrl/api/v1/chat/stream');
     final request = http.Request('POST', uri);
+    final orgId = activeOrganizationId;
     request.headers.addAll({
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
       'Cache-Control': 'no-cache',
       if (accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      if (orgId != null && orgId.isNotEmpty) 'X-CLARA-Organization-Id': orgId,
     });
     request.body = jsonEncode(payload);
     return _streamSse(request);
@@ -2850,6 +2872,10 @@ class ApiClient {
     if (accessToken != null && accessToken.isNotEmpty) {
       request.headers['Authorization'] = 'Bearer $accessToken';
     }
+    final orgId = activeOrganizationId;
+    if (orgId != null && orgId.isNotEmpty) {
+      request.headers['X-CLARA-Organization-Id'] = orgId;
+    }
     request.fields.addAll(fields);
     if (fileField != null && fileBytes != null) {
       request.files.add(
@@ -2947,6 +2973,11 @@ class ApiClient {
 
     if (accessToken != null && accessToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $accessToken';
+    }
+
+    final orgId = activeOrganizationId;
+    if (orgId != null && orgId.isNotEmpty) {
+      headers['X-CLARA-Organization-Id'] = orgId;
     }
 
     if (extra != null) {

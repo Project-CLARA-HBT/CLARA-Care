@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH04",
+  "agent_id": "A06",
+  "role": "Mobile Flutter",
+  "task": "tenant-aware web navigation & mobile org context; audit mobile organization scoping, clinic association in patient profile, presentation mode scoping, and ensure X-CLARA-Organization-Id header propagation in ApiClient.",
+  "status": "PASSED",
+  "branch": "phase/ph04-a06",
+  "base_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "frozen_head_sha": "7f458c915a59a75568e344b670d2f12ce9133a4e",
+  "path_lane": "apps/mobile/;artifacts/PH04/A06/",
+  "files_changed": [
+    "apps/mobile/lib/core/api_client.dart",
+    "apps/mobile/lib/core/session_store.dart",
+    "apps/mobile/test/api_client_tenant_organization_test.dart",
+    "artifacts/PH04/A06/change_manifest.json",
+    "artifacts/PH04/A06/test_report.md",
+    "artifacts/PH04/A06/risk_register.md",
+    "artifacts/PH04/A06/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH04/A06/change_manifest.json",
+    "artifacts/PH04/A06/test_report.md",
+    "artifacts/PH04/A06/risk_register.md",
+    "artifacts/PH04/A06/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/mobile/lib/core/api_client.dart",
+      "symbol": "ApiClient._headers",
+      "description": "Injects X-CLARA-Organization-Id header on all standard REST requests when activeOrganizationId is present."
+    },
+    {
+      "file": "apps/mobile/lib/core/api_client.dart",
+      "symbol": "ApiClient.streamChat, ApiClient.streamResearchJob",
+      "description": "Propagates X-CLARA-Organization-Id header on SSE streaming endpoints."
+    },
+    {
+      "file": "apps/mobile/lib/core/api_client.dart",
+      "symbol": "ApiClient._postMultipart",
+      "description": "Propagates X-CLARA-Organization-Id header on multipart file uploads."
+    },
+    {
+      "file": "apps/mobile/lib/core/session_store.dart",
+      "symbol": "PersistentSessionStore.setOrganizationId, hydrate, clear",
+      "description": "Manages persistent storage and lifecycle for active organization ID in secure storage."
+    },
+    {
+      "file": "apps/mobile/lib/experience/presentation_mode.dart",
+      "symbol": "PresentationMode",
+      "description": "Audited presentation mode scoping: layout/navigation context remains separated from backend tenant RBAC authorization."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "flutter analyze --no-pub lib/core/api_client.dart lib/core/session_store.dart test/api_client_tenant_organization_test.dart test/session_store_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Zero issues found in static analysis of modified Flutter sources and tests."
+    },
+    {
+      "command": "flutter test --no-pub test/api_client_tenant_organization_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "5 unit tests verifying explicit, store-attached, and override organization header propagation and persistence."
+    },
+    {
+      "command": "flutter test --no-pub test/session_store_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "12 unit tests verifying session store persistence, cache purging, and token expiry cycles."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A06 -p PH04",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Enforced strict path lane isolation across all modified and deliverable files."
+    }
+  ],
+  "audit_findings": {
+    "organization_header_propagation": {
+      "status": "COMPLETED",
+      "finding": "ApiClient supports explicit organizationId parameter, dynamic setOrganization(), and seamless fallback to SessionStoreAuthHooks.organizationId. All JSON REST, SSE streaming, and multipart uploads now carry X-CLARA-Organization-Id header safely."
+    },
+    "secure_session_storage": {
+      "status": "COMPLETED",
+      "finding": "PersistentSessionStore now securely persists and retrieves clara.session.organization_id, reliably clearing on logout or expired token hydration."
+    },
+    "presentation_mode_scoping": {
+      "status": "COMPLETED",
+      "finding": "PresentationMode (personal, clinical, research, admin) confirmed to modify only client-side navigation and layout presentation without bypassing server-side RBAC or organization tenant boundaries."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH04_A06 checkout 7f458c915a59a75568e344b670d2f12ce9133a4e -- apps/mobile/lib/core/api_client.dart apps/mobile/lib/core/session_store.dart",
+    "rm -f /dev/shm/clara_worktrees/PH04_A06/apps/mobile/test/api_client_tenant_organization_test.dart",
+    "rm -rf /dev/shm/clara_worktrees/PH04_A06/artifacts/PH04/A06"
+  ],
+  "timestamp": "2026-10-22T02:00:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH04_A06"
+}

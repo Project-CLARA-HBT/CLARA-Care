@@ -78,6 +78,7 @@ class PersistentSessionStore extends ChangeNotifier {
   static const String accessTokenKey = 'clara.session.access_token';
   static const String refreshTokenKey = 'clara.session.refresh_token';
   static const String roleKey = 'clara.session.role';
+  static const String organizationIdKey = 'clara.session.organization_id';
   static const String biometricEnabledKey = 'clara.settings.biometric_enabled';
 
   // Offline cache storage keys (kept in sync with CareguardOfflineCache and LifeMapReadCache).
@@ -100,6 +101,7 @@ class PersistentSessionStore extends ChangeNotifier {
   String? _accessToken;
   String? _refreshToken;
   String? _role;
+  String? _organizationId;
   bool _biometricEnabled = false;
   bool _biometricLocked = false;
 
@@ -107,7 +109,19 @@ class PersistentSessionStore extends ChangeNotifier {
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
   String? get role => _role;
+  String? get organizationId => _organizationId;
   String? get userId => tokenSubject(_accessToken);
+
+  /// Updates the active organization/tenant context and persists it to secure storage.
+  Future<void> setOrganizationId(String? orgId) async {
+    _organizationId = orgId;
+    notifyListeners();
+    if (orgId != null && orgId.isNotEmpty) {
+      await _storage.write(organizationIdKey, orgId);
+    } else {
+      await _storage.delete(organizationIdKey);
+    }
+  }
 
   Future<String?> readLifeMapCaptureSessionId() =>
       _storage.read(lifeMapCaptureSessionKey);
@@ -180,6 +194,7 @@ class PersistentSessionStore extends ChangeNotifier {
     final storedAccessToken = await _storage.read(accessTokenKey);
     final storedRefreshToken = await _storage.read(refreshTokenKey);
     final storedRole = await _storage.read(roleKey);
+    final storedOrgId = await _storage.read(organizationIdKey);
 
     if (storedAccessToken == null || storedAccessToken.isEmpty) {
       _resetInMemory();
@@ -191,6 +206,7 @@ class PersistentSessionStore extends ChangeNotifier {
     _accessToken = storedAccessToken;
     _refreshToken = storedRefreshToken;
     _role = storedRole;
+    _organizationId = storedOrgId;
 
     if (isExpired) {
       // Expired or invalid stored token: clear credentials so the app routes
@@ -212,6 +228,7 @@ class PersistentSessionStore extends ChangeNotifier {
     required String accessToken,
     required String refreshToken,
     required String role,
+    String? organizationId,
   }) async {
     // Purge previous user's offline caches before storing new session tokens.
     if (_email != null || _accessToken != null) {
@@ -221,6 +238,7 @@ class PersistentSessionStore extends ChangeNotifier {
     _accessToken = accessToken;
     _refreshToken = refreshToken;
     _role = role;
+    _organizationId = organizationId;
     _biometricLocked = false;
     // Notify synchronously (before awaiting persistence) so listeners react
     // immediately, matching the previous in-memory behavior.
@@ -230,6 +248,11 @@ class PersistentSessionStore extends ChangeNotifier {
     await _storage.write(accessTokenKey, accessToken);
     await _storage.write(refreshTokenKey, refreshToken);
     await _storage.write(roleKey, role);
+    if (organizationId != null && organizationId.isNotEmpty) {
+      await _storage.write(organizationIdKey, organizationId);
+    } else {
+      await _storage.delete(organizationIdKey);
+    }
   }
 
   /// Removes all stored credentials from memory and secure storage (10.5).
@@ -243,6 +266,7 @@ class PersistentSessionStore extends ChangeNotifier {
     await _storage.delete(accessTokenKey);
     await _storage.delete(refreshTokenKey);
     await _storage.delete(roleKey);
+    await _storage.delete(organizationIdKey);
     await _purgeOfflineCaches(email: prevEmail, token: prevToken);
   }
 
@@ -275,6 +299,7 @@ class PersistentSessionStore extends ChangeNotifier {
     _accessToken = null;
     _refreshToken = null;
     _role = null;
+    _organizationId = null;
     _biometricLocked = false;
   }
 
