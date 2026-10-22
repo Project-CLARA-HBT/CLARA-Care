@@ -272,6 +272,40 @@ def load_persisted_proposal_dependencies(
     )
 
 
+def inspect_glhs_lineage_and_dependencies(
+    db: Session,
+    proposal_id: int,
+) -> dict[str, Any]:
+    """Read-only introspection adapter for GLHS proposals without lock acquisition or state mutation."""
+    proposal = db.execute(
+        select(GlhsClinicalCommitmentProposal)
+        .where(GlhsClinicalCommitmentProposal.id == proposal_id)
+    ).scalar_one_or_none()
+    if proposal is None:
+        raise GlhsInvariantError("proposal_not_found")
+
+    deps = load_persisted_proposal_dependencies(db, proposal)
+
+    return {
+        "proposal_id": proposal.id,
+        "public_id": proposal.public_id,
+        "origin": proposal.origin,
+        "admission_decision": getattr(proposal, "admission_decision", "PENDING"),
+        "is_sealed": proposal.sealed_at is not None,
+        "sealed_at": proposal.sealed_at.isoformat() if proposal.sealed_at else None,
+        "dependency_count": len(deps),
+        "dependencies": [
+            {
+                "kind": d.dependency_kind,
+                "key": d.dependency_key,
+                "mode": d.access_mode,
+                "observed_version": d.observed_version,
+            }
+            for d in deps
+        ],
+    }
+
+
 @overload
 def execute_atomic_glhs_commit(
     db: Session,

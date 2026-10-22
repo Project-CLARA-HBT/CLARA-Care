@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH49",
+  "agent_id": "A04",
+  "role": "Adapter / existing code",
+  "task": "Adapt existing commit_kernel read APIs without bypassing writes",
+  "status": "PASSED",
+  "branch": "phase/ph49-a04",
+  "base_sha": "670a050a12e3c035ea6f316d3f2347963be699d7",
+  "frozen_head_sha": "670a050a12e3c035ea6f316d3f2347963be699d7",
+  "path_lane": "services/api/src/clara_api/;services/ml/src/clara_ml/;artifacts/PH49/A04/",
+  "files_changed": [
+    "services/api/src/clara_api/glhs/commit_kernel.py",
+    "artifacts/PH49/A04/change_manifest.json",
+    "artifacts/PH49/A04/test_report.md",
+    "artifacts/PH49/A04/risk_register.md",
+    "artifacts/PH49/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH49/A04/change_manifest.json",
+    "artifacts/PH49/A04/test_report.md",
+    "artifacts/PH49/A04/risk_register.md",
+    "artifacts/PH49/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/glhs/commit_kernel.py",
+      "symbol": "inspect_glhs_lineage_and_dependencies",
+      "description": "Read-only introspection adapter exposing proposal lineage, sealing status, and dependency sets without acquiring exclusive locks or executing mutations."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/glhs/commit_kernel.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated commit_kernel.py."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH49",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/ and artifacts/PH49/A04/."
+    }
+  ],
+  "audit_findings": {
+    "commit_kernel_read_adapters": {
+      "status": "COMPLETED",
+      "finding": "Implemented inspect_glhs_lineage_and_dependencies enabling safe control-plane audit reads while strictly preserving write-path execution through the 6-phase atomic commit kernel."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH49_A04 checkout 670a050a12e3c035ea6f316d3f2347963be699d7 -- services/api/src/clara_api/glhs/commit_kernel.py",
+    "rm -rf /dev/shm/clara_worktrees/PH49_A04/artifacts/PH49/A04"
+  ],
+  "timestamp": "2026-10-22T19:15:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH49_A04"
+}
