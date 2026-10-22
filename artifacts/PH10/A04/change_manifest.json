@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH10",
+  "agent_id": "A04",
+  "role": "ML + retrieval",
+  "task": "time validity and knowledge replay",
+  "status": "PASSED",
+  "branch": "phase/ph10-a04",
+  "base_sha": "d17260aa2f70b79fcce8965615d6a2f3068e217d",
+  "frozen_head_sha": "d17260aa2f70b79fcce8965615d6a2f3068e217d",
+  "path_lane": "services/ml/src/clara_ml/;evaluation/;services/ocr/;services/asr/;artifacts/PH10/A04/",
+  "files_changed": [
+    "services/ml/src/clara_ml/bitemporal_replay.py",
+    "artifacts/PH10/A04/change_manifest.json",
+    "artifacts/PH10/A04/test_report.md",
+    "artifacts/PH10/A04/risk_register.md",
+    "artifacts/PH10/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH10/A04/change_manifest.json",
+    "artifacts/PH10/A04/test_report.md",
+    "artifacts/PH10/A04/risk_register.md",
+    "artifacts/PH10/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/ml/src/clara_ml/bitemporal_replay.py",
+      "symbol": "BiTemporalReplayEngine.replay_as_of",
+      "description": "Bi-temporal clinical knowledge replay engine reconstructing patient health facts as of arbitrary valid-time and transaction-time coordinates."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/ml/src/clara_ml/bitemporal_replay.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of bi-temporal replay module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH10",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/ml/src/clara_ml/ and artifacts/PH10/A04/."
+    }
+  ],
+  "audit_findings": {
+    "bitemporal_knowledge_replay": {
+      "status": "COMPLETED",
+      "finding": "Implemented BiTemporalReplayEngine separating valid-time from transaction-time, eliminating retrospective data leakage during longitudinal ML evaluations."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH10_A04/services/ml/src/clara_ml/bitemporal_replay.py",
+    "rm -rf /dev/shm/clara_worktrees/PH10_A04/artifacts/PH10/A04"
+  ],
+  "timestamp": "2026-10-22T17:38:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH10_A04"
+}
