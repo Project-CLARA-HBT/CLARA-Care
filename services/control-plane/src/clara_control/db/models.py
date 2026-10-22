@@ -97,6 +97,31 @@ class ControlAuditLog(ControlBase):
     admin_user = relationship("ControlAdminUser", back_populates="audit_logs")
 
 
+class ControlAdminSession(ControlBase):
+    """Privileged admin session with constrained TTL and device binding."""
+
+    __tablename__ = "control_admin_sessions"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    admin_id = Column(String(36), ForeignKey("control_admin_users.id", ondelete="CASCADE"), nullable=False, index=True)
+    device_id = Column(String(128), nullable=False, index=True)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(255), nullable=True)
+    mfa_verified = Column(Boolean, default=False, nullable=False)
+    step_up_level = Column(String(32), default="STANDARD", nullable=False)  # STANDARD, PRIVILEGED, EMERGENCY
+    is_revoked = Column(Boolean, default=False, nullable=False, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=datetime.datetime.utcnow,
+        onupdate=datetime.datetime.utcnow,
+        nullable=False,
+    )
+
+    admin_user = relationship("ControlAdminUser")
+
+
 class ControlFeatureFlag(ControlBase):
     """Control-plane governed operational and safety feature flags."""
 
@@ -114,3 +139,4 @@ class ControlFeatureFlag(ControlBase):
         onupdate=datetime.datetime.utcnow,
         nullable=False,
     )
+

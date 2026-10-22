@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH42",
+  "agent_id": "A02",
+  "role": "Data/migrations",
+  "task": "Design constrained session/device TTL schema and indexes",
+  "status": "PASSED",
+  "branch": "phase/ph42-a02",
+  "base_sha": "40e2dfcd0180a5e840d2448378516ee7137f6e06",
+  "frozen_head_sha": "40e2dfcd0180a5e840d2448378516ee7137f6e06",
+  "path_lane": "services/control-plane/src/clara_control/db/;services/control-plane/alembic/versions/;artifacts/PH42/A02/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/db/models.py",
+    "services/control-plane/src/clara_control/db/__init__.py",
+    "services/control-plane/alembic/versions/20260903_0002_admin_sessions_device_ttl.py",
+    "artifacts/PH42/A02/change_manifest.json",
+    "artifacts/PH42/A02/test_report.md",
+    "artifacts/PH42/A02/risk_register.md",
+    "artifacts/PH42/A02/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH42/A02/change_manifest.json",
+    "artifacts/PH42/A02/test_report.md",
+    "artifacts/PH42/A02/risk_register.md",
+    "artifacts/PH42/A02/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/db/models.py",
+      "symbol": "ControlAdminSession",
+      "description": "Privileged admin session model with device binding, MFA verification flag, step-up level, and constrained TTL."
+    },
+    {
+      "file": "services/control-plane/alembic/versions/20260903_0002_admin_sessions_device_ttl.py",
+      "symbol": "upgrade, downgrade",
+      "description": "Control-plane migration 0002 creating control_admin_sessions table with device, expiration, and revocation indexes."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/db",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated control-plane models."
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/control-plane/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All control-plane migrations define verified non-empty downgrade."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A02 -p PH42",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across control-plane db and alembic paths."
+    }
+  ],
+  "audit_findings": {
+    "session_device_ttl_schema": {
+      "status": "COMPLETED",
+      "finding": "Designed ControlAdminSession schema and migration 0002 with constrained device TTL, step-up level tracking, and revocation indexing."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH42_A02 checkout 40e2dfcd0180a5e840d2448378516ee7137f6e06 -- services/control-plane/src/clara_control/db/",
+    "rm -f /dev/shm/clara_worktrees/PH42_A02/services/control-plane/alembic/versions/20260903_0002_admin_sessions_device_ttl.py",
+    "rm -rf /dev/shm/clara_worktrees/PH42_A02/artifacts/PH42/A02"
+  ],
+  "timestamp": "2026-10-22T13:42:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH42_A02"
+}
