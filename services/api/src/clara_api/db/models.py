@@ -613,6 +613,25 @@ class VnDrugMappingAudit(Base):
     actor: Mapped[User | None] = relationship("User")
 
 
+class MedicalVocabularyCode(Base):
+    """Normalized medical coding registry mapping Vietnamese clinical terms to standard systems (ICD-10, LOINC, RxNorm, SNOMED)."""
+
+    __tablename__ = "medical_vocabulary_codes"
+    __table_args__ = (
+        UniqueConstraint("system", "code", name="uq_medical_vocab_system_code"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    system: Mapped[str] = mapped_column(String(64), index=True)  # "ICD-10", "LOINC", "RxNorm", "SNOMED-CT", "VN_CIRCULAR"
+    code: Mapped[str] = mapped_column(String(64), index=True)
+    display_vi: Mapped[str] = mapped_column(String(255), index=True)
+    display_en: Mapped[str] = mapped_column(String(255), default="")
+    category: Mapped[str] = mapped_column(String(64), index=True)  # "condition", "observation", "medication", "procedure"
+    synonyms_json: Mapped[list | dict | None] = mapped_column(JSON, default=list)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class SystemSetting(Base):
     __tablename__ = "system_settings"
 

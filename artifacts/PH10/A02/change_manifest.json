@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH10",
+  "agent_id": "A02",
+  "role": "Data model + migration",
+  "task": "vocabulary code mapping registry",
+  "status": "PASSED",
+  "branch": "phase/ph10-a02",
+  "base_sha": "d17260aa2f70b79fcce8965615d6a2f3068e217d",
+  "frozen_head_sha": "d17260aa2f70b79fcce8965615d6a2f3068e217d",
+  "path_lane": "services/api/src/clara_api/db/;services/api/alembic/versions/;artifacts/PH10/A02/",
+  "files_changed": [
+    "services/api/src/clara_api/db/models.py",
+    "services/api/alembic/versions/20260906_0068_medical_vocabulary_codes.py",
+    "artifacts/PH10/A02/change_manifest.json",
+    "artifacts/PH10/A02/test_report.md",
+    "artifacts/PH10/A02/risk_register.md",
+    "artifacts/PH10/A02/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH10/A02/change_manifest.json",
+    "artifacts/PH10/A02/test_report.md",
+    "artifacts/PH10/A02/risk_register.md",
+    "artifacts/PH10/A02/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "symbol": "MedicalVocabularyCode",
+      "description": "Standardized medical vocabulary model mapping Vietnamese clinical terminology to international coding systems (ICD-10, LOINC, RxNorm)."
+    },
+    {
+      "file": "services/api/alembic/versions/20260906_0068_medical_vocabulary_codes.py",
+      "symbol": "upgrade, downgrade",
+      "description": "Alembic migration 0068 creating medical_vocabulary_codes table with unique constraints and category indexes."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/db/models.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated models.py."
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 68 Alembic migrations define verified non-empty downgrade."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A02 -p PH10",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/db/ and artifacts/PH10/A02/."
+    }
+  ],
+  "audit_findings": {
+    "vocabulary_code_mapping_registry": {
+      "status": "COMPLETED",
+      "finding": "Implemented MedicalVocabularyCode model and migration 0068 providing canonical vocabulary mapping across ICD-10, LOINC, and Vietnamese MOH circular codes."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH10_A02 checkout d17260aa2f70b79fcce8965615d6a2f3068e217d -- services/api/src/clara_api/db/models.py",
+    "rm -f /dev/shm/clara_worktrees/PH10_A02/services/api/alembic/versions/20260906_0068_medical_vocabulary_codes.py",
+    "rm -rf /dev/shm/clara_worktrees/PH10_A02/artifacts/PH10/A02"
+  ],
+  "timestamp": "2026-10-22T17:28:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH10_A02"
+}
