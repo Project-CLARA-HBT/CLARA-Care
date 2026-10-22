@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH05",
+  "agent_id": "A04",
+  "role": "ML + retrieval",
+  "task": "policy epoch and revocation anchors",
+  "status": "PASSED",
+  "branch": "phase/ph05-a04",
+  "base_sha": "1c626f461ce20f8c050ca161a09d300062b9f939",
+  "frozen_head_sha": "1c626f461ce20f8c050ca161a09d300062b9f939",
+  "path_lane": "services/ml/src/clara_ml/;evaluation/;services/ocr/;services/asr/;artifacts/PH05/A04/",
+  "files_changed": [
+    "services/ml/src/clara_ml/policy_epoch.py",
+    "artifacts/PH05/A04/change_manifest.json",
+    "artifacts/PH05/A04/test_report.md",
+    "artifacts/PH05/A04/risk_register.md",
+    "artifacts/PH05/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH05/A04/change_manifest.json",
+    "artifacts/PH05/A04/test_report.md",
+    "artifacts/PH05/A04/risk_register.md",
+    "artifacts/PH05/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/ml/src/clara_ml/policy_epoch.py",
+      "symbol": "PolicyEpochGate",
+      "description": "RAG candidate filter checking retrieval chunk purpose tags against user active and revoked consent epochs."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/ml/src/clara_ml/policy_epoch.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of policy epoch module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH05",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/ml/src/clara_ml/ and artifacts/PH05/A04/."
+    }
+  ],
+  "audit_findings": {
+    "policy_epoch_retrieval_filtering": {
+      "status": "COMPLETED",
+      "finding": "Implemented PolicyEpochGate to immediately evict retrieval candidates associated with revoked consent purposes upon user consent modification."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH05_A04/services/ml/src/clara_ml/policy_epoch.py",
+    "rm -rf /dev/shm/clara_worktrees/PH05_A04/artifacts/PH05/A04"
+  ],
+  "timestamp": "2026-10-22T11:28:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH05_A04"
+}
