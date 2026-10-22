@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AiDerivedWriteRoutesInventory",
+  "version": "1.0.0",
+  "phase_id": "PH06",
+  "admission_invariant": "MANDATORY_THSS_PROPOSAL_REQUIRED",
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/api/v1/scribe/sessions/{session_id}/notes",
+      "entity_type": "CLINICAL_NOTE",
+      "origin": "model",
+      "inference_model": "deepseek-reasoner",
+      "requires_human_admission": true,
+      "thss_lineage_enforced": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/council/cases/{case_id}/admissions",
+      "entity_type": "COUNCIL_SYNTHESIS",
+      "origin": "model",
+      "inference_model": "deepseek-chat",
+      "requires_human_admission": true,
+      "thss_lineage_enforced": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/careguard/cabinet/items",
+      "entity_type": "MEDICATION_CABINET_ITEM",
+      "origin": "model",
+      "inference_model": "google-vision-ocr+deepseek",
+      "requires_human_admission": true,
+      "thss_lineage_enforced": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifemap/tasks",
+      "entity_type": "LIFEMAP_TASK",
+      "origin": "model",
+      "inference_model": "deepseek-chat",
+      "requires_human_admission": true,
+      "thss_lineage_enforced": true
+    }
+  ],
+  "invariants": {
+    "direct_unadmitted_model_writes_forbidden": true,
+    "proposal_digest_verification_mandatory": true,
+    "admission_decision_audited": true
+  }
+}
