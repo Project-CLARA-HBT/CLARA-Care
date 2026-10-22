@@ -7,6 +7,7 @@ from .models import (
     ControlBase,
     ControlFeatureFlag,
     ControlGlhsProvenanceAudit,
+    ControlJobExecutionRecord,
     ControlRoleBinding,
     ControlTenant,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "ControlBase",
     "ControlFeatureFlag",
     "ControlGlhsProvenanceAudit",
+    "ControlJobExecutionRecord",
     "ControlRoleBinding",
     "ControlTenant",
 ]

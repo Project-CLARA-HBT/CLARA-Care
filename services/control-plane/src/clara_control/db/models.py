@@ -170,6 +170,28 @@ class ControlAdminSession(ControlBase):
     admin_user = relationship("ControlAdminUser")
 
 
+class ControlJobExecutionRecord(ControlBase):
+    """Control-plane job state, lease locking, and retry tracking ledger."""
+
+    __tablename__ = "control_job_executions"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(36), ForeignKey("control_tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    job_id = Column(String(64), unique=True, nullable=False, index=True)
+    queue_name = Column(String(64), nullable=False, index=True)
+    job_type = Column(String(64), nullable=False, index=True)
+    status = Column(String(32), default="PENDING", nullable=False, index=True)  # PENDING, RUNNING, COMPLETED, FAILED, DEAD_LETTER
+    attempt_count = Column(Integer, default=0, nullable=False)
+    max_attempts = Column(Integer, default=8, nullable=False)
+    lease_owner = Column(String(128), nullable=True, index=True)
+    lease_expires_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    last_error_code = Column(String(96), default="", nullable=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow, nullable=False, index=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    tenant = relationship("ControlTenant")
+
+
 class ControlFeatureFlag(ControlBase):
     """Control-plane governed operational and safety feature flags."""
 

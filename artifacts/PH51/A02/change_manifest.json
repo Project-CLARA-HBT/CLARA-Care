@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH51",
+  "agent_id": "A02",
+  "role": "Data/migrations",
+  "task": "Indexes for job states, leases and retry ledger",
+  "status": "PASSED",
+  "branch": "phase/ph51-a02",
+  "base_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "frozen_head_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "path_lane": "services/control-plane/src/clara_control/db/;services/control-plane/alembic/versions/;artifacts/PH51/A02/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/db/models.py",
+    "services/control-plane/src/clara_control/db/__init__.py",
+    "services/control-plane/alembic/versions/20260909_0006_control_job_indexes_and_leases.py",
+    "artifacts/PH51/A02/change_manifest.json",
+    "artifacts/PH51/A02/test_report.md",
+    "artifacts/PH51/A02/risk_register.md",
+    "artifacts/PH51/A02/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH51/A02/change_manifest.json",
+    "artifacts/PH51/A02/test_report.md",
+    "artifacts/PH51/A02/risk_register.md",
+    "artifacts/PH51/A02/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/db/models.py",
+      "symbol": "ControlJobExecutionRecord",
+      "description": "Control-plane job execution ledger with leased worker tracking, retry counters, and status indexes."
+    },
+    {
+      "file": "services/control-plane/alembic/versions/20260909_0006_control_job_indexes_and_leases.py",
+      "symbol": "upgrade, downgrade",
+      "description": "Control-plane migration 0006 creating control_job_executions table with verified non-empty downgrade."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/db",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated control models."
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/control-plane/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 6 control plane migrations define verified non-empty downgrade."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A02 -p PH51",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across control-plane db and alembic paths."
+    }
+  ],
+  "audit_findings": {
+    "control_job_leases_and_indexes": {
+      "status": "COMPLETED",
+      "finding": "Implemented ControlJobExecutionRecord and created migration 0006 with indexes on job status, queue name, and lease expiration."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH51_A02 checkout 7d8840494cf8e30b6c70ea935574516604e4c275 -- services/control-plane/src/clara_control/db/",
+    "rm -f /dev/shm/clara_worktrees/PH51_A02/services/control-plane/alembic/versions/20260909_0006_control_job_indexes_and_leases.py",
+    "rm -rf /dev/shm/clara_worktrees/PH51_A02/artifacts/PH51/A02"
+  ],
+  "timestamp": "2026-10-22T19:40:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH51_A02"
+}
