@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH05",
+  "agent_id": "A05",
+  "role": "Web UX",
+  "task": "family/delegated authority restrictions",
+  "status": "PASSED",
+  "branch": "phase/ph05-a05",
+  "base_sha": "1c626f461ce20f8c050ca161a09d300062b9f939",
+  "frozen_head_sha": "1c626f461ce20f8c050ca161a09d300062b9f939",
+  "path_lane": "apps/web/app/;apps/web/components/;apps/web/lib/;artifacts/PH05/A05/",
+  "files_changed": [
+    "apps/web/lib/delegated-authority.ts",
+    "apps/web/lib/delegated-authority.test.ts",
+    "artifacts/PH05/A05/change_manifest.json",
+    "artifacts/PH05/A05/test_report.md",
+    "artifacts/PH05/A05/risk_register.md",
+    "artifacts/PH05/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH05/A05/change_manifest.json",
+    "artifacts/PH05/A05/test_report.md",
+    "artifacts/PH05/A05/risk_register.md",
+    "artifacts/PH05/A05/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/web/lib/delegated-authority.ts",
+      "symbol": "canSignMedicalConsent, canViewPatientPhr, canExportDsarData",
+      "description": "Delegated and family authority restrictions policy gating consent signing, PHR access, and DSAR export by patient age and relationship."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "npm run test -- lib/delegated-authority.test.ts",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "3 unit tests verifying adult self-authority, minor parent gating, and proxy restrictions."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A05 -p PH05",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/web/lib/ and artifacts/PH05/A05/."
+    }
+  ],
+  "audit_findings": {
+    "delegated_authority_rules": {
+      "status": "COMPLETED",
+      "finding": "Implemented delegated authority rules preventing unauthorized family members or proxies from executing statutory medical consent or DSAR data exports on behalf of adult patients."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH05_A05/apps/web/lib/delegated-authority.ts",
+    "rm -f /dev/shm/clara_worktrees/PH05_A05/apps/web/lib/delegated-authority.test.ts",
+    "rm -rf /dev/shm/clara_worktrees/PH05_A05/artifacts/PH05/A05"
+  ],
+  "timestamp": "2026-10-22T11:32:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH05_A05"
+}
