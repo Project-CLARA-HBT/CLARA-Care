@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH08",
+  "agent_id": "A03",
+  "role": "Domain + GLHS services",
+  "task": "entity-local OCC locking adapters",
+  "status": "PASSED",
+  "branch": "phase/ph08-a03",
+  "base_sha": "94ec2c1e2f7535b4430e3bb45f913d9a0d1e39a3",
+  "frozen_head_sha": "94ec2c1e2f7535b4430e3bb45f913d9a0d1e39a3",
+  "path_lane": "services/api/src/clara_api/glhs/;services/api/src/clara_api/lifemap/;services/api/src/clara_api/phr/;services/api/src/clara_api/compliance/;services/api/src/clara_api/core/;artifacts/PH08/A03/",
+  "files_changed": [
+    "services/api/src/clara_api/glhs/occ_locking_adapters.py",
+    "artifacts/PH08/A03/change_manifest.json",
+    "artifacts/PH08/A03/test_report.md",
+    "artifacts/PH08/A03/risk_register.md",
+    "artifacts/PH08/A03/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH08/A03/change_manifest.json",
+    "artifacts/PH08/A03/test_report.md",
+    "artifacts/PH08/A03/risk_register.md",
+    "artifacts/PH08/A03/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/glhs/occ_locking_adapters.py",
+      "symbol": "EntityLocalLockAdapter, MedicationLockAdapter, ClinicalNoteLockAdapter",
+      "description": "Domain-specific OCC locking adapters enforcing lexicographical partition sorting and canonical lock plan acquisition."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/glhs/occ_locking_adapters.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of OCC locking adapters module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A03 -p PH08",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/glhs/ and artifacts/PH08/A03/."
+    }
+  ],
+  "audit_findings": {
+    "occ_locking_adapters": {
+      "status": "COMPLETED",
+      "finding": "Implemented domain-specific OCC locking adapters for medications and clinical notes with automatic lexicographical key sorting to eliminate transactional deadlocks."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH08_A03/services/api/src/clara_api/glhs/occ_locking_adapters.py",
+    "rm -rf /dev/shm/clara_worktrees/PH08_A03/artifacts/PH08/A03"
+  ],
+  "timestamp": "2026-10-22T15:15:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH08_A03"
+}
