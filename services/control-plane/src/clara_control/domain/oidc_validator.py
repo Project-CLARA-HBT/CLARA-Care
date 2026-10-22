@@ -54,7 +54,10 @@ class OidcTokenValidator:
         # Signature verification across active and retiring keys
         sig_valid = False
         signing_input = f"{header_b64}.{payload_b64}".encode("utf-8")
-        actual_sig = base64.urlsafe_b64decode(sig_b64 + "=" * (-len(sig_b64) % 4))
+        try:
+            actual_sig = base64.urlsafe_b64decode(sig_b64 + "=" * (-len(sig_b64) % 4))
+        except Exception:
+            return OidcValidationResult(valid=False, subject=None, role=None, mfa_verified=False, step_up_level="NONE", error="Invalid base64 signature")
 
         for key in [self.active_key, self.retiring_key]:
             if key is None:
