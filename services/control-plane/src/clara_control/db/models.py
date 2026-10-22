@@ -122,6 +122,29 @@ class ControlAuditLog(ControlBase):
     admin_user = relationship("ControlAdminUser", back_populates="audit_logs")
 
 
+class ControlGlhsProvenanceAudit(ControlBase):
+    """Control-plane read model for GLHS proposal attestation, receipts, and human review decisions."""
+
+    __tablename__ = "control_glhs_provenance_audits"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(36), ForeignKey("control_tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    proposal_public_id = Column(String(36), nullable=False, index=True)
+    root_proposal_id = Column(String(36), nullable=False, index=True)
+    attestation_level = Column(String(32), nullable=False, index=True)
+    d1_projection_digest = Column(String(64), nullable=True)
+    d2_semantic_digest = Column(String(64), nullable=True, index=True)
+    d3_transport_digest = Column(String(64), nullable=True, index=True)
+    provider_receipt_digest = Column(String(64), nullable=True)
+    admission_decision = Column(String(32), nullable=False, index=True)  # PENDING, ADMITTED, REJECTED
+    reviewer_notes = Column(Text, nullable=True)
+    is_sealed = Column(Boolean, default=False, nullable=False)
+    sealed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow, nullable=False, index=True)
+
+    tenant = relationship("ControlTenant")
+
+
 class ControlAdminSession(ControlBase):
     """Privileged admin session with constrained TTL and device binding."""
 
