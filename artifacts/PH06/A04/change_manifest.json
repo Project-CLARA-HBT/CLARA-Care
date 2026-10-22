@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH06",
+  "agent_id": "A04",
+  "role": "ML + retrieval",
+  "task": "no-downgrade across review descendants",
+  "status": "PASSED",
+  "branch": "phase/ph06-a04",
+  "base_sha": "2370329965f32a7e7df48473e6a2b842ae37580b",
+  "frozen_head_sha": "2370329965f32a7e7df48473e6a2b842ae37580b",
+  "path_lane": "services/ml/src/clara_ml/;evaluation/;services/ocr/;services/asr/;artifacts/PH06/A04/",
+  "files_changed": [
+    "services/ml/src/clara_ml/lineage_verifier.py",
+    "artifacts/PH06/A04/change_manifest.json",
+    "artifacts/PH06/A04/test_report.md",
+    "artifacts/PH06/A04/risk_register.md",
+    "artifacts/PH06/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH06/A04/change_manifest.json",
+    "artifacts/PH06/A04/test_report.md",
+    "artifacts/PH06/A04/risk_register.md",
+    "artifacts/PH06/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/ml/src/clara_ml/lineage_verifier.py",
+      "symbol": "LineageAntiDowngradeVerifier.verify_no_downgrade",
+      "description": "Anti-downgrade verifier enforcing attestation rank preservation (L0-L3) and snapshot consistency across review chains."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/ml/src/clara_ml/lineage_verifier.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of lineage verifier module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH06",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/ml/src/clara_ml/ and artifacts/PH06/A04/."
+    }
+  ],
+  "audit_findings": {
+    "lineage_anti_downgrade": {
+      "status": "COMPLETED",
+      "finding": "Implemented LineageAntiDowngradeVerifier to ensure clinician review descendants maintain model provenance and reject attestation downgrades."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH06_A04/services/ml/src/clara_ml/lineage_verifier.py",
+    "rm -rf /dev/shm/clara_worktrees/PH06_A04/artifacts/PH06/A04"
+  ],
+  "timestamp": "2026-10-22T12:32:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH06_A04"
+}
