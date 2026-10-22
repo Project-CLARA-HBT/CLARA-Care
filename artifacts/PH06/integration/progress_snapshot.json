@@ -1,0 +1,35 @@
+{
+  "phase_id": "PH06",
+  "name": "GLHS mandatory THSS admission integration",
+  "status": "COMPLETED",
+  "base_sha": "23703299659c5257573dcd800a64cb6b46f75e9b",
+  "completed_agents": [
+    "A01",
+    "A02",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "integrated_commits": [
+    "9abc2807",
+    "2b34f2ac",
+    "95c37f58",
+    "eb1e7bd7",
+    "0fbdd83b",
+    "ad25a120",
+    "51dbe1a1",
+    "b6378a46",
+    "b4deb666",
+    "7c8b6c89"
+  ],
+  "quality_gate": {
+    "status": "PASSED",
+    "script": "scripts/ci/ph06_quality_gate.py"
+  },
+  "timestamp": "2026-10-22T18:45:00Z"
+}

@@ -1,0 +1,226 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH06",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "23703299659c5257573dcd800a64cb6b46f75e9b",
+  "merge_commit_sha": "7c8b6c89c9bc76c6a0a5f97e5ff64064dd539fc3",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "canonical proposal create endpoint",
+      "worktree": "/dev/shm/clara_worktrees/PH06_A02",
+      "branch": "phase/ph06-a02",
+      "commit": "3e3a5d97",
+      "full_commit": "3e3a5d97137e5534b0e8daaba9b267a5a962cbf2",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/db/models.py",
+        "services/api/alembic/versions/20260902_0066_thss_mandatory_admission.py",
+        "artifacts/PH06/A02/change_manifest.json",
+        "artifacts/PH06/A02/test_report.md",
+        "artifacts/PH06/A02/risk_register.md",
+        "artifacts/PH06/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "inventory every AI-derived write route",
+      "worktree": "/dev/shm/clara_worktrees/PH06_A01",
+      "branch": "phase/ph06-a01",
+      "commit": "a729ca5c",
+      "full_commit": "a729ca5cbb3235ab128370c15e46e3115613f800",
+      "status": "PASSED",
+      "files": [
+        "contracts/glhs/ai_derived_write_routes_inventory.v1.json",
+        "artifacts/PH06/A01/change_manifest.json",
+        "artifacts/PH06/A01/test_report.md",
+        "artifacts/PH06/A01/risk_register.md",
+        "artifacts/PH06/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "enforce THSS identity and digest check",
+      "worktree": "/dev/shm/clara_worktrees/PH06_A03",
+      "branch": "phase/ph06-a03",
+      "commit": "18ced1e1",
+      "full_commit": "18ced1e194ff630911d2b46eb12cb59520d8125d",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/glhs/admission.py",
+        "artifacts/PH06/A03/change_manifest.json",
+        "artifacts/PH06/A03/test_report.md",
+        "artifacts/PH06/A03/risk_register.md",
+        "artifacts/PH06/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "no-downgrade across review descendants",
+      "worktree": "/dev/shm/clara_worktrees/PH06_A04",
+      "branch": "phase/ph06-a04",
+      "commit": "7ac0b5fe",
+      "full_commit": "7ac0b5fedc8262fc2de15b779550efaa7394f41c",
+      "status": "PASSED",
+      "files": [
+        "services/ml/src/clara_ml/lineage_verifier.py",
+        "artifacts/PH06/A04/change_manifest.json",
+        "artifacts/PH06/A04/test_report.md",
+        "artifacts/PH06/A04/risk_register.md",
+        "artifacts/PH06/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "commit kernel entity dependency wiring",
+      "worktree": "/dev/shm/clara_worktrees/PH06_A05",
+      "branch": "phase/ph06-a05",
+      "commit": "0466edda",
+      "full_commit": "0466edda7546792c005866cf959d0b60018da16d",
+      "status": "PASSED",
+      "files": [
+        "apps/web/lib/commit-kernel-client.ts",
+        "apps/web/lib/commit-kernel-client.test.ts",
+        "artifacts/PH06/A05/change_manifest.json",
+        "artifacts/PH06/A05/test_report.md",
+        "artifacts/PH06/A05/risk_register.md",
+        "artifacts/PH06/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "reviewer explicit decision UX",
+      "worktree": "/dev/shm/clara_worktrees/PH06_A06",
+      "branch": "phase/ph06-a06",
+      "commit": "24f3e3a3",
+      "full_commit": "24f3e3a35b7b713730b727ed8d5ec97098cd3abf",
+      "status": "PASSED",
+      "files": [
+        "apps/mobile/lib/widgets/proposal_decision_sheet.dart",
+        "apps/mobile/test/proposal_decision_ux_test.dart",
+        "artifacts/PH06/A06/change_manifest.json",
+        "artifacts/PH06/A06/test_report.md",
+        "artifacts/PH06/A06/risk_register.md",
+        "artifacts/PH06/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "mobile pending-proposal state",
+      "worktree": "/dev/shm/clara_worktrees/PH06_A07",
+      "branch": "phase/ph06-a07",
+      "commit": "e039fad0",
+      "full_commit": "e039fad0e8819d31a9ef740cbe69f1b4989530b8",
+      "status": "PASSED",
+      "files": [
+        "services/api/tests/test_thss_pending_proposal_state.py",
+        "artifacts/PH06/A07/change_manifest.json",
+        "artifacts/PH06/A07/test_report.md",
+        "artifacts/PH06/A07/risk_register.md",
+        "artifacts/PH06/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "adversarial stale-write and downgrade tests",
+      "worktree": "/dev/shm/clara_worktrees/PH06_A08",
+      "branch": "phase/ph06-a08",
+      "commit": "682becc4",
+      "full_commit": "682becc4ca6cc3d32462990b03a9685394f22d5c",
+      "status": "PASSED",
+      "files": [
+        "docs/security/GLHS_STALE_WRITE_AND_DOWNGRADE_THREAT_MODEL.md",
+        "scripts/ops/audit_thss_lineage.py",
+        "artifacts/PH06/A08/change_manifest.json",
+        "artifacts/PH06/A08/test_report.md",
+        "artifacts/PH06/A08/risk_register.md",
+        "artifacts/PH06/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "forensic trace redaction audit",
+      "worktree": "/dev/shm/clara_worktrees/PH06_A09",
+      "branch": "phase/ph06-a09",
+      "commit": "54227514",
+      "full_commit": "5422751496f6ccffefa19f761f53632d9a470e01",
+      "status": "PASSED",
+      "files": [
+        "docs/research/GLHS_THSS_FORENSIC_TRACE_REDACTION_AUDIT.md",
+        "artifacts/PH06/A09/change_manifest.json",
+        "artifacts/PH06/A09/test_report.md",
+        "artifacts/PH06/A09/risk_register.md",
+        "artifacts/PH06/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "rollback and compatibility/migration plan",
+      "worktree": "/dev/shm/clara_worktrees/PH06_A10",
+      "branch": "phase/ph06-a10",
+      "commit": "01d04dee",
+      "full_commit": "01d04dee565a79f21172a8a06b7c92edc806fcb3",
+      "status": "PASSED",
+      "files": [
+        "docs/runbooks/thss-admission-rollback-and-compatibility.md",
+        "docs/reports/ph06-thss-admission-integration-audit.md",
+        "scripts/ci/ph06_quality_gate.py",
+        "artifacts/PH06/A10/change_manifest.json",
+        "artifacts/PH06/A10/test_report.md",
+        "artifacts/PH06/A10/risk_register.md",
+        "artifacts/PH06/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.153,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.148,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T12:53:05.617157+00:00"
+}

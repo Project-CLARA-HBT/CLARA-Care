@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH06-01,A01,Contracts,AI-derived write routes inventory & THSS admission,All model write routes mandate human admission,4/4 routes mapped,PASS,contracts/glhs/ai_derived_write_routes_inventory.v1.json
+TC-PH06-02,A02,DB,Proposal admission_decision column & migration 0066,GlhsClinicalCommitmentProposal records decision state,66/66 migrations pass,PASS,python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions
+TC-PH06-03,A03,Domain,GRWC admission verifier & proposal sealing,Rejects REJECTED proposals and seals admitted timestamp,Admitted cleanly,PASS,services/api/src/clara_api/glhs/admission.py
+TC-PH06-04,A04,ML,Lineage anti-downgrade verifier across review chains,Attestation level monotonicity preserved (L0-L3),Non-downgrade verified,PASS,services/ml/src/clara_ml/lineage_verifier.py
+TC-PH06-05,A05,Web,Commit kernel OCC dependency vector builder,Client attaches observed entity versions and handles 409,3/3 tests pass,PASS,npm run test -- lib/commit-kernel-client.test.ts
+TC-PH06-06,A06,Mobile,Reviewer explicit decision UX sheet,Clinician confirms or rejects proposal with provenance,2/2 tests pass,PASS,flutter test --no-pub test/proposal_decision_ux_test.dart
+TC-PH06-07,A07,Tests/CI,Pending proposal state lifecycle & gating suite,New proposals default PENDING; rejected fail closed,2/2 tests pass,PASS,python3 -m unittest services/api/tests/test_thss_pending_proposal_state.py
+TC-PH06-08,A08,Security,Stale-write and attestation downgrade threat model,OCC freshness revalidated under lock in Phase 3,Audited cleanly,PASS,python3 scripts/ops/audit_thss_lineage.py
+TC-PH06-09,A09,Docs,Forensic trace & PII redaction audit,Zero PII markers in proposal envelopes and outbox events,Verified compliant,PASS,docs/research/GLHS_THSS_FORENSIC_TRACE_REDACTION_AUDIT.md
+TC-PH06-10,A10,Review,THSS admission rollback plan & quality gate,Compatibility runbook and automated invariant verification,Quality gate passed,PASS,python3 scripts/ci/ph06_quality_gate.py
+TC-PH06-11,Integration,Gate,PH06 Quality Gate,All 7 invariants verified green,PH06 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph06_quality_gate.py
