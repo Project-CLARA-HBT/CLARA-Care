@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH05",
+  "agent_id": "A08",
+  "role": "Security + privacy",
+  "task": "consent-drift concurrent test matrix",
+  "status": "PASSED",
+  "branch": "phase/ph05-a08",
+  "base_sha": "1c626f461ce20f8c050ca161a09d300062b9f939",
+  "frozen_head_sha": "1c626f461ce20f8c050ca161a09d300062b9f939",
+  "path_lane": "docs/security/;docs/compliance/;scripts/ops/;artifacts/PH05/A08/",
+  "files_changed": [
+    "docs/security/CONSENT_DRIFT_CONCURRENT_SECURITY_MATRIX.md",
+    "scripts/ops/audit_consent_drift.py",
+    "artifacts/PH05/A08/change_manifest.json",
+    "artifacts/PH05/A08/test_report.md",
+    "artifacts/PH05/A08/risk_register.md",
+    "artifacts/PH05/A08/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH05/A08/change_manifest.json",
+    "artifacts/PH05/A08/test_report.md",
+    "artifacts/PH05/A08/risk_register.md",
+    "artifacts/PH05/A08/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/glhs/lock_hierarchy.py",
+      "symbol": "acquire_consent_lock_anchor",
+      "description": "Lock anchor serializing concurrent consent mutations per user account."
+    },
+    {
+      "file": "docs/security/CONSENT_DRIFT_CONCURRENT_SECURITY_MATRIX.md",
+      "symbol": "Concurrent Test Matrix",
+      "description": "Threat model and concurrency evaluation matrix covering version drift, rapid grant/revoke, and multi-session invalidation."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ops/audit_consent_drift.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Consent drift audit script executed cleanly."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A08 -p PH05",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/security/, scripts/ops/, and artifacts/PH05/A08/."
+    }
+  ],
+  "audit_findings": {
+    "consent_drift_matrix": {
+      "status": "COMPLETED",
+      "finding": "Published comprehensive consent drift threat matrix and operational audit tool ensuring zero silent bypass upon policy updates."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH05_A08/docs/security/CONSENT_DRIFT_CONCURRENT_SECURITY_MATRIX.md",
+    "rm -f /dev/shm/clara_worktrees/PH05_A08/scripts/ops/audit_consent_drift.py",
+    "rm -rf /dev/shm/clara_worktrees/PH05_A08/artifacts/PH05/A08"
+  ],
+  "timestamp": "2026-10-22T11:40:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH05_A08"
+}
