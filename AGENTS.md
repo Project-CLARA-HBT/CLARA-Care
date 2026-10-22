@@ -73,3 +73,19 @@ Run checks closest to your changes before widening:
 - **Role Portals**: Consumers land on `/today`; clinicians/researchers/admins land on `/dashboard`.
 - **UI Modernization Changes**: Refer to `docs/ui-modernization/07-exec-plan.md` and `08-task-list.md`. Keep route authorization separate from navigation presentation. Update the ExecPlan and decision log after checkpoints.
 - **Language**: Respond and document in the user's language (Vietnamese when requested).
+
+## Commit Hygiene & Granular Phase Commit Guidelines
+
+- **Granular Commits**: Commit each logical, cohesive change individually rather than bundling entire phases into single monolithic commits.
+- **Imperative Tense**: Commit messages MUST use the imperative mood (e.g., "add feature" instead of "added feature" or "adds feature").
+- **Structure**:
+  ```
+  <type>: <title>
+
+  [Optional description after the title with a blank line if the changes are complex]
+  ```
+- **Rules**:
+  - Keep the title concise and under 72 characters.
+  - Allowed `<type>` values: `fix`, `feat`, `build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`.
+  - In commit logs, output the raw commit message without quotes or commentary.
+
