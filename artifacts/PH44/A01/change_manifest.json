@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH44",
+  "agent_id": "A01",
+  "role": "API contract + BFF",
+  "task": "Organization create/update/status REST contract",
+  "status": "PASSED",
+  "branch": "phase/ph44-a01",
+  "base_sha": "ad759178619bc5bebe867d34199c93a0bcf5f1cf",
+  "frozen_head_sha": "ad759178619bc5bebe867d34199c93a0bcf5f1cf",
+  "path_lane": "services/control-plane/src/clara_control/api/;contracts/control-plane/;artifacts/PH44/A01/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/api/router.py",
+    "contracts/control-plane/control_v1_openapi.json",
+    "artifacts/PH44/A01/change_manifest.json",
+    "artifacts/PH44/A01/test_report.md",
+    "artifacts/PH44/A01/risk_register.md",
+    "artifacts/PH44/A01/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH44/A01/change_manifest.json",
+    "artifacts/PH44/A01/test_report.md",
+    "artifacts/PH44/A01/risk_register.md",
+    "artifacts/PH44/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/api/router.py",
+      "symbol": "create_governed_tenant, update_governed_tenant, suspend_governed_tenant, activate_governed_tenant",
+      "description": "REST endpoints managing tenant organization creation, configuration updates, and suspension/activation state transitions."
+    },
+    {
+      "file": "contracts/control-plane/control_v1_openapi.json",
+      "symbol": "paths./control/v1/tenants",
+      "description": "Updated OpenAPI contract covering B2B tenant organization lifecycle."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/api/router.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated control router."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A01 -p PH44",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/control-plane/src/clara_control/api/, contracts/control-plane/, and artifacts/PH44/A01/."
+    }
+  ],
+  "audit_findings": {
+    "tenant_rest_contract": {
+      "status": "COMPLETED",
+      "finding": "Implemented complete tenant lifecycle REST contract including creation, parameter updates, suspension, and reactivation."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH44_A01 checkout ad759178619bc5bebe867d34199c93a0bcf5f1cf -- services/control-plane/src/clara_control/api/router.py",
+    "git -C /dev/shm/clara_worktrees/PH44_A01 checkout ad759178619bc5bebe867d34199c93a0bcf5f1cf -- contracts/control-plane/control_v1_openapi.json",
+    "rm -rf /dev/shm/clara_worktrees/PH44_A01/artifacts/PH44/A01"
+  ],
+  "timestamp": "2026-10-22T18:15:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH44_A01"
+}

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "CLARA Control-Plane API",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "paths": {
     "/control/v1/sessions/issue": {
@@ -216,6 +216,195 @@
                   },
                   "type": "array",
                   "title": "Response List Governed Tenants Control V1 Tenants Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Create Governed Tenant",
+        "description": "Creates a new B2B healthcare tenant organization.",
+        "operationId": "create_governed_tenant_control_v1_tenants_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/tenants/{tenant_id}": {
+      "patch": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Update Governed Tenant",
+        "description": "Updates configuration parameters of a governed tenant organization.",
+        "operationId": "update_governed_tenant_control_v1_tenants__tenant_id__patch",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/tenants/{tenant_id}/suspend": {
+      "post": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Suspend Governed Tenant",
+        "description": "Suspends a tenant organization, disabling data-plane authentication.",
+        "operationId": "suspend_governed_tenant_control_v1_tenants__tenant_id__suspend_post",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantStatusUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/tenants/{tenant_id}/activate": {
+      "post": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Activate Governed Tenant",
+        "description": "Reactivates a suspended tenant organization.",
+        "operationId": "activate_governed_tenant_control_v1_tenants__tenant_id__activate_post",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -497,6 +686,47 @@
         ],
         "title": "SessionStepUpRequest"
       },
+      "TenantCreateRequest": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 3,
+            "title": "Slug"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "tier": {
+            "type": "string",
+            "title": "Tier",
+            "default": "standard"
+          },
+          "max_workspaces": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Max Workspaces",
+            "default": 5
+          },
+          "max_users": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Max Users",
+            "default": 50
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug",
+          "name"
+        ],
+        "title": "TenantCreateRequest"
+      },
       "TenantResponse": {
         "properties": {
           "id": {
@@ -518,6 +748,11 @@
           "is_active": {
             "type": "boolean",
             "title": "Is Active"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "ACTIVE"
           },
           "max_workspaces": {
             "type": "integer",
@@ -545,6 +780,76 @@
           "created_at"
         ],
         "title": "TenantResponse"
+      },
+      "TenantStatusUpdateRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "pattern": "^(ONBOARDING|ACTIVE|SUSPENDED|DECOMMISSIONED)$",
+            "title": "Status"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "reason"
+        ],
+        "title": "TenantStatusUpdateRequest"
+      },
+      "TenantUpdateRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          },
+          "max_workspaces": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Workspaces"
+          },
+          "max_users": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Users"
+          }
+        },
+        "type": "object",
+        "title": "TenantUpdateRequest"
       },
       "ValidationError": {
         "properties": {

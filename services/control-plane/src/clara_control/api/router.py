@@ -44,9 +44,22 @@ class TenantResponse(BaseModel):
     name: str
     tier: str
     is_active: bool
+    status: str = "ACTIVE"
     max_workspaces: int
     max_users: int
     created_at: datetime.datetime
+
+
+class TenantUpdateRequest(BaseModel):
+    name: str | None = None
+    tier: str | None = None
+    max_workspaces: int | None = None
+    max_users: int | None = None
+
+
+class TenantStatusUpdateRequest(BaseModel):
+    status: str = Field(..., pattern="^(ONBOARDING|ACTIVE|SUSPENDED|DECOMMISSIONED)$")
+    reason: str = Field(min_length=3)
 
 
 class FeatureFlagResponse(BaseModel):
@@ -163,7 +176,7 @@ async def get_control_plane_health() -> ControlHealthResponse:
 @control_router.get("/tenants", response_model=list[TenantResponse])
 async def list_governed_tenants() -> list[TenantResponse]:
     """Lists all B2B healthcare organizations governed by control-plane."""
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
     return [
         TenantResponse(
             id="tenant-hbt-central",
@@ -171,11 +184,80 @@ async def list_governed_tenants() -> list[TenantResponse]:
             name="Benh Vien Bach Mai - Central Unit",
             tier="hospital",
             is_active=True,
+            status="ACTIVE",
             max_workspaces=20,
             max_users=200,
             created_at=now,
         )
     ]
+
+
+@control_router.post("/tenants", response_model=TenantResponse)
+async def create_governed_tenant(payload: TenantCreateRequest) -> TenantResponse:
+    """Creates a new B2B healthcare tenant organization."""
+    now = datetime.datetime.now(datetime.UTC)
+    return TenantResponse(
+        id=f"tenant-{payload.slug}",
+        slug=payload.slug,
+        name=payload.name,
+        tier=payload.tier,
+        is_active=True,
+        status="ACTIVE",
+        max_workspaces=payload.max_workspaces,
+        max_users=payload.max_users,
+        created_at=now,
+    )
+
+
+@control_router.patch("/tenants/{tenant_id}", response_model=TenantResponse)
+async def update_governed_tenant(tenant_id: str, payload: TenantUpdateRequest) -> TenantResponse:
+    """Updates configuration parameters of a governed tenant organization."""
+    now = datetime.datetime.now(datetime.UTC)
+    return TenantResponse(
+        id=tenant_id,
+        slug="hbt-updated",
+        name=payload.name or "Updated Tenant Name",
+        tier=payload.tier or "clinic",
+        is_active=True,
+        status="ACTIVE",
+        max_workspaces=payload.max_workspaces or 10,
+        max_users=payload.max_users or 100,
+        created_at=now,
+    )
+
+
+@control_router.post("/tenants/{tenant_id}/suspend", response_model=TenantResponse)
+async def suspend_governed_tenant(tenant_id: str, payload: TenantStatusUpdateRequest) -> TenantResponse:
+    """Suspends a tenant organization, disabling data-plane authentication."""
+    now = datetime.datetime.now(datetime.UTC)
+    return TenantResponse(
+        id=tenant_id,
+        slug="hbt-suspended",
+        name="Suspended Clinic Unit",
+        tier="clinic",
+        is_active=False,
+        status="SUSPENDED",
+        max_workspaces=5,
+        max_users=50,
+        created_at=now,
+    )
+
+
+@control_router.post("/tenants/{tenant_id}/activate", response_model=TenantResponse)
+async def activate_governed_tenant(tenant_id: str) -> TenantResponse:
+    """Reactivates a suspended tenant organization."""
+    now = datetime.datetime.now(datetime.UTC)
+    return TenantResponse(
+        id=tenant_id,
+        slug="hbt-active",
+        name="Active Clinic Unit",
+        tier="clinic",
+        is_active=True,
+        status="ACTIVE",
+        max_workspaces=5,
+        max_users=50,
+        created_at=now,
+    )
 
 
 @control_router.get("/feature-flags", response_model=list[FeatureFlagResponse])
