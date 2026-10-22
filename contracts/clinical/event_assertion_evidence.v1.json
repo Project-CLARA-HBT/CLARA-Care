@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClinicalEventAssertionEvidenceTypedContract",
+  "version": "1.0.0",
+  "phase_id": "PH10",
+  "entities": {
+    "ClinicalEvent": {
+      "fields": {
+        "event_id": "string (UUID)",
+        "profile_id": "integer",
+        "domain": "string (medications, conditions, vitals, procedures)",
+        "effective_time": "ISO 8601 UTC",
+        "recorded_time": "ISO 8601 UTC"
+      }
+    },
+    "ClinicalAssertion": {
+      "fields": {
+        "assertion_id": "string (UUID)",
+        "event_id": "string (UUID)",
+        "assertion_type": "string (CONFIRMED, REFUTED, UNCERTAIN)",
+        "confidence_score": "float (0.0 - 1.0)",
+        "actor_role": "string (clinician, patient, model)"
+      }
+    },
+    "ClinicalEvidence": {
+      "fields": {
+        "evidence_id": "string (UUID)",
+        "assertion_id": "string (UUID)",
+        "source_type": "string (DOCUMENT_OCR, SCRIBE_AUDIO, LAB_RESULT, PATIENT_INPUT)",
+        "source_reference": "string",
+        "content_hash": "string (SHA-256)",
+        "attestation_digest": "string"
+      }
+    }
+  },
+  "invariants": {
+    "immutable_evidence_chain": true,
+    "confidence_bounds_enforced": true,
+    "uncertainty_preservation_mandatory": true
+  }
+}

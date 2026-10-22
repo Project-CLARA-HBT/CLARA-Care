@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH10",
+  "agent_id": "A01",
+  "role": "API + contract",
+  "task": "event/assertion/evidence typed contract",
+  "status": "PASSED",
+  "branch": "phase/ph10-a01",
+  "base_sha": "d17260aa2f70b79fcce8965615d6a2f3068e217d",
+  "frozen_head_sha": "d17260aa2f70b79fcce8965615d6a2f3068e217d",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;artifacts/PH10/A01/",
+  "files_changed": [
+    "contracts/clinical/event_assertion_evidence.v1.json",
+    "artifacts/PH10/A01/change_manifest.json",
+    "artifacts/PH10/A01/test_report.md",
+    "artifacts/PH10/A01/risk_register.md",
+    "artifacts/PH10/A01/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH10/A01/change_manifest.json",
+    "artifacts/PH10/A01/test_report.md",
+    "artifacts/PH10/A01/risk_register.md",
+    "artifacts/PH10/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "contracts/clinical/event_assertion_evidence.v1.json",
+      "symbol": "entities",
+      "description": "Canonical typed machine contract defining clinical events, assertions, and supporting evidence links."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A01 -p PH10",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across contracts/ and artifacts/PH10/A01/."
+    }
+  ],
+  "audit_findings": {
+    "event_assertion_evidence_contract": {
+      "status": "COMPLETED",
+      "finding": "Published event_assertion_evidence.v1.json formalizing the triad between raw observation events, clinical assertions, and provenance evidence."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH10_A01/contracts/clinical/event_assertion_evidence.v1.json",
+    "rm -rf /dev/shm/clara_worktrees/PH10_A01/artifacts/PH10/A01"
+  ],
+  "timestamp": "2026-10-22T17:30:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH10_A01"
+}
