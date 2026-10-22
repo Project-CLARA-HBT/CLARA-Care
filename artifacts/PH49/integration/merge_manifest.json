@@ -1,0 +1,224 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH49",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "670a050a124d9860a0f10fc2214f3938c7371a75",
+  "merge_commit_sha": "28ec67c9e5952dbc357be9413a517492250b55e8",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data/migrations",
+      "task": "Index GLHS provenance receipt and audit read model",
+      "worktree": "/dev/shm/clara_worktrees/PH49_A02",
+      "branch": "phase/ph49-a02",
+      "commit": "3f306328",
+      "full_commit": "3f306328445d92f90ac1d5c1a1ebc9a592bbf339",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/db/models.py",
+        "services/control-plane/src/clara_control/db/__init__.py",
+        "services/control-plane/alembic/versions/20260908_0005_glhs_provenance_audit.py",
+        "artifacts/PH49/A02/change_manifest.json",
+        "artifacts/PH49/A02/test_report.md",
+        "artifacts/PH49/A02/risk_register.md",
+        "artifacts/PH49/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API contract + BFF",
+      "task": "GLHS proposal/attestation/rejection redacted read API",
+      "worktree": "/dev/shm/clara_worktrees/PH49_A01",
+      "branch": "phase/ph49-a01",
+      "commit": "948861b0",
+      "full_commit": "948861b01b0620ffba94e9b3b685b40c919a0307",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/api/router.py",
+        "contracts/control-plane/control_v1_openapi.json",
+        "artifacts/PH49/A01/change_manifest.json",
+        "artifacts/PH49/A01/test_report.md",
+        "artifacts/PH49/A01/risk_register.md",
+        "artifacts/PH49/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain service",
+      "task": "Expose deny reasons, dependency sets and audit-safe reconciliation",
+      "worktree": "/dev/shm/clara_worktrees/PH49_A03",
+      "branch": "phase/ph49-a03",
+      "commit": "7d5c2e9f",
+      "full_commit": "7d5c2e9ff65dd4a8e798886a81db01888839e4c9",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/domain/glhs_reconciliation.py",
+        "artifacts/PH49/A03/change_manifest.json",
+        "artifacts/PH49/A03/test_report.md",
+        "artifacts/PH49/A03/risk_register.md",
+        "artifacts/PH49/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "Adapter / existing code",
+      "task": "Adapt existing commit_kernel read APIs without bypassing writes",
+      "worktree": "/dev/shm/clara_worktrees/PH49_A04",
+      "branch": "phase/ph49-a04",
+      "commit": "4064cc17",
+      "full_commit": "4064cc171980e697dd598364e367c8361fef4e6e",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/glhs/commit_kernel.py",
+        "artifacts/PH49/A04/change_manifest.json",
+        "artifacts/PH49/A04/test_report.md",
+        "artifacts/PH49/A04/risk_register.md",
+        "artifacts/PH49/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Admin/consumer app routes",
+      "task": "Build GLHS trace explorer and human review queue",
+      "worktree": "/dev/shm/clara_worktrees/PH49_A05",
+      "branch": "phase/ph49-a05",
+      "commit": "12c56729",
+      "full_commit": "12c56729f9750752f275994dc300063d9e53d87c",
+      "status": "PASSED",
+      "files": [
+        "apps/admin/app/glhs/page.tsx",
+        "artifacts/PH49/A05/change_manifest.json",
+        "artifacts/PH49/A05/test_report.md",
+        "artifacts/PH49/A05/risk_register.md",
+        "artifacts/PH49/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "UI widgets / Flutter",
+      "task": "Build evidence membership/dependency/consent status components",
+      "worktree": "/dev/shm/clara_worktrees/PH49_A06",
+      "branch": "phase/ph49-a06",
+      "commit": "92b6950a",
+      "full_commit": "92b6950a30ca775e0a7b7bbba1af1fe04cf72f74",
+      "status": "PASSED",
+      "files": [
+        "apps/admin/components/glhs_evidence_badge.tsx",
+        "artifacts/PH49/A06/change_manifest.json",
+        "artifacts/PH49/A06/test_report.md",
+        "artifacts/PH49/A06/risk_register.md",
+        "artifacts/PH49/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Integration tests",
+      "task": "Test wrong snapshot, token C3 parity and stale consent",
+      "worktree": "/dev/shm/clara_worktrees/PH49_A07",
+      "branch": "phase/ph49-a07",
+      "commit": "0e13433e",
+      "full_commit": "0e13433e8763eeba039d651d1e3378bf1afb1032",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/tests/test_glhs_lineage_adversarial_reconciliation.py",
+        "artifacts/PH49/A07/change_manifest.json",
+        "artifacts/PH49/A07/test_report.md",
+        "artifacts/PH49/A07/risk_register.md",
+        "artifacts/PH49/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security / negative tests",
+      "task": "Threat model no-downgrade and false audit reconstruction",
+      "worktree": "/dev/shm/clara_worktrees/PH49_A08",
+      "branch": "phase/ph49-a08",
+      "commit": "2ca2732a",
+      "full_commit": "2ca2732a9f5766f0c6f89bb53dcfbba453282dfc",
+      "status": "PASSED",
+      "files": [
+        "docs/security/GLHS_LINEAGE_ANTI_DOWNGRADE_THREAT_MODEL.md",
+        "artifacts/PH49/A08/change_manifest.json",
+        "artifacts/PH49/A08/test_report.md",
+        "artifacts/PH49/A08/risk_register.md",
+        "artifacts/PH49/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "Write scientific claim linkage and incident support runbook",
+      "worktree": "/dev/shm/clara_worktrees/PH49_A09",
+      "branch": "phase/ph49-a09",
+      "commit": "a35f2e02",
+      "full_commit": "a35f2e02af2c83704c9b7b1d1bc2c47c12b56e5a",
+      "status": "PASSED",
+      "files": [
+        "docs/runbooks/scientific-claim-linkage-and-incident-support.md",
+        "artifacts/PH49/A09/change_manifest.json",
+        "artifacts/PH49/A09/test_report.md",
+        "artifacts/PH49/A09/risk_register.md",
+        "artifacts/PH49/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial reviewer",
+      "task": "Adversarial replay of lineage-stripped reviewed proposal",
+      "worktree": "/dev/shm/clara_worktrees/PH49_A10",
+      "branch": "phase/ph49-a10",
+      "commit": "bf045b02",
+      "full_commit": "bf045b0212f111820ffb5a475ebe5177586a1ea7",
+      "status": "PASSED",
+      "files": [
+        "docs/reports/ph49-adversarial-replay-lineage-audit.md",
+        "scripts/ci/ph49_quality_gate.py",
+        "artifacts/PH49/A10/change_manifest.json",
+        "artifacts/PH49/A10/test_report.md",
+        "artifacts/PH49/A10/risk_register.md",
+        "artifacts/PH49/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.079,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.138,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T19:29:56.861162+00:00"
+}

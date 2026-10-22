@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH49-01,A01,Contracts,GLHS proposal attestation redacted read API,Exposes /control/v1/glhs/proposals endpoints,OpenAPI valid,PASS,contracts/control-plane/control_v1_openapi.json
+TC-PH49-02,A02,DB,Control GLHS provenance audits model & migration 0005,Indexes D1 D2 D3 digests and admission decisions,Migration 0005 passes,PASS,python3 scripts/ops/check_migration_downgrade.py services/control-plane/alembic/versions
+TC-PH49-03,A03,Domain,GLHS reconciliation service and deny reason codes,Structured denial categorization and audit record creation,Categorized cleanly,PASS,services/control-plane/src/clara_control/domain/glhs_reconciliation.py
+TC-PH49-04,A04,Adapter,Read-only commit kernel introspection adapter,Non-locking read access to proposal lineage and dependencies,Inspected cleanly,PASS,services/api/src/clara_api/glhs/commit_kernel.py
+TC-PH49-05,A05,Web,GLHS trace explorer and human review queue UI,Visual inspection of proposal hashes and admission buttons,UI verified,PASS,apps/admin/app/glhs/page.tsx
+TC-PH49-06,A06,UI,GLHS evidence and attestation status badge component,Renders L0-L3 attestation and dependency freshness,Component verified,PASS,apps/admin/components/glhs_evidence_badge.tsx
+TC-PH49-07,A07,Tests/CI,Adversarial lineage and snapshot parity test suite,Rejection of wrong snapshot IDs and stale consent,3/3 tests pass,PASS,python3 -m unittest services/control-plane/tests/test_glhs_lineage_adversarial_reconciliation.py
+TC-PH49-08,A08,Security,GLHS lineage anti-downgrade and audit threat model,Proves impossible to strip model ID or forge audit chain,Threat model published,PASS,docs/security/GLHS_LINEAGE_ANTI_DOWNGRADE_THREAT_MODEL.md
+TC-PH49-09,A09,Docs,Scientific claim linkage and incident support runbook,Forensic trace extraction and D1/D2/D3 verification,Runbook published,PASS,docs/runbooks/scientific-claim-linkage-and-incident-support.md
+TC-PH49-10,A10,Review,Adversarial replay of lineage-stripped proposals,Replay of stripped or forged proposals fails closed,Quality gate green,PASS,docs/reports/ph49-adversarial-replay-lineage-audit.md
+TC-PH49-11,Integration,Gate,PH49 Quality Gate,All 7 invariants verified green,PH49 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph49_quality_gate.py
