@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH41",
+  "agent_id": "A10",
+  "role": "Adversarial reviewer",
+  "task": "Hostile audit old /admin routes for weaker lingering side doors",
+  "status": "PASSED",
+  "branch": "phase/ph41-a10",
+  "base_sha": "f161b49db767c1e3d4e33c218305ee54056bcdfd",
+  "frozen_head_sha": "f161b49db767c1e3d4e33c218305ee54056bcdfd",
+  "path_lane": "docs/reports/;scripts/ci/;artifacts/phase-gates/;artifacts/PH41/A10/",
+  "files_changed": [
+    "docs/reports/ph41-hostile-admin-route-audit.md",
+    "scripts/ci/ph41_quality_gate.py",
+    "artifacts/PH41/A10/change_manifest.json",
+    "artifacts/PH41/A10/test_report.md",
+    "artifacts/PH41/A10/risk_register.md",
+    "artifacts/PH41/A10/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH41/A10/change_manifest.json",
+    "artifacts/PH41/A10/test_report.md",
+    "artifacts/PH41/A10/risk_register.md",
+    "artifacts/PH41/A10/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "docs/reports/ph41-hostile-admin-route-audit.md",
+      "symbol": "Audited Route Surface Inventory",
+      "description": "Hostile security review of legacy administrative routes asserting strict RBAC enforcement and zero lingering side doors."
+    },
+    {
+      "file": "scripts/ci/ph41_quality_gate.py",
+      "symbol": "run_ph41_quality_gate",
+      "description": "Automated quality gate verifying control plane isolation, baseline SHA, migration downgrades, and credential hygiene."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/ph41_quality_gate.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 7 control plane quality gate invariants verified green."
+    },
+    {
+      "command": "python3 scripts/ci/ph41_quality_gate.py --verify-control",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Control plane isolation unit tests passed cleanly."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A10 -p PH41",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/reports/, scripts/ci/, and artifacts/PH41/A10/."
+    }
+  ],
+  "audit_findings": {
+    "hostile_route_audit": {
+      "status": "COMPLETED",
+      "finding": "Audited all legacy /admin routes against hostile penetration vectors: verified 100% require_roles('admin') enforcement, zero anonymous side doors, and zero query parameter bypasses."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH41_A10/docs/reports/ph41-hostile-admin-route-audit.md",
+    "rm -f /dev/shm/clara_worktrees/PH41_A10/scripts/ci/ph41_quality_gate.py",
+    "rm -rf /dev/shm/clara_worktrees/PH41_A10/artifacts/PH41/A10"
+  ],
+  "timestamp": "2026-10-22T12:20:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH41_A10"
+}
