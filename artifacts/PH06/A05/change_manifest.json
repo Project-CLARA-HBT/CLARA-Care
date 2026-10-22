@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH06",
+  "agent_id": "A05",
+  "role": "Web UX",
+  "task": "commit kernel entity dependency wiring",
+  "status": "PASSED",
+  "branch": "phase/ph06-a05",
+  "base_sha": "2370329965f32a7e7df48473e6a2b842ae37580b",
+  "frozen_head_sha": "2370329965f32a7e7df48473e6a2b842ae37580b",
+  "path_lane": "apps/web/app/;apps/web/components/;apps/web/lib/;artifacts/PH06/A05/",
+  "files_changed": [
+    "apps/web/lib/commit-kernel-client.ts",
+    "apps/web/lib/commit-kernel-client.test.ts",
+    "artifacts/PH06/A05/change_manifest.json",
+    "artifacts/PH06/A05/test_report.md",
+    "artifacts/PH06/A05/risk_register.md",
+    "artifacts/PH06/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH06/A05/change_manifest.json",
+    "artifacts/PH06/A05/test_report.md",
+    "artifacts/PH06/A05/risk_register.md",
+    "artifacts/PH06/A05/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/web/lib/commit-kernel-client.ts",
+      "symbol": "CommitKernelClient",
+      "description": "Client-side OCC dependency vector builder attaching observed entity versions and handling 409 conflict detection."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "npm run test -- lib/commit-kernel-client.test.ts",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "3 unit tests verifying dependency vector construction and stale version conflict identification."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A05 -p PH06",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/web/lib/ and artifacts/PH06/A05/."
+    }
+  ],
+  "audit_findings": {
+    "commit_kernel_wiring": {
+      "status": "COMPLETED",
+      "finding": "Implemented CommitKernelClient enabling client mutations to construct formal GLHS OCC dependency vectors, preventing lost updates during concurrent edits."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH06_A05/apps/web/lib/commit-kernel-client.ts",
+    "rm -f /dev/shm/clara_worktrees/PH06_A05/apps/web/lib/commit-kernel-client.test.ts",
+    "rm -rf /dev/shm/clara_worktrees/PH06_A05/artifacts/PH06/A05"
+  ],
+  "timestamp": "2026-10-22T12:35:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH06_A05"
+}
