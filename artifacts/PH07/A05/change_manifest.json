@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH07",
+  "agent_id": "A05",
+  "role": "Web UX",
+  "task": "provider identity and model-registry binding",
+  "status": "PASSED",
+  "branch": "phase/ph07-a05",
+  "base_sha": "e8533cb029a1470ce2d1bc027a421b47664871c5",
+  "frozen_head_sha": "e8533cb029a1470ce2d1bc027a421b47664871c5",
+  "path_lane": "apps/web/app/;apps/web/components/;apps/web/lib/;artifacts/PH07/A05/",
+  "files_changed": [
+    "apps/web/lib/model-registry.ts",
+    "apps/web/lib/model-registry.test.ts",
+    "artifacts/PH07/A05/change_manifest.json",
+    "artifacts/PH07/A05/test_report.md",
+    "artifacts/PH07/A05/risk_register.md",
+    "artifacts/PH07/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH07/A05/change_manifest.json",
+    "artifacts/PH07/A05/test_report.md",
+    "artifacts/PH07/A05/risk_register.md",
+    "artifacts/PH07/A05/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/web/lib/model-registry.ts",
+      "symbol": "ModelRegistryClient, APPROVED_MODEL_REGISTRY",
+      "description": "Client-side model registry binding model selection to approved providers and task-specific attestation levels."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "npm run test -- lib/model-registry.test.ts",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "3 unit tests verifying model approval, task validation, and unauthorized provider rejection."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A05 -p PH07",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/web/lib/ and artifacts/PH07/A05/."
+    }
+  ],
+  "audit_findings": {
+    "model_registry_binding": {
+      "status": "COMPLETED",
+      "finding": "Implemented ModelRegistryClient enforcing approved provider identity bindings and minimum attestation requirements per clinical task family."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH07_A05/apps/web/lib/model-registry.ts",
+    "rm -f /dev/shm/clara_worktrees/PH07_A05/apps/web/lib/model-registry.test.ts",
+    "rm -rf /dev/shm/clara_worktrees/PH07_A05/artifacts/PH07/A05"
+  ],
+  "timestamp": "2026-10-22T14:40:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH07_A05"
+}
