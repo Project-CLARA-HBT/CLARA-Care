@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH43",
+  "agent_id": "A07",
+  "role": "Integration tests",
+  "task": "Run 2-tenant x 10-role positive/negative contract tests",
+  "status": "PASSED",
+  "branch": "phase/ph43-a07",
+  "base_sha": "89801b4823296c0065793e1140061e56cf574880",
+  "frozen_head_sha": "89801b4823296c0065793e1140061e56cf574880",
+  "path_lane": "services/control-plane/tests/;apps/admin/e2e/;services/api/tests/;apps/web/e2e/;artifacts/PH43/A07/",
+  "files_changed": [
+    "services/control-plane/tests/test_multi_tenant_rbac_abac_contract.py",
+    "artifacts/PH43/A07/change_manifest.json",
+    "artifacts/PH43/A07/test_report.md",
+    "artifacts/PH43/A07/risk_register.md",
+    "artifacts/PH43/A07/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH43/A07/change_manifest.json",
+    "artifacts/PH43/A07/test_report.md",
+    "artifacts/PH43/A07/risk_register.md",
+    "artifacts/PH43/A07/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/tests/test_multi_tenant_rbac_abac_contract.py",
+      "symbol": "MultiTenantRbacAbacContractTestCase",
+      "description": "Integration unit test suite verifying positive same-tenant operations, negative cross-tenant denials, and zero platform PHI access."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m unittest services/control-plane/tests/test_multi_tenant_rbac_abac_contract.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 5 multi-tenant contract unit tests passed cleanly."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A07 -p PH43",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/control-plane/tests/ and artifacts/PH43/A07/."
+    }
+  ],
+  "audit_findings": {
+    "multi_tenant_rbac_tests": {
+      "status": "COMPLETED",
+      "finding": "Implemented test_multi_tenant_rbac_abac_contract.py asserting strict 2-tenant isolation and negative permission denials across roles."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH43_A07/services/control-plane/tests/test_multi_tenant_rbac_abac_contract.py",
+    "rm -rf /dev/shm/clara_worktrees/PH43_A07/artifacts/PH43/A07"
+  ],
+  "timestamp": "2026-10-22T17:10:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH43_A07"
+}
