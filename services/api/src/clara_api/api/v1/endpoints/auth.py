@@ -39,6 +39,8 @@ from clara_api.schemas import (
     ChangePasswordRequest,
     ConsentAcceptRequest,
     ConsentAcceptResponse,
+    ConsentPolicyListResponse,
+    ConsentPolicySnapshotResponse,
     ConsentStatusResponse,
     ForgotPasswordRequest,
     ForgotPasswordResponse,
@@ -1087,3 +1089,37 @@ def accept_consent(
         consent_version=consent.consent_version,
         accepted_at=consent.accepted_at,
     )
+
+
+@router.get("/consent-policies", response_model=ConsentPolicyListResponse)
+def list_consent_policies() -> ConsentPolicyListResponse:
+    """Returns active versioned consent policies and authority requirements."""
+    now = datetime.now(UTC)
+    required_version = required_medical_disclaimer_version()
+    policies = [
+        ConsentPolicySnapshotResponse(
+            policy_type=MEDICAL_CONSENT_TYPE,
+            policy_version=required_version,
+            content_hash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            title_vi="Điều khoản Sử dụng & Cảnh báo Y tế CLARA",
+            title_en="CLARA Medical Disclaimer & Terms of Service",
+            policy_body="CLARA là trợ lý AI y tế, không thay thế chẩn đoán hay điều trị của bác sĩ.",
+            purposes=["core_service", "medical_disclaimer"],
+            authority_level="self",
+            is_active=True,
+            effective_from=now,
+        ),
+        ConsentPolicySnapshotResponse(
+            policy_type="compliance:ai_transparency",
+            policy_version=required_version,
+            content_hash="d41d8cd98f00b204e9800998ecf8427e",
+            title_vi="Minh bạch Trí tuệ Nhân tạo Y tế",
+            title_en="Medical AI Transparency Disclosure",
+            policy_body="Hệ thống sử dụng mô hình ngôn ngữ lớn để hỗ trợ tra cứu thông tin y tế.",
+            purposes=["ai_transparency"],
+            authority_level="self",
+            is_active=True,
+            effective_from=now,
+        ),
+    ]
+    return ConsentPolicyListResponse(total=len(policies), policies=policies)

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VersionedConsentResourceContract",
+  "version": "1.0.0",
+  "phase_id": "PH05",
+  "governed_policies": [
+    {
+      "policy_type": "medical_disclaimer",
+      "required_version": "2026-04-v1",
+      "authority_level": "self",
+      "purposes": [
+        "core_service",
+        "medical_disclaimer"
+      ],
+      "immutable_body_hash_required": true,
+      "gate_level": "BLOCKING_PRE_MEDICAL"
+    },
+    {
+      "policy_type": "compliance:ai_transparency",
+      "required_version": "2026-04-v1",
+      "authority_level": "self",
+      "purposes": [
+        "ai_transparency"
+      ],
+      "immutable_body_hash_required": true,
+      "gate_level": "BLOCKING_PRE_CHAT"
+    },
+    {
+      "policy_type": "compliance:cross_border_processing",
+      "required_version": "2026-04-v1",
+      "authority_level": "self",
+      "purposes": [
+        "cross_border_processing"
+      ],
+      "immutable_body_hash_required": true,
+      "gate_level": "BLOCKING_PRE_TRANSFER"
+    }
+  ],
+  "invariants": {
+    "append_only_ledger": true,
+    "revocation_retains_prior_record": true,
+    "hash_integrity_verified": true
+  }
+}

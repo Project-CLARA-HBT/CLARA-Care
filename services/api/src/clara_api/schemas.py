@@ -179,6 +179,24 @@ class ConsentAcceptResponse(BaseModel):
     accepted_at: datetime
 
 
+class ConsentPolicySnapshotResponse(BaseModel):
+    policy_type: str
+    policy_version: str
+    content_hash: str
+    title_vi: str
+    title_en: str
+    policy_body: str
+    purposes: list[str] = Field(default_factory=list)
+    authority_level: str = "self"
+    is_active: bool = True
+    effective_from: datetime
+
+
+class ConsentPolicyListResponse(BaseModel):
+    total: int
+    policies: list[ConsentPolicySnapshotResponse]
+
+
 PolicyAction = Literal["allow", "warn", "block", "escalate"]
 
 

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH05",
+  "agent_id": "A01",
+  "role": "API + contract",
+  "task": "versioned consent resource endpoints",
+  "status": "PASSED",
+  "branch": "phase/ph05-a01",
+  "base_sha": "1c626f461ce20f8c050ca161a09d300062b9f939",
+  "frozen_head_sha": "1c626f461ce20f8c050ca161a09d300062b9f939",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;artifacts/PH05/A01/",
+  "files_changed": [
+    "contracts/consent/versioned_consent_contract.v1.json",
+    "services/api/src/clara_api/schemas.py",
+    "services/api/src/clara_api/api/v1/endpoints/auth.py",
+    "artifacts/PH05/A01/change_manifest.json",
+    "artifacts/PH05/A01/test_report.md",
+    "artifacts/PH05/A01/risk_register.md",
+    "artifacts/PH05/A01/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH05/A01/change_manifest.json",
+    "artifacts/PH05/A01/test_report.md",
+    "artifacts/PH05/A01/risk_register.md",
+    "artifacts/PH05/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/schemas.py",
+      "symbol": "ConsentPolicySnapshotResponse, ConsentPolicyListResponse",
+      "description": "Typed Pydantic schemas for versioned consent policy representations and authority requirements."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "symbol": "list_consent_policies",
+      "description": "Public endpoint GET /auth/consent-policies exposing active consent policies and authority constraints."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/schemas.py services/api/src/clara_api/api/v1/endpoints/auth.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of schemas.py and auth.py."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A01 -p PH05",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/api/, contracts/, schemas.py, and artifacts/PH05/A01/."
+    }
+  ],
+  "audit_findings": {
+    "versioned_consent_endpoints": {
+      "status": "COMPLETED",
+      "finding": "Exposed GET /auth/consent-policies and published canonical versioned consent machine contract in contracts/consent/versioned_consent_contract.v1.json."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH05_A01 checkout 1c626f461ce20f8c050ca161a09d300062b9f939 -- services/api/src/clara_api/schemas.py services/api/src/clara_api/api/v1/endpoints/auth.py",
+    "rm -rf /dev/shm/clara_worktrees/PH05_A01/contracts/consent",
+    "rm -rf /dev/shm/clara_worktrees/PH05_A01/artifacts/PH05/A01"
+  ],
+  "timestamp": "2026-10-22T11:22:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH05_A01"
+}
