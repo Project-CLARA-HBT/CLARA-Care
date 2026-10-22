@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH08",
+  "agent_id": "A04",
+  "role": "ML + retrieval",
+  "task": "cross-partition write skew guards",
+  "status": "PASSED",
+  "branch": "phase/ph08-a04",
+  "base_sha": "94ec2c1e2f7535b4430e3bb45f913d9a0d1e39a3",
+  "frozen_head_sha": "94ec2c1e2f7535b4430e3bb45f913d9a0d1e39a3",
+  "path_lane": "services/ml/src/clara_ml/;evaluation/;services/ocr/;services/asr/;artifacts/PH08/A04/",
+  "files_changed": [
+    "services/ml/src/clara_ml/write_skew_guard.py",
+    "artifacts/PH08/A04/change_manifest.json",
+    "artifacts/PH08/A04/test_report.md",
+    "artifacts/PH08/A04/risk_register.md",
+    "artifacts/PH08/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH08/A04/change_manifest.json",
+    "artifacts/PH08/A04/test_report.md",
+    "artifacts/PH08/A04/risk_register.md",
+    "artifacts/PH08/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/ml/src/clara_ml/write_skew_guard.py",
+      "symbol": "CrossPartitionWriteSkewGuard.audit_dependencies",
+      "description": "Validation guard preventing cross-partition write skew by asserting composite read dependency coverage across clinical domains."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/ml/src/clara_ml/write_skew_guard.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of write skew guard module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH08",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/ml/src/clara_ml/ and artifacts/PH08/A04/."
+    }
+  ],
+  "audit_findings": {
+    "cross_partition_write_skew": {
+      "status": "COMPLETED",
+      "finding": "Implemented CrossPartitionWriteSkewGuard preventing write skew anomalies where partial mutations across disjoint partitions bypass composite safety constraints."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH08_A04/services/ml/src/clara_ml/write_skew_guard.py",
+    "rm -rf /dev/shm/clara_worktrees/PH08_A04/artifacts/PH08/A04"
+  ],
+  "timestamp": "2026-10-22T15:18:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH08_A04"
+}
