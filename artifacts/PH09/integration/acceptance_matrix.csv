@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH09-01,A01,Contracts,Outbox domain event schema contract,Supported clinical event types and zero-PHI envelope,Contract published,PASS,contracts/events/outbox_domain_events.v1.json
+TC-PH09-02,A02,DB,Idempotent outbox publisher and deduplication,Idempotent event insert and DLQ transition,Deduplicated cleanly,PASS,services/api/src/clara_api/db/outbox_publisher.py
+TC-PH09-03,A03,Domain,Outbox consumer retry and DLQ policy,Jittered exponential backoff with max attempt ceiling,Retry calculated,PASS,services/api/src/clara_api/glhs/outbox_retry_policy.py
+TC-PH09-04,A04,ML,ML event subscriptions and pipeline triggers,Asynchronous routing of events to ML indexers,Dispatched cleanly,PASS,services/ml/src/clara_ml/event_subscriptions.py
+TC-PH09-05,A05,Web,Async job monitoring with SSE and polling seam,Real-time progress tracking with polling fallback,1/1 tests pass,PASS,npm run test -- lib/async-job-monitor.test.ts
+TC-PH09-06,A06,Mobile,Background job status card widget,Renders queued running failed states with retry,2/2 tests pass,PASS,flutter test --no-pub test/background_job_card_test.dart
+TC-PH09-07,A07,Tests/CI,Mobile pending job tracking test suite,Active job query filters and excludes DLQ records,2/2 tests pass,PASS,python3 -m unittest services/api/tests/test_mobile_pending_job_tracking.py
+TC-PH09-08,A08,Security,Outbox queue failure and crash recovery,Worker crash simulation and automated lease recovery,Reclaimed cleanly,PASS,python3 scripts/ops/simulate_queue_recovery.py
+TC-PH09-09,A09,Docs,PHI-minimized event payload architecture,Pseudonymized UUID references without raw medical text,Specified,PASS,docs/research/PHI_MINIMIZED_EVENT_PAYLOAD_SECURITY.md
+TC-PH09-10,A10,Review,Outbox operations runbook and retention,DLQ alert procedures and 14-day retention rules,Quality gate green,PASS,docs/reports/ph09-outbox-lifecycle-audit.md
+TC-PH09-11,Integration,Gate,PH09 Quality Gate,All 7 invariants verified green,PH09 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph09_quality_gate.py

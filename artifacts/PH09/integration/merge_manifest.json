@@ -1,0 +1,225 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH09",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "4c6621242a7dded10704a00ac298a87e5ecd54eb",
+  "merge_commit_sha": "8cde29e6cabd6cee72660d7df7dfd07a47088ad6",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "idempotent publisher and dedupe",
+      "worktree": "/dev/shm/clara_worktrees/PH09_A02",
+      "branch": "phase/ph09-a02",
+      "commit": "72035ff5",
+      "full_commit": "72035ff5d182417ee7c5c9df37039be419955688",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/db/outbox_publisher.py",
+        "artifacts/PH09/A02/change_manifest.json",
+        "artifacts/PH09/A02/test_report.md",
+        "artifacts/PH09/A02/risk_register.md",
+        "artifacts/PH09/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "outbox domain event schema",
+      "worktree": "/dev/shm/clara_worktrees/PH09_A01",
+      "branch": "phase/ph09-a01",
+      "commit": "a93a57ae",
+      "full_commit": "a93a57aeb5cb6ba5364ff39fbaac18e75c42f538",
+      "status": "PASSED",
+      "files": [
+        "contracts/events/outbox_domain_events.v1.json",
+        "artifacts/PH09/A01/change_manifest.json",
+        "artifacts/PH09/A01/test_report.md",
+        "artifacts/PH09/A01/risk_register.md",
+        "artifacts/PH09/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "consumer retry and DLQ policy",
+      "worktree": "/dev/shm/clara_worktrees/PH09_A03",
+      "branch": "phase/ph09-a03",
+      "commit": "6f0a7aae",
+      "full_commit": "6f0a7aaea33c15cb2244afc6c40b98f8321c8fd1",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/glhs/outbox_retry_policy.py",
+        "artifacts/PH09/A03/change_manifest.json",
+        "artifacts/PH09/A03/test_report.md",
+        "artifacts/PH09/A03/risk_register.md",
+        "artifacts/PH09/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "API event subscriptions",
+      "worktree": "/dev/shm/clara_worktrees/PH09_A04",
+      "branch": "phase/ph09-a04",
+      "commit": "3ba1698c",
+      "full_commit": "3ba1698cc2ce4dd1c9bff0cad25248a99529e5d5",
+      "status": "PASSED",
+      "files": [
+        "services/ml/src/clara_ml/event_subscriptions.py",
+        "artifacts/PH09/A04/change_manifest.json",
+        "artifacts/PH09/A04/test_report.md",
+        "artifacts/PH09/A04/risk_register.md",
+        "artifacts/PH09/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "async job monitoring SSE/polling",
+      "worktree": "/dev/shm/clara_worktrees/PH09_A05",
+      "branch": "phase/ph09-a05",
+      "commit": "1c9a9a78",
+      "full_commit": "1c9a9a7808ad300ebea11f569b8173c3b6657a4f",
+      "status": "PASSED",
+      "files": [
+        "apps/web/lib/async-job-monitor.ts",
+        "apps/web/lib/async-job-monitor.test.ts",
+        "artifacts/PH09/A05/change_manifest.json",
+        "artifacts/PH09/A05/test_report.md",
+        "artifacts/PH09/A05/risk_register.md",
+        "artifacts/PH09/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "web background job status",
+      "worktree": "/dev/shm/clara_worktrees/PH09_A06",
+      "branch": "phase/ph09-a06",
+      "commit": "1efa4316",
+      "full_commit": "1efa4316a704cefc09a7fd6408c816dd00053d2e",
+      "status": "PASSED",
+      "files": [
+        "apps/mobile/lib/widgets/background_job_card.dart",
+        "apps/mobile/test/background_job_card_test.dart",
+        "artifacts/PH09/A06/change_manifest.json",
+        "artifacts/PH09/A06/test_report.md",
+        "artifacts/PH09/A06/risk_register.md",
+        "artifacts/PH09/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "mobile pending job tracking",
+      "worktree": "/dev/shm/clara_worktrees/PH09_A07",
+      "branch": "phase/ph09-a07",
+      "commit": "baf9fd76",
+      "full_commit": "baf9fd76742dcf6f0863528217f2c07119faff96",
+      "status": "PASSED",
+      "files": [
+        "services/api/tests/test_mobile_pending_job_tracking.py",
+        "artifacts/PH09/A07/change_manifest.json",
+        "artifacts/PH09/A07/test_report.md",
+        "artifacts/PH09/A07/risk_register.md",
+        "artifacts/PH09/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "queue failure/restore integration tests",
+      "worktree": "/dev/shm/clara_worktrees/PH09_A08",
+      "branch": "phase/ph09-a08",
+      "commit": "98c7aeea",
+      "full_commit": "98c7aeea125886e1f466f2e4f2cce83977ac0531",
+      "status": "PASSED",
+      "files": [
+        "docs/security/QUEUE_FAILURE_AND_DLQ_AUDIT.md",
+        "scripts/ops/simulate_queue_recovery.py",
+        "artifacts/PH09/A08/change_manifest.json",
+        "artifacts/PH09/A08/test_report.md",
+        "artifacts/PH09/A08/risk_register.md",
+        "artifacts/PH09/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "PHI-minimized event payload security",
+      "worktree": "/dev/shm/clara_worktrees/PH09_A09",
+      "branch": "phase/ph09-a09",
+      "commit": "3a3e9e7f",
+      "full_commit": "3a3e9e7f883f87214c5b281caee14f4fcc5d09eb",
+      "status": "PASSED",
+      "files": [
+        "docs/research/PHI_MINIMIZED_EVENT_PAYLOAD_SECURITY.md",
+        "artifacts/PH09/A09/change_manifest.json",
+        "artifacts/PH09/A09/test_report.md",
+        "artifacts/PH09/A09/risk_register.md",
+        "artifacts/PH09/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "operator runbook and retention",
+      "worktree": "/dev/shm/clara_worktrees/PH09_A10",
+      "branch": "phase/ph09-a10",
+      "commit": "ba7b6985",
+      "full_commit": "ba7b69854b3ea588fc3e29b7d30622cb06ecaf02",
+      "status": "PASSED",
+      "files": [
+        "docs/runbooks/outbox-operations-dlq-and-retention.md",
+        "docs/reports/ph09-outbox-lifecycle-audit.md",
+        "scripts/ci/ph09_quality_gate.py",
+        "artifacts/PH09/A10/change_manifest.json",
+        "artifacts/PH09/A10/test_report.md",
+        "artifacts/PH09/A10/risk_register.md",
+        "artifacts/PH09/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.083,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.146,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T16:36:46.342358+00:00"
+}
