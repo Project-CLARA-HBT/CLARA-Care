@@ -1,0 +1,43 @@
+{
+  "taxonomy_version": "v1.0.0",
+  "phase_owner": "PH40",
+  "categories": [
+    {
+      "code": "HARDCODED_TELEMETRY",
+      "prio": "P0",
+      "disposition": "REMEDIATE_PH41",
+      "count": 6
+    },
+    {
+      "code": "TRUE_DEFAULT_ON_FETCH_FAILURE",
+      "prio": "P0",
+      "disposition": "REMEDIATE_PH41",
+      "count": 3
+    },
+    {
+      "code": "UI_DEMO_FIXTURE",
+      "prio": "P2",
+      "disposition": "RETAIN_ISOLATED",
+      "count": 38
+    },
+    {
+      "code": "INERT_OR_DISABLED_FLOW",
+      "prio": "P1",
+      "disposition": "RETAIN_FAIL_CLOSED",
+      "count": 12
+    },
+    {
+      "code": "BASE_CLASS_ABSTRACT",
+      "prio": "P2",
+      "disposition": "RETAIN_ABC_CONTRACT",
+      "count": 14
+    },
+    {
+      "code": "FLAG_DEFAULT_DISABLED",
+      "prio": "P1",
+      "disposition": "STAGE_FOR_DAG_ACTIVATION",
+      "count": 39
+    }
+  ],
+  "total_triaged": 112
+}
