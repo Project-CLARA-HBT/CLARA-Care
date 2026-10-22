@@ -1,0 +1,226 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH10",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "d17260aa2f3bf4c8812677f5a736495665ba6255",
+  "merge_commit_sha": "330a03c3d49b2bd1b88a2e781a9b8d244de203a6",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "vocabulary code mapping registry",
+      "worktree": "/dev/shm/clara_worktrees/PH10_A02",
+      "branch": "phase/ph10-a02",
+      "commit": "ee7760b9",
+      "full_commit": "ee7760b9ec9bf37685aaedee5617f337a4fcce44",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/db/models.py",
+        "services/api/alembic/versions/20260906_0068_medical_vocabulary_codes.py",
+        "artifacts/PH10/A02/change_manifest.json",
+        "artifacts/PH10/A02/test_report.md",
+        "artifacts/PH10/A02/risk_register.md",
+        "artifacts/PH10/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "event/assertion/evidence typed contract",
+      "worktree": "/dev/shm/clara_worktrees/PH10_A01",
+      "branch": "phase/ph10-a01",
+      "commit": "ea09c93e",
+      "full_commit": "ea09c93e504369018e4082d74c90c7030acbfa7c",
+      "status": "PASSED",
+      "files": [
+        "contracts/clinical/event_assertion_evidence.v1.json",
+        "artifacts/PH10/A01/change_manifest.json",
+        "artifacts/PH10/A01/test_report.md",
+        "artifacts/PH10/A01/risk_register.md",
+        "artifacts/PH10/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "uncertainty and conflict preservation",
+      "worktree": "/dev/shm/clara_worktrees/PH10_A03",
+      "branch": "phase/ph10-a03",
+      "commit": "6349a89f",
+      "full_commit": "6349a89f6da6abd69b2a408fc97b5df8ef2ff7a7",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/lifemap/conflict_preservation.py",
+        "artifacts/PH10/A03/change_manifest.json",
+        "artifacts/PH10/A03/test_report.md",
+        "artifacts/PH10/A03/risk_register.md",
+        "artifacts/PH10/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "time validity and knowledge replay",
+      "worktree": "/dev/shm/clara_worktrees/PH10_A04",
+      "branch": "phase/ph10-a04",
+      "commit": "31dd1b53",
+      "full_commit": "31dd1b535e60f03fe4c94285d0ce3a0362064025",
+      "status": "PASSED",
+      "files": [
+        "services/ml/src/clara_ml/bitemporal_replay.py",
+        "artifacts/PH10/A04/change_manifest.json",
+        "artifacts/PH10/A04/test_report.md",
+        "artifacts/PH10/A04/risk_register.md",
+        "artifacts/PH10/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "source and acquisition provenance",
+      "worktree": "/dev/shm/clara_worktrees/PH10_A05",
+      "branch": "phase/ph10-a05",
+      "commit": "837f7346",
+      "full_commit": "837f7346d5f8bcd68291580e22b4871ae38fac80",
+      "status": "PASSED",
+      "files": [
+        "apps/web/lib/clinical-provenance.ts",
+        "apps/web/lib/clinical-provenance.test.ts",
+        "artifacts/PH10/A05/change_manifest.json",
+        "artifacts/PH10/A05/test_report.md",
+        "artifacts/PH10/A05/risk_register.md",
+        "artifacts/PH10/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "PHR edit/review surfaces",
+      "worktree": "/dev/shm/clara_worktrees/PH10_A06",
+      "branch": "phase/ph10-a06",
+      "commit": "b8b3dfb2",
+      "full_commit": "b8b3dfb23c011f58ad952de96f5300d010015677",
+      "status": "PASSED",
+      "files": [
+        "apps/mobile/lib/widgets/phr_provenance_badge.dart",
+        "apps/mobile/test/phr_provenance_badge_test.dart",
+        "artifacts/PH10/A06/change_manifest.json",
+        "artifacts/PH10/A06/test_report.md",
+        "artifacts/PH10/A06/risk_register.md",
+        "artifacts/PH10/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "mobile measurement capture",
+      "worktree": "/dev/shm/clara_worktrees/PH10_A07",
+      "branch": "phase/ph10-a07",
+      "commit": "306090fa",
+      "full_commit": "306090fae2d393c5830f1937be58cf31fe4542e1",
+      "status": "PASSED",
+      "files": [
+        "services/api/tests/test_mobile_measurement_capture.py",
+        "artifacts/PH10/A07/change_manifest.json",
+        "artifacts/PH10/A07/test_report.md",
+        "artifacts/PH10/A07/risk_register.md",
+        "artifacts/PH10/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "conflict-resolution golden tests",
+      "worktree": "/dev/shm/clara_worktrees/PH10_A08",
+      "branch": "phase/ph10-a08",
+      "commit": "46a33f62",
+      "full_commit": "46a33f628793677c62fc30e2d1911110914d9ba8",
+      "status": "PASSED",
+      "files": [
+        "docs/security/MASTER_RECORD_CONFLICT_RESOLUTION_AUDIT.md",
+        "scripts/ops/run_golden_conflict_tests.py",
+        "artifacts/PH10/A08/change_manifest.json",
+        "artifacts/PH10/A08/test_report.md",
+        "artifacts/PH10/A08/risk_register.md",
+        "artifacts/PH10/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "source authenticity and licensing audit",
+      "worktree": "/dev/shm/clara_worktrees/PH10_A09",
+      "branch": "phase/ph10-a09",
+      "commit": "1148123f",
+      "full_commit": "1148123f9377d1862cf501e4c336abeaccf3a614",
+      "status": "PASSED",
+      "files": [
+        "docs/research/SOURCE_AUTHENTICITY_AND_LICENSING_AUDIT.md",
+        "artifacts/PH10/A09/change_manifest.json",
+        "artifacts/PH10/A09/test_report.md",
+        "artifacts/PH10/A09/risk_register.md",
+        "artifacts/PH10/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "data dictionary and migration plan",
+      "worktree": "/dev/shm/clara_worktrees/PH10_A10",
+      "branch": "phase/ph10-a10",
+      "commit": "9cb82461",
+      "full_commit": "9cb82461cfa3b9d3080bf7e96e9c346f2b977789",
+      "status": "PASSED",
+      "files": [
+        "docs/runbooks/clinical-data-dictionary-and-vocabulary-cutover.md",
+        "docs/reports/ph10-health-data-normalization-audit.md",
+        "scripts/ci/ph10_quality_gate.py",
+        "artifacts/PH10/A10/change_manifest.json",
+        "artifacts/PH10/A10/test_report.md",
+        "artifacts/PH10/A10/risk_register.md",
+        "artifacts/PH10/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.143,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.138,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T18:01:06.918078+00:00"
+}

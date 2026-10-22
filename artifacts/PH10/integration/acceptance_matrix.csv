@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH10-01,A01,Contracts,Clinical event assertion and evidence contract,Defines typed triad with provenance hash chains,Contract published,PASS,contracts/clinical/event_assertion_evidence.v1.json
+TC-PH10-02,A02,DB,Medical vocabulary codes table & migration 0068,Maps Vietnamese terms to ICD-10 LOINC RxNorm,Migration 0068 passes,PASS,python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions
+TC-PH10-03,A03,Domain,Clinical conflict and uncertainty preservation,Parallel assertion retention without destructive overwrites,Preserved cleanly,PASS,services/api/src/clara_api/lifemap/conflict_preservation.py
+TC-PH10-04,A04,ML,Bi-temporal knowledge replay and time validity,Separates valid-time from transaction-time,Replay verified,PASS,services/ml/src/clara_ml/bitemporal_replay.py
+TC-PH10-05,A05,Web,Clinical source acquisition provenance model,Distinguishes EMR-verified from patient self-reports,2/2 tests pass,PASS,npm run test -- lib/clinical-provenance.test.ts
+TC-PH10-06,A06,Mobile,PHR provenance badge for clinical observation views,Visual warning cues on self-reported entries,2/2 tests pass,PASS,flutter test --no-pub test/phr_provenance_badge_test.dart
+TC-PH10-07,A07,Tests/CI,Mobile measurement capture and normalization,LOINC glucose mapping and physiological sanity filters,3/3 tests pass,PASS,python3 -m unittest services/api/tests/test_mobile_measurement_capture.py
+TC-PH10-08,A08,Security,Master patient record conflict-resolution golden tests,EMR precedence held and competing claims preserved,Golden tests pass,PASS,python3 scripts/ops/run_golden_conflict_tests.py
+TC-PH10-09,A09,Docs,Source authenticity and medical licensing audit,Verified licensing across WHO, Regenstrief, and DAV,Audit complete,PASS,docs/research/SOURCE_AUTHENTICITY_AND_LICENSING_AUDIT.md
+TC-PH10-10,A10,Review,Data dictionary and vocabulary cutover runbook,Curation runbook and automated normalization quality gate,Quality gate green,PASS,docs/reports/ph10-health-data-normalization-audit.md
+TC-PH10-11,Integration,Gate,PH10 Quality Gate,All 7 invariants verified green,PH10 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph10_quality_gate.py
