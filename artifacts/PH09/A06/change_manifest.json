@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH09",
+  "agent_id": "A06",
+  "role": "Mobile Flutter",
+  "task": "web background job status",
+  "status": "PASSED",
+  "branch": "phase/ph09-a06",
+  "base_sha": "4c6621242a3cfef1d7ef46f204360e28f3cb6957",
+  "frozen_head_sha": "4c6621242a3cfef1d7ef46f204360e28f3cb6957",
+  "path_lane": "apps/mobile/;artifacts/PH09/A06/",
+  "files_changed": [
+    "apps/mobile/lib/widgets/background_job_card.dart",
+    "apps/mobile/test/background_job_card_test.dart",
+    "artifacts/PH09/A06/change_manifest.json",
+    "artifacts/PH09/A06/test_report.md",
+    "artifacts/PH09/A06/risk_register.md",
+    "artifacts/PH09/A06/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH09/A06/change_manifest.json",
+    "artifacts/PH09/A06/test_report.md",
+    "artifacts/PH09/A06/risk_register.md",
+    "artifacts/PH09/A06/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/mobile/lib/widgets/background_job_card.dart",
+      "symbol": "BackgroundJobCard",
+      "description": "Accessible card widget presenting queued, running, succeeded, and failed background task states with retry trigger."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "flutter analyze --no-pub lib/widgets/background_job_card.dart test/background_job_card_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Zero static analysis issues in background job card widget."
+    },
+    {
+      "command": "flutter test --no-pub test/background_job_card_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "2 widget tests verifying running progress bar and failed retry action."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A06 -p PH09",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/mobile/ and artifacts/PH09/A06/."
+    }
+  ],
+  "audit_findings": {
+    "mobile_background_job_card": {
+      "status": "COMPLETED",
+      "finding": "Implemented BackgroundJobCard providing accessible visual status for asynchronous tasks (e.g. Scribe audio, OCR extraction) with localized Vietnamese badges and retry buttons."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH09_A06/apps/mobile/lib/widgets/background_job_card.dart",
+    "rm -f /dev/shm/clara_worktrees/PH09_A06/apps/mobile/test/background_job_card_test.dart",
+    "rm -rf /dev/shm/clara_worktrees/PH09_A06/artifacts/PH09/A06"
+  ],
+  "timestamp": "2026-10-22T16:15:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH09_A06"
+}
