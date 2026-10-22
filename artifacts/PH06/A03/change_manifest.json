@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH06",
+  "agent_id": "A03",
+  "role": "Domain + GLHS services",
+  "task": "enforce THSS identity and digest check",
+  "status": "PASSED",
+  "branch": "phase/ph06-a03",
+  "base_sha": "2370329965f32a7e7df48473e6a2b842ae37580b",
+  "frozen_head_sha": "2370329965f32a7e7df48473e6a2b842ae37580b",
+  "path_lane": "services/api/src/clara_api/glhs/;services/api/src/clara_api/lifemap/;services/api/src/clara_api/phr/;services/api/src/clara_api/compliance/;services/api/src/clara_api/core/;artifacts/PH06/A03/",
+  "files_changed": [
+    "services/api/src/clara_api/glhs/admission.py",
+    "artifacts/PH06/A03/change_manifest.json",
+    "artifacts/PH06/A03/test_report.md",
+    "artifacts/PH06/A03/risk_register.md",
+    "artifacts/PH06/A03/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH06/A03/change_manifest.json",
+    "artifacts/PH06/A03/test_report.md",
+    "artifacts/PH06/A03/risk_register.md",
+    "artifacts/PH06/A03/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/glhs/admission.py",
+      "symbol": "evaluate_grwc_admission",
+      "description": "GRWC admission verifier enforcing admission_decision terminal checks and sealed_at timestamping upon successful verification."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/glhs/admission.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated admission.py."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A03 -p PH06",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/glhs/ and artifacts/PH06/A03/."
+    }
+  ],
+  "audit_findings": {
+    "thss_admission_verification": {
+      "status": "COMPLETED",
+      "finding": "Updated evaluate_grwc_admission to enforce admission_decision invariant: fails closed immediately on REJECTED proposals, and seals proposal state upon admission."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH06_A03 checkout 2370329965f32a7e7df48473e6a2b842ae37580b -- services/api/src/clara_api/glhs/admission.py",
+    "rm -rf /dev/shm/clara_worktrees/PH06_A03/artifacts/PH06/A03"
+  ],
+  "timestamp": "2026-10-22T12:30:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH06_A03"
+}

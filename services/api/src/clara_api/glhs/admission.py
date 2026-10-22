@@ -515,6 +515,9 @@ def evaluate_grwc_admission(
     if proposal_row is None:
         raise GlhsInvariantError("commitment_proposal_history_incomplete")
 
+    if getattr(proposal_row, "admission_decision", "PENDING") == "REJECTED":
+        raise GlhsInvariantError("proposal_rejected: cannot admit explicitly rejected commitment proposal")
+
     # Step 2: Target profile identity matching
     if proposal_row.target_profile_public_id and target_profile_id is not None:
         profile_row = db.execute(
@@ -690,6 +693,11 @@ def evaluate_grwc_admission(
         if root_binding is not None
         else APPLICATION_ENVELOPE_ONLY
     )
+
+    if getattr(proposal_row, "admission_decision", None) == "PENDING":
+        proposal_row.admission_decision = "ADMITTED"
+    if getattr(proposal_row, "sealed_at", None) is None:
+        proposal_row.sealed_at = datetime.now(UTC)
 
     return GrwcAdmissionResult(
         admitted=True,
