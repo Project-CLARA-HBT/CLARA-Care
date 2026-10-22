@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH44",
+  "agent_id": "A08",
+  "role": "Security / negative tests",
+  "task": "Threat model tenant bleed, link sharing, malicious org owner",
+  "status": "PASSED",
+  "branch": "phase/ph44-a08",
+  "base_sha": "ad759178619bc5bebe867d34199c93a0bcf5f1cf",
+  "frozen_head_sha": "ad759178619bc5bebe867d34199c93a0bcf5f1cf",
+  "path_lane": "docs/security/;tests/security/;services/control-plane/tests/security/;artifacts/PH44/A08/",
+  "files_changed": [
+    "docs/security/MULTI_TENANT_BLEED_AND_ORG_OWNER_THREAT_MODEL.md",
+    "artifacts/PH44/A08/change_manifest.json",
+    "artifacts/PH44/A08/test_report.md",
+    "artifacts/PH44/A08/risk_register.md",
+    "artifacts/PH44/A08/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH44/A08/change_manifest.json",
+    "artifacts/PH44/A08/test_report.md",
+    "artifacts/PH44/A08/risk_register.md",
+    "artifacts/PH44/A08/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "docs/security/MULTI_TENANT_BLEED_AND_ORG_OWNER_THREAT_MODEL.md",
+      "symbol": "Threat Vectors & Countermeasures",
+      "description": "Comprehensive threat model evaluating cross-tenant data bleed, rogue organization administrator actions, and invitation link sharing."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A08 -p PH44",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/security/ and artifacts/PH44/A08/."
+    }
+  ],
+  "audit_findings": {
+    "tenant_bleed_threat_model": {
+      "status": "COMPLETED",
+      "finding": "Threat modeled tenant bleed vectors, email-bound single-use invitations, and rogue administrator containment."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH44_A08/docs/security/MULTI_TENANT_BLEED_AND_ORG_OWNER_THREAT_MODEL.md",
+    "rm -rf /dev/shm/clara_worktrees/PH44_A08/artifacts/PH44/A08"
+  ],
+  "timestamp": "2026-10-22T18:45:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH44_A08"
+}
