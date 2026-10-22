@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH42",
+  "agent_id": "A05",
+  "role": "Admin/consumer app routes",
+  "task": "Build admin sign-in and MFA/step-up flows",
+  "status": "PASSED",
+  "branch": "phase/ph42-a05",
+  "base_sha": "40e2dfcd0180a5e840d2448378516ee7137f6e06",
+  "frozen_head_sha": "40e2dfcd0180a5e840d2448378516ee7137f6e06",
+  "path_lane": "apps/admin/app/;apps/web/app/;artifacts/PH42/A05/",
+  "files_changed": [
+    "apps/admin/app/login/page.tsx",
+    "apps/admin/app/mfa/page.tsx",
+    "artifacts/PH42/A05/change_manifest.json",
+    "artifacts/PH42/A05/test_report.md",
+    "artifacts/PH42/A05/risk_register.md",
+    "artifacts/PH42/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH42/A05/change_manifest.json",
+    "artifacts/PH42/A05/test_report.md",
+    "artifacts/PH42/A05/risk_register.md",
+    "artifacts/PH42/A05/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/admin/app/login/page.tsx",
+      "symbol": "AdminLoginPage",
+      "description": "Dedicated control plane login page with device binding."
+    },
+    {
+      "file": "apps/admin/app/mfa/page.tsx",
+      "symbol": "AdminMfaPage",
+      "description": "MFA TOTP step-up verification flow elevating session to PRIVILEGED level."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A05 -p PH42",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/admin/app/ and artifacts/PH42/A05/."
+    }
+  ],
+  "audit_findings": {
+    "admin_signin_and_mfa_flow": {
+      "status": "COMPLETED",
+      "finding": "Created dedicated admin login and MFA step-up pages in apps/admin/app, segregated from consumer authentication."
+    }
+  },
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH42_A05/apps/admin/app/login",
+    "rm -rf /dev/shm/clara_worktrees/PH42_A05/apps/admin/app/mfa",
+    "rm -rf /dev/shm/clara_worktrees/PH42_A05/artifacts/PH42/A05"
+  ],
+  "timestamp": "2026-10-22T13:52:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH42_A05"
+}
