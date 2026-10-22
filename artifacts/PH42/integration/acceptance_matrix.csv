@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH42-01,A01,Contracts,Session issue introspection and step-up contract,Exposes /control/v1/sessions with device binding,4 endpoints published,PASS,contracts/control-plane/control_v1_openapi.json
+TC-PH42-02,A02,DB,Control admin sessions model and migration 0002,Constrained session TTL and device revocation indexes,Migration 0002 passes,PASS,python3 scripts/ops/check_migration_downgrade.py services/control-plane/alembic/versions
+TC-PH42-03,A03,Domain,OIDC token validator and device binding,Validates dual-key rotation and AMR MFA claim,Verified cleanly,PASS,services/control-plane/src/clara_control/domain/oidc_validator.py
+TC-PH42-04,A04,Adapter,Legacy admin deprecation & RFC 8594 sunset headers,Sunset headers guide migration to port 8200,Sunset header present,PASS,services/api/src/clara_api/api/v1/endpoints/admin_users.py
+TC-PH42-05,A05,Web,Admin sign-in and MFA step-up pages,Isolated Next.js admin login and 6-digit TOTP step-up,Pages created,PASS,apps/admin/app/login/page.tsx
+TC-PH42-06,A06,UI,Session inventory and revoke-other-device component,Inspects active sessions and terminates other devices,Component verified,PASS,apps/admin/components/session_inventory.tsx
+TC-PH42-07,A07,Tests/CI,Session fixation and MFA step-up integration tests,Revoked sessions return 401; step-up elevates to PRIVILEGED,4/4 tests pass,PASS,python3 -m unittest services/control-plane/tests/test_oidc_mfa_step_up.py
+TC-PH42-08,A08,Security,OIDC MFA step-up and token theft threat model,__Host- cookies and single-use refresh token rotation,Threat model published,PASS,docs/security/OIDC_MFA_STEP_UP_THREAT_MODEL.md
+TC-PH42-09,A09,Docs,Emergency dual-operator root recovery runbook,Break-glass ceremony under four-eyes principle,Runbook published,PASS,docs/runbooks/emergency-root-recovery-dual-operator.md
+TC-PH42-10,A10,Review,Hostile penetration audit of OIDC MFA vectors,Rejection of forged JWTs, AMR claims, and cookie theft,Audit report green,PASS,docs/reports/ph42-oidc-mfa-adversarial-audit.md
+TC-PH42-11,Integration,Gate,PH42 Quality Gate,All 7 invariants verified green,PH42 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph42_quality_gate.py

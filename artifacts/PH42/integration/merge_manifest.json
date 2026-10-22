@@ -1,0 +1,226 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH42",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "40e2dfcd01f3f5db455e2157900212435cdba84d",
+  "merge_commit_sha": "51569fb70106a1924286b0e47046bd99f7b9cdf7",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data/migrations",
+      "task": "Design constrained session/device TTL schema and indexes",
+      "worktree": "/dev/shm/clara_worktrees/PH42_A02",
+      "branch": "phase/ph42-a02",
+      "commit": "ad9e96f1",
+      "full_commit": "ad9e96f1f84763d4175ed57cfc7fc1f878e1d9a4",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/db/models.py",
+        "services/control-plane/src/clara_control/db/__init__.py",
+        "services/control-plane/alembic/versions/20260903_0002_admin_sessions_device_ttl.py",
+        "artifacts/PH42/A02/change_manifest.json",
+        "artifacts/PH42/A02/test_report.md",
+        "artifacts/PH42/A02/risk_register.md",
+        "artifacts/PH42/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API contract + BFF",
+      "task": "Implement session issue/introspection/revocation contract",
+      "worktree": "/dev/shm/clara_worktrees/PH42_A01",
+      "branch": "phase/ph42-a01",
+      "commit": "0c1dbd5b",
+      "full_commit": "0c1dbd5b8c71b37778b0165ddfd50b31628169c0",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/api/router.py",
+        "contracts/control-plane/control_v1_openapi.json",
+        "artifacts/PH42/A01/change_manifest.json",
+        "artifacts/PH42/A01/test_report.md",
+        "artifacts/PH42/A01/risk_register.md",
+        "artifacts/PH42/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain service",
+      "task": "OIDC audience/issuer validation, key rotate and token binding",
+      "worktree": "/dev/shm/clara_worktrees/PH42_A03",
+      "branch": "phase/ph42-a03",
+      "commit": "a16d081e",
+      "full_commit": "a16d081eda47ade6fed6033d77521fa47b71462d",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/domain/oidc_validator.py",
+        "artifacts/PH42/A03/change_manifest.json",
+        "artifacts/PH42/A03/test_report.md",
+        "artifacts/PH42/A03/risk_register.md",
+        "artifacts/PH42/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "Adapter / existing code",
+      "task": "Integrate existing auth for deprecation without reusing client getRole",
+      "worktree": "/dev/shm/clara_worktrees/PH42_A04",
+      "branch": "phase/ph42-a04",
+      "commit": "69071834",
+      "full_commit": "69071834e4f0c9e4c9936b8c4083a88172a52501",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/core/admin_deprecation.py",
+        "services/api/src/clara_api/api/v1/endpoints/admin_users.py",
+        "artifacts/PH42/A04/change_manifest.json",
+        "artifacts/PH42/A04/test_report.md",
+        "artifacts/PH42/A04/risk_register.md",
+        "artifacts/PH42/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Admin/consumer app routes",
+      "task": "Build admin sign-in and MFA/step-up flows",
+      "worktree": "/dev/shm/clara_worktrees/PH42_A05",
+      "branch": "phase/ph42-a05",
+      "commit": "9dfda3a8",
+      "full_commit": "9dfda3a89198f18bea1fe49c730335e81334959c",
+      "status": "PASSED",
+      "files": [
+        "apps/admin/app/login/page.tsx",
+        "apps/admin/app/mfa/page.tsx",
+        "artifacts/PH42/A05/change_manifest.json",
+        "artifacts/PH42/A05/test_report.md",
+        "artifacts/PH42/A05/risk_register.md",
+        "artifacts/PH42/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "UI widgets / Flutter",
+      "task": "Build session inventory and revoke-your-other-device UX",
+      "worktree": "/dev/shm/clara_worktrees/PH42_A06",
+      "branch": "phase/ph42-a06",
+      "commit": "b333d177",
+      "full_commit": "b333d1778a5edd93f5fe4318f545ad0947f0d7be",
+      "status": "PASSED",
+      "files": [
+        "apps/admin/components/session_inventory.tsx",
+        "artifacts/PH42/A06/change_manifest.json",
+        "artifacts/PH42/A06/test_report.md",
+        "artifacts/PH42/A06/risk_register.md",
+        "artifacts/PH42/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Integration tests",
+      "task": "Automate expired/revoked token and session fixation tests",
+      "worktree": "/dev/shm/clara_worktrees/PH42_A07",
+      "branch": "phase/ph42-a07",
+      "commit": "a02e320e",
+      "full_commit": "a02e320e80ff1759ed5c309cceac065f2ef4407f",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/tests/test_oidc_mfa_step_up.py",
+        "artifacts/PH42/A07/change_manifest.json",
+        "artifacts/PH42/A07/test_report.md",
+        "artifacts/PH42/A07/risk_register.md",
+        "artifacts/PH42/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security / negative tests",
+      "task": "Threat model MFA bypass, CSRF, refresh token theft",
+      "worktree": "/dev/shm/clara_worktrees/PH42_A08",
+      "branch": "phase/ph42-a08",
+      "commit": "bc7eef87",
+      "full_commit": "bc7eef878e23c9b3c9678344043d96cc6f9e1131",
+      "status": "PASSED",
+      "files": [
+        "docs/security/OIDC_MFA_STEP_UP_THREAT_MODEL.md",
+        "artifacts/PH42/A08/change_manifest.json",
+        "artifacts/PH42/A08/test_report.md",
+        "artifacts/PH42/A08/risk_register.md",
+        "artifacts/PH42/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs / operational design",
+      "task": "Document emergency root recovery with two operators",
+      "worktree": "/dev/shm/clara_worktrees/PH42_A09",
+      "branch": "phase/ph42-a09",
+      "commit": "05d638dc",
+      "full_commit": "05d638dcce6e8eaba3fdc67a4f034086e0b7a199",
+      "status": "PASSED",
+      "files": [
+        "docs/runbooks/emergency-root-recovery-dual-operator.md",
+        "artifacts/PH42/A09/change_manifest.json",
+        "artifacts/PH42/A09/test_report.md",
+        "artifacts/PH42/A09/risk_register.md",
+        "artifacts/PH42/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial reviewer",
+      "task": "Adversarial test forged JWT/step-up and cross-origin cookies",
+      "worktree": "/dev/shm/clara_worktrees/PH42_A10",
+      "branch": "phase/ph42-a10",
+      "commit": "544e0584",
+      "full_commit": "544e0584d2bee6270e81df824651b5ffd5e98900",
+      "status": "PASSED",
+      "files": [
+        "docs/reports/ph42-oidc-mfa-adversarial-audit.md",
+        "scripts/ci/ph42_quality_gate.py",
+        "artifacts/PH42/A10/change_manifest.json",
+        "artifacts/PH42/A10/test_report.md",
+        "artifacts/PH42/A10/risk_register.md",
+        "artifacts/PH42/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.086,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.141,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T14:19:02.675148+00:00"
+}
