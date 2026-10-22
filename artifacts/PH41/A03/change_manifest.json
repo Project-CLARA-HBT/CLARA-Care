@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH41",
+  "agent_id": "A03",
+  "role": "Domain service",
+  "task": "Scaffold FastAPI control-plane domain and service-token gateway",
+  "status": "PASSED",
+  "branch": "phase/ph41-a03",
+  "base_sha": "f161b49db7c3c54117b8841da3675f92fe19543e",
+  "frozen_head_sha": "f161b49db7c3c54117b8841da3675f92fe19543e",
+  "path_lane": "services/control-plane/src/clara_control/domain/;artifacts/PH41/A03/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/domain/service_token_gateway.py",
+    "services/control-plane/src/clara_control/domain/tenant_governor.py",
+    "artifacts/PH41/A03/change_manifest.json",
+    "artifacts/PH41/A03/test_report.md",
+    "artifacts/PH41/A03/risk_register.md",
+    "artifacts/PH41/A03/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH41/A03/change_manifest.json",
+    "artifacts/PH41/A03/test_report.md",
+    "artifacts/PH41/A03/risk_register.md",
+    "artifacts/PH41/A03/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/domain/service_token_gateway.py",
+      "symbol": "ServiceTokenGateway",
+      "description": "Cryptographic HMAC service token generator and verifier for inter-plane RPC communication."
+    },
+    {
+      "file": "services/control-plane/src/clara_control/domain/tenant_governor.py",
+      "symbol": "TenantGovernor",
+      "description": "Domain service managing tenant quota rules, seat limits, and workspace boundaries."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/domain",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of service token gateway and tenant governor."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A03 -p PH41",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across control-plane domain and artifacts/PH41/A03/."
+    }
+  ],
+  "audit_findings": {
+    "control_domain_scaffolding": {
+      "status": "COMPLETED",
+      "finding": "Implemented ServiceTokenGateway and TenantGovernor providing isolated inter-plane authentication and tenant quota governance."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH41_A03/services/control-plane/src/clara_control/domain/service_token_gateway.py",
+    "rm -f /dev/shm/clara_worktrees/PH41_A03/services/control-plane/src/clara_control/domain/tenant_governor.py",
+    "rm -rf /dev/shm/clara_worktrees/PH41_A03/artifacts/PH41/A03"
+  ],
+  "timestamp": "2026-10-22T12:00:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH41_A03"
+}
