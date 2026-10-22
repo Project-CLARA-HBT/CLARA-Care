@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH42",
+  "agent_id": "A04",
+  "role": "Adapter / existing code",
+  "task": "Integrate existing auth for deprecation without reusing client getRole",
+  "status": "PASSED",
+  "branch": "phase/ph42-a04",
+  "base_sha": "40e2dfcd0180a5e840d2448378516ee7137f6e06",
+  "frozen_head_sha": "40e2dfcd0180a5e840d2448378516ee7137f6e06",
+  "path_lane": "services/api/src/clara_api/;services/ml/src/clara_ml/;artifacts/PH42/A04/",
+  "files_changed": [
+    "services/api/src/clara_api/core/admin_deprecation.py",
+    "services/api/src/clara_api/api/v1/endpoints/admin_users.py",
+    "artifacts/PH42/A04/change_manifest.json",
+    "artifacts/PH42/A04/test_report.md",
+    "artifacts/PH42/A04/risk_register.md",
+    "artifacts/PH42/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH42/A04/change_manifest.json",
+    "artifacts/PH42/A04/test_report.md",
+    "artifacts/PH42/A04/risk_register.md",
+    "artifacts/PH42/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/core/admin_deprecation.py",
+      "symbol": "apply_legacy_admin_deprecation_headers",
+      "description": "RFC 8594 deprecation and sunset headers guiding migration from co-located admin endpoints to isolated control plane."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/admin_users.py",
+      "symbol": "list_admin_users",
+      "description": "Legacy admin users endpoint attaching sunset header and enforcing server-side admin role check."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/core/admin_deprecation.py services/api/src/clara_api/api/v1/endpoints/admin_users.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of deprecation module and updated admin users endpoint."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH42",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/ and artifacts/PH42/A04/."
+    }
+  ],
+  "audit_findings": {
+    "admin_auth_deprecation": {
+      "status": "COMPLETED",
+      "finding": "Attached RFC 8594 deprecation headers to legacy /admin/users endpoint and formalized cutover path to isolated port 8200 control plane."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH42_A04 checkout 40e2dfcd0180a5e840d2448378516ee7137f6e06 -- services/api/src/clara_api/api/v1/endpoints/admin_users.py",
+    "rm -f /dev/shm/clara_worktrees/PH42_A04/services/api/src/clara_api/core/admin_deprecation.py",
+    "rm -rf /dev/shm/clara_worktrees/PH42_A04/artifacts/PH42/A04"
+  ],
+  "timestamp": "2026-10-22T13:50:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH42_A04"
+}

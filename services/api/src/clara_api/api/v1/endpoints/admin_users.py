@@ -4,11 +4,12 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from clara_api.core.admin_deprecation import apply_legacy_admin_deprecation_headers
 from clara_api.core.rbac import require_roles
 from clara_api.db.models import User
 from clara_api.db.session import get_db
@@ -85,6 +86,7 @@ def _check_last_active_admin(db: Session, target_user: User) -> None:
 
 @router.get("", response_model=AdminUsersListResponse)
 def list_admin_users(
+    response: Response,
     query: str | None = Query(None, description="Search term for name or email"),
     role: str | None = Query(None, description="Filter by role"),
     status_filter: str | None = Query(None, alias="status", description="Filter by status"),
@@ -93,6 +95,7 @@ def list_admin_users(
     current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
+    apply_legacy_admin_deprecation_headers(response, "users")
     stmt = select(User)
     if role:
         stmt = stmt.where(User.role == role)
