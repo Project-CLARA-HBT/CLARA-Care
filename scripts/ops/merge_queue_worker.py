@@ -750,7 +750,7 @@ class MergeQueueWorker:
 
         if not self.dry_run:
             status = subprocess.run(
-                ["git", "status", "--porcelain"],
+                ["git", "status", "--porcelain", "-uno"],
                 cwd=self.repo_root,
                 capture_output=True,
                 text=True,
