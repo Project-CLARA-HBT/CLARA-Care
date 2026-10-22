@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH09",
+  "agent_id": "A05",
+  "role": "Web UX",
+  "task": "async job monitoring SSE/polling",
+  "status": "PASSED",
+  "branch": "phase/ph09-a05",
+  "base_sha": "4c6621242a3cfef1d7ef46f204360e28f3cb6957",
+  "frozen_head_sha": "4c6621242a3cfef1d7ef46f204360e28f3cb6957",
+  "path_lane": "apps/web/app/;apps/web/components/;apps/web/lib/;artifacts/PH09/A05/",
+  "files_changed": [
+    "apps/web/lib/async-job-monitor.ts",
+    "apps/web/lib/async-job-monitor.test.ts",
+    "artifacts/PH09/A05/change_manifest.json",
+    "artifacts/PH09/A05/test_report.md",
+    "artifacts/PH09/A05/risk_register.md",
+    "artifacts/PH09/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH09/A05/change_manifest.json",
+    "artifacts/PH09/A05/test_report.md",
+    "artifacts/PH09/A05/risk_register.md",
+    "artifacts/PH09/A05/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/web/lib/async-job-monitor.ts",
+      "symbol": "AsyncJobMonitor",
+      "description": "Background job tracking client utilizing primary Server-Sent Events (SSE) stream with automated polling fallback."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "npm run test -- lib/async-job-monitor.test.ts",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Unit tests verifying monitor lifecycle and clean shutdown."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A05 -p PH09",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/web/lib/ and artifacts/PH09/A05/."
+    }
+  ],
+  "audit_findings": {
+    "async_job_monitoring": {
+      "status": "COMPLETED",
+      "finding": "Implemented AsyncJobMonitor providing robust real-time progress updates for asynchronous jobs (e.g. OCR scan, Council run) with automated polling fallback."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH09_A05/apps/web/lib/async-job-monitor.ts",
+    "rm -f /dev/shm/clara_worktrees/PH09_A05/apps/web/lib/async-job-monitor.test.ts",
+    "rm -rf /dev/shm/clara_worktrees/PH09_A05/artifacts/PH09/A05"
+  ],
+  "timestamp": "2026-10-22T16:10:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH09_A05"
+}
