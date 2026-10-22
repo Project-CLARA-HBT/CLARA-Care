@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PlatformVsTenantRbacAbacPermissionRegistry",
+  "version": "1.0.0",
+  "phase_id": "PH43",
+  "platform_permissions": [
+    "platform:tenants:create",
+    "platform:tenants:suspend",
+    "platform:tenants:delete",
+    "platform:flags:manage",
+    "platform:audit:read",
+    "platform:keys:rotate"
+  ],
+  "tenant_permissions": [
+    "tenant:users:invite",
+    "tenant:users:remove",
+    "tenant:workspaces:create",
+    "tenant:workspaces:delete",
+    "tenant:policies:read",
+    "tenant:audit:read"
+  ],
+  "invariants": {
+    "deny_by_default": true,
+    "platform_root_cannot_read_phi": true,
+    "tenant_admin_cannot_access_peer_tenants": true,
+    "mfa_required_for_destructive_actions": true
+  }
+}

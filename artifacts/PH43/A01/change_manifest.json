@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH43",
+  "agent_id": "A01",
+  "role": "API contract + BFF",
+  "task": "Define permission registry and deny-by-default policy DTO",
+  "status": "PASSED",
+  "branch": "phase/ph43-a01",
+  "base_sha": "89801b4823296c0065793e1140061e56cf574880",
+  "frozen_head_sha": "89801b4823296c0065793e1140061e56cf574880",
+  "path_lane": "services/control-plane/src/clara_control/api/;contracts/control-plane/;artifacts/PH43/A01/",
+  "files_changed": [
+    "contracts/control-plane/rbac_abac_permission_registry.v1.json",
+    "artifacts/PH43/A01/change_manifest.json",
+    "artifacts/PH43/A01/test_report.md",
+    "artifacts/PH43/A01/risk_register.md",
+    "artifacts/PH43/A01/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH43/A01/change_manifest.json",
+    "artifacts/PH43/A01/test_report.md",
+    "artifacts/PH43/A01/risk_register.md",
+    "artifacts/PH43/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "contracts/control-plane/rbac_abac_permission_registry.v1.json",
+      "symbol": "platform_permissions, tenant_permissions",
+      "description": "Granular permission registry distinguishing platform root governance from tenant scoped operational permissions with deny-by-default invariants."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A01 -p PH43",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across contracts/control-plane/ and artifacts/PH43/A01/."
+    }
+  ],
+  "audit_findings": {
+    "rbac_abac_permission_registry": {
+      "status": "COMPLETED",
+      "finding": "Published rbac_abac_permission_registry.v1.json defining platform vs tenant permissions and strict deny-by-default evaluation invariants."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH43_A01/contracts/control-plane/rbac_abac_permission_registry.v1.json",
+    "rm -rf /dev/shm/clara_worktrees/PH43_A01/artifacts/PH43/A01"
+  ],
+  "timestamp": "2026-10-22T16:48:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH43_A01"
+}
