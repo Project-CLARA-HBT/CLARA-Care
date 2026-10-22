@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH43",
+  "agent_id": "A05",
+  "role": "Admin/consumer app routes",
+  "task": "Create role matrix UI read-only then editing with approval",
+  "status": "PASSED",
+  "branch": "phase/ph43-a05",
+  "base_sha": "89801b4823296c0065793e1140061e56cf574880",
+  "frozen_head_sha": "89801b4823296c0065793e1140061e56cf574880",
+  "path_lane": "apps/admin/app/;apps/web/app/;artifacts/PH43/A05/",
+  "files_changed": [
+    "apps/admin/app/roles/page.tsx",
+    "artifacts/PH43/A05/change_manifest.json",
+    "artifacts/PH43/A05/test_report.md",
+    "artifacts/PH43/A05/risk_register.md",
+    "artifacts/PH43/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH43/A05/change_manifest.json",
+    "artifacts/PH43/A05/test_report.md",
+    "artifacts/PH43/A05/risk_register.md",
+    "artifacts/PH43/A05/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/admin/app/roles/page.tsx",
+      "symbol": "RoleMatrixPage",
+      "description": "Read-only role and permission matrix interface displaying platform vs tenant scoping."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A05 -p PH43",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/admin/app/ and artifacts/PH43/A05/."
+    }
+  ],
+  "audit_findings": {
+    "role_matrix_ui": {
+      "status": "COMPLETED",
+      "finding": "Created RoleMatrixPage presenting clear visual boundaries between platform_admin, tenant_admin, and auditor roles."
+    }
+  },
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH43_A05/apps/admin/app/roles",
+    "rm -rf /dev/shm/clara_worktrees/PH43_A05/artifacts/PH43/A05"
+  ],
+  "timestamp": "2026-10-22T17:00:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH43_A05"
+}
