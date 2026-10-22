@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH08",
+  "agent_id": "A06",
+  "role": "Mobile Flutter",
+  "task": "staleness UI rejection taxonomy",
+  "status": "PASSED",
+  "branch": "phase/ph08-a06",
+  "base_sha": "94ec2c1e2f7535b4430e3bb45f913d9a0d1e39a3",
+  "frozen_head_sha": "94ec2c1e2f7535b4430e3bb45f913d9a0d1e39a3",
+  "path_lane": "apps/mobile/;artifacts/PH08/A06/",
+  "files_changed": [
+    "apps/mobile/lib/core/staleness_taxonomy.dart",
+    "apps/mobile/test/staleness_taxonomy_test.dart",
+    "artifacts/PH08/A06/change_manifest.json",
+    "artifacts/PH08/A06/test_report.md",
+    "artifacts/PH08/A06/risk_register.md",
+    "artifacts/PH08/A06/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH08/A06/change_manifest.json",
+    "artifacts/PH08/A06/test_report.md",
+    "artifacts/PH08/A06/risk_register.md",
+    "artifacts/PH08/A06/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/mobile/lib/core/staleness_taxonomy.dart",
+      "symbol": "StalenessFeedback.fromServerCode",
+      "description": "Parser categorizing server HTTP 409/403 rejection codes into structured clinical UI actions."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "flutter analyze --no-pub lib/core/staleness_taxonomy.dart test/staleness_taxonomy_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Zero static analysis issues in staleness taxonomy module."
+    },
+    {
+      "command": "flutter test --no-pub test/staleness_taxonomy_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "3 unit tests verifying error mapping, auto-refresh permissions, and localized message formatting."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A06 -p PH08",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/mobile/ and artifacts/PH08/A06/."
+    }
+  ],
+  "audit_findings": {
+    "staleness_rejection_taxonomy": {
+      "status": "COMPLETED",
+      "finding": "Implemented StalenessFeedback parser categorizing concurrent edit staleness, lease expirations, and consent withdrawals with tailored user actions."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH08_A06/apps/mobile/lib/core/staleness_taxonomy.dart",
+    "rm -f /dev/shm/clara_worktrees/PH08_A06/apps/mobile/test/staleness_taxonomy_test.dart",
+    "rm -rf /dev/shm/clara_worktrees/PH08_A06/artifacts/PH08/A06"
+  ],
+  "timestamp": "2026-10-22T15:25:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH08_A06"
+}
