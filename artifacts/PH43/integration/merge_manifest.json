@@ -1,0 +1,222 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH43",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "89801b4823bb4b7aab67a8870b365709cbc03339",
+  "merge_commit_sha": "a4fa29ab742230bc593ee09f94a27caa5d40af43",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data/migrations",
+      "task": "Implement role binding schema and explicit org FKs",
+      "worktree": "/dev/shm/clara_worktrees/PH43_A02",
+      "branch": "phase/ph43-a02",
+      "commit": "89f228b0",
+      "full_commit": "89f228b0fcf8ec0fdc08e9cd1cf8118354acc816",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/db/models.py",
+        "services/control-plane/alembic/versions/20260905_0003_control_role_bindings.py",
+        "artifacts/PH43/A02/change_manifest.json",
+        "artifacts/PH43/A02/test_report.md",
+        "artifacts/PH43/A02/risk_register.md",
+        "artifacts/PH43/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API contract + BFF",
+      "task": "Define permission registry and deny-by-default policy DTO",
+      "worktree": "/dev/shm/clara_worktrees/PH43_A01",
+      "branch": "phase/ph43-a01",
+      "commit": "ec5c1d52",
+      "full_commit": "ec5c1d522fb60ee6ffe4340025f641ba41ee71d8",
+      "status": "PASSED",
+      "files": [
+        "contracts/control-plane/rbac_abac_permission_registry.v1.json",
+        "artifacts/PH43/A01/change_manifest.json",
+        "artifacts/PH43/A01/test_report.md",
+        "artifacts/PH43/A01/risk_register.md",
+        "artifacts/PH43/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain service",
+      "task": "Build policy evaluation service for all control actions",
+      "worktree": "/dev/shm/clara_worktrees/PH43_A03",
+      "branch": "phase/ph43-a03",
+      "commit": "56cf7465",
+      "full_commit": "56cf74654e7b259e2dedd8801448ac9df1f5f840",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/domain/policy_evaluator.py",
+        "artifacts/PH43/A03/change_manifest.json",
+        "artifacts/PH43/A03/test_report.md",
+        "artifacts/PH43/A03/risk_register.md",
+        "artifacts/PH43/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "Adapter / existing code",
+      "task": "Put second server guard in health domain API adapters",
+      "worktree": "/dev/shm/clara_worktrees/PH43_A04",
+      "branch": "phase/ph43-a04",
+      "commit": "53e4cd8e",
+      "full_commit": "53e4cd8e8ae95f785dab873aa58e241871b3cf65",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/api/v1/endpoints/health_adapter.py",
+        "artifacts/PH43/A04/change_manifest.json",
+        "artifacts/PH43/A04/test_report.md",
+        "artifacts/PH43/A04/risk_register.md",
+        "artifacts/PH43/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Admin/consumer app routes",
+      "task": "Create role matrix UI read-only then editing with approval",
+      "worktree": "/dev/shm/clara_worktrees/PH43_A05",
+      "branch": "phase/ph43-a05",
+      "commit": "0b3b1080",
+      "full_commit": "0b3b1080e3040bc49105143e97c7b298c74c4fa0",
+      "status": "PASSED",
+      "files": [
+        "apps/admin/app/roles/page.tsx",
+        "artifacts/PH43/A05/change_manifest.json",
+        "artifacts/PH43/A05/test_report.md",
+        "artifacts/PH43/A05/risk_register.md",
+        "artifacts/PH43/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "UI widgets / Flutter",
+      "task": "Implement permission diff/preview and forbidden-action UX",
+      "worktree": "/dev/shm/clara_worktrees/PH43_A06",
+      "branch": "phase/ph43-a06",
+      "commit": "d062ae07",
+      "full_commit": "d062ae0760945c4fea3f90aeb6992c96d6f5e8bd",
+      "status": "PASSED",
+      "files": [
+        "apps/admin/components/permission_diff_preview.tsx",
+        "artifacts/PH43/A06/change_manifest.json",
+        "artifacts/PH43/A06/test_report.md",
+        "artifacts/PH43/A06/risk_register.md",
+        "artifacts/PH43/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Integration tests",
+      "task": "Run 2-tenant x 10-role positive/negative contract tests",
+      "worktree": "/dev/shm/clara_worktrees/PH43_A07",
+      "branch": "phase/ph43-a07",
+      "commit": "84588bb3",
+      "full_commit": "84588bb34bc3273e1e2cc0e198305173f65aba4a",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/tests/test_multi_tenant_rbac_abac_contract.py",
+        "artifacts/PH43/A07/change_manifest.json",
+        "artifacts/PH43/A07/test_report.md",
+        "artifacts/PH43/A07/risk_register.md",
+        "artifacts/PH43/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security / negative tests",
+      "task": "Prove no implicit platform-root PHI permission",
+      "worktree": "/dev/shm/clara_worktrees/PH43_A08",
+      "branch": "phase/ph43-a08",
+      "commit": "b1444fd8",
+      "full_commit": "b1444fd8ad848ccb89be93a3744b8bb433ade89f",
+      "status": "PASSED",
+      "files": [
+        "docs/security/ZERO_IMPLICIT_PLATFORM_ROOT_PHI_PROOF.md",
+        "artifacts/PH43/A08/change_manifest.json",
+        "artifacts/PH43/A08/test_report.md",
+        "artifacts/PH43/A08/risk_register.md",
+        "artifacts/PH43/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs / operational design",
+      "task": "Document policy inheritance and legal/privacy boundaries",
+      "worktree": "/dev/shm/clara_worktrees/PH43_A09",
+      "branch": "phase/ph43-a09",
+      "commit": "a546ee67",
+      "full_commit": "a546ee67d5d0538231dc0361fb6a25b5a1578fdb",
+      "status": "PASSED",
+      "files": [
+        "docs/implementation/POLICY_INHERITANCE_AND_PRIVACY_BOUNDARIES.md",
+        "artifacts/PH43/A09/change_manifest.json",
+        "artifacts/PH43/A09/test_report.md",
+        "artifacts/PH43/A09/risk_register.md",
+        "artifacts/PH43/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial reviewer",
+      "task": "Attempt cross-tenant IDOR via cursor, export, job and cache",
+      "worktree": "/dev/shm/clara_worktrees/PH43_A10",
+      "branch": "phase/ph43-a10",
+      "commit": "ef491341",
+      "full_commit": "ef491341201dea0e8b3766cf5b49ef2acffad695",
+      "status": "PASSED",
+      "files": [
+        "docs/reports/ph43-cross-tenant-idor-audit.md",
+        "scripts/ci/ph43_quality_gate.py",
+        "artifacts/PH43/A10/change_manifest.json",
+        "artifacts/PH43/A10/test_report.md",
+        "artifacts/PH43/A10/risk_register.md",
+        "artifacts/PH43/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.067,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.128,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T17:18:45.762943+00:00"
+}

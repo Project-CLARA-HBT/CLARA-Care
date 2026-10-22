@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH43-01,A01,Contracts,RBAC and ABAC permission registry contract,Categorizes platform vs tenant permissions with deny-by-default,Registry valid,PASS,contracts/control-plane/rbac_abac_permission_registry.v1.json
+TC-PH43-02,A02,DB,Control role bindings model & migration 0003,Explicit org FKs and granular permission JSON storage,Migration 0003 passes,PASS,python3 scripts/ops/check_migration_downgrade.py services/control-plane/alembic/versions
+TC-PH43-03,A03,Domain,Control-plane policy evaluation service,Deny-by-default and cross-tenant mutation denial,Evaluated cleanly,PASS,services/control-plane/src/clara_control/domain/policy_evaluator.py
+TC-PH43-04,A04,Adapter,Secondary server guard in health telemetry adapter,Organization format validation on telemetry metrics,Format validated,PASS,services/api/src/clara_api/api/v1/endpoints/health_adapter.py
+TC-PH43-05,A05,Web,Read-only role and permission matrix interface,Renders platform vs tenant scopes clearly in apps/admin,Rendered,PASS,apps/admin/app/roles/page.tsx
+TC-PH43-06,A06,UI,Permission diff preview modal component,Visual diff of added/removed permissions with MFA cue,Component verified,PASS,apps/admin/components/permission_diff_preview.tsx
+TC-PH43-07,A07,Tests/CI,Multi-tenant RBAC/ABAC contract test suite,Asserts 2-tenant isolation and negative role denials,5/5 tests pass,PASS,python3 -m unittest services/control-plane/tests/test_multi_tenant_rbac_abac_contract.py
+TC-PH43-08,A08,Security,Zero implicit platform-root PHI proof,Proves platform root has zero authority over patient EHR,Proof verified,PASS,docs/security/ZERO_IMPLICIT_PLATFORM_ROOT_PHI_PROOF.md
+TC-PH43-09,A09,Docs,Policy inheritance and legal privacy boundaries,Hierarchical statutory policy rules under PDPD Vietnam,Specified,PASS,docs/implementation/POLICY_INHERITANCE_AND_PRIVACY_BOUNDARIES.md
+TC-PH43-10,A10,Review,Cross-tenant IDOR audit across cursor and jobs,Rejection of IDOR probes across pagination export and cache,Quality gate green,PASS,docs/reports/ph43-cross-tenant-idor-audit.md
+TC-PH43-11,Integration,Gate,PH43 Quality Gate,All 7 invariants verified green,PH43 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph43_quality_gate.py
