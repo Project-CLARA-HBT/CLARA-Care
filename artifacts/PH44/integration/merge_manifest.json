@@ -1,0 +1,223 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH44",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "ad75917861972c2ada4c99f7e51700fa0d43813e",
+  "merge_commit_sha": "93577c697e5e3adf9b4c5194676931e377886896",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data/migrations",
+      "task": "Org slug and unique member/role schema migration",
+      "worktree": "/dev/shm/clara_worktrees/PH44_A02",
+      "branch": "phase/ph44-a02",
+      "commit": "f43d9899",
+      "full_commit": "f43d9899b96cb4380de1290d8ac8fdb8b1b00e42",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/db/models.py",
+        "services/control-plane/alembic/versions/20260907_0004_tenant_lifecycle_status.py",
+        "artifacts/PH44/A02/change_manifest.json",
+        "artifacts/PH44/A02/test_report.md",
+        "artifacts/PH44/A02/risk_register.md",
+        "artifacts/PH44/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API contract + BFF",
+      "task": "Organization create/update/status REST contract",
+      "worktree": "/dev/shm/clara_worktrees/PH44_A01",
+      "branch": "phase/ph44-a01",
+      "commit": "7b870752",
+      "full_commit": "7b87075217ed081ca0a47170a9b116467d028b3e",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/api/router.py",
+        "contracts/control-plane/control_v1_openapi.json",
+        "artifacts/PH44/A01/change_manifest.json",
+        "artifacts/PH44/A01/test_report.md",
+        "artifacts/PH44/A01/risk_register.md",
+        "artifacts/PH44/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain service",
+      "task": "Onboard, invite, accept, revoke and suspend domain operations",
+      "worktree": "/dev/shm/clara_worktrees/PH44_A03",
+      "branch": "phase/ph44-a03",
+      "commit": "346d0bbb",
+      "full_commit": "346d0bbb6c045929830e548267bba8e3bf65173f",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/domain/org_lifecycle.py",
+        "artifacts/PH44/A03/change_manifest.json",
+        "artifacts/PH44/A03/test_report.md",
+        "artifacts/PH44/A03/risk_register.md",
+        "artifacts/PH44/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "Adapter / existing code",
+      "task": "Adapt existing workspace/profile context with tenant isolation",
+      "worktree": "/dev/shm/clara_worktrees/PH44_A04",
+      "branch": "phase/ph44-a04",
+      "commit": "baf15693",
+      "full_commit": "baf15693016be83fa935fcb3fcaf8daf33e34c5f",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/core/tenant.py",
+        "artifacts/PH44/A04/change_manifest.json",
+        "artifacts/PH44/A04/test_report.md",
+        "artifacts/PH44/A04/risk_register.md",
+        "artifacts/PH44/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Admin/consumer app routes",
+      "task": "Build org list/detail/settings UI with lifecycle states",
+      "worktree": "/dev/shm/clara_worktrees/PH44_A05",
+      "branch": "phase/ph44-a05",
+      "commit": "dff046fd",
+      "full_commit": "dff046fdcd153fa0b90d45d65c7527e9b6d36603",
+      "status": "PASSED",
+      "files": [
+        "apps/admin/app/tenants/page.tsx",
+        "artifacts/PH44/A05/change_manifest.json",
+        "artifacts/PH44/A05/test_report.md",
+        "artifacts/PH44/A05/risk_register.md",
+        "artifacts/PH44/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "UI widgets / Flutter",
+      "task": "Build signed invite, membership and seat-limit components",
+      "worktree": "/dev/shm/clara_worktrees/PH44_A06",
+      "branch": "phase/ph44-a06",
+      "commit": "15913b21",
+      "full_commit": "15913b21314f4b6b715bcefef3bc89304f547c5e",
+      "status": "PASSED",
+      "files": [
+        "apps/admin/components/signed_invite_modal.tsx",
+        "artifacts/PH44/A06/change_manifest.json",
+        "artifacts/PH44/A06/test_report.md",
+        "artifacts/PH44/A06/risk_register.md",
+        "artifacts/PH44/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Integration tests",
+      "task": "Test suspended org denies data-plane auth and invite replay",
+      "worktree": "/dev/shm/clara_worktrees/PH44_A07",
+      "branch": "phase/ph44-a07",
+      "commit": "e1ee05a1",
+      "full_commit": "e1ee05a125c6194e20b6d1dd59b9f5d721cc54ea",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/tests/test_tenant_suspension_and_invite_replay.py",
+        "artifacts/PH44/A07/change_manifest.json",
+        "artifacts/PH44/A07/test_report.md",
+        "artifacts/PH44/A07/risk_register.md",
+        "artifacts/PH44/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security / negative tests",
+      "task": "Threat model tenant bleed, link sharing, malicious org owner",
+      "worktree": "/dev/shm/clara_worktrees/PH44_A08",
+      "branch": "phase/ph44-a08",
+      "commit": "fc1b84e0",
+      "full_commit": "fc1b84e0be6d31ccd76141ca4a12bee68803144d",
+      "status": "PASSED",
+      "files": [
+        "docs/security/MULTI_TENANT_BLEED_AND_ORG_OWNER_THREAT_MODEL.md",
+        "artifacts/PH44/A08/change_manifest.json",
+        "artifacts/PH44/A08/test_report.md",
+        "artifacts/PH44/A08/risk_register.md",
+        "artifacts/PH44/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs / operational design",
+      "task": "Write tenant migration/backfill safe dual-read playbook",
+      "worktree": "/dev/shm/clara_worktrees/PH44_A09",
+      "branch": "phase/ph44-a09",
+      "commit": "26cacd4c",
+      "full_commit": "26cacd4cb567a15e2150f2b63582d63613b48bfa",
+      "status": "PASSED",
+      "files": [
+        "docs/implementation/TENANT_MIGRATION_SAFE_DUAL_READ_PLAYBOOK.md",
+        "artifacts/PH44/A09/change_manifest.json",
+        "artifacts/PH44/A09/test_report.md",
+        "artifacts/PH44/A09/risk_register.md",
+        "artifacts/PH44/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial reviewer",
+      "task": "Challenge claims that legacy tenant_id column equals secure org model",
+      "worktree": "/dev/shm/clara_worktrees/PH44_A10",
+      "branch": "phase/ph44-a10",
+      "commit": "180a581d",
+      "full_commit": "180a581d372dcd95dc932080ab6a7c81e38ff0c3",
+      "status": "PASSED",
+      "files": [
+        "docs/reports/ph44-legacy-tenant-vs-governed-org-audit.md",
+        "scripts/ci/ph44_quality_gate.py",
+        "artifacts/PH44/A10/change_manifest.json",
+        "artifacts/PH44/A10/test_report.md",
+        "artifacts/PH44/A10/risk_register.md",
+        "artifacts/PH44/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.078,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.138,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T18:45:11.195291+00:00"
+}

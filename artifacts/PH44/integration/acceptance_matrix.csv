@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH44-01,A01,Contracts,Tenant organization REST lifecycle contract,Exposes /control/v1/tenants endpoints,Contract valid,PASS,contracts/control-plane/control_v1_openapi.json
+TC-PH44-02,A02,DB,Tenant lifecycle status column & migration 0004,Supports ONBOARDING ACTIVE SUSPENDED states,Migration 0004 passes,PASS,python3 scripts/ops/check_migration_downgrade.py services/control-plane/alembic/versions
+TC-PH44-03,A03,Domain,Organization lifecycle manager & signed invites,HMAC signed invitation verification and 24h expiry,Verified cleanly,PASS,services/control-plane/src/clara_control/domain/org_lifecycle.py
+TC-PH44-04,A04,Adapter,Tenant context suspended organization denial,Raises TenantSuspendedError on suspended access,Denial verified,PASS,services/api/src/clara_api/core/tenant.py
+TC-PH44-05,A05,Web,Interactive tenant organization directory UI,Renders quota metrics and interactive status toggle,UI verified,PASS,apps/admin/app/tenants/page.tsx
+TC-PH44-06,A06,UI,Signed invite modal component for clinic staff,Generates signed invitation tokens with role binding,Component verified,PASS,apps/admin/components/signed_invite_modal.tsx
+TC-PH44-07,A07,Tests/CI,Suspended tenant and invitation replay tests,Asserts inactive status and rejection of tampered tokens,4/4 tests pass,PASS,python3 -m unittest services/control-plane/tests/test_tenant_suspension_and_invite_replay.py
+TC-PH44-08,A08,Security,Multi-tenant bleed and malicious org owner threat model,Evaluates query bleed and rogue admin containment,Threat model published,PASS,docs/security/MULTI_TENANT_BLEED_AND_ORG_OWNER_THREAT_MODEL.md
+TC-PH44-09,A09,Docs,Tenant migration safe dual-read playbook,Zero-downtime 4-phase dual-read cutover protocol,Playbook published,PASS,docs/implementation/TENANT_MIGRATION_SAFE_DUAL_READ_PLAYBOOK.md
+TC-PH44-10,A10,Review,Hostile audit of legacy tenant column assumptions,Proves necessity of governed organization models,Quality gate green,PASS,docs/reports/ph44-legacy-tenant-vs-governed-org-audit.md
+TC-PH44-11,Integration,Gate,PH44 Quality Gate,All 7 invariants verified green,PH44 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph44_quality_gate.py
