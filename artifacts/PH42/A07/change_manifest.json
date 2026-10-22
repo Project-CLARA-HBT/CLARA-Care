@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH42",
+  "agent_id": "A07",
+  "role": "Integration tests",
+  "task": "Automate expired/revoked token and session fixation tests",
+  "status": "PASSED",
+  "branch": "phase/ph42-a07",
+  "base_sha": "40e2dfcd0180a5e840d2448378516ee7137f6e06",
+  "frozen_head_sha": "40e2dfcd0180a5e840d2448378516ee7137f6e06",
+  "path_lane": "services/control-plane/tests/;apps/admin/e2e/;services/api/tests/;apps/web/e2e/;artifacts/PH42/A07/",
+  "files_changed": [
+    "services/control-plane/tests/test_oidc_mfa_step_up.py",
+    "artifacts/PH42/A07/change_manifest.json",
+    "artifacts/PH42/A07/test_report.md",
+    "artifacts/PH42/A07/risk_register.md",
+    "artifacts/PH42/A07/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH42/A07/change_manifest.json",
+    "artifacts/PH42/A07/test_report.md",
+    "artifacts/PH42/A07/risk_register.md",
+    "artifacts/PH42/A07/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/tests/test_oidc_mfa_step_up.py",
+      "symbol": "OidcMfaStepUpTestCase",
+      "description": "Integration test suite verifying session issuance, device binding, revoked token fail-closed behavior, and MFA step-up elevation."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m unittest services/control-plane/tests/test_oidc_mfa_step_up.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 4 integration unit tests passed cleanly."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A07 -p PH42",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/control-plane/tests/ and artifacts/PH42/A07/."
+    }
+  ],
+  "audit_findings": {
+    "session_fixation_and_mfa_tests": {
+      "status": "COMPLETED",
+      "finding": "Automated tests for session issuance, device binding, revoked token rejection, and MFA step-up elevation."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH42_A07/services/control-plane/tests/test_oidc_mfa_step_up.py",
+    "rm -rf /dev/shm/clara_worktrees/PH42_A07/artifacts/PH42/A07"
+  ],
+  "timestamp": "2026-10-22T13:58:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH42_A07"
+}
