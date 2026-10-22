@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH49",
+  "agent_id": "A07",
+  "role": "Integration tests",
+  "task": "Test wrong snapshot, token C3 parity and stale consent",
+  "status": "PASSED",
+  "branch": "phase/ph49-a07",
+  "base_sha": "670a050a12e3c035ea6f316d3f2347963be699d7",
+  "frozen_head_sha": "670a050a12e3c035ea6f316d3f2347963be699d7",
+  "path_lane": "services/control-plane/tests/;apps/admin/e2e/;services/api/tests/;apps/web/e2e/;artifacts/PH49/A07/",
+  "files_changed": [
+    "services/control-plane/tests/test_glhs_lineage_adversarial_reconciliation.py",
+    "artifacts/PH49/A07/change_manifest.json",
+    "artifacts/PH49/A07/test_report.md",
+    "artifacts/PH49/A07/risk_register.md",
+    "artifacts/PH49/A07/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH49/A07/change_manifest.json",
+    "artifacts/PH49/A07/test_report.md",
+    "artifacts/PH49/A07/risk_register.md",
+    "artifacts/PH49/A07/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/tests/test_glhs_lineage_adversarial_reconciliation.py",
+      "symbol": "GlhsAdversarialLineageTestCase",
+      "description": "Integration test suite verifying rejection of mismatched snapshot IDs, stale consent purposes, and unverified attestation claims."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m unittest services/control-plane/tests/test_glhs_lineage_adversarial_reconciliation.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 3 adversarial lineage reconciliation unit tests passed cleanly."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A07 -p PH49",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/control-plane/tests/ and artifacts/PH49/A07/."
+    }
+  ],
+  "audit_findings": {
+    "adversarial_reconciliation_tests": {
+      "status": "COMPLETED",
+      "finding": "Implemented test_glhs_lineage_adversarial_reconciliation.py asserting fail-closed rejection on wrong snapshot bindings, revoked consent, and unverified receipts."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH49_A07/services/control-plane/tests/test_glhs_lineage_adversarial_reconciliation.py",
+    "rm -rf /dev/shm/clara_worktrees/PH49_A07/artifacts/PH49/A07"
+  ],
+  "timestamp": "2026-10-22T19:30:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH49_A07"
+}
