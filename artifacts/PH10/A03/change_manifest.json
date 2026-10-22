@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH10",
+  "agent_id": "A03",
+  "role": "Domain + GLHS services",
+  "task": "uncertainty and conflict preservation",
+  "status": "PASSED",
+  "branch": "phase/ph10-a03",
+  "base_sha": "d17260aa2f70b79fcce8965615d6a2f3068e217d",
+  "frozen_head_sha": "d17260aa2f70b79fcce8965615d6a2f3068e217d",
+  "path_lane": "services/api/src/clara_api/glhs/;services/api/src/clara_api/lifemap/;services/api/src/clara_api/phr/;services/api/src/clara_api/compliance/;services/api/src/clara_api/core/;artifacts/PH10/A03/",
+  "files_changed": [
+    "services/api/src/clara_api/lifemap/conflict_preservation.py",
+    "artifacts/PH10/A03/change_manifest.json",
+    "artifacts/PH10/A03/test_report.md",
+    "artifacts/PH10/A03/risk_register.md",
+    "artifacts/PH10/A03/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH10/A03/change_manifest.json",
+    "artifacts/PH10/A03/test_report.md",
+    "artifacts/PH10/A03/risk_register.md",
+    "artifacts/PH10/A03/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/lifemap/conflict_preservation.py",
+      "symbol": "ConflictPreservationEngine.dispute_assertion",
+      "description": "Clinical conflict preservation engine managing parallel competing assertions and dispute tracking without destructive overwrites."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/lifemap/conflict_preservation.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of conflict preservation module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A03 -p PH10",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/lifemap/ and artifacts/PH10/A03/."
+    }
+  ],
+  "audit_findings": {
+    "conflict_preservation_engine": {
+      "status": "COMPLETED",
+      "finding": "Implemented ConflictPreservationEngine preserving competing clinical claims and patient disputes alongside historical assertions."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH10_A03/services/api/src/clara_api/lifemap/conflict_preservation.py",
+    "rm -rf /dev/shm/clara_worktrees/PH10_A03/artifacts/PH10/A03"
+  ],
+  "timestamp": "2026-10-22T17:35:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH10_A03"
+}
