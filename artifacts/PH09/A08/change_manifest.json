@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH09",
+  "agent_id": "A08",
+  "role": "Security + privacy",
+  "task": "queue failure/restore integration tests",
+  "status": "PASSED",
+  "branch": "phase/ph09-a08",
+  "base_sha": "4c6621242a3cfef1d7ef46f204360e28f3cb6957",
+  "frozen_head_sha": "4c6621242a3cfef1d7ef46f204360e28f3cb6957",
+  "path_lane": "docs/security/;docs/compliance/;scripts/ops/;artifacts/PH09/A08/",
+  "files_changed": [
+    "docs/security/QUEUE_FAILURE_AND_DLQ_AUDIT.md",
+    "scripts/ops/simulate_queue_recovery.py",
+    "artifacts/PH09/A08/change_manifest.json",
+    "artifacts/PH09/A08/test_report.md",
+    "artifacts/PH09/A08/risk_register.md",
+    "artifacts/PH09/A08/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH09/A08/change_manifest.json",
+    "artifacts/PH09/A08/test_report.md",
+    "artifacts/PH09/A08/risk_register.md",
+    "artifacts/PH09/A08/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "scripts/ops/simulate_queue_recovery.py",
+      "symbol": "run_queue_failure_tests",
+      "description": "Outbox crash simulator verifying automated lease reclamation and attempt counter progression following simulated worker death."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ops/simulate_queue_recovery.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Simulated mid-flight worker crash; lease reclaimed cleanly by peer worker."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A08 -p PH09",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/security/, scripts/ops/, and artifacts/PH09/A08/."
+    }
+  ],
+  "audit_findings": {
+    "queue_failure_and_dlq": {
+      "status": "COMPLETED",
+      "finding": "Verified that outbox lease timeout mechanisms prevent permanent stalls following worker crashes, and that poison pills are safely isolated into DLQ."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH09_A08/docs/security/QUEUE_FAILURE_AND_DLQ_AUDIT.md",
+    "rm -f /dev/shm/clara_worktrees/PH09_A08/scripts/ops/simulate_queue_recovery.py",
+    "rm -rf /dev/shm/clara_worktrees/PH09_A08/artifacts/PH09/A08"
+  ],
+  "timestamp": "2026-10-22T16:22:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH09_A08"
+}
