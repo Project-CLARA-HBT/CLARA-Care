@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH06",
+  "agent_id": "A08",
+  "role": "Security + privacy",
+  "task": "adversarial stale-write and downgrade tests",
+  "status": "PASSED",
+  "branch": "phase/ph06-a08",
+  "base_sha": "2370329965f32a7e7df48473e6a2b842ae37580b",
+  "frozen_head_sha": "2370329965f32a7e7df48473e6a2b842ae37580b",
+  "path_lane": "docs/security/;docs/compliance/;scripts/ops/;artifacts/PH06/A08/",
+  "files_changed": [
+    "docs/security/GLHS_STALE_WRITE_AND_DOWNGRADE_THREAT_MODEL.md",
+    "scripts/ops/audit_thss_lineage.py",
+    "artifacts/PH06/A08/change_manifest.json",
+    "artifacts/PH06/A08/test_report.md",
+    "artifacts/PH06/A08/risk_register.md",
+    "artifacts/PH06/A08/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH06/A08/change_manifest.json",
+    "artifacts/PH06/A08/test_report.md",
+    "artifacts/PH06/A08/risk_register.md",
+    "artifacts/PH06/A08/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/glhs/commit_kernel.py",
+      "symbol": "revalidate_partition_dependencies",
+      "description": "OCC freshness revalidation under locks in Phase 3 preventing stale writes."
+    },
+    {
+      "file": "docs/security/GLHS_STALE_WRITE_AND_DOWNGRADE_THREAT_MODEL.md",
+      "symbol": "Threat Vectors & Invariants",
+      "description": "Formal threat model covering stale write overwrites, attestation level downgrade attacks, and proposal cycle DoS."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ops/audit_thss_lineage.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "THSS lineage audit tool executed cleanly."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A08 -p PH06",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/security/, scripts/ops/, and artifacts/PH06/A08/."
+    }
+  ],
+  "audit_findings": {
+    "stale_write_threat_model": {
+      "status": "COMPLETED",
+      "finding": "Threat modeled OCC partition versioning, attestation rank monotonicity, and bounded cycle-free lineage traversal."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH06_A08/docs/security/GLHS_STALE_WRITE_AND_DOWNGRADE_THREAT_MODEL.md",
+    "rm -f /dev/shm/clara_worktrees/PH06_A08/scripts/ops/audit_thss_lineage.py",
+    "rm -rf /dev/shm/clara_worktrees/PH06_A08/artifacts/PH06/A08"
+  ],
+  "timestamp": "2026-10-22T12:42:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH06_A08"
+}
