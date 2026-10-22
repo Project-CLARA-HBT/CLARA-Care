@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH06",
+  "agent_id": "A06",
+  "role": "Mobile Flutter",
+  "task": "reviewer explicit decision UX",
+  "status": "PASSED",
+  "branch": "phase/ph06-a06",
+  "base_sha": "2370329965f32a7e7df48473e6a2b842ae37580b",
+  "frozen_head_sha": "2370329965f32a7e7df48473e6a2b842ae37580b",
+  "path_lane": "apps/mobile/;artifacts/PH06/A06/",
+  "files_changed": [
+    "apps/mobile/lib/widgets/proposal_decision_sheet.dart",
+    "apps/mobile/test/proposal_decision_ux_test.dart",
+    "artifacts/PH06/A06/change_manifest.json",
+    "artifacts/PH06/A06/test_report.md",
+    "artifacts/PH06/A06/risk_register.md",
+    "artifacts/PH06/A06/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH06/A06/change_manifest.json",
+    "artifacts/PH06/A06/test_report.md",
+    "artifacts/PH06/A06/risk_register.md",
+    "artifacts/PH06/A06/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/mobile/lib/widgets/proposal_decision_sheet.dart",
+      "symbol": "ProposalDecisionSheet",
+      "description": "Modal decision sheet enabling explicit clinician approval or rejection of AI-derived clinical proposals."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "flutter analyze --no-pub lib/widgets/proposal_decision_sheet.dart test/proposal_decision_ux_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Zero issues in static analysis of proposal decision widgets."
+    },
+    {
+      "command": "flutter test --no-pub test/proposal_decision_ux_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "2 widget tests verifying onAdmit and onReject callbacks and provenance rendering."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A06 -p PH06",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/mobile/ and artifacts/PH06/A06/."
+    }
+  ],
+  "audit_findings": {
+    "reviewer_explicit_decision_ux": {
+      "status": "COMPLETED",
+      "finding": "Implemented ProposalDecisionSheet ensuring clinicians make explicit, audited admission or rejection decisions on AI proposals with provenance attestation transparency."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH06_A06/apps/mobile/lib/widgets/proposal_decision_sheet.dart",
+    "rm -f /dev/shm/clara_worktrees/PH06_A06/apps/mobile/test/proposal_decision_ux_test.dart",
+    "rm -rf /dev/shm/clara_worktrees/PH06_A06/artifacts/PH06/A06"
+  ],
+  "timestamp": "2026-10-22T12:38:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH06_A06"
+}
