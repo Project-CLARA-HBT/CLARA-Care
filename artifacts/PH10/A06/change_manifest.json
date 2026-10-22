@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH10",
+  "agent_id": "A06",
+  "role": "Mobile Flutter",
+  "task": "PHR edit/review surfaces",
+  "status": "PASSED",
+  "branch": "phase/ph10-a06",
+  "base_sha": "d17260aa2f70b79fcce8965615d6a2f3068e217d",
+  "frozen_head_sha": "d17260aa2f70b79fcce8965615d6a2f3068e217d",
+  "path_lane": "apps/mobile/;artifacts/PH10/A06/",
+  "files_changed": [
+    "apps/mobile/lib/widgets/phr_provenance_badge.dart",
+    "apps/mobile/test/phr_provenance_badge_test.dart",
+    "artifacts/PH10/A06/change_manifest.json",
+    "artifacts/PH10/A06/test_report.md",
+    "artifacts/PH10/A06/risk_register.md",
+    "artifacts/PH10/A06/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH10/A06/change_manifest.json",
+    "artifacts/PH10/A06/test_report.md",
+    "artifacts/PH10/A06/risk_register.md",
+    "artifacts/PH10/A06/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/mobile/lib/widgets/phr_provenance_badge.dart",
+      "symbol": "PhrProvenanceBadge",
+      "description": "Visual provenance badge distinguishing verified EMR hospital integration from self-reported patient inputs on mobile PHR surfaces."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "flutter analyze --no-pub lib/widgets/phr_provenance_badge.dart test/phr_provenance_badge_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Zero static analysis issues in PHR provenance badge widget."
+    },
+    {
+      "command": "flutter test --no-pub test/phr_provenance_badge_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "2 widget tests verifying EMR verified badges and self-reported warning cues."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A06 -p PH10",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/mobile/ and artifacts/PH10/A06/."
+    }
+  ],
+  "audit_findings": {
+    "phr_provenance_surfaces": {
+      "status": "COMPLETED",
+      "finding": "Implemented PhrProvenanceBadge on mobile PHR views providing clear visual provenance distinction between hospital EMR records and self-reported inputs."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH10_A06/apps/mobile/lib/widgets/phr_provenance_badge.dart",
+    "rm -f /dev/shm/clara_worktrees/PH10_A06/apps/mobile/test/phr_provenance_badge_test.dart",
+    "rm -rf /dev/shm/clara_worktrees/PH10_A06/artifacts/PH10/A06"
+  ],
+  "timestamp": "2026-10-22T17:45:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH10_A06"
+}
