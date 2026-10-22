@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH43",
+  "agent_id": "A03",
+  "role": "Domain service",
+  "task": "Build policy evaluation service for all control actions",
+  "status": "PASSED",
+  "branch": "phase/ph43-a03",
+  "base_sha": "89801b4823296c0065793e1140061e56cf574880",
+  "frozen_head_sha": "89801b4823296c0065793e1140061e56cf574880",
+  "path_lane": "services/control-plane/src/clara_control/domain/;artifacts/PH43/A03/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/domain/policy_evaluator.py",
+    "artifacts/PH43/A03/change_manifest.json",
+    "artifacts/PH43/A03/test_report.md",
+    "artifacts/PH43/A03/risk_register.md",
+    "artifacts/PH43/A03/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH43/A03/change_manifest.json",
+    "artifacts/PH43/A03/test_report.md",
+    "artifacts/PH43/A03/risk_register.md",
+    "artifacts/PH43/A03/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/domain/policy_evaluator.py",
+      "symbol": "ControlPolicyEvaluator.evaluate",
+      "description": "Comprehensive authorization engine enforcing deny-by-default, cross-tenant isolation, MFA step-up requirements, and zero PHI access."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/domain/policy_evaluator.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of policy evaluator module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A03 -p PH43",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across control-plane domain and artifacts/PH43/A03/."
+    }
+  ],
+  "audit_findings": {
+    "control_policy_evaluation": {
+      "status": "COMPLETED",
+      "finding": "Implemented ControlPolicyEvaluator enforcing platform vs tenant RBAC/ABAC boundaries, MFA step-up for destructive mutations, and zero implicit PHI access."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH43_A03/services/control-plane/src/clara_control/domain/policy_evaluator.py",
+    "rm -rf /dev/shm/clara_worktrees/PH43_A03/artifacts/PH43/A03"
+  ],
+  "timestamp": "2026-10-22T16:50:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH43_A03"
+}
