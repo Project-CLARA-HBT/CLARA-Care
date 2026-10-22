@@ -1,0 +1,229 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH05",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "1c626f461cd14dc61f7a84e6b4d713fc55bab565",
+  "merge_commit_sha": "acdd488b4022e6eb6dccac0785a7369a6398bb47",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "consent snapshot/version persistence",
+      "worktree": "/dev/shm/clara_worktrees/PH05_A02",
+      "branch": "phase/ph05-a02",
+      "commit": "74ada6d6",
+      "full_commit": "74ada6d6f4635d3bebdf958832a2bc336d5a56df",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/db/models.py",
+        "services/api/alembic/versions/20260827_0065_consent_policy_snapshots.py",
+        "artifacts/PH05/A02/change_manifest.json",
+        "artifacts/PH05/A02/test_report.md",
+        "artifacts/PH05/A02/risk_register.md",
+        "artifacts/PH05/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "versioned consent resource endpoints",
+      "worktree": "/dev/shm/clara_worktrees/PH05_A01",
+      "branch": "phase/ph05-a01",
+      "commit": "abec8915",
+      "full_commit": "abec8915893244e577a89f96ed639faa4126c0e1",
+      "status": "PASSED",
+      "files": [
+        "contracts/consent/versioned_consent_contract.v1.json",
+        "services/api/src/clara_api/schemas.py",
+        "services/api/src/clara_api/api/v1/endpoints/auth.py",
+        "artifacts/PH05/A01/change_manifest.json",
+        "artifacts/PH05/A01/test_report.md",
+        "artifacts/PH05/A01/risk_register.md",
+        "artifacts/PH05/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "purpose-based policy evaluator",
+      "worktree": "/dev/shm/clara_worktrees/PH05_A03",
+      "branch": "phase/ph05-a03",
+      "commit": "6b52457b",
+      "full_commit": "6b52457b27426d68af2ae7528e9fd89444e46a5f",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/compliance/policy_evaluator.py",
+        "artifacts/PH05/A03/change_manifest.json",
+        "artifacts/PH05/A03/test_report.md",
+        "artifacts/PH05/A03/risk_register.md",
+        "artifacts/PH05/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "policy epoch and revocation anchors",
+      "worktree": "/dev/shm/clara_worktrees/PH05_A04",
+      "branch": "phase/ph05-a04",
+      "commit": "b4c0e8c6",
+      "full_commit": "b4c0e8c66f12fd80522ed93b835d13e5fc656ff8",
+      "status": "PASSED",
+      "files": [
+        "services/ml/src/clara_ml/policy_epoch.py",
+        "artifacts/PH05/A04/change_manifest.json",
+        "artifacts/PH05/A04/test_report.md",
+        "artifacts/PH05/A04/risk_register.md",
+        "artifacts/PH05/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "family/delegated authority restrictions",
+      "worktree": "/dev/shm/clara_worktrees/PH05_A05",
+      "branch": "phase/ph05-a05",
+      "commit": "e79be4cd",
+      "full_commit": "e79be4cddd94cc6bbd3afc17c825fceb91ed0d82",
+      "status": "PASSED",
+      "files": [
+        "apps/web/lib/delegated-authority.ts",
+        "apps/web/lib/delegated-authority.test.ts",
+        "artifacts/PH05/A05/change_manifest.json",
+        "artifacts/PH05/A05/test_report.md",
+        "artifacts/PH05/A05/risk_register.md",
+        "artifacts/PH05/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "consent explanation UX",
+      "worktree": "/dev/shm/clara_worktrees/PH05_A06",
+      "branch": "phase/ph05-a06",
+      "commit": "d08b099e",
+      "full_commit": "d08b099e6a456bdea14586579d4b9eb25da8f0c5",
+      "status": "PASSED",
+      "files": [
+        "apps/mobile/lib/widgets/consent_explanation_sheet.dart",
+        "apps/mobile/test/consent_explanation_ux_test.dart",
+        "artifacts/PH05/A06/change_manifest.json",
+        "artifacts/PH05/A06/test_report.md",
+        "artifacts/PH05/A06/risk_register.md",
+        "artifacts/PH05/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "mobile consent gates and revocation",
+      "worktree": "/dev/shm/clara_worktrees/PH05_A07",
+      "branch": "phase/ph05-a07",
+      "commit": "75fec0bc",
+      "full_commit": "75fec0bc4a30d24368fc6178340dab1051c0d55e",
+      "status": "PASSED",
+      "files": [
+        "services/api/tests/test_consent_gates_and_revocation.py",
+        "artifacts/PH05/A07/change_manifest.json",
+        "artifacts/PH05/A07/test_report.md",
+        "artifacts/PH05/A07/risk_register.md",
+        "artifacts/PH05/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "consent-drift concurrent test matrix",
+      "worktree": "/dev/shm/clara_worktrees/PH05_A08",
+      "branch": "phase/ph05-a08",
+      "commit": "c6083589",
+      "full_commit": "c60835899b860542d1aa82c6af5b146aea6a6e51",
+      "status": "PASSED",
+      "files": [
+        "docs/security/CONSENT_DRIFT_CONCURRENT_SECURITY_MATRIX.md",
+        "scripts/ops/audit_consent_drift.py",
+        "artifacts/PH05/A08/change_manifest.json",
+        "artifacts/PH05/A08/test_report.md",
+        "artifacts/PH05/A08/risk_register.md",
+        "artifacts/PH05/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "compliance retention/DSAR impact audit",
+      "worktree": "/dev/shm/clara_worktrees/PH05_A09",
+      "branch": "phase/ph05-a09",
+      "commit": "e5bc37f9",
+      "full_commit": "e5bc37f993996746d7e8375aa2ff2470626f3d2e",
+      "status": "PASSED",
+      "files": [
+        "docs/implementation/CONSENT_RETENTION_AND_DSAR_IMPACT.md",
+        "artifacts/PH05/A09/dsar_compliance_retention_audit.json",
+        "artifacts/PH05/A09/change_manifest.json",
+        "artifacts/PH05/A09/test_report.md",
+        "artifacts/PH05/A09/risk_register.md",
+        "artifacts/PH05/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "policy language and owner approval",
+      "worktree": "/dev/shm/clara_worktrees/PH05_A10",
+      "branch": "phase/ph05-a10",
+      "commit": "768b3d52",
+      "full_commit": "768b3d5239b72c17f51eeb3cbc498846822f8af8",
+      "status": "PASSED",
+      "files": [
+        "docs/runbooks/consent-policy-management-and-owner-approval.md",
+        "docs/reports/ph05-consent-policy-and-authority-audit.md",
+        "scripts/ci/ph05_quality_gate.py",
+        "artifacts/PH05/A10/change_manifest.json",
+        "artifacts/PH05/A10/test_report.md",
+        "artifacts/PH05/A10/risk_register.md",
+        "artifacts/PH05/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.196,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.135,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T11:49:20.926087+00:00"
+}
