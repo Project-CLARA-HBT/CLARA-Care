@@ -1,0 +1,100 @@
+{
+  "audit_scope": "apps/web/app/ UI disabled buttons, hardcoded fixtures, and telemetry states",
+  "total_conditional_disabled_buttons": 145,
+  "unconditionally_dead_buttons_found": 0,
+  "telemetry_fallback_state": {
+    "file": "apps/web/app/admin/system/page.tsx",
+    "status": "SURFACED_IN_AUDIT",
+    "finding": "Uses getStatusChipForService to render healthy/degraded/down tone chips. Admin telemetry consumers must be migrated to real metrics endpoint rather than synthetic defaults."
+  },
+  "landing_demo_fixtures": {
+    "status": "ISOLATED_AND_LABELED",
+    "paths": [
+      "apps/web/components/landing/v6/",
+      "apps/web/components/landing/v7/"
+    ],
+    "finding": "Landing demo fixtures are public product showcases clearly labeled and isolated from authenticated /today, /phr, and /clinical patient state."
+  },
+  "sampled_button_conditions": [
+    {
+      "file": "apps/web/app/onboarding/page.tsx",
+      "condition": "isConsentAccepting || isConsentLoading"
+    },
+    {
+      "file": "apps/web/app/onboarding/page.tsx",
+      "condition": "isPhrSaving"
+    },
+    {
+      "file": "apps/web/app/onboarding/page.tsx",
+      "condition": "isPhrSaving || !confirmSelfDeclared"
+    },
+    {
+      "file": "apps/web/app/lifemap/page.tsx",
+      "condition": "!episodeId"
+    },
+    {
+      "file": "apps/web/app/lifemap/page.tsx",
+      "condition": "candidate.missing_critical_fields.length > 0 ||\n                              candidate.security_findings.length > 0"
+    },
+    {
+      "file": "apps/web/app/lifemap/page.tsx",
+      "condition": "!captureFile"
+    },
+    {
+      "file": "apps/web/app/lifemap/page.tsx",
+      "condition": "!episodeId"
+    },
+    {
+      "file": "apps/web/app/lifemap/page.tsx",
+      "condition": "saving || !episodeId"
+    },
+    {
+      "file": "apps/web/app/login/page.tsx",
+      "condition": "isLockedOut"
+    },
+    {
+      "file": "apps/web/app/login/page.tsx",
+      "condition": "isLockedOut"
+    },
+    {
+      "file": "apps/web/app/login/page.tsx",
+      "condition": "isLockedOut"
+    },
+    {
+      "file": "apps/web/app/login/page.tsx",
+      "condition": "isSubmitting || cooldownSeconds > 0"
+    },
+    {
+      "file": "apps/web/app/login/page.tsx",
+      "condition": "isSubmitDisabled"
+    },
+    {
+      "file": "apps/web/app/research/research-workspace.tsx",
+      "condition": "isRunning || clarifyPending"
+    },
+    {
+      "file": "apps/web/app/medicines/safety-tab.tsx",
+      "condition": "isChecking || (!checkingFreeText && (needsMoreMedicines || unresolvedClarification)) || freeTextNeedsMoreMedicines"
+    },
+    {
+      "file": "apps/web/app/medicines/safety-tab.tsx",
+      "condition": "isChecking || unresolvedClarification"
+    },
+    {
+      "file": "apps/web/app/community/page.tsx",
+      "condition": "!canCompose"
+    },
+    {
+      "file": "apps/web/app/contact/contact-form.tsx",
+      "condition": "submitting"
+    },
+    {
+      "file": "apps/web/app/visits/page.tsx",
+      "condition": "savingConsent"
+    },
+    {
+      "file": "apps/web/app/scribe/page.tsx",
+      "condition": "isCreating"
+    }
+  ]
+}

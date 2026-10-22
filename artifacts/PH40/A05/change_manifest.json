@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH40",
+  "agent_id": "A05",
+  "role": "Admin/consumer app routes",
+  "task": "Audit UI disabled buttons, hardcoded fixtures and synthetic claims",
+  "status": "PASSED",
+  "branch": "phase/ph40-a05",
+  "base_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "frozen_head_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "path_lane": "apps/admin/app/;apps/web/app/;artifacts/PH40/A05/",
+  "files_changed": [
+    "artifacts/PH40/A05/ui_fixture_and_dead_button_audit.json",
+    "artifacts/PH40/A05/change_manifest.json",
+    "artifacts/PH40/A05/test_report.md",
+    "artifacts/PH40/A05/risk_register.md",
+    "artifacts/PH40/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH40/A05/change_manifest.json",
+    "artifacts/PH40/A05/test_report.md",
+    "artifacts/PH40/A05/risk_register.md",
+    "artifacts/PH40/A05/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/web/app/admin/system/page.tsx",
+      "symbol": "getStatusChipForService",
+      "description": "System telemetry health card renderer presenting healthy/degraded/down statuses."
+    },
+    {
+      "file": "apps/web/lib/admin-system.ts",
+      "symbol": "fetchSystemTelemetry",
+      "description": "Telemetry fetcher requiring migration from hardcoded KPI numbers to explicit unknown/degraded states."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A05 -p PH40",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Enforced strict path lane isolation for Web UI audit artifacts."
+    }
+  ],
+  "audit_findings": {
+    "dead_buttons": {
+      "status": "COMPLETED",
+      "finding": "Audited 145 button disabled bindings across apps/web/app/. 100% of disabled attributes are tied to active state machines (e.g. form submission, cooldown, prerequisite consent, file selection); zero unconditionally dead buttons found."
+    },
+    "fixtures_and_telemetry": {
+      "status": "COMPLETED",
+      "finding": "Identified synthetic telemetry fallbacks in admin-system.ts (CAND-0043 to CAND-0048); documented replacement requirements with explicit UNKNOWN states in Phase PH41."
+    }
+  },
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH40_A05/artifacts/PH40/A05"
+  ],
+  "timestamp": "2026-10-22T11:00:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH40_A05"
+}
