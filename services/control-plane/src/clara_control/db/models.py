@@ -75,6 +75,30 @@ class ControlAdminUser(ControlBase):
 
     tenant = relationship("ControlTenant", back_populates="admin_users")
     audit_logs = relationship("ControlAuditLog", back_populates="admin_user")
+    role_bindings = relationship("ControlRoleBinding", back_populates="admin_user", cascade="all, delete-orphan")
+
+
+class ControlRoleBinding(ControlBase):
+    """Explicit role binding linking admin users to specific tenant organizations with permission scopes."""
+
+    __tablename__ = "control_role_bindings"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(36), ForeignKey("control_tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    admin_id = Column(String(36), ForeignKey("control_admin_users.id", ondelete="CASCADE"), nullable=False, index=True)
+    role_name = Column(String(64), nullable=False, index=True)
+    permissions_json = Column(Text, nullable=False, default="[]")
+    granted_by = Column(String(36), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=datetime.datetime.utcnow,
+        onupdate=datetime.datetime.utcnow,
+        nullable=False,
+    )
+
+    tenant = relationship("ControlTenant")
+    admin_user = relationship("ControlAdminUser", back_populates="role_bindings")
 
 
 class ControlAuditLog(ControlBase):

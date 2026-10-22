@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH43",
+  "agent_id": "A02",
+  "role": "Data/migrations",
+  "task": "Implement role binding schema and explicit org FKs",
+  "status": "PASSED",
+  "branch": "phase/ph43-a02",
+  "base_sha": "89801b4823296c0065793e1140061e56cf574880",
+  "frozen_head_sha": "89801b4823296c0065793e1140061e56cf574880",
+  "path_lane": "services/control-plane/src/clara_control/db/;services/control-plane/alembic/versions/;artifacts/PH43/A02/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/db/models.py",
+    "services/control-plane/alembic/versions/20260905_0003_control_role_bindings.py",
+    "artifacts/PH43/A02/change_manifest.json",
+    "artifacts/PH43/A02/test_report.md",
+    "artifacts/PH43/A02/risk_register.md",
+    "artifacts/PH43/A02/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH43/A02/change_manifest.json",
+    "artifacts/PH43/A02/test_report.md",
+    "artifacts/PH43/A02/risk_register.md",
+    "artifacts/PH43/A02/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/db/models.py",
+      "symbol": "ControlRoleBinding",
+      "description": "Role binding model enforcing foreign key constraints to control_tenants and control_admin_users with granular permission scopes."
+    },
+    {
+      "file": "services/control-plane/alembic/versions/20260905_0003_control_role_bindings.py",
+      "symbol": "upgrade, downgrade",
+      "description": "Control plane migration 0003 creating control_role_bindings table with verified downgrade."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/db",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated control-plane models."
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/control-plane/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All control plane migrations define verified non-empty downgrade."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A02 -p PH43",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across control-plane db and alembic paths."
+    }
+  ],
+  "audit_findings": {
+    "role_binding_schema": {
+      "status": "COMPLETED",
+      "finding": "Implemented ControlRoleBinding model and created migration 0003 with explicit tenant foreign keys and granular permission sets."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH43_A02 checkout 89801b4823296c0065793e1140061e56cf574880 -- services/control-plane/src/clara_control/db/",
+    "rm -f /dev/shm/clara_worktrees/PH43_A02/services/control-plane/alembic/versions/20260905_0003_control_role_bindings.py",
+    "rm -rf /dev/shm/clara_worktrees/PH43_A02/artifacts/PH43/A02"
+  ],
+  "timestamp": "2026-10-22T16:45:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH43_A02"
+}
