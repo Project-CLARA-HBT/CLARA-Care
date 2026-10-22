@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH08",
+  "agent_id": "A09",
+  "role": "Docs + research evidence",
+  "task": "formal refinement/property tests",
+  "status": "PASSED",
+  "branch": "phase/ph08-a09",
+  "base_sha": "94ec2c1e2f7535b4430e3bb45f913d9a0d1e39a3",
+  "frozen_head_sha": "94ec2c1e2f7535b4430e3bb45f913d9a0d1e39a3",
+  "path_lane": "research/;docs/research/;docs/implementation/;docs/interoperability/;artifacts/PH08/A09/",
+  "files_changed": [
+    "docs/research/FORMAL_REFINEMENT_OCC_PROPERTIES.md",
+    "artifacts/PH08/A09/change_manifest.json",
+    "artifacts/PH08/A09/test_report.md",
+    "artifacts/PH08/A09/risk_register.md",
+    "artifacts/PH08/A09/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH08/A09/change_manifest.json",
+    "artifacts/PH08/A09/test_report.md",
+    "artifacts/PH08/A09/risk_register.md",
+    "artifacts/PH08/A09/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "docs/research/FORMAL_REFINEMENT_OCC_PROPERTIES.md",
+      "symbol": "Property 1: Serializability of Commit Sequence",
+      "description": "Formal mathematical proofs establishing zero lost updates and deadlock freedom via lexicographical lock hierarchy."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A09 -p PH08",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/research/ and artifacts/PH08/A09/."
+    }
+  ],
+  "audit_findings": {
+    "formal_occ_proofs": {
+      "status": "COMPLETED",
+      "finding": "Authored formal refinement specification and mathematical proofs establishing linearizability, zero lost updates, and deadlock freedom."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH08_A09/docs/research/FORMAL_REFINEMENT_OCC_PROPERTIES.md",
+    "rm -rf /dev/shm/clara_worktrees/PH08_A09/artifacts/PH08/A09"
+  ],
+  "timestamp": "2026-10-22T15:35:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH08_A09"
+}
