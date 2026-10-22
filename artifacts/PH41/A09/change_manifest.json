@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH41",
+  "agent_id": "A09",
+  "role": "Docs / operational design",
+  "task": "Write ADR on control/data planes, deploy diagram and migration cutover",
+  "status": "PASSED",
+  "branch": "phase/ph41-a09",
+  "base_sha": "f161b49db7c3c54117b8841da3675f92fe19543e",
+  "frozen_head_sha": "f161b49db7c3c54117b8841da3675f92fe19543e",
+  "path_lane": "docs/implementation/;docs/runbooks/;research/;artifacts/PH41/A09/",
+  "files_changed": [
+    "docs/implementation/ADR_CONTROL_PLANE_DATA_PLANE_SEGREGATION.md",
+    "docs/runbooks/control-plane-deployment-and-cutover.md",
+    "artifacts/PH41/A09/change_manifest.json",
+    "artifacts/PH41/A09/test_report.md",
+    "artifacts/PH41/A09/risk_register.md",
+    "artifacts/PH41/A09/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH41/A09/change_manifest.json",
+    "artifacts/PH41/A09/test_report.md",
+    "artifacts/PH41/A09/risk_register.md",
+    "artifacts/PH41/A09/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "docs/implementation/ADR_CONTROL_PLANE_DATA_PLANE_SEGREGATION.md",
+      "symbol": "Architecture Decision Record (ADR)",
+      "description": "Formal ADR establishing independent control plane gateway, dedicated admin web app, and zero-PHI RPC bridge."
+    },
+    {
+      "file": "docs/runbooks/control-plane-deployment-and-cutover.md",
+      "symbol": "Runbook: Control-Plane Deployment",
+      "description": "Step-by-step operations runbook for control database migrations and port 8200 service launch."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A09 -p PH41",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/implementation/, docs/runbooks/, and artifacts/PH41/A09/."
+    }
+  ],
+  "audit_findings": {
+    "adr_and_cutover_runbook": {
+      "status": "COMPLETED",
+      "finding": "Authored formal ADR on control/data plane segregation and detailed operational deployment and migration cutover runbook."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH41_A09/docs/implementation/ADR_CONTROL_PLANE_DATA_PLANE_SEGREGATION.md",
+    "rm -f /dev/shm/clara_worktrees/PH41_A09/docs/runbooks/control-plane-deployment-and-cutover.md",
+    "rm -rf /dev/shm/clara_worktrees/PH41_A09/artifacts/PH41/A09"
+  ],
+  "timestamp": "2026-10-22T12:18:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH41_A09"
+}
