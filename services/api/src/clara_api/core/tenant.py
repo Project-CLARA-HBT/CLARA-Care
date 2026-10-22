@@ -47,6 +47,10 @@ class TenantContextMissingError(TenantIsolationError):
     """Raised when strict tenant isolation requires a populated tenant context."""
 
 
+class TenantSuspendedError(TenantIsolationError):
+    """Raised when attempting data-plane operations on a suspended tenant organization."""
+
+
 def validate_tenant_identifier(ident: str | None, name: str = "tenant_id") -> str:
     """Validate that an identifier conforms strictly to safe multi-tenant naming rules.
 
@@ -80,9 +84,12 @@ class TenantContext:
     workspace_id: str | None = None
     user_id: int | None = None
     is_system_admin: bool = False
+    is_suspended: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        if self.is_suspended:
+            raise TenantSuspendedError(f"Tenant {self.tenant_id} is currently SUSPENDED")
         # Validate tenant_id
         validate_tenant_identifier(self.tenant_id, name="tenant_id")
         if self.organization_id is not None:

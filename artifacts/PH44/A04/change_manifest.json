@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH44",
+  "agent_id": "A04",
+  "role": "Adapter / existing code",
+  "task": "Adapt existing workspace/profile context with tenant isolation",
+  "status": "PASSED",
+  "branch": "phase/ph44-a04",
+  "base_sha": "ad759178619bc5bebe867d34199c93a0bcf5f1cf",
+  "frozen_head_sha": "ad759178619bc5bebe867d34199c93a0bcf5f1cf",
+  "path_lane": "services/api/src/clara_api/;services/ml/src/clara_ml/;artifacts/PH44/A04/",
+  "files_changed": [
+    "services/api/src/clara_api/core/tenant.py",
+    "artifacts/PH44/A04/change_manifest.json",
+    "artifacts/PH44/A04/test_report.md",
+    "artifacts/PH44/A04/risk_register.md",
+    "artifacts/PH44/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH44/A04/change_manifest.json",
+    "artifacts/PH44/A04/test_report.md",
+    "artifacts/PH44/A04/risk_register.md",
+    "artifacts/PH44/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/core/tenant.py",
+      "symbol": "TenantSuspendedError, TenantContext.is_suspended",
+      "description": "Tenant context extension enforcing immediate denial when accessing data-plane within a suspended tenant scope."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/core/tenant.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated tenant core module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH44",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/ and artifacts/PH44/A04/."
+    }
+  ],
+  "audit_findings": {
+    "tenant_isolation_adaptation": {
+      "status": "COMPLETED",
+      "finding": "Adapted TenantContext to enforce immediate fail-closed denial via TenantSuspendedError when an organization is marked suspended."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH44_A04 checkout ad759178619bc5bebe867d34199c93a0bcf5f1cf -- services/api/src/clara_api/core/tenant.py",
+    "rm -rf /dev/shm/clara_worktrees/PH44_A04/artifacts/PH44/A04"
+  ],
+  "timestamp": "2026-10-22T18:25:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH44_A04"
+}
