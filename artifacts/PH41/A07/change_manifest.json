@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH41",
+  "agent_id": "A07",
+  "role": "Integration tests",
+  "task": "Add contract/e2e tests for forbidden cross-origin admin use",
+  "status": "PASSED",
+  "branch": "phase/ph41-a07",
+  "base_sha": "f161b49db7c3c54117b8841da3675f92fe19543e",
+  "frozen_head_sha": "f161b49db7c3c54117b8841da3675f92fe19543e",
+  "path_lane": "services/control-plane/tests/;apps/admin/e2e/;services/api/tests/;apps/web/e2e/;artifacts/PH41/A07/",
+  "files_changed": [
+    "services/control-plane/tests/test_forbidden_cross_origin_admin.py",
+    "artifacts/PH41/A07/change_manifest.json",
+    "artifacts/PH41/A07/test_report.md",
+    "artifacts/PH41/A07/risk_register.md",
+    "artifacts/PH41/A07/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH41/A07/change_manifest.json",
+    "artifacts/PH41/A07/test_report.md",
+    "artifacts/PH41/A07/risk_register.md",
+    "artifacts/PH41/A07/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/tests/test_forbidden_cross_origin_admin.py",
+      "symbol": "ForbiddenCrossOriginAdminTestCase",
+      "description": "Integration test suite verifying control-plane isolated plane response, routes summary, and fail-closed unknown action handling."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m unittest services/control-plane/tests/test_forbidden_cross_origin_admin.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 3 integration unit tests passed cleanly."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A07 -p PH41",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/control-plane/tests/ and artifacts/PH41/A07/."
+    }
+  ],
+  "audit_findings": {
+    "cross_origin_admin_security": {
+      "status": "COMPLETED",
+      "finding": "Implemented test_forbidden_cross_origin_admin.py verifying control plane endpoints return isolated indicators and fail closed on unauthorized accesses."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH41_A07/services/control-plane/tests/test_forbidden_cross_origin_admin.py",
+    "rm -rf /dev/shm/clara_worktrees/PH41_A07/artifacts/PH41/A07"
+  ],
+  "timestamp": "2026-10-22T12:12:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH41_A07"
+}
