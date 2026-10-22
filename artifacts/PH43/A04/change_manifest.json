@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH43",
+  "agent_id": "A04",
+  "role": "Adapter / existing code",
+  "task": "Put second server guard in health domain API adapters",
+  "status": "PASSED",
+  "branch": "phase/ph43-a04",
+  "base_sha": "89801b4823296c0065793e1140061e56cf574880",
+  "frozen_head_sha": "89801b4823296c0065793e1140061e56cf574880",
+  "path_lane": "services/api/src/clara_api/;services/ml/src/clara_ml/;artifacts/PH43/A04/",
+  "files_changed": [
+    "services/api/src/clara_api/api/v1/endpoints/health_adapter.py",
+    "artifacts/PH43/A04/change_manifest.json",
+    "artifacts/PH43/A04/test_report.md",
+    "artifacts/PH43/A04/risk_register.md",
+    "artifacts/PH43/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH43/A04/change_manifest.json",
+    "artifacts/PH43/A04/test_report.md",
+    "artifacts/PH43/A04/risk_register.md",
+    "artifacts/PH43/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/health_adapter.py",
+      "symbol": "get_authenticated_system_telemetry",
+      "description": "Health adapter updated with secondary server guard validating organization header format in addition to primary service token."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/api/v1/endpoints/health_adapter.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated health adapter module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH43",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/ and artifacts/PH43/A04/."
+    }
+  ],
+  "audit_findings": {
+    "second_server_guard": {
+      "status": "COMPLETED",
+      "finding": "Added secondary server guard to health adapter, validating organization identifier patterns and preventing header injection tampering."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH43_A04 checkout 89801b4823296c0065793e1140061e56cf574880 -- services/api/src/clara_api/api/v1/endpoints/health_adapter.py",
+    "rm -rf /dev/shm/clara_worktrees/PH43_A04/artifacts/PH43/A04"
+  ],
+  "timestamp": "2026-10-22T16:55:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH43_A04"
+}
