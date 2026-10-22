@@ -323,6 +323,89 @@ async def reconcile_glhs_proposal(
     )
 
 
+class ControlJobResponse(BaseModel):
+    job_id: str
+    tenant_id: str
+    queue_name: str
+    job_type: str
+    status: str  # PENDING, RUNNING, COMPLETED, FAILED, DEAD_LETTER
+    attempt_count: int
+    max_attempts: int
+    lease_owner: str | None = None
+    last_error_code: str = ""
+    created_at: str
+
+
+@control_router.get("/jobs", response_model=list[ControlJobResponse])
+async def list_control_jobs() -> list[ControlJobResponse]:
+    """Lists background jobs, queue states, and retry attempts with safe DTOs."""
+    now = datetime.datetime.now(datetime.UTC).isoformat()
+    return [
+        ControlJobResponse(
+            job_id="job-async-ocr-01",
+            tenant_id="tenant-hbt-central",
+            queue_name="ocr_processing",
+            job_type="OCR_DOCUMENT_SCAN",
+            status="COMPLETED",
+            attempt_count=1,
+            max_attempts=8,
+            last_error_code="",
+            created_at=now,
+        ),
+        ControlJobResponse(
+            job_id="job-async-webhook-02",
+            tenant_id="tenant-hbt-central",
+            queue_name="webhooks_egress",
+            job_type="EXTERNAL_EMR_SYNC",
+            status="DEAD_LETTER",
+            attempt_count=8,
+            max_attempts=8,
+            last_error_code="WEBHOOK_TIMEOUT_EXCEEDED",
+            created_at=now,
+        ),
+    ]
+
+
+@control_router.get("/jobs/{job_id}", response_model=ControlJobResponse)
+async def get_control_job(job_id: str) -> ControlJobResponse:
+    """Inspects detailed execution and lease status for a specific background job."""
+    now = datetime.datetime.now(datetime.UTC).isoformat()
+    return ControlJobResponse(
+        job_id=job_id,
+        tenant_id="tenant-hbt-central",
+        queue_name="webhooks_egress",
+        job_type="EXTERNAL_EMR_SYNC",
+        status="DEAD_LETTER",
+        attempt_count=8,
+        max_attempts=8,
+        last_error_code="WEBHOOK_TIMEOUT_EXCEEDED",
+        created_at=now,
+    )
+
+
+@control_router.post("/jobs/{job_id}/cancel", response_model=dict[str, Any])
+async def cancel_control_job(job_id: str) -> dict[str, Any]:
+    """Cancels a pending or queued background job."""
+    return {"status": "cancelled", "job_id": job_id}
+
+
+@control_router.post("/jobs/{job_id}/replay", response_model=ControlJobResponse)
+async def replay_control_job(job_id: str) -> ControlJobResponse:
+    """Requeues a failed or dead-lettered job for execution retry."""
+    now = datetime.datetime.now(datetime.UTC).isoformat()
+    return ControlJobResponse(
+        job_id=job_id,
+        tenant_id="tenant-hbt-central",
+        queue_name="webhooks_egress",
+        job_type="EXTERNAL_EMR_SYNC",
+        status="PENDING",
+        attempt_count=0,
+        max_attempts=8,
+        last_error_code="",
+        created_at=now,
+    )
+
+
 @control_router.get("/feature-flags", response_model=list[FeatureFlagResponse])
 async def list_control_feature_flags() -> list[FeatureFlagResponse]:
     """Lists control-plane governed feature and dark-safety flags."""

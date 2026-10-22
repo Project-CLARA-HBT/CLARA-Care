@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "CLARA Control-Plane API",
-    "version": "1.3.0"
+    "version": "1.4.0"
   },
   "paths": {
     "/control/v1/sessions/issue": {
@@ -491,6 +491,163 @@
         }
       }
     },
+    "/control/v1/jobs": {
+      "get": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "List Control Jobs",
+        "description": "Lists background jobs, queue states, and retry attempts with safe DTOs.",
+        "operationId": "list_control_jobs_control_v1_jobs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ControlJobResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Control Jobs Control V1 Jobs Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Get Control Job",
+        "description": "Inspects detailed execution and lease status for a specific background job.",
+        "operationId": "get_control_job_control_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Cancel Control Job",
+        "description": "Cancels a pending or queued background job.",
+        "operationId": "cancel_control_job_control_v1_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Cancel Control Job Control V1 Jobs  Job Id  Cancel Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/jobs/{job_id}/replay": {
+      "post": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Replay Control Job",
+        "description": "Requeues a failed or dead-lettered job for execution retry.",
+        "operationId": "replay_control_job_control_v1_jobs__job_id__replay_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/control/v1/feature-flags": {
       "get": {
         "tags": [
@@ -640,6 +797,70 @@
         },
         "type": "object",
         "title": "ControlHealthResponse"
+      },
+      "ControlJobResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "queue_name": {
+            "type": "string",
+            "title": "Queue Name"
+          },
+          "job_type": {
+            "type": "string",
+            "title": "Job Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "attempt_count": {
+            "type": "integer",
+            "title": "Attempt Count"
+          },
+          "max_attempts": {
+            "type": "integer",
+            "title": "Max Attempts"
+          },
+          "lease_owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lease Owner"
+          },
+          "last_error_code": {
+            "type": "string",
+            "title": "Last Error Code",
+            "default": ""
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "tenant_id",
+          "queue_name",
+          "job_type",
+          "status",
+          "attempt_count",
+          "max_attempts",
+          "created_at"
+        ],
+        "title": "ControlJobResponse"
       },
       "FeatureFlagResponse": {
         "properties": {

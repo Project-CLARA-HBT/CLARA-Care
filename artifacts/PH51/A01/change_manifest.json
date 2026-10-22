@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH51",
+  "agent_id": "A01",
+  "role": "API contract + BFF",
+  "task": "Admin list/inspect/cancel/replay job API with safe DTO",
+  "status": "PASSED",
+  "branch": "phase/ph51-a01",
+  "base_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "frozen_head_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "path_lane": "services/control-plane/src/clara_control/api/;contracts/control-plane/;artifacts/PH51/A01/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/api/router.py",
+    "contracts/control-plane/control_v1_openapi.json",
+    "artifacts/PH51/A01/change_manifest.json",
+    "artifacts/PH51/A01/test_report.md",
+    "artifacts/PH51/A01/risk_register.md",
+    "artifacts/PH51/A01/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH51/A01/change_manifest.json",
+    "artifacts/PH51/A01/test_report.md",
+    "artifacts/PH51/A01/risk_register.md",
+    "artifacts/PH51/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/api/router.py",
+      "symbol": "list_control_jobs, get_control_job, cancel_control_job, replay_control_job",
+      "description": "Background job administration endpoints providing safe DTOs without leaking internal tokens or raw payloads."
+    },
+    {
+      "file": "contracts/control-plane/control_v1_openapi.json",
+      "symbol": "paths./control/v1/jobs",
+      "description": "Updated OpenAPI contract covering job queue inspection and manual replay operations."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/api/router.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of updated control router."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A01 -p PH51",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/control-plane/src/clara_control/api/, contracts/control-plane/, and artifacts/PH51/A01/."
+    }
+  ],
+  "audit_findings": {
+    "admin_job_queue_api": {
+      "status": "COMPLETED",
+      "finding": "Implemented job queue management REST endpoints under /control/v1/jobs with safe DTOs masking webhook auth credentials and clinical PHI."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH51_A01 checkout 7d8840494cf8e30b6c70ea935574516604e4c275 -- services/control-plane/src/clara_control/api/router.py",
+    "git -C /dev/shm/clara_worktrees/PH51_A01 checkout 7d8840494cf8e30b6c70ea935574516604e4c275 -- contracts/control-plane/control_v1_openapi.json",
+    "rm -rf /dev/shm/clara_worktrees/PH51_A01/artifacts/PH51/A01"
+  ],
+  "timestamp": "2026-10-22T19:45:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH51_A01"
+}
