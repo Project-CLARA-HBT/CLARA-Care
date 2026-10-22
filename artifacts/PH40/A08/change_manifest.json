@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH40",
+  "agent_id": "A08",
+  "role": "Security / negative tests",
+  "task": "Classify true false-success/privacy/security P0 with evidence",
+  "status": "PASSED",
+  "branch": "phase/ph40-a08",
+  "base_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "frozen_head_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "path_lane": "docs/security/;tests/security/;services/control-plane/tests/security/;artifacts/PH40/A08/",
+  "files_changed": [
+    "docs/security/MOCK_SKELETON_FALSE_SUCCESS_SECURITY_AUDIT.md",
+    "artifacts/PH40/A08/change_manifest.json",
+    "artifacts/PH40/A08/test_report.md",
+    "artifacts/PH40/A08/risk_register.md",
+    "artifacts/PH40/A08/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH40/A08/change_manifest.json",
+    "artifacts/PH40/A08/test_report.md",
+    "artifacts/PH40/A08/risk_register.md",
+    "artifacts/PH40/A08/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/web/lib/admin-system.ts",
+      "symbol": "fetchSystemTelemetry",
+      "description": "Hardcoded KPI default values classified as P0 false-success security risk."
+    },
+    {
+      "file": "docs/security/MOCK_SKELETON_FALSE_SUCCESS_SECURITY_AUDIT.md",
+      "symbol": "Compliance & Threat Matrix",
+      "description": "Exhaustive triage of 112 mock/skeleton candidate items classifying P0 risks vs intentional fail-closed safety gates."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A08 -p PH40",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/security/ and artifacts/PH40/A08/."
+    }
+  ],
+  "audit_findings": {
+    "false_success_classification": {
+      "status": "COMPLETED",
+      "finding": "Classified CAND-0001, CAND-0043 to CAND-0048 as P0 false-success vulnerabilities requiring explicit UNAVAILABLE states in PH41. Triaged mobile inert flows as valid fail-closed gates."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH40_A08/docs/security/MOCK_SKELETON_FALSE_SUCCESS_SECURITY_AUDIT.md",
+    "rm -rf /dev/shm/clara_worktrees/PH40_A08/artifacts/PH40/A08"
+  ],
+  "timestamp": "2026-10-22T11:08:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH40_A08"
+}
