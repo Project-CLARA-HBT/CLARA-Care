@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH40",
+  "agent_id": "A07",
+  "role": "Integration tests",
+  "task": "Create cross-layer traceability CI detector and synthetic fixture tests",
+  "status": "PASSED",
+  "branch": "phase/ph40-a07",
+  "base_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "frozen_head_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "path_lane": "services/control-plane/tests/;apps/admin/e2e/;services/api/tests/;apps/web/e2e/;artifacts/PH40/A07/",
+  "files_changed": [
+    "services/api/tests/test_mock_and_synthetic_fixtures.py",
+    "artifacts/PH40/A07/change_manifest.json",
+    "artifacts/PH40/A07/test_report.md",
+    "artifacts/PH40/A07/risk_register.md",
+    "artifacts/PH40/A07/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH40/A07/change_manifest.json",
+    "artifacts/PH40/A07/test_report.md",
+    "artifacts/PH40/A07/risk_register.md",
+    "artifacts/PH40/A07/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/tests/test_mock_and_synthetic_fixtures.py",
+      "symbol": "MockAndSyntheticFixtureTestCase",
+      "description": "Integration test suite validating zero-mock responses, fail-closed error behaviors, and route classification coverage."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m unittest services/api/tests/test_mock_and_synthetic_fixtures.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 3 integration tests passed cleanly in hermetic runner."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A07 -p PH40",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/tests/ and artifacts/PH40/A07/."
+    }
+  ],
+  "audit_findings": {
+    "traceability_detector": {
+      "status": "COMPLETED",
+      "finding": "Implemented test_mock_and_synthetic_fixtures.py to actively enforce zero-mock invariants and prevent synthetic fallback leakage in production routes."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH40_A07/services/api/tests/test_mock_and_synthetic_fixtures.py",
+    "rm -rf /dev/shm/clara_worktrees/PH40_A07/artifacts/PH40/A07"
+  ],
+  "timestamp": "2026-10-22T11:05:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH40_A07"
+}
