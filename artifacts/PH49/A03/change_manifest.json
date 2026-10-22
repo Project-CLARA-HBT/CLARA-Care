@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH49",
+  "agent_id": "A03",
+  "role": "Domain service",
+  "task": "Expose deny reasons, dependency sets and audit-safe reconciliation",
+  "status": "PASSED",
+  "branch": "phase/ph49-a03",
+  "base_sha": "670a050a12e3c035ea6f316d3f2347963be699d7",
+  "frozen_head_sha": "670a050a12e3c035ea6f316d3f2347963be699d7",
+  "path_lane": "services/control-plane/src/clara_control/domain/;artifacts/PH49/A03/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/domain/glhs_reconciliation.py",
+    "artifacts/PH49/A03/change_manifest.json",
+    "artifacts/PH49/A03/test_report.md",
+    "artifacts/PH49/A03/risk_register.md",
+    "artifacts/PH49/A03/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH49/A03/change_manifest.json",
+    "artifacts/PH49/A03/test_report.md",
+    "artifacts/PH49/A03/risk_register.md",
+    "artifacts/PH49/A03/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/domain/glhs_reconciliation.py",
+      "symbol": "GlhsReconciliationService.record_decision",
+      "description": "Reconciliation domain service recording human reviewer decisions and categorizing proposal denial reason codes."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/domain/glhs_reconciliation.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of reconciliation domain service module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A03 -p PH49",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across control-plane domain and artifacts/PH49/A03/."
+    }
+  ],
+  "audit_findings": {
+    "glhs_reconciliation_domain": {
+      "status": "COMPLETED",
+      "finding": "Implemented GlhsReconciliationService defining canonical deny reason codes and recording audit-safe reconciliation decisions."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH49_A03/services/control-plane/src/clara_control/domain/glhs_reconciliation.py",
+    "rm -rf /dev/shm/clara_worktrees/PH49_A03/artifacts/PH49/A03"
+  ],
+  "timestamp": "2026-10-22T19:10:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH49_A03"
+}
