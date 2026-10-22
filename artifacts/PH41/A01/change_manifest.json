@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH41",
+  "agent_id": "A01",
+  "role": "API contract + BFF",
+  "task": "Define OpenAPI /control/v1 baseline and health status schema",
+  "status": "PASSED",
+  "branch": "phase/ph41-a01",
+  "base_sha": "f161b49db7c3c54117b8841da3675f92fe19543e",
+  "frozen_head_sha": "f161b49db7c3c54117b8841da3675f92fe19543e",
+  "path_lane": "services/control-plane/src/clara_control/api/;contracts/control-plane/;artifacts/PH41/A01/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/api/router.py",
+    "contracts/control-plane/control_v1_openapi.json",
+    "artifacts/PH41/A01/change_manifest.json",
+    "artifacts/PH41/A01/test_report.md",
+    "artifacts/PH41/A01/risk_register.md",
+    "artifacts/PH41/A01/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH41/A01/change_manifest.json",
+    "artifacts/PH41/A01/test_report.md",
+    "artifacts/PH41/A01/risk_register.md",
+    "artifacts/PH41/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/api/router.py",
+      "symbol": "get_control_plane_health, list_governed_tenants, list_control_feature_flags",
+      "description": "Control plane gateway endpoints exposing health, tenant governance, and feature flag management."
+    },
+    {
+      "file": "contracts/control-plane/control_v1_openapi.json",
+      "symbol": "paths",
+      "description": "Standardized OpenAPI 3.1 specification for separate admin control plane."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/api/router.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of control plane router."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A01 -p PH41",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/control-plane/src/clara_control/api/, contracts/control-plane/, and artifacts/PH41/A01/."
+    }
+  ],
+  "audit_findings": {
+    "control_plane_openapi_baseline": {
+      "status": "COMPLETED",
+      "finding": "Defined OpenAPI /control/v1 baseline with comprehensive schemas for health status, tenant governance, and feature flags."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH41_A01 checkout f161b49db7c3c54117b8841da3675f92fe19543e -- services/control-plane/src/clara_control/api/router.py",
+    "rm -f /dev/shm/clara_worktrees/PH41_A01/contracts/control-plane/control_v1_openapi.json",
+    "rm -rf /dev/shm/clara_worktrees/PH41_A01/artifacts/PH41/A01"
+  ],
+  "timestamp": "2026-10-22T11:58:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH41_A01"
+}

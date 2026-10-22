@@ -1,0 +1,242 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CLARA Control-Plane API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/control/v1/health": {
+      "get": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Get Control Plane Health",
+        "description": "Readiness probe for separate admin control plane.",
+        "operationId": "get_control_plane_health_control_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlHealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/tenants": {
+      "get": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "List Governed Tenants",
+        "description": "Lists all B2B healthcare organizations governed by control-plane.",
+        "operationId": "list_governed_tenants_control_v1_tenants_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TenantResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Governed Tenants Control V1 Tenants Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/feature-flags": {
+      "get": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "List Control Feature Flags",
+        "description": "Lists control-plane governed feature and dark-safety flags.",
+        "operationId": "list_control_feature_flags_control_v1_feature_flags_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureFlagResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Control Feature Flags Control V1 Feature Flags Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/control/v1/routes/summary": {
+      "get": {
+        "tags": [
+          "control-plane"
+        ],
+        "summary": "Get Route Inventory Summary",
+        "description": "Returns governance inventory of registered web client surfaces.",
+        "operationId": "get_route_inventory_summary_control_v1_routes_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Route Inventory Summary Control V1 Routes Summary Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ControlHealthDetails": {
+        "properties": {
+          "database": {
+            "type": "string",
+            "title": "Database",
+            "description": "Control-plane database pool state",
+            "default": "healthy"
+          },
+          "audit_ledger": {
+            "type": "string",
+            "title": "Audit Ledger",
+            "description": "Immutable audit append status",
+            "default": "active"
+          },
+          "network_plane": {
+            "type": "string",
+            "title": "Network Plane",
+            "description": "Network segmentation verification",
+            "default": "isolated"
+          }
+        },
+        "type": "object",
+        "title": "ControlHealthDetails"
+      },
+      "ControlHealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Control-plane service operational status",
+            "default": "healthy"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Control plane build release version",
+            "default": "v2026.4.0"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "plane": {
+            "type": "string",
+            "title": "Plane",
+            "default": "control-plane-isolated"
+          },
+          "details": {
+            "$ref": "#/components/schemas/ControlHealthDetails"
+          }
+        },
+        "type": "object",
+        "title": "ControlHealthResponse"
+      },
+      "FeatureFlagResponse": {
+        "properties": {
+          "flag_key": {
+            "type": "string",
+            "title": "Flag Key"
+          },
+          "default_state": {
+            "type": "boolean",
+            "title": "Default State"
+          },
+          "is_dark": {
+            "type": "boolean",
+            "title": "Is Dark"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "flag_key",
+          "default_state",
+          "is_dark",
+          "description"
+        ],
+        "title": "FeatureFlagResponse"
+      },
+      "TenantResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "tier": {
+            "type": "string",
+            "title": "Tier"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "max_workspaces": {
+            "type": "integer",
+            "title": "Max Workspaces"
+          },
+          "max_users": {
+            "type": "integer",
+            "title": "Max Users"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "tier",
+          "is_active",
+          "max_workspaces",
+          "max_users",
+          "created_at"
+        ],
+        "title": "TenantResponse"
+      }
+    }
+  }
+}
