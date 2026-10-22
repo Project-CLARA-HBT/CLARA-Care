@@ -1,0 +1,867 @@
+{
+  "schema_version": "control-plane.web-route-inventory.v1",
+  "total_routes": 123,
+  "routes": [
+    {
+      "route": "`/`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public landing",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/login`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public auth",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/register`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public auth",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/forgot-password`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public auth",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/reset-password`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public auth",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/verify-email`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public auth",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/auth/callback`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public auth callback",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/legal`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public legal",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/legal/consent`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public legal",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/legal/cookies`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public legal",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/legal/privacy`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public legal",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/legal/terms`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public legal",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/consent`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public legal",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/contact`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public legal",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/cookies`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public legal",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/privacy`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public legal",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/safety`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public legal",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/sources`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public sources",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/terms`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public legal",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/clinical-standards`",
+      "access": "public",
+      "workspace": "\u2014",
+      "presentation": "Public clinical standards",
+      "test_suite": "public E2E"
+    },
+    {
+      "route": "`/share/[token]`",
+      "access": "public capability",
+      "workspace": "\u2014",
+      "presentation": "Public share; shell-free",
+      "test_suite": "public-share E2E"
+    },
+    {
+      "route": "`/chat/share/[token]`",
+      "access": "public capability",
+      "workspace": "\u2014",
+      "presentation": "Public share; shell-free",
+      "test_suite": "public-share E2E"
+    },
+    {
+      "route": "`/phr/shared/[token]`",
+      "access": "public capability",
+      "workspace": "\u2014",
+      "presentation": "Public PHR share; shell-free",
+      "test_suite": "public-share E2E"
+    },
+    {
+      "route": "`/today`",
+      "access": "authenticated all roles",
+      "workspace": "personal",
+      "presentation": "Primary Personal; professional direct/context",
+      "test_suite": "role E2E"
+    },
+    {
+      "route": "`/today/tasks/[taskId]`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Context from Today",
+      "test_suite": "task E2E"
+    },
+    {
+      "route": "`/lifemap`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Primary Personal",
+      "test_suite": "personal E2E"
+    },
+    {
+      "route": "`/lifemap/new`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Context/create entry",
+      "test_suite": "flow E2E"
+    },
+    {
+      "route": "`/lifemap/new/[draftId]/[step]`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Guided step; server draft",
+      "test_suite": "flow/deep-link E2E"
+    },
+    {
+      "route": "`/lifemap/timeline`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Context timeline",
+      "test_suite": "personal E2E"
+    },
+    {
+      "route": "`/lifemap/visit-prep`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Compatibility/context to Visit",
+      "test_suite": "compatibility E2E"
+    },
+    {
+      "route": "`/visits`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "More Personal",
+      "test_suite": "visit E2E"
+    },
+    {
+      "route": "`/visits/new`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Context/guided create",
+      "test_suite": "visit E2E"
+    },
+    {
+      "route": "`/visits/[visitId]`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Context visit detail reader",
+      "test_suite": "visit E2E"
+    },
+    {
+      "route": "`/admin/users`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/family`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "More Personal",
+      "test_suite": "family E2E"
+    },
+    {
+      "route": "`/family/invite`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Context/guided share",
+      "test_suite": "family E2E"
+    },
+    {
+      "route": "`/family/accept`",
+      "access": "authenticated recipient capability",
+      "workspace": "personal",
+      "presentation": "Context/preview then accept",
+      "test_suite": "family E2E"
+    },
+    {
+      "route": "`/phr`",
+      "access": "authenticated permitted profile",
+      "workspace": "personal/clinical context",
+      "presentation": "Primary Personal; More Clinical",
+      "test_suite": "PHR E2E"
+    },
+    {
+      "route": "`/phr/[section]`",
+      "access": "authenticated permitted profile",
+      "workspace": "personal/clinical context",
+      "presentation": "Context focused form",
+      "test_suite": "PHR E2E"
+    },
+    {
+      "route": "`/medicines`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Primary Personal",
+      "test_suite": "medicines E2E"
+    },
+    {
+      "route": "`/medicines/[id]`",
+      "access": "authenticated owner/profile + consent",
+      "workspace": "personal",
+      "presentation": "Context detail",
+      "test_suite": "medicines E2E"
+    },
+    {
+      "route": "`/medicines/add`",
+      "access": "authenticated owner/profile + consent",
+      "workspace": "personal",
+      "presentation": "Context guided add",
+      "test_suite": "medicines E2E"
+    },
+    {
+      "route": "`/medicines/cabinet`",
+      "access": "authenticated owner/profile + consent",
+      "workspace": "personal",
+      "presentation": "Context cabinet",
+      "test_suite": "medicines E2E"
+    },
+    {
+      "route": "`/medicines/cabinet/add`",
+      "access": "authenticated owner/profile + consent",
+      "workspace": "personal",
+      "presentation": "Context shared cabinet add",
+      "test_suite": "medicines E2E"
+    },
+    {
+      "route": "`/selfmed`",
+      "access": "authenticated owner/profile + consent",
+      "workspace": "personal",
+      "presentation": "Alias only",
+      "test_suite": "redirect \u2192 medicines cabinet"
+    },
+    {
+      "route": "`/selfmed/add`",
+      "access": "authenticated owner/profile + consent",
+      "workspace": "personal",
+      "presentation": "Alias/shared component",
+      "test_suite": "redirect/shared flow"
+    },
+    {
+      "route": "`/selfmed/ddi`",
+      "access": "authenticated owner/profile + consent",
+      "workspace": "personal",
+      "presentation": "Alias only",
+      "test_suite": "redirect \u2192 medicines safety"
+    },
+    {
+      "route": "`/careguard`",
+      "access": "authenticated owner/profile + consent",
+      "workspace": "personal",
+      "presentation": "Alias only",
+      "test_suite": "redirect \u2192 medicines safety"
+    },
+    {
+      "route": "`/chat`",
+      "access": "authenticated all roles",
+      "workspace": "personal/research/clinical",
+      "presentation": "Primary in all permitted workspaces",
+      "test_suite": "Chat E2E"
+    },
+    {
+      "route": "`/chat/[chatId]`",
+      "access": "authenticated all roles",
+      "workspace": "personal/research/clinical",
+      "presentation": "Context direct chat session",
+      "test_suite": "Chat E2E"
+    },
+    {
+      "route": "`/chat/shares`",
+      "access": "authenticated owner",
+      "workspace": "research/personal context",
+      "presentation": "More Chat",
+      "test_suite": "share E2E"
+    },
+    {
+      "route": "`/evidence`",
+      "access": "authenticated permitted role",
+      "workspace": "research",
+      "presentation": "Primary Research; More Clinical",
+      "test_suite": "evidence E2E"
+    },
+    {
+      "route": "`/research`",
+      "access": "authenticated permitted role",
+      "workspace": "research",
+      "presentation": "Alias only",
+      "test_suite": "redirect \u2192 Chat"
+    },
+    {
+      "route": "`/research/analyze`",
+      "access": "authenticated permitted role",
+      "workspace": "research",
+      "presentation": "Alias only",
+      "test_suite": "redirect \u2192 Chat"
+    },
+    {
+      "route": "`/research/citations`",
+      "access": "authenticated permitted role",
+      "workspace": "research",
+      "presentation": "Alias only",
+      "test_suite": "redirect \u2192 Chat"
+    },
+    {
+      "route": "`/research/deepdive`",
+      "access": "authenticated permitted role",
+      "workspace": "research",
+      "presentation": "Alias only",
+      "test_suite": "redirect \u2192 Chat"
+    },
+    {
+      "route": "`/research/details`",
+      "access": "authenticated permitted role",
+      "workspace": "research",
+      "presentation": "Alias only",
+      "test_suite": "redirect \u2192 Chat"
+    },
+    {
+      "route": "`/research/source-hub`",
+      "access": "authenticated researcher/doctor/admin",
+      "workspace": "research",
+      "presentation": "Primary Research; More Admin",
+      "test_suite": "source E2E"
+    },
+    {
+      "route": "`/council`",
+      "access": "authenticated doctor/admin",
+      "workspace": "clinical",
+      "presentation": "Primary Clinical",
+      "test_suite": "council E2E"
+    },
+    {
+      "route": "`/council/new`",
+      "access": "authenticated doctor/admin",
+      "workspace": "clinical",
+      "presentation": "Context/guided create",
+      "test_suite": "council E2E"
+    },
+    {
+      "route": "`/council/new/intake`",
+      "access": "authenticated doctor/admin",
+      "workspace": "clinical",
+      "presentation": "Guided step",
+      "test_suite": "council E2E"
+    },
+    {
+      "route": "`/council/new/specialists`",
+      "access": "authenticated doctor/admin",
+      "workspace": "clinical",
+      "presentation": "Guided step",
+      "test_suite": "council E2E"
+    },
+    {
+      "route": "`/council/new/review`",
+      "access": "authenticated doctor/admin",
+      "workspace": "clinical",
+      "presentation": "Guided review/run",
+      "test_suite": "council E2E"
+    },
+    {
+      "route": "`/council/result`",
+      "access": "authenticated doctor/admin + owner/access",
+      "workspace": "clinical",
+      "presentation": "Context result",
+      "test_suite": "council E2E"
+    },
+    {
+      "route": "`/council/analyze`",
+      "access": "authenticated doctor/admin + owner/access",
+      "workspace": "clinical",
+      "presentation": "Result detail/compatibility",
+      "test_suite": "council E2E"
+    },
+    {
+      "route": "`/council/citations`",
+      "access": "authenticated doctor/admin + owner/access",
+      "workspace": "clinical",
+      "presentation": "Result detail/compatibility",
+      "test_suite": "council E2E"
+    },
+    {
+      "route": "`/council/deepdive`",
+      "access": "authenticated doctor/admin + owner/access",
+      "workspace": "clinical",
+      "presentation": "Expert detail/compatibility",
+      "test_suite": "council E2E"
+    },
+    {
+      "route": "`/council/details`",
+      "access": "authenticated doctor/admin + owner/access",
+      "workspace": "clinical",
+      "presentation": "Expert detail/compatibility",
+      "test_suite": "council E2E"
+    },
+    {
+      "route": "`/council/research`",
+      "access": "authenticated doctor/admin + owner/access",
+      "workspace": "clinical/research",
+      "presentation": "Result evidence detail",
+      "test_suite": "council E2E"
+    },
+    {
+      "route": "`/scribe`",
+      "access": "authenticated doctor/admin",
+      "workspace": "clinical",
+      "presentation": "Primary Clinical",
+      "test_suite": "scribe E2E"
+    },
+    {
+      "route": "`/clinical`",
+      "access": "authenticated doctor/admin",
+      "workspace": "clinical",
+      "presentation": "Primary Clinical",
+      "test_suite": "clinical E2E"
+    },
+    {
+      "route": "`/clinical/overview`",
+      "access": "authenticated doctor/admin",
+      "workspace": "clinical",
+      "presentation": "More Clinical",
+      "test_suite": "clinical E2E"
+    },
+    {
+      "route": "`/clinical/patients`",
+      "access": "authenticated doctor/admin",
+      "workspace": "clinical",
+      "presentation": "More Clinical",
+      "test_suite": "clinical E2E"
+    },
+    {
+      "route": "`/clinical/standards`",
+      "access": "authenticated doctor/admin",
+      "workspace": "clinical",
+      "presentation": "More Clinical",
+      "test_suite": "clinical E2E"
+    },
+    {
+      "route": "`/dashboard`",
+      "access": "authenticated researcher/doctor/admin (client may allow legacy; server authoritative)",
+      "workspace": "clinical/admin/research context",
+      "presentation": "Primary Clinical/Admin home by role",
+      "test_suite": "role E2E"
+    },
+    {
+      "route": "`/dashboard/control-tower`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/dashboard/ecosystem`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/system`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "Alias only",
+      "test_suite": "redirect \u2192 admin/overview"
+    },
+    {
+      "route": "`/admin/overview`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "Primary Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/knowledge-sources`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "Primary Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/answer-flow`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "Primary Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/observability`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "Primary Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/experiments`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/feedback`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/analytics`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "Primary Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/analytics/clinical`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/community-moderation`",
+      "access": "authenticated admin + social flag",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/dsar`",
+      "access": "authenticated admin + compliance flag",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/audit`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/audit-log`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/rag-eval`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/rag-ingestion`",
+      "access": "authenticated admin + flag",
+      "workspace": "admin",
+      "presentation": "More Admin",
+      "test_suite": "admin E2E"
+    },
+    {
+      "route": "`/admin/rag-sources`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "Alias only",
+      "test_suite": "redirect \u2192 knowledge sources"
+    },
+    {
+      "route": "`/admin/source-hub`",
+      "access": "authenticated admin",
+      "workspace": "admin",
+      "presentation": "Alias only",
+      "test_suite": "redirect \u2192 knowledge sources"
+    },
+    {
+      "route": "`/community`",
+      "access": "authenticated all + social flag",
+      "workspace": "personal",
+      "presentation": "More Personal",
+      "test_suite": "flag-off/role E2E"
+    },
+    {
+      "route": "`/huong-dan`",
+      "access": "authenticated all",
+      "workspace": "personal/support",
+      "presentation": "More/support",
+      "test_suite": "support E2E"
+    },
+    {
+      "route": "`/welcome`",
+      "access": "authenticated utility",
+      "workspace": "\u2014",
+      "presentation": "Onboarding utility, not nav",
+      "test_suite": "onboarding E2E"
+    },
+    {
+      "route": "`/welcome/[step]`",
+      "access": "authenticated utility",
+      "workspace": "\u2014",
+      "presentation": "Onboarding step",
+      "test_suite": "onboarding E2E"
+    },
+    {
+      "route": "`/onboarding`",
+      "access": "authenticated utility",
+      "workspace": "\u2014",
+      "presentation": "Onboarding utility, not nav",
+      "test_suite": "onboarding E2E"
+    },
+    {
+      "route": "`/role-select`",
+      "access": "authenticated utility/compatibility",
+      "workspace": "\u2014",
+      "presentation": "Redirect utility, not nav",
+      "test_suite": "redirect E2E"
+    },
+    {
+      "route": "`/account/consent`",
+      "access": "authenticated all + compliance",
+      "workspace": "personal/support",
+      "presentation": "More/profile",
+      "test_suite": "account E2E"
+    },
+    {
+      "route": "`/account/data`",
+      "access": "authenticated all + compliance",
+      "workspace": "personal/support",
+      "presentation": "More/profile",
+      "test_suite": "account E2E"
+    },
+    {
+      "route": "`/account/data/delete/[step]`",
+      "access": "authenticated owner + explicit confirmation",
+      "workspace": "personal/support",
+      "presentation": "Focused destructive flow",
+      "test_suite": "account safety E2E"
+    },
+    {
+      "route": "`/ask`",
+      "access": "authenticated all roles",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer ask",
+      "test_suite": "ask E2E"
+    },
+    {
+      "route": "`/care`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer care",
+      "test_suite": "care E2E"
+    },
+    {
+      "route": "`/care/check-symptoms`",
+      "access": "authenticated all roles",
+      "workspace": "personal",
+      "presentation": "Rebuild symptom checker",
+      "test_suite": "symptom check E2E"
+    },
+    {
+      "route": "`/care/prepare`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer visit prep",
+      "test_suite": "visit prep E2E"
+    },
+    {
+      "route": "`/care/visits`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer visits",
+      "test_suite": "visit E2E"
+    },
+    {
+      "route": "`/health`",
+      "access": "authenticated permitted profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer health",
+      "test_suite": "health E2E"
+    },
+    {
+      "route": "`/health/documents`",
+      "access": "authenticated permitted profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer health documents",
+      "test_suite": "documents E2E"
+    },
+    {
+      "route": "`/health/measurements`",
+      "access": "authenticated permitted profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer health measurements",
+      "test_suite": "measurements E2E"
+    },
+    {
+      "route": "`/health/medications`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer medications",
+      "test_suite": "medications E2E"
+    },
+    {
+      "route": "`/health/results`",
+      "access": "authenticated permitted profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer health results",
+      "test_suite": "results E2E"
+    },
+    {
+      "route": "`/health/timeline`",
+      "access": "authenticated permitted profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer health timeline",
+      "test_suite": "timeline E2E"
+    },
+    {
+      "route": "`/home`",
+      "access": "authenticated all roles",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer home",
+      "test_suite": "home E2E"
+    },
+    {
+      "route": "`/you`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer you",
+      "test_suite": "you E2E"
+    },
+    {
+      "route": "`/you/integrations`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer integrations",
+      "test_suite": "integrations E2E"
+    },
+    {
+      "route": "`/you/notifications`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer notifications",
+      "test_suite": "notifications E2E"
+    },
+    {
+      "route": "`/you/privacy`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer privacy",
+      "test_suite": "privacy E2E"
+    },
+    {
+      "route": "`/you/settings`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer settings",
+      "test_suite": "settings E2E"
+    },
+    {
+      "route": "`/you/profile`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer profile",
+      "test_suite": "profile E2E"
+    },
+    {
+      "route": "`/you/sharing`",
+      "access": "authenticated owner/profile",
+      "workspace": "personal",
+      "presentation": "Rebuild consumer sharing",
+      "test_suite": "sharing E2E"
+    }
+  ]
+}

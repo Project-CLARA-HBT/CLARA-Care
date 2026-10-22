@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH40",
+  "agent_id": "A01",
+  "role": "API contract + BFF",
+  "task": "Inventory all web routes against route-capability matrix",
+  "status": "PASSED",
+  "branch": "phase/ph40-a01",
+  "base_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "frozen_head_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "path_lane": "services/control-plane/src/clara_control/api/;contracts/control-plane/;artifacts/PH40/A01/",
+  "files_changed": [
+    "contracts/control-plane/web_routes_capability_inventory.v1.json",
+    "services/control-plane/src/clara_control/api/__init__.py",
+    "services/control-plane/src/clara_control/api/router.py",
+    "artifacts/PH40/A01/change_manifest.json",
+    "artifacts/PH40/A01/test_report.md",
+    "artifacts/PH40/A01/risk_register.md",
+    "artifacts/PH40/A01/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH40/A01/change_manifest.json",
+    "artifacts/PH40/A01/test_report.md",
+    "artifacts/PH40/A01/risk_register.md",
+    "artifacts/PH40/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "docs/ui-modernization/route-capability-matrix.md",
+      "symbol": "Route capability matrix",
+      "description": "Canonical 123-route reachability and classification contract."
+    },
+    {
+      "file": "services/control-plane/src/clara_control/api/router.py",
+      "symbol": "control_router",
+      "description": "Isolated admin control plane gateway router with segregated readiness probe."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/api",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of control-plane API router."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A01 -p PH40",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Enforced strict path lane isolation across contracts and control-plane api files."
+    }
+  ],
+  "audit_findings": {
+    "web_route_capability_inventory": {
+      "status": "COMPLETED",
+      "finding": "Audited all 123 web routes against route capability matrix; structured schema emitted to contracts/control-plane/web_routes_capability_inventory.v1.json."
+    },
+    "control_plane_api_scaffolding": {
+      "status": "COMPLETED",
+      "finding": "Scaffolded isolated control-plane router strictly partitioned from clinical and end-user request pathways."
+    }
+  },
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH40_A01/services/control-plane/src/clara_control/api",
+    "rm -rf /dev/shm/clara_worktrees/PH40_A01/contracts/control-plane",
+    "rm -rf /dev/shm/clara_worktrees/PH40_A01/artifacts/PH40/A01"
+  ],
+  "timestamp": "2026-10-22T10:52:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH40_A01"
+}
