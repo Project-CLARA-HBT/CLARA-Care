@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH41-01,A01,Contracts,OpenAPI control baseline and health schema,Exposes /control/v1/health /tenants /feature-flags,OpenAPI 3.1 valid,PASS,contracts/control-plane/control_v1_openapi.json
+TC-PH41-02,A02,DB,Control-plane schema & migration 0001,Creates control tables with non-empty downgrade,Migrations pass,PASS,python3 scripts/ops/check_migration_downgrade.py services/control-plane/alembic/versions
+TC-PH41-03,A03,Domain,Service-token gateway & tenant governor,Cryptographic HMAC minting with TTL and audience checks,Verified cleanly,PASS,services/control-plane/src/clara_control/domain/service_token_gateway.py
+TC-PH41-04,A04,Adapter,Authenticated health adapter without PHI access,Validates service token and emits zero PHI metrics,zero_phi_certified=true,PASS,services/api/src/clara_api/api/v1/endpoints/health_adapter.py
+TC-PH41-05,A05,Web,Independent apps/admin Next.js route tree,Scaffolds dashboard /tenants /flags /audit,All routes valid,PASS,apps/admin/app/layout.tsx
+TC-PH41-06,A06,UI,Admin design tokens and accessible shell,WCAG high-contrast tokens and accessible keyboard nav,Components verified,PASS,apps/admin/components/admin_shell.tsx
+TC-PH41-07,A07,Tests/CI,Forbidden cross-origin admin integration suite,Asserts isolated plane and fail-closed unknown actions,3/3 tests pass,PASS,python3 -m unittest services/control-plane/tests/test_forbidden_cross_origin_admin.py
+TC-PH41-08,A08,Security,Control plane network and SSO threat model,__Host- cookie prefix and port 8200 physical segregation,Specified,PASS,docs/security/CONTROL_PLANE_NETWORK_AND_SSO_THREAT_MODEL.md
+TC-PH41-09,A09,Docs,ADR and control-plane deployment cutover runbook,Formal ADR on control/data plane segregation,Runbook published,PASS,docs/implementation/ADR_CONTROL_PLANE_DATA_PLANE_SEGREGATION.md
+TC-PH41-10,A10,Review,Hostile audit of legacy admin routes,All legacy /admin routes require admin role without bypass,Hostile audit green,PASS,docs/reports/ph41-hostile-admin-route-audit.md
+TC-PH41-11,Integration,Gate,PH41 Quality Gate,All 7 invariants verified green,PH41 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph41_quality_gate.py

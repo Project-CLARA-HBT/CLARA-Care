@@ -1,0 +1,231 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH41",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "f161b49db767c1e3d4e33c218305ee54056bcdfd",
+  "merge_commit_sha": "cb969bf83d56ba9e404fe19d1dbf5ce3a70093d9",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data/migrations",
+      "task": "Create control-plane schema + immutable migration plan",
+      "worktree": "/dev/shm/clara_worktrees/PH41_A02",
+      "branch": "phase/ph41-a02",
+      "commit": "f4d38403",
+      "full_commit": "f4d38403840d0777534f985aa932a4b8c6d9fa95",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/alembic/versions/20260901_0001_control_plane_initial.py",
+        "services/control-plane/src/clara_control/db/schema_plan.py",
+        "artifacts/PH41/A02/change_manifest.json",
+        "artifacts/PH41/A02/test_report.md",
+        "artifacts/PH41/A02/risk_register.md",
+        "artifacts/PH41/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API contract + BFF",
+      "task": "Define OpenAPI /control/v1 baseline and health status schema",
+      "worktree": "/dev/shm/clara_worktrees/PH41_A01",
+      "branch": "phase/ph41-a01",
+      "commit": "a5ff2be4",
+      "full_commit": "a5ff2be4ea8505d27430c8f1af3cf69babe212c6",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/api/router.py",
+        "contracts/control-plane/control_v1_openapi.json",
+        "artifacts/PH41/A01/change_manifest.json",
+        "artifacts/PH41/A01/test_report.md",
+        "artifacts/PH41/A01/risk_register.md",
+        "artifacts/PH41/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain service",
+      "task": "Scaffold FastAPI control-plane domain and service-token gateway",
+      "worktree": "/dev/shm/clara_worktrees/PH41_A03",
+      "branch": "phase/ph41-a03",
+      "commit": "9097ecd6",
+      "full_commit": "9097ecd691d227d08befb341103d0182ff8594f7",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/domain/service_token_gateway.py",
+        "services/control-plane/src/clara_control/domain/tenant_governor.py",
+        "artifacts/PH41/A03/change_manifest.json",
+        "artifacts/PH41/A03/test_report.md",
+        "artifacts/PH41/A03/risk_register.md",
+        "artifacts/PH41/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "Adapter / existing code",
+      "task": "Build authenticated health API adapter without direct PHI DB access",
+      "worktree": "/dev/shm/clara_worktrees/PH41_A04",
+      "branch": "phase/ph41-a04",
+      "commit": "7e8c99a9",
+      "full_commit": "7e8c99a90f14d044e8b9c88c8662c7af2e62c700",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/api/v1/endpoints/health_adapter.py",
+        "services/api/src/clara_api/api/router.py",
+        "artifacts/PH41/A04/change_manifest.json",
+        "artifacts/PH41/A04/test_report.md",
+        "artifacts/PH41/A04/risk_register.md",
+        "artifacts/PH41/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Admin/consumer app routes",
+      "task": "Create independent apps/admin Next.js route tree",
+      "worktree": "/dev/shm/clara_worktrees/PH41_A05",
+      "branch": "phase/ph41-a05",
+      "commit": "3b2dc2a7",
+      "full_commit": "3b2dc2a7675fa5c8954b80096d6f6d6026cd0900",
+      "status": "PASSED",
+      "files": [
+        "apps/admin/app/layout.tsx",
+        "apps/admin/app/page.tsx",
+        "apps/admin/app/tenants/page.tsx",
+        "apps/admin/app/flags/page.tsx",
+        "apps/admin/app/audit/page.tsx",
+        "artifacts/PH41/A05/change_manifest.json",
+        "artifacts/PH41/A05/test_report.md",
+        "artifacts/PH41/A05/risk_register.md",
+        "artifacts/PH41/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "UI widgets / Flutter",
+      "task": "Build admin design tokens, navigation and accessible shell",
+      "worktree": "/dev/shm/clara_worktrees/PH41_A06",
+      "branch": "phase/ph41-a06",
+      "commit": "87dc4648",
+      "full_commit": "87dc4648e0f29af773a012ff320b50a064ec71a5",
+      "status": "PASSED",
+      "files": [
+        "apps/admin/components/tokens.ts",
+        "apps/admin/components/admin_shell.tsx",
+        "artifacts/PH41/A06/change_manifest.json",
+        "artifacts/PH41/A06/test_report.md",
+        "artifacts/PH41/A06/risk_register.md",
+        "artifacts/PH41/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Integration tests",
+      "task": "Add contract/e2e tests for forbidden cross-origin admin use",
+      "worktree": "/dev/shm/clara_worktrees/PH41_A07",
+      "branch": "phase/ph41-a07",
+      "commit": "2d9783a0",
+      "full_commit": "2d9783a01b58d92d96e37e3058aae2cb78447f7a",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/tests/test_forbidden_cross_origin_admin.py",
+        "artifacts/PH41/A07/change_manifest.json",
+        "artifacts/PH41/A07/test_report.md",
+        "artifacts/PH41/A07/risk_register.md",
+        "artifacts/PH41/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security / negative tests",
+      "task": "Threat model cookie/origin/host-only SSO and network segmentation",
+      "worktree": "/dev/shm/clara_worktrees/PH41_A08",
+      "branch": "phase/ph41-a08",
+      "commit": "16120bbf",
+      "full_commit": "16120bbf78b689e722564b74dcbe58101c812007",
+      "status": "PASSED",
+      "files": [
+        "docs/security/CONTROL_PLANE_NETWORK_AND_SSO_THREAT_MODEL.md",
+        "artifacts/PH41/A08/change_manifest.json",
+        "artifacts/PH41/A08/test_report.md",
+        "artifacts/PH41/A08/risk_register.md",
+        "artifacts/PH41/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs / operational design",
+      "task": "Write ADR on control/data planes, deploy diagram and migration cutover",
+      "worktree": "/dev/shm/clara_worktrees/PH41_A09",
+      "branch": "phase/ph41-a09",
+      "commit": "d58f7b91",
+      "full_commit": "d58f7b918499d132f439ef3ec6aaf0c6ae74e2ae",
+      "status": "PASSED",
+      "files": [
+        "docs/implementation/ADR_CONTROL_PLANE_DATA_PLANE_SEGREGATION.md",
+        "docs/runbooks/control-plane-deployment-and-cutover.md",
+        "artifacts/PH41/A09/change_manifest.json",
+        "artifacts/PH41/A09/test_report.md",
+        "artifacts/PH41/A09/risk_register.md",
+        "artifacts/PH41/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial reviewer",
+      "task": "Hostile audit old /admin routes for weaker lingering side doors",
+      "worktree": "/dev/shm/clara_worktrees/PH41_A10",
+      "branch": "phase/ph41-a10",
+      "commit": "6d1eabb2",
+      "full_commit": "6d1eabb29410e6d547c63a78ae19ac2a3642539d",
+      "status": "PASSED",
+      "files": [
+        "docs/reports/ph41-hostile-admin-route-audit.md",
+        "scripts/ci/ph41_quality_gate.py",
+        "artifacts/PH41/A10/change_manifest.json",
+        "artifacts/PH41/A10/test_report.md",
+        "artifacts/PH41/A10/risk_register.md",
+        "artifacts/PH41/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.067,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.139,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T12:18:27.831341+00:00"
+}
