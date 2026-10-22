@@ -2494,8 +2494,8 @@ class GlhsInferenceContextBinding(Base):
     attestation_level: Mapped[str] = mapped_column(
         String(32), default="SERVER_PRE_DISPATCH"
     )
-    semantic_envelope_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    transport_payload_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    semantic_envelope_digest: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    transport_payload_digest: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     dispatch_attempt_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     provider_receipt_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
     provider_receipt_key_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
