@@ -1,0 +1,12 @@
+test_id,agent_id,domain,invariant,expected,actual,status,evidence
+TC-PH08-01,A01,Contracts,Clinical dependency schema registry,Published key patterns and access modes for partitions,Registry validated,PASS,contracts/glhs/clinical_dependency_registry.v1.json
+TC-PH08-02,A02,DB,Dependency derivation rules by mutation kind,Derives required read and write partition dependencies,Derived cleanly,PASS,services/api/src/clara_api/db/dependency_derivation.py
+TC-PH08-03,A03,Domain,Entity-local OCC locking adapters,Lexicographical partition key sorting eliminates deadlocks,Order verified,PASS,services/api/src/clara_api/glhs/occ_locking_adapters.py
+TC-PH08-04,A04,ML,Cross-partition write skew guards,Blocks medication mutation without clinical context read,Skew blocked,PASS,services/ml/src/clara_ml/write_skew_guard.py
+TC-PH08-05,A05,Web,Mixed conflict resolution and staleness classifier,Classifies 409/403 into actionable clinical UX guidance,4/4 tests pass,PASS,npm run test -- lib/mixed-conflict-resolver.test.ts
+TC-PH08-06,A06,Mobile,Staleness rejection taxonomy parser,Maps server conflict codes into bilingual guidance,3/3 tests pass,PASS,flutter test --no-pub test/staleness_taxonomy_test.dart
+TC-PH08-07,A07,Tests/CI,Mobile clinical draft reconciliation test suite,Local drafts preserved on 409; halted on 403,2/2 tests pass,PASS,python3 -m unittest services/api/tests/test_mobile_reconciliation.py
+TC-PH08-08,A08,Security,PostgreSQL randomized TOCTOU concurrency audit,50 threads execute CAS; zero lost updates detected,Linearizable,PASS,python3 scripts/ops/simulate_toctou_concurrency.py
+TC-PH08-09,A09,Docs,Formal refinement proofs for linearizable OCC,Theorem 1 (Zero Lost Updates) & Theorem 2 (Deadlock Freedom),Proofs verified,PASS,docs/research/FORMAL_REFINEMENT_OCC_PROPERTIES.md
+TC-PH08-10,A10,Review,Benchmark performance envelope & quality gate,Documented latency benchmarks across transaction profiles,Quality gate green,PASS,docs/reports/ph08-concurrency-hardening-audit.md
+TC-PH08-11,Integration,Gate,PH08 Quality Gate,All 7 invariants verified green,PH08 QUALITY GATE: PASSED,PASS,python3 scripts/ci/ph08_quality_gate.py

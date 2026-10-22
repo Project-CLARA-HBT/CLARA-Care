@@ -1,0 +1,224 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH08",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "94ec2c1e2f0935d84114d800eff8e5da8e379a3c",
+  "merge_commit_sha": "1c2b85af40734ed873016371297041fab5172c93",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "dependency derivation by mutation kind",
+      "worktree": "/dev/shm/clara_worktrees/PH08_A02",
+      "branch": "phase/ph08-a02",
+      "commit": "2ce41934",
+      "full_commit": "2ce41934fe56ce400a6b167b1df9c4b600b40972",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/db/dependency_derivation.py",
+        "artifacts/PH08/A02/change_manifest.json",
+        "artifacts/PH08/A02/test_report.md",
+        "artifacts/PH08/A02/risk_register.md",
+        "artifacts/PH08/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "clinical dependency schema registry",
+      "worktree": "/dev/shm/clara_worktrees/PH08_A01",
+      "branch": "phase/ph08-a01",
+      "commit": "281873ac",
+      "full_commit": "281873ace761e6bb58f188699b8fa3579cc09c04",
+      "status": "PASSED",
+      "files": [
+        "contracts/glhs/clinical_dependency_registry.v1.json",
+        "artifacts/PH08/A01/change_manifest.json",
+        "artifacts/PH08/A01/test_report.md",
+        "artifacts/PH08/A01/risk_register.md",
+        "artifacts/PH08/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "entity-local OCC locking adapters",
+      "worktree": "/dev/shm/clara_worktrees/PH08_A03",
+      "branch": "phase/ph08-a03",
+      "commit": "76cf8191",
+      "full_commit": "76cf819109c89f06a319742a58bb87afc30cd037",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/glhs/occ_locking_adapters.py",
+        "artifacts/PH08/A03/change_manifest.json",
+        "artifacts/PH08/A03/test_report.md",
+        "artifacts/PH08/A03/risk_register.md",
+        "artifacts/PH08/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "cross-partition write skew guards",
+      "worktree": "/dev/shm/clara_worktrees/PH08_A04",
+      "branch": "phase/ph08-a04",
+      "commit": "d443728f",
+      "full_commit": "d443728f8c81e19c313e3da4aa0137c94f95ca9d",
+      "status": "PASSED",
+      "files": [
+        "services/ml/src/clara_ml/write_skew_guard.py",
+        "artifacts/PH08/A04/change_manifest.json",
+        "artifacts/PH08/A04/test_report.md",
+        "artifacts/PH08/A04/risk_register.md",
+        "artifacts/PH08/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "lease/consent/version mixed conflict rules",
+      "worktree": "/dev/shm/clara_worktrees/PH08_A05",
+      "branch": "phase/ph08-a05",
+      "commit": "1e2781c1",
+      "full_commit": "1e2781c114f212fc9dd93afbca21cbb258ce4a8d",
+      "status": "PASSED",
+      "files": [
+        "apps/web/lib/mixed-conflict-resolver.ts",
+        "apps/web/lib/mixed-conflict-resolver.test.ts",
+        "artifacts/PH08/A05/change_manifest.json",
+        "artifacts/PH08/A05/test_report.md",
+        "artifacts/PH08/A05/risk_register.md",
+        "artifacts/PH08/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "staleness UI rejection taxonomy",
+      "worktree": "/dev/shm/clara_worktrees/PH08_A06",
+      "branch": "phase/ph08-a06",
+      "commit": "f9077ce9",
+      "full_commit": "f9077ce9f811218383d74e6ba4841ed1463d16bf",
+      "status": "PASSED",
+      "files": [
+        "apps/mobile/lib/core/staleness_taxonomy.dart",
+        "apps/mobile/test/staleness_taxonomy_test.dart",
+        "artifacts/PH08/A06/change_manifest.json",
+        "artifacts/PH08/A06/test_report.md",
+        "artifacts/PH08/A06/risk_register.md",
+        "artifacts/PH08/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "mobile reconciliation UI",
+      "worktree": "/dev/shm/clara_worktrees/PH08_A07",
+      "branch": "phase/ph08-a07",
+      "commit": "0e8c732e",
+      "full_commit": "0e8c732e39924aec8fd4764b5275745f20d78af0",
+      "status": "PASSED",
+      "files": [
+        "services/api/tests/test_mobile_reconciliation.py",
+        "artifacts/PH08/A07/change_manifest.json",
+        "artifacts/PH08/A07/test_report.md",
+        "artifacts/PH08/A07/risk_register.md",
+        "artifacts/PH08/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "Postgres randomized TOCTOU tests",
+      "worktree": "/dev/shm/clara_worktrees/PH08_A08",
+      "branch": "phase/ph08-a08",
+      "commit": "5893f2cb",
+      "full_commit": "5893f2cbbd03c54d340f9fe8511e0e90c34d405b",
+      "status": "PASSED",
+      "files": [
+        "docs/security/POSTGRES_TOCTOU_CONCURRENCY_AUDIT.md",
+        "scripts/ops/simulate_toctou_concurrency.py",
+        "artifacts/PH08/A08/change_manifest.json",
+        "artifacts/PH08/A08/test_report.md",
+        "artifacts/PH08/A08/risk_register.md",
+        "artifacts/PH08/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "formal refinement/property tests",
+      "worktree": "/dev/shm/clara_worktrees/PH08_A09",
+      "branch": "phase/ph08-a09",
+      "commit": "4f271bb2",
+      "full_commit": "4f271bb2949a93abbad818bb95a4304b2dc4c09c",
+      "status": "PASSED",
+      "files": [
+        "docs/research/FORMAL_REFINEMENT_OCC_PROPERTIES.md",
+        "artifacts/PH08/A09/change_manifest.json",
+        "artifacts/PH08/A09/test_report.md",
+        "artifacts/PH08/A09/risk_register.md",
+        "artifacts/PH08/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "benchmark and performance envelope",
+      "worktree": "/dev/shm/clara_worktrees/PH08_A10",
+      "branch": "phase/ph08-a10",
+      "commit": "420e480f",
+      "full_commit": "420e480fa6469da1cc603d37ebbfa3ba99643f81",
+      "status": "PASSED",
+      "files": [
+        "docs/reports/ph08-concurrency-hardening-audit.md",
+        "scripts/ci/ph08_quality_gate.py",
+        "artifacts/PH08/A10/change_manifest.json",
+        "artifacts/PH08/A10/test_report.md",
+        "artifacts/PH08/A10/risk_register.md",
+        "artifacts/PH08/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.081,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.136,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-22T15:47:47.596509+00:00"
+}
