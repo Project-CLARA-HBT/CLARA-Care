@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH40",
+  "agent_id": "A03",
+  "role": "Domain service",
+  "task": "Traverse DB/service/worker paths for each route",
+  "status": "PASSED",
+  "branch": "phase/ph40-a03",
+  "base_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "frozen_head_sha": "db1ba377c0b02047a27ebbe5db2b291a1aebbbcd",
+  "path_lane": "services/control-plane/src/clara_control/domain/;artifacts/PH40/A03/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/domain/__init__.py",
+    "services/control-plane/src/clara_control/domain/traversal.py",
+    "artifacts/PH40/A03/route_traversal_audit.json",
+    "artifacts/PH40/A03/change_manifest.json",
+    "artifacts/PH40/A03/test_report.md",
+    "artifacts/PH40/A03/risk_register.md",
+    "artifacts/PH40/A03/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH40/A03/change_manifest.json",
+    "artifacts/PH40/A03/test_report.md",
+    "artifacts/PH40/A03/risk_register.md",
+    "artifacts/PH40/A03/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/domain/traversal.py",
+      "symbol": "RouteDependencyTraversal",
+      "description": "Cross-layer route dependency graph engine mapping API routes to DB models, services, and asynchronous workers."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/domain",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of control-plane domain traversal service."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A03 -p PH40",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Enforced strict path lane compliance across control-plane domain files."
+    }
+  ],
+  "audit_findings": {
+    "route_dependency_traversal": {
+      "status": "COMPLETED",
+      "finding": "Traversed database, domain service, worker queue, and fail-safe fallback boundaries across core clinical and administrative routes."
+    }
+  },
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH40_A03/services/control-plane/src/clara_control/domain",
+    "rm -rf /dev/shm/clara_worktrees/PH40_A03/artifacts/PH40/A03"
+  ],
+  "timestamp": "2026-10-22T10:55:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH40_A03"
+}

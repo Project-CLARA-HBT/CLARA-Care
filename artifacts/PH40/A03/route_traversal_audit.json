@@ -1,0 +1,66 @@
+{
+  "status": "audited",
+  "total_domain_anchors": 5,
+  "routes": [
+    {
+      "route_pattern": "/api/v1/chat",
+      "method": "POST",
+      "domain_service": "clara_ml.agents.clinical_agent",
+      "backing_models": [
+        "ChatSession",
+        "ChatMessage"
+      ],
+      "queue_or_worker": "redis:rag_pipeline",
+      "has_fallback": true,
+      "fallback_safety": "FAIL_SAFE_EMERGENCY_ESCALATION"
+    },
+    {
+      "route_pattern": "/api/v1/careguard/analyze",
+      "method": "POST",
+      "domain_service": "clara_ml.agents.drug_safety",
+      "backing_models": [
+        "CabinetMedicine",
+        "DrugInteractionClaim"
+      ],
+      "queue_or_worker": "inline_fides",
+      "has_fallback": true,
+      "fallback_safety": "FAIL_CLOSED_BLOCK_CRITICAL_DDI"
+    },
+    {
+      "route_pattern": "/api/v1/lifemap/tasks",
+      "method": "GET",
+      "domain_service": "clara_api.lifemap.tasks",
+      "backing_models": [
+        "LifeMapTask",
+        "ProfileScope"
+      ],
+      "queue_or_worker": null,
+      "has_fallback": false,
+      "fallback_safety": "SCOPED_OWNER_DENIAL"
+    },
+    {
+      "route_pattern": "/api/v1/organizations",
+      "method": "GET",
+      "domain_service": "clara_api.core.tenant",
+      "backing_models": [
+        "Organization",
+        "TenantMembership"
+      ],
+      "queue_or_worker": null,
+      "has_fallback": false,
+      "fallback_safety": "UNIFORM_404_ON_FOREIGN_TENANT"
+    },
+    {
+      "route_pattern": "/api/v1/scribe/sessions",
+      "method": "POST",
+      "domain_service": "clara_api.api.v1.endpoints.scribe",
+      "backing_models": [
+        "ScribeSession",
+        "ScribeConsent"
+      ],
+      "queue_or_worker": "services/asr:faster-whisper",
+      "has_fallback": true,
+      "fallback_safety": "REVERT_TO_INERT_ON_FLAG_DISABLED"
+    }
+  ]
+}
