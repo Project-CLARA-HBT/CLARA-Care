@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH07",
+  "agent_id": "A04",
+  "role": "ML + retrieval",
+  "task": "server-attested inference dispatch route",
+  "status": "PASSED",
+  "branch": "phase/ph07-a04",
+  "base_sha": "e8533cb029a1470ce2d1bc027a421b47664871c5",
+  "frozen_head_sha": "e8533cb029a1470ce2d1bc027a421b47664871c5",
+  "path_lane": "services/ml/src/clara_ml/;evaluation/;services/ocr/;services/asr/;artifacts/PH07/A04/",
+  "files_changed": [
+    "services/ml/src/clara_ml/attested_dispatch.py",
+    "artifacts/PH07/A04/change_manifest.json",
+    "artifacts/PH07/A04/test_report.md",
+    "artifacts/PH07/A04/risk_register.md",
+    "artifacts/PH07/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH07/A04/change_manifest.json",
+    "artifacts/PH07/A04/test_report.md",
+    "artifacts/PH07/A04/risk_register.md",
+    "artifacts/PH07/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/ml/src/clara_ml/attested_dispatch.py",
+      "symbol": "AttestedModelDispatcher.execute_attested_dispatch",
+      "description": "Server-attested inference dispatcher tracking attempt ID, transport digest, and provider receipt digest."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/ml/src/clara_ml/attested_dispatch.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of attested dispatch module."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH07",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/ml/src/clara_ml/ and artifacts/PH07/A04/."
+    }
+  ],
+  "audit_findings": {
+    "server_attested_dispatch": {
+      "status": "COMPLETED",
+      "finding": "Implemented AttestedModelDispatcher linking outgoing model queries to cryptographic attestation receipts (Level L2) without data leakage."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH07_A04/services/ml/src/clara_ml/attested_dispatch.py",
+    "rm -rf /dev/shm/clara_worktrees/PH07_A04/artifacts/PH07/A04"
+  ],
+  "timestamp": "2026-10-22T14:38:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH07_A04"
+}
