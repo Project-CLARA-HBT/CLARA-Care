@@ -207,6 +207,10 @@ def is_file_in_path_lane(
     if norm_file.lower().startswith(f"artifacts/{phase_id.lower()}/{agent_id.lower()}/"):
         return True
 
+    # Rule 2b: A10 is the designated phase-gate auditor permitted to write phase-gates artifacts
+    if agent_id.upper() == "A10" and (norm_file.startswith("artifacts/phase-gates/") or norm_file.startswith("artifacts/phase_gates/")):
+        return True
+
     # Rule 3: Check against declared path lane
     for raw_lane in path_lane:
         lane = normalize_lane_entry(raw_lane)
