@@ -1,0 +1,11 @@
+agent_id,role,status,commit_sha,files_changed,tests_passed
+A01,API + contract,PASSED,7b2edd0a,10,17
+A02,Data model + migration,PASSED,0f23bec5,9,5
+A03,Domain + GLHS services,PASSED,1443f4ec,9,23
+A04,ML + retrieval,PASSED,b024fbac,7,25
+A05,Web UX,PASSED,ecf5bcef,13,73
+A06,Mobile Flutter,PASSED,32637977,15,24
+A07,Tests + CI,PASSED,a621eea5,5,18
+A08,Security + privacy,PASSED,39fceab1,9,7
+A09,Docs + research evidence,PASSED,e41e0cce,9,62
+A10,Adversarial audit + integration proposals,PASSED,7db04c34,8,29

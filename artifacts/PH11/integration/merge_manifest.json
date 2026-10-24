@@ -1,0 +1,264 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH11",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "merge_commit_sha": "fe47a5b8dd7cadabede7a6a31b6994339cf55be0",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "FHIR Patient/Observation import",
+      "worktree": "/dev/shm/clara_worktrees/PH11_A02",
+      "branch": "phase/ph11-a02",
+      "commit": "0f23bec5",
+      "full_commit": "0f23bec583dedcb7768b2cd276851622ee4d404f",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/db/fhir_models.py",
+        "services/api/src/clara_api/db/fhir_import.py",
+        "services/api/src/clara_api/db/test_fhir_import.py",
+        "services/api/src/clara_api/db/models.py",
+        "services/api/alembic/versions/20260907_0069_fhir_patient_observation_import.py",
+        "artifacts/PH11/A02/change_manifest.json",
+        "artifacts/PH11/A02/test_report.md",
+        "artifacts/PH11/A02/risk_register.md",
+        "artifacts/PH11/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API + contract",
+      "task": "FHIR CapabilityStatement API",
+      "worktree": "/dev/shm/clara_worktrees/PH11_A01",
+      "branch": "phase/ph11-a01",
+      "commit": "7b2edd0a",
+      "full_commit": "7b2edd0a0ce6a10dff6d53bead202540099a1713",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/api/router.py",
+        "services/api/src/clara_api/api/v1/endpoints/fhir.py",
+        "services/api/src/clara_api/schemas.py",
+        "contracts/fhir/capability_statement_contract.v1.json",
+        "contracts/fhir/capability_statement.schema.json",
+        "contracts/fhir/test_capability_statement_contract.py",
+        "artifacts/PH11/A01/change_manifest.json",
+        "artifacts/PH11/A01/test_report.md",
+        "artifacts/PH11/A01/risk_register.md",
+        "artifacts/PH11/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "MedicationStatement and AllergyIntolerance mapping domain services",
+      "worktree": "/dev/shm/clara_worktrees/PH11_A03",
+      "branch": "phase/ph11-a03",
+      "commit": "1443f4ec",
+      "full_commit": "1443f4ec711e4cddf81c3c52ff7d6dfd20be2128",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/core/config.py",
+        "services/api/src/clara_api/lifemap/fhir_r4.py",
+        "services/api/src/clara_api/lifemap/fhir_mapping.py",
+        "services/api/src/clara_api/glhs/fhir_mapping_service.py",
+        "artifacts/PH11/A03/test_fhir_mapping.py",
+        "artifacts/PH11/A03/change_manifest.json",
+        "artifacts/PH11/A03/test_report.md",
+        "artifacts/PH11/A03/risk_register.md",
+        "artifacts/PH11/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "Consent and Provenance mapping",
+      "worktree": "/dev/shm/clara_worktrees/PH11_A04",
+      "branch": "phase/ph11-a04",
+      "commit": "b024fbac",
+      "full_commit": "b024fbacd55be0a45411003b53d2e2f861a0bf6f",
+      "status": "PASSED",
+      "files": [
+        "services/ml/src/clara_ml/config.py",
+        "services/ml/src/clara_ml/fhir_consent_provenance.py",
+        "evaluation/tests/test_fhir_consent_provenance.py",
+        "artifacts/PH11/A04/change_manifest.json",
+        "artifacts/PH11/A04/test_report.md",
+        "artifacts/PH11/A04/risk_register.md",
+        "artifacts/PH11/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "encounter/documents export",
+      "worktree": "/dev/shm/clara_worktrees/PH11_A05",
+      "branch": "phase/ph11-a05",
+      "commit": "ecf5bcef",
+      "full_commit": "ecf5bcef15449023651a1281f37d0d3da616d9c2",
+      "status": "PASSED",
+      "files": [
+        "apps/web/app/api/export/documents/route.ts",
+        "apps/web/app/api/export/encounter/route.ts",
+        "apps/web/app/api/export/export-routes.test.ts",
+        "apps/web/app/visits/[visitId]/page.tsx",
+        "apps/web/components/export/fhir-encounter-export-dialog.test.tsx",
+        "apps/web/components/export/fhir-encounter-export-dialog.tsx",
+        "apps/web/lib/fhir-encounter-export.test.ts",
+        "apps/web/lib/fhir-encounter-export.ts",
+        "apps/web/lib/scribe.ts",
+        "artifacts/PH11/A05/change_manifest.json",
+        "artifacts/PH11/A05/risk_register.md",
+        "artifacts/PH11/A05/rollback.md",
+        "artifacts/PH11/A05/test_report.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile Flutter",
+      "task": "web integration status dashboard and mobile Flutter FHIR export view",
+      "worktree": "",
+      "branch": "phase/ph11-a06",
+      "commit": "32637977",
+      "full_commit": "32637977c700c74c5dc5a52637246d0d47e57e42",
+      "status": "PASSED",
+      "files": [
+        "apps/mobile/lib/core/api_client.dart",
+        "apps/mobile/lib/core/feature_flags.dart",
+        "apps/mobile/lib/experience/connected_health/connected_health_screen.dart",
+        "apps/mobile/lib/experience/fhir/fhir_export_screen.dart",
+        "apps/mobile/lib/experience/fhir/fhir_models.dart",
+        "apps/mobile/lib/experience/fhir/fhir_sync_dashboard_screen.dart",
+        "apps/mobile/lib/experience/unified/profile_hub.dart",
+        "apps/mobile/test/api_client_fhir_test.dart",
+        "apps/mobile/test/fhir_export_view_test.dart",
+        "apps/mobile/test/fhir_feature_flag_test.dart",
+        "apps/mobile/test/fhir_sync_dashboard_test.dart",
+        "artifacts/PH11/A06/change_manifest.json",
+        "artifacts/PH11/A06/risk_register.md",
+        "artifacts/PH11/A06/rollback.md",
+        "artifacts/PH11/A06/test_report.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "mobile consented FHIR share",
+      "worktree": "/dev/shm/clara_worktrees/PH11_A07",
+      "branch": "phase/ph11-a07",
+      "commit": "a621eea5",
+      "full_commit": "a621eea55ef64d44ffdfb9fcf6211f7ace93c4c7",
+      "status": "PASSED",
+      "files": [
+        "services/api/tests/test_mobile_consented_fhir_share.py",
+        "artifacts/PH11/A07/change_manifest.json",
+        "artifacts/PH11/A07/test_report.md",
+        "artifacts/PH11/A07/risk_register.md",
+        "artifacts/PH11/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "official validator conformance matrix and security privacy review",
+      "worktree": "/dev/shm/clara_worktrees/PH11_A08",
+      "branch": "phase/ph11-a08",
+      "commit": "39fceab1",
+      "full_commit": "39fceab16ba9add9487d09f6d4009b5d5b74facb",
+      "status": "PASSED",
+      "files": [
+        "docs/security/FHIR_R4_VALIDATOR_CONFORMANCE_AND_SECURITY_THREAT_MODEL.md",
+        "docs/security/FHIR_PATIENT_IDENTIFICATION_AND_DEIDENTIFICATION_SPEC.md",
+        "docs/compliance/FHIR_R4_INTEROPERABILITY_COMPLIANCE_ASSESSMENT.md",
+        "scripts/ops/audit_fhir_validator_conformance.py",
+        "scripts/ops/test_audit_fhir_validator_conformance.py",
+        "artifacts/PH11/A08/change_manifest.json",
+        "artifacts/PH11/A08/test_report.md",
+        "artifacts/PH11/A08/risk_register.md",
+        "artifacts/PH11/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "FHIR auth scopes and endpoint security",
+      "worktree": "/dev/shm/clara_worktrees/PH11_A09",
+      "branch": "phase/ph11-a09",
+      "commit": "e41e0cce",
+      "full_commit": "e41e0cce339388187850823ab2d053cf3a7277a6",
+      "status": "PASSED",
+      "files": [
+        "docs/interoperability/FHIR_SMART_AUTH_SCOPES_AND_ENDPOINT_SECURITY.md",
+        "docs/interoperability/lifemap-fhir-r4.md",
+        "docs/implementation/FHIR_ENDPOINT_SECURITY_ARCHITECTURE.md",
+        "docs/research/FHIR_AUTH_SECURITY_THREAT_MODEL_AND_AUDIT.md",
+        "artifacts/PH11/A09/test_fhir_auth_scopes_and_security.py",
+        "artifacts/PH11/A09/change_manifest.json",
+        "artifacts/PH11/A09/test_report.md",
+        "artifacts/PH11/A09/risk_register.md",
+        "artifacts/PH11/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "vendor EHR sandbox integration guide and adversarial interoperability audit",
+      "worktree": "/dev/shm/clara_worktrees/PH11_A10",
+      "branch": "phase/ph11-a10",
+      "commit": "7db04c34",
+      "full_commit": "7db04c34b8ee5b1a83d01fd4b2cb226db7098cc4",
+      "status": "PASSED",
+      "files": [
+        "docs/runbooks/vendor-ehr-sandbox-integration-guide.md",
+        "docs/reports/ph11-adversarial-interoperability-audit.md",
+        "scripts/ci/check_agent_path_acl.py",
+        "artifacts/phase-gates/PH11_gate_manifest.json",
+        "artifacts/PH11/A10/change_manifest.json",
+        "artifacts/PH11/A10/test_report.md",
+        "artifacts/PH11/A10/risk_register.md",
+        "artifacts/PH11/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.205,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.139,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-24T10:03:02.959444+00:00"
+}
