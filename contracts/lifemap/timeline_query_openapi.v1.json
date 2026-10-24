@@ -1,0 +1,335 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CLARA Care LifeMap Timeline Event Query API",
+    "version": "1.0.0",
+    "description": "Longitudinal intelligence timeline event query endpoints with bitemporal sorting, safe PHI DTOs, and keyset cursor pagination."
+  },
+  "paths": {
+    "/api/v1/lifemap/timeline/events": {
+      "get": {
+        "tags": ["lifemap-timeline"],
+        "summary": "Query Longitudinal Timeline Events",
+        "description": "Queries patient health timeline events with dual-temporal filtering (valid clinical time vs. system transaction time), safe PHI serialization, and cursor pagination.",
+        "operationId": "query_lifemap_timeline_events",
+        "parameters": [
+          {
+            "name": "valid_time_from",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" },
+            "description": "Filter events with occurred_at >= valid_time_from"
+          },
+          {
+            "name": "valid_time_to",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" },
+            "description": "Filter events with occurred_at <= valid_time_to"
+          },
+          {
+            "name": "system_time_from",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" },
+            "description": "Filter events with recorded_at >= system_time_from"
+          },
+          {
+            "name": "system_time_to",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" },
+            "description": "Filter events with recorded_at <= system_time_to"
+          },
+          {
+            "name": "episode_id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Filter events by associated care loop episode public ID"
+          },
+          {
+            "name": "event_types",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Comma-separated list of event types to include"
+          },
+          {
+            "name": "truth_states",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Comma-separated list of truth states (e.g. confirmed,user_reported)"
+          },
+          {
+            "name": "source_kinds",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Comma-separated list of source kinds"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Case-insensitive text search in title and display summary"
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["occurred_at", "recorded_at"],
+              "default": "occurred_at"
+            },
+            "description": "Temporal ordering dimension"
+          },
+          {
+            "name": "order_direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "desc"
+            },
+            "description": "Sort order: desc for newest first, asc for chronological"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Opaque base64 pagination cursor"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 50, "minimum": 1, "maximum": 200 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 0, "minimum": 0 }
+          },
+          {
+            "name": "X-CLARA-Profile-Context",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Delegated profile public ID for authorized family or clinician access"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful timeline events response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TimelineQueryResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized - Missing or invalid Bearer token" },
+          "403": { "description": "Forbidden - Insufficient permissions or ungranted cross-profile query" },
+          "404": { "description": "Not Found - Feature flag disabled or profile does not exist" },
+          "422": { "description": "Unprocessable Entity - Malformed timestamp, cursor, or parameters" },
+          "428": { "description": "Precondition Required - Medical disclaimer consent required" }
+        },
+        "security": [{ "BearerAuth": [] }]
+      }
+    },
+    "/api/v1/lifemap/events/{event_id}": {
+      "get": {
+        "tags": ["lifemap-timeline"],
+        "summary": "Get Individual Timeline Event",
+        "description": "Fetches a single timeline event by its public ID with sanitized clinical payload and safe provenance.",
+        "operationId": "get_lifemap_event_by_id",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Public UUID of the event"
+          },
+          {
+            "name": "X-CLARA-Profile-Context",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Individual timeline event details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SafeTimelineEventDTO" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Event not found or feature flag disabled" },
+          "428": { "description": "Precondition Required - Medical disclaimer consent required" }
+        },
+        "security": [{ "BearerAuth": [] }]
+      }
+    },
+    "/api/v1/lifemap/timeline/contract": {
+      "get": {
+        "tags": ["lifemap-timeline"],
+        "summary": "Timeline Query Contract Metadata",
+        "description": "Returns supported filtering capabilities, sort dimensions, and active feature flag states.",
+        "operationId": "get_lifemap_timeline_contract",
+        "responses": {
+          "200": {
+            "description": "Contract metadata summary",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TimelineContractMetadataResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "TimelineSourceReferenceDTO": {
+        "type": "object",
+        "required": ["source_id", "source_kind"],
+        "properties": {
+          "source_id": { "type": "string" },
+          "source_kind": { "type": "string" },
+          "original_language": { "type": "string", "default": "vi" },
+          "checksum": { "type": ["string", "null"] },
+          "source_span": { "type": ["object", "null"] },
+          "observed_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "SafeTimelineEventDTO": {
+        "type": "object",
+        "required": [
+          "id",
+          "event_type",
+          "truth_state",
+          "occurred_at",
+          "title",
+          "display_summary",
+          "payload",
+          "provenance",
+          "source_kind",
+          "revision_no"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "event_type": { "type": "string" },
+          "truth_state": { "type": "string" },
+          "occurred_at": { "type": "string", "format": "date-time" },
+          "recorded_at": { "type": ["string", "null"], "format": "date-time" },
+          "title": { "type": "string" },
+          "display_summary": { "type": "string" },
+          "payload": { "type": "object" },
+          "provenance": { "type": "object" },
+          "source_kind": { "type": "string" },
+          "episode_id": { "type": ["string", "null"] },
+          "revision_no": { "type": "integer" },
+          "source_reference": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/TimelineSourceReferenceDTO" },
+              { "type": "null" }
+            ]
+          },
+          "confidence": { "type": ["number", "null"] }
+        }
+      },
+      "TimelineQueryPagination": {
+        "type": "object",
+        "required": ["limit", "offset", "has_more", "total_count"],
+        "properties": {
+          "limit": { "type": "integer" },
+          "offset": { "type": "integer" },
+          "cursor": { "type": ["string", "null"] },
+          "next_cursor": { "type": ["string", "null"] },
+          "prev_cursor": { "type": ["string", "null"] },
+          "has_more": { "type": "boolean" },
+          "total_count": { "type": "integer" }
+        }
+      },
+      "TimelineQueryWindow": {
+        "type": "object",
+        "properties": {
+          "valid_time_from": { "type": ["string", "null"], "format": "date-time" },
+          "valid_time_to": { "type": ["string", "null"], "format": "date-time" },
+          "system_time_from": { "type": ["string", "null"], "format": "date-time" },
+          "system_time_to": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "TimelineQueryResponse": {
+        "type": "object",
+        "required": [
+          "generated_at",
+          "profile_id",
+          "items",
+          "pagination",
+          "query_window",
+          "active_filters",
+          "data_protection_notice"
+        ],
+        "properties": {
+          "generated_at": { "type": "string", "format": "date-time" },
+          "profile_id": { "type": "string" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SafeTimelineEventDTO" }
+          },
+          "pagination": { "$ref": "#/components/schemas/TimelineQueryPagination" },
+          "query_window": { "$ref": "#/components/schemas/TimelineQueryWindow" },
+          "active_filters": { "type": "object" },
+          "data_protection_notice": { "type": "string" }
+        }
+      },
+      "TimelineContractMetadataResponse": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "feature_flag_status",
+          "supported_sort_fields",
+          "supported_sort_directions",
+          "supported_event_types",
+          "supported_truth_states",
+          "supported_source_kinds",
+          "max_limit",
+          "default_limit",
+          "bitemporal_axes"
+        ],
+        "properties": {
+          "schema_version": { "type": "string" },
+          "feature_flag_status": { "type": "boolean" },
+          "supported_sort_fields": { "type": "array", "items": { "type": "string" } },
+          "supported_sort_directions": { "type": "array", "items": { "type": "string" } },
+          "supported_event_types": { "type": "array", "items": { "type": "string" } },
+          "supported_truth_states": { "type": "array", "items": { "type": "string" } },
+          "supported_source_kinds": { "type": "array", "items": { "type": "string" } },
+          "max_limit": { "type": "integer" },
+          "default_limit": { "type": "integer" },
+          "bitemporal_axes": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

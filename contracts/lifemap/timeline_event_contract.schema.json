@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LifeMap Timeline Event Query & Safe PHI DTO Schema",
+  "version": "1.0.0",
+  "phase_id": "PH12",
+  "agent_id": "A01",
+  "definitions": {
+    "TimelineSortBy": {
+      "type": "string",
+      "enum": ["occurred_at", "recorded_at"],
+      "description": "Bitemporal sort dimension: valid clinical time (occurred_at) or transaction recorded time (recorded_at)"
+    },
+    "TimelineSortOrder": {
+      "type": "string",
+      "enum": ["asc", "desc"],
+      "description": "Temporal ordering direction: desc for latest first, asc for earliest first"
+    },
+    "TimelineTruthState": {
+      "type": "string",
+      "enum": ["confirmed", "user_reported", "disputed", "refuted", "draft"],
+      "description": "LifeMap clinical truth status"
+    },
+    "TimelineSourceReference": {
+      "type": "object",
+      "required": ["source_id", "source_kind"],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Opaque public identifier of the health source reference"
+        },
+        "source_kind": {
+          "type": "string",
+          "description": "Category of origin: reported, clinical_document, prescription, lab_system, iot_device, import"
+        },
+        "original_language": {
+          "type": "string",
+          "default": "vi",
+          "description": "Original language code of the clinical source artifact"
+        },
+        "checksum": {
+          "type": ["string", "null"],
+          "description": "Cryptographic content hash (SHA-256) of the original source payload"
+        },
+        "source_span": {
+          "type": ["object", "null"],
+          "description": "Bounding character offsets or section identifier within the source document"
+        },
+        "observed_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Timestamp when the clinical observation was recorded by the source system"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SafeTimelineEvent": {
+      "type": "object",
+      "required": [
+        "id",
+        "event_type",
+        "truth_state",
+        "occurred_at",
+        "title",
+        "display_summary",
+        "payload",
+        "provenance",
+        "source_kind",
+        "revision_no"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Public UUID or opaque string identifier for the event (never database internal integer)"
+        },
+        "event_type": {
+          "type": "string",
+          "description": "Clinical or life event kind (medication, symptom, condition, diagnosis, lab, vitals, allergy, procedure, visit, observation, task)"
+        },
+        "truth_state": {
+          "$ref": "#/definitions/TimelineTruthState"
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Valid clinical time when the health event actually occurred (ISO 8601 UTC)"
+        },
+        "recorded_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Transaction time when the event revision was recorded in the database (ISO 8601 UTC)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Sanitized human-readable display title in Vietnamese or English"
+        },
+        "display_summary": {
+          "type": "string",
+          "description": "Sanitized clinical summary stripped of raw patient identifiers (PII/PHI)"
+        },
+        "payload": {
+          "type": "object",
+          "description": "Sanitized event payload containing structured clinical values without raw PII"
+        },
+        "provenance": {
+          "type": "object",
+          "description": "Audit provenance metadata including attribution, confidence, and policy version"
+        },
+        "source_kind": {
+          "type": "string",
+          "description": "Origin type (reported, clinical, extracted, iot, import)"
+        },
+        "episode_id": {
+          "type": ["string", "null"],
+          "description": "Public identifier of the associated care loop episode"
+        },
+        "revision_no": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Monotonically increasing event revision sequence number"
+        },
+        "source_reference": {
+          "anyOf": [
+            { "$ref": "#/definitions/TimelineSourceReference" },
+            { "type": "null" }
+          ]
+        },
+        "confidence": {
+          "type": ["number", "null"],
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Clinical extraction confidence score between 0.0 and 1.0"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TimelinePagination": {
+      "type": "object",
+      "required": ["limit", "offset", "has_more", "total_count"],
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cursor": {
+          "type": ["string", "null"],
+          "description": "Current page cursor if cursor pagination was used"
+        },
+        "next_cursor": {
+          "type": ["string", "null"],
+          "description": "Opaque cursor token for retrieving the subsequent page"
+        },
+        "prev_cursor": {
+          "type": ["string", "null"],
+          "description": "Opaque cursor token for retrieving the preceding page"
+        },
+        "has_more": {
+          "type": "boolean",
+          "description": "True if more events are available beyond current page"
+        },
+        "total_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total matching events satisfying filter criteria within profile"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TimelineQueryWindow": {
+      "type": "object",
+      "properties": {
+        "valid_time_from": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "valid_time_to": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "system_time_from": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "system_time_to": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "required": [
+    "generated_at",
+    "profile_id",
+    "items",
+    "pagination",
+    "query_window",
+    "active_filters",
+    "data_protection_notice"
+  ],
+  "properties": {
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "profile_id": {
+      "type": "string",
+      "description": "Public identifier of the scoped patient profile"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/SafeTimelineEvent"
+      }
+    },
+    "pagination": {
+      "$ref": "#/definitions/TimelinePagination"
+    },
+    "query_window": {
+      "$ref": "#/definitions/TimelineQueryWindow"
+    },
+    "active_filters": {
+      "type": "object",
+      "description": "Echoed active filters applied during the query execution"
+    },
+    "data_protection_notice": {
+      "type": "string",
+      "description": "Statutory privacy disclaimer for safe PHI handling"
+    }
+  },
+  "additionalProperties": false
+}

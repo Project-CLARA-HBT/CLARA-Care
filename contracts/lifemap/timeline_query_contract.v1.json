@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CLARA Care LifeMap Timeline Event Query Typed Contract",
+  "version": "1.0.0",
+  "phase_id": "PH12",
+  "agent_id": "A01",
+  "conformance_status": "active",
+  "feature_flag": "LIFEMAP_TIMELINE_QUERY_V2_ENABLED",
+  "default_flag_state": false,
+  "endpoints": [
+    {
+      "path": "/api/v1/lifemap/timeline/events",
+      "aliases": [
+        "/api/v1/lifemap/events"
+      ],
+      "method": "GET",
+      "summary": "Longitudinal LifeMap timeline events query with bitemporal filtering, safe PHI DTO, and keyset cursor pagination",
+      "feature_gated": true,
+      "query_parameters": [
+        {
+          "name": "valid_time_from",
+          "type": "string (ISO 8601 UTC)",
+          "required": false,
+          "description": "Inclusive lower bound on valid clinical time (occurred_at)"
+        },
+        {
+          "name": "valid_time_to",
+          "type": "string (ISO 8601 UTC)",
+          "required": false,
+          "description": "Inclusive upper bound on valid clinical time (occurred_at)"
+        },
+        {
+          "name": "system_time_from",
+          "type": "string (ISO 8601 UTC)",
+          "required": false,
+          "description": "Inclusive lower bound on system recorded time (recorded_at)"
+        },
+        {
+          "name": "system_time_to",
+          "type": "string (ISO 8601 UTC)",
+          "required": false,
+          "description": "Inclusive upper bound on system recorded time (recorded_at)"
+        },
+        {
+          "name": "episode_id",
+          "type": "string",
+          "required": false,
+          "description": "Filter by associated care loop episode public ID"
+        },
+        {
+          "name": "event_types",
+          "type": "string (comma-separated)",
+          "required": false,
+          "description": "Filter by event categories (medication, symptom, condition, lab, vitals, visit, task, etc.)"
+        },
+        {
+          "name": "truth_states",
+          "type": "string (comma-separated)",
+          "required": false,
+          "description": "Filter by truth state (confirmed, user_reported, disputed, refuted, draft)"
+        },
+        {
+          "name": "source_kinds",
+          "type": "string (comma-separated)",
+          "required": false,
+          "description": "Filter by source origin kind (reported, clinical, extracted, iot, import)"
+        },
+        {
+          "name": "search",
+          "type": "string",
+          "required": false,
+          "description": "Case-insensitive substring search in event title and display summary"
+        },
+        {
+          "name": "order_by",
+          "type": "string",
+          "enum": ["occurred_at", "recorded_at"],
+          "default": "occurred_at",
+          "description": "Bitemporal ordering axis"
+        },
+        {
+          "name": "order_direction",
+          "type": "string",
+          "enum": ["asc", "desc"],
+          "default": "desc",
+          "description": "Sort direction: desc (newest first) or asc (chronological)"
+        },
+        {
+          "name": "cursor",
+          "type": "string (base64url token)",
+          "required": false,
+          "description": "Opaque pagination cursor for keyset pagination"
+        },
+        {
+          "name": "limit",
+          "type": "integer",
+          "default": 50,
+          "minimum": 1,
+          "maximum": 200,
+          "description": "Maximum items to return per page"
+        },
+        {
+          "name": "offset",
+          "type": "integer",
+          "default": 0,
+          "minimum": 0,
+          "description": "Offset fallback when cursor is not used"
+        }
+      ],
+      "response_model": "TimelineQueryResponse",
+      "produces": ["application/json"]
+    },
+    {
+      "path": "/api/v1/lifemap/events/{event_id}",
+      "method": "GET",
+      "summary": "Retrieve an individual LifeMap timeline event by public ID with safe PHI DTO",
+      "feature_gated": true,
+      "path_parameters": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "required": true,
+          "description": "Public UUID or opaque string ID of the event"
+        }
+      ],
+      "response_model": "SafeTimelineEventDTO",
+      "produces": ["application/json"]
+    },
+    {
+      "path": "/api/v1/lifemap/timeline",
+      "method": "GET",
+      "summary": "Existing compatibility endpoint enhanced with bitemporal upper bounds and cursor pagination",
+      "feature_gated": false,
+      "response_model": "LifeMapTimelineResponse",
+      "produces": ["application/json"]
+    },
+    {
+      "path": "/api/v1/lifemap/timeline/contract",
+      "method": "GET",
+      "summary": "Query capabilities, supported filters, and active feature flag state",
+      "feature_gated": false,
+      "response_model": "TimelineContractMetadataResponse",
+      "produces": ["application/json"]
+    }
+  ],
+  "security": {
+    "auth_type": "Bearer JWT",
+    "roles_allowed": ["normal", "researcher", "doctor", "admin"],
+    "profile_scoping": {
+      "header": "X-CLARA-Profile-Context",
+      "isolation_invariant": "A user can only query events matching their owned or delegated profile",
+      "audit_logging": "Every timeline query writes an audit record with zero PHI payload"
+    },
+    "consent_gate": {
+      "policy": "ensure_medical_disclaimer_consent",
+      "failure_status": 428
+    }
+  },
+  "invariants": {
+    "strictly_pseudonymized_dto": true,
+    "no_database_primary_keys_in_api": true,
+    "bitemporal_deterministic_ordering": true,
+    "cursor_drift_free_keyset_pagination": true,
+    "zero_mock_data_in_production_routes": true,
+    "read_audit_minimum_data_logged": true
+  }
+}

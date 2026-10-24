@@ -1616,7 +1616,7 @@ class AgentManifest(BaseModel):
         default_factory=list,
         description="Interface assumptions made regarding other agents or contracts",
     )
-    verified_source_anchors: list[dict[str, Any]] = Field(
+    verified_source_anchors: list[dict[str, Any] | str] = Field(
         default_factory=list,
         description="Inspected or modified source code anchors",
     )
@@ -2043,3 +2043,146 @@ class FHIRConformanceRulesSummary(BaseModel):
     operations: list[str] = Field(default_factory=list)
     invariants: list[str] = Field(default_factory=list)
     feature_flag_status: bool = False
+
+
+# ============================================================================
+# LifeMap Longitudinal Intelligence — Timeline Event Query & Safe PHI DTOs (PH12 A01)
+# ============================================================================
+
+TimelineSortBy = Literal["occurred_at", "recorded_at"]
+TimelineSortOrder = Literal["asc", "desc"]
+TimelineTruthState = Literal["confirmed", "user_reported", "disputed", "refuted", "draft"]
+
+
+class TimelineSourceReferenceDTO(BaseModel):
+    """Safe projection of clinical source citation without internal paths or unredacted PII."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    source_id: str
+    source_kind: str
+    original_language: str = "vi"
+    checksum: str | None = None
+    source_span: dict[str, Any] | None = None
+    observed_at: datetime | None = None
+
+
+class SafeTimelineEventDTO(BaseModel):
+    """Strictly pseudonymized and safe clinical timeline event DTO for consumer & clinician view."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str = Field(..., description="Public UUID or opaque string identifier")
+    event_type: str = Field(..., description="Event kind (e.g. medication, symptom, condition, lab, vitals, visit)")
+    truth_state: str = Field(..., description="LifeMap truth status")
+    occurred_at: datetime = Field(..., description="Valid clinical time (ISO 8601 UTC)")
+    recorded_at: datetime | None = Field(default=None, description="System transaction recorded time (ISO 8601 UTC)")
+    title: str = Field(default="", description="Sanitized human-readable display title")
+    display_summary: str = Field(default="", description="Sanitized summary, zero PII")
+    payload: dict[str, Any] = Field(default_factory=dict, description="Sanitized clinical payload")
+    provenance: dict[str, Any] = Field(default_factory=dict, description="Safe audit provenance metadata")
+    source_kind: str = Field(default="reported", description="Data origin classification")
+    episode_id: str | None = Field(default=None, description="Public ID of associated care loop episode")
+    revision_no: int = Field(default=1, ge=1, description="Event revision counter")
+    source_reference: TimelineSourceReferenceDTO | None = Field(default=None, description="Safe origin citation")
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0, description="Extraction confidence score")
+
+
+class TimelineQueryPagination(BaseModel):
+    """Pagination metadata supporting both keyset cursor and offset modes."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    limit: int = Field(default=50, ge=1, le=200)
+    offset: int = Field(default=0, ge=0)
+    cursor: str | None = None
+    next_cursor: str | None = None
+    prev_cursor: str | None = None
+    has_more: bool = False
+    total_count: int = 0
+
+
+class TimelineQueryWindow(BaseModel):
+    """Dual-temporal query bounding window."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    valid_time_from: datetime | None = None
+    valid_time_to: datetime | None = None
+    system_time_from: datetime | None = None
+    system_time_to: datetime | None = None
+
+
+class TimelineQueryResponse(BaseModel):
+    """Standardized response envelope for longitudinal timeline event queries."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    generated_at: datetime
+    profile_id: str
+    items: list[SafeTimelineEventDTO] = Field(default_factory=list)
+    pagination: TimelineQueryPagination
+    query_window: TimelineQueryWindow
+    active_filters: dict[str, Any] = Field(default_factory=dict)
+    data_protection_notice: str = (
+        "Dữ liệu được bảo vệ nghiêm ngặt theo chính sách ẩn danh hóa PHI/PII và kiểm toán bitemporal."
+    )
+
+
+class TimelineContractMetadataResponse(BaseModel):
+    """Contract introspection metadata for timeline query capabilities."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    schema_version: str = "lifemap.timeline.v1"
+    feature_flag_status: bool = False
+    supported_sort_fields: list[str] = Field(
+        default_factory=lambda: ["occurred_at", "recorded_at"]
+    )
+    supported_sort_directions: list[str] = Field(
+        default_factory=lambda: ["asc", "desc"]
+    )
+    supported_event_types: list[str] = Field(
+        default_factory=lambda: [
+            "medication",
+            "symptom",
+            "condition",
+            "diagnosis",
+            "lab",
+            "lab_result",
+            "vitals",
+            "allergy",
+            "procedure",
+            "visit",
+            "observation",
+            "clinician_instruction",
+            "task",
+            "milestone",
+            "journal",
+        ]
+    )
+    supported_truth_states: list[str] = Field(
+        default_factory=lambda: [
+            "confirmed",
+            "user_reported",
+            "disputed",
+            "refuted",
+            "draft",
+        ]
+    )
+    supported_source_kinds: list[str] = Field(
+        default_factory=lambda: [
+            "reported",
+            "clinical",
+            "extracted",
+            "iot",
+            "import",
+            "user_commitment",
+            "course",
+        ]
+    )
+    max_limit: int = 200
+    default_limit: int = 50
+    bitemporal_axes: list[str] = Field(
+        default_factory=lambda: ["valid_time (occurred_at)", "system_time (recorded_at)"]
+    )

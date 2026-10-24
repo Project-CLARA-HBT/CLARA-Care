@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH12",
+  "agent_id": "A01",
+  "role": "API + contract",
+  "task": "timeline event query API",
+  "status": "PASSED",
+  "branch": "phase/ph12-a01",
+  "base_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "frozen_head_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "worktree_path": "/dev/shm/clara_worktrees/PH12_A01",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;artifacts/PH12/A01/",
+  "blockers": [],
+  "deliverables": [
+    "artifacts/PH12/A01/change_manifest.json",
+    "artifacts/PH12/A01/test_report.md",
+    "artifacts/PH12/A01/risk_register.md",
+    "artifacts/PH12/A01/rollback.md"
+  ],
+  "files_changed": [
+    "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+    "services/api/src/clara_api/schemas.py",
+    "contracts/lifemap/test_timeline_query_contract.py",
+    "contracts/lifemap/timeline_event_contract.schema.json",
+    "contracts/lifemap/timeline_query_contract.v1.json",
+    "contracts/lifemap/timeline_query_openapi.v1.json",
+    "artifacts/PH12/A01/change_manifest.json",
+    "artifacts/PH12/A01/test_report.md",
+    "artifacts/PH12/A01/risk_register.md",
+    "artifacts/PH12/A01/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/api/v1/endpoints/lifemap.py:286-425",
+    "services/api/src/clara_api/api/v1/endpoints/lifemap.py:2108-2285",
+    "services/api/src/clara_api/api/v1/endpoints/lifemap.py:2290-2580",
+    "services/api/src/clara_api/schemas.py:2046-2185",
+    "contracts/lifemap/timeline_event_contract.schema.json:1-120",
+    "contracts/lifemap/timeline_query_contract.v1.json:1-110",
+    "contracts/lifemap/timeline_query_openapi.v1.json:1-250",
+    "contracts/lifemap/test_timeline_query_contract.py:1-420"
+  ],
+  "interface_assumptions": [
+    "LifeMap timeline query v2 endpoints are gated by LIFEMAP_TIMELINE_QUERY_V2_ENABLED, defaulting to False until clinical and privacy review.",
+    "Bitemporal querying evaluates valid_time (occurred_at) and system_time (recorded_at) with UTC boundary normalization.",
+    "Pagination keyset cursors are opaque base64url encoded tokens containing sort field, timestamp, and event ID.",
+    "Sensitive PHI keys in health event payloads are redacted recursively to [REDACTED_PHI] on projection.",
+    "Medical disclaimer consent is enforced on timeline read endpoints preventing unauthorized clinical disclosure."
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall services/api/src/clara_api/api/ services/api/src/clara_api/schemas.py contracts/lifemap/",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Bytecode compilation of all modified and created Python files with 0 syntax errors."
+    },
+    {
+      "command": "PYTHONPATH=services/api/src pytest contracts/lifemap/test_timeline_query_contract.py -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "13 passed in 9.47s"
+    },
+    {
+      "command": "uv run --extra dev ruff check src/clara_api/api/v1/endpoints/lifemap.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "All checks passed!"
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A01 -p PH12",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "PATH ACL CHECKER — PASSED (Agent: A01, Phase: PH12)"
+    }
+  ],
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH12_A01 checkout 36e5b95fac7e65712f0779de253d8ed18dc693d7 -- services/api/src/clara_api/api/v1/endpoints/lifemap.py services/api/src/clara_api/schemas.py",
+    "rm -rf /dev/shm/clara_worktrees/PH12_A01/contracts/lifemap",
+    "rm -rf /dev/shm/clara_worktrees/PH12_A01/artifacts/PH12/A01"
+  ],
+  "timestamp": "2026-10-24T18:00:00Z"
+}

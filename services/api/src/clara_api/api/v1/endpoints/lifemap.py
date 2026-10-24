@@ -8,15 +8,18 @@ append-only action/revision, and transactional outbox event.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
+import os
 from datetime import UTC, datetime, timedelta
+from typing import Any, Literal
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, or_, select
+from sqlalchemy import String, and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from clara_api.compliance.redaction import hash_user_ref
@@ -77,6 +80,14 @@ from clara_api.lifemap.projection_invalidation import invalidate_projection_grap
 from clara_api.lifemap.visit_family_service import invalidate_visit_packs_for_source
 from clara_api.observability.admin_audit import record_admin_action
 from clara_api.phr.audit import write_audit
+from clara_api.schemas import (
+    SafeTimelineEventDTO,
+    TimelineContractMetadataResponse,
+    TimelineQueryPagination,
+    TimelineQueryResponse,
+    TimelineQueryWindow,
+    TimelineSourceReferenceDTO,
+)
 
 router = APIRouter()
 USER_ROLE_DEP = Depends(require_roles("normal", "researcher", "doctor", "admin"))
@@ -261,6 +272,10 @@ class LifeMapTimelineItem(BaseModel):
     source_kind: str = "reported"
     episode_id: str | None = None
     revision_no: int = 1
+    title: str | None = None
+    display_summary: str | None = None
+    confidence: float | None = None
+    source_reference: dict | None = None
 
 
 class LifeMapTimelineResponse(BaseModel):
@@ -269,6 +284,158 @@ class LifeMapTimelineResponse(BaseModel):
     total_count: int = 0
     valid_time_from: datetime | None = None
     system_time_from: datetime | None = None
+    valid_time_to: datetime | None = None
+    system_time_to: datetime | None = None
+    next_cursor: str | None = None
+    prev_cursor: str | None = None
+    has_more: bool = False
+
+
+LIFEMAP_TIMELINE_QUERY_V2_ENABLED_ENV = "LIFEMAP_TIMELINE_QUERY_V2_ENABLED"
+
+
+def is_timeline_query_v2_enabled() -> bool:
+    """Check if LifeMap Timeline Query V2 API is enabled. Default False until review."""
+    return os.getenv(LIFEMAP_TIMELINE_QUERY_V2_ENABLED_ENV, "false").strip().lower() in {
+        "true",
+        "1",
+        "yes",
+        "on",
+    }
+
+
+def require_timeline_query_v2_enabled() -> None:
+    """Enforce feature flag gate on timeline query v2 endpoints."""
+    if not is_timeline_query_v2_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "lifemap_timeline_query_v2_disabled",
+                "message": (
+                    "LifeMap timeline event query V2 API is currently disabled pending "
+                    "formal clinical, security, and longitudinal privacy review."
+                ),
+            },
+        )
+
+
+def _encode_timeline_cursor(
+    sort_by: str,
+    dt: datetime,
+    event_id: int,
+) -> str:
+    """Encode an opaque base64url keyset cursor token."""
+    iso = dt.astimezone(UTC).isoformat() if dt.tzinfo else dt.replace(tzinfo=UTC).isoformat()
+    raw = f"v1:{sort_by}:{iso}:{event_id}"
+    return base64.urlsafe_b64encode(raw.encode("utf-8")).decode("ascii")
+
+
+def _decode_timeline_cursor(
+    cursor_str: str,
+    expected_sort_by: str,
+) -> tuple[datetime, int]:
+    """Decode and validate a keyset cursor. Raises HTTP 422 if invalid or mismatched."""
+    try:
+        raw = base64.urlsafe_b64decode(cursor_str.encode("ascii")).decode("utf-8")
+        parts = raw.split(":")
+        if len(parts) < 4 or parts[0] != "v1":
+            raise ValueError("Malformed cursor prefix")
+        sort_by = parts[1]
+        if sort_by != expected_sort_by:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "code": "cursor_sort_mismatch",
+                    "message": f"Cursor sort field '{sort_by}' does not match query sort '{expected_sort_by}'",
+                },
+            )
+        event_id = int(parts[-1])
+        iso_str = ":".join(parts[2:-1])
+        dt = datetime.fromisoformat(iso_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        return dt.astimezone(UTC), event_id
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "invalid_cursor", "message": "Failed to parse opaque pagination cursor token"},
+        ) from exc
+
+
+_SENSITIVE_PHI_KEYS = frozenset(
+    {
+        "ssn",
+        "citizen_id",
+        "cmnd",
+        "cccd",
+        "identity_card",
+        "phone",
+        "phone_number",
+        "so_dien_thoai",
+        "email",
+        "home_address",
+        "dia_chi",
+        "bank_account",
+        "credit_card",
+        "passport",
+        "so_ho_chieu",
+        "bhyt_raw",
+    }
+)
+
+
+def _sanitize_event_payload(payload: dict | None) -> dict[str, Any]:
+    """Recursively scrub direct identifiers from health payloads."""
+    if not isinstance(payload, dict):
+        return {}
+    sanitized: dict[str, Any] = {}
+    for k, v in payload.items():
+        if k.lower() in _SENSITIVE_PHI_KEYS:
+            sanitized[k] = "[REDACTED_PHI]"
+        elif isinstance(v, dict):
+            sanitized[k] = _sanitize_event_payload(v)
+        elif isinstance(v, list):
+            sanitized[k] = [
+                _sanitize_event_payload(item) if isinstance(item, dict) else item
+                for item in v
+            ]
+        else:
+            sanitized[k] = v
+    return sanitized
+
+
+def _safe_event_title(
+    event: LifeMapEvent,
+    revision: LifeMapEventRevision | None,
+    payload: dict[str, Any],
+) -> str:
+    """Derive a safe display title without raw patient identifying info."""
+    candidate = payload.get("title")
+    if isinstance(candidate, str) and candidate.strip():
+        return candidate.strip()
+    if revision and revision.display_summary and len(revision.display_summary) <= 80:
+        return revision.display_summary.strip()
+    vietnamese_event_titles = {
+        "medication": "Đơn thuốc / Dược phẩm",
+        "symptom": "Triệu chứng lâm sàng",
+        "condition": "Tình trạng sức khỏe",
+        "diagnosis": "Chẩn đoán y khoa",
+        "lab": "Xét nghiệm & Cận lâm sàng",
+        "lab_result": "Kết quả xét nghiệm",
+        "vitals": "Chỉ số sinh hiệu",
+        "allergy": "Dị ứng / Phản ứng phụ",
+        "procedure": "Thủ thuật y tế",
+        "visit": "Thăm khám lâm sàng",
+        "observation": "Ghi nhận quan sát",
+        "clinician_instruction": "Chỉ dẫn của bác sĩ",
+        "task": "Nhiệm vụ chăm sóc",
+        "milestone": "Mốc hành trình sức khỏe",
+        "journal": "Nhật ký sức khỏe cá nhân",
+    }
+    return vietnamese_event_titles.get(event.event_type, f"Sự kiện {event.event_type}")
+
 
 
 class LifeMapEpisodeItem(BaseModel):
@@ -1939,10 +2106,17 @@ def today(
 @router.get("/timeline", response_model=LifeMapTimelineResponse)
 def lifemap_timeline(
     valid_time_from: str | datetime | None = Query(default=None),
+    valid_time_to: str | datetime | None = Query(default=None),
     system_time_from: str | datetime | None = Query(default=None),
+    system_time_to: str | datetime | None = Query(default=None),
     episode_id: str | None = Query(default=None),
     event_type: str | None = Query(default=None),
     truth_state: str | None = Query(default=None),
+    source_kind: str | None = Query(default=None),
+    search: str | None = Query(default=None),
+    order_by: Literal["occurred_at", "recorded_at"] = Query(default="occurred_at"),
+    order_direction: Literal["asc", "desc"] = Query(default="desc"),
+    cursor: str | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
@@ -1952,11 +2126,24 @@ def lifemap_timeline(
     scope = _scope(db, token, x_profile, action="view")
     now = datetime.now(UTC)
     v_from = _normalize_filter_time(valid_time_from)
+    v_to = _normalize_filter_time(valid_time_to)
     s_from = _normalize_filter_time(system_time_from)
+    s_to = _normalize_filter_time(system_time_to)
+
+    if v_from and v_to and v_from > v_to:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "invalid_time_range", "message": "valid_time_from cannot be greater than valid_time_to"},
+        )
+    if s_from and s_to and s_from > s_to:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "invalid_time_range", "message": "system_time_from cannot be greater than system_time_to"},
+        )
 
     query = (
         select(LifeMapEvent, LifeMapEventRevision)
-        .join(
+        .outerjoin(
             LifeMapEventRevision,
             (LifeMapEventRevision.event_id == LifeMapEvent.id)
             & (LifeMapEventRevision.revision_no == LifeMapEvent.current_revision_no),
@@ -1968,27 +2155,99 @@ def lifemap_timeline(
     )
 
     if episode_id:
-        episode = _episode(db, scope, episode_id)
-        query = query.where(LifeMapEvent.episode_id == episode.id)
+        if episode_id.lower() == "none":
+            query = query.where(LifeMapEvent.episode_id.is_(None))
+        else:
+            episode = _episode(db, scope, episode_id)
+            query = query.where(LifeMapEvent.episode_id == episode.id)
     if event_type:
         query = query.where(LifeMapEvent.event_type == event_type)
     if truth_state:
         query = query.where(LifeMapEvent.truth_state == truth_state)
+    if source_kind:
+        query = query.where(LifeMapEvent.source_kind == source_kind)
     if v_from is not None:
         query = query.where(LifeMapEvent.occurred_at >= v_from)
+    if v_to is not None:
+        query = query.where(LifeMapEvent.occurred_at <= v_to)
     if s_from is not None:
-        query = query.where(LifeMapEventRevision.recorded_at >= s_from)
+        query = query.where(
+            or_(
+                LifeMapEventRevision.recorded_at >= s_from,
+                and_(LifeMapEventRevision.id.is_(None), LifeMapEvent.created_at >= s_from),
+            )
+        )
+    if s_to is not None:
+        query = query.where(
+            or_(
+                LifeMapEventRevision.recorded_at <= s_to,
+                and_(LifeMapEventRevision.id.is_(None), LifeMapEvent.created_at <= s_to),
+            )
+        )
+    if search:
+        search_pattern = f"%{search.strip()}%"
+        query = query.where(
+            or_(
+                LifeMapEventRevision.display_summary.ilike(search_pattern),
+                func.cast(LifeMapEvent.payload_json, String).ilike(search_pattern),
+            )
+        )
 
     count_subq = query.with_only_columns(func.count(LifeMapEvent.id)).order_by(None)
     total_count = db.execute(count_subq).scalar_one()
 
-    rows = list(
-        db.execute(
-            query.order_by(LifeMapEvent.occurred_at.desc(), LifeMapEvent.id.desc())
-            .offset(offset)
-            .limit(limit)
-        ).all()
-    )
+    primary_col = LifeMapEvent.occurred_at if order_by == "occurred_at" else LifeMapEventRevision.recorded_at
+    secondary_col = LifeMapEvent.id
+
+    if cursor:
+        cursor_dt, cursor_id = _decode_timeline_cursor(cursor, expected_sort_by=order_by)
+        if order_direction == "desc":
+            query = query.where(
+                or_(
+                    primary_col < cursor_dt,
+                    and_(primary_col == cursor_dt, secondary_col < cursor_id),
+                )
+            )
+        else:
+            query = query.where(
+                or_(
+                    primary_col > cursor_dt,
+                    and_(primary_col == cursor_dt, secondary_col > cursor_id),
+                )
+            )
+
+    if order_direction == "desc":
+        query = query.order_by(primary_col.desc(), secondary_col.desc())
+    else:
+        query = query.order_by(primary_col.asc(), secondary_col.asc())
+
+    if cursor:
+        raw_rows = list(db.execute(query.limit(limit + 1)).all())
+    else:
+        raw_rows = list(db.execute(query.offset(offset).limit(limit + 1)).all())
+
+    has_more = len(raw_rows) > limit
+    rows = raw_rows[:limit] if has_more else raw_rows
+
+    next_cursor = None
+    if has_more and rows:
+        last_ev, last_rev = rows[-1]
+        last_dt = (
+            last_ev.occurred_at
+            if order_by == "occurred_at"
+            else (last_rev.recorded_at if last_rev and last_rev.recorded_at else last_ev.created_at)
+        )
+        next_cursor = _encode_timeline_cursor(order_by, last_dt, last_ev.id)
+
+    prev_cursor = None
+    if rows and (cursor or offset > 0):
+        first_ev, first_rev = rows[0]
+        first_dt = (
+            first_ev.occurred_at
+            if order_by == "occurred_at"
+            else (first_rev.recorded_at if first_rev and first_rev.recorded_at else first_ev.created_at)
+        )
+        prev_cursor = _encode_timeline_cursor(order_by, first_dt, first_ev.id)
 
     episode_ids = {ev.episode_id for ev, _ in rows if ev.episode_id is not None}
     episodes_map: dict[int, str] = {}
@@ -2008,12 +2267,15 @@ def lifemap_timeline(
             event_type=ev.event_type,
             truth_state=ev.truth_state,
             occurred_at=ev.occurred_at,
-            recorded_at=rev.recorded_at,
-            payload=rev.payload_json if isinstance(rev.payload_json, dict) else {},
-            provenance=rev.provenance_json if isinstance(rev.provenance_json, dict) else {},
+            recorded_at=rev.recorded_at if rev and rev.recorded_at else ev.created_at,
+            payload=_sanitize_event_payload(rev.payload_json if rev and isinstance(rev.payload_json, dict) else ev.payload_json),
+            provenance=rev.provenance_json if rev and isinstance(rev.provenance_json, dict) else ev.provenance_json,
             source_kind=ev.source_kind,
             episode_id=episodes_map.get(ev.episode_id) if ev.episode_id else None,
-            revision_no=rev.revision_no,
+            revision_no=rev.revision_no if rev else ev.current_revision_no,
+            title=_safe_event_title(ev, rev, rev.payload_json if rev and isinstance(rev.payload_json, dict) else ev.payload_json),
+            display_summary=rev.display_summary if rev and rev.display_summary else "",
+            confidence=rev.confidence if rev else None,
         )
         for ev, rev in rows
     ]
@@ -2025,6 +2287,362 @@ def lifemap_timeline(
         total_count=total_count,
         valid_time_from=v_from,
         system_time_from=s_from,
+        valid_time_to=v_to,
+        system_time_to=s_to,
+        next_cursor=next_cursor,
+        prev_cursor=prev_cursor,
+        has_more=has_more,
+    )
+
+
+@router.get("/timeline/events", response_model=TimelineQueryResponse)
+@router.get("/events", response_model=TimelineQueryResponse)
+def query_timeline_events(
+    valid_time_from: str | datetime | None = Query(default=None),
+    valid_time_to: str | datetime | None = Query(default=None),
+    system_time_from: str | datetime | None = Query(default=None),
+    system_time_to: str | datetime | None = Query(default=None),
+    episode_id: str | None = Query(default=None),
+    event_types: str | None = Query(default=None, description="Comma-separated event kinds"),
+    truth_states: str | None = Query(default=None, description="Comma-separated truth states"),
+    source_kinds: str | None = Query(default=None, description="Comma-separated source kinds"),
+    search: str | None = Query(default=None),
+    order_by: Literal["occurred_at", "recorded_at"] = Query(default="occurred_at"),
+    order_direction: Literal["asc", "desc"] = Query(default="desc"),
+    cursor: str | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> TimelineQueryResponse:
+    require_timeline_query_v2_enabled()
+    scope = _scope(db, token, x_profile, action="view")
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    now = datetime.now(UTC)
+
+    v_from = _normalize_filter_time(valid_time_from)
+    v_to = _normalize_filter_time(valid_time_to)
+    s_from = _normalize_filter_time(system_time_from)
+    s_to = _normalize_filter_time(system_time_to)
+
+    if v_from and v_to and v_from > v_to:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "invalid_time_range", "message": "valid_time_from cannot be greater than valid_time_to"},
+        )
+    if s_from and s_to and s_from > s_to:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "invalid_time_range", "message": "system_time_from cannot be greater than system_time_to"},
+        )
+
+    query = (
+        select(LifeMapEvent, LifeMapEventRevision)
+        .outerjoin(
+            LifeMapEventRevision,
+            (LifeMapEventRevision.event_id == LifeMapEvent.id)
+            & (LifeMapEventRevision.revision_no == LifeMapEvent.current_revision_no),
+        )
+        .where(
+            LifeMapEvent.profile_id == scope.profile.id,
+            LifeMapEvent.lifecycle_status == "active",
+        )
+    )
+
+    active_filters: dict[str, Any] = {}
+    if episode_id:
+        active_filters["episode_id"] = episode_id
+        if episode_id.lower() == "none":
+            query = query.where(LifeMapEvent.episode_id.is_(None))
+        else:
+            episode = _episode(db, scope, episode_id)
+            query = query.where(LifeMapEvent.episode_id == episode.id)
+
+    if event_types:
+        parsed_types = [t.strip() for t in event_types.split(",") if t.strip()]
+        if parsed_types:
+            active_filters["event_types"] = parsed_types
+            query = query.where(LifeMapEvent.event_type.in_(parsed_types))
+
+    if truth_states:
+        parsed_states = [s.strip() for s in truth_states.split(",") if s.strip()]
+        if parsed_states:
+            active_filters["truth_states"] = parsed_states
+            query = query.where(LifeMapEvent.truth_state.in_(parsed_states))
+
+    if source_kinds:
+        parsed_sources = [sk.strip() for sk in source_kinds.split(",") if sk.strip()]
+        if parsed_sources:
+            active_filters["source_kinds"] = parsed_sources
+            query = query.where(LifeMapEvent.source_kind.in_(parsed_sources))
+
+    if v_from is not None:
+        active_filters["valid_time_from"] = v_from.isoformat()
+        query = query.where(LifeMapEvent.occurred_at >= v_from)
+    if v_to is not None:
+        active_filters["valid_time_to"] = v_to.isoformat()
+        query = query.where(LifeMapEvent.occurred_at <= v_to)
+    if s_from is not None:
+        active_filters["system_time_from"] = s_from.isoformat()
+        query = query.where(
+            or_(
+                LifeMapEventRevision.recorded_at >= s_from,
+                and_(LifeMapEventRevision.id.is_(None), LifeMapEvent.created_at >= s_from),
+            )
+        )
+    if s_to is not None:
+        active_filters["system_time_to"] = s_to.isoformat()
+        query = query.where(
+            or_(
+                LifeMapEventRevision.recorded_at <= s_to,
+                and_(LifeMapEventRevision.id.is_(None), LifeMapEvent.created_at <= s_to),
+            )
+        )
+    if search:
+        active_filters["search"] = search
+        search_pattern = f"%{search.strip()}%"
+        query = query.where(
+            or_(
+                LifeMapEventRevision.display_summary.ilike(search_pattern),
+                func.cast(LifeMapEvent.payload_json, String).ilike(search_pattern),
+            )
+        )
+
+    count_subq = query.with_only_columns(func.count(LifeMapEvent.id)).order_by(None)
+    total_count = db.execute(count_subq).scalar_one()
+
+    primary_col = LifeMapEvent.occurred_at if order_by == "occurred_at" else LifeMapEventRevision.recorded_at
+    secondary_col = LifeMapEvent.id
+
+    if cursor:
+        cursor_dt, cursor_id = _decode_timeline_cursor(cursor, expected_sort_by=order_by)
+        if order_direction == "desc":
+            query = query.where(
+                or_(
+                    primary_col < cursor_dt,
+                    and_(primary_col == cursor_dt, secondary_col < cursor_id),
+                )
+            )
+        else:
+            query = query.where(
+                or_(
+                    primary_col > cursor_dt,
+                    and_(primary_col == cursor_dt, secondary_col > cursor_id),
+                )
+            )
+
+    if order_direction == "desc":
+        query = query.order_by(primary_col.desc(), secondary_col.desc())
+    else:
+        query = query.order_by(primary_col.asc(), secondary_col.asc())
+
+    if cursor:
+        raw_rows = list(db.execute(query.limit(limit + 1)).all())
+    else:
+        raw_rows = list(db.execute(query.offset(offset).limit(limit + 1)).all())
+
+    has_more = len(raw_rows) > limit
+    rows = raw_rows[:limit] if has_more else raw_rows
+
+    next_cursor = None
+    if has_more and rows:
+        last_ev, last_rev = rows[-1]
+        last_dt = (
+            last_ev.occurred_at
+            if order_by == "occurred_at"
+            else (last_rev.recorded_at if last_rev and last_rev.recorded_at else last_ev.created_at)
+        )
+        next_cursor = _encode_timeline_cursor(order_by, last_dt, last_ev.id)
+
+    prev_cursor = None
+    if rows and (cursor or offset > 0):
+        first_ev, first_rev = rows[0]
+        first_dt = (
+            first_ev.occurred_at
+            if order_by == "occurred_at"
+            else (first_rev.recorded_at if first_rev and first_rev.recorded_at else first_ev.created_at)
+        )
+        prev_cursor = _encode_timeline_cursor(order_by, first_dt, first_ev.id)
+
+    episode_ids = {ev.episode_id for ev, _ in rows if ev.episode_id is not None}
+    episodes_map: dict[int, str] = {}
+    if episode_ids:
+        episodes_map = {
+            ep.id: ep.public_id
+            for ep in db.execute(
+                select(LifeMapEpisode.id, LifeMapEpisode.public_id).where(
+                    LifeMapEpisode.id.in_(episode_ids)
+                )
+            ).all()
+        }
+
+    source_ref_ids = {
+        rev.source_reference_id for _, rev in rows if rev and rev.source_reference_id is not None
+    }
+    source_refs_map: dict[int, HealthSourceReference] = {}
+    if source_ref_ids:
+        source_refs_map = {
+            ref.id: ref
+            for ref in db.execute(
+                select(HealthSourceReference).where(HealthSourceReference.id.in_(source_ref_ids))
+            ).scalars().all()
+        }
+
+    items: list[SafeTimelineEventDTO] = []
+    for ev, rev in rows:
+        raw_payload = (
+            rev.payload_json
+            if rev and isinstance(rev.payload_json, dict)
+            else (ev.payload_json if isinstance(ev.payload_json, dict) else {})
+        )
+        raw_prov = (
+            rev.provenance_json
+            if rev and isinstance(rev.provenance_json, dict)
+            else (ev.provenance_json if isinstance(ev.provenance_json, dict) else {})
+        )
+        sanitized_payload = _sanitize_event_payload(raw_payload)
+        safe_title = _safe_event_title(ev, rev, sanitized_payload)
+        summary = (
+            rev.display_summary
+            if rev and rev.display_summary
+            else (sanitized_payload.get("summary") or "")
+        )
+
+        src_dto = None
+        if rev and rev.source_reference_id and rev.source_reference_id in source_refs_map:
+            sref = source_refs_map[rev.source_reference_id]
+            src_dto = TimelineSourceReferenceDTO(
+                source_id=sref.public_id,
+                source_kind=sref.source_kind,
+                original_language=sref.original_language or "vi",
+                checksum=sref.checksum or None,
+                source_span=sref.source_span_json if isinstance(sref.source_span_json, dict) else None,
+                observed_at=sref.observed_at,
+            )
+
+        items.append(
+            SafeTimelineEventDTO(
+                id=ev.public_id,
+                event_type=ev.event_type,
+                truth_state=ev.truth_state,
+                occurred_at=ev.occurred_at,
+                recorded_at=rev.recorded_at if rev and rev.recorded_at else ev.created_at,
+                title=safe_title,
+                display_summary=summary,
+                payload=sanitized_payload,
+                provenance=raw_prov,
+                source_kind=ev.source_kind,
+                episode_id=episodes_map.get(ev.episode_id) if ev.episode_id else None,
+                revision_no=rev.revision_no if rev else ev.current_revision_no,
+                source_reference=src_dto,
+                confidence=rev.confidence if rev else None,
+            )
+        )
+
+    _audit_read(db, scope, entity="timeline")
+    return TimelineQueryResponse(
+        generated_at=now,
+        profile_id=scope.profile.public_id,
+        items=items,
+        pagination=TimelineQueryPagination(
+            limit=limit,
+            offset=offset,
+            cursor=cursor,
+            next_cursor=next_cursor,
+            prev_cursor=prev_cursor,
+            has_more=has_more,
+            total_count=total_count,
+        ),
+        query_window=TimelineQueryWindow(
+            valid_time_from=v_from,
+            valid_time_to=v_to,
+            system_time_from=s_from,
+            system_time_to=s_to,
+        ),
+        active_filters=active_filters,
+    )
+
+
+@router.get("/events/{event_id}", response_model=SafeTimelineEventDTO)
+def get_event_by_id(
+    event_id: str,
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> SafeTimelineEventDTO:
+    require_timeline_query_v2_enabled()
+    scope = _scope(db, token, x_profile, action="view")
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+
+    event = _event(db, scope, event_id)
+    rev = db.execute(
+        select(LifeMapEventRevision).where(
+            LifeMapEventRevision.event_id == event.id,
+            LifeMapEventRevision.revision_no == event.current_revision_no,
+        )
+    ).scalar_one_or_none()
+
+    episode_public_id = None
+    if event.episode_id:
+        episode = db.get(LifeMapEpisode, event.episode_id)
+        if episode:
+            episode_public_id = episode.public_id
+
+    src_dto = None
+    if rev and rev.source_reference_id:
+        src = db.get(HealthSourceReference, rev.source_reference_id)
+        if src:
+            src_dto = TimelineSourceReferenceDTO(
+                source_id=src.public_id,
+                source_kind=src.source_kind,
+                original_language=src.original_language or "vi",
+                checksum=src.checksum or None,
+                source_span=src.source_span_json if isinstance(src.source_span_json, dict) else None,
+                observed_at=src.observed_at,
+            )
+
+    raw_payload = (
+        rev.payload_json
+        if rev and isinstance(rev.payload_json, dict)
+        else (event.payload_json if isinstance(event.payload_json, dict) else {})
+    )
+    raw_prov = (
+        rev.provenance_json
+        if rev and isinstance(rev.provenance_json, dict)
+        else (event.provenance_json if isinstance(event.provenance_json, dict) else {})
+    )
+    sanitized_payload = _sanitize_event_payload(raw_payload)
+    safe_title = _safe_event_title(event, rev, sanitized_payload)
+    summary = (
+        rev.display_summary
+        if rev and rev.display_summary
+        else (sanitized_payload.get("summary") or "")
+    )
+
+    _audit_read(db, scope, entity="timeline_event", entity_id=event.public_id)
+    return SafeTimelineEventDTO(
+        id=event.public_id,
+        event_type=event.event_type,
+        truth_state=event.truth_state,
+        occurred_at=event.occurred_at,
+        recorded_at=rev.recorded_at if rev and rev.recorded_at else event.created_at,
+        title=safe_title,
+        display_summary=summary,
+        payload=sanitized_payload,
+        provenance=raw_prov,
+        source_kind=event.source_kind,
+        episode_id=episode_public_id,
+        revision_no=rev.revision_no if rev else event.current_revision_no,
+        source_reference=src_dto,
+        confidence=rev.confidence if rev else None,
+    )
+
+
+@router.get("/timeline/contract", response_model=TimelineContractMetadataResponse)
+def get_timeline_contract_metadata() -> TimelineContractMetadataResponse:
+    return TimelineContractMetadataResponse(
+        feature_flag_status=is_timeline_query_v2_enabled(),
     )
 
 
