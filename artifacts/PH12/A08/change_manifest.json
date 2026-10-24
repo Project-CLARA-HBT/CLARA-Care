@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH12",
+  "agent_id": "A08",
+  "role": "Security + privacy",
+  "task": "longitudinal regression suite",
+  "path_lane": "docs/security/;docs/compliance/;scripts/ops/;artifacts/PH12/A08/",
+  "frozen_head_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "base_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "worktree_path": "/dev/shm/clara_worktrees/PH12_A08",
+  "branch": "phase/ph12-a08",
+  "timestamp": "2026-10-24T00:00:00Z",
+  "status": "COMPLETED",
+  "blockers": [],
+  "deliverables": [
+    "docs/security/LIFEMAP_LONGITUDINAL_SECURITY_AND_PRIVACY_THREAT_MODEL.md",
+    "docs/compliance/LIFEMAP_LONGITUDINAL_DATA_RETENTION_AND_PRIVACY_ASSESSMENT.md",
+    "scripts/ops/audit_longitudinal_security_regression.py",
+    "scripts/ops/test_audit_longitudinal_security_regression.py",
+    "artifacts/PH12/A08/change_manifest.json",
+    "artifacts/PH12/A08/test_report.md",
+    "artifacts/PH12/A08/risk_register.md",
+    "artifacts/PH12/A08/rollback.md"
+  ],
+  "files_changed": [
+    "docs/security/LIFEMAP_LONGITUDINAL_SECURITY_AND_PRIVACY_THREAT_MODEL.md",
+    "docs/compliance/LIFEMAP_LONGITUDINAL_DATA_RETENTION_AND_PRIVACY_ASSESSMENT.md",
+    "scripts/ops/audit_longitudinal_security_regression.py",
+    "scripts/ops/test_audit_longitudinal_security_regression.py",
+    "artifacts/PH12/A08/change_manifest.json",
+    "artifacts/PH12/A08/test_report.md",
+    "artifacts/PH12/A08/risk_register.md",
+    "artifacts/PH12/A08/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/lifemap/temporal_index.py:16-32",
+    "services/api/src/clara_api/lifemap/temporal_index.py:55-142",
+    "services/api/src/clara_api/lifemap/intelligence.py:80-85",
+    "services/api/src/clara_api/lifemap/intelligence.py:125-135",
+    "services/api/src/clara_api/lifemap/intelligence.py:141-260",
+    "services/api/src/clara_api/lifemap/intelligence.py:330-365",
+    "services/api/src/clara_api/lifemap/profile_scope.py:23-48",
+    "services/api/src/clara_api/lifemap/profile_scope.py:86-210",
+    "services/api/src/clara_api/lifemap/projection_invalidation.py:21-52",
+    "services/api/src/clara_api/lifemap/projection_invalidation.py:55-131",
+    "services/api/src/clara_api/lifemap/capture_cleanup.py:18-21",
+    "services/api/src/clara_api/lifemap/capture_cleanup.py:22-66",
+    "services/api/src/clara_api/compliance/retention.py:58-106",
+    "services/api/src/clara_api/compliance/retention.py:109-176",
+    "services/api/src/clara_api/compliance/retention.py:432-477",
+    "services/api/src/clara_api/api/v1/endpoints/lifemap.py:1940-2030",
+    "services/api/src/clara_api/api/v1/endpoints/lifemap_insights.py:315-570",
+    "services/api/src/clara_api/db/models.py:1045-1078",
+    "services/api/src/clara_api/db/models.py:1079-1105",
+    "services/api/src/clara_api/db/models.py:1178-1206",
+    "services/api/src/clara_api/db/models.py:1737-1764",
+    "services/api/src/clara_api/db/models.py:1765-1792",
+    "services/api/src/clara_api/db/models.py:1825-1862",
+    "services/api/src/clara_api/db/models.py:1941-1997",
+    "services/api/src/clara_api/db/models.py:2053-2070"
+  ],
+  "tests_run": [
+    {
+      "command": "pytest scripts/ops/test_audit_longitudinal_security_regression.py -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Longitudinal security regression test harness passing 10 tests."
+    },
+    {
+      "command": "python3 scripts/ops/audit_longitudinal_security_regression.py --fail-on-high",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Zero security or privacy audit findings in LifeMap longitudinal architecture."
+    },
+    {
+      "command": "pytest services/api/tests/test_lifemap_temporal_index.py services/api/tests/test_lifemap_projection_invalidation.py services/api/tests/test_lifemap_capture_cleanup.py services/api/tests/test_lifemap_intelligence.py -q",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "LifeMap core temporal, invalidation, capture cleanup, and intelligence suites passing 20 tests."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A08 -p PH12",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Subagent path isolation verified with 0 violations."
+    }
+  ],
+  "rollback_steps": [
+    "git reset --hard 36e5b95fac7e65712f0779de253d8ed18dc693d7"
+  ]
+}
