@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH12",
+  "agent_id": "A10",
+  "role": "Adversarial audit + integration proposals",
+  "task": "LifeMap product tutorial, adversarial longitudinal audit, and phase gate manifest",
+  "status": "PASSED",
+  "branch": "phase/ph12-a10",
+  "base_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "frozen_head_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "path_lane": "docs/reports/;docs/runbooks/;scripts/ci/;artifacts/phase-gates/;artifacts/PH12/A10/",
+  "files_changed": [
+    "docs/runbooks/lifemap-product-tutorial-and-acceptance.md",
+    "docs/reports/ph12-adversarial-longitudinal-audit.md",
+    "scripts/ci/ph12_quality_gate.py",
+    "artifacts/phase-gates/PH12_gate_manifest.json",
+    "artifacts/PH12/A10/change_manifest.json",
+    "artifacts/PH12/A10/test_report.md",
+    "artifacts/PH12/A10/risk_register.md",
+    "artifacts/PH12/A10/rollback.md"
+  ],
+  "deliverables": [
+    "docs/runbooks/lifemap-product-tutorial-and-acceptance.md",
+    "docs/reports/ph12-adversarial-longitudinal-audit.md",
+    "scripts/ci/ph12_quality_gate.py",
+    "artifacts/phase-gates/PH12_gate_manifest.json",
+    "artifacts/PH12/A10/change_manifest.json",
+    "artifacts/PH12/A10/test_report.md",
+    "artifacts/PH12/A10/risk_register.md",
+    "artifacts/PH12/A10/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/lifemap/intelligence.py",
+      "line": 125,
+      "symbol": "route_ask_query",
+      "description": "Safety and intent routing enforcing emergency fast-path and legal hard-guards."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/intelligence.py",
+      "line": 141,
+      "symbol": "retrieve_revision_evidence",
+      "description": "Governed revision retrieval ensuring profile scoping and revocation filtering."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/baselines.py",
+      "line": 54,
+      "symbol": "compute_baseline",
+      "description": "Deterministic personal-baseline computation using median and MAD without diagnostic claims."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/next_best_question.py",
+      "line": 75,
+      "symbol": "choose_next_best_question",
+      "description": "Deterministic-core next-best-question selector with emergency short-circuit."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/conflict_preservation.py",
+      "line": 31,
+      "symbol": "ConflictPreservationEngine",
+      "description": "Multi-source clinical conflict preservation retaining competing assertions side-by-side."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/projection_invalidation.py",
+      "line": 55,
+      "symbol": "invalidate_projection_graph",
+      "description": "Transitive DAG projection invalidation traversing downstream dependencies upon event mutation."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/temporal_index.py",
+      "line": 55,
+      "symbol": "TemporalRetrievalIndex",
+      "description": "Partitioned memory index guaranteeing zero cross-profile document bleed."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/capture_extraction.py",
+      "line": 21,
+      "symbol": "_INJECTION",
+      "description": "Capture text security scanner detecting adversarial prompt injection threats."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/ph12_quality_gate.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 7 PH12 quality gate invariants verified green."
+    },
+    {
+      "command": "python3 scripts/ci/ph12_quality_gate.py --verify-longitudinal",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "LifeMap longitudinal invariant hermetic unit tests passed cleanly (5/5 tests)."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A10 -p PH12",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/reports/, docs/runbooks/, scripts/ci/, artifacts/phase-gates/, and artifacts/PH12/A10/."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py --selftest",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Internal test suite verifying path ACL checker logic (10/10 tests passed)."
+    },
+    {
+      "command": "pytest -q services/api/tests/test_lifemap_temporal_index.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Temporal index partition boundary and scoring tests (3/3 tests passed)."
+    },
+    {
+      "command": "pytest -q services/api/tests/test_lifemap_intelligence.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Ask My LifeMap intelligence, evidence citation, and privacy lineage tests (11/11 tests passed)."
+    },
+    {
+      "command": "pytest -q services/api/tests/test_lifemap_projection_invalidation.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Transitive projection DAG invalidation tests (5/5 tests passed)."
+    },
+    {
+      "command": "pytest -q services/api/tests/test_lifemap_v2_safety_contracts.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "LifeMap v2 safety contracts, consent enforcement, and route tests (18/18 tests passed)."
+    }
+  ],
+  "audit_findings": {
+    "adversarial_resilience": {
+      "status": "PASSED",
+      "finding": "10/10 adversarial attack vectors defeated with zero cross-profile bleed, zero prompt injection escalation, zero historical overwrite, zero diagnostic/prescribing generation, and full emergency/FIDES preservation."
+    },
+    "zero_mock_data": {
+      "status": "PASSED",
+      "finding": "Synthetic test fixtures strictly quarantined; zero synthetic mock data promoted to production clinical databases."
+    },
+    "bi_temporal_ledger_integrity": {
+      "status": "PASSED",
+      "finding": "Valid time (tau_v) and transaction time (tau_k) strictly decoupled; append-only revisions ensure immutable audit history."
+    },
+    "transitive_projection_invalidation": {
+      "status": "PASSED",
+      "finding": "Dependency DAG walks downstream projections and invalidates stale caches upon event modification or dispute."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH12_A10/docs/runbooks/lifemap-product-tutorial-and-acceptance.md",
+    "rm -f /dev/shm/clara_worktrees/PH12_A10/docs/reports/ph12-adversarial-longitudinal-audit.md",
+    "rm -f /dev/shm/clara_worktrees/PH12_A10/scripts/ci/ph12_quality_gate.py",
+    "rm -f /dev/shm/clara_worktrees/PH12_A10/artifacts/phase-gates/PH12_gate_manifest.json",
+    "rm -rf /dev/shm/clara_worktrees/PH12_A10/artifacts/PH12/A10"
+  ],
+  "timestamp": "2026-10-24T17:20:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH12_A10"
+}

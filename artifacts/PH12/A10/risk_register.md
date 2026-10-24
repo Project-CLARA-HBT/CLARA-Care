@@ -1,0 +1,12 @@
+# Risk Register — PH12 A10 (LifeMap Longitudinal Intelligence)
+
+| Risk ID | Description | Severity | Likelihood | Mitigation | Status |
+|---|---|---|---|---|---|
+| RISK-PH12-A10-01 | Prompt injection via unstructured OCR / capture notes manipulating LLM clinical summarization or next-best-question reasoning | Critical | Low | Multi-pattern regex scanner (`_PROMPT_INJECTION_PATTERNS`) combined with Unicode folding quarantines suspicious drafts from automatic execution. | Mitigated |
+| RISK-PH12-A10-02 | Retro-dated physiological assertions fraudulently altering historical baseline trends | High | Low | Decoupled bi-temporal architecture ($\tau_v$ vs $\tau_k$); transaction time is immutable server clock. Historical revisions remain append-only. | Mitigated |
+| RISK-PH12-A10-03 | Ingestion of raw radiology imagery (DICOM CT/MRI) prompting consumers to rely on AI imaging diagnoses | Critical | Low | Hard boundary check (`is_diagnostic_image_intent`) rejects DICOM media types and diagnostic imaging keywords, directing patients to radiologists. | Mitigated |
+| RISK-PH12-A10-04 | User conversational queries masquerading acute cardiac or stroke symptoms within longitudinal timeline reviews | Critical | Medium | Intent router evaluates `_EMERGENCY_HINTS` before any longitudinal retrieval or LLM inference, immediately tripping 115 emergency triage callout. | Mitigated |
+| RISK-PH12-A10-05 | Invalidation of core physiological event failing to propagate to cached visit prep drafts or weekly digests | High | Low | Transitive DAG walk in `invalidate_projection_graph` recursively invalidates all dependent projections in `lifemap_projection_dependencies`. | Mitigated |
+| RISK-PH12-A10-06 | Cross-profile IDOR leakage across shared memory temporal retrieval caches | Critical | Low | `TemporalRetrievalIndex` maintains disjoint per-profile document dictionaries (`_partitions[profile_id]`), preventing cross-tenant leakage at memory level. | Mitigated |
+| RISK-PH12-A10-07 | Destructive overwrite of disputed clinical encounter records eliminating doctor-patient difference in opinion | High | Low | `ConflictPreservationEngine` retains parallel assertions side-by-side with source author, confidence scores, and dispute notes. | Mitigated |
+| RISK-PH12-A10-08 | High-frequency next-best-question prompts causing consumer alert fatigue or cognitive overload | Medium | Low | NBQ engine enforces maximum of one question per encounter, respects user dismissal history, and short-circuits to zero questions on emergency. | Mitigated |
