@@ -16,6 +16,7 @@ from clara_api.api.v1.endpoints import (
     council,
     evidence_questions,
     family,
+    fhir,
     govred_research,
     guided_flows,
     health,
@@ -95,6 +96,7 @@ api_router.include_router(
 )
 api_router.include_router(compliance_router, prefix="/compliance", tags=["compliance"])
 api_router.include_router(health_adapter.router)
+api_router.include_router(fhir.router, prefix="/fhir", tags=["fhir"])
 
 # This route is intentionally absent unless the process is an attested,
 # non-production isolated RIVF deployment with one explicit research arm.

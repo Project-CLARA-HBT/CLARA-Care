@@ -1865,3 +1865,181 @@ class TenantAuditResponse(BaseModel):
 
     items: list[TenantAuditLogItem] = Field(default_factory=list)
     total: int = 0
+
+
+# ==============================================================================
+# FHIR R4 Interoperability & CapabilityStatement Schemas (Phase PH11 / A01)
+# ==============================================================================
+
+
+class FHIRCoding(BaseModel):
+    """FHIR Coding element representing a reference to a code defined by a terminology system."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    system: str = Field(..., description="Identity of the terminology system")
+    version: str | None = Field(default=None, description="Version of the system - if relevant")
+    code: str = Field(..., description="Symbol in syntax defined by the system")
+    display: str | None = Field(default=None, description="Representation defined by the system")
+
+
+class FHIRCodeableConcept(BaseModel):
+    """FHIR CodeableConcept element representing a value that is usually bound to one or more value sets."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    coding: list[FHIRCoding] = Field(default_factory=list, description="Code defined by a terminology system")
+    text: str | None = Field(default=None, description="Plain text representation of the concept")
+
+
+class FHIRContactPoint(BaseModel):
+    """FHIR ContactPoint element for communication details."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    system: str = Field(..., description="phone | fax | email | pager | url | sms | other")
+    value: str = Field(..., description="The actual contact point details")
+    use: str | None = Field(default=None, description="home | work | temp | old | mobile")
+
+
+class FHIRContactDetail(BaseModel):
+    """FHIR ContactDetail element specifying contact information for an individual or organization."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    name: str | None = Field(default=None, description="Name of an individual to contact")
+    telecom: list[FHIRContactPoint] = Field(default_factory=list, description="Contact details for individual/organization")
+
+
+class FHIRCapabilityStatementSoftware(BaseModel):
+    """FHIR CapabilityStatement.software element identifying software powering the instance."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    name: str = Field(..., description="A name the software is known by")
+    version: str = Field(..., description="The version identifier for the software")
+    releaseDate: str | None = Field(default=None, description="Date this version was released (YYYY-MM-DD)")
+
+
+class FHIRCapabilityStatementImplementation(BaseModel):
+    """FHIR CapabilityStatement.implementation identifying this specific installation."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    description: str = Field(..., description="Describes this specific instance")
+    url: str | None = Field(default=None, description="Base URL for the implementation")
+
+
+class FHIRCapabilityStatementSecurityService(BaseModel):
+    """FHIR security service definition within CapabilityStatement.rest.security."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    coding: list[FHIRCoding] = Field(default_factory=list, description="OAuth | SMART-on-FHIR | NTLM | Basic | Kerberos | Certificates")
+    text: str | None = Field(default=None, description="Description of the security service")
+
+
+class FHIRCapabilityStatementSecurity(BaseModel):
+    """FHIR CapabilityStatement.rest.security element describing system security mechanisms."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    cors: bool = Field(default=True, description="Whether CORS is enabled")
+    service: list[FHIRCapabilityStatementSecurityService] = Field(default_factory=list, description="OAuth | SMART-on-FHIR etc.")
+    description: str | None = Field(default=None, description="General description of how security works")
+    extension: list[dict[str, Any]] = Field(default_factory=list, description="Security extensions such as SMART oauth-uris")
+
+
+class FHIRResourceInteraction(BaseModel):
+    """FHIR resource-level interaction definition (read, search-type, create, etc.)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    code: str = Field(..., description="read | vread | update | patch | delete | history-instance | history-type | create | search-type")
+    documentation: str | None = Field(default=None, description="What's done with interaction / constraints")
+
+
+class FHIRResourceSearchParam(BaseModel):
+    """FHIR resource-level search parameter specification."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    name: str = Field(..., description="Name of search parameter")
+    type: str = Field(..., description="number | date | string | token | reference | composite | quantity | uri | special")
+    documentation: str | None = Field(default=None, description="Documentation for search parameter")
+
+
+class FHIRRestResource(BaseModel):
+    """FHIR CapabilityStatement.rest.resource definition."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    type: str = Field(..., description="A resource type that is supported (e.g. Patient, Observation)")
+    profile: str | None = Field(default=None, description="Base system profile for all uses of resource")
+    supportedProfile: list[str] = Field(default_factory=list, description="Profiles for use cases supported")
+    documentation: str | None = Field(default=None, description="Additional information about the use of the resource type")
+    interaction: list[FHIRResourceInteraction] = Field(default_factory=list, description="What operations are performed on this resource")
+    searchParam: list[FHIRResourceSearchParam] = Field(default_factory=list, description="Search parameters for supported searching")
+
+
+class FHIRRestOperation(BaseModel):
+    """FHIR CapabilityStatement.rest.operation definition ($export, $import, etc.)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    name: str = Field(..., description="Name by which the operation is invoked as code ($export, etc.)")
+    definition: str = Field(..., description="The canonical URL of the OperationDefinition")
+    documentation: str | None = Field(default=None, description="Specific details about how CLARA implements this operation")
+
+
+class FHIRRestCapability(BaseModel):
+    """FHIR CapabilityStatement.rest definition."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    mode: Literal["server", "client"] = Field(default="server", description="server | client")
+    documentation: str | None = Field(default=None, description="General description of implementation")
+    security: FHIRCapabilityStatementSecurity | None = Field(default=None, description="Information about security of implementation")
+    resource: list[FHIRRestResource] = Field(default_factory=list, description="Resource served on the REST interface")
+    interaction: list[FHIRResourceInteraction] = Field(default_factory=list, description="System-level interaction")
+    operation: list[FHIRRestOperation] = Field(default_factory=list, description="Definition of an operation or a named query")
+
+
+class FHIRCapabilityStatement(BaseModel):
+    """Canonical HL7 FHIR Release 4 (v4.0.1) CapabilityStatement resource model."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    resourceType: Literal["CapabilityStatement"] = Field(default="CapabilityStatement")
+    id: str = Field(..., description="Logical id of this artifact")
+    url: str = Field(..., description="Canonical identifier for this capability statement")
+    version: str = Field(..., description="Business version of the capability statement")
+    name: str = Field(..., description="Name for this capability statement (computer friendly)")
+    title: str = Field(..., description="Name for this capability statement (human friendly)")
+    status: Literal["draft", "active", "retired", "unknown"] = Field(default="active", description="Publication status")
+    experimental: bool = Field(default=False, description="For testing purposes, not real usage")
+    date: str = Field(..., description="Date last changed (ISO 8601 string)")
+    publisher: str = Field(..., description="Name of the publisher/organization")
+    contact: list[FHIRContactDetail] = Field(default_factory=list, description="Contact details for publisher")
+    description: str = Field(..., description="Natural language description of the capability statement")
+    kind: Literal["instance", "capability", "requirements"] = Field(default="instance", description="instance | capability | requirements")
+    software: FHIRCapabilityStatementSoftware = Field(..., description="Software that is covered by this capability statement")
+    implementation: FHIRCapabilityStatementImplementation | None = Field(default=None, description="If this describes a specific instance")
+    fhirVersion: Literal["4.0.1"] = Field(default="4.0.1", description="FHIR Version the system uses")
+    format: list[str] = Field(default_factory=lambda: ["application/fhir+json", "application/json"], description="formats supported (xml | json | cbor | etc.)")
+    rest: list[FHIRRestCapability] = Field(default_factory=list, description="If the endpoint is a RESTful one")
+
+
+class FHIRConformanceRulesSummary(BaseModel):
+    """Summary DTO of active FHIR R4 conformance rules, profiles, security mechanisms, and safety invariants."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    fhir_version: str = "4.0.1"
+    conformance_status: str = "active"
+    supported_resources: list[str] = Field(default_factory=list)
+    security_protocols: list[str] = Field(default_factory=list)
+    supported_formats: list[str] = Field(default_factory=list)
+    operations: list[str] = Field(default_factory=list)
+    invariants: list[str] = Field(default_factory=list)
+    feature_flag_status: bool = False

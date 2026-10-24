@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CLARA Care FHIR R4 CapabilityStatement Interoperability Contract",
+  "version": "1.0.0",
+  "phase_id": "PH11",
+  "agent_id": "A01",
+  "standard": "HL7 FHIR Release 4 (v4.0.1)",
+  "conformance_status": "active",
+  "feature_flag": "FHIR_CAPABILITY_STATEMENT_ENABLED",
+  "default_flag_state": false,
+  "endpoints": [
+    {
+      "path": "/api/v1/fhir/metadata",
+      "method": "GET",
+      "interaction": "metadata",
+      "summary": "Standard FHIR R4 CapabilityStatement conformance interaction",
+      "produces": [
+        "application/fhir+json",
+        "application/json"
+      ],
+      "query_params": [
+        {
+          "name": "mode",
+          "type": "string",
+          "allowed_values": ["full", "normative", "terminology"],
+          "default": "full"
+        },
+        {
+          "name": "_format",
+          "type": "string",
+          "allowed_values": ["json", "application/json", "application/fhir+json"]
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/fhir/CapabilityStatement",
+      "method": "GET",
+      "interaction": "resource_alias",
+      "summary": "FHIR REST convention direct resource alias for metadata interaction"
+    },
+    {
+      "path": "/api/v1/fhir/conformance-rules",
+      "method": "GET",
+      "interaction": "introspection",
+      "summary": "Administrative and developer summary of active conformance rules and safety invariants"
+    }
+  ],
+  "security": {
+    "auth_mechanisms": [
+      "OAuth2-Bearer",
+      "SMART-on-FHIR",
+      "CLARA-RBAC"
+    ],
+    "roles": [
+      "normal",
+      "researcher",
+      "doctor",
+      "admin"
+    ],
+    "smart_oauth_uris": {
+      "token": "https://theclaracare.com/api/v1/auth/token",
+      "authorize": "https://theclaracare.com/api/v1/auth/authorize",
+      "manage": "https://theclaracare.com/api/v1/profiles/manage"
+    },
+    "csrf_enforcement": "Enforced on all cookie-authenticated mutations; read-only metadata interactions exempt",
+    "emergency_fast_path": "Acute symptom queries trigger immediate clinical escalation, bypassing diagnostic reasoning",
+    "fides_drug_safety": "Failed CRITICAL drug-dosage or DDI claims block response generation",
+    "telemetry_phi_redaction": "Zero PHI/PII permitted in metrics, logs, or error responses"
+  },
+  "supported_resources": [
+    {
+      "type": "Patient",
+      "profile": "http://hl7.org/fhir/StructureDefinition/Patient",
+      "interactions": ["read", "search-type"],
+      "search_params": ["_id", "identifier", "name", "gender", "birthdate"]
+    },
+    {
+      "type": "Observation",
+      "profile": "http://hl7.org/fhir/StructureDefinition/Observation",
+      "interactions": ["read", "search-type", "create"],
+      "search_params": ["_id", "patient", "code", "date", "category"]
+    },
+    {
+      "type": "Condition",
+      "profile": "http://hl7.org/fhir/StructureDefinition/Condition",
+      "interactions": ["read", "search-type"],
+      "search_params": ["_id", "patient", "clinical-status", "category", "code"]
+    },
+    {
+      "type": "MedicationStatement",
+      "profile": "http://hl7.org/fhir/StructureDefinition/MedicationStatement",
+      "interactions": ["read", "search-type"],
+      "search_params": ["_id", "patient", "status", "medication"]
+    },
+    {
+      "type": "MedicationRequest",
+      "profile": "http://hl7.org/fhir/StructureDefinition/MedicationRequest",
+      "interactions": ["read", "search-type"],
+      "search_params": ["_id", "patient", "status", "intent"]
+    },
+    {
+      "type": "AllergyIntolerance",
+      "profile": "http://hl7.org/fhir/StructureDefinition/AllergyIntolerance",
+      "interactions": ["read", "search-type"],
+      "search_params": ["_id", "patient", "clinical-status", "verification-status"]
+    },
+    {
+      "type": "DocumentReference",
+      "profile": "http://hl7.org/fhir/StructureDefinition/DocumentReference",
+      "interactions": ["read", "search-type", "create"],
+      "search_params": ["_id", "patient", "type", "date", "status"]
+    },
+    {
+      "type": "Composition",
+      "profile": "http://hl7.org/fhir/StructureDefinition/Composition",
+      "interactions": ["read", "search-type"],
+      "search_params": ["_id", "patient", "type", "date", "status"]
+    },
+    {
+      "type": "Encounter",
+      "profile": "http://hl7.org/fhir/StructureDefinition/Encounter",
+      "interactions": ["read", "search-type"],
+      "search_params": ["_id", "patient", "date", "status"]
+    },
+    {
+      "type": "Consent",
+      "profile": "http://hl7.org/fhir/StructureDefinition/Consent",
+      "interactions": ["read", "search-type"],
+      "search_params": ["_id", "patient", "status", "category"]
+    },
+    {
+      "type": "Provenance",
+      "profile": "http://hl7.org/fhir/StructureDefinition/Provenance",
+      "interactions": ["read", "search-type"],
+      "search_params": ["_id", "target", "recorded", "agent"]
+    },
+    {
+      "type": "AuditEvent",
+      "profile": "http://hl7.org/fhir/StructureDefinition/AuditEvent",
+      "interactions": ["read", "search-type"],
+      "search_params": ["_id", "date", "entity", "agent", "type"]
+    }
+  ],
+  "operations": [
+    {
+      "name": "$export",
+      "definition": "https://theclaracare.com/fhir/OperationDefinition/lifemap-export",
+      "description": "Exports bounded patient LifeMap clinical records as a validated FHIR R4 Bundle"
+    },
+    {
+      "name": "$import",
+      "definition": "https://theclaracare.com/fhir/OperationDefinition/lifemap-import",
+      "description": "Receives external FHIR R4 documents into untrusted capture drafts pending patient review and attestation"
+    }
+  ],
+  "invariants": {
+    "no_mock_data": true,
+    "strict_dto_validation": true,
+    "fhir_version_locked": "4.0.1",
+    "feature_flag_default_disabled": true,
+    "max_bundle_bytes": 1000000,
+    "max_entries": 500,
+    "max_depth": 20
+  }
+}

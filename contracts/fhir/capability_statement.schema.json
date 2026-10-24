@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FHIR R4 CapabilityStatement Schema",
+  "type": "object",
+  "required": [
+    "resourceType",
+    "id",
+    "url",
+    "version",
+    "name",
+    "title",
+    "status",
+    "date",
+    "kind",
+    "software",
+    "fhirVersion",
+    "format",
+    "rest"
+  ],
+  "properties": {
+    "resourceType": {
+      "type": "string",
+      "const": "CapabilityStatement"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "version": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "active", "retired", "unknown"]
+    },
+    "experimental": {
+      "type": "boolean"
+    },
+    "date": {
+      "type": "string"
+    },
+    "publisher": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["instance", "capability", "requirements"]
+    },
+    "software": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "releaseDate": { "type": "string" }
+      }
+    },
+    "implementation": {
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "url": { "type": "string" }
+      }
+    },
+    "fhirVersion": {
+      "type": "string",
+      "const": "4.0.1"
+    },
+    "format": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "rest": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["mode", "resource"],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": ["server", "client"]
+          },
+          "documentation": { "type": "string" },
+          "security": {
+            "type": "object",
+            "properties": {
+              "cors": { "type": "boolean" },
+              "service": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "coding": { "type": "array" },
+                    "text": { "type": "string" }
+                  }
+                }
+              },
+              "description": { "type": "string" },
+              "extension": { "type": "array" }
+            }
+          },
+          "resource": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "interaction"],
+              "properties": {
+                "type": { "type": "string" },
+                "profile": { "type": "string" },
+                "documentation": { "type": "string" },
+                "interaction": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["code"],
+                    "properties": {
+                      "code": { "type": "string" },
+                      "documentation": { "type": "string" }
+                    }
+                  }
+                },
+                "searchParam": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["name", "type"],
+                    "properties": {
+                      "name": { "type": "string" },
+                      "type": { "type": "string" },
+                      "documentation": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "interaction": { "type": "array" },
+          "operation": { "type": "array" }
+        }
+      }
+    }
+  }
+}

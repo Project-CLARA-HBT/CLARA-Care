@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH11",
+  "agent_id": "A01",
+  "role": "API + contract",
+  "task": "FHIR CapabilityStatement API",
+  "status": "PASSED",
+  "branch": "phase/ph11-a01",
+  "base_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "frozen_head_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;artifacts/PH11/A01/",
+  "files_changed": [
+    "services/api/src/clara_api/api/router.py",
+    "services/api/src/clara_api/api/v1/endpoints/fhir.py",
+    "services/api/src/clara_api/schemas.py",
+    "contracts/fhir/capability_statement_contract.v1.json",
+    "contracts/fhir/capability_statement.schema.json",
+    "contracts/fhir/test_capability_statement_contract.py",
+    "artifacts/PH11/A01/change_manifest.json",
+    "artifacts/PH11/A01/test_report.md",
+    "artifacts/PH11/A01/risk_register.md",
+    "artifacts/PH11/A01/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH11/A01/change_manifest.json",
+    "artifacts/PH11/A01/test_report.md",
+    "artifacts/PH11/A01/risk_register.md",
+    "artifacts/PH11/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/api/router.py",
+      "line": 4,
+      "symbol": "api_router",
+      "description": "Registered fhir router under prefix /fhir, mounting /api/v1/fhir/metadata, /api/v1/fhir/CapabilityStatement, and /api/v1/fhir/conformance-rules."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/fhir.py",
+      "line": 1,
+      "symbol": "get_fhir_capability_statement, get_fhir_conformance_rules_summary",
+      "description": "FHIR R4 CapabilityStatement API endpoints adhering to HL7 v4.0.1 specification, gated by feature flag and RBAC."
+    },
+    {
+      "file": "services/api/src/clara_api/schemas.py",
+      "line": 1868,
+      "symbol": "FHIRCapabilityStatement, FHIRRestCapability, FHIRRestResource, FHIRConformanceRulesSummary",
+      "description": "Strict Pydantic DTO models for FHIR R4 CapabilityStatement elements with field validation and JSON schema alignment."
+    },
+    {
+      "file": "contracts/fhir/capability_statement_contract.v1.json",
+      "line": 1,
+      "symbol": "CLARA Care FHIR R4 CapabilityStatement Interoperability Contract",
+      "description": "Machine-readable contract formalizing supported FHIR R4 profiles, operations, search parameters, and safety invariants."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "PYTHONPATH=services/api/src python3 -m pytest contracts/fhir/test_capability_statement_contract.py -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "17 automated test cases verifying schema validity, DTO models, modes, content negotiation, RBAC, feature flags, and API router integration."
+    },
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/api services/api/src/clara_api/schemas.py contracts/fhir",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Bytecode compilation of all modified and created Python files."
+    }
+  ],
+  "audit_findings": {
+    "fhir_r4_capability_statement": {
+      "status": "COMPLETED",
+      "finding": "Implemented fully compliant FHIR R4 CapabilityStatement API adhering to HL7 FHIR v4.0.1 without mock data. Feature-gated with default False."
+    },
+    "safety_invariants": {
+      "status": "VERIFIED",
+      "finding": "Preserved RBAC (normal, doctor, researcher, admin), CSRF protection, emergency fast-path documentation, FIDES drug check, and zero-PII telemetry."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH11_A01 checkout 85cef4b2d9a0e926ca684e9eeeba5e588ab11600 -- services/api/src/clara_api/api/router.py services/api/src/clara_api/schemas.py",
+    "rm -rf /dev/shm/clara_worktrees/PH11_A01/services/api/src/clara_api/api/v1/endpoints/fhir.py",
+    "rm -rf /dev/shm/clara_worktrees/PH11_A01/contracts/fhir",
+    "rm -rf /dev/shm/clara_worktrees/PH11_A01/artifacts/PH11/A01"
+  ],
+  "timestamp": "2026-10-24T16:35:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH11_A01"
+}
