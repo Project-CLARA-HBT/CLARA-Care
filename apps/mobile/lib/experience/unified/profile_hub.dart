@@ -20,6 +20,7 @@ import '../../theme/components/clara_card.dart';
 import '../../theme/components/section_header.dart';
 import '../../theme/tokens.dart';
 import '../connected_health/connected_health_screen.dart';
+import '../fhir/fhir_sync_dashboard_screen.dart';
 import '../language_controller.dart';
 import '../presentation_mode.dart';
 import '../redesign/phr_surface_v3.dart';
@@ -161,6 +162,26 @@ class ProfileHub extends StatelessWidget {
         ),
       ),
     );
+
+    // FHIR R4 Interoperability & Sync Dashboard (Phase PH11)
+    if (resolver.fhirInteroperabilityEnabled) {
+      entries.add(
+        _ProfileEntry(
+          icon: Icons.sync_alt_outlined,
+          title: languageController?.languageCode == 'en'
+              ? 'FHIR Interoperability & Sync'
+              : 'Đồng bộ & Xuất chuẩn FHIR R4',
+          subtitle: languageController?.languageCode == 'en'
+              ? 'EHR web integration status and consented health record export'
+              : 'Trạng thái tích hợp web EHR và xuất hồ sơ có đồng thuận',
+          builder: (_) => FhirSyncDashboardScreen(
+            apiClient: apiClient,
+            sessionStore: sessionStore,
+            languageController: languageController,
+          ),
+        ),
+      );
+    }
 
     // 4. Privacy & Consent & 5. Data Rights (PDPD).
     if (resolver.consentCenterEnabled) {

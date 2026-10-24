@@ -5,6 +5,7 @@ import '../../core/consumer_terminology.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/section_header.dart';
 import '../../theme/tokens.dart';
+import '../fhir/fhir_sync_dashboard_screen.dart';
 import '../language_controller.dart';
 
 /// Clear, ownership-first management for health sources already authorized on
@@ -184,7 +185,29 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
 
   Widget _buildLocalized(BuildContext context, ConsumerTerminology copy) {
     return Scaffold(
-      appBar: AppBar(title: Text(copy[ConsumerTerm.connectedHealthTitle])),
+      appBar: AppBar(
+        title: Text(copy[ConsumerTerm.connectedHealthTitle]),
+        actions: [
+          IconButton(
+            key: const Key('connected-health-fhir-sync-action'),
+            icon: const Icon(Icons.sync_alt_outlined),
+            tooltip: copy.locale == 'en'
+                ? 'FHIR Interoperability & Sync'
+                : 'Đồng bộ & Xuất chuẩn FHIR R4',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => FhirSyncDashboardScreen(
+                    apiClient: widget.apiClient,
+                    sessionStore: widget.sessionStore,
+                    languageController: widget.languageController,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading

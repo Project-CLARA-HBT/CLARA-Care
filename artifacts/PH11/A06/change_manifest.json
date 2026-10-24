@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH11",
+  "agent_id": "A06",
+  "role": "Mobile Flutter",
+  "task": "web integration status dashboard and mobile Flutter FHIR export view",
+  "status": "PASSED",
+  "branch": "phase/ph11-a06",
+  "base_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "frozen_head_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "path_lane": "apps/mobile/;artifacts/PH11/A06/",
+  "files_changed": [
+    "apps/mobile/lib/core/api_client.dart",
+    "apps/mobile/lib/core/feature_flags.dart",
+    "apps/mobile/lib/experience/connected_health/connected_health_screen.dart",
+    "apps/mobile/lib/experience/fhir/fhir_export_screen.dart",
+    "apps/mobile/lib/experience/fhir/fhir_models.dart",
+    "apps/mobile/lib/experience/fhir/fhir_sync_dashboard_screen.dart",
+    "apps/mobile/lib/experience/unified/profile_hub.dart",
+    "apps/mobile/test/api_client_fhir_test.dart",
+    "apps/mobile/test/fhir_export_view_test.dart",
+    "apps/mobile/test/fhir_feature_flag_test.dart",
+    "apps/mobile/test/fhir_sync_dashboard_test.dart",
+    "artifacts/PH11/A06/change_manifest.json",
+    "artifacts/PH11/A06/risk_register.md",
+    "artifacts/PH11/A06/rollback.md",
+    "artifacts/PH11/A06/test_report.md"
+  ],
+  "deliverables": [
+    "artifacts/PH11/A06/change_manifest.json",
+    "artifacts/PH11/A06/test_report.md",
+    "artifacts/PH11/A06/risk_register.md",
+    "artifacts/PH11/A06/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/mobile/lib/core/feature_flags.dart",
+      "line": 78,
+      "symbol": "MobileFeatureFlags.fhirInteroperabilityMobileEnabled",
+      "description": "Additive fail-closed feature gate fhir_interoperability_mobile_enabled defaulting to false."
+    },
+    {
+      "file": "apps/mobile/lib/core/api_client.dart",
+      "line": 1663,
+      "symbol": "ApiClient.getFhirConformance, ApiClient.exportFhirR4Summary, ApiClient.syncConnector",
+      "description": "Typed client methods for FHIR R4 conformance statement, consented summary export, and connector sync."
+    },
+    {
+      "file": "apps/mobile/lib/experience/fhir/fhir_sync_dashboard_screen.dart",
+      "line": 18,
+      "symbol": "FhirSyncDashboardScreen",
+      "description": "Web integration status dashboard and health data connector synchronization view."
+    },
+    {
+      "file": "apps/mobile/lib/experience/fhir/fhir_export_screen.dart",
+      "line": 20,
+      "symbol": "FhirExportScreen",
+      "description": "Consented health record HL7 FHIR R4 export view with consent gate and data minimization."
+    },
+    {
+      "file": "apps/mobile/lib/experience/unified/profile_hub.dart",
+      "line": 166,
+      "symbol": "ProfileHub._entries",
+      "description": "Profile hub navigation entry wired to FHIR dashboard under fhirInteroperabilityEnabled gate."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "/home/clue/development/flutter/bin/flutter test --no-pub test/fhir_feature_flag_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "6 unit tests verifying fail-closed default, server-scoped override, and build-time define resolution."
+    },
+    {
+      "command": "/home/clue/development/flutter/bin/flutter test --no-pub test/api_client_fhir_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "10 unit tests for ApiClient FHIR conformance, export, header propagation, connector sync, and error mapping."
+    },
+    {
+      "command": "/home/clue/development/flutter/bin/flutter test --no-pub test/fhir_sync_dashboard_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "4 widget tests for FHIR dashboard rendering, capability chips, sync triggering, feedback, and navigation."
+    },
+    {
+      "command": "/home/clue/development/flutter/bin/flutter test --no-pub test/fhir_export_view_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "4 widget tests verifying consent gate enforcement, resource minimization toggles, export result, and error handling."
+    },
+    {
+      "command": "/home/clue/development/flutter/bin/dart analyze lib/experience/fhir lib/core/feature_flags.dart lib/core/api_client.dart test/fhir_feature_flag_test.dart test/api_client_fhir_test.dart test/fhir_sync_dashboard_test.dart test/fhir_export_view_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Dart static analysis on all new and modified mobile files with zero errors and zero warnings."
+    }
+  ],
+  "audit_findings": {
+    "consent_gate_compliance": {
+      "status": "COMPLETED",
+      "finding": "Medical consent gate enforced: export action is strictly disabled until the patient explicitly reviews and confirms the informed consent disclaimer."
+    },
+    "regulatory_disclosure_compliance": {
+      "status": "COMPLETED",
+      "finding": "Honest non-accredited / summary-not-ips disclosure rendered in dashboard and export screens to prevent misrepresentation as a certified general FHIR server."
+    },
+    "path_isolation": {
+      "status": "COMPLETED",
+      "finding": "All modifications and deliverables strictly bounded to apps/mobile/ and artifacts/PH11/A06/ lanes."
+    }
+  }
+}

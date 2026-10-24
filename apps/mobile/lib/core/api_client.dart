@@ -1660,6 +1660,86 @@ class ApiClient {
     );
   }
 
+  // --- FHIR R4 Interoperability & Sync (Phase PH11) ------------------------
+
+  /// Fetches the machine-readable FHIR R4 conformance and capability statement
+  /// from the LifeMap API endpoint (`GET /api/v1/lifemap/v2/fhir/conformance`).
+  /// This statement reflects the boundaries and supported export/import actions
+  /// without falsely claiming a full generic FHIR server.
+  Future<Map<String, dynamic>> getFhirConformance({
+    required String accessToken,
+  }) {
+    return _get(
+      '/api/v1/lifemap/v2/fhir/conformance',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Exports the user's longitudinal health summary as an HL7 FHIR R4
+  /// Collection Bundle (`GET /api/v1/lifemap/v2/export/fhir-r4`).
+  /// Bound to an explicit consent [purpose] and an optional comma-separated
+  /// resource filter [include]. If [profileContext] is specified, passes
+  /// the `X-CLARA-Profile-Context` header for scoped family/dependent exports.
+  Future<Map<String, dynamic>> exportFhirR4Summary({
+    required String accessToken,
+    String purpose = 'self_download',
+    String include =
+        'Patient,Condition,Observation,MedicationStatement,AllergyIntolerance,DocumentReference,Encounter',
+    String? profileContext,
+  }) {
+    final query = Uri(
+      queryParameters: <String, String>{
+        'purpose': purpose,
+        'include': include,
+      },
+    ).query;
+    return _get(
+      '/api/v1/lifemap/v2/export/fhir-r4?$query',
+      accessToken: accessToken,
+      extraHeaders: profileContext != null && profileContext.isNotEmpty
+          ? <String, String>{'X-CLARA-Profile-Context': profileContext}
+          : null,
+    );
+  }
+
+  /// Triggers a manual sync operation for a connected health data connector
+  /// (`POST /api/v1/connectors/{connectorId}/sync`).
+  Future<Map<String, dynamic>> syncConnector({
+    required String accessToken,
+    required String connectorId,
+  }) {
+    return _post(
+      '/api/v1/connectors/$connectorId/sync',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+    );
+  }
+
+  /// Returns aggregate health connector status and outbox synchronization
+  /// health (`GET /api/v1/connectors/status-adapter`).
+  Future<Map<String, dynamic>> getConnectorStatusAdapter({
+    required String accessToken,
+  }) {
+    return _get(
+      '/api/v1/connectors/status-adapter',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Exports the legacy PHR record as a standard FHIR bundle
+  /// (`GET /api/v1/phr/export?resource={resource}`).
+  Future<Map<String, dynamic>> exportPhrFhir({
+    required String accessToken,
+    String resource = 'all',
+  }) {
+    final query =
+        Uri(queryParameters: <String, String>{'resource': resource}).query;
+    return _get(
+      '/api/v1/phr/export?$query',
+      accessToken: accessToken,
+    );
+  }
+
   /// Persists the owner's full PHR profile via the server-validated
   /// `PUT /record` contract (personal-health-record Requirement 17.2). The
   /// server enforces field length/range and severity/status domains; validation
@@ -2954,12 +3034,13 @@ class ApiClient {
   Future<Map<String, dynamic>> _get(
     String path, {
     String? accessToken,
+    Map<String, String>? extraHeaders,
   }) {
     return _sendAuthed(
       accessToken,
       (token) => _httpClient.get(
         Uri.parse('$_baseUrl$path'),
-        headers: _headers(accessToken: token),
+        headers: _headers(accessToken: token, extra: extraHeaders),
       ),
     );
   }

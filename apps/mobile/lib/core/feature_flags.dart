@@ -76,6 +76,10 @@ class MobileFeatureFlags {
   /// not expose a route whose safe server contract is unavailable.
   static const String lifeMapVietnameseDrafts = 'lifemap_vietnamese_drafts';
 
+  /// FHIR R4 interoperability & sync dashboard gate (Phase PH11).
+  static const String fhirInteroperabilityMobileEnabled =
+      'fhir_interoperability_mobile_enabled';
+
   /// All new mobile flag keys, in staged-enablement order.
   static const List<String> all = <String>[
     chatMobileEnabled,
@@ -88,6 +92,7 @@ class MobileFeatureFlags {
     sharingMobileEnabled,
     uxPolishEnabled,
     lifeMapVietnameseDrafts,
+    fhirInteroperabilityMobileEnabled,
   ];
 }
 
@@ -116,6 +121,9 @@ const bool _sharingMobileDefault =
     bool.fromEnvironment('SHARING_MOBILE_ENABLED', defaultValue: false);
 const bool _uxPolishMobileDefault =
     bool.fromEnvironment('MOBILE_UX_POLISH_ENABLED', defaultValue: false);
+const bool _fhirInteroperabilityMobileDefault = bool.fromEnvironment(
+    'FHIR_INTEROPERABILITY_MOBILE_ENABLED',
+    defaultValue: false);
 
 /// The compile-time `--dart-define` defaults keyed by flag. All `false` unless
 /// the build explicitly enabled one. Used as the build-time half of the
@@ -133,6 +141,8 @@ const Map<String, bool> kMobileFeatureFlagBuildDefaults = <String, bool>{
   MobileFeatureFlags.sharingMobileEnabled: _sharingMobileDefault,
   MobileFeatureFlags.uxPolishEnabled: _uxPolishMobileDefault,
   MobileFeatureFlags.lifeMapVietnameseDrafts: false,
+  MobileFeatureFlags.fhirInteroperabilityMobileEnabled:
+      _fhirInteroperabilityMobileDefault,
 };
 
 // --- Experience_V2 build gate (single switch, default OFF) -------------------
@@ -328,6 +338,10 @@ class MobileFeatureFlagResolver {
   /// summary could not be read or the server disables the endpoint.
   bool get lifeMapVietnameseDraftsEnabled =>
       serverGranted(MobileFeatureFlags.lifeMapVietnameseDrafts);
+
+  /// FHIR R4 interoperability & sync dashboard gate (Phase PH11).
+  bool get fhirInteroperabilityEnabled =>
+      isEnabled(MobileFeatureFlags.fhirInteroperabilityMobileEnabled);
 
   /// A snapshot of every known new gate's resolved value. Useful for tiles and
   /// for asserting flags-off equivalence in tests (Property 1).
