@@ -1,0 +1,83 @@
+{
+  "$schema": "https://theclaracare.com/schemas/agent-execution/agent-manifest.schema.json",
+  "phase_id": "PH11",
+  "agent_id": "A02",
+  "role": "Data model + migration",
+  "task": "FHIR Patient/Observation import",
+  "worktree_path": "/dev/shm/clara_worktrees/PH11_A02",
+  "base_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "frozen_head_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "branch": "phase/ph11-a02",
+  "path_lane": "services/api/src/clara_api/db/;services/api/alembic/versions/;artifacts/PH11/A02/",
+  "status": "PASSED",
+  "files_changed": [
+    "services/api/src/clara_api/db/fhir_models.py",
+    "services/api/src/clara_api/db/fhir_import.py",
+    "services/api/src/clara_api/db/test_fhir_import.py",
+    "services/api/src/clara_api/db/models.py",
+    "services/api/alembic/versions/20260907_0069_fhir_patient_observation_import.py",
+    "artifacts/PH11/A02/change_manifest.json",
+    "artifacts/PH11/A02/test_report.md",
+    "artifacts/PH11/A02/risk_register.md",
+    "artifacts/PH11/A02/rollback.md"
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line_start": 4645,
+      "line_end": 4649,
+      "symbol": "FhirImportBatch, FhirObservation, FhirPatient"
+    },
+    {
+      "file": "services/api/alembic/versions/20260906_0068_medical_vocabulary_codes.py",
+      "line_start": 13,
+      "line_end": 14,
+      "symbol": "revision = '20260906_0068'"
+    }
+  ],
+  "interface_assumptions": [
+    "PhrProfile anchor (phr_profiles.id) exists and serves as the patient clinical boundary.",
+    "Imported resources default to import_trust = 'untrusted_external_draft' and require clinical verification before altering confirmed health truth.",
+    "Observation categories adhere to FHIR R4 standard codes (vital-signs, laboratory) and LOINC vocabulary.",
+    "Idempotent imports are identified by SHA-256 digest of raw bundle payload or caller idempotency_key."
+  ],
+  "tests_run": [
+    {
+      "command": "pytest src/clara_api/db/test_fhir_import.py -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "12 passed in 2.32s"
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "[migration-downgrade-check] scanned 69 migration(s) in services/api/alembic/versions. 69 define a non-empty downgrade(). OK."
+    },
+    {
+      "command": "python3 -m compileall services/api/src/clara_api/db/ services/api/alembic/versions/",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Clean compilation of all Python modules without error."
+    },
+    {
+      "command": "alembic upgrade head && alembic downgrade -1",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Successfully applied 20260907_0069 and downgraded cleanly back to 20260906_0068."
+    }
+  ],
+  "artifacts": [
+    "artifacts/PH11/A02/change_manifest.json",
+    "artifacts/PH11/A02/test_report.md",
+    "artifacts/PH11/A02/risk_register.md",
+    "artifacts/PH11/A02/rollback.md"
+  ],
+  "rollback_steps": [
+    "cd services/api && alembic downgrade 20260906_0068",
+    "git checkout 85cef4b2d9a0e926ca684e9eeeba5e588ab11600 -- services/api/src/clara_api/db/models.py",
+    "rm -f services/api/src/clara_api/db/fhir_models.py services/api/src/clara_api/db/fhir_import.py services/api/src/clara_api/db/test_fhir_import.py",
+    "rm -f services/api/alembic/versions/20260907_0069_fhir_patient_observation_import.py",
+    "rm -rf artifacts/PH11/A02"
+  ]
+}

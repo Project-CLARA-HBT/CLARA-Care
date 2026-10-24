@@ -4643,3 +4643,7 @@ class PrivacyAuditReceipt(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+# PH11: FHIR R4 interoperability production profiles (Patient / Observation import & storage)
+from clara_api.db.fhir_models import FhirImportBatch, FhirObservation, FhirPatient  # noqa: E402
