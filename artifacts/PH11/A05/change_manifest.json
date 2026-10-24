@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH11",
+  "agent_id": "A05",
+  "role": "Web UX",
+  "task": "encounter/documents export",
+  "status": "PASSED",
+  "branch": "phase/ph11-a05",
+  "base_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "frozen_head_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "path_lane": "apps/web/app/;apps/web/components/;apps/web/lib/;artifacts/PH11/A05/",
+  "files_changed": [
+    "apps/web/app/api/export/documents/route.ts",
+    "apps/web/app/api/export/encounter/route.ts",
+    "apps/web/app/api/export/export-routes.test.ts",
+    "apps/web/app/visits/[visitId]/page.tsx",
+    "apps/web/components/export/fhir-encounter-export-dialog.test.tsx",
+    "apps/web/components/export/fhir-encounter-export-dialog.tsx",
+    "apps/web/lib/fhir-encounter-export.test.ts",
+    "apps/web/lib/fhir-encounter-export.ts",
+    "apps/web/lib/scribe.ts",
+    "artifacts/PH11/A05/change_manifest.json",
+    "artifacts/PH11/A05/risk_register.md",
+    "artifacts/PH11/A05/rollback.md",
+    "artifacts/PH11/A05/test_report.md"
+  ],
+  "deliverables": [
+    "artifacts/PH11/A05/change_manifest.json",
+    "artifacts/PH11/A05/test_report.md",
+    "artifacts/PH11/A05/risk_register.md",
+    "artifacts/PH11/A05/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/web/lib/scribe.ts",
+      "symbol": "exportScribeNote",
+      "description": "Expanded ScribeExportFormat to support fhir_composition (Composition, Encounter, and DocumentReference structured payload)."
+    },
+    {
+      "file": "apps/web/app/visits/[visitId]/page.tsx",
+      "symbol": "VisitDetailReaderStream",
+      "description": "Integrated FHIR Encounter & Documents export action and modal alongside print and share controls."
+    },
+    {
+      "file": "apps/web/lib/fhir-encounter-export.ts",
+      "symbol": "exportEncounterAsFhir",
+      "description": "Core FHIR R4 Encounter and Documents export engine with consent gate, redaction safety check, and sanitized download."
+    },
+    {
+      "file": "apps/web/components/export/fhir-encounter-export-dialog.tsx",
+      "symbol": "FhirEncounterExportDialog",
+      "description": "Accessible Next.js Web UX dialog for FHIR encounter and clinical document export with purpose, format selection, and consent indicator."
+    },
+    {
+      "file": "apps/web/app/api/export/encounter/route.ts",
+      "symbol": "GET",
+      "description": "Next.js App Router API route handler for FHIR R4 Encounter bundle export with feature flag check and consent verification."
+    },
+    {
+      "file": "apps/web/app/api/export/documents/route.ts",
+      "symbol": "GET",
+      "description": "Next.js App Router API route handler for FHIR R4 DocumentReference bundle export."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "npx vitest run lib/fhir-encounter-export.test.ts",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "19 unit tests verifying feature flags, consent gate, filename sanitization, redaction safety, and FHIR resource/bundle builders."
+    },
+    {
+      "command": "npx vitest run components/export/fhir-encounter-export-dialog.test.tsx",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "5 UI component tests verifying preview banner, consent verification indicator, format selection, and download invocation."
+    },
+    {
+      "command": "npx vitest run app/api/export/export-routes.test.ts",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "10 route tests verifying 404 feature-disabled, 422 validation, 403 consent gating, and 200 FHIR JSON / NDJSON exports."
+    },
+    {
+      "command": "npx vitest run lib/scribe.workflow.test.ts",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "22 tests verifying Scribe note export formats including FHIR document and composition."
+    },
+    {
+      "command": "npx vitest run app/visits/visits-page.test.tsx",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "17 tests verifying Visit detail page, preparation wizard, and export action rendering."
+    },
+    {
+      "command": "npm run route-matrix:check",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Verified that all 123 Next.js page routes match the route capability matrix."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A05 -p PH11 --files apps/web/app/api/export/documents/route.ts apps/web/app/api/export/encounter/route.ts apps/web/app/api/export/export-routes.test.ts apps/web/app/visits/[visitId]/page.tsx apps/web/components/export/fhir-encounter-export-dialog.test.tsx apps/web/components/export/fhir-encounter-export-dialog.tsx apps/web/lib/fhir-encounter-export.test.ts apps/web/lib/fhir-encounter-export.ts apps/web/lib/scribe.ts artifacts/PH11/A05/change_manifest.json artifacts/PH11/A05/risk_register.md artifacts/PH11/A05/rollback.md artifacts/PH11/A05/test_report.md",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/web/app/, apps/web/components/, apps/web/lib/, and artifacts/PH11/A05/."
+    }
+  ],
+  "audit_findings": {
+    "feature_flag_gated": {
+      "status": "COMPLETED",
+      "finding": "Feature is strictly disabled by default (NEXT_PUBLIC_FHIR_ENCOUNTER_EXPORT_ENABLED defaults to false), failing closed with 404 feature_disabled."
+    },
+    "consent_enforcement": {
+      "status": "COMPLETED",
+      "finding": "Export operations enforce active medical_disclaimer consent and fail closed with 403 consent_required when unaccepted."
+    },
+    "phi_redaction_and_sanitization": {
+      "status": "COMPLETED",
+      "finding": "Filename sanitization strips directory traversal paths; validateRedaction rejects any internal tokens, passwords, or secrets before download initiation."
+    }
+  },
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH11_A05/apps/web/app/api/export",
+    "rm -rf /dev/shm/clara_worktrees/PH11_A05/apps/web/components/export",
+    "rm -f /dev/shm/clara_worktrees/PH11_A05/apps/web/lib/fhir-encounter-export.ts",
+    "rm -f /dev/shm/clara_worktrees/PH11_A05/apps/web/lib/fhir-encounter-export.test.ts",
+    "git checkout 85cef4b2d9a0e926ca684e9eeeba5e588ab11600 -- apps/web/lib/scribe.ts apps/web/app/visits/[visitId]/page.tsx",
+    "rm -rf /dev/shm/clara_worktrees/PH11_A05/artifacts/PH11/A05"
+  ],
+  "timestamp": "2026-10-24T16:50:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH11_A05"
+}

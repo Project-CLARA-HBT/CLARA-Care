@@ -341,17 +341,25 @@ export async function getScribeAudit(
   return response.data;
 }
 
-/** Supported export formats (Requirement 9): Markdown, DOCX, FHIR DocumentReference. */
-export type ScribeExportFormat = "md" | "docx" | "fhir";
+/** Supported export formats (Requirement 9, Req 17): Markdown, DOCX, FHIR DocumentReference, FHIR Composition + Encounter. */
+export type ScribeExportFormat = "md" | "docx" | "fhir" | "fhir_composition";
 
 /**
  * Normalized export result. `md` carries the rendered markdown (+ the raw
- * payload), `fhir` the DocumentReference-shaped JSON, and `docx` the binary
+ * payload), `fhir` the DocumentReference-shaped JSON, `fhir_composition` the
+ * structured Composition and Encounter, and `docx` the binary
  * blob plus a filename ready to download.
  */
 export type ScribeExportResult =
   | { format: "md"; markdown: string; data: Record<string, unknown> }
   | { format: "fhir"; document: Record<string, unknown> }
+  | {
+      format: "fhir_composition";
+      composition: Record<string, unknown>;
+      encounter?: Record<string, unknown>;
+      document_reference?: Record<string, unknown>;
+      document: Record<string, unknown>;
+    }
   | { format: "docx"; blob: Blob; filename: string };
 
 /**
@@ -386,6 +394,15 @@ export async function exportScribeNote(
   const data = response.data ?? {};
   if (format === "fhir") {
     return { format: "fhir", document: data };
+  }
+  if (format === "fhir_composition") {
+    return {
+      format: "fhir_composition",
+      composition: (data.composition as Record<string, unknown>) ?? {},
+      encounter: data.encounter as Record<string, unknown> | undefined,
+      document_reference: data.document_reference as Record<string, unknown> | undefined,
+      document: data,
+    };
   }
   const markdown = typeof data.markdown === "string" ? data.markdown : "";
   return { format: "md", markdown, data };

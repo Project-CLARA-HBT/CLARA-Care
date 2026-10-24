@@ -14,6 +14,7 @@ import { Field, Textarea } from "@/components/ui/field";
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
+import { FhirEncounterExportDialog } from "@/components/export/fhir-encounter-export-dialog";
 import {
   createVisitDocument,
   deleteVisitDocument,
@@ -94,6 +95,9 @@ function VisitDetailReaderStream() {
   // Share modal state
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+
+  // FHIR Encounter & Documents export modal state
+  const [fhirExportModalOpen, setFhirExportModalOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!visitId) return;
@@ -334,6 +338,16 @@ function VisitDetailReaderStream() {
                   data-testid="share-visit-action"
                 >
                   {copy("visitDetail.actions.share")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  icon="clinical-notes"
+                  onClick={() => setFhirExportModalOpen(true)}
+                  data-testid="export-fhir-visit-action"
+                >
+                  {isEn ? "Export FHIR" : "Xuất FHIR R4"}
                 </Button>
                 <Button
                   as="link"
@@ -805,6 +819,19 @@ function VisitDetailReaderStream() {
           </div>
         </div>
       </Modal>
+
+      {/* ============================================================ */}
+      {/* Modal: Export FHIR Encounter & Documents */}
+      {/* ============================================================ */}
+      {visit ? (
+        <FhirEncounterExportDialog
+          open={fhirExportModalOpen}
+          onClose={() => setFhirExportModalOpen(false)}
+          visit={visit}
+          documents={documents}
+          locale={isEn ? "en" : "vi"}
+        />
+      ) : null}
     </PageFrame>
   );
 }
