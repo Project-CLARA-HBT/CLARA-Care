@@ -1,0 +1,11 @@
+# Risk Register — PH12 A04 (Longitudinal Trajectory Baseline Recommendation Engine)
+
+| Risk ID | Description | Severity | Likelihood | Mitigation | Status |
+|---------|-------------|----------|------------|------------|--------|
+| RISK-PH12-A04-01 | Unconsented longitudinal health trajectory analysis on personal data | Critical | Low | Fail-closed `consent_active` and `consent_purposes` ("longitudinal_analysis") verification under Decree 13/2023/ND-CP and Circular 46/2018/TT-BYT before processing. | Mitigated |
+| RISK-PH12-A04-02 | Exploratory questions delaying acute emergency clinical escalation | Critical | Low | Hard emergency fast-path check: if `emergency_detected` is active, the engine short-circuits questioning immediately and surfaces zero questions. | Mitigated |
+| RISK-PH12-A04-03 | Learned models or scorers inventing unapproved clinical questions | High | Low | Closed, clinician-reviewed `DEFAULT_QUESTION_CATALOGUE`. Optional learned rankers conform to `QuestionScorer` protocol and can only re-order pre-filtered, verified eligible questions. | Mitigated |
+| RISK-PH12-A04-04 | Diagnostic or prescriptive claims violating regulatory invariants | High | Low | Invariant enforcement: trajectory baseline engine compares a person strictly with their own eligible history. Outputs remain descriptive, non-diagnostic, and non-prescriptive. | Mitigated |
+| RISK-PH12-A04-05 | Spurious baseline recalibration caused by isolated sensor spikes or noise | Medium | Low | Non-parametric robust estimators (Theil-Sen slope, MAD, and normal-equivalent IQR) resist up to ~29% outliers. Step-shift detection requires sustained multi-sample shift exceeding Z-threshold. | Mitigated |
+| RISK-PH12-A04-06 | User cognitive fatigue and burden from excessive question prompts | Medium | Low | Strict burden budget: daily burden ceiling (`max_daily_burden=0.5`), max one question per day, and cooldown suppression for dismissed questions. | Mitigated |
+| RISK-PH12-A04-07 | Premature production activation of unreviewed trajectory recommendations | Medium | Low | Engine is fully protected behind feature flag `lifemap_trajectory_recommendation_enabled: bool = False` until clinical review. | Mitigated |

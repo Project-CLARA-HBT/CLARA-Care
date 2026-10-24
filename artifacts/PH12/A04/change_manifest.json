@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH12",
+  "agent_id": "A04",
+  "role": "ML + retrieval",
+  "task": "question/baseline recommendation logic",
+  "status": "PASSED",
+  "branch": "phase/ph12-a04",
+  "base_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "frozen_head_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "path_lane": "services/ml/src/clara_ml/;evaluation/;services/ocr/;services/asr/;artifacts/PH12/A04/",
+  "files_changed": [
+    "services/ml/src/clara_ml/config.py",
+    "services/ml/src/clara_ml/lifemap/__init__.py",
+    "services/ml/src/clara_ml/lifemap/longitudinal_trajectory.py",
+    "evaluation/tests/test_longitudinal_trajectory_baseline.py",
+    "artifacts/PH12/A04/change_manifest.json",
+    "artifacts/PH12/A04/test_report.md",
+    "artifacts/PH12/A04/risk_register.md",
+    "artifacts/PH12/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH12/A04/change_manifest.json",
+    "artifacts/PH12/A04/test_report.md",
+    "artifacts/PH12/A04/risk_register.md",
+    "artifacts/PH12/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/ml/src/clara_ml/lifemap/adaptive.py",
+      "line": 48,
+      "symbol": "EligibleQuestion",
+      "description": "Adaptive question ranking action model with deterministic fallback order."
+    },
+    {
+      "file": "services/ml/src/clara_ml/lifemap/adaptive.py",
+      "line": 56,
+      "symbol": "RankContext",
+      "description": "Contextual burden, cooldown, emergency, and consent state governing question presentation."
+    },
+    {
+      "file": "services/ml/src/clara_ml/lifemap/adaptive.py",
+      "line": 65,
+      "symbol": "QuestionScorer",
+      "description": "Verified ranking protocol allowing learned scorers to order already-eligible questions without altering the eligible action set."
+    },
+    {
+      "file": "services/ml/src/clara_ml/lifemap/adaptive.py",
+      "line": 96,
+      "symbol": "compare_shadow_rankings",
+      "description": "Shadow comparison protocol auditing agreement and top-1 changes between champion deterministic baseline and learned scorers."
+    },
+    {
+      "file": "services/ml/src/clara_ml/lifemap/timeseries_features.py",
+      "line": 19,
+      "symbol": "SignalObservation",
+      "description": "Time-series observation unit with strict person, site, revision, and unit consistency."
+    },
+    {
+      "file": "services/ml/src/clara_ml/lifemap/uncertainty.py",
+      "line": 15,
+      "symbol": "SufficiencyPolicy",
+      "description": "Sufficiency policy enforcing minimum sample counts and coverage bounds before releasing predictions."
+    },
+    {
+      "file": "services/ml/src/clara_ml/config.py",
+      "line": 1144,
+      "symbol": "Settings.lifemap_trajectory_recommendation_enabled",
+      "description": "Feature flag gating LifeMap longitudinal trajectory baseline recommendation engine (default: False)."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/ml/src/clara_ml/ evaluation/tests/",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation across modified and created Python sources."
+    },
+    {
+      "command": "pytest -v evaluation/tests/test_longitudinal_trajectory_baseline.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "30 focused test cases verifying trajectory metrics, Theil-Sen slope, MAD/IQR dispersion, step-shift detection, baseline recommendations, emergency fast-path, consent gates, cooldown/burden filters, shadow ranking, and concurrency determinism."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A04 -p PH12",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/ml/src/clara_ml/, evaluation/, and artifacts/PH12/A04/."
+    }
+  ],
+  "audit_findings": {
+    "longitudinal_trajectory_engine": {
+      "status": "COMPLETED",
+      "finding": "Implemented LongitudinalTrajectoryEngine in services/ml/src/clara_ml/lifemap/longitudinal_trajectory.py computing non-parametric robust statistics (Theil-Sen slope, MAD, IQR) and step-shift changepoint detection without any mock data."
+    },
+    "personal_baseline_recommendation": {
+      "status": "COMPLETED",
+      "finding": "Implemented deterministic baseline action evaluator returning establish, maintain, recalibrate, refresh_stale, or increase_monitoring actions with explicit confidence scores, decision rule IDs, and bilingual (Vietnamese/English) clinical assistant rationales."
+    },
+    "longitudinal_next_best_question": {
+      "status": "COMPLETED",
+      "finding": "Implemented question recommendation engine selecting at most one primary question from an approved clinical catalogue, guarded by emergency fast-path short-circuit, Decree 13/Circular 46 purpose consent, daily burden budgets, and dismissal cooldowns."
+    },
+    "shadow_ranking_governance": {
+      "status": "COMPLETED",
+      "finding": "Integrated QuestionScorer protocol and compare_shadow_rankings ensuring candidate learned models cannot invent questions or modify eligible action sets."
+    }
+  },
+  "rollback_steps": [
+    "git checkout 36e5b95fac7e65712f0779de253d8ed18dc693d7 -- services/ml/src/clara_ml/config.py services/ml/src/clara_ml/lifemap/__init__.py",
+    "rm -f services/ml/src/clara_ml/lifemap/longitudinal_trajectory.py",
+    "rm -f evaluation/tests/test_longitudinal_trajectory_baseline.py",
+    "rm -rf artifacts/PH12/A04"
+  ],
+  "timestamp": "2026-10-24T18:00:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH12_A04"
+}

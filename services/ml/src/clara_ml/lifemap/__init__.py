@@ -1,1 +1,43 @@
 """LifeMap-specific governed ML capabilities."""
+
+from clara_ml.lifemap.longitudinal_trajectory import (
+    DEFAULT_QUESTION_CATALOGUE,
+    DEFAULT_SIGNAL_DEFINITIONS,
+    BaselineRecommendation,
+    CurrentBaseline,
+    TrajectoryEngineError,
+    TrajectoryMetrics,
+    TrajectoryObservation,
+    TrajectoryQuestionContext,
+    TrajectoryQuestionDefinition,
+    TrajectoryQuestionRecommendation,
+    TrajectoryRecommendationRequest,
+    TrajectoryRecommendationResponse,
+    TrajectorySignalDefinition,
+    TrajectoryValidationError,
+    compute_trajectory_metrics,
+    evaluate_baseline_recommendation,
+    execute_trajectory_recommendation_pipeline,
+    recommend_trajectory_questions,
+)
+
+__all__ = [
+    "DEFAULT_QUESTION_CATALOGUE",
+    "DEFAULT_SIGNAL_DEFINITIONS",
+    "BaselineRecommendation",
+    "CurrentBaseline",
+    "TrajectoryEngineError",
+    "TrajectoryMetrics",
+    "TrajectoryObservation",
+    "TrajectoryQuestionContext",
+    "TrajectoryQuestionDefinition",
+    "TrajectoryQuestionRecommendation",
+    "TrajectoryRecommendationRequest",
+    "TrajectoryRecommendationResponse",
+    "TrajectorySignalDefinition",
+    "TrajectoryValidationError",
+    "compute_trajectory_metrics",
+    "evaluate_baseline_recommendation",
+    "execute_trajectory_recommendation_pipeline",
+    "recommend_trajectory_questions",
+]
