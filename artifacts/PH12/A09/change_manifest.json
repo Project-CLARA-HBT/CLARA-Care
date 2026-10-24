@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH12",
+  "agent_id": "A09",
+  "role": "Docs + research evidence",
+  "task": "data minimization/history visibility audit",
+  "status": "PASSED",
+  "base_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "frozen_head_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "branch": "phase/ph12-a09",
+  "worktree_path": "/dev/shm/clara_worktrees/PH12_A09",
+  "path_lane": "research/;docs/research/;docs/implementation/;docs/interoperability/;artifacts/PH12/A09/",
+  "timestamp": "2026-10-24T17:30:00Z",
+  "files_changed": [
+    "docs/research/LIFEMAP_LONGITUDINAL_DATA_MINIMIZATION_AND_HISTORY_VISIBILITY_AUDIT.md",
+    "docs/implementation/LIFEMAP_DATA_MINIMIZATION_AND_VISIBILITY_BOUNDARIES_SPEC.md",
+    "docs/interoperability/LIFEMAP_FHIR_PROVENANCE_AND_MINIMIZATION_BOUNDARIES.md",
+    "artifacts/PH12/A09/test_lifemap_data_minimization_and_visibility.py",
+    "artifacts/PH12/A09/change_manifest.json",
+    "artifacts/PH12/A09/test_report.md",
+    "artifacts/PH12/A09/risk_register.md",
+    "artifacts/PH12/A09/rollback.md"
+  ],
+  "tests_run": [
+    {
+      "command": "pytest -v artifacts/PH12/A09/test_lifemap_data_minimization_and_visibility.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 1.88
+    },
+    {
+      "command": "pytest -v contracts/agent-execution/test_agent_manifest_schema.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 0.62
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A09 -p PH12",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 0.04
+    }
+  ],
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH12_A09/artifacts/PH12/A09",
+    "rm -f /dev/shm/clara_worktrees/PH12_A09/docs/research/LIFEMAP_LONGITUDINAL_DATA_MINIMIZATION_AND_HISTORY_VISIBILITY_AUDIT.md",
+    "rm -f /dev/shm/clara_worktrees/PH12_A09/docs/implementation/LIFEMAP_DATA_MINIMIZATION_AND_VISIBILITY_BOUNDARIES_SPEC.md",
+    "rm -f /dev/shm/clara_worktrees/PH12_A09/docs/interoperability/LIFEMAP_FHIR_PROVENANCE_AND_MINIMIZATION_BOUNDARIES.md",
+    "git -C /dev/shm/clara_worktrees/PH12_A09 reset --hard 36e5b95fac7e65712f0779de253d8ed18dc693d7"
+  ],
+  "blockers": [],
+  "artifacts": [
+    "artifacts/PH12/A09/change_manifest.json",
+    "artifacts/PH12/A09/test_report.md",
+    "artifacts/PH12/A09/risk_register.md",
+    "artifacts/PH12/A09/rollback.md",
+    "artifacts/PH12/A09/test_lifemap_data_minimization_and_visibility.py"
+  ],
+  "interface_assumptions": [
+    "Law on Medical Examination and Treatment No. 15/2023/QH15 restricts diagnosis and prescription strictly to licensed practitioners with practicing certificates; CDSS algorithms cannot autonomously prescribe or diagnose.",
+    "Decree 13/2023/ND-CP classifies health data as sensitive personal data requiring purpose-bound processing, data minimization, consent revocation cascade, and 72-hour DSAR erasure for active PHR.",
+    "Administrative roles (admin/support) possess zero ambient PHI visibility (platform_root_cannot_read_phi invariant) and require an explicit break-glass workflow.",
+    "Dynamic consent revocation is enforced via LifeMapSourceRevocation anti-join and transitive projection graph invalidation."
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line_start": 22,
+      "line_end": 48,
+      "symbol": "ProfileScope",
+      "description": "Server-authorized health-profile scope verifying actor ownership and purpose-bound ABAC permissions"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line_start": 49,
+      "line_end": 64,
+      "symbol": "ProfileAccessPolicy",
+      "description": "Role classification ensuring admin role never grants health-data capabilities"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line_start": 86,
+      "line_end": 235,
+      "symbol": "resolve_profile_scope",
+      "description": "Resolves profile scope, validates FamilyAccessGrant, blocks admins, and emits uniform 404 anti-enumeration"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line_start": 237,
+      "line_end": 387,
+      "symbol": "require_profile_scope",
+      "description": "User entity profile scope resolution and authorization guard"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/domain.py",
+      "line_start": 12,
+      "line_end": 20,
+      "symbol": "TRUTH_TRANSITIONS",
+      "description": "Deterministic truth state transition matrix (draft -> user_reported -> confirmed / disputed / invalidated)"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/domain.py",
+      "line_start": 43,
+      "line_end": 48,
+      "symbol": "require_truth_transition",
+      "description": "Validates state transition and raises InvalidTransition on non-permitted lifecycles"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/domain.py",
+      "line_start": 27,
+      "line_end": 35,
+      "symbol": "TASK_TRANSITIONS",
+      "description": "Care task state transition matrix (proposed -> accepted -> in_progress -> completed)"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/conflict_preservation.py",
+      "line_start": 19,
+      "line_end": 29,
+      "symbol": "PreservedClinicalAssertion",
+      "description": "Immutable container for parallel competing clinical claims with status and confidence typing"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/conflict_preservation.py",
+      "line_start": 31,
+      "line_end": 88,
+      "symbol": "ConflictPreservationEngine",
+      "description": "Manages parallel competing clinical assertions and non-destructive dispute tracking"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/intelligence.py",
+      "line_start": 56,
+      "line_end": 65,
+      "symbol": "_EMERGENCY_HINTS",
+      "description": "Vietnamese and English acute life-threatening symptom hints for fast-path escalation"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/intelligence.py",
+      "line_start": 66,
+      "line_end": 75,
+      "symbol": "_FORBIDDEN_HINTS",
+      "description": "Anti-prescribing and autonomous diagnosis keywords blocked under Law 15/2023/QH15"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/intelligence.py",
+      "line_start": 125,
+      "line_end": 135,
+      "symbol": "route_ask_query",
+      "description": "Directs queries to emergency fast-path or legal_guard before database retrieval"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/intelligence.py",
+      "line_start": 141,
+      "line_end": 200,
+      "symbol": "retrieve_revision_evidence",
+      "description": "Temporal revision retrieval joining LifeMapSourceRevocation anti-join to prune revoked sources"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/temporal_index.py",
+      "line_start": 15,
+      "line_end": 32,
+      "symbol": "RetrievalDocument",
+      "description": "Profile-partitioned retrieval document schema with data class and temporal bounds"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/temporal_index.py",
+      "line_start": 55,
+      "line_end": 142,
+      "symbol": "TemporalRetrievalIndex",
+      "description": "Profile-partitioned retrieval index enforcing data class gating and reranker escape protection"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/projection_invalidation.py",
+      "line_start": 55,
+      "line_end": 131,
+      "symbol": "invalidate_projection_graph",
+      "description": "Transitive projection invalidation cascade triggered on consent revocation or dispute"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/baselines.py",
+      "line_start": 1,
+      "line_end": 51,
+      "symbol": "BaselineResult",
+      "description": "Compares patient strictly against personal history; prohibits classification of clinical normality"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/next_best_question.py",
+      "line_start": 1,
+      "line_end": 50,
+      "symbol": "NextBestQuestionEngine",
+      "description": "Deterministic question minimization engine (0 or 1 question, emergency short-circuit)"
+    }
+  ]
+}
