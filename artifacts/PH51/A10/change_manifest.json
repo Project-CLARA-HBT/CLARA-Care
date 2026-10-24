@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH51",
+  "agent_id": "A10",
+  "role": "Adversarial reviewer",
+  "task": "Adversarial duplicate-replay and queue starvation scenario",
+  "status": "PASSED",
+  "branch": "phase/ph51-a10",
+  "base_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "frozen_head_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "path_lane": "docs/reports/;scripts/ci/;artifacts/phase-gates/;artifacts/PH51/A10/",
+  "files_changed": [
+    "docs/reports/ADVERSARIAL_JOB_DUPLICATE_REPLAY_AND_STARVATION_REPORT.md",
+    "artifacts/phase-gates/PH51_gate_manifest.json",
+    "artifacts/PH51/A10/change_manifest.json",
+    "artifacts/PH51/A10/test_report.md",
+    "artifacts/PH51/A10/risk_register.md",
+    "artifacts/PH51/A10/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH51/A10/change_manifest.json",
+    "artifacts/PH51/A10/test_report.md",
+    "artifacts/PH51/A10/risk_register.md",
+    "artifacts/PH51/A10/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "docs/reports/ADVERSARIAL_JOB_DUPLICATE_REPLAY_AND_STARVATION_REPORT.md",
+      "symbol": "Adversarial Report",
+      "description": "Adversarial simulation proving resistance against concurrent replay flooding and worker lease starvation."
+    },
+    {
+      "file": "artifacts/phase-gates/PH51_gate_manifest.json",
+      "symbol": "PH51 Gate Manifest",
+      "description": "Phase gate acceptance artifact confirming zero mock data and statutory guardrails."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A10 -p PH51",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/reports/, artifacts/phase-gates/, and artifacts/PH51/A10/."
+    }
+  ],
+  "audit_findings": {
+    "adversarial_resilience": {
+      "status": "COMPLETED",
+      "finding": "Verified that concurrent replay calls are deduplicated and worker leases recover cleanly without starvation."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH51_A10/docs/reports/ADVERSARIAL_JOB_DUPLICATE_REPLAY_AND_STARVATION_REPORT.md",
+    "rm -f /dev/shm/clara_worktrees/PH51_A10/artifacts/phase-gates/PH51_gate_manifest.json",
+    "rm -rf /dev/shm/clara_worktrees/PH51_A10/artifacts/PH51/A10"
+  ],
+  "timestamp": "2026-10-22T20:25:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH51_A10"
+}
