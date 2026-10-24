@@ -29,6 +29,7 @@ class MLEventSubscriptionRegistry:
         "medications.course.created": ["careguard_ddi_indexer"],
         "scribe.note.signed": ["clinical_soap_normalizer"],
         "council.consensus.admitted": ["evidence_intelligence"],
+        "connector.sync_requested": ["wearable_signal_normalizer"],
     }
 
     @classmethod

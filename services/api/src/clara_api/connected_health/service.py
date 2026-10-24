@@ -220,6 +220,17 @@ def request_sync(
         actor_user_id=user.id,
         event_type="connector.sync_requested",
     )
+    import uuid
+    from clara_api.lifemap.commands import add_outbox
+
+    add_outbox(
+        db,
+        event_id=f"conn-sync-{uuid.uuid4().hex[:16]}",
+        profile_id=user.id,
+        aggregate_type="connector_account",
+        aggregate_public_id=str(connector.id),
+        event_type="connector.sync_requested",
+    )
     db.commit()
     return ConnectorOperationResponse(
         connector=serialize_connector(db, connector),

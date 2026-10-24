@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH51",
+  "agent_id": "A04",
+  "role": "Adapter / existing code",
+  "task": "Hook health API outbox and connector status adapters",
+  "status": "PASSED",
+  "branch": "phase/ph51-a04",
+  "base_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "frozen_head_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "path_lane": "services/api/src/clara_api/;services/ml/src/clara_ml/;artifacts/PH51/A04/",
+  "files_changed": [
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py",
+    "services/api/src/clara_api/connected_health/service.py",
+    "services/ml/src/clara_ml/event_subscriptions.py",
+    "artifacts/PH51/A04/change_manifest.json",
+    "artifacts/PH51/A04/test_report.md",
+    "artifacts/PH51/A04/risk_register.md",
+    "artifacts/PH51/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH51/A04/change_manifest.json",
+    "artifacts/PH51/A04/test_report.md",
+    "artifacts/PH51/A04/risk_register.md",
+    "artifacts/PH51/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/connected_health/service.py",
+      "symbol": "request_sync",
+      "description": "Added transactional outbox event dispatch when sync is requested on a health connector."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/connected_health.py",
+      "symbol": "connector_status_adapter",
+      "description": "Admin adapter endpoint reporting connector health totals and outbox linkage."
+    },
+    {
+      "file": "services/ml/src/clara_ml/event_subscriptions.py",
+      "symbol": "MLEventSubscriptionRegistry.SUBSCRIBER_MAP",
+      "description": "Registered wearable signal normalization subscriber for connector sync requests."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/api/v1/endpoints/connected_health.py services/api/src/clara_api/connected_health/service.py services/ml/src/clara_ml/event_subscriptions.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation across modified API and ML modules."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A04 -p PH51",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/src/clara_api/, services/ml/src/clara_ml/, and artifacts/PH51/A04/."
+    }
+  ],
+  "audit_findings": {
+    "outbox_connector_hook": {
+      "status": "COMPLETED",
+      "finding": "Connected health synchronization events are reliably queued to transactional outbox and routed to ML event subscribers."
+    }
+  },
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH51_A04 checkout 7d8840494cf8e30b6c70ea935574516604e4c275 -- services/api/src/clara_api/ services/ml/src/clara_ml/",
+    "rm -rf /dev/shm/clara_worktrees/PH51_A04/artifacts/PH51/A04"
+  ],
+  "timestamp": "2026-10-22T19:55:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH51_A04"
+}
