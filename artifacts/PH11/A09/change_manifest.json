@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH11",
+  "agent_id": "A09",
+  "role": "Docs + research evidence",
+  "task": "FHIR auth scopes and endpoint security",
+  "status": "PASSED",
+  "base_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "frozen_head_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "branch": "phase/ph11-a09",
+  "worktree_path": "/dev/shm/clara_worktrees/PH11_A09",
+  "path_lane": "research/;docs/research/;docs/implementation/;docs/interoperability/;artifacts/PH11/A09/",
+  "timestamp": "2026-10-24T12:00:00Z",
+  "files_changed": [
+    "docs/interoperability/FHIR_SMART_AUTH_SCOPES_AND_ENDPOINT_SECURITY.md",
+    "docs/interoperability/lifemap-fhir-r4.md",
+    "docs/implementation/FHIR_ENDPOINT_SECURITY_ARCHITECTURE.md",
+    "docs/research/FHIR_AUTH_SECURITY_THREAT_MODEL_AND_AUDIT.md",
+    "artifacts/PH11/A09/test_fhir_auth_scopes_and_security.py",
+    "artifacts/PH11/A09/change_manifest.json",
+    "artifacts/PH11/A09/test_report.md",
+    "artifacts/PH11/A09/risk_register.md",
+    "artifacts/PH11/A09/rollback.md"
+  ],
+  "tests_run": [
+    {
+      "command": "pytest -v artifacts/PH11/A09/test_fhir_auth_scopes_and_security.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 0.20
+    },
+    {
+      "command": "pytest -v contracts/auth/test_auth_contracts.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 0.21
+    },
+    {
+      "command": "pytest -v contracts/agent-execution/test_agent_manifest_schema.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 0.60
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A09 -p PH11",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 0.05
+    }
+  ],
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH11_A09/artifacts/PH11/A09",
+    "rm -f /dev/shm/clara_worktrees/PH11_A09/docs/interoperability/FHIR_SMART_AUTH_SCOPES_AND_ENDPOINT_SECURITY.md",
+    "rm -f /dev/shm/clara_worktrees/PH11_A09/docs/implementation/FHIR_ENDPOINT_SECURITY_ARCHITECTURE.md",
+    "rm -f /dev/shm/clara_worktrees/PH11_A09/docs/research/FHIR_AUTH_SECURITY_THREAT_MODEL_AND_AUDIT.md",
+    "git -C /dev/shm/clara_worktrees/PH11_A09 checkout 85cef4b2d9a0e926ca684e9eeeba5e588ab11600 -- docs/interoperability/lifemap-fhir-r4.md",
+    "git -C /dev/shm/clara_worktrees/PH11_A09 reset --hard 85cef4b2d9a0e926ca684e9eeeba5e588ab11600"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line_start": 15,
+      "line_end": 29,
+      "symbol": "_has_bearer_scheme",
+      "description": "Case-insensitive Bearer scheme parser; prevents cookie fallback"
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line_start": 31,
+      "line_end": 39,
+      "symbol": "extract_bearer_token",
+      "description": "Explicit Bearer credential extraction"
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line_start": 41,
+      "line_end": 58,
+      "symbol": "_reject_if_revoked",
+      "description": "Rejects denylisted (revoked-at-logout) access tokens"
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line_start": 60,
+      "line_end": 78,
+      "symbol": "AuthContextMiddleware",
+      "description": "Decode JWT once per request and attach to request.state"
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line_start": 80,
+      "line_end": 90,
+      "symbol": "_extract_access_token",
+      "description": "Extraction preferring explicit Bearer token"
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line_start": 92,
+      "line_end": 108,
+      "symbol": "has_valid_explicit_bearer_token",
+      "description": "CSRF exemption check for valid non-revoked Bearer token"
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line_start": 110,
+      "line_end": 126,
+      "symbol": "get_current_token",
+      "description": "Resolves TokenPayload and rejects revoked tokens"
+    },
+    {
+      "file": "services/api/src/clara_api/core/rbac.py",
+      "line_start": 138,
+      "line_end": 149,
+      "symbol": "require_roles",
+      "description": "RBAC role dependency checker"
+    },
+    {
+      "file": "services/api/src/clara_api/core/security.py",
+      "line_start": 11,
+      "line_end": 20,
+      "symbol": "TokenPayload",
+      "description": "JWT payload schema and helper properties"
+    },
+    {
+      "file": "services/api/src/clara_api/core/security.py",
+      "line_start": 21,
+      "line_end": 35,
+      "symbol": "create_access_token",
+      "description": "Creates access token with jti and expiry"
+    },
+    {
+      "file": "services/api/src/clara_api/core/security.py",
+      "line_start": 89,
+      "line_end": 103,
+      "symbol": "decode_access_token",
+      "description": "Decodes access token using primary and overlap keys"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/fhir_r4.py",
+      "line_start": 17,
+      "line_end": 50,
+      "symbol": "FHIR_R4_VERSION",
+      "description": "FHIR R4 constant definition and supported resource types"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line_start": 23,
+      "line_end": 48,
+      "symbol": "ProfileScope",
+      "description": "Server-authorized health-profile scope for LifeMap"
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line_start": 86,
+      "line_end": 120,
+      "symbol": "resolve_profile_scope",
+      "description": "ABAC resolution verifying ownership or Family grant"
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line_start": 2726,
+      "line_end": 2749,
+      "symbol": "_fhir_scope",
+      "description": "Purpose validation and profile scope resolution"
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line_start": 2751,
+      "line_end": 2774,
+      "symbol": "_fhir_snapshot",
+      "description": "Data class permission gating and snapshot extraction"
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line_start": 2881,
+      "line_end": 2936,
+      "symbol": "export_fhir_r4_summary",
+      "description": "FHIR R4 summary bundle export endpoint"
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line_start": 2940,
+      "line_end": 3008,
+      "symbol": "fhir_conformance_statement",
+      "description": "FHIR boundary conformance declaration"
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line_start": 3012,
+      "line_end": 3118,
+      "symbol": "import_fhir_r4_as_capture_drafts",
+      "description": "Untrusted external draft FHIR import endpoint"
+    },
+    {
+      "file": "contracts/auth/token-contract.schema.json",
+      "line_start": 1,
+      "line_end": 96,
+      "symbol": "ClaraTokenContract",
+      "description": "Formal schema specifying JWT claims, types, and constraints"
+    },
+    {
+      "file": "contracts/control-plane/rbac_abac_permission_registry.v1.json",
+      "line_start": 1,
+      "line_end": 28,
+      "symbol": "PlatformVsTenantRbacAbacPermissionRegistry",
+      "description": "Platform vs tenant RBAC/ABAC permission registry and invariants"
+    }
+  ]
+}

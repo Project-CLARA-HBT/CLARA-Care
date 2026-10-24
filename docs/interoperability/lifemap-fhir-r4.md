@@ -78,6 +78,10 @@ Trusted-source ingestion is intentionally unsupported. A future trusted-source
 policy needs separate identity assurance, contract, profile matching,
 terminology, provenance, revocation, and clinical-safety approval.
 
+For full specification of OAuth2 / SMART-on-FHIR authorization scopes, RBAC/ABAC
+mapping, discovery metadata, and endpoint security architecture, see
+`docs/interoperability/FHIR_SMART_AUTH_SCOPES_AND_ENDPOINT_SECURITY.md`.
+
 ## Validation
 
 Download the exact validator artifact in the lock file, verify its checksum,
