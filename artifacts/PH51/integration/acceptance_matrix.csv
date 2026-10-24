@@ -1,0 +1,11 @@
+agent_id,role,status,commit_sha,files_changed,tests_passed
+A01,API contract + BFF,PASSED,7ad725b6,6,3
+A02,Data/migrations,PASSED,afb55b5e,7,3
+A03,Domain service,PASSED,c30de0be,5,3
+A04,Adapter / existing code,PASSED,c7287162,7,3
+A05,Admin/consumer app routes,PASSED,4780cb46,5,2
+A06,UI widgets / Flutter,PASSED,a4729f47,6,2
+A07,Integration tests,PASSED,65e038b0,5,2
+A08,Security / negative tests,PASSED,a9660422,6,2
+A09,Docs / operational design,PASSED,fa8b7b09,5,2
+A10,Adversarial reviewer,PASSED,ec46c861,6,2

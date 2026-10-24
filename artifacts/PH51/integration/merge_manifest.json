@@ -1,0 +1,228 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH51",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "merge_commit_sha": "0fb939eeec3ecc902b3dc57052e96677ac12e14f",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data/migrations",
+      "task": "Indexes for job states, leases and retry ledger",
+      "worktree": "/dev/shm/clara_worktrees/PH51_A02",
+      "branch": "phase/ph51-a02",
+      "commit": "afb55b5e",
+      "full_commit": "afb55b5e7ef6f774c15a16bd750485a9a0ad7fd9",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/db/models.py",
+        "services/control-plane/src/clara_control/db/__init__.py",
+        "services/control-plane/alembic/versions/20260909_0006_control_job_indexes_and_leases.py",
+        "artifacts/PH51/A02/change_manifest.json",
+        "artifacts/PH51/A02/test_report.md",
+        "artifacts/PH51/A02/risk_register.md",
+        "artifacts/PH51/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API contract + BFF",
+      "task": "Admin list/inspect/cancel/replay job API with safe DTO",
+      "worktree": "/dev/shm/clara_worktrees/PH51_A01",
+      "branch": "phase/ph51-a01",
+      "commit": "7ad725b6",
+      "full_commit": "7ad725b6988dc6bcf53c3e144219536c096cd616",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/api/router.py",
+        "contracts/control-plane/control_v1_openapi.json",
+        "artifacts/PH51/A01/change_manifest.json",
+        "artifacts/PH51/A01/test_report.md",
+        "artifacts/PH51/A01/risk_register.md",
+        "artifacts/PH51/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain service",
+      "task": "Implement requeue with idempotency and consent recheck",
+      "worktree": "/dev/shm/clara_worktrees/PH51_A03",
+      "branch": "phase/ph51-a03",
+      "commit": "c30de0be",
+      "full_commit": "c30de0be354e4b3b5a37123f9f6d75eae575dcc9",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/src/clara_control/domain/job_requeue_service.py",
+        "artifacts/PH51/A03/change_manifest.json",
+        "artifacts/PH51/A03/test_report.md",
+        "artifacts/PH51/A03/risk_register.md",
+        "artifacts/PH51/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "Adapter / existing code",
+      "task": "Hook health API outbox and connector status adapters",
+      "worktree": "/dev/shm/clara_worktrees/PH51_A04",
+      "branch": "phase/ph51-a04",
+      "commit": "c7287162",
+      "full_commit": "c7287162616fed3ce7cafc4410472b0d6be22a89",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/api/v1/endpoints/connected_health.py",
+        "services/api/src/clara_api/connected_health/service.py",
+        "services/ml/src/clara_ml/event_subscriptions.py",
+        "artifacts/PH51/A04/change_manifest.json",
+        "artifacts/PH51/A04/test_report.md",
+        "artifacts/PH51/A04/risk_register.md",
+        "artifacts/PH51/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Admin/consumer app routes",
+      "task": "Build job/outbox/connector dashboard",
+      "worktree": "/dev/shm/clara_worktrees/PH51_A05",
+      "branch": "phase/ph51-a05",
+      "commit": "4780cb46",
+      "full_commit": "4780cb46ef7007ca05fbd4fd014168d35db64235",
+      "status": "PASSED",
+      "files": [
+        "apps/admin/app/jobs/page.tsx",
+        "artifacts/PH51/A05/change_manifest.json",
+        "artifacts/PH51/A05/test_report.md",
+        "artifacts/PH51/A05/risk_register.md",
+        "artifacts/PH51/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "UI widgets / Flutter",
+      "task": "Build retry approval / redacted failure inspector components",
+      "worktree": "/dev/shm/clara_worktrees/PH51_A06",
+      "branch": "phase/ph51-a06",
+      "commit": "a4729f47",
+      "full_commit": "a4729f4763ce26eaa9631f44b96d80a51b7e9224",
+      "status": "PASSED",
+      "files": [
+        "apps/admin/components/retry_approval_modal.tsx",
+        "apps/admin/components/redacted_failure_inspector.tsx",
+        "artifacts/PH51/A06/change_manifest.json",
+        "artifacts/PH51/A06/test_report.md",
+        "artifacts/PH51/A06/risk_register.md",
+        "artifacts/PH51/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Integration tests",
+      "task": "Test worker death, duplicate, out-of-order and TTL expiration",
+      "worktree": "/dev/shm/clara_worktrees/PH51_A07",
+      "branch": "phase/ph51-a07",
+      "commit": "65e038b0",
+      "full_commit": "65e038b05242fb5228115e82ee96a6221d74f1ad",
+      "status": "PASSED",
+      "files": [
+        "services/control-plane/tests/test_worker_death_ttl_and_duplicate_queue.py",
+        "artifacts/PH51/A07/change_manifest.json",
+        "artifacts/PH51/A07/test_report.md",
+        "artifacts/PH51/A07/risk_register.md",
+        "artifacts/PH51/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security / negative tests",
+      "task": "Threat model replay of revoked-consent jobs, SSRF connectors",
+      "worktree": "/dev/shm/clara_worktrees/PH51_A08",
+      "branch": "phase/ph51-a08",
+      "commit": "a9660422",
+      "full_commit": "a966042258846fe1e9989db615d8bd48b8c9528f",
+      "status": "PASSED",
+      "files": [
+        "docs/security/REVOKED_CONSENT_JOB_REPLAY_AND_CONNECTOR_SSRF_THREAT_MODEL.md",
+        "services/control-plane/tests/security/test_ssrf_and_revoked_consent_negative.py",
+        "artifacts/PH51/A08/change_manifest.json",
+        "artifacts/PH51/A08/test_report.md",
+        "artifacts/PH51/A08/risk_register.md",
+        "artifacts/PH51/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs / operational design",
+      "task": "Document DLQ runbook and payment/webhook failure SLO",
+      "worktree": "/dev/shm/clara_worktrees/PH51_A09",
+      "branch": "phase/ph51-a09",
+      "commit": "fa8b7b09",
+      "full_commit": "fa8b7b09bf9c0ed646a7e9d20271881e44056502",
+      "status": "PASSED",
+      "files": [
+        "docs/runbooks/control-plane-job-dlq-and-webhook-slo.md",
+        "artifacts/PH51/A09/change_manifest.json",
+        "artifacts/PH51/A09/test_report.md",
+        "artifacts/PH51/A09/risk_register.md",
+        "artifacts/PH51/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial reviewer",
+      "task": "Adversarial duplicate-replay and queue starvation scenario",
+      "worktree": "/dev/shm/clara_worktrees/PH51_A10",
+      "branch": "phase/ph51-a10",
+      "commit": "ec46c861",
+      "full_commit": "ec46c861f0eda15e74757a13c2895b2e7db54dd0",
+      "status": "PASSED",
+      "files": [
+        "docs/reports/ADVERSARIAL_JOB_DUPLICATE_REPLAY_AND_STARVATION_REPORT.md",
+        "artifacts/phase-gates/PH51_gate_manifest.json",
+        "artifacts/PH51/A10/change_manifest.json",
+        "artifacts/PH51/A10/test_report.md",
+        "artifacts/PH51/A10/risk_register.md",
+        "artifacts/PH51/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.238,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.164,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-10-24T09:10:15.763990+00:00"
+}
