@@ -859,6 +859,9 @@ class Settings(BaseSettings):
     lifemap_fhir_import_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_FHIR_IMPORT_ENABLED"
     )
+    fhir_r4_domain_mapping_enabled: bool = Field(
+        default=False, validation_alias="FHIR_R4_DOMAIN_MAPPING_ENABLED"
+    )
     lifemap_ask_ai_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_ASK_AI_ENABLED"
     )

@@ -1,0 +1,9 @@
+# Risk Register — Phase PH11 / A03 (MedicationStatement & AllergyIntolerance Domain Services)
+
+| Risk ID | Category | Description | Severity | Likelihood | Mitigation | Status |
+|---|---|---|---|---|---|---|
+| `RISK-PH11-A03-01` | Authority Elevation | Untrusted external FHIR resource asserts clinician order / verified status to bypass review | Critical | Medium | Enforced `verify_authority_anti_elevation`: external imports default to `patient_report` and raise `FhirAuthorityElevationError` if claiming clinician authority without verified cryptographic receipt. | Mitigated |
+| `RISK-PH11-A03-02` | Stale Authorization (TOCTOU) | User revokes data-sharing or medical consent after initiating a multi-step FHIR session | High | Low | Enforced `ConsentRecheckGate.assert_active`: fresh-transaction consent recheck directly reads latest ledger row with lock-hierarchy serialization. | Mitigated |
+| `RISK-PH11-A03-03` | Clinical Contradiction | Conflicting medication or allergy claims silently overwrite existing confirmed records | High | Medium | Enforced GLHS conflict detection emitting `ABSTAIN_ESCALATE` and `active_vs_stopped_conflict` / `confirmed_vs_refuted_conflict` reason codes, preserving competing assertions. | Mitigated |
+| `RISK-PH11-A03-04` | Accidental Production Exposure | In-development FHIR interoperability services accidentally exposed before clinical review | Medium | Low | Feature locked behind `fhir_r4_domain_mapping_enabled` config flag, defaulting to `False` until review sign-off. | Mitigated |
+| `RISK-PH11-A03-05` | Coding System Ambiguity | External coding system mismatch (e.g., proprietary hospital codes vs RxNorm) causing incorrect drug lookup | Medium | Medium | Implemented multi-coding support (RxNorm, ATC, SNOMED, and VN-Drug-National) while capturing raw free text in `.text` for unmapped terms. | Mitigated |

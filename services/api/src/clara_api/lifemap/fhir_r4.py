@@ -79,6 +79,13 @@ _RESOURCE_KEYS: dict[str, frozenset[str]] = {
             "code",
             "patient",
             "reaction",
+            "onsetDateTime",
+            "recordedDate",
+            "recorder",
+            "asserter",
+            "note",
+            "extension",
+            "identifier",
         }
     ),
     "Condition": frozenset(
@@ -103,9 +110,13 @@ _RESOURCE_KEYS: dict[str, frozenset[str]] = {
             "medicationCodeableConcept",
             "subject",
             "effectivePeriod",
+            "effectiveDateTime",
             "dateAsserted",
             "informationSource",
             "dosage",
+            "note",
+            "extension",
+            "identifier",
         }
     ),
     "MedicationRequest": frozenset(

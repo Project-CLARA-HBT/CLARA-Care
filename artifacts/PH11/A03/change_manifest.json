@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH11",
+  "agent_id": "A03",
+  "role": "Domain + GLHS services",
+  "task": "MedicationStatement and AllergyIntolerance mapping domain services",
+  "status": "PASSED",
+  "branch": "phase/ph11-a03",
+  "base_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "frozen_head_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "path_lane": "services/api/src/clara_api/glhs/;services/api/src/clara_api/lifemap/;services/api/src/clara_api/phr/;services/api/src/clara_api/compliance/;services/api/src/clara_api/core/;artifacts/PH11/A03/",
+  "files_changed": [
+    "services/api/src/clara_api/core/config.py",
+    "services/api/src/clara_api/lifemap/fhir_r4.py",
+    "services/api/src/clara_api/lifemap/fhir_mapping.py",
+    "services/api/src/clara_api/glhs/fhir_mapping_service.py",
+    "artifacts/PH11/A03/test_fhir_mapping.py",
+    "artifacts/PH11/A03/change_manifest.json",
+    "artifacts/PH11/A03/test_report.md",
+    "artifacts/PH11/A03/risk_register.md",
+    "artifacts/PH11/A03/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH11/A03/change_manifest.json",
+    "artifacts/PH11/A03/test_report.md",
+    "artifacts/PH11/A03/risk_register.md",
+    "artifacts/PH11/A03/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/core/config.py",
+      "symbol": "Settings.fhir_r4_domain_mapping_enabled",
+      "description": "Fail-closed feature flag for FHIR R4 domain mapping and GLHS continuity services."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/fhir_r4.py",
+      "symbol": "_RESOURCE_KEYS",
+      "description": "FHIR R4 resource element allowlists for MedicationStatement and AllergyIntolerance."
+    },
+    {
+      "file": "services/api/src/clara_api/glhs/fhir_mapping_service.py",
+      "symbol": "FhirDomainMappingService",
+      "description": "Core domain mapping engine for MedicationStatement and AllergyIntolerance with GLHS continuity and consent recheck."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/fhir_mapping.py",
+      "symbol": "map_fhir_to_lifemap_candidate",
+      "description": "Bridge projecting FHIR resources to LifeMap universal capture candidates with GLHS continuity metadata."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/glhs/ services/api/src/clara_api/lifemap/ services/api/src/clara_api/core/config.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation across all modified source modules."
+    },
+    {
+      "command": "PYTHONPATH=services/api/src pytest artifacts/PH11/A03/test_fhir_mapping.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Focused test suite covering bidirectional FHIR mapping, GLHS continuity digests, anti-elevation, conflict detection, and consent recheck."
+    },
+    {
+      "command": "pytest services/api/tests/test_lifemap_fhir_r4.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Existing LifeMap FHIR R4 projection, golden fixture, and fail-closed import tests."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A03 -p PH11",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path ACL lane isolation validation ensuring no files outside write lane are touched."
+    }
+  ],
+  "audit_findings": {
+    "fhir_domain_mapping": {
+      "status": "COMPLETED",
+      "finding": "Implemented bidirectional MedicationStatement and AllergyIntolerance mappings with RxNorm, ATC, SNOMED, and VN-Drug codings."
+    },
+    "glhs_continuity": {
+      "status": "COMPLETED",
+      "finding": "Integrated D1 projection digest and canonical JCS lineage digest in standard FHIR extension glhs-continuity."
+    },
+    "anti_elevation_guard": {
+      "status": "COMPLETED",
+      "finding": "Enforced strict anti-elevation preventing untrusted external inputs from asserting clinician orders without cryptographic receipts."
+    },
+    "consent_recheck": {
+      "status": "COMPLETED",
+      "finding": "Implemented point-in-time fresh-transaction consent verification with lock-hierarchy serialization against append-only ledger."
+    }
+  },
+  "rollback_steps": [
+    "git checkout services/api/src/clara_api/core/config.py",
+    "git checkout services/api/src/clara_api/lifemap/fhir_r4.py",
+    "rm -f services/api/src/clara_api/glhs/fhir_mapping_service.py",
+    "rm -f services/api/src/clara_api/lifemap/fhir_mapping.py",
+    "rm -rf artifacts/PH11/A03"
+  ],
+  "timestamp": "2026-10-24T10:00:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH11_A03"
+}
