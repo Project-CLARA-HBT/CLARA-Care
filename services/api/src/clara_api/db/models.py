@@ -4646,4 +4646,15 @@ class PrivacyAuditReceipt(Base):
 
 
 # PH11: FHIR R4 interoperability production profiles (Patient / Observation import & storage)
-from clara_api.db.fhir_models import FhirImportBatch, FhirObservation, FhirPatient  # noqa: E402
+from clara_api.db.fhir_models import (  # noqa: E402, F401
+    FhirImportBatch,
+    FhirObservation,
+    FhirPatient,
+)
+
+# PH12: LifeMap longitudinal intelligence (temporal projection caching, state versioning, invalidation ledger)
+from clara_api.db.lifemap_temporal_models import (  # noqa: E402, F401
+    LifeMapCacheInvalidationLedger,
+    LifeMapStateVersion,
+    LifeMapTemporalProjectionCache,
+)

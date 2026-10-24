@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH12",
+  "agent_id": "A02",
+  "role": "Data model + migration",
+  "task": "temporal projection cache/invalidation",
+  "base_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "frozen_head_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "branch": "phase/ph12-a02",
+  "worktree_path": "/dev/shm/clara_worktrees/PH12_A02",
+  "path_lane": "services/api/src/clara_api/db/;services/api/alembic/versions/;artifacts/PH12/A02/",
+  "status": "PASSED",
+  "files_changed": [
+    "services/api/alembic/versions/20260908_0070_lifemap_temporal_projection_cache.py",
+    "services/api/src/clara_api/db/lifemap_temporal_models.py",
+    "services/api/src/clara_api/db/lifemap_temporal_cache.py",
+    "services/api/src/clara_api/db/models.py",
+    "services/api/src/clara_api/db/test_lifemap_temporal_cache.py",
+    "artifacts/PH12/A02/change_manifest.json",
+    "artifacts/PH12/A02/test_report.md",
+    "artifacts/PH12/A02/risk_register.md",
+    "artifacts/PH12/A02/rollback.md"
+  ],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line_start": 4648,
+      "line_end": 4656,
+      "symbol": "LifeMapTemporalModelsExport",
+      "description": "Integration and export point for LifeMap temporal projection cache, state version, and invalidation ledger models"
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line_start": 923,
+      "line_end": 960,
+      "symbol": "PhrProfile",
+      "description": "Profile partition anchor referenced by foreign key in LifeMap temporal models"
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line_start": 1045,
+      "line_end": 1075,
+      "symbol": "LifeMapEvent",
+      "description": "LifeMap event entity referenced as causation link in state version and invalidation ledger"
+    },
+    {
+      "file": "services/api/src/clara_api/db/models.py",
+      "line_start": 1941,
+      "line_end": 1995,
+      "symbol": "LifeMapEventRevision",
+      "description": "LifeMap event revision entity referenced as causation link in state version and invalidation ledger"
+    },
+    {
+      "file": "services/api/alembic/versions/20260907_0069_fhir_patient_observation_import.py",
+      "line_start": 13,
+      "line_end": 16,
+      "symbol": "revision",
+      "description": "Down revision 20260907_0069 predecessor for migration 20260908_0070"
+    },
+    {
+      "file": "scripts/ops/check_migration_downgrade.py",
+      "line_start": 64,
+      "line_end": 135,
+      "symbol": "check_versions",
+      "description": "Enforcement gate verifying strict non-empty downgrade routines across migrations"
+    }
+  ],
+  "interface_assumptions": [
+    "LifeMap longitudinal intelligence utilizes monotonic state versioning (LifeMapStateVersion) per profile to provide deterministic cache boundaries.",
+    "Temporal projection caches (LifeMapTemporalProjectionCache) are keyed by (profile_id, projection_type, projection_key, state_version) with support for temporal window filtering.",
+    "Cache invalidation ledger (LifeMapCacheInvalidationLedger) provides tamper-evident, append-only coordination recording direct, scoped, and cascade invalidation operations.",
+    "Alembic migration 20260908_0070 maintains 100% downgrade reversibility verified via scripts/ops/check_migration_downgrade.py --strict.",
+    "All models and cache operations enforce profile boundary containment without cross-tenant or cross-profile data leakage."
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py --strict services/api/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "scanned 70 migration(s) in services/api/alembic/versions, 70 define a non-empty downgrade(), OK"
+    },
+    {
+      "command": "DATABASE_URL=\"sqlite:////tmp/test_alembic_ph12_0070.db\" uv run alembic upgrade head && DATABASE_URL=\"sqlite:////tmp/test_alembic_ph12_0070.db\" uv run alembic downgrade -1 && DATABASE_URL=\"sqlite:////tmp/test_alembic_ph12_0070.db\" uv run alembic upgrade head",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Alembic upgrade, downgrade, and re-upgrade roundtrip completed successfully on revision 20260908_0070"
+    },
+    {
+      "command": "pytest services/api/src/clara_api/db/test_lifemap_temporal_cache.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "13 passed in 4.67s"
+    },
+    {
+      "command": "pytest services/api/src/clara_api/db/test_fhir_import.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "12 passed in 2.19s"
+    },
+    {
+      "command": "python3 -m compileall services/api/src/clara_api/db services/api/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Listing and compiling services/api/src/clara_api/db and services/api/alembic/versions with 0 syntax errors"
+    },
+    {
+      "command": "uv run --extra dev ruff check src/clara_api/db/lifemap_temporal_models.py src/clara_api/db/lifemap_temporal_cache.py src/clara_api/db/test_lifemap_temporal_cache.py src/clara_api/db/models.py alembic/versions/20260908_0070_lifemap_temporal_projection_cache.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "All checks passed!"
+    },
+    {
+      "command": "uv run --extra dev mypy src/clara_api/db/lifemap_temporal_models.py src/clara_api/db/lifemap_temporal_cache.py src/clara_api/db/test_lifemap_temporal_cache.py --ignore-missing-imports",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Success: no issues found in 3 source files"
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A02 -p PH12",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "PATH ACL CHECKER — PASSED (Agent: A02, Phase: PH12)"
+    }
+  ],
+  "blockers": [],
+  "rollback_steps": [
+    "git checkout 36e5b95fac7e65712f0779de253d8ed18dc693d7 -- services/api/src/clara_api/db/models.py",
+    "rm -f services/api/src/clara_api/db/lifemap_temporal_models.py",
+    "rm -f services/api/src/clara_api/db/lifemap_temporal_cache.py",
+    "rm -f services/api/src/clara_api/db/test_lifemap_temporal_cache.py",
+    "rm -f services/api/alembic/versions/20260908_0070_lifemap_temporal_projection_cache.py",
+    "rm -rf artifacts/PH12/A02"
+  ]
+}
