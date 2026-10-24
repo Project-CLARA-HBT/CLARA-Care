@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH12",
+  "agent_id": "A06",
+  "role": "Mobile Flutter",
+  "task": "LifeMap longitudinal health timeline responsive widget, bitemporal model, and offline read cache",
+  "status": "PASSED",
+  "base_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "branch": "phase/ph12-a06",
+  "path_lane": "apps/mobile/;artifacts/PH12/A06/",
+  "blockers": [],
+  "files_changed": [
+    "apps/mobile/lib/core/api_client.dart",
+    "apps/mobile/lib/core/feature_flags.dart",
+    "apps/mobile/lib/core/session_store.dart",
+    "apps/mobile/lib/core/lifemap_timeline_cache.dart",
+    "apps/mobile/lib/core/lifemap_timeline_models.dart",
+    "apps/mobile/lib/widgets/lifemap_timeline_widget.dart",
+    "apps/mobile/pubspec.yaml",
+    "apps/mobile/pubspec.lock",
+    "apps/mobile/test/api_client_lifemap_test.dart",
+    "apps/mobile/test/fakes/fake_api_client.dart",
+    "apps/mobile/test/feature_flags_test.dart",
+    "apps/mobile/test/lifemap_timeline_test.dart",
+    "artifacts/PH12/A06/change_manifest.json",
+    "artifacts/PH12/A06/test_report.md",
+    "artifacts/PH12/A06/risk_register.md",
+    "artifacts/PH12/A06/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH12/A06/change_manifest.json",
+    "artifacts/PH12/A06/test_report.md",
+    "artifacts/PH12/A06/risk_register.md",
+    "artifacts/PH12/A06/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "apps/mobile/lib/core/feature_flags.dart:84",
+    "apps/mobile/lib/core/feature_flags.dart:357",
+    "apps/mobile/lib/core/api_client.dart:1808",
+    "apps/mobile/lib/core/session_store.dart:89",
+    "apps/mobile/lib/core/session_store.dart:291",
+    "apps/mobile/lib/core/lifemap_timeline_models.dart:4",
+    "apps/mobile/lib/core/lifemap_timeline_models.dart:96",
+    "apps/mobile/lib/core/lifemap_timeline_models.dart:224",
+    "apps/mobile/lib/core/lifemap_timeline_cache.dart:29",
+    "apps/mobile/lib/widgets/lifemap_timeline_widget.dart:34"
+  ],
+  "tests_run": [
+    {
+      "command": "/home/clue/development/flutter/bin/flutter test --no-pub test/lifemap_timeline_test.dart",
+      "description": "13 unit and widget tests verifying bitemporal metadata, period/type filtering, offline read cache with 15-minute TTL, phone (<600dp) and tablet (>=600dp) responsive layouts, accessibility >=48dp touch targets, and revision history inspector modal.",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "command": "/home/clue/development/flutter/bin/flutter test --no-pub test/feature_flags_test.dart",
+      "description": "9 unit tests verifying fail-closed default for lifemap_timeline_mobile_enabled, build-time defines, and resolution properties.",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "command": "/home/clue/development/flutter/bin/flutter test --no-pub test/api_client_lifemap_test.dart",
+      "description": "19 unit tests verifying getLifeMapTimeline request paths, bitemporal and filter query parameters, auth headers, and idempotent care episode mutations.",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "command": "/home/clue/development/flutter/bin/flutter test --no-pub test/lifemap_read_cache_test.dart",
+      "description": "4 unit tests verifying offline secure storage scoping, TTL expiry, and session logout purge.",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "command": "/home/clue/development/flutter/bin/dart analyze lib/core/api_client.dart lib/core/feature_flags.dart lib/core/session_store.dart lib/core/lifemap_timeline_cache.dart lib/core/lifemap_timeline_models.dart lib/widgets/lifemap_timeline_widget.dart test/feature_flags_test.dart test/lifemap_timeline_test.dart",
+      "description": "Dart static analysis across all modified and newly created timeline files resulting in zero issues.",
+      "exit_code": 0,
+      "status": "PASSED"
+    }
+  ],
+  "rollback_steps": [
+    "Disable runtime feature flag by serving 'lifemap_timeline_mobile_enabled': false in GET /api/v1/mobile/summary.",
+    "Compile mobile build with --dart-define=LIFEMAP_TIMELINE_MOBILE_ENABLED=false.",
+    "If necessary, revert the git commit on phase/ph12-a06 to cleanly restore previous mobile code.",
+    "Verify no offline projection leaks: PersistentSessionStore._purgeOfflineCaches ensures timeline cache keys are cleanly purged."
+  ]
+}

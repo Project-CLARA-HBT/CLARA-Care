@@ -118,7 +118,7 @@ class FakeApiClient extends ApiClient {
     if (responder != null) {
       _sseResponder = responder;
     } else if (error != null) {
-      _sseResponder = (_) => Stream<SseEvent>.error(error);
+      _sseResponder = (_) => Future<SseEvent>.error(error).asStream();
     } else {
       _sseResponder = (_) => Stream<SseEvent>.fromIterable(events!);
     }
@@ -548,6 +548,32 @@ class FakeApiClient extends ApiClient {
   @override
   Future<Map<String, dynamic>> getLifeMapToday({required String accessToken}) {
     return _dispatch('getLifeMapToday', const {}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> getLifeMapTimeline({
+    required String accessToken,
+    String? validTimeFrom,
+    String? systemTimeFrom,
+    String? episodeId,
+    String? eventType,
+    String? truthState,
+    int limit = 100,
+    int offset = 0,
+  }) {
+    return _dispatch(
+      'getLifeMapTimeline',
+      {
+        if (validTimeFrom != null) 'validTimeFrom': validTimeFrom,
+        if (systemTimeFrom != null) 'systemTimeFrom': systemTimeFrom,
+        if (episodeId != null) 'episodeId': episodeId,
+        if (eventType != null) 'eventType': eventType,
+        if (truthState != null) 'truthState': truthState,
+        'limit': limit,
+        'offset': offset,
+      },
+      accessToken: accessToken,
+    );
   }
 
   @override

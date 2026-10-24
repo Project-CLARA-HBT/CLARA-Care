@@ -1804,6 +1804,45 @@ class ApiClient {
     return _get('/api/v1/lifemap/today', accessToken: accessToken);
   }
 
+  /// Cursor- or offset-paginated longitudinal health timeline events.
+  Future<Map<String, dynamic>> getLifeMapTimeline({
+    required String accessToken,
+    String? validTimeFrom,
+    String? systemTimeFrom,
+    String? episodeId,
+    String? eventType,
+    String? truthState,
+    int limit = 100,
+    int offset = 0,
+  }) {
+    final params = <String, String>{
+      'limit': '$limit',
+      'offset': '$offset',
+    };
+    if (validTimeFrom != null && validTimeFrom.isNotEmpty) {
+      params['valid_time_from'] = validTimeFrom;
+    }
+    if (systemTimeFrom != null && systemTimeFrom.isNotEmpty) {
+      params['system_time_from'] = systemTimeFrom;
+    }
+    if (episodeId != null && episodeId.isNotEmpty) {
+      params['episode_id'] = episodeId;
+    }
+    if (eventType != null && eventType.isNotEmpty) {
+      params['event_type'] = eventType;
+    }
+    if (truthState != null && truthState.isNotEmpty) {
+      params['truth_state'] = truthState;
+    }
+    final query = params.entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+    return _get(
+      '/api/v1/lifemap/timeline?$query',
+      accessToken: accessToken,
+    );
+  }
+
   /// Creates a user-owned care episode. Mutations carry an `Idempotency-Key`.
   Future<Map<String, dynamic>> createLifeMapEpisode({
     required String accessToken,

@@ -80,6 +80,10 @@ class MobileFeatureFlags {
   static const String fhirInteroperabilityMobileEnabled =
       'fhir_interoperability_mobile_enabled';
 
+  /// Responsive longitudinal health timeline gate (Phase PH12).
+  static const String lifeMapTimelineMobileEnabled =
+      'lifemap_timeline_mobile_enabled';
+
   /// All new mobile flag keys, in staged-enablement order.
   static const List<String> all = <String>[
     chatMobileEnabled,
@@ -93,6 +97,7 @@ class MobileFeatureFlags {
     uxPolishEnabled,
     lifeMapVietnameseDrafts,
     fhirInteroperabilityMobileEnabled,
+    lifeMapTimelineMobileEnabled,
   ];
 }
 
@@ -124,6 +129,9 @@ const bool _uxPolishMobileDefault =
 const bool _fhirInteroperabilityMobileDefault = bool.fromEnvironment(
     'FHIR_INTEROPERABILITY_MOBILE_ENABLED',
     defaultValue: false);
+const bool _lifeMapTimelineMobileDefault = bool.fromEnvironment(
+    'LIFEMAP_TIMELINE_MOBILE_ENABLED',
+    defaultValue: false);
 
 /// The compile-time `--dart-define` defaults keyed by flag. All `false` unless
 /// the build explicitly enabled one. Used as the build-time half of the
@@ -143,6 +151,8 @@ const Map<String, bool> kMobileFeatureFlagBuildDefaults = <String, bool>{
   MobileFeatureFlags.lifeMapVietnameseDrafts: false,
   MobileFeatureFlags.fhirInteroperabilityMobileEnabled:
       _fhirInteroperabilityMobileDefault,
+  MobileFeatureFlags.lifeMapTimelineMobileEnabled:
+      _lifeMapTimelineMobileDefault,
 };
 
 // --- Experience_V2 build gate (single switch, default OFF) -------------------
@@ -342,6 +352,10 @@ class MobileFeatureFlagResolver {
   /// FHIR R4 interoperability & sync dashboard gate (Phase PH11).
   bool get fhirInteroperabilityEnabled =>
       isEnabled(MobileFeatureFlags.fhirInteroperabilityMobileEnabled);
+
+  /// Responsive longitudinal health timeline gate (Phase PH12).
+  bool get lifeMapTimelineEnabled =>
+      isEnabled(MobileFeatureFlags.lifeMapTimelineMobileEnabled);
 
   /// A snapshot of every known new gate's resolved value. Useful for tiles and
   /// for asserting flags-off equivalence in tests (Property 1).

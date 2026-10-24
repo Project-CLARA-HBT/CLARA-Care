@@ -52,6 +52,54 @@ void main() {
       expect(result['pending_confirmation_count'], 0);
     });
 
+    test('getLifeMapTimeline GETs /api/v1/lifemap/timeline with query parameters', () async {
+      late http.Request captured;
+      final client = ApiClient(
+        baseUrl: base,
+        httpClient: MockClient((request) async {
+          captured = request;
+          return ok({
+            'items': [
+              {
+                'id': 'evt-1',
+                'event_type': 'medication',
+                'truth_state': 'confirmed',
+                'occurred_at': '2026-10-24T10:00:00Z',
+                'recorded_at': '2026-10-24T10:05:00Z',
+                'title': 'Paracetamol 500mg',
+              }
+            ],
+            'total': 1,
+            'limit': 50,
+            'offset': 0,
+          });
+        }),
+      );
+
+      final result = await client.getLifeMapTimeline(
+        accessToken: token,
+        validTimeFrom: '2026-10-01T00:00:00Z',
+        systemTimeFrom: '2026-10-01T00:00:00Z',
+        episodeId: 'ep-42',
+        eventType: 'medication',
+        truthState: 'confirmed',
+        limit: 50,
+        offset: 10,
+      );
+
+      expect(captured.method, 'GET');
+      expect(captured.url.path, '/api/v1/lifemap/timeline');
+      expect(captured.url.queryParameters['valid_time_from'], '2026-10-01T00:00:00Z');
+      expect(captured.url.queryParameters['system_time_from'], '2026-10-01T00:00:00Z');
+      expect(captured.url.queryParameters['episode_id'], 'ep-42');
+      expect(captured.url.queryParameters['event_type'], 'medication');
+      expect(captured.url.queryParameters['truth_state'], 'confirmed');
+      expect(captured.url.queryParameters['limit'], '50');
+      expect(captured.url.queryParameters['offset'], '10');
+      expect(captured.headers['Authorization'], 'Bearer $token');
+      expect((result['items'] as List).length, 1);
+    });
+
     test(
         'createLifeMapEpisode POSTs title/goal/priority with an Idempotency-Key',
         () async {

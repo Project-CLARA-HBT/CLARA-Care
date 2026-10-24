@@ -86,6 +86,8 @@ class PersistentSessionStore extends ChangeNotifier {
       'clara.careguard.ddi.last_known_view';
   static const String lifeMapReadCacheKey =
       'clara.lifemap.today.read_projection';
+  static const String lifeMapTimelineCacheKey =
+      'clara.lifemap.timeline.read_projection';
   static const String lifeMapCaptureSessionKey =
       'clara.lifemap.capture.active_session';
 
@@ -95,7 +97,13 @@ class PersistentSessionStore extends ChangeNotifier {
   static String lifeMapScopedKey(String userId) =>
       'clara.lifemap.today.$userId.read_projection';
 
+  static String lifeMapTimelineScopedKey(String userId) =>
+      'clara.lifemap.timeline.$userId.read_projection';
+
   final SessionSecureStorage _storage;
+
+  /// Exposes the underlying session storage abstraction.
+  SessionSecureStorage get storage => _storage;
 
   String? _email;
   String? _accessToken;
@@ -280,17 +288,20 @@ class PersistentSessionStore extends ChangeNotifier {
   Future<void> _purgeOfflineCaches({String? email, String? token}) async {
     await _storage.delete(careguardOfflineCacheKey);
     await _storage.delete(lifeMapReadCacheKey);
+    await _storage.delete(lifeMapTimelineCacheKey);
     await _storage.delete(lifeMapCaptureSessionKey);
 
     final sub = tokenSubject(token ?? _accessToken);
     if (sub != null && sub.isNotEmpty) {
       await _storage.delete(careguardScopedKey(sub));
       await _storage.delete(lifeMapScopedKey(sub));
+      await _storage.delete(lifeMapTimelineScopedKey(sub));
     }
     final userEmail = email ?? _email;
     if (userEmail != null && userEmail.isNotEmpty) {
       await _storage.delete(careguardScopedKey(userEmail));
       await _storage.delete(lifeMapScopedKey(userEmail));
+      await _storage.delete(lifeMapTimelineScopedKey(userEmail));
     }
   }
 
