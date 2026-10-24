@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH11",
+  "agent_id": "A04",
+  "role": "ML + retrieval",
+  "task": "Consent and Provenance mapping",
+  "status": "PASSED",
+  "branch": "phase/ph11-a04",
+  "base_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "frozen_head_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "path_lane": "services/ml/src/clara_ml/;evaluation/;services/ocr/;services/asr/;artifacts/PH11/A04/",
+  "files_changed": [
+    "services/ml/src/clara_ml/config.py",
+    "services/ml/src/clara_ml/fhir_consent_provenance.py",
+    "evaluation/tests/test_fhir_consent_provenance.py",
+    "artifacts/PH11/A04/change_manifest.json",
+    "artifacts/PH11/A04/test_report.md",
+    "artifacts/PH11/A04/risk_register.md",
+    "artifacts/PH11/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH11/A04/change_manifest.json",
+    "artifacts/PH11/A04/test_report.md",
+    "artifacts/PH11/A04/risk_register.md",
+    "artifacts/PH11/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/ml/src/clara_ml/policy_epoch.py",
+      "line": 18,
+      "symbol": "PolicyEpoch",
+      "description": "User consent epoch model bridged bidirectionally to/from FHIR R4 Consent."
+    },
+    {
+      "file": "services/ml/src/clara_ml/lineage_verifier.py",
+      "line": 33,
+      "symbol": "LineageAntiDowngradeVerifier",
+      "description": "Anti-downgrade verifier enforcing provenance attestation rankings across review chains."
+    },
+    {
+      "file": "services/ml/src/clara_ml/attested_dispatch.py",
+      "line": 21,
+      "symbol": "AttestedDispatchResult",
+      "description": "Cryptographic dispatch receipt generator mapped into FHIR R4 Provenance signatures."
+    },
+    {
+      "file": "services/ml/src/clara_ml/llm/model_gateway.py",
+      "line": 69,
+      "symbol": "ModelRunProvenance",
+      "description": "PII-safe model execution provenance translated into FHIR R4 Provenance resources."
+    },
+    {
+      "file": "services/ml/src/clara_ml/scribe/provenance.py",
+      "line": 89,
+      "symbol": "SpanRegistry",
+      "description": "Transcript span registry providing deterministic references for Scribe FHIR Provenance entities."
+    },
+    {
+      "file": "services/ml/src/clara_ml/config.py",
+      "line": 1139,
+      "symbol": "Settings.fhir_consent_provenance_enabled",
+      "description": "Feature flag gating FHIR Consent and Provenance mapping (default: False)."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/ml/src/clara_ml/config.py services/ml/src/clara_ml/fhir_consent_provenance.py evaluation/tests/test_fhir_consent_provenance.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation across modified and created Python sources."
+    },
+    {
+      "command": "pytest -v evaluation/tests/test_fhir_consent_provenance.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "25 unit and concurrency test cases verifying consent enforcement, provenance mapping, lineage anti-downgrade, and PII redaction."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A04 -p PH11",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/ml/src/clara_ml/, evaluation/, and artifacts/PH11/A04/."
+    }
+  ],
+  "audit_findings": {
+    "fhir_r4_consent_mapping": {
+      "status": "COMPLETED",
+      "finding": "Implemented FhirConsentEnforcer with fail-closed gates for purpose authorization, period validation, patient matching, and Decree 13/2023 statutory cross-border requirements."
+    },
+    "fhir_r4_provenance_mapping": {
+      "status": "COMPLETED",
+      "finding": "Implemented FhirProvenanceMapper supporting ModelRunProvenance, Scribe SOAP transcript spans, Tier-2 research citation entities, cryptographic receipts, and deep PII/PHI scrubbing."
+    },
+    "anti_downgrade_lineage": {
+      "status": "COMPLETED",
+      "finding": "Integrated LineageAntiDowngradeVerifier ensuring descendant FHIR Provenance resources cannot lower attestation ranking or alter source snapshot context digests."
+    }
+  },
+  "rollback_steps": [
+    "git checkout 85cef4b2d9a0e926ca684e9eeeba5e588ab11600 -- services/ml/src/clara_ml/config.py",
+    "rm -f services/ml/src/clara_ml/fhir_consent_provenance.py",
+    "rm -f evaluation/tests/test_fhir_consent_provenance.py",
+    "rm -rf artifacts/PH11/A04"
+  ],
+  "timestamp": "2026-10-24T16:20:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH11_A04"
+}

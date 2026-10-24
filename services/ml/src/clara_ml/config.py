@@ -1136,6 +1136,10 @@ class Settings(BaseSettings):
     rag_scribe_eval_gate_enabled: bool = Field(
         default=False, validation_alias="RAG_SCRIBE_EVAL_GATE_ENABLED"
     )
+    # FHIR R4 Consent and Provenance mapping for ML and research pipelines (PH11 / A04)
+    fhir_consent_provenance_enabled: bool = Field(
+        default=False, validation_alias="FHIR_CONSENT_PROVENANCE_ENABLED"
+    )
     # Embedding fail-loud / degraded-mode tuning (replaces silent hash fallback).
     rag_embedding_fail_loud: bool = Field(
         default=True,
