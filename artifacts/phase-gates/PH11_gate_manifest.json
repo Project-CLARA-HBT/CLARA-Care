@@ -1,0 +1,21 @@
+{
+  "phase_id": "PH11",
+  "title": "FHIR R4 interoperability production profiles",
+  "verdict": "PASSED",
+  "evaluated_at": "2026-10-24T10:00:00Z",
+  "agents_evaluated": [
+    "A01", "A02", "A03", "A04", "A05", "A06", "A07", "A08", "A09", "A10"
+  ],
+  "invariants_verified": {
+    "zero_mock_data": true,
+    "fhir_r4_base_conformance": true,
+    "ips_candidate_quarantine": true,
+    "untrusted_import_draft_isolation": true,
+    "cross_patient_idor_prevention": true,
+    "statutory_consent_gate": true,
+    "emergency_fast_path_intact": true,
+    "fides_critical_ddi_intact": true,
+    "zero_pii_telemetry": true,
+    "path_acl_conformance": true
+  }
+}

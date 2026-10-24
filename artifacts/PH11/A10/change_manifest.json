@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH11",
+  "agent_id": "A10",
+  "role": "Adversarial audit + integration proposals",
+  "task": "vendor EHR sandbox integration guide and adversarial interoperability audit",
+  "status": "PASSED",
+  "branch": "phase/ph11-a10",
+  "base_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "frozen_head_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "path_lane": "docs/reports/;docs/runbooks/;scripts/ci/;artifacts/phase-gates/;artifacts/PH11/A10/",
+  "files_changed": [
+    "docs/runbooks/vendor-ehr-sandbox-integration-guide.md",
+    "docs/reports/ph11-adversarial-interoperability-audit.md",
+    "scripts/ci/check_agent_path_acl.py",
+    "artifacts/phase-gates/PH11_gate_manifest.json",
+    "artifacts/PH11/A10/change_manifest.json",
+    "artifacts/PH11/A10/test_report.md",
+    "artifacts/PH11/A10/risk_register.md",
+    "artifacts/PH11/A10/rollback.md"
+  ],
+  "deliverables": [
+    "docs/runbooks/vendor-ehr-sandbox-integration-guide.md",
+    "docs/reports/ph11-adversarial-interoperability-audit.md",
+    "artifacts/phase-gates/PH11_gate_manifest.json",
+    "artifacts/PH11/A10/change_manifest.json",
+    "artifacts/PH11/A10/test_report.md",
+    "artifacts/PH11/A10/risk_register.md",
+    "artifacts/PH11/A10/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "scripts/ci/check_agent_path_acl.py",
+      "line": 36,
+      "symbol": "_detect_repo_root",
+      "description": "Dynamic worktree root detection via git rev-parse with ancestor fallback."
+    },
+    {
+      "file": "scripts/ci/check_agent_path_acl.py",
+      "line": 87,
+      "symbol": "DEFAULT_AGENT_LANES",
+      "description": "Incorporated artifacts/phase-gates/ into A10 designated path lane."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/fhir_r4.py",
+      "line": 950,
+      "symbol": "validate_bundle",
+      "description": "FHIR R4 bundle boundary validation enforcing single-patient, size, and anti-XSS constraints."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line": 2881,
+      "symbol": "export_fhir_r4_summary",
+      "description": "FHIR R4 summary export projection gated by medical consent and purpose."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line": 3012,
+      "symbol": "import_fhir_r4_as_capture_drafts",
+      "description": "Untrusted external FHIR R4 draft ingestion into Universal Capture queue."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A10 -p PH11",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/reports/, docs/runbooks/, scripts/ci/, artifacts/phase-gates/, and artifacts/PH11/A10/."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py --selftest",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Internal test suite verifying path ACL checker logic (10/10 tests passed)."
+    },
+    {
+      "command": "pytest -q services/api/tests/test_lifemap_fhir_r4.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "FHIR R4 LifeMap import, export, and conformance tests (12/12 tests passed)."
+    },
+    {
+      "command": "pytest -q services/api/tests/test_scribe_fhir_composition_property.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Scribe FHIR DocumentReference and Composition export property tests (5/5 tests passed)."
+    }
+  ],
+  "audit_findings": {
+    "adversarial_resilience": {
+      "status": "PASSED",
+      "finding": "10/10 adversarial attack vectors defeated with zero cross-patient bleed, zero XSS, zero order injection, zero SSRF, and full emergency/FIDES preservation."
+    },
+    "zero_mock_data": {
+      "status": "PASSED",
+      "finding": "Synthetic test fixtures strictly quarantined; zero synthetic mock data promoted to production clinical databases."
+    },
+    "terminology_and_ips_gate": {
+      "status": "PASSED",
+      "finding": "IPS candidate package quarantined; clara-r4-summary-not-ips tag enforced until formal licensing approval."
+    }
+  },
+  "rollback_steps": [
+    "rm -f docs/reports/ph11-adversarial-interoperability-audit.md",
+    "rm -f docs/runbooks/vendor-ehr-sandbox-integration-guide.md",
+    "rm -f artifacts/phase-gates/PH11_gate_manifest.json",
+    "rm -rf artifacts/PH11/A10",
+    "git checkout -- scripts/ci/check_agent_path_acl.py"
+  ],
+  "timestamp": "2026-10-24T10:00:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH11_A10"
+}

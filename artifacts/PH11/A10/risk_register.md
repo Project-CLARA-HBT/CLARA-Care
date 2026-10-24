@@ -1,0 +1,9 @@
+# Risk Register — PH11 A10 (Adversarial Interoperability Audit & EHR Sandbox Guide)
+
+| Risk ID | Description | Severity | Likelihood | Mitigation | Status |
+|---------|-------------|----------|------------|------------|--------|
+| RISK-PH11-A10-01 | Cross-patient data contamination via malicious or misconfigured EHR vendor sandboxes embedding foreign patient IDs | Critical | Low | Strict single-patient identity validation in `validate_bundle` rejecting multi-patient bundles (`exactly_one_patient_required`) and enforcing authenticated profile equivalence (`patient_identity_mismatch`). | Mitigated |
+| RISK-PH11-A10-02 | Prescribing privilege elevation via inbound `MedicationRequest` resources from EHR sandboxes | Critical | Low | CLARA Care is an AI clinical assistant, not a prescribing physician. `MedicationRequest` cannot create active orders; mapped strictly to `untrusted_external_draft` with zero ordering privilege. | Mitigated |
+| RISK-PH11-A10-03 | Stored Cross-Site Scripting (XSS) via XHTML narrative text in `.text.div` elements of FHIR resources | High | Low | Regex inspection via `_UNSAFE_NARRATIVE` rejecting active scripts, SVG handlers, and javascript URIs before database admission. | Mitigated |
+| RISK-PH11-A10-04 | Server-Side Request Forgery (SSRF) and metadata exfiltration via external or versioned URI references | High | Low | Strict reference sanitization blocking `http://`, `https://`, `//`, and `/_history/` subpaths (`external_reference_forbidden`). | Mitigated |
+| RISK-PH11-A10-05 | Premature international patient summary (IPS) export without legal terminology licensing | Medium | Medium | Fail-closed gate on `GET /api/v1/lifemap/v2/export/ips` and tag `clara-r4-summary-not-ips` until SNOMED CT and LOINC jurisdictional licenses are approved. | Mitigated |

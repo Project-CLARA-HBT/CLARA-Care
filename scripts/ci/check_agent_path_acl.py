@@ -33,7 +33,23 @@ import unittest
 from pathlib import Path
 from typing import Any, Sequence
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+def _detect_repo_root() -> Path:
+    """Detects active git repository or worktree root, falling back to script ancestor."""
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            return Path(res.stdout.strip()).resolve()
+    except Exception:
+        pass
+    return Path(__file__).resolve().parents[2]
+
+
+REPO_ROOT = _detect_repo_root()
 
 # Canonical default path lanes by agent role across phases
 DEFAULT_AGENT_LANES: dict[str, list[str]] = {
@@ -88,6 +104,7 @@ DEFAULT_AGENT_LANES: dict[str, list[str]] = {
         "docs/reports/",
         "docs/runbooks/",
         "scripts/ci/",
+        "artifacts/phase-gates/",
     ],
 }
 
@@ -316,6 +333,11 @@ def get_agent_path_lanes(
     artifact_prefix = f"artifacts/{normalized_phase}/{normalized_agent}/"
     if artifact_prefix not in lanes:
         lanes.append(artifact_prefix)
+
+    # 4b. Invariant: A10 is the phase-gate auditor and always permitted phase-gates
+    if normalized_agent == "A10":
+        if "artifacts/phase-gates/" not in lanes:
+            lanes.append("artifacts/phase-gates/")
 
     # 5. Task-specific lane adjustments
     # PH02 A05 is assigned 'ownership and path ACL checker' in scripts/ci/
@@ -695,6 +717,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Explicit path to PHASE_TASKS.json",
     )
     parser.add_argument(
+        "--repo-root",
+        dest="repo_root",
+        help="Explicit repository or worktree root directory",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Output results in JSON format",
@@ -769,6 +796,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             diff_text = args.diff_input
 
+    effective_repo_root = (
+        Path(args.repo_root).resolve() if args.repo_root else _detect_repo_root()
+    )
+
     passed, allowed_lanes, evaluated_files, violations = check_agent_path_acl(
         agent_id=agent_id,
         phase_id=phase_id,
@@ -780,7 +811,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         explicit_lane=args.explicit_lane,
         extra_lanes=args.extra_lanes,
         phase_tasks_path=args.phase_tasks_path,
-        repo_root=REPO_ROOT,
+        repo_root=effective_repo_root,
     )
 
     if args.json:
