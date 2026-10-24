@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH51",
+  "agent_id": "A08",
+  "role": "Security / negative tests",
+  "task": "Threat model replay of revoked-consent jobs, SSRF connectors",
+  "status": "PASSED",
+  "branch": "phase/ph51-a08",
+  "base_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "frozen_head_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "path_lane": "docs/security/;tests/security/;services/control-plane/tests/security/;artifacts/PH51/A08/",
+  "files_changed": [
+    "docs/security/REVOKED_CONSENT_JOB_REPLAY_AND_CONNECTOR_SSRF_THREAT_MODEL.md",
+    "services/control-plane/tests/security/test_ssrf_and_revoked_consent_negative.py",
+    "artifacts/PH51/A08/change_manifest.json",
+    "artifacts/PH51/A08/test_report.md",
+    "artifacts/PH51/A08/risk_register.md",
+    "artifacts/PH51/A08/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH51/A08/change_manifest.json",
+    "artifacts/PH51/A08/test_report.md",
+    "artifacts/PH51/A08/risk_register.md",
+    "artifacts/PH51/A08/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "docs/security/REVOKED_CONSENT_JOB_REPLAY_AND_CONNECTOR_SSRF_THREAT_MODEL.md",
+      "symbol": "Threat Model",
+      "description": "Comprehensive threat model covering statutory consent replay attacks and connector SSRF exfiltration."
+    },
+    {
+      "file": "services/control-plane/tests/security/test_ssrf_and_revoked_consent_negative.py",
+      "symbol": "test_ssrf_webhook_rejection, test_revoked_consent_job_replay_blocked",
+      "description": "Security test assertions verifying rejection of metadata/private IP SSRF and blocking of revoked-consent job re-execution."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "pytest services/control-plane/tests/security/test_ssrf_and_revoked_consent_negative.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Executed 2 security verification tests."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A08 -p PH51",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/security/, tests/security/, and artifacts/PH51/A08/."
+    }
+  ],
+  "audit_findings": {
+    "ssrf_and_consent_threat_model": {
+      "status": "COMPLETED",
+      "finding": "Delivered threat model and executable negative test harness for connector SSRF prevention and revoked-consent DLQ protection."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH51_A08/docs/security/REVOKED_CONSENT_JOB_REPLAY_AND_CONNECTOR_SSRF_THREAT_MODEL.md",
+    "rm -f /dev/shm/clara_worktrees/PH51_A08/services/control-plane/tests/security/test_ssrf_and_revoked_consent_negative.py",
+    "rm -rf /dev/shm/clara_worktrees/PH51_A08/artifacts/PH51/A08"
+  ],
+  "timestamp": "2026-10-22T20:15:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH51_A08"
+}
