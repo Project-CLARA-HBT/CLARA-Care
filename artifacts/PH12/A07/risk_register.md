@@ -1,0 +1,10 @@
+# Risk Register — PH12 A07 (Mobile LifeMap Parity Integration Tests)
+
+| Risk ID | Description | Severity | Likelihood | Mitigation | Status |
+|---------|-------------|----------|------------|------------|--------|
+| RISK-PH12-A07-01 | Mobile client caching unredacted or unconfirmed health facts leading to stale or unauthorized medical guidance | High | Low | Integration test `test_mobile_today_read_projection_contract` and `test_mobile_client_contract_offline_policy_and_vocabulary` enforce data minimization and strict `truth_authority: False` on all non-confirmed states. | Mitigated |
+| RISK-PH12-A07-02 | Offline mobile client attempting to queue mutating actions without active server verification | High | Low | Verified `offline_policy["mutations"] == "disabled"` and `queued_health_mutations_supported == False`; mutating capabilities default to `online_only`. | Mitigated |
+| RISK-PH12-A07-03 | Concurrent client edits overwriting clinical facts without optimistic locking detection | Medium | Low | `test_mobile_optimistic_concurrency_and_stale_detection` validates `If-Match` revision enforcement, returning HTTP 409 `stale_version` upon version conflict. | Mitigated |
+| RISK-PH12-A07-04 | User accessing sensitive LifeMap longitudinal queries after revoking medical disclaimer consent | Critical | Low | `test_consent_revocation_immediately_blocks_endpoints` validates that consent withdrawal immediately gates subsequent queries behind HTTP 428 Precondition Required. | Mitigated |
+| RISK-PH12-A07-05 | Cross-profile IDOR leakage across mobile multi-profile or family shared environments | Critical | Low | `test_mobile_timeline_profile_isolation_and_idor_protection` verifies profile scoping fail-closed (HTTP 404) for foreign profile context headers. | Mitigated |
+| RISK-PH12-A07-06 | Late-arriving wearable or sync data corrupting cached daily/weekly timeline aggregations | Medium | Low | `test_cache_invalidation_on_late_arriving_data` verifies that events with historical timestamps (>5 minutes in the past) trigger global projection cache invalidation (`late_data`). | Mitigated |

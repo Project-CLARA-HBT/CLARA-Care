@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH12",
+  "agent_id": "A07",
+  "role": "Tests + CI",
+  "task": "mobile full LifeMap parity integration tests and test suites",
+  "status": "COMPLETED",
+  "branch": "phase/ph12-a07",
+  "base_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "frozen_head_sha": "36e5b95fac7e65712f0779de253d8ed18dc693d7",
+  "worktree_path": "/dev/shm/clara_worktrees/PH12_A07",
+  "path_lane": "services/api/tests/;services/ml/tests/;apps/web/e2e/;.github/workflows/;artifacts/PH12/A07/",
+  "timestamp": "2026-10-24T10:30:00Z",
+  "files_created": [
+    "services/api/tests/test_lifemap_mobile_parity_integration.py",
+    "artifacts/PH12/A07/change_manifest.json",
+    "artifacts/PH12/A07/test_report.md",
+    "artifacts/PH12/A07/risk_register.md",
+    "artifacts/PH12/A07/rollback.md"
+  ],
+  "files_modified": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line_start": 1939,
+      "line_end": 2025,
+      "symbol": "lifemap_timeline",
+      "description": "GET /api/v1/lifemap/timeline endpoint delivering bitemporally filtered, reverse-chronological events with profile scoping and pagination."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line_start": 1794,
+      "line_end": 1937,
+      "symbol": "today",
+      "description": "GET /api/v1/lifemap/today endpoint producing the least-necessary read projection matching mobile LifeMapReadCache.project()."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line_start": 2982,
+      "line_end": 2990,
+      "symbol": "client_contract",
+      "description": "GET /api/v1/lifemap/v2/client-contract route returning safe state vocabulary (7 states), confirmed-only authority, and offline policy."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line_start": 387,
+      "line_end": 400,
+      "symbol": "_require_version",
+      "description": "Optimistic concurrency guard enforcing If-Match header against current revision number (409 stale_version, 422 invalid_if_match)."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line_start": 1009,
+      "line_end": 1124,
+      "symbol": "correct_event",
+      "description": "POST /api/v1/lifemap/events/{event_id}/correct route generating successor revision and invalidating projection graph dependencies."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line_start": 930,
+      "line_end": 1000,
+      "symbol": "dispute_event, resolve_event",
+      "description": "POST dispute and resolve truth transition commands with projection graph invalidation."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line_start": 2404,
+      "line_end": 2489,
+      "symbol": "revoke_source",
+      "description": "POST /api/v1/lifemap/v2/sources/{source_id}/revoke route invalidating dependent projections across all cited fact revisions."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/projection_invalidation.py",
+      "line_start": 21,
+      "line_end": 131,
+      "symbol": "add_projection_dependency, invalidate_projection_graph",
+      "description": "Transitive projection dependency tracking and single-pass graph invalidation."
+    },
+    {
+      "file": "services/api/src/clara_api/core/consent.py",
+      "line_start": 58,
+      "line_end": 75,
+      "symbol": "ensure_medical_disclaimer_consent",
+      "description": "Precondition gate raising HTTP 428 Precondition Required when active medical disclaimer consent is ungranted or outdated."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/mobile.py",
+      "line_start": 58,
+      "line_end": 97,
+      "symbol": "mobile_summary",
+      "description": "GET /api/v1/mobile/summary endpoint returning role-based capabilities and server-authoritative LifeMap feature flags."
+    },
+    {
+      "file": "apps/mobile/lib/core/lifemap_read_cache.dart",
+      "line_start": 31,
+      "line_end": 98,
+      "symbol": "LifeMapReadCache",
+      "description": "Client-side encrypted read projection cache verifying schema, TTL, and offline mutation blocking."
+    },
+    {
+      "file": "apps/mobile/lib/core/lifemap_client_contract.dart",
+      "line_start": 3,
+      "line_end": 54,
+      "symbol": "LifeMapClientState, LifeMapCapability",
+      "description": "Mobile state vocabulary mapping and online-only capability enforcement."
+    }
+  ],
+  "interface_assumptions": {
+    "timeline_query_api": "GET /api/v1/lifemap/timeline returns LifeMapTimelineResponse with reverse-chronological items and bitemporal filtering",
+    "today_projection_api": "GET /api/v1/lifemap/today delivers tasks, episodes, and activity aggregates matching mobile LifeMapReadCache.project()",
+    "projection_cache_invalidation": "invalidate_projection_graph() invalidates dependencies upon event correction, dispute, resolution, source revocation, and late data (>5 min in past)",
+    "optimistic_concurrency": "If-Match header enforced against current revision_no returning 409 stale_version or 422 invalid_if_match",
+    "consent_gate": "ensure_medical_disclaimer_consent() strictly enforces versioned medical disclaimer consent with HTTP 428 Precondition Required",
+    "mobile_summary_parity": "GET /api/v1/mobile/summary exposes authoritative server flags for LifeMap capabilities"
+  },
+  "tests_run": [
+    {
+      "command": "DATABASE_URL=sqlite+pysqlite:////tmp/clara_api_ci.db AUTH_AUTO_PROVISION_USERS=true AUTH_BOOTSTRAP_ADMIN_ENABLED=true uv run pytest -q tests/test_lifemap_mobile_parity_integration.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "tests_passed": 20,
+      "tests_failed": 0,
+      "duration_seconds": 37.86
+    },
+    {
+      "command": "python3 -m compileall -q services/api/tests/test_lifemap_mobile_parity_integration.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of integration test suite"
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A07 -p PH12",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Subagent path lane validation strictly within allowed boundaries"
+    }
+  ],
+  "deliverables": [
+    "services/api/tests/test_lifemap_mobile_parity_integration.py",
+    "artifacts/PH12/A07/change_manifest.json",
+    "artifacts/PH12/A07/test_report.md",
+    "artifacts/PH12/A07/risk_register.md",
+    "artifacts/PH12/A07/rollback.md"
+  ],
+  "blockers": []
+}
