@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH12",
+  "agent_id": "A05",
+  "role": "Web UX",
+  "task": "conflict provenance UI",
+  "base_sha": "36e5b95facf155985012354e6005bb7097c36d0b",
+  "frozen_head_sha": "36e5b95facf155985012354e6005bb7097c36d0b",
+  "branch": "phase/ph12-a05",
+  "worktree_path": "/dev/shm/clara_worktrees/PH12_A05",
+  "path_lane": "apps/web/app/;apps/web/components/;apps/web/lib/;artifacts/PH12/A05/",
+  "status": "PASSED",
+  "blockers": [],
+  "files_changed": [
+    "apps/web/app/lifemap/timeline/page.test.tsx",
+    "apps/web/app/lifemap/timeline/page.tsx",
+    "apps/web/components/lifemap/conflict-provenance-inspector.test.tsx",
+    "apps/web/components/lifemap/conflict-provenance-inspector.tsx",
+    "apps/web/components/lifemap/longitudinal-conflict-timeline.test.tsx",
+    "apps/web/components/lifemap/longitudinal-conflict-timeline.tsx",
+    "apps/web/components/lifemap/multi-source-contradiction-banner.tsx",
+    "apps/web/lib/lifemap-conflict-provenance.test.ts",
+    "apps/web/lib/lifemap-conflict-provenance.ts",
+    "artifacts/PH12/A05/change_manifest.json",
+    "artifacts/PH12/A05/test_report.md",
+    "artifacts/PH12/A05/risk_register.md",
+    "artifacts/PH12/A05/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "apps/web/lib/lifemap-conflict-provenance.ts:33-43",
+    "apps/web/lib/lifemap-conflict-provenance.ts:112-139",
+    "apps/web/lib/lifemap-conflict-provenance.ts:144-197",
+    "apps/web/lib/lifemap-conflict-provenance.ts:236-250",
+    "apps/web/lib/lifemap-conflict-provenance.ts:255-310",
+    "apps/web/components/lifemap/multi-source-contradiction-banner.tsx:15-95",
+    "apps/web/components/lifemap/conflict-provenance-inspector.tsx:28-110",
+    "apps/web/components/lifemap/longitudinal-conflict-timeline.tsx:70-125",
+    "apps/web/app/lifemap/timeline/page.tsx:345-373",
+    "apps/web/app/lifemap/timeline/page.tsx:456-488"
+  ],
+  "tests_run": [
+    {
+      "command": "npx vitest run lib/lifemap-conflict-provenance.test.ts",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "16 passed in 22ms"
+    },
+    {
+      "command": "npx vitest run components/lifemap/longitudinal-conflict-timeline.test.tsx",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "4 passed in 284ms"
+    },
+    {
+      "command": "npx vitest run components/lifemap/conflict-provenance-inspector.test.tsx",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "6 passed in 578ms"
+    },
+    {
+      "command": "npx vitest run app/lifemap/timeline/page.test.tsx",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "7 passed in 1170ms"
+    },
+    {
+      "command": "npx vitest run components/lifemap/ lib/lifemap-conflict-provenance.test.ts app/lifemap/timeline/page.test.tsx",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "6 test files passed, 53 passed in 3.97s"
+    },
+    {
+      "command": "npx next lint --file app/lifemap/timeline/page.tsx --file components/lifemap/conflict-provenance-inspector.tsx --file components/lifemap/longitudinal-conflict-timeline.tsx --file components/lifemap/multi-source-contradiction-banner.tsx --file lib/lifemap-conflict-provenance.ts",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "No ESLint warnings or errors"
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A05 -p PH12",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "PATH ACL CHECKER — PASSED (Agent: A05, Phase: PH12)"
+    }
+  ],
+  "rollback_steps": [
+    "git checkout 36e5b95facf155985012354e6005bb7097c36d0b -- apps/web/app/lifemap/timeline/page.tsx apps/web/app/lifemap/timeline/page.test.tsx",
+    "rm -f apps/web/components/lifemap/conflict-provenance-inspector.test.tsx apps/web/components/lifemap/conflict-provenance-inspector.tsx apps/web/components/lifemap/longitudinal-conflict-timeline.test.tsx apps/web/components/lifemap/longitudinal-conflict-timeline.tsx apps/web/components/lifemap/multi-source-contradiction-banner.tsx",
+    "rm -f apps/web/lib/lifemap-conflict-provenance.test.ts apps/web/lib/lifemap-conflict-provenance.ts",
+    "rm -rf artifacts/PH12/A05"
+  ],
+  "interface_assumptions": [
+    "Conflict provenance and contradiction detection is feature-gated via NEXT_PUBLIC_LIFEMAP_CONFLICT_PROVENANCE_ENABLED (defaults to false for safe clinical rollout).",
+    "Contradiction sources align both Valid Time (occurred_at) and Transaction/System Time (recorded_at) across EMR, OCR, Scribe, and Patient logs.",
+    "Audit resolutions are tamper-evident and require clinical justification rationale (2-500 characters) before submission.",
+    "Optimistic concurrency control uses If-Match header with revision checking to prevent lost updates.",
+    "Non-blocking integration preserves existing JourneyTimelinePage capabilities and synthetic replay fallbacks."
+  ],
+  "deliverables": [
+    "artifacts/PH12/A05/change_manifest.json",
+    "artifacts/PH12/A05/test_report.md",
+    "artifacts/PH12/A05/risk_register.md",
+    "artifacts/PH12/A05/rollback.md"
+  ],
+  "timestamp": "2026-10-24T17:05:00Z"
+}

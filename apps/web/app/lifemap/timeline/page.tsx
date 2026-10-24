@@ -25,10 +25,19 @@ import {
   getLifeMapBaselines,
   getLifeMapDisputes,
   getLifeMapToday,
+  scanLifeMapReviewFindings,
   type LifeMapBaseline,
   type LifeMapDisputeCase,
   type LifeMapToday,
 } from "@/lib/lifemap";
+import {
+  isLifeMapConflictProvenanceEnabled,
+  LifeMapConflictProvenanceHelper,
+  type MultiSourceContradiction,
+  type ResolutionActionInput,
+} from "@/lib/lifemap-conflict-provenance";
+import { ConflictProvenanceInspector } from "@/components/lifemap/conflict-provenance-inspector";
+import { MultiSourceContradictionBanner } from "@/components/lifemap/multi-source-contradiction-banner";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 import { listVisits, type Visit } from "@/lib/visit-family";
@@ -68,6 +77,7 @@ export interface BitemporalTimelineEvent {
   metrics?: Record<string, string | number>;
   status?: string;
   associated_journey?: string;
+  contradictions?: MultiSourceContradiction[];
 }
 
 const SEED_TIMELINE_EVENTS: BitemporalTimelineEvent[] = [
@@ -119,6 +129,51 @@ const SEED_TIMELINE_EVENTS: BitemporalTimelineEvent[] = [
       policy_version: "prescription.v1",
     },
     associated_journey: "Kiểm soát huyết áp",
+    contradictions: [
+      {
+        id: "contra-evt-003",
+        eventId: "evt-003",
+        fieldKey: "dosage",
+        title: "Mâu thuẫn liều dùng: Amlodipine 5mg vs 10mg",
+        description:
+          "Đơn thuốc EMR kê 5mg/ngày nhưng kết quả quét OCR vỏ hộp thuốc ghi nhận 10mg.",
+        severity: "critical",
+        type: "contradiction",
+        detectedAt: "2026-08-03T11:30:00Z",
+        status: "unresolved",
+        sources: [
+          {
+            sourceId: "src-emr-003",
+            sourceType: "EMR_INTEGRATION",
+            attribution: "Đơn thuốc EMR - BV Bạch Mai",
+            occurredAt: "2026-08-03T10:15:00Z",
+            recordedAt: "2026-08-03T11:30:00Z",
+            revision: 1,
+            truthState: "confirmed",
+            valueDisplay: "Amlodipine 5mg (1 viên mỗi sáng)",
+            payload: { medication: "Amlodipine", dosage: "5mg", freq: "1/day" },
+            confidence: 0.99,
+            contentHash: "sha256-emr-amlodipine-5mg",
+            isAuthoritative: true,
+            authorName: "BS. Trần Văn Hoàng",
+          },
+          {
+            sourceId: "src-ocr-003",
+            sourceType: "DOCUMENT_OCR",
+            attribution: "Ảnh quét vỏ hộp thuốc cá nhân",
+            occurredAt: "2026-08-03T10:30:00Z",
+            recordedAt: "2026-08-03T11:35:00Z",
+            revision: 1,
+            truthState: "draft",
+            valueDisplay: "Amlodipine 10mg (Hộp 3 vỉ x 10 viên)",
+            payload: { medication: "Amlodipine", dosage: "10mg", freq: "unknown" },
+            confidence: 0.88,
+            contentHash: "sha256-ocr-amlodipine-10mg",
+            isAuthoritative: false,
+          },
+        ],
+      },
+    ],
   },
   {
     id: "evt-004",
@@ -211,6 +266,9 @@ export default function JourneyTimelinePage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [inspectingEvent, setInspectingEvent] = useState<BitemporalTimelineEvent | null>(null);
+  const [inspectingContradiction, setInspectingContradiction] =
+    useState<MultiSourceContradiction | null>(null);
+  const [conflictOnly, setConflictOnly] = useState(false);
   const [disputeModalEvent, setDisputeModalEvent] = useState<BitemporalTimelineEvent | null>(null);
   const [disputeReason, setDisputeReason] = useState("");
   const [disputing, setDisputing] = useState(false);
@@ -282,6 +340,36 @@ export default function JourneyTimelinePage() {
             matched.truth_state = "disputed";
           }
         });
+      }
+
+      // Check review findings if longitudinal conflict provenance feature is active
+      if (isLifeMapConflictProvenanceEnabled()) {
+        try {
+          const findings = await scanLifeMapReviewFindings();
+          if (Array.isArray(findings)) {
+            findings.forEach((finding) => {
+              if (finding.kind === "contradiction") {
+                const targetEvent = liveEvents.find(
+                  (e) =>
+                    finding.revision_ids.includes(e.id) ||
+                    e.title.toLowerCase().includes(finding.field_key.toLowerCase()),
+                );
+                if (targetEvent) {
+                  const mapped = LifeMapConflictProvenanceHelper.fromReviewFinding(
+                    finding,
+                    targetEvent.contradictions?.[0]?.sources || [],
+                  );
+                  targetEvent.contradictions = [
+                    ...(targetEvent.contradictions || []),
+                    mapped,
+                  ];
+                }
+              }
+            });
+          }
+        } catch {
+          // Non-blocking for offline / synthetic dev
+        }
       }
 
       setEvents(liveEvents);
@@ -365,9 +453,52 @@ export default function JourneyTimelinePage() {
     }
   };
 
+  const handleResolveContradiction = async (actionInput: ResolutionActionInput) => {
+    await LifeMapConflictProvenanceHelper.executeResolution(actionInput);
+    setEvents((prev) =>
+      prev.map((e) => {
+        if (e.id === actionInput.eventId) {
+          const updatedContradictions = e.contradictions?.map((c) =>
+            c.id === actionInput.conflictId
+              ? {
+                  ...c,
+                  status: (actionInput.action === "dismiss"
+                    ? "dismissed"
+                    : "resolved") as "resolved" | "dismissed",
+                  resolution: {
+                    action: actionInput.action,
+                    chosenSourceId: actionInput.chosenSourceId,
+                    reason: actionInput.reason,
+                    resolvedAt: new Date().toISOString(),
+                    auditReceiptId: `rec-${Date.now()}`,
+                  },
+                }
+              : c,
+          );
+          return {
+            ...e,
+            truth_state:
+              actionInput.action === "dispute_all" ? "disputed" : e.truth_state,
+            contradictions: updatedContradictions,
+          };
+        }
+        return e;
+      }),
+    );
+  };
+
   const filteredEvents = useMemo(() => {
     return events
       .filter((item) => {
+        if (
+          conflictOnly &&
+          !(
+            (item.contradictions && item.contradictions.length > 0) ||
+            item.truth_state === "disputed"
+          )
+        ) {
+          return false;
+        }
         if (typeFilter !== "all" && item.type !== typeFilter) return false;
         if (stateFilter !== "all" && item.truth_state !== stateFilter) return false;
         if (searchQuery.trim()) {
@@ -388,9 +519,9 @@ export default function JourneyTimelinePage() {
           perspective === "valid_time"
             ? new Date(b.occurred_at).getTime()
             : new Date(b.recorded_at).getTime();
-        return timeB - timeA;
-      });
-  }, [events, typeFilter, stateFilter, searchQuery, perspective]);
+      return timeB - timeA;
+    });
+  }, [events, typeFilter, stateFilter, searchQuery, perspective, conflictOnly]);
 
   const truthStateConfig: Record<
     TruthState,
@@ -564,6 +695,18 @@ export default function JourneyTimelinePage() {
                   {copy(tab.labelKey)}
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => setConflictOnly((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  conflictOnly
+                    ? "bg-[var(--warn-600,#d97706)] text-white font-semibold"
+                    : "bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
+                }`}
+                data-testid="timeline-filter-conflicts-toggle"
+              >
+                {conflictOnly ? "✓ Đang lọc mâu thuẫn" : "Mâu thuẫn"}
+              </button>
             </div>
           </div>
 
@@ -689,6 +832,19 @@ export default function JourneyTimelinePage() {
                               </strong>
                               {val}
                             </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Multi-Source Contradiction Banner (Longitudinal Conflict Provenance UI) */}
+                      {item.contradictions && item.contradictions.length > 0 && (
+                        <div className="my-3 space-y-2">
+                          {item.contradictions.map((contra) => (
+                            <MultiSourceContradictionBanner
+                              key={contra.id}
+                              contradiction={contra}
+                              onInspect={(c) => setInspectingContradiction(c)}
+                            />
                           ))}
                         </div>
                       )}
@@ -825,6 +981,16 @@ export default function JourneyTimelinePage() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Multi-Source Conflict Provenance Inspector Modal */}
+      {inspectingContradiction && (
+        <ConflictProvenanceInspector
+          contradiction={inspectingContradiction}
+          open={Boolean(inspectingContradiction)}
+          onClose={() => setInspectingContradiction(null)}
+          onResolve={handleResolveContradiction}
+        />
       )}
 
       {/* Dispute Modal */}

@@ -267,4 +267,48 @@ describe("JourneyTimelinePage (Spec v5 Section 6.18)", () => {
       ).toBeInTheDocument();
     });
   });
+
+  it("filters stream to only conflicted events and opens ConflictProvenanceInspector", async () => {
+    await act(async () => {
+      render(<JourneyTimelinePage />);
+    });
+
+    // Conflict banner for Amlodipine 5mg vs 10mg is visible
+    expect(
+      screen.getByText("Mâu thuẫn liều dùng: Amlodipine 5mg vs 10mg"),
+    ).toBeInTheDocument();
+
+    // Toggle conflict filter
+    const conflictToggleBtn = screen.getByTestId("timeline-filter-conflicts-toggle");
+    fireEvent.click(conflictToggleBtn);
+
+    // Non-conflicted events should be filtered out
+    expect(
+      screen.queryByText("Khởi động hành trình Kiểm soát huyết áp"),
+    ).not.toBeInTheDocument();
+    // Conflicted event remains
+    expect(
+      screen.getByText("Đổi đơn thuốc: Chuyển sang Amlodipine 5mg"),
+    ).toBeInTheDocument();
+
+    // Click inspect on contradiction banner
+    const inspectBtn = screen.getByRole("button", {
+      name: /Kiểm tra mâu thuẫn cho dosage/i,
+    });
+    fireEvent.click(inspectBtn);
+
+    // Modal opens
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(
+        screen.getByText(/Đối chiếu & Thẩm định mâu thuẫn: dosage/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Đơn thuốc EMR - BV Bạch Mai"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Ảnh quét vỏ hộp thuốc cá nhân"),
+      ).toBeInTheDocument();
+    });
+  });
 });
