@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH11",
+  "agent_id": "A07",
+  "role": "Tests + CI",
+  "task": "mobile consented FHIR share",
+  "status": "PASSED",
+  "branch": "phase/ph11-a07",
+  "base_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "frozen_head_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "path_lane": "services/api/tests/;services/ml/tests/;apps/web/e2e/;.github/workflows/;artifacts/PH11/A07/",
+  "files_changed": [
+    "services/api/tests/test_mobile_consented_fhir_share.py",
+    "artifacts/PH11/A07/change_manifest.json",
+    "artifacts/PH11/A07/test_report.md",
+    "artifacts/PH11/A07/risk_register.md",
+    "artifacts/PH11/A07/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH11/A07/change_manifest.json",
+    "artifacts/PH11/A07/test_report.md",
+    "artifacts/PH11/A07/risk_register.md",
+    "artifacts/PH11/A07/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line": 2881,
+      "symbol": "export_fhir_r4_summary",
+      "description": "FHIR R4 collection export endpoint enforcing purpose-bound authorization and medical disclaimer consent."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line": 2726,
+      "symbol": "_fhir_scope",
+      "description": "Validates export purpose and resolves scoped profile authorization context."
+    },
+    {
+      "file": "services/api/src/clara_api/api/v1/endpoints/lifemap.py",
+      "line": 2751,
+      "symbol": "_fhir_snapshot",
+      "description": "Constructs canonical health snapshot enforcing delegate data class boundaries and filtering active events."
+    },
+    {
+      "file": "services/api/src/clara_api/core/consent.py",
+      "line": 58,
+      "symbol": "ensure_medical_disclaimer_consent",
+      "description": "Fail-closed check raising HTTP 428 Precondition Required when active medical disclaimer consent is absent or revoked."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/profile_scope.py",
+      "line": 86,
+      "symbol": "resolve_profile_scope",
+      "description": "Profile authorization resolver enforcing RBAC, IDOR defense, and FamilyAccessGrant temporal and action boundaries."
+    },
+    {
+      "file": "services/api/src/clara_api/lifemap/fhir_r4.py",
+      "line": 366,
+      "symbol": "build_summary_bundle",
+      "description": "Transforms snapshot into strict FHIR R4 collection bundle with Patient, Observation, MedicationStatement, Consent, and Provenance."
+    },
+    {
+      "file": "services/api/tests/test_mobile_consented_fhir_share.py",
+      "symbol": "TestMobileConsentedFhirShareIntegration",
+      "description": "Automated integration test suite covering mobile consented share, consent gating, purpose validation, IDOR defense, and conformance boundaries."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "DATABASE_URL=sqlite+pysqlite:////tmp/clara_api_ci.db AUTH_AUTO_PROVISION_USERS=true AUTH_BOOTSTRAP_ADMIN_ENABLED=true uv run pytest -v tests/test_mobile_consented_fhir_share.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 18 mobile consented FHIR share integration tests passed cleanly."
+    },
+    {
+      "command": "python3 ./scripts/ci/check_agent_path_acl.py -a A07 -p PH11",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/api/tests/ and artifacts/PH11/A07/."
+    }
+  ],
+  "audit_findings": {
+    "mobile_consented_fhir_share_tests": {
+      "status": "COMPLETED",
+      "finding": "Implemented test_mobile_consented_fhir_share.py covering 18 integration scenarios: full export workflow (Patient, Observation with UCUM units, MedicationStatement with dosage and coding, Consent, Provenance), consent gating and revocation (HTTP 428), purpose validation (HTTP 422), unauthenticated rejection (HTTP 401), cross-user IDOR protection (HTTP 404), admin direct access prevention without break-glass (HTTP 404), family delegate boundaries (expired, revoked, missing action, and missing data class fail closed; active succeeds), feature flag disabling (HTTP 404), IPS overclaim prevention (HTTP 409), non-general server conformance, demographic data minimization, and draft filtering."
+    }
+  },
+  "rollback_steps": [
+    "rm -f services/api/tests/test_mobile_consented_fhir_share.py",
+    "rm -rf artifacts/PH11/A07"
+  ],
+  "timestamp": "2026-10-24T09:30:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH11_A07"
+}
