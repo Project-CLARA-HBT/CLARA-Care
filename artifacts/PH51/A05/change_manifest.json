@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH51",
+  "agent_id": "A05",
+  "role": "Admin/consumer app routes",
+  "task": "Build job/outbox/connector dashboard",
+  "status": "PASSED",
+  "branch": "phase/ph51-a05",
+  "base_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "frozen_head_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "path_lane": "apps/admin/app/;apps/web/app/;artifacts/PH51/A05/",
+  "files_changed": [
+    "apps/admin/app/jobs/page.tsx",
+    "artifacts/PH51/A05/change_manifest.json",
+    "artifacts/PH51/A05/test_report.md",
+    "artifacts/PH51/A05/risk_register.md",
+    "artifacts/PH51/A05/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH51/A05/change_manifest.json",
+    "artifacts/PH51/A05/test_report.md",
+    "artifacts/PH51/A05/risk_register.md",
+    "artifacts/PH51/A05/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "apps/admin/app/jobs/page.tsx",
+      "symbol": "AdminJobsDashboardPage",
+      "description": "Administrative job queue, outbox relay status, and connector supervisor dashboard."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A05 -p PH51",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across apps/admin/app/, apps/web/app/, and artifacts/PH51/A05/."
+    }
+  ],
+  "audit_findings": {
+    "admin_jobs_console": {
+      "status": "COMPLETED",
+      "finding": "Implemented jobs dashboard with inspection modal enforcing strict PHI redaction and manual retry controls."
+    }
+  },
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH51_A05/apps/admin/app/jobs",
+    "rm -rf /dev/shm/clara_worktrees/PH51_A05/artifacts/PH51/A05"
+  ],
+  "timestamp": "2026-10-22T20:00:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH51_A05"
+}
