@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH51",
+  "agent_id": "A03",
+  "role": "Domain service",
+  "task": "Implement requeue with idempotency and consent recheck",
+  "status": "PASSED",
+  "branch": "phase/ph51-a03",
+  "base_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "frozen_head_sha": "7d8840494cf8e30b6c70ea935574516604e4c275",
+  "path_lane": "services/control-plane/src/clara_control/domain/;artifacts/PH51/A03/",
+  "files_changed": [
+    "services/control-plane/src/clara_control/domain/job_requeue_service.py",
+    "artifacts/PH51/A03/change_manifest.json",
+    "artifacts/PH51/A03/test_report.md",
+    "artifacts/PH51/A03/risk_register.md",
+    "artifacts/PH51/A03/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH51/A03/change_manifest.json",
+    "artifacts/PH51/A03/test_report.md",
+    "artifacts/PH51/A03/risk_register.md",
+    "artifacts/PH51/A03/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    {
+      "file": "services/control-plane/src/clara_control/domain/job_requeue_service.py",
+      "symbol": "JobRequeueService.requeue_job",
+      "description": "Safe job requeue domain logic enforcing statutory consent re-validation prior to resetting retry counters."
+    }
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/control-plane/src/clara_control/domain/job_requeue_service.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation of JobRequeueService."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A03 -p PH51",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across services/control-plane/src/clara_control/domain/ and artifacts/PH51/A03/."
+    }
+  ],
+  "audit_findings": {
+    "consent_aware_requeue": {
+      "status": "COMPLETED",
+      "finding": "Implemented statutory consent re-check preventing requeue of DLQ jobs if patient revoked consent."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH51_A03/services/control-plane/src/clara_control/domain/job_requeue_service.py",
+    "rm -rf /dev/shm/clara_worktrees/PH51_A03/artifacts/PH51/A03"
+  ],
+  "timestamp": "2026-10-22T19:50:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH51_A03"
+}
