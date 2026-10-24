@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH12",
+  "agent_id": "A03",
+  "role": "Domain + GLHS services",
+  "task": "LifeMap capture extraction service",
+  "status": "PASSED",
+  "branch": "phase/ph12-a03",
+  "base_sha": "36e5b95facf155985012354e6005bb7097c36d0b",
+  "frozen_head_sha": "36e5b95facf155985012354e6005bb7097c36d0b",
+  "worktree_path": "/dev/shm/clara_worktrees/PH12_A03",
+  "path_lane": "services/api/src/clara_api/glhs/;services/api/src/clara_api/lifemap/;services/api/src/clara_api/phr/;services/api/src/clara_api/compliance/;services/api/src/clara_api/core/;artifacts/PH12/A03/",
+  "files_changed": [
+    "services/api/src/clara_api/core/config.py",
+    "services/api/src/clara_api/glhs/occ_locking_adapters.py",
+    "services/api/src/clara_api/lifemap/capture_extraction_service.py",
+    "artifacts/PH12/A03/change_manifest.json",
+    "artifacts/PH12/A03/test_report.md",
+    "artifacts/PH12/A03/risk_register.md",
+    "artifacts/PH12/A03/rollback.md",
+    "artifacts/PH12/A03/test_capture_extraction.py"
+  ],
+  "deliverables": [
+    "artifacts/PH12/A03/change_manifest.json",
+    "artifacts/PH12/A03/test_report.md",
+    "artifacts/PH12/A03/risk_register.md",
+    "artifacts/PH12/A03/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/core/config.py:862-865",
+    "services/api/src/clara_api/glhs/occ_locking_adapters.py:109-136",
+    "services/api/src/clara_api/lifemap/capture_extraction_service.py:132-437"
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall services/api/src/clara_api/core/config.py services/api/src/clara_api/glhs/occ_locking_adapters.py services/api/src/clara_api/lifemap/capture_extraction_service.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "AST bytecode compilation across modified and newly created Python modules."
+    },
+    {
+      "command": "PYTHONPATH=services/api/src pytest artifacts/PH12/A03/test_capture_extraction.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Comprehensive unit & invariant suite covering feature flag gating, ProfileScope authorization, OCC partition locking, CAS version validation, cryptographic 3-digest continuity, non-destructive conflict preservation, and emergency fast-path escalation."
+    },
+    {
+      "command": "PYTHONPATH=services/api/src pytest services/api/tests/test_lifemap_capture_extraction.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Existing LifeMap capture candidate extraction regression tests."
+    },
+    {
+      "command": "PYTHONPATH=services/api/src pytest services/api/tests/test_glhs_dynamic_ww_locking.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "GLHS dynamic entity partition write-write locking tests."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A03 -p PH12",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path ACL lane isolation validation ensuring zero files outside the write lane are touched."
+    }
+  ],
+  "audit_findings": {
+    "capture_extraction_domain_service": {
+      "status": "COMPLETED",
+      "finding": "Implemented CaptureExtractionService orchestrating candidate linking to timeline events, source references, and GLHS continuity."
+    },
+    "glhs_3digest_continuity": {
+      "status": "COMPLETED",
+      "finding": "Calculated D1 projection digest, D2 semantic envelope digest, D3 transport payload digest, and RFC 8785 canonical lineage digest."
+    },
+    "occ_partition_locking": {
+      "status": "COMPLETED",
+      "finding": "Implemented LifeMapCaptureLockAdapter acquiring deterministic entity partition locks across capture session, timeline, and GLHS continuity partitions."
+    },
+    "conflict_preservation": {
+      "status": "COMPLETED",
+      "finding": "Integrated ConflictPreservationEngine preserving competing clinical assertions as parallel DISPUTED records non-destructively."
+    },
+    "emergency_fast_path": {
+      "status": "COMPLETED",
+      "finding": "Synchronously evaluated candidate text against acute clinical red flags via emergency_fast_path, escalating immediately."
+    }
+  },
+  "rollback_steps": [
+    "git checkout 36e5b95facf155985012354e6005bb7097c36d0b -- services/api/src/clara_api/core/config.py services/api/src/clara_api/glhs/occ_locking_adapters.py",
+    "rm -f services/api/src/clara_api/lifemap/capture_extraction_service.py",
+    "rm -rf artifacts/PH12/A03"
+  ],
+  "timestamp": "2026-10-24T22:35:00Z"
+}

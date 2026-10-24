@@ -39,27 +39,30 @@ class EntityLocalLockAdapter:
     def acquire_partition_locks(
         self,
         *,
-        user_id: int,
+        profile_id: int,
         partition_keys: list[str],
         exclusive: bool = True,
+        user_id: int | None = None,
     ) -> PartitionLockResult:
-        # Sort keys lexicographically to guarantee canonical lock acquisition order
-        sorted_keys = sorted(list(set(partition_keys)))
-        mode = LockMode.EXCLUSIVE if exclusive else LockMode.SHARED
+        parsed_tuples: list[tuple[str, str]] = []
+        for k in partition_keys:
+            if ":" in k:
+                d, s = k.split(":", 1)
+                parsed_tuples.append((d, s))
+            else:
+                parsed_tuples.append(("general", k))
 
-        # Build and execute deterministic lock acquisition
-        lock_plan = build_lock_plan(
-            governance_domain=None,
-            user_id=user_id,
-            entity_keys=sorted_keys,
-            exclusive=exclusive,
+        sorted_tuples = sorted(list(set(parsed_tuples)), key=lambda item: (item[0], item[1]))
+        lock_entity_partitions(
+            self.db,
+            profile_id=profile_id,
+            partitions=sorted_tuples,
+            read_only=not exclusive,
         )
 
-        lock_entity_partitions(self.db, user_id=user_id, partition_keys=sorted_keys, mode=mode)
-
         return PartitionLockResult(
-            locked_keys=sorted_keys,
-            mode=mode.name,
+            locked_keys=[f"{d}:{k}" for d, k in sorted_tuples],
+            mode="EXCLUSIVE" if exclusive else "SHARED",
             success=True,
         )
 
@@ -67,20 +70,68 @@ class EntityLocalLockAdapter:
 class MedicationLockAdapter(EntityLocalLockAdapter):
     """Domain lock adapter for medication reconciliations and prescription updates."""
 
-    def lock_patient_medications(self, *, user_id: int, exclusive: bool = True) -> PartitionLockResult:
+    def lock_patient_medications(
+        self,
+        *,
+        profile_id: int | None = None,
+        user_id: int | None = None,
+        exclusive: bool = True,
+    ) -> PartitionLockResult:
+        pid = profile_id if profile_id is not None else (user_id or 1)
         return self.acquire_partition_locks(
-            user_id=user_id,
-            partition_keys=[f"medications:{user_id}"],
+            profile_id=pid,
+            partition_keys=[f"medications:{pid}"],
             exclusive=exclusive,
+            user_id=user_id,
         )
 
 
 class ClinicalNoteLockAdapter(EntityLocalLockAdapter):
     """Domain lock adapter for Scribe SOAP documentation and clinician sign-off."""
 
-    def lock_session_note(self, *, user_id: int, session_id: str, exclusive: bool = True) -> PartitionLockResult:
+    def lock_session_note(
+        self,
+        *,
+        session_id: str,
+        profile_id: int | None = None,
+        user_id: int | None = None,
+        exclusive: bool = True,
+    ) -> PartitionLockResult:
+        pid = profile_id if profile_id is not None else (user_id or 1)
         return self.acquire_partition_locks(
-            user_id=user_id,
+            profile_id=pid,
             partition_keys=[f"notes:{session_id}"],
             exclusive=exclusive,
+            user_id=user_id,
         )
+
+
+class LifeMapCaptureLockAdapter(EntityLocalLockAdapter):
+    """Domain lock adapter for LifeMap Universal Capture candidate extraction and OCC conflict resolution.
+
+    Acquires entity partition locks in canonical lexicographical order:
+    - `capture_session:<session_id>`
+    - `lifemap_timeline:<profile_id>`
+    - `glhs_continuity:<profile_id>`
+    """
+
+    def lock_capture_extraction(
+        self,
+        *,
+        profile_id: int,
+        session_id: str,
+        user_id: int | None = None,
+        exclusive: bool = True,
+    ) -> PartitionLockResult:
+        keys = [
+            f"capture_session:{session_id}",
+            f"glhs_continuity:{profile_id}",
+            f"lifemap_timeline:{profile_id}",
+        ]
+        return self.acquire_partition_locks(
+            profile_id=profile_id,
+            partition_keys=keys,
+            exclusive=exclusive,
+            user_id=user_id,
+        )
+

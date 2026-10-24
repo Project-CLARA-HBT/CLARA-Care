@@ -1,0 +1,10 @@
+# Risk Register — PH12 A03 (LifeMap Capture Extraction Service)
+
+| Risk ID | Description | Severity | Likelihood | Mitigation | Status |
+|---------|-------------|----------|------------|------------|--------|
+| RISK-PH12-A03-01 | Unreviewed OCR/multimodal extraction mistakenly promoted directly to confirmed clinical state | Critical | Low | Hard fail-closed review boundary: candidates default to `draft`/`user_reported`; only explicit authorized clinician action or user review can advance truth state. | Mitigated |
+| RISK-PH12-A03-02 | Stale concurrent updates overwriting longitudinal health timeline facts (Lost Updates) | High | Low | Optimistic Concurrency Control (OCC) partition locking (`LifeMapCaptureLockAdapter`) and CAS version validation reject stale modifications with `CaptureExtractionConflictError`. | Mitigated |
+| RISK-PH12-A03-03 | Competing conflicting medical claims from different sources silently overwritten | High | Low | Non-destructive conflict preservation via `ConflictPreservationEngine`: competing assertions are stored as parallel `DISPUTED` or `UNCERTAIN` assertions with full author and dispute provenance. | Mitigated |
+| RISK-PH12-A03-04 | Critical emergency red flags in extraction payload delayed by background processing | Critical | Low | Immediate deterministic emergency fast-path check (`emergency_fast_path`) executed synchronously before any persistence, raising `CaptureEmergencyEscalationError`. | Mitigated |
+| RISK-PH12-A03-05 | Inconsistent cryptographic lineage or tampering between capture extraction and GLHS projection | High | Low | Cryptographic 3-digest continuity bundle (D1 projection digest, D2 semantic digest, D3 transport digest, canonical lineage digest) computed and verified via RFC 8785 canonical JSON. | Mitigated |
+| RISK-PH12-A03-06 | Accidental activation of experimental capture extraction domain service before clinical approval | Medium | Low | Service guarded behind `lifemap_capture_extraction_service_enabled` feature flag (default `False`), failing closed unless explicitly enabled. | Mitigated |

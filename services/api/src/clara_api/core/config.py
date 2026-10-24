@@ -859,6 +859,10 @@ class Settings(BaseSettings):
     lifemap_fhir_import_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_FHIR_IMPORT_ENABLED"
     )
+    lifemap_capture_extraction_service_enabled: bool = Field(
+        default=False,
+        validation_alias="LIFEMAP_CAPTURE_EXTRACTION_SERVICE_ENABLED",
+    )
     fhir_r4_domain_mapping_enabled: bool = Field(
         default=False, validation_alias="FHIR_R4_DOMAIN_MAPPING_ENABLED"
     )
