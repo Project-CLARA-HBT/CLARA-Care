@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH11",
+  "agent_id": "A08",
+  "role": "Security + privacy",
+  "task": "official validator conformance matrix and security privacy review",
+  "path_lane": "docs/security/;docs/compliance/;scripts/ops/;artifacts/PH11/A08/",
+  "frozen_head_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "base_sha": "85cef4b2d9a0e926ca684e9eeeba5e588ab11600",
+  "worktree_path": "/dev/shm/clara_worktrees/PH11_A08",
+  "branch": "phase/ph11-a08",
+  "timestamp": "2026-10-24T00:00:00Z",
+  "status": "COMPLETED",
+  "blockers": [],
+  "deliverables": [
+    "docs/security/FHIR_R4_VALIDATOR_CONFORMANCE_AND_SECURITY_THREAT_MODEL.md",
+    "docs/security/FHIR_PATIENT_IDENTIFICATION_AND_DEIDENTIFICATION_SPEC.md",
+    "docs/compliance/FHIR_R4_INTEROPERABILITY_COMPLIANCE_ASSESSMENT.md",
+    "scripts/ops/audit_fhir_validator_conformance.py",
+    "scripts/ops/test_audit_fhir_validator_conformance.py",
+    "artifacts/PH11/A08/change_manifest.json",
+    "artifacts/PH11/A08/test_report.md",
+    "artifacts/PH11/A08/risk_register.md",
+    "artifacts/PH11/A08/rollback.md"
+  ],
+  "files_changed": [
+    "docs/security/FHIR_R4_VALIDATOR_CONFORMANCE_AND_SECURITY_THREAT_MODEL.md",
+    "docs/security/FHIR_PATIENT_IDENTIFICATION_AND_DEIDENTIFICATION_SPEC.md",
+    "docs/compliance/FHIR_R4_INTEROPERABILITY_COMPLIANCE_ASSESSMENT.md",
+    "scripts/ops/audit_fhir_validator_conformance.py",
+    "scripts/ops/test_audit_fhir_validator_conformance.py",
+    "artifacts/PH11/A08/change_manifest.json",
+    "artifacts/PH11/A08/test_report.md",
+    "artifacts/PH11/A08/risk_register.md",
+    "artifacts/PH11/A08/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "docs/interoperability/fhir-toolchain.lock.json:1-29",
+    "services/api/src/clara_api/lifemap/fhir_r4.py:17-50",
+    "services/api/src/clara_api/lifemap/fhir_r4.py:750-930",
+    "services/api/src/clara_api/lifemap/fhir_r4.py:938-939",
+    "services/api/src/clara_api/lifemap/fhir_r4.py:950-965",
+    "services/api/src/clara_api/lifemap/fhir_r4.py:1008-1025",
+    "services/api/src/clara_api/api/v1/endpoints/lifemap.py:2726-2748",
+    "services/api/src/clara_api/api/v1/endpoints/lifemap.py:2881-2938",
+    "services/api/src/clara_api/api/v1/endpoints/lifemap.py:2940-2980",
+    "services/api/src/clara_api/api/v1/endpoints/lifemap.py:2992-3010",
+    "services/api/src/clara_api/api/v1/endpoints/lifemap.py:3012-3060",
+    "services/api/src/clara_api/api/v1/endpoints/scribe.py:2390-2404",
+    "evaluation/fhir_conformance/validator_wrapper.py:52-64",
+    "evaluation/fhir_conformance/validator_wrapper.py:135-215",
+    "evaluation/fhir_conformance/support_matrix.md:1-137"
+  ],
+  "tests_run": [
+    {
+      "command": "pytest scripts/ops/test_audit_fhir_validator_conformance.py -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Validation test harness passing 7 tests."
+    },
+    {
+      "command": "python3 scripts/ops/audit_fhir_validator_conformance.py --fail-on-high",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Zero security audit findings in FHIR profile validator."
+    }
+  ],
+  "rollback_steps": [
+    "git reset --hard 85cef4b2d9a0e926ca684e9eeeba5e588ab11600"
+  ]
+}
