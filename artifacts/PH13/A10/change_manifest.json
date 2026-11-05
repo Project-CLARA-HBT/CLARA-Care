@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH13",
+  "agent_id": "A10",
+  "role": "Adversarial audit + integration proposals",
+  "task": "vendor sandbox instructions, adversarial wearable replay audit, and phase gate manifest",
+  "status": "PASSED",
+  "branch": "phase/ph13-a10",
+  "base_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "frozen_head_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "path_lane": "docs/reports/;docs/runbooks/;scripts/ci/;artifacts/phase-gates/;artifacts/PH13/A10/",
+  "files_changed": [
+    "docs/runbooks/connected-health-vendor-sandbox-instructions.md",
+    "docs/reports/ph13-adversarial-wearable-replay-audit.md",
+    "scripts/ci/ph13_quality_gate.py",
+    "artifacts/phase-gates/PH13_gate_manifest.json",
+    "artifacts/PH13/A10/change_manifest.json",
+    "artifacts/PH13/A10/test_report.md",
+    "artifacts/PH13/A10/risk_register.md",
+    "artifacts/PH13/A10/rollback.md"
+  ],
+  "deliverables": [
+    "docs/runbooks/connected-health-vendor-sandbox-instructions.md",
+    "docs/reports/ph13-adversarial-wearable-replay-audit.md",
+    "scripts/ci/ph13_quality_gate.py",
+    "artifacts/phase-gates/PH13_gate_manifest.json",
+    "artifacts/PH13/A10/change_manifest.json",
+    "artifacts/PH13/A10/test_report.md",
+    "artifacts/PH13/A10/risk_register.md",
+    "artifacts/PH13/A10/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/connected_health/schemas.py:113",
+    "services/api/src/clara_api/connected_health/schemas.py:157",
+    "services/api/src/clara_api/connected_health/schemas.py:206",
+    "services/api/src/clara_api/connected_health/ingestion.py:29",
+    "services/api/src/clara_api/connected_health/ingestion.py:67",
+    "services/api/src/clara_api/connected_health/service.py:46",
+    "services/api/src/clara_api/connected_health/service.py:59",
+    "services/api/src/clara_api/connected_health/service.py:110",
+    "services/api/src/clara_api/connected_health/service.py:241",
+    "services/api/src/clara_api/connected_health/service.py:274",
+    "services/api/src/clara_api/connected_health/projection.py:39",
+    "services/api/src/clara_api/connected_health/projection.py:78",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:116",
+    "services/api/src/clara_api/glhs/adapters.py:517"
+  ],
+  "tests_run": [
+    {
+      "command": "python3 scripts/ci/ph13_quality_gate.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 8 PH13 quality gate checks verified conforming and green."
+    },
+    {
+      "command": "python3 scripts/ci/ph13_quality_gate.py --verify-invariants",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Hermetic connected health invariant test suite passed cleanly (6/6 tests)."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A10 -p PH13",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified across docs/reports/, docs/runbooks/, scripts/ci/, artifacts/phase-gates/, and artifacts/PH13/A10/."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py --selftest",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Internal test suite verifying path ACL checker logic (10/10 tests passed)."
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "All 70 Alembic migrations define valid non-empty downgrade() routines."
+    }
+  ],
+  "audit_findings": {
+    "adversarial_resilience": {
+      "status": "PASSED",
+      "finding": "10/10 adversarial attack vectors defeated: zero cross-profile IDOR, zero unconsented data leakage, idempotent replay guaranteed, multi-device step inflation prevented, and physiological boundaries enforced."
+    },
+    "zero_mock_data": {
+      "status": "PASSED",
+      "finding": "Sandbox test data quarantined to synthetic staging profiles; zero mock data promoted to clinical production."
+    },
+    "interval_deduplication": {
+      "status": "PASSED",
+      "finding": "Overlapping steps choose winner by coverage/max value rather than summing, preventing false physical capacity estimates."
+    },
+    "statutory_consent_gate": {
+      "status": "PASSED",
+      "finding": "Revocation immediately invalidates tokens and blocks batch imports with HTTP 403/409 within the same transaction."
+    }
+  },
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH13_A10/docs/runbooks/connected-health-vendor-sandbox-instructions.md",
+    "rm -f /dev/shm/clara_worktrees/PH13_A10/docs/reports/ph13-adversarial-wearable-replay-audit.md",
+    "rm -f /dev/shm/clara_worktrees/PH13_A10/scripts/ci/ph13_quality_gate.py",
+    "rm -f /dev/shm/clara_worktrees/PH13_A10/artifacts/phase-gates/PH13_gate_manifest.json",
+    "rm -rf /dev/shm/clara_worktrees/PH13_A10/artifacts/PH13/A10"
+  ],
+  "timestamp": "2026-10-24T18:10:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH13_A10"
+}

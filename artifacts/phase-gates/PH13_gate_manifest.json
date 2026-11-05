@@ -1,0 +1,23 @@
+{
+  "phase_id": "PH13",
+  "title": "Connected Health và wearables",
+  "verdict": "PASSED",
+  "evaluated_at": "2026-10-24T18:00:00Z",
+  "agents_evaluated": [
+    "A01", "A02", "A03", "A04", "A05", "A06", "A07", "A08", "A09", "A10"
+  ],
+  "invariants_verified": {
+    "zero_mock_data": true,
+    "wearable_idempotent_ingestion": true,
+    "overlapping_interval_deduplication": true,
+    "cross_profile_idor_prevention": true,
+    "statutory_consent_gate": true,
+    "physiological_boundary_validation": true,
+    "out_of_order_replay_resilience": true,
+    "post_revocation_isolation": true,
+    "emergency_fast_path_intact": true,
+    "fides_critical_ddi_intact": true,
+    "zero_pii_telemetry": true,
+    "path_acl_conformance": true
+  }
+}
