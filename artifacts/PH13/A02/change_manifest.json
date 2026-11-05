@@ -1,0 +1,81 @@
+{
+  "$schema": "https://theclaracare.com/schemas/agent-execution/agent-manifest.schema.json",
+  "phase_id": "PH13",
+  "agent_id": "A02",
+  "role": "Data model + migration",
+  "task": "OAuth callback/refresh secure store",
+  "worktree_path": "/dev/shm/clara_worktrees/PH13_A02",
+  "base_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "branch": "phase/ph13-a02",
+  "path_lane": "services/api/src/clara_api/db/;services/api/alembic/versions/;artifacts/PH13/A02/",
+  "status": "PASSED",
+  "blockers": [],
+  "files_changed": [
+    "services/api/src/clara_api/db/oauth_secure_models.py",
+    "services/api/src/clara_api/db/oauth_secure_store.py",
+    "services/api/src/clara_api/db/test_oauth_secure_store.py",
+    "services/api/src/clara_api/db/models.py",
+    "services/api/alembic/versions/20260909_0071_oauth_secure_store_and_lease.py",
+    "artifacts/PH13/A02/change_manifest.json",
+    "artifacts/PH13/A02/test_report.md",
+    "artifacts/PH13/A02/risk_register.md",
+    "artifacts/PH13/A02/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/db/models.py:4662",
+    "services/api/alembic/versions/20260908_0070_lifemap_temporal_projection_cache.py:14",
+    "services/api/src/clara_api/db/oauth_secure_models.py:38",
+    "services/api/src/clara_api/db/oauth_secure_store.py:270"
+  ],
+  "interface_assumptions": [
+    "ConnectorAccount anchor (connector_accounts.id) and PhrProfile anchor (phr_profiles.id) exist.",
+    "Tokens are encrypted using AES-256-GCM authenticated cipher with tenant, profile, and connector AAD binding.",
+    "Refresh tokens follow RFC 6819 single-use rotation semantics; reuse triggers cascade revocation of the entire token family.",
+    "Distributed lease locking prevents concurrent token refresh races with monotonic fencing tokens."
+  ],
+  "tests_run": [
+    {
+      "command": "pytest src/clara_api/db/test_oauth_secure_store.py -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "17 passed in 5.80s"
+    },
+    {
+      "command": "python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions --strict",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "[migration-downgrade-check] scanned 71 migration(s) in services/api/alembic/versions. 71 define a non-empty downgrade(). OK."
+    },
+    {
+      "command": "python3 -m compileall services/api/src/clara_api/db/ services/api/alembic/versions/",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Clean compilation without error."
+    },
+    {
+      "command": "python3 scripts/ci/check_agent_path_acl.py -a A02 -p PH13",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "All touched files conform strictly to the designated path lane."
+    },
+    {
+      "command": "DATABASE_URL=sqlite:////tmp/test_ph13_a02.db alembic upgrade head && DATABASE_URL=sqlite:////tmp/test_ph13_a02.db alembic downgrade -1",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output": "Successfully upgraded to 20260909_0071 and downgraded cleanly back to 20260908_0070."
+    }
+  ],
+  "artifacts": [
+    "artifacts/PH13/A02/change_manifest.json",
+    "artifacts/PH13/A02/test_report.md",
+    "artifacts/PH13/A02/risk_register.md",
+    "artifacts/PH13/A02/rollback.md"
+  ],
+  "rollback_steps": [
+    "cd services/api && alembic downgrade 20260908_0070",
+    "git checkout bce92340e1f7a0709a96e9526e0682fa0fcb1e32 -- services/api/src/clara_api/db/models.py",
+    "rm -f services/api/src/clara_api/db/oauth_secure_models.py services/api/src/clara_api/db/oauth_secure_store.py services/api/src/clara_api/db/test_oauth_secure_store.py",
+    "rm -f services/api/alembic/versions/20260909_0071_oauth_secure_store_and_lease.py",
+    "rm -rf artifacts/PH13/A02"
+  ]
+}

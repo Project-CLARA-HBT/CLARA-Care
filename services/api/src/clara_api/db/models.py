@@ -4658,3 +4658,11 @@ from clara_api.db.lifemap_temporal_models import (  # noqa: E402, F401
     LifeMapStateVersion,
     LifeMapTemporalProjectionCache,
 )
+
+# PH13: Connected Health & Wearables (encrypted OAuth token storage, refresh token rotation, lease locking)
+from clara_api.db.oauth_secure_models import (  # noqa: E402, F401
+    ConnectorLeaseLock,
+    ConnectorOAuthToken,
+    ConnectorRefreshTokenRotation,
+)
+
