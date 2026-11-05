@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH13",
+  "agent_id": "A08",
+  "role": "Security + privacy",
+  "task": "out-of-order replay simulations and wearable security threat model",
+  "path_lane": "docs/security/;docs/compliance/;scripts/ops/;artifacts/PH13/A08/",
+  "frozen_head_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "base_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "worktree_path": "/dev/shm/clara_worktrees/PH13_A08",
+  "branch": "phase/ph13-a08",
+  "timestamp": "2026-11-05T00:00:00Z",
+  "status": "PASSED",
+  "blockers": [],
+  "deliverables": [
+    "docs/security/WEARABLE_CONNECTED_HEALTH_THREAT_MODEL.md",
+    "docs/compliance/WEARABLE_DATA_RETENTION_AND_PRIVACY_IMPACT_ASSESSMENT.md",
+    "scripts/ops/simulate_wearable_security_threats.py",
+    "scripts/ops/test_audit_wearable_security_simulations.py",
+    "artifacts/PH13/A08/change_manifest.json",
+    "artifacts/PH13/A08/test_report.md",
+    "artifacts/PH13/A08/risk_register.md",
+    "artifacts/PH13/A08/rollback.md"
+  ],
+  "files_changed": [
+    "docs/security/WEARABLE_CONNECTED_HEALTH_THREAT_MODEL.md",
+    "docs/compliance/WEARABLE_DATA_RETENTION_AND_PRIVACY_IMPACT_ASSESSMENT.md",
+    "scripts/ops/simulate_wearable_security_threats.py",
+    "scripts/ops/test_audit_wearable_security_simulations.py",
+    "artifacts/PH13/A08/change_manifest.json",
+    "artifacts/PH13/A08/test_report.md",
+    "artifacts/PH13/A08/risk_register.md",
+    "artifacts/PH13/A08/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:86-130",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:176-205",
+    "services/api/src/clara_api/connected_health/ingestion.py:29-34",
+    "services/api/src/clara_api/connected_health/ingestion.py:67-120",
+    "services/api/src/clara_api/connected_health/ingestion.py:134-216",
+    "services/api/src/clara_api/connected_health/ingestion.py:283-305",
+    "services/api/src/clara_api/connected_health/schemas.py:86-110",
+    "services/api/src/clara_api/connected_health/schemas.py:113-189",
+    "services/api/src/clara_api/connected_health/schemas.py:206-231",
+    "services/api/src/clara_api/connected_health/service.py:46-56",
+    "services/api/src/clara_api/connected_health/service.py:70-87",
+    "services/api/src/clara_api/connected_health/service.py:110-170",
+    "services/api/src/clara_api/connected_health/service.py:241-272",
+    "services/api/src/clara_api/connected_health/service.py:274-324",
+    "services/api/src/clara_api/db/models.py:3629-3660",
+    "services/api/src/clara_api/db/models.py:3662-3678",
+    "services/api/src/clara_api/db/models.py:3699-3722",
+    "services/api/src/clara_api/db/models.py:3724-3766",
+    "services/api/src/clara_api/db/models.py:3768-3783",
+    "services/api/src/clara_api/db/models.py:3830-3849",
+    "services/api/src/clara_api/glhs/adapters.py:517-570"
+  ],
+  "tests_run": [
+    {
+      "command": "pytest scripts/ops/test_audit_wearable_security_simulations.py -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Wearable operational security threat simulation test harness passing 14 tests."
+    },
+    {
+      "command": "python3 scripts/ops/simulate_wearable_security_threats.py --fail-on-high --json",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Wearable threat simulator CLI verifying 12 operational security scenarios with 0 failures."
+    },
+    {
+      "command": "pytest services/api/tests/test_connected_health_schemas.py services/api/tests/test_connected_health_control_plane.py -q",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Connected Health canonical schemas and control plane API passing 21 tests."
+    },
+    {
+      "command": "pytest services/api/tests/test_connectors_envelope.py -q",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Connected observation envelope deduplication engine passing 17 tests."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A08 -p PH13 --repo-root /dev/shm/clara_worktrees/PH13_A08",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Subagent path isolation verified with 0 violations."
+    }
+  ],
+  "rollback_steps": [
+    "git reset --hard bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+    "git clean -fd"
+  ]
+}
