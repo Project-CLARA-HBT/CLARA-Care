@@ -40,6 +40,13 @@ from clara_ml.llm.model_registry import (
     build_task_client,
     resolve_asr_model_selection,
 )
+from clara_ml.wearables import (
+    WearableDailyAggregate,
+    WearableObservationInput,
+    WearableValidationError,
+    aggregate_wearable_records,
+    detect_wearable_trends,
+)
 from clara_ml.medical_answer_v2 import build_medical_answer_v2
 from clara_ml.medical_harness import postprocess_stages, preflight_harness
 from clara_ml.model_router import (
@@ -2652,4 +2659,152 @@ def result_explanation_explain(payload: dict) -> dict:
         return explanation.model_dump()
     except Exception as exc:
         logger.exception("result_explanation_failed")
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/v1/wearables/aggregates/daily")
+def compute_wearable_daily_aggregates(payload: dict) -> dict:
+    """Compute daily aggregates (steps, resting HR, sleep) from raw observations.
+
+    Gated by WEARABLE_AGGREGATES_ENABLED feature flag.
+    Deterministic, PII-scrubbed, and non-diagnostic.
+    """
+    if not settings.wearable_aggregates_enabled:
+        raise HTTPException(status_code=404, detail="feature_disabled")
+
+    raw_observations = payload.get("observations")
+    if not isinstance(raw_observations, list):
+        raise HTTPException(status_code=422, detail="observations_must_be_a_list")
+
+    preferred_origin = payload.get("preferred_origin")
+    if preferred_origin is not None and not isinstance(preferred_origin, str):
+        raise HTTPException(status_code=422, detail="preferred_origin_must_be_string")
+
+    parsed_observations: list[WearableObservationInput] = []
+    try:
+        for item in raw_observations:
+            if not isinstance(item, dict):
+                raise WearableValidationError("observation_must_be_dict")
+            start_val = item.get("start_time")
+            end_val = item.get("end_time")
+            if isinstance(start_val, str):
+                start_dt = datetime.fromisoformat(start_val)
+            elif isinstance(start_val, datetime):
+                start_dt = start_val
+            else:
+                raise WearableValidationError("invalid_start_time")
+
+            if isinstance(end_val, str):
+                end_dt = datetime.fromisoformat(end_val)
+            elif isinstance(end_val, datetime):
+                end_dt = end_val
+            else:
+                raise WearableValidationError("invalid_end_time")
+
+            parsed_observations.append(
+                WearableObservationInput(
+                    record_id=str(item.get("record_id", "")),
+                    person_key=str(item.get("person_key", "")),
+                    metric=str(item.get("metric", "")),
+                    start_time=start_dt,
+                    end_time=end_dt,
+                    value=float(item.get("value", 0.0)),
+                    unit=str(item.get("unit", "")),
+                    source_origin=str(item.get("source_origin", "")),
+                    device_key=str(item.get("device_key", "")),
+                    quality_score=float(item.get("quality_score", 1.0)),
+                    metadata=dict(item.get("metadata", {})),
+                )
+            )
+        aggregated = aggregate_wearable_records(
+            parsed_observations, preferred_origin=preferred_origin
+        )
+        return {
+            "status": "success",
+            "aggregates": {
+                metric: [agg.as_dict() for agg in aggs]
+                for metric, aggs in aggregated.items()
+            },
+        }
+    except WearableValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("wearable_daily_aggregates_failed")
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/v1/wearables/trends/analyze")
+def analyze_wearable_trends(payload: dict) -> dict:
+    """Analyze multi-day trends and detect anomalies/source-switches for wearables.
+
+    Gated by WEARABLE_AGGREGATES_ENABLED feature flag.
+    Deterministic, PII-scrubbed, and strictly non-diagnostic.
+    """
+    if not settings.wearable_aggregates_enabled:
+        raise HTTPException(status_code=404, detail="feature_disabled")
+
+    metric = payload.get("metric")
+    if not metric or not isinstance(metric, str):
+        raise HTTPException(status_code=422, detail="metric_required")
+
+    raw_aggregates = payload.get("daily_aggregates")
+    if not isinstance(raw_aggregates, list):
+        raise HTTPException(status_code=422, detail="daily_aggregates_must_be_a_list")
+
+    window_days = int(payload.get("window_days", 7))
+    baseline_days = int(payload.get("baseline_days", 14))
+
+    ref_date_val = payload.get("reference_date")
+    ref_date = date.fromisoformat(ref_date_val) if ref_date_val else None
+
+    parsed_aggregates: list[WearableDailyAggregate] = []
+    try:
+        for item in raw_aggregates:
+            if not isinstance(item, dict):
+                raise WearableValidationError("aggregate_must_be_dict")
+            computed_at_val = item.get("computed_at")
+            if isinstance(computed_at_val, str):
+                comp_dt = datetime.fromisoformat(computed_at_val)
+            elif isinstance(computed_at_val, datetime):
+                comp_dt = computed_at_val
+            else:
+                comp_dt = datetime.now(UTC)
+
+            parsed_aggregates.append(
+                WearableDailyAggregate(
+                    aggregate_id=str(item.get("aggregate_id", "")),
+                    person_key=str(item.get("person_key", "")),
+                    date=str(item.get("date", "")),
+                    metric=str(item.get("metric", "")),
+                    value=float(item.get("value", 0.0)),
+                    unit=str(item.get("unit", "")),
+                    coverage_ratio=float(item.get("coverage_ratio", 1.0)),
+                    active_wear_hours=float(item.get("active_wear_hours", 24.0)),
+                    contributing_origins=tuple(item.get("contributing_origins", ())),
+                    contributing_records_count=int(item.get("contributing_records_count", 1)),
+                    contributing_record_ids=tuple(item.get("contributing_record_ids", ())),
+                    quality_score=float(item.get("quality_score", 1.0)),
+                    is_partial=bool(item.get("is_partial", False)),
+                    is_stale_or_quarantined=bool(item.get("is_stale_or_quarantined", False)),
+                    quarantine_reasons=tuple(item.get("quarantine_reasons", ())),
+                    secondary_metrics=dict(item.get("secondary_metrics", {})),
+                    computed_at=comp_dt,
+                )
+            )
+
+        trend_result = detect_wearable_trends(
+            parsed_aggregates,
+            metric=metric,
+            window_days=window_days,
+            baseline_days=baseline_days,
+            reference_date=ref_date,
+        )
+        return {
+            "status": "success",
+            "trend": trend_result.as_dict(),
+        }
+    except WearableValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("wearable_trends_analyze_failed")
         raise HTTPException(status_code=400, detail=str(exc)) from exc

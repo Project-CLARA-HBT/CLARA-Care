@@ -1144,6 +1144,10 @@ class Settings(BaseSettings):
     lifemap_trajectory_recommendation_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_TRAJECTORY_RECOMMENDATION_ENABLED"
     )
+    # Wearable daily aggregations and trend detection engine (PH13 / A04)
+    wearable_aggregates_enabled: bool = Field(
+        default=False, validation_alias="WEARABLE_AGGREGATES_ENABLED"
+    )
     # Embedding fail-loud / degraded-mode tuning (replaces silent hash fallback).
     rag_embedding_fail_loud: bool = Field(
         default=True,

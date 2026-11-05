@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH13",
+  "agent_id": "A04",
+  "role": "ML + retrieval",
+  "task": "wearable daily aggregates feature extraction and trend analysis",
+  "status": "PASSED",
+  "branch": "phase/ph13-a04",
+  "base_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "frozen_head_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "path_lane": "services/ml/src/clara_ml/;evaluation/;services/ocr/;services/asr/;artifacts/PH13/A04/",
+  "files_changed": [
+    "services/ml/src/clara_ml/config.py",
+    "services/ml/src/clara_ml/main.py",
+    "services/ml/src/clara_ml/wearables/__init__.py",
+    "services/ml/src/clara_ml/wearables/schemas.py",
+    "services/ml/src/clara_ml/wearables/aggregates.py",
+    "services/ml/src/clara_ml/wearables/trend_detection.py",
+    "evaluation/tests/test_wearable_aggregates_and_trends.py",
+    "artifacts/PH13/A04/change_manifest.json",
+    "artifacts/PH13/A04/test_report.md",
+    "artifacts/PH13/A04/risk_register.md",
+    "artifacts/PH13/A04/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH13/A04/change_manifest.json",
+    "artifacts/PH13/A04/test_report.md",
+    "artifacts/PH13/A04/risk_register.md",
+    "artifacts/PH13/A04/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    "services/ml/src/clara_ml/lifemap/timeseries_features.py:19",
+    "services/ml/src/clara_ml/lifemap/longitudinal_trajectory.py:271",
+    "services/ml/src/clara_ml/lifemap/longitudinal_trajectory.py:307",
+    "services/ml/src/clara_ml/config.py:1148",
+    "services/ml/src/clara_ml/main.py:2666",
+    "services/ml/src/clara_ml/main.py:2735",
+    "services/ml/src/clara_ml/event_subscriptions.py:32"
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/ml/src/clara_ml/ evaluation/",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Python bytecode compilation across modified and created modules."
+    },
+    {
+      "command": "python3 -m pytest -v evaluation/tests/test_wearable_aggregates_and_trends.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "24 focused tests verifying daily steps, resting heart rate, sleep duration, Theil-Sen slope, source-switch critic, non-diagnostic disclaimers, and FastAPI endpoint feature gates."
+    },
+    {
+      "command": "python3 -m pytest evaluation/tests/test_longitudinal_trajectory_baseline.py evaluation/tests/test_wearable_aggregates_and_trends.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "54 combined regression and domain tests verifying longitudinal and wearable signal processing."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A04 -p PH13",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path ACL checker verifying strict isolation to A04 lane."
+    }
+  ],
+  "audit_findings": {
+    "daily_aggregates_engine": {
+      "status": "COMPLETED",
+      "finding": "Implemented deterministic daily aggregations in services/ml/src/clara_ml/wearables/aggregates.py supporting steps (deduplication, interval summing, daily ceiling), resting heart rate (robust median, MAD, bounds filtering), and sleep duration (overnight wake-up date attribution, stage accumulation, interval consolidation) without any mock data."
+    },
+    "trend_detection_engine": {
+      "status": "COMPLETED",
+      "finding": "Implemented robust trend detection and source-shift critic in services/ml/src/clara_ml/wearables/trend_detection.py utilizing Theil-Sen slope estimator, personal baseline MAD scaling, source-switch transition detector, and Decision Ledger audit logging."
+    },
+    "safety_invariants": {
+      "status": "COMPLETED",
+      "finding": "Enforced non-diagnostic disclaimers (vi/en), corroboration requirement for clinical actions, quarantine of physiologically implausible or extreme values, and gated by WEARABLE_AGGREGATES_ENABLED feature flag."
+    }
+  },
+  "rollback_steps": [
+    "git checkout bce92340e1f7a0709a96e9526e0682fa0fcb1e32 -- services/ml/src/clara_ml/config.py services/ml/src/clara_ml/main.py",
+    "rm -rf services/ml/src/clara_ml/wearables",
+    "rm -f evaluation/tests/test_wearable_aggregates_and_trends.py",
+    "rm -rf artifacts/PH13/A04"
+  ],
+  "timestamp": "2026-11-05T12:00:00Z",
+  "worktree_path": "/dev/shm/clara_worktrees/PH13_A04"
+}
