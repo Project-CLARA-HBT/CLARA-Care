@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "phase_id": "PH13",
+  "agent_id": "A09",
+  "role": "Docs + research evidence",
+  "task": "connector DPA/retention audit",
+  "status": "PASSED",
+  "base_sha": "bce92340e190c62208a24aa3304f188080f6fd58",
+  "frozen_head_sha": "bce92340e190c62208a24aa3304f188080f6fd58",
+  "branch": "phase/ph13-a09",
+  "worktree_path": "/dev/shm/clara_worktrees/PH13_A09",
+  "path_lane": "research/;docs/research/;docs/implementation/;docs/interoperability/;artifacts/PH13/A09/",
+  "timestamp": "2026-11-05T21:20:00Z",
+  "blockers": [],
+  "files_changed": [
+    "docs/research/WEARABLE_CONNECTOR_DPA_AND_STATUTORY_RETENTION_AUDIT.md",
+    "docs/implementation/WEARABLE_DATA_PROCESSING_AGREEMENT_AND_RETENTION_SPEC.md",
+    "docs/interoperability/WEARABLE_VENDOR_INTEGRATION_BOUNDARIES_AND_DATA_FLOWS.md",
+    "artifacts/PH13/A09/test_wearable_dpa_and_retention_compliance.py",
+    "artifacts/PH13/A09/change_manifest.json",
+    "artifacts/PH13/A09/test_report.md",
+    "artifacts/PH13/A09/risk_register.md",
+    "artifacts/PH13/A09/rollback.md"
+  ],
+  "deliverables": [
+    "artifacts/PH13/A09/change_manifest.json",
+    "artifacts/PH13/A09/test_report.md",
+    "artifacts/PH13/A09/risk_register.md",
+    "artifacts/PH13/A09/rollback.md"
+  ],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:41-74",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:116-130",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:176-205",
+    "services/api/src/clara_api/connected_health/schemas.py:17-50",
+    "services/api/src/clara_api/connected_health/schemas.py:113-190",
+    "services/api/src/clara_api/connected_health/service.py:46-57",
+    "services/api/src/clara_api/connected_health/service.py:241-272",
+    "services/api/src/clara_api/connected_health/service.py:274-324",
+    "services/api/src/clara_api/connected_health/projection.py:39-76",
+    "services/api/src/clara_api/db/models.py:3629-3660",
+    "services/api/src/clara_api/db/models.py:3662-3678",
+    "services/api/src/clara_api/db/models.py:3724-3766",
+    "services/api/src/clara_api/db/models.py:3785-3810",
+    "services/api/src/clara_api/db/models.py:3830-3849",
+    "services/api/alembic/versions/20260725_0021_connected_health_foundation.py:1-120"
+  ],
+  "interface_assumptions": [
+    "Wearable telemetry is strictly classified as personal health wellness data, not clinical diagnostic records, under Vietnam Law on Medical Examination and Treatment No. 15/2023/QH15.",
+    "Decree 13/2023/ND-CP governs statutory health retention: transit payloads 7 days, granular intraday observations 90 days, daily longitudinal aggregates 3 years, consent ledgers 5 years post-revocation.",
+    "Data Subject Rights (DSAR) erasure executes with a 72-hour SLA, cascading physical unlinking of observations and dependent aggregate invalidation.",
+    "Cross-border transfer of encrypted tokens to Fitbit Web API is governed by Decree 13 Article 25 TIA Dossier Form No. 06 filed with A05 Ministry of Public Security.",
+    "Disconnecting a connector zeroes out encrypted OAuth tokens immediately while preserving previously imported records under original lawful consent until explicitly deleted."
+  ],
+  "tests_run": [
+    {
+      "command": "pytest -v artifacts/PH13/A09/test_wearable_dpa_and_retention_compliance.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 1.63
+    },
+    {
+      "command": "pytest -v contracts/agent-execution/test_agent_manifest_schema.py",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 0.56
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A09 -p PH13",
+      "status": "PASSED",
+      "exit_code": 0,
+      "duration_seconds": 0.04
+    }
+  ],
+  "rollback_steps": [
+    "rm -rf /dev/shm/clara_worktrees/PH13_A09/artifacts/PH13/A09",
+    "rm -f /dev/shm/clara_worktrees/PH13_A09/docs/research/WEARABLE_CONNECTOR_DPA_AND_STATUTORY_RETENTION_AUDIT.md",
+    "rm -f /dev/shm/clara_worktrees/PH13_A09/docs/implementation/WEARABLE_DATA_PROCESSING_AGREEMENT_AND_RETENTION_SPEC.md",
+    "rm -f /dev/shm/clara_worktrees/PH13_A09/docs/interoperability/WEARABLE_VENDOR_INTEGRATION_BOUNDARIES_AND_DATA_FLOWS.md",
+    "git -C /dev/shm/clara_worktrees/PH13_A09 reset --hard bce92340e190c62208a24aa3304f188080f6fd58"
+  ]
+}
