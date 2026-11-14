@@ -1,0 +1,25 @@
+{
+  "task_id": "SH-guard_regression",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "changed_paths": [
+    "services/api/tests/test_glhs_immutable_projection_contract.py"
+  ],
+  "commands": [
+    {
+      "argv": "uv run --project services/api pytest -q services/api/tests/test_glhs_immutable_projection_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-guard_regression.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "services/api/tests/test_glhs_immutable_projection_contract.py": "c1dbd52a5b42596e102f199e0daee2feb9dd62c3747b60539ba6fd51873ebfbe",
+    "research/venue2027/proof/logs/SH-guard_regression.log": "ec226fd47b7a25873cfaf72ca0fc6e275c2c8c35809c62e44e4c060f364e8b06",
+    "research/venue2027/proof/logs/SH-guard_regression.runxfail.log": "0d5aec24c081d44e4e28de736864a521404516aeb59d7810fe525b7335722205"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Desired-behaviour projection test xfail(strict) pending SH-repair_immutable; canonical-mutation rejection and rollback hash preservation genuinely pass. Documented expected-failure evidence (NOT a PASS command): uv run --project services/api pytest -q services/api/tests/test_glhs_immutable_projection_contract.py --runxfail exited 1, log at research/venue2027/proof/logs/SH-guard_regression.runxfail.log, proving test_projection_whitelist fails on current code with ValueError \"GLHS ledger rows are immutable\" at db/models.py:3040."
+}

@@ -1,0 +1,89 @@
+F..                                                                      [100%]
+=================================== FAILURES ===================================
+__________________________ test_projection_whitelist ___________________________
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason="R4 bug: proposal registered in blanket immutable loop; "
+        "fix belongs to SH-repair_immutable",
+    )
+    def test_projection_whitelist() -> None:
+        """Desired behaviour: projection-only UPDATE is permitted, digest unchanged.
+    
+        The mutation mirrors the GRWC admission projection path
+        (``clara_api/glhs/admission.py``: ``admission_decision``/``sealed_at``
+        writes) that currently trips the blanket immutable guard.
+        """
+    
+        # Discover the actual column names first: the contract only makes sense
+        # if the projection fields exist on the model as currently mapped.
+        discovered = _discovered_column_names(GlhsClinicalCommitmentProposal)
+        missing = PROJECTION_FIELDS - discovered
+        assert not missing, f"projection fields missing from model: {sorted(missing)}"
+    
+        engine = create_engine("sqlite://")
+        Base.metadata.create_all(engine)
+        with Session(engine) as db:
+            proposal = _make_proposal(db)
+            before_digest = _row_digest(db, proposal.id)
+    
+            # The exact mutation path used by GRWC admission
+            # (clara_api/glhs/admission.py:697-700): stamp the projection fields.
+            proposal.admission_decision = "ADMITTED"
+            proposal.sealed_at = datetime.now(UTC)
+>           db.commit()
+
+services/api/tests/test_glhs_immutable_projection_contract.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1286: in _prepare_impl
+    self.session.flush()
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4331: in flush
+    self._flush(objects)
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4466: in _flush
+    with util.safe_reraise():
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4427: in _flush
+    flush_context.execute()
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:60: in save_obj
+    for (
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:236: in _organize_states_for_save
+    mapper.dispatch.before_update(mapper, connection, state)
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/event/attr.py:515: in __call__
+    fn(*args, **kw)
+services/api/.venv/lib/python3.12/site-packages/sqlalchemy/orm/events.py:892: in wrap
+    fn(*arg, **kw)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_args = (<Mapper at 0x76b48005c620; GlhsClinicalCommitmentProposal>, <sqlalchemy.engine.base.Connection object at 0x76b47a830830>, <clara_api.db.models.GlhsClinicalCommitmentProposal object at 0x76b47a211b50>)
+_kwargs = {}
+
+    def _reject_glhs_ledger_mutation(*_args: object, **_kwargs: object) -> None:
+>       raise ValueError("GLHS ledger rows are immutable; append a governed transition")
+E       ValueError: GLHS ledger rows are immutable; append a governed transition
+
+services/api/src/clara_api/db/models.py:3040: ValueError
+------------------------------ Captured log setup ------------------------------
+WARNING  clara_api.core.bootstrap_admin:bootstrap_admin.py:87 Failed to seed admin clinical data: 'version_no' is an invalid keyword argument for PhrProfile
+WARNING  clara_api.core.bootstrap_admin:bootstrap_admin.py:87 Failed to seed admin clinical data: 'version_no' is an invalid keyword argument for PhrProfile
+=========================== short test summary info ============================
+FAILED services/api/tests/test_glhs_immutable_projection_contract.py::test_projection_whitelist
+1 failed, 2 passed in 24.43s
