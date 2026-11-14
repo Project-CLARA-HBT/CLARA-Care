@@ -1,0 +1,5 @@
+server_version=16.4 (Debian 16.4-1.pgdg120+2)
+server_version_num=160004
+image=postgres@sha256:e62fbf9d3e2b49816a32c400ed2dba83e3b361e6833e624024309c35d334b412
+verdict=PASS
+concurrent_writers=2

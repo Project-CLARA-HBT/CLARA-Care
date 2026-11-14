@@ -1,0 +1,32 @@
+{
+  "tool": "pg_concurrency_probe",
+  "dsn_host": "pg_research",
+  "guard_version": "1.0.0",
+  "server_version": "16.4 (Debian 16.4-1.pgdg120+2)",
+  "server_version_num": "160004",
+  "isolation_level": "INTRANS",
+  "visibility": {
+    "reader1_uncommitted_invisible": 0,
+    "reader1_snapshot": "740:740:",
+    "reader2_after_a_commit_only": 1,
+    "reader2_snapshot": "741:741:",
+    "rows_after_both_commits": [
+      [
+        1,
+        "A"
+      ],
+      [
+        2,
+        "B"
+      ]
+    ]
+  },
+  "verdict": "PASS",
+  "concurrent_writers": 2,
+  "independent_transactions": true,
+  "inputs_sha256": {
+    "pg_guard.py": "55bae555a2afcce15b4411857e7e0516ee3ee4d9290dcf56e6ebaae4dd419a18",
+    "pg_concurrency_probe.py": "0cf7b74ee2d09fabb0f20bb27f92ba7e89a7da2c0cf7e84ee3cbba0af8571578"
+  },
+  "captured_at_utc": "runtime"
+}

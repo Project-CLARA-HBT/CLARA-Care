@@ -1,0 +1,48 @@
+{
+  "task_id": "SH-base_contracts",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "8fbea8c886ced9d822fec1d32f75ebd6716e09a2",
+  "changed_paths": [
+    "research/venue2027/_shared/schemas/case.v1.schema.json",
+    "research/venue2027/_shared/schemas/run_manifest.v1.schema.json",
+    "research/venue2027/_shared/schemas/oracle_decision.v1.schema.json",
+    "research/venue2027/_shared/schemas/README.md",
+    "research/venue2027/_shared/tools/schema_validator.py",
+    "research/venue2027/_shared/tests/test_base_contracts.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/test_base_contracts.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-base_contracts.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/_shared/tools/schema_validator.py research/venue2027/_shared/tests/test_base_contracts.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-base_contracts.ruff.log"
+    },
+    {
+      "argv": "uv run --frozen --extra dev --no-editable --project services/api pytest -q research/venue2027/_shared/tests/test_base_contracts.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-base_contracts.pytest-apienv.log"
+    },
+    {
+      "argv": "uv run --frozen --extra dev --no-editable --project services/api mypy research/venue2027/_shared/tools/schema_validator.py --ignore-missing-imports",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-base_contracts.mypy.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/schemas/case.v1.schema.json": "6e2a83f082234f175c714df3d0f11a57f914155e01033d231b512d7185635f6a",
+    "research/venue2027/_shared/schemas/run_manifest.v1.schema.json": "b00345e7b4fda409bf78606789beb463c82be00b48b59efa367bb26ca423969f",
+    "research/venue2027/_shared/schemas/oracle_decision.v1.schema.json": "39a51800c522e69ead3c60d737754876261b22eff8498db3eecd59bf2382764c",
+    "research/venue2027/_shared/schemas/README.md": "c017692d6f4e71f830c75674ea6d26ef25dbd7464b595ce58381fc02192a533d",
+    "research/venue2027/_shared/tools/schema_validator.py": "b1db12f80b15f1c580d716b20f9d2873da6525d4c37a39280629bcdcddccf44d",
+    "research/venue2027/_shared/tests/test_base_contracts.py": "7fe402227ba41a789449a9a7cc0c4e9a95cd0c1f8efdd61d31f35c6688095d41"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Shared v1 base contracts: case.v1, run_manifest.v1, oracle_decision.v1 JSON Schema 2020-12 subset + pure-stdlib validator. Encodes independent_unit_id+unit_kind (explicit independence, timestamps forensics-only), backend enum (postgresql|sqlite|synthetic), frozen source_sha, seed, exact branch, arm id, sha256 evidence pointers, explicit INDETERMINATE and NOT_RUN_EXTERNAL outcomes. 5 positive and 10 adversarial vectors; negative controls (missing independent_unit_id/backend/source_sha) rejected with stable reason codes; unknown schema keywords fail closed. mypy run as extra gate."
+}

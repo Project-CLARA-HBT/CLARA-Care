@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://clara-care.dev/research/venue2027/schemas/run_manifest.v1.schema.json",
+  "title": "CLARA 2027 shared run manifest, version 1",
+  "description": "Machine-checkable manifest of one experimental run: what code (exact branch + frozen source_sha), what environment (backend, seed), which arms and independent units, and which frozen evidence backs it. Denominator fields are mutually exclusive per SCIENTIFIC_METRICS_CONTRACT.md item 6 (never silently shrink denominator). Timestamps are forensics only and cannot establish unit independence.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable logical operation/run ID; retries must reuse it for idempotence."
+    },
+    "backend": {
+      "enum": [
+        "postgresql",
+        "sqlite",
+        "synthetic"
+      ],
+      "description": "Required execution backend."
+    },
+    "source_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Required frozen full git commit SHA."
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 18446744073709551615,
+      "description": "Required RNG seed."
+    },
+    "branch": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact git branch; compared by exact string in analyses."
+    },
+    "arms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Arm IDs executed in this run (e.g. B0..B4)."
+    },
+    "independent_units": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Explicit independent experimental unit IDs covered by this run; independence is asserted here, never inferred from timestamps.",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:.-]{1,128}$"
+      }
+    },
+    "unit_kind": {
+      "enum": [
+        "case",
+        "history",
+        "run",
+        "session",
+        "subject",
+        "benchmark_run"
+      ],
+      "description": "Kind of the independent units listed above."
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "case.v1.schema.json#/$defs/evidence_pointer"
+      },
+      "description": "At least one evidence pointer (shared definition with case.v1)."
+    },
+    "denominator": {
+      "type": "object",
+      "description": "Mutually exclusive per-arm outcome counts (SCIENTIFIC_METRICS_CONTRACT.md item 6). INDETERMINATE and NOT_RUN_EXTERNAL are first-class outcomes, never folded into success or safe rejection.",
+      "properties": {
+        "eligible": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attempted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "completed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rejected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "abstained": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "indeterminate": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "environment_failure": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "not_run_external": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "eligible",
+        "attempted",
+        "completed",
+        "rejected",
+        "indeterminate",
+        "timeout",
+        "not_run_external",
+        "missing"
+      ],
+      "additionalProperties": false
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Forensic timestamp only; not a basis for unit independence or denominator membership."
+    },
+    "finished_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Forensic timestamp only."
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "backend",
+    "source_sha",
+    "seed",
+    "branch",
+    "arms",
+    "independent_units",
+    "unit_kind",
+    "evidence",
+    "denominator"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "_documentation_only": {
+      "description": "The evidence_pointer definition lives in case.v1.schema.json ($defs/evidence_pointer) and is referenced cross-schema via $ref; the validator resolves this as a local-file companion schema. Keep additive-only within v1."
+    }
+  }
+}

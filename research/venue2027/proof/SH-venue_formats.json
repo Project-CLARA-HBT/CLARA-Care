@@ -1,0 +1,53 @@
+{
+  "task_id": "SH-venue_formats",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "00029c1b24170c1384157a0ccf702d1975147227",
+  "changed_paths": [
+    "research/venue2027/_shared/submission_venue_checklist.md",
+    "research/venue2027/_shared/venue_checklist.json",
+    "research/venue2027/_shared/tools/venue_checklist.py",
+    "research/venue2027/_shared/tests/test_venue_checklist.py",
+    "research/venue2027/proof/SH-venue_formats.json",
+    "research/venue2027/proof/logs/SH-venue_formats.log",
+    "research/venue2027/proof/logs/SH-venue_formats.pytest.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/venue_checklist.py --date 2026-11-15 --out research/venue2027/_shared/submission_venue_checklist.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-venue_formats.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/test_venue_checklist.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-venue_formats.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0
+    },
+    {
+      "argv": "ruff check research/venue2027/_shared/tools/venue_checklist.py research/venue2027/_shared/tests/test_venue_checklist.py --config ruff.toml",
+      "exit_code": 0
+    },
+    {
+      "argv": "ruff format --check research/venue2027/_shared/tools/venue_checklist.py research/venue2027/_shared/tests/test_venue_checklist.py --config ruff.toml",
+      "exit_code": 0
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/submission_venue_checklist.md": "f3386fa8b7d2c11df1b33c183419e82e1e721633485cdf46d31ec13bd752b304",
+    "research/venue2027/_shared/venue_checklist.json": "70913539a0e1c71f7f4969c5042c60a19d82c4c7c93aff39a64277d22e00ffdc",
+    "research/venue2027/_shared/tools/venue_checklist.py": "2b7493e91d444e7ba51bfb81e1e57094af5c19f35d626bc85c95c2093faac1cf",
+    "research/venue2027/_shared/tests/test_venue_checklist.py": "d6f905c63fa8dbebcd7d61ae59cc879ffb1a98f52f5f8769546a68c326486f20"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [
+    "All external deadlines/costs in venue_checklist.json are UNVERIFIED: live CFP not fetched; must be re-verified at conversion time by a human with web access.",
+    "PoPETs page-limit and 2027 anonymization policy unconfirmed; DSN/COMPSAC/AIME fee amounts unconfirmed.",
+    "taskctl state entry for SH-claim_overlap missing in STATE/completion.json; SH-venue_formats state marking deferred to orchestrator (dependency PASS report exists and hashes verified)."
+  ],
+  "notes": "All external deadlines/costs are UNVERIFIED pending human verification: live CFPs were not reliably fetchable from this environment (a single petsymposium.org text fetch was performed and treated as insufficient evidence; every row keeps status UNVERIFIED with reason \"live CFP not fetched; must be re-verified at conversion time\"). No submission, registration, fee payment, waiver request, or other submission/fee action was taken. The negative control is enforced by audit_checklist + CLI: a deadline/cost presented as CONFIRMED without verification_url+date fails (exit 1, reason_code CONFIRMED_WITHOUT_CITATION); the shipped registry contains zero CONFIRMED rows, so the audit returns ok:true because nothing is falsely confirmed. Orchestrator handoff note: taskctl.py mark SH-venue_formats PASS could not record state because STATE/completion.json lacks the SH-claim_overlap entry, although its committed PASS report (proof/SH-claim_overlap.json, status PASS, all commands exit 0, artifact hashes verified in commit 7ebdbbf0) satisfies the manifest dependency. I did not fabricate the state entry; the orchestrator should mark SH-claim_overlap PASS from its existing report, then mark SH-venue_formats. Next ready tasks after that: DSN-funding, POPETS-funding, IFIP_SEC-funding, ACNS-funding, COMPSAC-funding, AIME-funding, SACMAT-funding, DIMVA-funding, PST-funding."
+}

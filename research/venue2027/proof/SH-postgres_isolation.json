@@ -1,0 +1,44 @@
+{
+  "task_id": "SH-postgres_isolation",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "changed_paths": [
+    "research/venue2027/_shared/tools/pg_guard.py",
+    "research/venue2027/_shared/tools/pg_concurrency_probe.py",
+    "research/venue2027/_shared/tests/test_pg_guard.py",
+    "infra/research/venue2027/docker-compose.pg.yaml",
+    "infra/research/venue2027/initdb/001_init_roles.sql",
+    "infra/research/venue2027/README.md",
+    "infra/research/venue2027/tests/test_pg_isolation.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/test_pg_guard.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-postgres_isolation.pg_guard.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q infra/research/venue2027/tests/test_pg_isolation.py -rs",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-postgres_isolation.pg_isolation.pytest.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/tools/pg_guard.py": "55bae555a2afcce15b4411857e7e0516ee3ee4d9290dcf56e6ebaae4dd419a18",
+    "research/venue2027/_shared/tools/pg_concurrency_probe.py": "0cf7b74ee2d09fabb0f20bb27f92ba7e89a7da2c0cf7e84ee3cbba0af8571578",
+    "research/venue2027/_shared/tests/test_pg_guard.py": "a47b80711d5bf9bea3f5c43af989ab722c3bb8f5b20d43acdd401242522172fc",
+    "infra/research/venue2027/docker-compose.pg.yaml": "25f4fa0a48f86ac0efbe9b2621f2997aba5e1bbdb362725166e03d03244ff100",
+    "infra/research/venue2027/initdb/001_init_roles.sql": "a8ad22861f2e1569a5787a6d47e9331a6260b7fe9102db1185a7e897645ff9ee",
+    "infra/research/venue2027/README.md": "7c52ca666433ecc5cb33f695a09fd8d84ba3e63b2499602da32a4ffe4f7e5804",
+    "infra/research/venue2027/tests/test_pg_isolation.py": "0e2880a23df82df0ef4063e868af1f57362f8b9f63304ce5933b938b2b3d1945",
+    "research/venue2027/proof/logs/SH-postgres_isolation.pg_guard.pytest.log": "dd29040c8988c9ae9094f6702eb36f2787c19a9faa730ec6ca972feac1b825b8",
+    "research/venue2027/proof/logs/SH-postgres_isolation.pg_isolation.pytest.log": "f437a14f10a74566119a660d8fa07e542a98c6e42b46a08e392ea42a67f4774c",
+    "research/venue2027/proof/logs/pg_server_version.log": "64184bcdaf337aed1bd02db066a5a2b89e84fbdfd7b978d3abde9baacaae6881",
+    "research/venue2027/proof/logs/pg_probe_evidence.json": "8850df24ac45c66e0de7ff7d6e26f7ae518ca4e07b385711e51a08eb6cc46b7a"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Docker genuinely available (server 29.1.2, compose v5.0.0); real cluster brought up from infra/research/venue2027/docker-compose.pg.yaml. Observed SHOW server_version = '16.4 (Debian 16.4-1.pgdg120+2)' (server_version_num=160004); evidence: research/venue2027/proof/logs/pg_server_version.log and pg_probe_evidence.json (image postgres@sha256:e62fbf9d3e2b49816a32c400ed2dba83e3b361e6833e624024309c35d334b412). Two concurrent psycopg transactions demonstrated independent commit visibility with a deterministic gate schedule (uncommitted invisible: 0; after A commit only: 1; after both: 2). Guard refuses prod/localhost/remote/non-postgres DSNs with stable reason codes; cluster publishes no host port, so localhost non-isolated DBs are unusable by design. Teardown verified: zero clara containers and volume removed after run."
+}

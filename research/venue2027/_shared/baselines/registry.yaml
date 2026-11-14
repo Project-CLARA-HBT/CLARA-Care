@@ -1,0 +1,841 @@
+# =============================================================================
+# CLARA-Care 2027 shared task SH-baseline_registry (Phase P03, shared)
+# =============================================================================
+# Purpose
+# -------
+# Program-level provenance registry for every comparator used across the nine
+# venue studies (ACNS, AIME, COMPSAC, DIMVA, DSN, IFIP_SEC, POPETS, PST,
+# SACMAT). Each entry records where the baseline came from (upstream source URL
+# + revision), under what license it may be used, what algorithm class it
+# implements, its pinned config, data rights, the parity fixture that will
+# prove fidelity, the exact exec command, and an honest fidelity status.
+#
+# Core invariants (EXECUTION_CONTRACT.md rule 8)
+# ----------------------------------------------
+# 1. Never replace an unavailable baseline with a toy implementation and keep
+#    the same name. If an upstream cannot be pinned, the entry is
+#    UNAVAILABLE_NOT_RUN and stays that way until a real revision is verified.
+# 2. Never invent an upstream hash. Every revision below was resolved live via
+#    `git ls-remote` (tags/HEAD) or an official publication endpoint on
+#    2026-11-15 (UTC). Provenance of verification is in `notes`.
+# 3. FAITHFUL_PORT entries MUST declare a parity fixture reference.
+# 4. Every entry MUST declare a license or be UNAVAILABLE_NOT_RUN.
+# 5. All datasets are synthetic (see _shared/dataset_declarations.json); no
+#    real patient records are used by any baseline.
+#
+# Schema of each entry (see tools/baseline_registry.py)
+# -----------------------------------------------------
+# name, venue(s), upstream_url, upstream_revision, license, algorithm_class,
+# config, data_rights, parity_fixture, exec_command, fidelity_status, notes
+#
+# Version: 1.0.0 (2026-11-15)
+# =============================================================================
+
+schema_version: "1.0.0"
+registry_date: "2026-11-15"
+revision_provenance: >
+  Upstream revisions resolved live on 2026-11-15 with `git ls-remote` against
+  the upstream origin (tags/HEAD), or via official publisher endpoints (RFC
+  Editor, NIST/CSRC, Docker Hub, PyPI). No revision identifier below is
+  guessed. Entries that could not be pinned declare upstream_revision:
+  UNAVAILABLE and fidelity_status: UNAVAILABLE_NOT_RUN.
+
+baselines:
+  # ===========================================================================
+  # COMPSAC — Dependency-Complete Optimistic Admission for Concurrent Clinical
+  # AI Writes (blueprint "Strong baselines" arms B0-B3)
+  # ===========================================================================
+  - name: global-profile-version-occ
+    venues: [compsac]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "coarse-grained optimistic concurrency control (single global version profile)"
+    config: >-
+      Single global profile version counter per entity class; validate at
+      commit against one global epoch; no per-entity readset tracking.
+      Synthetic workload: medication/allergy/history/purpose grants,
+      1-16 workers, Zipf skew per COMPSAC protocol.
+    data_rights: "Synthetic dataset synthetic-compsac-2027; project-internal-synthetic license; no third-party data."
+    parity_fixture: "evaluation/venue2027/compsac/fixtures/global_profile_occ_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.compsac.baselines --baseline global-profile-version-occ --config configs/venue2027/compsac/global_profile_occ.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: >-
+      In-project reference OCC comparator (arm B0). No upstream release pin
+      exists to verify; labelled honestly UNAVAILABLE_NOT_RUN. Must NOT be
+      presented as Silo or any external system.
+
+  - name: silo-style-entity-readset-occ
+    venues: [compsac]
+    upstream_url: "https://doi.org/10.1145/2517349.2522713"
+    upstream_revision: UNAVAILABLE
+    license: "ACM publication (DL access terms); algorithm described in paper, no official reference implementation"
+    algorithm_class: "Silo-style optimistic concurrency control with per-entity readset validation and commit-time batching"
+    config: >-
+      Per-entity versioned reads, local validation buffers, commit-time
+      epoch validation per Silo (Tu et al., SOSP 2013) Sec. 3-4. Disclosure:
+      this arm is a re-implementation of the published algorithm, NOT Silo
+      source code (no official code release exists to pin).
+    data_rights: "Synthetic dataset synthetic-compsac-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/compsac/fixtures/silo_readset_occ_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.compsac.baselines --baseline silo-style-entity-readset-occ --config configs/venue2027/compsac/silo_readset.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: >-
+      Paper: "Speedy Transactions in Multicore In-Memory Databases", SOSP 2013,
+      DOI 10.1145/2517349.2522713 (title/issuance verified via Crossref on
+      2026-11-15). upstream_revision is UNAVAILABLE because the paper has no
+      official code release to pin; per the task contract this entry stays
+      UNAVAILABLE_NOT_RUN until a verifiable revision (or the completed,
+      parity-checked port) exists. Must never be called "Silo" upstream code.
+
+  - name: postgresql-ssi
+    venues: [compsac]
+    upstream_url: "https://github.com/postgres/postgres"
+    upstream_revision: "6e4ab1b69197e2756192a1019439aebacdea5497"
+    license: "PostgreSQL Licence (permissive; PostgreSQL Global Development Group COPYRIGHT, REL_16_9/COPYRIGHT verified 2026-11-15)"
+    algorithm_class: "serializable snapshot isolation (SSI) database-native concurrency control"
+    config: >-
+      postgres/postgres tag REL_16_9 (verified via git ls-remote on
+      2026-11-15). Runtime image pgvector/pgvector:pg16, manifest digest
+      sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
+      (Docker Hub, checked 2026-11-15). isolation level SERIALIZABLE,
+      default_sitetable constants untouched; schema-check predicates per
+      COMPSAC protocol; isolated container, no production DB.
+    data_rights: "Synthetic dataset synthetic-compsac-2027 only; isolated empty database per GLHS benchmark acknowledgement pattern."
+    parity_fixture: "evaluation/venue2027/compsac/fixtures/postgres_ssi_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.compsac.baselines --baseline postgresql-ssi --config configs/venue2027/compsac/pg_ssi.toml --database-image-digest sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f"
+    fidelity_status: ORIGINAL_UPSTREAM
+    notes: >-
+      Strong DB-native comparator (arm B2). Runs actual PostgreSQL 16.9 as
+      upstream; never substitute SQLite for any claimed PostgreSQL condition.
+
+  - name: entity-occ-no-closure-ablation
+    venues: [compsac]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "ablation: entity-level OCC without semantic dependency closure (write-skew exposing control)"
+    config: >-
+      Same commit-time validation as silo-style-entity-readset-occ but with
+      the semantic dependency closure disabled; exposes write-skew under
+      policy-epoch races per COMPSAC RQ2.
+    data_rights: "Synthetic dataset synthetic-compsac-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/compsac/fixtures/entity_occ_ablation_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.compsac.baselines --baseline entity-occ-no-closure-ablation --config configs/venue2027/compsac/entity_occ_ablation.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: >-
+      Arm B3 ablation. It is a controlled degradation of the candidate, not an
+      external baseline; labelled UNAVAILABLE_NOT_RUN until implemented and
+      parity-checked. Must never be presented as a full external comparator.
+
+  # ===========================================================================
+  # POPETS — Revocation-Complete Future Disclosure for Cached Longitudinal AI
+  # Contexts (arms B0-B3)
+  # ===========================================================================
+  - name: ttl-only-cache
+    venues: [popets]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "TTL-based cache expiry, weak lower-bound control"
+    config: >-
+      Cache entries expire by time-to-live only; no revocation listener.
+      Per POPETS RQ1 lower bound.
+    data_rights: "Synthetic dataset synthetic-popets-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/popets/fixtures/ttl_only_cache_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.popets.baselines --baseline ttl-only-cache --config configs/venue2027/popets/ttl_cache.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B0 weak lower bound; in-project; no upstream pin to verify."
+
+  - name: coarse-cache-purge-on-revocation
+    venues: [popets]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "coarse cache purge (full invalidation on consent change), strong simple safety baseline"
+    config: >-
+      On any revocation event, purge all cached entries derived from the
+      subject's context; no dependency labels.
+    data_rights: "Synthetic dataset synthetic-popets-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/popets/fixtures/coarse_purge_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.popets.baselines --baseline coarse-cache-purge-on-revocation --config configs/venue2027/popets/coarse_purge.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B1; in-project comparator; not yet implemented/parity-checked."
+
+  - name: always-recompute-authorized-projection
+    venues: [popets]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "per-dispatch full recompute of the authorized projection; privacy reference upper bound"
+    config: >-
+      Reauthorize and recompute the authorized view on every dispatch; zero
+      caching; cost comparator per POPETS RQ3.
+    data_rights: "Synthetic dataset synthetic-popets-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/popets/fixtures/always_recompute_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.popets.baselines --baseline always-recompute-authorized-projection --config configs/venue2027/popets/always_recompute.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B2 privacy reference upper bound; in-project; not yet run."
+
+  - name: zanzibar-like-consistency-token-cache
+    venues: [popets]
+    upstream_url: "https://www.usenix.org/conference/atc19/presentation/pang"
+    upstream_revision: "c57af6886593e778916b7ca60dcf049d90f75aee3eb07cf7e78f8565f93e0b0a"
+    license: "USENIX Open Access (proceedings freely available; paper PDF verified 2026-11-15); design description, no official reference implementation"
+    algorithm_class: "consistency-token authorization with derived-cache tagging (Zanzibar design)"
+    config: >-
+      Adapter implements Zanzibar's zookies/consistency tokens plus derived
+      tuples tagging per the ATC 2019 paper Sec. 2.3-2.4. Revision is the
+      SHA256 of the official paper PDF atc19-pang.pdf (verified 2026-11-15).
+      Support for derived-cache tagging must be shown by the adapter before
+      any comparative claim (blueprint caveat).
+    data_rights: "Synthetic dataset synthetic-popets-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/popets/fixtures/zanzibar_token_cache_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.popets.baselines --baseline zanzibar-like-consistency-token-cache --config configs/venue2027/popets/zanzibar_token.toml"
+    fidelity_status: FAITHFUL_PORT
+    notes: >-
+      Paper: "Zanzibar: Google's Consistent, Global Authorization System",
+      USENIX ATC 2019, pp. 33-46 (page and title verified 2026-11-15).
+      Executable comparator for derivations should prefer the OpenFGA
+      original-upstream entry (ifip_sec zanzibar-openfga) when semantics
+      allow; this arm covers the paper-level architecture.
+
+  # ===========================================================================
+  # AIME — Counterfactual Clinical Workflow Safety (arms B0-B3)
+  # ===========================================================================
+  - name: full-authorized-history-single-snapshot
+    venues: [aime]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "static full-context LLM prompt baseline (single snapshot)"
+    config: >-
+      Provide the full authorized history as one snapshot; no consent-aware
+      regeneration; matched provider-prompt arm per AIME protocol.
+    data_rights: "Synthetic dataset synthetic-aime-2027; project-internal-synthetic license; provider terms acknowledged before any live-provider run."
+    parity_fixture: "evaluation/venue2027/aime/fixtures/single_snapshot_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.aime.baselines --baseline full-authorized-history-single-snapshot --config configs/venue2027/aime/single_snapshot.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B0; in-project; LLM-backend tests must use the declared actual provider or stay BLOCKED."
+
+  - name: full-per-step-refresh-current-policy-filter
+    venues: [aime]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "full per-step context refresh with current-policy filter; strong correctness/privacy control"
+    config: >-
+      Restart the full context at every step and filter to the current
+      consent/policy epoch; cost comparator per AIME RQ2.
+    data_rights: "Synthetic dataset synthetic-aime-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/aime/fixtures/full_refresh_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.aime.baselines --baseline full-per-step-refresh-current-policy-filter --config configs/venue2027/aime/full_refresh.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B1 strong control; in-project; not yet run."
+
+  - name: healthbench-medhelm-rubric
+    venues: [aime]
+    upstream_url: "https://github.com/openai/simple-evals"
+    upstream_revision: "652c89d0ca9df547706735883097e9537d40dc47"
+    license: MIT (simple-evals LICENSE verified at pinned commit 2026-11-15)
+    algorithm_class: "physician-authored multi-turn health evaluation rubric (HealthBench) + clinical-task taxonomy (MedHELM); rubric, not a decision algorithm"
+    config: >-
+      openai/simple-evals @ main commit 652c89d0 (git ls-remote HEAD, verified
+      2026-11-15; LICENSE hash matched at that commit: d831db55645e47ca8e491c5
+      a0e37f1ee744d7b10bf5aa8d50146c795ac0176c0). healthbench_eval.py
+      --run_mode=physician_completions used as rubric reference. MedHELM
+      companion taxonomy: Nature Medicine s41591-025-04151-2 (publisher-held
+      rights; taxonomy cited as rubric guidance only, not redistributed).
+    data_rights: "Synthetic dataset synthetic-aime-2027 for study arms; HealthBench items used only through the pinned reference implementation under MIT; no patient data."
+    parity_fixture: "evaluation/venue2027/aime/fixtures/healthbench_rubric_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.aime.baselines --baseline healthbench-medhelm-rubric --config configs/venue2027/aime/rubric.toml --upstream-ref 652c89d0ca9df547706735883097e9537d40dc47"
+    fidelity_status: ORIGINAL_UPSTREAM
+    notes: >-
+      Arm B2. HealthBench reference implementation lives in openai/simple-evals
+      (README, July 2025 deprecation notice keeps HealthBench reference impl).
+      Used strictly as an evaluation rubric; never as a clinical decision tool.
+
+  - name: static-model-output-post-filter
+    venues: [aime]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "static model with deterministic output post-filter; common LLM guardrail comparator"
+    config: >-
+      Single static context + rule-based post-filter on outputs; matched
+      provider-prompt arm per AIME protocol.
+    data_rights: "Synthetic dataset synthetic-aime-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/aime/fixtures/postfilter_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.aime.baselines --baseline static-model-output-post-filter --config configs/venue2027/aime/postfilter.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B3 common guardrail comparator; in-project; not yet run."
+
+  # ===========================================================================
+  # DIMVA — GovernanceTrace (arms B0-B3)
+  # ===========================================================================
+  - name: static-threshold-denied-per-window
+    venues: [dimva]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "static threshold on denied-request counts per window; strong operational baseline"
+    config: >-
+      Threshold on failed/denied request counts per fixed window; leak-safe
+      features only (no rejection reason codes) per DIMVA RQ1.
+    data_rights: "Synthetic dataset synthetic-dimva-2027; PHI-minimized events; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/dimva/fixtures/threshold_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.dimva.baselines --baseline static-threshold-denied-per-window --config configs/venue2027/dimva/threshold.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B0; in-project; falsification criterion: if this matches sequence models on holdout, no ML-necessity claim."
+
+  - name: temporal-rule-sequence-signature
+    venues: [dimva]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "finite-state / temporal rule sequence signature; interpretable baseline"
+    config: >-
+      Ordered rule-sequence signatures over event types; no learned
+      parameters; leak-safe event schema.
+    data_rights: "Synthetic dataset synthetic-dimva-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/dimva/fixtures/rule_sequence_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.dimva.baselines --baseline temporal-rule-sequence-signature --config configs/venue2027/dimva/rule_sequence.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B1; in-project; not yet run."
+
+  - name: isolation-forest-privacy-minimized
+    venues: [dimva]
+    upstream_url: "https://github.com/scikit-learn/scikit-learn"
+    upstream_revision: "63acddb6de687f685b7323ad68fb2cf76cc3bd1a"
+    license: BSD-3-Clause (scikit-learn COPYING at tag 1.8.0 verified 2026-11-15)
+    algorithm_class: "unsupervised anomaly detection (Isolation Forest)"
+    config: >-
+      scikit-learn 1.8.0 (PyPI sdist sha256
+      146b4d36f800c013d267b29168813f7a03a43ecd2895d04861f1240b564421da,
+      verified 2026-11-15; tag 1.8.0 -> commit 63acddb6... via
+      git ls-remote + tag-object dereference). sklearn.ensemble.IsolationForest
+      on privacy-minimized counts, random_state pinned; family-held-out
+      evaluation per DIMVA protocol.
+    data_rights: "Synthetic dataset synthetic-dimva-2027; privacy-minimized features; no PII."
+    parity_fixture: "evaluation/venue2027/dimva/fixtures/isolation_forest_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.dimva.baselines --baseline isolation-forest-privacy-minimized --config configs/venue2027/dimva/isoforest.toml"
+    fidelity_status: ORIGINAL_UPSTREAM
+    notes: >-
+      Arm B2 unsupervised comparator; runs the actual scikit-learn Isolation
+      Forest. Environment: Python 3.12.3, scikit-learn 1.8.0 (installed,
+      verified).
+
+  - name: gradient-boosted-trees-controlled-features
+    venues: [dimva]
+    upstream_url: "https://github.com/scikit-learn/scikit-learn"
+    upstream_revision: "63acddb6de687f685b7323ad68fb2cf76cc3bd1a"
+    license: BSD-3-Clause (verified 2026-11-15)
+    algorithm_class: "supervised gradient-boosted decision trees"
+    config: >-
+      sklearn.ensemble.HistGradientBoostingClassifier with controlled
+      leak-safe feature set; family-held-out splits; random_state pinned.
+    data_rights: "Synthetic dataset synthetic-dimva-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/dimva/fixtures/gbt_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.dimva.baselines --baseline gradient-boosted-trees-controlled-features --config configs/venue2027/dimva/gbt.toml"
+    fidelity_status: ORIGINAL_UPSTREAM
+    notes: "Arm B3 supervised comparator; actual scikit-learn 1.8.0 upstream."
+
+  - name: agentdojo-attack-observability
+    venues: [dimva, acns]
+    upstream_url: "https://github.com/ethz-spylab/agentdojo"
+    upstream_revision: "a75aba7631d3ca5fb7ab938965c97ead2f9ff84b"
+    license: MIT (agentdojo LICENSE at tag v0.1.35 verified 2026-11-15)
+    algorithm_class: "stateful tool-agent attack/defense benchmark; evidence and attack observability categories"
+    config: >-
+      ethz-spylab/agentdojo tag v0.1.35 (git ls-remote, verified 2026-11-15;
+      MIT License Copyright (c) 2024 Debenedetti et al.). Attack suite used
+      to generate independent multi-stage traces and observability categories
+      for DIMVA cross-family evaluation and ACNS evidence taxonomy (arm B2).
+    data_rights: "Synthetic dataset synthetic-dimva-2027 / synthetic-acns-2027; agentdojo benchmark suite used per MIT license."
+    parity_fixture: "evaluation/venue2027/dimva/fixtures/agentdojo_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.dimva.baselines --baseline agentdojo-attack-observability --config configs/venue2027/dimva/agentdojo.toml --upstream-ref a75aba7631d3ca5fb7ab938965c97ead2f9ff84b"
+    fidelity_status: ORIGINAL_UPSTREAM
+    notes: >-
+      Taxonomy comparator, not a direct authorization system (ledger relation).
+      Used as evidence/attack observability taxonomy in ACNS arm B2 and as
+      trace generator in DIMVA.
+
+  - name: toolemu-risk-emulation
+    venues: [acns]
+    upstream_url: "https://github.com/ryoungj/ToolEmu"
+    upstream_revision: "ac4a7ab7ed8c7985d96231e214bd6b54304b7ddb"
+    license: Apache-2.0 (ToolEmu LICENSE verified at pinned HEAD 2026-11-15)
+    algorithm_class: "LM-emulated sandbox risk identification; judge-validated risk taxonomy"
+    config: >-
+      ryoungj/ToolEmu @ main ac4a7ab7 (git ls-remote HEAD, verified
+      2026-11-15; repo dormant since 2024-03-16 per commit date). Used for
+      ACNS arm B2 empirical taxonomy of simulated risk evidence only.
+      Simulated tool outcomes are never equated with persisted transactions.
+    data_rights: "Synthetic dataset synthetic-acns-2027; ToolEmu benchmark materials under Apache-2.0."
+    parity_fixture: "evaluation/venue2027/acns/fixtures/toolemu_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.acns.baselines --baseline toolemu-risk-emulation --config configs/venue2027/acns/toolemu.toml --upstream-ref ac4a7ab7ed8c7985d96231e214bd6b54304b7ddb"
+    fidelity_status: ORIGINAL_UPSTREAM
+    notes: "ACNS arm B2 empirical-study taxonomy baseline. No real provider calls in unit tests."
+
+  # ===========================================================================
+  # DSN — Recoverable Safety Journals (arms B0-B2)
+  # ===========================================================================
+  - name: db-transaction-fire-and-forget
+    venues: [dsn]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "single DB transaction commit with fire-and-forget side effect; weak control"
+    config: >-
+      Transaction commits the clinical row; side effect is sent without
+      durability guarantees; measures lost side effects per DSN RQ1.
+    data_rights: "Synthetic dataset synthetic-dsn-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/dsn/fixtures/fire_and_forget_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.dsn.baselines --baseline db-transaction-fire-and-forget --config configs/venue2027/dsn/fire_forget.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B0 weak control; in-project; not yet run."
+
+  - name: postgres-outbox-idempotent-consumer
+    venues: [dsn]
+    upstream_url: "https://github.com/postgres/postgres"
+    upstream_revision: "6e4ab1b69197e2756192a1019439aebacdea5497"
+    license: "PostgreSQL Licence (verified 2026-11-15)"
+    algorithm_class: "transactional outbox with idempotent consumer on PostgreSQL"
+    config: >-
+      postgres/postgres tag REL_16_9 + pgvector/pgvector:pg16 image digest
+      sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f;
+      outbox table in same transaction, consumer keyed by stable operation ID
+      (at-least-once delivery, idempotent apply). Fault injection 48 crash
+      windows per DSN protocol. Elle history export (jepsen-io/elle v0.2.8,
+      commit 2843344620c7d0653eef1c20728aa8580a05f505, git ls-remote verified
+      2026-11-15) used as independent checker.
+    data_rights: "Synthetic dataset synthetic-dsn-2027; isolated container DB only."
+    parity_fixture: "evaluation/venue2027/dsn/fixtures/outbox_idempotent_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.dsn.baselines --baseline postgres-outbox-idempotent-consumer --config configs/venue2027/dsn/outbox.toml --database-image-digest sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f"
+    fidelity_status: ORIGINAL_UPSTREAM
+    notes: >-
+      Arm B1 strong practical baseline; blueprint requires it to be fully
+      implemented. Uses actual PostgreSQL; Elle checker upstream pinned for
+      the oracle side (Oracle reviewer must not reuse candidate code).
+
+  - name: durable-workflow-saga-compensation
+    venues: [dsn]
+    upstream_url: "https://github.com/temporalio/sdk-python"
+    upstream_revision: "11e8650c7c8b89af45fab328e400d2fd5a9af16c"
+    license: MIT (temporalio, PyPI License-Expression MIT verified 2026-11-15)
+    algorithm_class: "durable workflow/saga execution with compensation and stable operation IDs"
+    config: >-
+      temporalio 1.19.0 (tag 1.19.0 -> commit 11e8650c7c8b89af45fab328e400d2f
+      d5a9af16c via git ls-remote 2026-11-15; PyPI requires_python >=3.10).
+      Saga compensation workflows with durable timers; engine and version
+      recorded per-run per blueprint requirement. Unit tests use the Temporal
+      test-server harness only (no live service).
+    data_rights: "Synthetic dataset synthetic-dsn-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/dsn/fixtures/saga_compensation_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.dsn.baselines --baseline durable-workflow-saga-compensation --config configs/venue2027/dsn/saga.toml --upstream-ref 11e8650c7c8b89af45fab328e400d2fd5a9af16c"
+    fidelity_status: ORIGINAL_UPSTREAM
+    notes: "Arm B2 strong operational baseline. Precise engine/version recorded: Temporal Python SDK 1.19.0."
+
+  # ===========================================================================
+  # IFIP_SEC — Replay-Closed Authorization (arms B0-B3)
+  # ===========================================================================
+  - name: bearer-signed-receipt
+    venues: [ifip_sec]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "bearer token signed receipt; weak control"
+    config: >-
+      HMAC-signed bearer receipt without caveat binding or consume-once
+      semantics; per IFIP_SEC RQ1 weak control.
+    data_rights: "Synthetic dataset synthetic-ifip_sec-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/ifip_sec/fixtures/bearer_receipt_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.ifip_sec.baselines --baseline bearer-signed-receipt --config configs/venue2027/ifip_sec/bearer.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B0; in-project; not yet run."
+
+  - name: macaroon-hmac-caveats
+    venues: [ifip_sec]
+    upstream_url: "https://www.ndss-symposium.org/ndss2014/ndss-2014-programme/macaroons-cookies-contextual-caveats-decentralized-authorization-cloud/"
+    upstream_revision: "faea0d28bc33a27d625a09bdece4f1e39a8d6b23b2d1e607f58cf99d43e39aa5"
+    license: >-
+      NDSS 2014 paper: "Permission to freely reproduce all or part of this
+      paper for noncommercial purposes is granted" (statement verified in
+      official NDSS PDF 2026-11-15). No official reference implementation
+      released by the paper authors.
+    algorithm_class: "HMAC caveat-chain context-bound capabilities (Macaroons)"
+    config: >-
+      Caveats: actor, purpose, task, expiry, nonce per blueprint arm B1.
+      Third-party caveats unused. Revision = SHA256 of official NDSS 2014
+      paper PDF 04_3_1.pdf (verified 2026-11-15). Python binding reference:
+      pymacaroons v0.13.0 (MIT, tag v0.13.0 -> commit 06b55110eda2fb192c130d
+      eeb0bcedf8b124d1056, verified 2026-11-15) may be used as an independent
+      cross-check, not as the baseline itself.
+    data_rights: "Synthetic dataset synthetic-ifip_sec-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/ifip_sec/fixtures/macaroon_caveats_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.ifip_sec.baselines --baseline macaroon-hmac-caveats --config configs/venue2027/ifip_sec/macaroon.toml"
+    fidelity_status: FAITHFUL_PORT
+    notes: >-
+      Paper: "Macaroons: Cookies with Contextual Caveats for Decentralized
+      Authorization in the Cloud", NDSS 2014. Port must reproduce signature
+      verification and caveat-satisfaction semantics; registry disclosure:
+      port, not upstream code.
+
+  - name: zanzibar-openfga
+    venues: [ifip_sec, popets, sacmat]
+    upstream_url: "https://github.com/openfga/openfga"
+    upstream_revision: "44054f542f64e9b9589dd26a595081b3d2cfd942"
+    license: Apache-2.0 (LICENSE verified at tag v1.22.1, 2026-11-15)
+    algorithm_class: "Zanzibar-inspired relationship-based authorization with consistency tokens and fresh policy evaluation"
+    config: >-
+      OpenFGA v1.22.1 (git ls-remote refs/tags/v1.22.1, verified 2026-11-15).
+      Consistency tokens (minimize_latency=false) and fresh evaluation mode;
+      relation tuples loaded from synthetic fixtures only. IFIP_SEC arm B2;
+      POPETS arm B3 adapter (must truly support derived-cache tagging before
+      comparative claims); SACMAT encoding surface for conformance testing.
+    data_rights: "Synthetic dataset synthetic-ifip_sec-2027 / synthetic-popets-2027 / synthetic-sacmat-2027; no production data."
+    parity_fixture: "evaluation/venue2027/ifip_sec/fixtures/openfga_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.ifip_sec.baselines --baseline zanzibar-openfga --config configs/venue2027/ifip_sec/openfga.toml --upstream-ref v1.22.1"
+    fidelity_status: ORIGINAL_UPSTREAM
+    notes: >-
+      Runs the actual OpenFGA server binary from the pinned tag. Paper-design
+      provenance: Zanzibar (USENIX ATC 2019, verified 2026-11-15).
+
+  - name: cedar-opa-policy-decision-nonce-registry
+    venues: [ifip_sec, sacmat]
+    upstream_url: "https://github.com/cedar-policy/cedar"
+    upstream_revision: "47d82a8293354f235d3f8d092c71071706401741"
+    license: Apache-2.0 (LICENSE verified at tag v4.14.1, 2026-11-15)
+    algorithm_class: "policy-as-code ABAC decision engine with external replay-nonce registry"
+    config: >-
+      Cedar v4.14.1 (git ls-remote refs/tags/v4.14.1, verified 2026-11-15)
+      via its Python/CLI binding for IFIP_SEC arm B3 and SACMAT Cedar
+      encoding. Replay-nonce registry is application-side (PostgreSQL-backed,
+      same REL_16_9 image as DSN/COMPSAC arms); OPA variant records
+      open-policy-agent/opa v1.22.4 (commit ba39415db4b3c90cd68942a74b3cc2223
+      ec2b23c, verified 2026-11-15, Apache-2.0) as the alternative PDP.
+    data_rights: "Synthetic dataset synthetic-ifip_sec-2027 / synthetic-sacmat-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/ifip_sec/fixtures/cedar_opa_nonce_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.ifip_sec.baselines --baseline cedar-opa-policy-decision-nonce-registry --config configs/venue2027/ifip_sec/cedar.toml --upstream-ref v4.14.1"
+    fidelity_status: ORIGINAL_UPSTREAM
+    notes: >-
+      Two PDPs under one arm per blueprint (Cedar/OPA). Both upstream tags
+      verified 2026-11-15; OPA v1.22.4 tag -> ba39415db4b3...
+
+  # ===========================================================================
+  # ACNS — SoK Evidence Boundaries (arms B0-B2)
+  # ===========================================================================
+  - name: rats-rfc9334-framework
+    venues: [acns]
+    upstream_url: "https://www.rfc-editor.org/rfc/rfc9334.html"
+    upstream_revision: "b80d035fb64a00a637d4888d2855772412246230913231301727ef78d4b00540"
+    license: >-
+      IETF Trust Legal Provisions - Revised BSD License (statement verified in
+      RFC 9334 text 2026-11-15); RFCs are freely reproducible per IETF/RFC
+      Editor policy.
+    algorithm_class: "normative RATS attestation architecture (evidence/attester/verifier boundary taxonomy)"
+    config: >-
+      RFC 9334 (Remote ATtestation procedureS architecture, IETF, January
+      2023 - publication date verified in RFC text). Revision = SHA256 of
+      rfc9334.txt as served by rfc-editor.org (checked 2026-11-15). Used as
+      normative taxonomy baseline arm B0; taxonomy extraction restricted to
+      the normative sections; claims mapped onto the evidence-to-claim
+      lattice without redefining terms.
+    data_rights: "Synthetic dataset synthetic-acns-2027; RFC text quoted within IETF redistribution terms."
+    parity_fixture: "evaluation/venue2027/acns/fixtures/rats_taxonomy_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.acns.baselines --baseline rats-rfc9334-framework --config configs/venue2027/acns/rats.toml"
+    fidelity_status: FAITHFUL_PORT
+    notes: >-
+      A normative document port (taxonomy extraction), not executable code;
+      parity fixture = double-coded extraction of the attestation model onto
+      the study's lattice with inter-rater agreement.
+
+  - name: w3c-prov-provenance-audit
+    venues: [acns]
+    upstream_url: "https://www.w3.org/TR/2013/REC-prov-dm-20130430/"
+    upstream_revision: "aa82bd71b6bb1f7b735bf3f7f5b948fae87764f0"
+    license: >-
+      W3C Document/Software license terms apply to W3C specifications
+      (www.w3.org/copyright/software-license-2023); REC text freely
+      citable with attribution. w3c/prov repository carries no OSS license
+      file (GitHub API license field null, verified 2026-11-15): treat as
+      "specification text with W3C terms", not as redistributable code.
+    algorithm_class: "W3C PROV-DM provenance data model + audit-event lineage (retrospective lineage baseline)"
+    config: >-
+      PROV-DM W3C Recommendation, 30 April 2013 (specStatus REC +
+      publishDate 2013-04-30 verified in w3c/prov source 2026-11-15).
+      Repository revision = w3c/prov HEAD aa82bd71b6bb1f7b735bf3f7f5b948fae
+      87764f0 (git ls-remote 2026-11-15). Used as retrospective lineage
+      baseline arm B1.
+    data_rights: "Synthetic dataset synthetic-acns-2027; PROV-DM terms cited as normative vocabulary."
+    parity_fixture: "evaluation/venue2027/acns/fixtures/prov_lineage_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.acns.baselines --baseline w3c-prov-provenance-audit --config configs/venue2027/acns/prov.toml"
+    fidelity_status: FAITHFUL_PORT
+    notes: "Retrospective lineage mapping; no W3C repo code is vendored."
+
+  # ===========================================================================
+  # PST — ReceiptMin forensic reconstructability (arms B0-B3)
+  # ===========================================================================
+  - name: full-plaintext-append-only-log
+    venues: [pst]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "full plaintext append-only audit log; utility upper bound / privacy lower bound"
+    config: >-
+      Append-only plaintext log of all audit events; forensic query set per
+      PST protocol.
+    data_rights: "Synthetic dataset synthetic-pst-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/pst/fixtures/plaintext_log_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.pst.baselines --baseline full-plaintext-append-only-log --config configs/venue2027/pst/plaintext.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B0; in-project; not yet run."
+
+  - name: hash-only-log-digests
+    venues: [pst]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "hash-only audit log / content digests; storage-privacy baseline with weak audit utility"
+    config: >-
+      SHA-256 digests of audit events only; no payloads retained.
+    data_rights: "Synthetic dataset synthetic-pst-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/pst/fixtures/hash_log_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.pst.baselines --baseline hash-only-log-digests --config configs/venue2027/pst/hash_log.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B1; in-project; not yet run."
+
+  - name: encrypted-log-role-gated-deletion
+    venues: [pst]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "encrypted audit log with role-gated decryption and key-deletion-based erasure; strong confidentiality comparator"
+    config: >-
+      AEAD-encrypted log, per-epoch data keys, role-gated decrypt; key
+      deletion declared in threat model per PST RQ3.
+    data_rights: "Synthetic dataset synthetic-pst-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/pst/fixtures/encrypted_log_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.pst.baselines --baseline encrypted-log-role-gated-deletion --config configs/venue2027/pst/encrypted.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B2 strong confidentiality comparator; in-project; not yet run."
+
+  - name: ct-merkle-append-only-integrity
+    venues: [pst]
+    upstream_url: "https://www.rfc-editor.org/rfc/rfc9162.html"
+    upstream_revision: "a0e432ce7580c99fcc8faf0cf3f6191f9ce6b4864f949158e020d4ecb295081f"
+    license: >-
+      IETF Trust Legal Provisions - Revised BSD License (statement verified in
+      RFC 9162 text 2026-11-15).
+    algorithm_class: "Certificate Transparency v2.0-style Merkle append-only integrity with authorized material retrieval"
+    config: >-
+      RFC 9162 (Certificate Transparency Version 2.0, Experimental, December
+      2021 - header verified). Revision = SHA256 of rfc9162.txt served by
+      rfc-editor.org (checked 2026-11-15). Merkle tree head + inclusion proofs
+      implemented per RFC Section 2.1; integrity is NOT confidentiality
+      (ledger guarantee note).
+    data_rights: "Synthetic dataset synthetic-pst-2027; RFC text within IETF redistribution terms."
+    parity_fixture: "evaluation/venue2027/pst/fixtures/ct_merkle_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.pst.baselines --baseline ct-merkle-append-only-integrity --config configs/venue2027/pst/ct_merkle.toml"
+    fidelity_status: FAITHFUL_PORT
+    notes: "Arm B3 strong integrity baseline; a protocol port of the RFC's log/monitor semantics."
+
+  # ===========================================================================
+  # SACMAT — PolicyTrace temporal conformance (arms B0-B2)
+  # ===========================================================================
+  - name: uniform-random-authorization-requests
+    venues: [sacmat]
+    upstream_url: "https://github.com/Project-CLARA-HBT/CLARA-Care"
+    upstream_revision: UNAVAILABLE
+    license: MIT
+    algorithm_class: "uniform random authorization request generator; weak reference"
+    config: >-
+      Uniform random request generation over the synthetic policy/principal
+      graph; matched oracle budget per SACMAT RQ2.
+    data_rights: "Synthetic dataset synthetic-sacmat-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/sacmat/fixtures/random_requests_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.sacmat.baselines --baseline uniform-random-authorization-requests --config configs/venue2027/sacmat/random.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Arm B0 weak reference; in-project; not yet run."
+
+  - name: mc-dc-xacml-policy-testing
+    venues: [sacmat]
+    upstream_url: "https://doi.org/10.1145/3205977.3205979"
+    upstream_revision: UNAVAILABLE
+    license: "ACM publication (DL access terms); algorithm from paper; no official reference implementation"
+    algorithm_class: "MC/DC-inspired XACML policy test generation and mutation-adequacy scoring (Xu et al., SACMAT 2018)"
+    config: >-
+      MC/DC-driven rule-pair test generation over XACML policies translated
+      to the study's ABAC encoding; mutation score at fixed oracle budget.
+      Paper verified via Crossref (title "Automated Coverage-Based Testing of
+      XACML Policies", SACMAT 2018, DOI 10.1145/3205977.3205979, issued
+      2018-06-07) on 2026-11-15. No upstream code exists to pin; port only.
+    data_rights: "Synthetic dataset synthetic-sacmat-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/sacmat/fixtures/mcdc_xacml_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.sacmat.baselines --baseline mc-dc-xacml-policy-testing --config configs/venue2027/sacmat/mcdc.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: >-
+      Arm B1 strong coverage baseline. The ledger warns "must not compare
+      naive only": this arm must be the MC/DC-faithful port, not a naive
+      random generator wearing the same name. No upstream code exists to
+      pin; entry remains UNAVAILABLE_NOT_RUN until the port is implemented
+      and its parity fixture demonstrates the paper's MC/DC semantics.
+
+  - name: xacbench-profile-driven-tests
+    venues: [sacmat]
+    upstream_url: "https://doi.org/10.1007/s00500-020-04925-5"
+    upstream_revision: UNAVAILABLE
+    license: >-
+      Springer Nature publication (subscription; metadata verified via
+      Crossref 2026-11-15). Policy profile structures are described in the
+      paper; no redistributable benchmark code pinned.
+    algorithm_class: "XACBench policy profile-driven synthetic test generation"
+    config: >-
+      XACBench policy profiles translated into the portable three/four-valued
+      decision oracle (PERMIT/DENY/NOT_APPLICABLE/INDETERMINATE); scope
+      limited to static policy structures (explicit scope difference from
+      longitudinal traces per ledger).
+    data_rights: "Synthetic dataset synthetic-sacmat-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/sacmat/fixtures/xacbench_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.sacmat.baselines --baseline xacbench-profile-driven-tests --config configs/venue2027/sacmat/xacbench.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: >-
+      Paper: "XACBench: a XACML policy benchmark", Soft Computing (2020),
+      DOI 10.1007/s00500-020-04925-5, issued 2020-04-21 (Crossref-verified).
+      No redistributable benchmark code pinned; entry stays
+      UNAVAILABLE_NOT_RUN until a verifiable revision or completed,
+      parity-checked profile translation exists.
+
+  - name: property-based-history-generator-no-metamorphs
+    venues: [sacmat]
+    upstream_url: "https://github.com/HypothesisWorks/hypothesis"
+    upstream_revision: "a8dcd7422a325926693b5464f73349e361562b7c"
+    license: MPL-2.0 (PyPI hypothesis 6.167.1 License-Expression verified 2026-11-15)
+    algorithm_class: "property-based stateful history generator without temporal metamorphic relation (strong stateful testing baseline)"
+    config: >-
+      hypothesis 6.167.1 (tag v6.167.1 -> commit a8dcd7422a325926693b5464f73
+      349e361562b7c via git ls-remote 2026-11-15; installed version matches).
+      RuleBasedStateMachine over policy/principal actions; deliberately no
+      temporal metamorphs (that is the candidate's arm).
+    data_rights: "Synthetic dataset synthetic-sacmat-2027; project-internal-synthetic license."
+    parity_fixture: "evaluation/venue2027/sacmat/fixtures/hypothesis_stateful_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.sacmat.baselines --baseline property-based-history-generator-no-metamorphs --config configs/venue2027/sacmat/hypothesis.toml --upstream-ref v6.167.1"
+    fidelity_status: ORIGINAL_UPSTREAM
+    notes: "Arm B3; runs the actual Hypothesis engine (installed 6.167.1) as the stateful generator."
+
+  # ===========================================================================
+  # AIME/medhall companion literature-locked baselines (data-driven comparators)
+  # ===========================================================================
+  - name: npj-medllm-benchmark-comparator
+    venues: [aime]
+    upstream_url: "https://www.nature.com/articles/s41746-025-02277-8"
+    upstream_revision: "88c2a6dd70983c91500625d9bcf4078155b8e992baff8d0a161b1e6c53077ec2"
+    license: >-
+      Open Access - Creative Commons Attribution 4.0 International (verified
+      on article page 2026-11-15). The revision identifier below is the
+      SHA256 of the currently-served article HTML snapshot (2026-11-15); the
+      citable version of record lives at the DOI/article URL.
+    algorithm_class: "physician-consensus medical-LLM evaluation benchmark; evaluation-quality baseline, not a consent-enforcement mechanism"
+    config: >-
+      Used as rubric/evaluation-quality comparator for AIME clinician
+      adjudication design. NOT a tested consent-enforcement system (ledger
+      relation).
+    data_rights: "Synthetic dataset synthetic-aime-2027; benchmark methodology cited under CC BY 4.0 with attribution."
+    parity_fixture: "evaluation/venue2027/aime/fixtures/npj_rubric_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.aime.baselines --baseline npj-medllm-benchmark-comparator --config configs/venue2027/aime/npj.toml"
+    fidelity_status: FAITHFUL_PORT
+    notes: >-
+      Paper: "A novel evaluation benchmark for medical LLMs illuminating
+      safety and effectiveness in clinical domains", npj Digital Medicine.
+      Title verified from citation meta 2026-11-15.
+
+  - name: who21-ethics-governance-boundary
+    venues: [acns, aime]
+    upstream_url: "https://iris.who.int/handle/10665/341376"
+    upstream_revision: "dc5697ab8ba83b0ab42232da6e85f1dd41eb4fab9d112deaedfa97458a8cdfb1"
+    license: >-
+      CC BY-NC-SA 3.0 IGO (license verified via WHO IRIS item metadata and
+      LICENSE bundle 2026-11-15; "Some rights reserved" statement). Non-
+      commercial use only - compatible with this research use; no clinical
+      claims derived from it.
+    algorithm_class: "clinical governance / ethics boundary framework; scope-governance comparator"
+    config: >-
+      WHO guidance "Ethics and governance of artificial intelligence for
+      health" (9789240029200). Revision = SHA256 of the official IRIS PDF
+      (f780d926-4ae3-42ce-a6d6-e898a5562621/content, 1,969,366 bytes, checked
+      2026-11-15). Used to bound clinical-claim language in ACNS/AIME arms.
+    data_rights: "Synthetic datasets; WHO guidance cited under CC BY-NC-SA 3.0 IGO with attribution, non-commercial."
+    parity_fixture: "evaluation/venue2027/acns/fixtures/who_ethics_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.acns.baselines --baseline who21-ethics-governance-boundary --config configs/venue2027/acns/who.toml"
+    fidelity_status: FAITHFUL_PORT
+    notes: >-
+      Governance comparator extracted into the claim-boundary ruleset;
+      never a source of clinical facts.
+
+  - name: muse-unlearning-comparator
+    venues: [popets]
+    upstream_url: "https://research.google/pubs/muse-machine-unlearning-six-way-evaluation-for-language-models/"
+    upstream_revision: UNAVAILABLE
+    license: >-
+      arXiv:2402.16835 (Machine Unlearning Six-Way Evaluation for Language
+      Models; arXiv article page reports CC BY 4.0, verified 2026-11-15).
+      research.google listing page has no redistributable code pin.
+    algorithm_class: "machine unlearning six-way evaluation taxonomy; distinction between unlearning and future-disclosure prevention"
+    config: >-
+      Used conceptually in POPETS to bound the difference between revoked-
+      context re-disclosure (this study) and model unlearning (that work).
+      No MUSE code is executed in the POPETS pipeline.
+    data_rights: "Synthetic dataset synthetic-popets-2027; taxonomy cited under arXiv CC BY 4.0."
+    parity_fixture: "evaluation/venue2027/popets/fixtures/muse_boundary_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.popets.baselines --baseline muse-unlearning-comparator --config configs/venue2027/popets/muse.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: >-
+      The listing page points to the paper, but no upstream implementation
+      revision could be verified for execution; taxonomy-only comparator, and
+      honestly UNAVAILABLE_NOT_RUN for execution purposes.
+
+  - name: injecagent-injection-taxonomy
+    venues: [dimva]
+    upstream_url: "https://aclanthology.org/2024.findings-acl.624/"
+    upstream_revision: UNAVAILABLE
+    license: >-
+      ACL Anthology: materials published in or after 2016 are licensed under
+      Creative Commons Attribution 4.0 International (statement verified on
+      the anthology page 2026-11-15).
+    algorithm_class: "indirect prompt injection threat taxonomy for tool-integrated LLM agents"
+    config: >-
+      Threat-family labels used to structure DIMVA cross-family holdout
+      splits; not a write-admission comparator (ledger relation). No code
+      pin verified; taxonomy extraction only.
+    data_rights: "Synthetic dataset synthetic-dimva-2027; taxonomy cited under CC BY 4.0."
+    parity_fixture: "evaluation/venue2027/dimva/fixtures/injecagent_taxonomy_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.dimva.baselines --baseline injecagent-injection-taxonomy --config configs/venue2027/dimva/injecagent.toml"
+    fidelity_status: UNAVAILABLE_NOT_RUN
+    notes: "Taxonomy-only comparator; no executable upstream revision verified."
+
+  - name: nist-abac-vocabulary
+    venues: [sacmat]
+    upstream_url: "https://doi.org/10.6028/NIST.SP.800-162"
+    upstream_revision: "ea90ee967a7011c8de5cfaffe0820d157167edefdea5fc2a84af730af4295cd7"
+    license: >-
+      NIST Special Publication. Per NIST Copyright, Fair Use, and Licensing
+      Statements: works authored by NIST employees are not subject to
+      copyright protection within the United States (17 U.S.C. 105); foreign
+      rights reserved with non-exclusive, perpetual, paid-up, royalty-free
+      worldwide reprint right (statement verified at
+      nist.gov/open/copyright-fair-use-and-licensing-statements-srd-data-
+      software-and-technical-series-publications, 2026-11-15).
+    algorithm_class: "ABAC definition and considerations vocabulary; normative attribute-based access control terms"
+    config: >-
+      NIST SP 800-162 "Guide to Attribute Based Access Control (ABAC)
+      Definition and Considerations" (CSRC citation_publication_date
+      2019/02/25, DOI 10.6028/NIST.SP.800-162; DOI resolves to the
+      66-page PDF whose SHA256 is recorded above, verified 2026-11-15).
+      Supplies ABAC vocabulary for the SACMAT portable oracle encodings.
+    data_rights: "Synthetic dataset synthetic-sacmat-2027; NIST text quoted per US-government-work terms with attribution."
+    parity_fixture: "evaluation/venue2027/sacmat/fixtures/nist_abac_parity.json"
+    exec_command: "python3 -m evaluation.venue2027.sacmat.baselines --baseline nist-abac-vocabulary --config configs/venue2027/sacmat/nist.toml"
+    fidelity_status: FAITHFUL_PORT
+    notes: >-
+      Vocabulary port (term mapping into the portable oracle), not code.
+      DOI-resolved PDF hash recorded as revision anchor.

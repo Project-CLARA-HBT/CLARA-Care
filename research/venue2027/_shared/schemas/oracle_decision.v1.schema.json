@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://clara-care.dev/research/venue2027/schemas/oracle_decision.v1.schema.json",
+  "title": "CLARA 2027 shared oracle decision record, version 1",
+  "description": "One adjudication by an independent oracle (which never imports candidate code). OUTCOME is an explicit multi-valued enum including INDETERMINATE and NOT_RUN_EXTERNAL: an incomplete, stale or externally-blocked execution is recorded as such and is never counted as a safe rejection or a completion. Ground truth derives from frozen oracle labels and observed persisted state, not candidate reason codes.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1"
+    },
+    "oracle_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier of the independent oracle implementation (with its own version pin elsewhere); must be disjoint from candidate code."
+    },
+    "independent_unit_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:.-]{1,128}$",
+      "description": "Required. The independent unit this decision applies to; never inferred from timestamps."
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Case within the unit family that was adjudicated."
+    },
+    "arm_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Arm being adjudicated."
+    },
+    "outcome": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "INDETERMINATE",
+        "NOT_RUN_EXTERNAL",
+        "FORBIDDEN_EVENT"
+      ],
+      "description": "Explicit outcome. INDETERMINATE = reconcilable ground truth absent/ambiguous. NOT_RUN_EXTERNAL = blocked by unavailable external dependency (provider, PG, reviewer). FORBIDDEN_EVENT = oracle-identified safety violation. Neither INDETERMINATE nor NOT_RUN_EXTERNAL may be tallied as rejection or success."
+    },
+    "reason_code": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{2,63}$",
+      "description": "Stable, machine-checkable reason code (never free prose, never candidate-supplied reason codes used as truth)."
+    },
+    "candidate_reason_code_ignored": {
+      "type": "boolean",
+      "description": "True when the candidate's own claimed reason code was present but deliberately not used as ground truth (oracle independence)."
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "case.v1.schema.json#/$defs/evidence_pointer"
+      },
+      "description": "At least one frozen evidence pointer supporting the decision (persisted DB state, history export, sealed log)."
+    },
+    "source_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Candidate source SHA the decision applies to (frozen)."
+    },
+    "backend": {
+      "enum": [
+        "postgresql",
+        "sqlite",
+        "synthetic"
+      ]
+    },
+    "adjudicated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Forensic timestamp only; carries no inferential weight and cannot substitute for independent_unit_id."
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "oracle_id",
+    "independent_unit_id",
+    "case_id",
+    "arm_id",
+    "outcome",
+    "reason_code",
+    "evidence",
+    "source_sha",
+    "backend"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "outcome": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "INDETERMINATE",
+        "NOT_RUN_EXTERNAL",
+        "FORBIDDEN_EVENT"
+      ],
+      "description": "Reusable outcome enum; INDETERMINATE and NOT_RUN_EXTERNAL are mandatory first-class outcomes."
+    }
+  }
+}

@@ -1,0 +1,78 @@
+# CLARA research disposable PostgreSQL 16 cluster (task SH-postgres_isolation).
+#
+# ISOLATION CONTRACT (enforced by research/venue2027/_shared/tools/pg_guard.py):
+#   * Dedicated compose project `clara-research-pg` and dedicated bridge network.
+#   * NO host port is published — the cluster is reachable ONLY from containers
+#     attached to the `pg_research_net` network, by the hostname `pg_research`.
+#     A "localhost non-isolated" database is therefore refused by pg_guard, and
+#     the cluster itself cannot collide with any host service (including the
+#     unrelated host listener on 55432).
+#   * NO production credentials: throwaway research-only users created by
+#     initdb/001_init_roles.sql (research_app = non-superuser, NOSUPERUSER
+#     NOCREATEDB NOCREATEROLE; research_admin limited to migration/teardown).
+#   * Database name is fixed to `clara_research` (POSTGRES_DB, checked by pg_guard).
+#   * Named volume `pg_research_data` for data; teardown = `docker compose down -v`.
+#   * Image pinned by digest (see README digest-pinning policy); runtime
+#     version is recorded by tests via `SHOW server_version` before any study run.
+#
+# Image digest (recorded at first pull 2026-11-15, sha256 of the manifest):
+#   postgres:16.4-bookworm -> sha256:e62fbf9d3e2b49816a32c400ed2dba83e3b361e6833e624024309c35d334b412
+#
+# Usage:
+#   docker compose -f infra/research/venue2027/docker-compose.pg.yaml up -d
+#   docker compose -f infra/research/venue2027/docker-compose.pg.yaml down -v
+#
+# Version: compose contract 1.0.0 (aligned with PG_GUARD_VERSION 1.0.0).
+
+name: clara-research-pg
+
+services:
+  pg_research:
+    # Digest-pinned minor of PostgreSQL 16 (16.4-bookworm). Update only via the
+    # README digest-pinning policy (record date, tag, digest in this comment).
+    image: postgres@sha256:e62fbf9d3e2b49816a32c400ed2dba83e3b361e6833e624024309c35d334b412
+    container_name: clara-pg-research
+    restart: "no"
+    environment:
+      # Research-only throwaway credentials; never production secrets.
+      POSTGRES_DB: clara_research
+      POSTGRES_USER: research_admin
+      POSTGRES_PASSWORD: research-only-throwaway
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    # No `ports:` mapping on purpose: publish nothing to the host. The cluster
+    # is reachable only via the dedicated network below (host: pg_research).
+    expose:
+      - "5432"
+    volumes:
+      - pg_research_data:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    networks:
+      - pg_research_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U research_admin -d clara_research"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    # Bounded research pilot defaults (RESOURCE_SCHEDULING.md): small cluster,
+    # no production tuning, all defaults documented in README.
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=40"
+      - "-c"
+      - "shared_buffers=128MB"
+      - "-c"
+      - "log_min_duration_statement=250"
+
+networks:
+  pg_research_net:
+    name: pg_research_net
+    driver: bridge
+    internal: false # keep egress for image/extension installs; no published ports
+    labels:
+      clara.research.isolated: "true"
+
+volumes:
+  pg_research_data:
+    name: pg_research_data

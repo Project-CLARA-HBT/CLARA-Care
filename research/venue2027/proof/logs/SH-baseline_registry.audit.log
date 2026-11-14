@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "reason_code": "OK",
+  "entries_audited": 40,
+  "findings": [],
+  "version": "1.0.0",
+  "registry": "research/venue2027/_shared/baselines/registry.yaml"
+}

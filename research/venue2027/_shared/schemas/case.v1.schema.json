@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://clara-care.dev/research/venue2027/schemas/case.v1.schema.json",
+  "title": "CLARA 2027 shared case record, version 1",
+  "description": "One evaluated case: a clinical/research task bound to an explicit independent experimental unit, backend, frozen source SHA, seed, exact branch and arm. Timestamps are recorded for forensics only; unit independence MUST be established by independent_unit_id (plus declared unit_kind), never inferred from timestamps. Fail closed: any missing required field rejects the case.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "description": "Contract version. Only '1' (additive-only evolution within v1).",
+      "const": "1"
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier of the case within its case family; uniqueness across families is not required by schema."
+    },
+    "case_family": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Family/holdout group label; used for source-disjoint holdouts and clustering correction."
+    },
+    "independent_unit_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:.-]{1,128}$",
+      "description": "Required. Identifies the independent experimental unit (e.g. one independently sampled history/vignette/run). Repeated attempts against the same unit are clustered, not independent. Never derived from timestamps alone."
+    },
+    "unit_kind": {
+      "enum": [
+        "case",
+        "history",
+        "run",
+        "session",
+        "subject",
+        "benchmark_run"
+      ],
+      "description": "Declared kind of independent unit so analysis can cluster appropriately (INDEPENDENT_EVIDENCE_PROTOCOL.md section 3)."
+    },
+    "backend": {
+      "enum": [
+        "postgresql",
+        "sqlite",
+        "synthetic"
+      ],
+      "description": "Required. Execution backend. PostgreSQL concurrency claims must use 'postgresql'; never substitute 'sqlite' for PG claims."
+    },
+    "source_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Required. Frozen full git commit SHA of the candidate code under test (40 lowercase hex)."
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 18446744073709551615,
+      "description": "Required integer RNG seed; untracked randomness is forbidden."
+    },
+    "branch": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$",
+      "description": "Exact git branch of the run; checked by exact-string equality in analyses, never prefix matching."
+    },
+    "arm_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Arm label (e.g. 'B0'..'B4', or candidate/baseline id) from the predeclared baseline table."
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "description": "At least one evidence pointer binding the case to frozen, hash-addressed inputs (evidence_pointer.v1).",
+      "items": {
+        "$ref": "#/$defs/evidence_pointer"
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Forensic timestamp (UTC RFC 3339). NOT a basis for unit independence: two attempts sharing independent_unit_id remain one clustered unit regardless of timestamps."
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "case_id",
+    "case_family",
+    "independent_unit_id",
+    "unit_kind",
+    "backend",
+    "source_sha",
+    "seed",
+    "branch",
+    "arm_id",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "evidence_pointer": {
+      "title": "Evidence pointer (v1)",
+      "type": "object",
+      "properties": {
+        "pointer_kind": {
+          "enum": [
+            "fixture_path",
+            "dataset_snapshot",
+            "consent_receipt",
+            "policy_epoch",
+            "oracle_label",
+            "provider_trace"
+          ],
+          "description": "What kind of frozen evidence this pointer addresses."
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Resolvable pointer (relative repo path or URI) to the frozen evidence artifact."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA256 of the pointed-to artifact; mismatch fails closed."
+        },
+        "frozen_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Freeze timestamp; forensic only."
+        }
+      },
+      "required": [
+        "pointer_kind",
+        "uri",
+        "sha256"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

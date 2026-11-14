@@ -1,0 +1,37 @@
+{
+  "artifacts_sha256": {
+    "research/venue2027/_shared/baselines/registry.yaml": "b3ee9580a16b8aa16525288be19466ed6ae6050522457fdd2d8cc91197cb0615",
+    "research/venue2027/_shared/tests/test_baseline_registry.py": "7bd25e4a834bb0e6999ae93fcc1d6a5c02caedd1a0932528ea1d659cc1850624",
+    "research/venue2027/_shared/tools/baseline_registry.py": "58fa1781a2b03dea537e140f6861ff3809598e532da89de7dbefefe99141c92a"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "research/venue2027/_shared/baselines/registry.yaml",
+    "research/venue2027/_shared/tools/baseline_registry.py",
+    "research/venue2027/_shared/tests/test_baseline_registry.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/test_baseline_registry.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-baseline_registry.pytest.log"
+    },
+    {
+      "argv": "python3 research/venue2027/_shared/tools/baseline_registry.py --registry research/venue2027/_shared/baselines/registry.yaml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-baseline_registry.audit.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/_shared/tools/baseline_registry.py research/venue2027/_shared/tests/test_baseline_registry.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-baseline_registry.ruff.log"
+    }
+  ],
+  "notes": "Baseline provenance registry with 40 comparators across all nine venues; revisions resolved live via git ls-remote/official endpoints on 2026-11-15 (no invented hashes). Honest labels: 11 ORIGINAL_UPSTREAM, 8 FAITHFUL_PORT (all with parity fixture refs), 21 UNAVAILABLE_NOT_RUN. CLI audit over the real registry returns ok:true. Adversarial negative controls include the constant-deny stub presented as a full baseline (STUB_PRESENTED_AS_BASELINE).",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "status": "PASS",
+  "task_id": "SH-baseline_registry",
+  "unresolved": []
+}
