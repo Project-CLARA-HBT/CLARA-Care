@@ -548,6 +548,51 @@ describe("You & Privacy Route Pages", () => {
         expect(screen.getByTestId("integration-action-success")).toBeInTheDocument();
       });
     });
+
+    it("handles reauthorization prompt modal and stale data warnings on integrations page", async () => {
+      vi.spyOn(v2Client, "getIntegrations").mockResolvedValueOnce({
+        sources: [
+          {
+            id: "garmin",
+            name: "garmin",
+            title: "Garmin Connect",
+            description: "Garmin Health API",
+            connected: true,
+            sync_enabled: true,
+            status: "error",
+            error_message: "OAuth token expired. Re-authentication required.",
+            recovery_guidance: "Click Reauthorize to renew your security grant.",
+            last_sync_at: "2026-08-18T10:00:00Z",
+            category_permissions: { steps: true, heart_rate: true, blood_pressure: false, sleep: false, blood_glucose: false, oxygen_saturation: false },
+          },
+        ],
+      } as any);
+
+      render(<YouIntegrationsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("you-integrations-page")).toBeInTheDocument();
+      });
+
+      // Banner should display reauthorization alert
+      expect(screen.getByTestId("wearable-reauth-alert-banner")).toBeInTheDocument();
+
+      // Card should have reauthorize button
+      const reauthBtn = screen.getByTestId("reauth-source-btn-garmin");
+      expect(reauthBtn).toBeInTheDocument();
+
+      // Clicking reauthorize opens the modal
+      fireEvent.click(reauthBtn);
+      expect(screen.getByTestId("wearable-reauth-modal")).toBeInTheDocument();
+
+      // Confirm reauthorization
+      vi.spyOn(v2Client, "reauthorizeIntegrationSource").mockResolvedValueOnce({ success: true, status: "active" });
+      fireEvent.click(screen.getByTestId("confirm-reauth-btn"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("reauth-success-view")).toBeInTheDocument();
+      });
+    });
   });
 
   describe("You Notifications Page (/you/notifications)", () => {

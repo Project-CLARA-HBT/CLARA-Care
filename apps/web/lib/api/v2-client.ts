@@ -2319,6 +2319,18 @@ export class ApiV2Client {
     return res.data;
   }
 
+  async reauthorizeIntegrationSource(
+    sourceId: string,
+    options?: ApiV2RequestOptions,
+  ): Promise<{ success: boolean; authorization_url?: string; status: string }> {
+    const res = await this.post<{ success: boolean; authorization_url?: string; status: string }>(
+      `/you/integrations/sources/${encodeURIComponent(sourceId)}/reauthorize`,
+      {},
+      options,
+    );
+    return res.data;
+  }
+
   async getNotificationPreferences(
     profileId?: string | null,
     options?: ApiV2RequestOptions,
@@ -2605,6 +2617,11 @@ export const apiV2SyncIntegrationSource = (
   sourceId: string,
   options?: ApiV2RequestOptions,
 ) => v2Client.syncIntegrationSource(sourceId, options);
+
+export const apiV2ReauthorizeIntegrationSource = (
+  sourceId: string,
+  options?: ApiV2RequestOptions,
+) => v2Client.reauthorizeIntegrationSource(sourceId, options);
 
 export const apiV2GetNotificationPreferences = (
   profileId?: string | null,

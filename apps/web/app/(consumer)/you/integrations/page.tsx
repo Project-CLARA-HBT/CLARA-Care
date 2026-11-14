@@ -12,6 +12,10 @@ import { formatLocaleDate } from "@/lib/i18n/catalog";
 import { getActiveProfileId } from "@/lib/profile-context";
 import { useQuery } from "@/lib/query/use-query";
 import { queryKeys } from "@/lib/query/query-keys";
+import { WearableSyncAlertBanner } from "@/components/health/wearable-sync-alert-banner";
+import { WearableReauthModal } from "@/components/health/wearable-reauth-modal";
+import { WearableStaleBadge } from "@/components/health/wearable-stale-badge";
+import { evaluateSourceSyncStatus } from "@/lib/wearable-sync";
 import {
   v2Client,
   type ConnectedHealthCategoryPermissionsDto,
@@ -37,6 +41,7 @@ export default function YouIntegrationsPage() {
   const [activeProfileId, setActiveProfileId] = useState<string | null>(getActiveProfileId());
 
   const [syncingSourceId, setSyncingSourceId] = useState<string | null>(null);
+  const [reauthModalSource, setReauthModalSource] = useState<ConnectedHealthSourceDto | null>(null);
   const [actionError, setActionError] = useState("");
   const [actionSuccess, setActionSuccess] = useState("");
 
@@ -190,6 +195,22 @@ export default function YouIntegrationsPage() {
     }
   };
 
+  const handleReauthorize = async (sourceId: string) => {
+    setActionError("");
+    setActionSuccess("");
+    try {
+      await v2Client.reauthorizeIntegrationSource(sourceId);
+      setActionSuccess(
+        isEn
+          ? "Reauthorization completed successfully."
+          : "Đã cấp lại quyền kết nối thành công.",
+      );
+      void refetch();
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="you-integrations-page">
       <HealthPageHeader
@@ -224,6 +245,14 @@ export default function YouIntegrationsPage() {
         <InlineError message={actionError} onRetry={() => setActionError("")} />
       ) : null}
 
+      {/* Prominent Fleet Alert Banner for Reauth, Sync Errors, or Stale Data */}
+      <WearableSyncAlertBanner
+        sources={integrationsData?.sources}
+        locale={uiLanguage}
+        onTriggerSync={handleTriggerSync}
+        onReauthorizeSuccess={() => void refetch()}
+      />
+
       {isLoading ? (
         <div className="space-y-4 animate-pulse" aria-busy="true">
           {[1, 2, 3].map((i) => (
@@ -237,6 +266,7 @@ export default function YouIntegrationsPage() {
         <div className="space-y-6" data-testid="integrations-list">
           {integrationsData?.sources?.map((source) => {
             const isSyncing = syncingSourceId === source.id;
+            const evalStatus = evaluateSourceSyncStatus(source);
             return (
               <section
                 key={source.id}
@@ -250,31 +280,20 @@ export default function YouIntegrationsPage() {
                       <Icon name="scan" size="1.5rem" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-sm font-bold text-[var(--text-primary)]">
                           {source.title}
                         </h3>
-                        <Badge
-                          tone={
-                            source.status === "active"
-                              ? "ok"
-                              : source.status === "error"
-                                ? "danger"
-                                : "neutral"
-                          }
-                        >
-                          {source.status === "active"
-                            ? isEn
-                              ? "Active & Connected"
-                              : "Đang kết nối"
-                            : source.status === "error"
-                              ? isEn
-                                ? "Needs Attention"
-                                : "Cần xử lý"
-                              : isEn
-                                ? "Disconnected"
-                                : "Chưa kết nối"}
+                        <Badge tone={evalStatus.badgeTone}>
+                          {isEn ? evalStatus.statusLabel.en : evalStatus.statusLabel.vi}
                         </Badge>
+                        {evalStatus.isStale && !evalStatus.isSyncError && (
+                          <WearableStaleBadge
+                            recordedAt={source.last_sync_at}
+                            locale={uiLanguage}
+                            severity={evalStatus.staleSeverity}
+                          />
+                        )}
                       </div>
                       <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                         {source.description}
@@ -334,21 +353,43 @@ export default function YouIntegrationsPage() {
                   </div>
                 </div>
 
-                {/* Error Recovery Guidance Banner if in error */}
-                {source.status === "error" ? (
+                {/* Error Recovery Guidance Banner if in error or reauth required */}
+                {source.status === "error" || evalStatus.isReauthRequired ? (
                   <div
                     className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-4 space-y-2 text-xs text-[var(--status-danger-text)]"
                     data-testid={`error-recovery-box-${source.id}`}
                   >
                     <div className="flex items-center gap-2 font-bold">
                       <Icon name="warning" size="1.1rem" />
-                      <span>{isEn ? "Sync Error Detected" : "Phát hiện lỗi đồng bộ"}</span>
+                      <span>
+                        {evalStatus.isReauthRequired
+                          ? isEn
+                            ? "Reauthorization Required"
+                            : "Cần cấp lại quyền xác thực"
+                          : isEn
+                            ? "Sync Error Detected"
+                            : "Phát hiện lỗi đồng bộ"}
+                      </span>
                     </div>
-                    <p>{source.error_message}</p>
-                    {source.recovery_guidance ? (
-                      <p className="font-semibold">{source.recovery_guidance}</p>
+                    <p>{source.error_message || evalStatus.errorDetail?.message}</p>
+                    {(source.recovery_guidance || evalStatus.errorDetail?.recoveryGuidance) ? (
+                      <p className="font-semibold">
+                        {source.recovery_guidance || evalStatus.errorDetail?.recoveryGuidance}
+                      </p>
                     ) : null}
-                    <div className="pt-1">
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
+                      {evalStatus.isReauthRequired ? (
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          icon="refresh"
+                          onClick={() => setReauthModalSource(source)}
+                          data-testid={`reauth-source-btn-${source.id}`}
+                        >
+                          {isEn ? "Reauthorize Grant" : "Cấp lại quyền"}
+                        </Button>
+                      ) : null}
                       <Button
                         type="button"
                         variant="secondary"
@@ -375,7 +416,7 @@ export default function YouIntegrationsPage() {
                               uiLanguage,
                               source.last_sync_at,
                               { dateStyle: "short", timeStyle: "short" },
-                            )}`
+                            )} (${isEn ? evalStatus.syncFreshnessText.en : evalStatus.syncFreshnessText.vi})`
                           : isEn
                             ? "Never synced"
                             : "Chưa từng đồng bộ"}
@@ -419,6 +460,17 @@ export default function YouIntegrationsPage() {
             );
           })}
         </div>
+      )}
+
+      {reauthModalSource && (
+        <WearableReauthModal
+          open={Boolean(reauthModalSource)}
+          onClose={() => setReauthModalSource(null)}
+          source={reauthModalSource}
+          locale={uiLanguage}
+          onReauthorize={handleReauthorize}
+          onSuccess={() => void refetch()}
+        />
       )}
     </div>
   );

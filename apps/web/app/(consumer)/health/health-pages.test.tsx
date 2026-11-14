@@ -140,8 +140,24 @@ describe("Health Canonical Route Pages", () => {
     expect(screen.getByText(/Tham chiếu: 4.1 - 5.9/i)).toBeInTheDocument();
   });
 
-  it("renders /health/measurements (Measurements & Vital Signs Page)", async () => {
-    vi.spyOn(v2Client, "getHealthSummary").mockResolvedValueOnce(mockSummary as any);
+  it("renders /health/measurements (Measurements & Vital Signs Page) with stale data indicators", async () => {
+    vi.spyOn(v2Client, "getHealthSummary").mockResolvedValueOnce({
+      ...mockSummary,
+      current: {
+        ...mockSummary.current,
+        important_measurements: [
+          {
+            id: "v1",
+            type: "blood_pressure",
+            label: "Huyết áp",
+            value: "120/80",
+            unit: "mmHg",
+            recorded_at: "2026-08-15T08:00:00Z", // Stale (>24h)
+            source_kind: "device",
+          },
+        ],
+      },
+    } as any);
 
     render(<MeasurementsPage />);
 
@@ -150,7 +166,10 @@ describe("Health Canonical Route Pages", () => {
     });
 
     expect(screen.getByText("Chỉ số sức khỏe & Sinh hiệu")).toBeInTheDocument();
-    expect(screen.getByText("120/80")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("120/80")).toBeInTheDocument();
+      expect(screen.getByTestId("wearable-stale-badge")).toBeInTheDocument();
+    });
   });
 
   it("renders /health/documents (Documents & Provenance Library Page)", async () => {

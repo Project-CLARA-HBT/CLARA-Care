@@ -14,7 +14,15 @@ import { formatLocaleDate } from "@/lib/i18n/catalog";
 import { getActiveProfileId } from "@/lib/profile-context";
 import { useQuery } from "@/lib/query/use-query";
 import { queryKeys } from "@/lib/query/query-keys";
-import { v2Client, type HealthMeasurementDto, type HealthSummaryDto } from "@/lib/api/v2-client";
+import { WearableSyncAlertBanner } from "@/components/health/wearable-sync-alert-banner";
+import { WearableStaleBadge } from "@/components/health/wearable-stale-badge";
+import { isMeasurementStale } from "@/lib/wearable-sync";
+import {
+  v2Client,
+  type ConnectedHealthSourcesDto,
+  type HealthMeasurementDto,
+  type HealthSummaryDto,
+} from "@/lib/api/v2-client";
 
 function MeasurementsPageContent() {
   const uiLanguage = useUILanguage();
@@ -27,6 +35,17 @@ function MeasurementsPageContent() {
   const { data, isLoading, isError, error, refetch } = useQuery<HealthSummaryDto>({
     queryKey,
     queryFn: () => v2Client.getHealthSummary(activeProfileId),
+  });
+
+  const { data: integrationsData, refetch: refetchIntegrations } = useQuery<ConnectedHealthSourcesDto>({
+    queryKey: queryKeys.profile(activeProfileId).you.integrations(),
+    queryFn: async () => {
+      try {
+        return await v2Client.getIntegrations(activeProfileId);
+      } catch {
+        return { sources: [] };
+      }
+    },
   });
 
   const measurements = useMemo(() => {
@@ -58,6 +77,17 @@ function MeasurementsPageContent() {
           onClick: () => setShowAddModal(true),
           icon: "scan",
         }}
+      />
+
+      {/* Wearable Sync Alerts & Stale Data Banner */}
+      <WearableSyncAlertBanner
+        sources={integrationsData?.sources}
+        locale={uiLanguage}
+        onTriggerSync={async (sourceId) => {
+          await v2Client.syncIntegrationSource(sourceId);
+          void refetchIntegrations();
+        }}
+        onReauthorizeSuccess={() => void refetchIntegrations()}
       />
 
       {/* Metric Category Quick Filters */}
@@ -169,19 +199,28 @@ function MeasurementsPageContent() {
                     <span className="font-bold text-xs uppercase tracking-wider text-[var(--text-secondary)]">
                       {m.label || m.type}
                     </span>
-                    {m.status && (
-                      <Badge
-                        tone={
-                          m.status === "critical"
-                            ? "danger"
-                            : m.status === "high" || m.status === "low"
-                              ? "warn"
-                              : "ok"
-                        }
-                      >
-                        {m.status}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {isMeasurementStale(m) && (
+                        <WearableStaleBadge
+                          recordedAt={m.recorded_at}
+                          locale={uiLanguage}
+                          compact
+                        />
+                      )}
+                      {m.status && (
+                        <Badge
+                          tone={
+                            m.status === "critical"
+                              ? "danger"
+                              : m.status === "high" || m.status === "low"
+                                ? "warn"
+                                : "ok"
+                          }
+                        >
+                          {m.status}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   <div className="my-3">

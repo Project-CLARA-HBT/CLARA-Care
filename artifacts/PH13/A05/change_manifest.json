@@ -1,0 +1,92 @@
+{
+  "phase_id": "PH13",
+  "agent_id": "A05",
+  "role": "Web UX",
+  "task": "Connected Health wearable sync errors, stale-data alerts, and reauthorization prompts",
+  "status": "PASSED",
+  "base_sha": "bce92340e190c62208a24aa3304f188080f6fd58",
+  "frozen_head_sha": "bce92340e190c62208a24aa3304f188080f6fd58",
+  "branch": "phase/ph13-a05",
+  "worktree_path": "/dev/shm/clara_worktrees/PH13_A05",
+  "path_lane": "apps/web/app/;apps/web/components/;apps/web/lib/;artifacts/PH13/A05/",
+  "files_changed": [
+    "apps/web/app/(consumer)/health/health-pages.test.tsx",
+    "apps/web/app/(consumer)/health/measurements/page.tsx",
+    "apps/web/app/(consumer)/you/integrations/page.tsx",
+    "apps/web/app/(consumer)/you/you-pages.test.tsx",
+    "apps/web/components/health/wearable-reauth-modal.tsx",
+    "apps/web/components/health/wearable-stale-badge.tsx",
+    "apps/web/components/health/wearable-sync-alert-banner.tsx",
+    "apps/web/components/health/wearable-sync-alerts.test.tsx",
+    "apps/web/lib/api/v2-client.ts",
+    "apps/web/lib/wearable-sync.test.ts",
+    "apps/web/lib/wearable-sync.ts",
+    "artifacts/PH13/A05/change_manifest.json",
+    "artifacts/PH13/A05/test_report.md",
+    "artifacts/PH13/A05/risk_register.md",
+    "artifacts/PH13/A05/rollback.md"
+  ],
+  "deliverables": [
+    "apps/web/lib/wearable-sync.ts",
+    "apps/web/lib/wearable-sync.test.ts",
+    "apps/web/components/health/wearable-sync-alert-banner.tsx",
+    "apps/web/components/health/wearable-reauth-modal.tsx",
+    "apps/web/components/health/wearable-stale-badge.tsx",
+    "apps/web/components/health/wearable-sync-alerts.test.tsx",
+    "apps/web/app/(consumer)/health/measurements/page.tsx",
+    "apps/web/app/(consumer)/you/integrations/page.tsx",
+    "apps/web/lib/api/v2-client.ts",
+    "artifacts/PH13/A05/change_manifest.json",
+    "artifacts/PH13/A05/test_report.md",
+    "artifacts/PH13/A05/risk_register.md",
+    "artifacts/PH13/A05/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    "apps/web/lib/wearable-sync.ts:52",
+    "apps/web/lib/wearable-sync.ts:80",
+    "apps/web/lib/wearable-sync.ts:95",
+    "apps/web/lib/wearable-sync.ts:127",
+    "apps/web/lib/wearable-sync.ts:269",
+    "apps/web/lib/wearable-sync.ts:321",
+    "apps/web/components/health/wearable-sync-alert-banner.tsx:25",
+    "apps/web/components/health/wearable-reauth-modal.tsx:20",
+    "apps/web/components/health/wearable-stale-badge.tsx:16",
+    "apps/web/lib/api/v2-client.ts:2322",
+    "apps/web/app/(consumer)/health/measurements/page.tsx:83",
+    "apps/web/app/(consumer)/you/integrations/page.tsx:249"
+  ],
+  "tests_run": [
+    {
+      "command": "cd apps/web && npx vitest run lib/wearable-sync.test.ts components/health/wearable-sync-alerts.test.tsx \"app/(consumer)/health/health-pages.test.tsx\" \"app/(consumer)/you/you-pages.test.tsx\"",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Combined wearable sync library, alert component, health measurements, and you/integrations route suites: 4 files, 55 tests passed."
+    },
+    {
+      "command": "cd apps/web && npx vitest run lib/api/v2-client.test.ts",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "API v2 client suite including reauthorizeIntegrationSource contract: 24 tests passed."
+    },
+    {
+      "command": "cd apps/web && npm run consumer-terminology:check",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Consumer terminology projection and contract check: 19 keys, 2026-07-30.v1."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A05 -p PH13",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified: 11 evaluated files, all within allowed lanes."
+    }
+  ],
+  "rollback_steps": [
+    "git checkout bce92340e190c62208a24aa3304f188080f6fd58 -- 'apps/web/app/(consumer)/health' 'apps/web/app/(consumer)/you' apps/web/components/health apps/web/lib/api/v2-client.ts apps/web/lib/wearable-sync.ts apps/web/lib/wearable-sync.test.ts",
+    "rm -f apps/web/components/health/wearable-reauth-modal.tsx apps/web/components/health/wearable-stale-badge.tsx apps/web/components/health/wearable-sync-alert-banner.tsx apps/web/components/health/wearable-sync-alerts.test.tsx apps/web/lib/wearable-sync.ts apps/web/lib/wearable-sync.test.ts",
+    "rm -rf artifacts/PH13/A05",
+    "git status"
+  ],
+  "timestamp": "2026-11-14T11:36:51Z"
+}
