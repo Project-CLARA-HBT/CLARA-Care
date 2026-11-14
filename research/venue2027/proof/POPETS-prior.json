@@ -1,0 +1,38 @@
+{
+  "task_id": "POPETS-prior",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "a6175b97be65f4eeef3ba388a6d488ad09799002",
+  "changed_paths": [
+    "research/venue2027/popets/literature_matrix.csv",
+    "research/venue2027/popets/tests/test_literature_matrix.py",
+    "research/venue2027/proof/POPETS-prior.json",
+    "research/venue2027/proof/logs/POPETS-prior.pytest.log",
+    "research/venue2027/proof/logs/POPETS-prior.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/popets/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-prior.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/popets/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-prior.ruff.log"
+    },
+    {
+      "argv": "ruff format --check research/venue2027/popets/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-prior.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/popets/literature_matrix.csv": "371e40d2b514c3d8f0631e70678219b6ba8555fed18f4875609721b75f137d65",
+    "research/venue2027/popets/tests/test_literature_matrix.py": "0c6e5bad03761b80cbbb1bcabc398b0af2f0c4410af5cce85135bbcd2d4bb592"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 prior-art implementation and verification ledger: literature_matrix.csv with 13 comparators - 8 real literature-registry ids (zanzibar19, openfga, cedar, opa, macaroons14, muse, fhir5, nistabac; metadata pulled mechanically from MANIFESTS/literature_registry.json) plus named blueprint/registry references (arms B0-B3 mapped to registry baselines ttl-only-cache, coarse-cache-purge-on-revocation, always-recompute-authorized-projection, zanzibar-like-consistency-token-cache; full cache refresh on revocation = B1; purpose-bound cache keying = blueprint design reference). Every row carries mechanism_analysis; openfga/cedar/opa carry verified pinned upstream code (available_code=yes, ORIGINAL_UPSTREAM); all blueprint arms honestly UNAVAILABLE_NOT_RUN (code does not exist yet; evaluation/venue2027 absent). B3 records NOT_RUN_EXTERNAL rule (execution contract rule 8: never replace unavailable baseline by custom toy under same name). Adversarial tamper controls verified failing: unknown comparator id, available_code=yes without code_url, empty mechanism_analysis. 8 tests passed; ruff check + format clean. No empirical numbers invented; primary_source_read=false rows remain background hypotheses per ledger status UNVERIFIED. source_sha_after records the work commit whose tree contains both hashed artifacts (sibling-convention: report JSON committed alongside in the same single task commit)."
+}

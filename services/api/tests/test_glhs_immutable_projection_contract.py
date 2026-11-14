@@ -8,12 +8,10 @@ Pin the intended append-only contract for
 1. ``test_projection_whitelist`` documents the DESIRED behaviour: updating
    only the admission projection fields (``admission_decision``, ``sealed_at``)
    must be permitted and must leave the canonical ``proposal_digest``
-   unchanged.  It is ``xfail(strict=True)`` because the model is currently
-   registered in the blanket immutable-model loop in
-   ``clara_api/db/models.py``, which rejects ANY ``UPDATE``.  The fix belongs
-   to task ``SH-repair_immutable`` (a projection allow-list analogous to
-   ``_protect_glhs_assertion_content``); when that fix lands, strict xfail
-   flips this test to XPASS and fails the suite until the mark is removed.
+   unchanged.  The model uses a projection allow-list listener
+   (``_protect_glhs_proposal_content``) registered by task
+   ``SH-repair_immutable``; the earlier ``xfail(strict=True)`` defect marker
+   has been removed now that the desired behaviour holds.
 2. ``test_reject_canonical_update`` documents the adversarial control that
    must genuinely pass today: mutating canonical proposal content
    (``origin`` / ``proposed_transition`` / ``source_snapshot_digest``) raises
@@ -129,11 +127,6 @@ def _row_digest(db: Session, proposal_id: int) -> str:
     return consistency_fingerprint(_proposal_envelope(row))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="R4 bug: proposal registered in blanket immutable loop; "
-    "fix belongs to SH-repair_immutable",
-)
 def test_projection_whitelist() -> None:
     """Desired behaviour: projection-only UPDATE is permitted, digest unchanged.
 
@@ -174,8 +167,8 @@ def test_projection_whitelist() -> None:
 def test_reject_canonical_update() -> None:
     """Adversarial control: canonical UPDATE raises and the row is unchanged.
 
-    Must genuinely pass today: the blanket immutable loop rejects any UPDATE
-    on ``GlhsClinicalCommitmentProposal`` before the flush reaches the DB.
+    Must genuinely pass today: the projection allow-list rejects any UPDATE
+    touching canonical proposal fields before the flush reaches the DB.
     """
 
     engine = create_engine("sqlite://")

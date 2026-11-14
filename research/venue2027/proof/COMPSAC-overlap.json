@@ -1,0 +1,40 @@
+{
+  "task_id": "COMPSAC-overlap",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "changed_paths": [
+    "research/venue2027/compsac/overlap_audit.md",
+    "research/venue2027/compsac/tests/test_overlap_audit.py",
+    "research/venue2027/proof/COMPSAC-overlap.json",
+    "research/venue2027/proof/logs/COMPSAC-overlap.claim_overlap.log",
+    "research/venue2027/proof/logs/COMPSAC-overlap.pytest.log",
+    "research/venue2027/proof/logs/COMPSAC-overlap.ruff.log",
+    "research/venue2027/proof/logs/COMPSAC-overlap.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 - # claim_overlap.py executable check against research/venue2027/_shared/study_claims.json: assert compsac shares no question+endpoint with any other venue and reuses no archive",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-overlap.claim_overlap.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/compsac/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-overlap.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/compsac/tests/test_overlap_audit.py && uvx ruff@0.7.1 format --check research/venue2027/compsac/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-overlap.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/compsac/overlap_audit.md": "26fe13f987a268267c07235c728336926d7b263f86acd2ca5866f254b75430c8",
+    "research/venue2027/compsac/tests/test_overlap_audit.py": "09bc58acee2c99fc325ccc077c8d08b9fd8cb359b07e9e5f61748c415064a83e"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 overlap gate: comparison vs all nine 2027 venues and historical GLHS R4 / GovRed / GovMut / CareGuard / HEALTHINF; artifact reuse table (no reused raw case IDs, labels, figures, endpoints); frozen E15-E22 outcomes explicitly NOT reused as new independent evidence; DSN contrast (crash consistency vs benign-contention concurrent-write admission). Executable claim_overlap.py check over study_claims.json: compsac shares no question+endpoint pair with any other venue, reuses_archive=[], zero findings. Decision: PASS. Deliverable commit SHA reported in task handoff (cannot embed a commit's own SHA)."
+}

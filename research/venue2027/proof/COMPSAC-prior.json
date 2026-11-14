@@ -1,0 +1,39 @@
+{
+  "task_id": "COMPSAC-prior",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "changed_paths": [
+    "research/venue2027/compsac/literature_matrix.csv",
+    "research/venue2027/compsac/tests/test_literature_matrix.py",
+    "research/venue2027/proof/logs/COMPSAC-prior.pytest.log",
+    "research/venue2027/proof/logs/COMPSAC-prior.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/compsac/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-prior.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/compsac/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-prior.ruff.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 format --check research/venue2027/compsac/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-prior.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/compsac/literature_matrix.csv": "1c807abdf086fc048598ee11f377049d8939be6aa3630b2861c66a5d19d98ab6",
+    "research/venue2027/compsac/tests/test_literature_matrix.py": "5cf6d68dab88e1a83696d5db81acba821bd2e96b4988055399c7891e776bcbb8",
+    "research/venue2027/proof/logs/COMPSAC-prior.pytest.log": "63d7a2372c998e5eece86a21ba5445a6882758fc30f56b0cfbe09136c18f82d3",
+    "research/venue2027/proof/logs/COMPSAC-prior.ruff.log": "ce04ce92b16073000b77c97a42c00b98b96305692d9d5ed4dcfa5a9ca9ea62d6"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 prior-art ledger: literature_matrix.csv with 8 rows covering all five blueprint arms (B0 global-profile version OCC, B1 Silo-style entity readset OCC [silo13], B2 PostgreSQL SSI [Ports & Grittner 2012, doi:10.14778/2367502.2367515, code github.com/postgres/postgres, ORIGINAL_UPSTREAM], B3 entity-OCC ablation, B4 candidate) plus elle20, zanzibar19, macaroons14; every row carries a mechanism analysis, no fabricated ids, UNAVAILABLE_NOT_RUN used where no pin-able implementation exists. Validator test_literature_matrix.py: 9 tests pass; ruff check + format clean. Baseline parity NOT_APPLICABLE (matrix phase; arms execute in P03 per source_reference_map COMPSAC-X04/X05). Deliverable commit SHA reported in task handoff (cannot embed a commit's own SHA)."
+}

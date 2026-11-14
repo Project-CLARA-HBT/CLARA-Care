@@ -1,0 +1,11 @@
+claim_overlap.py executable check — task COMPSAC-overlap
+tool version: 1.0.0
+claims loaded: ['compsac', 'popets', 'aime', 'ifip_sec', 'acns', 'dsn', 'dimva', 'pst', 'sacmat']
+compsac research_question: Compared with globally versioned OCC, does a dependency-complete read set reduce unnecessary aborts without increasing forbidden commits?
+compsac primary_endpoint:  forbidden commit rate under dependency-complete schedules
+compsac reuses_archive:    []
+endpoint shared with:      ['compsac']
+question shared with:      ['compsac']
+findings involving compsac: []
+audit ok: True
+RESULT: compsac shares no question+endpoint pair with any other venue; no archive reuse. PASS

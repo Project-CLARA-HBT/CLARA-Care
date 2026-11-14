@@ -1,0 +1,40 @@
+{
+  "task_id": "PST-threat",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "00bcd76caf8a84031edc2c7e0f6513abc8cf31e5",
+  "changed_paths": [
+    "research/venue2027/pst/threat_model.md",
+    "research/venue2027/pst/tests/test_threat_model.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/pst/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-threat.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/pst/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-threat.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/pst/tests/ research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-threat.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/_shared/tools/threat_model.py research/venue2027/pst/threat_model.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-threat.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/pst/threat_model.md": "b23953f12e04579fc7a88c29dcdef01379eb5696af835eee83b2c3da39b115d8",
+    "research/venue2027/pst/tests/test_threat_model.py": "23c2aabdeb5cf6f8e36d7a00c33c8465a93d4e53879c7233116cbbb86623341e"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Design-level threat model for ReceiptMin (PST, P01). Attacker/observer capabilities P1-P7 including compromised read-only audit reader with auxiliary-data joins; trusted components T1-T5 (append-only receipts, retention policy engine/map, HMAC purpose-binding key custody, independent oracle ledger, consent/policy epoch registry) each with declared failure behavior; excluded domains X1-X6 (full disk compromise, key custody/physical, dispatch path, immutable disclosures/backups, production enforcement, real PHI) with residual risks; revocation instant r and retention deadline d schedule time; model agency bounded by the ex-ante frozen forensic query set; resubmission power collapsed by stable logical operation IDs and epoch freshness. Eleven attack families, each pairing a clean control with an adversarial case, covering the five canonical validator families plus the PST-specific forensic_omission, receipt_forgery, selective_omission, record_tampering, linkability_leakage and timestamp_inference families mapped to PST-CASE-01..09. Stable reason codes; UNKNOWN and INDETERMINATE are counted, never coerced into passes. Shared validate_threat() validator: ok=true, all five canonical families paired. Tests: 19 passed (real file passes validator; incomplete models refused with MISSING_SECTION / FAMILY_WITHOUT_PAIR; forensic-omission family asserted with clean+adversarial cells and case anchors); full pst+_shared suite 162 passed. ruff 0.7.1 clean. No empirical numbers."
+}

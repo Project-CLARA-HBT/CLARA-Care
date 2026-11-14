@@ -1,0 +1,44 @@
+{
+  "task_id": "DIMVA-threat",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "0346ef336554c3b79f089fca9e051ae3fa09dc73",
+  "changed_paths": [
+    "research/venue2027/dimva/threat_model.md",
+    "research/venue2027/dimva/tests/test_threat_model.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest research/venue2027/dimva/tests/test_threat_model.py -q",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-threat.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest research/venue2027/_shared/tests/ research/venue2027/dimva/tests/ -q",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-threat.suite.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/dimva/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-threat.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/_shared/tools/threat_model.py research/venue2027/dimva/threat_model.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-threat.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/dimva/threat_model.md": "92f0c8fb5bd6967fffd29ff7849ac7851c30db5c1fe6f6818489e3516e3168d9",
+    "research/venue2027/dimva/tests/test_threat_model.py": "96ada52a44765a31af50169f9ee05db0997376566795324eda786979ea9d64c2",
+    "research/venue2027/proof/logs/DIMVA-threat.pytest.log": "8713bf4f0121067551b9a6ee2450f5b5f26a4ad717f39b24cdd3f367d389fcf1",
+    "research/venue2027/proof/logs/DIMVA-threat.suite.log": "3df90904342bd107fa91ad5c8f8617dafae11c69d925b3aeb679d748b5bd4e46",
+    "research/venue2027/proof/logs/DIMVA-threat.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/DIMVA-threat.validator.log": "384312e3946e5b682bc4487b5c4fe293f00ec916b1eefc6246ac409d81b5fb00"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Threat/trust/failure model signed: attacker/observer capabilities (A1-A5, O1-O2), trusted components (minimal event collector T1, detection model T2, sealed oracle T3, policy engine T4), excluded domains (host-level rootkit, infra, digest cryptanalysis, prevention endpoints), revocation + logical schedule-time semantics, model agency + receipt-replay power, and a paired clean/adversarial matrix over all five canonical families plus the DIMVA-specific adaptive_probing family (validator ok:true, all families covered). 14 structural tests pass incl. negative controls (incomplete model, unpaired family, dropped family all refused). Finding: shared validator UNDEFINED_AUTHORITY branch is unsatisfiable ('defined' is substring of 'undefined'); shared tool left untouched (not this task's file); defined-authority declaration enforced at document-contract level in test_threat_model.py for independent follow-up. Dependencies DIMVA-scope and SH-research_ethics PASS. No empirical numbers; synthetic-only per SH-research_ethics."
+}

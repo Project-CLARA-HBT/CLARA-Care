@@ -1,0 +1,51 @@
+{
+  "task_id": "DSN-threat",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "changed_paths": [
+    "research/venue2027/dsn/threat_model.md",
+    "research/venue2027/dsn/tests/test_threat_model.py",
+    "research/venue2027/proof/DSN-threat.json",
+    "research/venue2027/proof/logs/DSN-threat.pytest.log",
+    "research/venue2027/proof/logs/DSN-threat.ruff.log",
+    "research/venue2027/proof/logs/DSN-threat.validator.log",
+    "research/venue2027/proof/logs/DSN-threat.suite.log",
+    "research/venue2027/proof/logs/DSN-threat.shared_regression.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dsn/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-threat.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/dsn/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-threat.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/_shared/tools/threat_model.py research/venue2027/dsn/threat_model.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-threat.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dsn/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-threat.suite.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/test_shared_foundations.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-threat.shared_regression.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/dsn/threat_model.md": "96175aa56f926d8ce6acb11e80a8e919e848b8c5c532478af5c9eb0f9c184b71",
+    "research/venue2027/dsn/tests/test_threat_model.py": "1da163ebc70aa943441382c7788e49e94c0d58da4b6a2c1b5c5e7d671fab373c"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 design artifact: DSN threat/trust/failure model with attacker/observer capabilities (A1 crash injector, A2 at-least-once broker, A3 scheduler, A4 observer, A5 durability liar, A6 consent-epoch race, A7 untrusted AI proposer, A8 journal tamperer), six trusted components (append-only safety journal, durable storage, idempotency ledger, consent epoch service, fail-closed reconciler, signing-key custody), excluded domains (physical destruction, undetectable Byzantine storage, signature forgery, superuser WAL forgery), tri-state recoverable outcome COMMITTED/REJECTED/INDETERMINATE with stable reason codes, revocation/schedule-time semantics on logical schedules, and a paired clean/adversarial matrix over six families incl. crash_consistency (crash mid-mutation, torn journal write, duplicate/lost recovery transition, fsync assumption failure, non-idempotent retry). Machine-validated: shared validate_threat ok:true (all 5 families paired); 15 new tests pass incl. real-file-passes, incomplete-model-fails (x3), and crash-family clean+adversarial assertions; DSN suite 25 passed; shared foundations regression 25 passed; ruff clean. No empirical numbers; artifacts derive from artifacts/venue2027/dsn/<run_id>/manifest.json only."
+}

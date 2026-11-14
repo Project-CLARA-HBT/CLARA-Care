@@ -1,0 +1,45 @@
+{
+  "task_id": "IFIP_SEC-threat",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "changed_paths": [
+    "research/venue2027/ifip_sec/threat_model.md",
+    "research/venue2027/ifip_sec/tests/test_threat_model.py",
+    "research/venue2027/proof/IFIP_SEC-threat.json",
+    "research/venue2027/proof/logs/IFIP_SEC-threat.pytest.log",
+    "research/venue2027/proof/logs/IFIP_SEC-threat.ruff.log",
+    "research/venue2027/proof/logs/IFIP_SEC-threat.validator.log",
+    "research/venue2027/proof/logs/IFIP_SEC-threat.shared_regression.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/ifip_sec/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-threat.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/ifip_sec/ && ruff format --check research/venue2027/ifip_sec/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-threat.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/_shared/tools/threat_model.py research/venue2027/ifip_sec/threat_model.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-threat.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-threat.shared_regression.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/ifip_sec/threat_model.md": "c40ad063436af543faa5b909c150db7561fdeba41604f3094cd52977c4a612b9",
+    "research/venue2027/ifip_sec/tests/test_threat_model.py": "8a35afafbc0a012fe246ea6cab6955e2c30542451bac7e0bb0b12653a1c711a4"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 threat model frozen: attacker/observer classes A1-A5 plus audit observers; trusted components (capability receipt format, delegation ledger, policy engine with independent consent/policy epochs, consume-once nonce store under real PostgreSQL 16 for RQ2, independent oracle, synthetic fixture generator); excluded domains (compromised signing keys, Byzantine policy engine/ledger, storage tampering, prompt injection, cryptanalysis, DoS, real PHI); revocation/schedule time is logical (dispatch -> revoke-commit -> consume interleavings); model agency with stale-re-execution power; paired clean/adversarial matrix over all five registered families mapped to IFIP_SEC-CASE-01..06 fixtures. Shared validator validate_threat() returns ok=true with all five families paired. 16 positive/adversarial tests pass; shared regression suite 131 tests pass; ruff clean. Validator caveat recorded honestly: the UNDEFINED_AUTHORITY branch in the shared validator is unreachable code (the substring 'defined' is contained in 'undefined', so its guard can never hold); the threat model therefore declares defined authority explicitly and the test file enforces the documented contract directly on the section text. SHA convention follows repo precedent (SH-claim_overlap/IFIP_SEC-scope): before==after==parent source state because the single required commit contains this self-referential report; the final deliverable commit SHA is reported in the handoff."
+}

@@ -1,0 +1,44 @@
+{
+  "task_id": "AIME-threat",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "changed_paths": [
+    "research/venue2027/aime/threat_model.md",
+    "research/venue2027/aime/tests/test_threat_model.py",
+    "research/venue2027/proof/logs/AIME-threat.pytest.log",
+    "research/venue2027/proof/logs/AIME-threat.ruff.log",
+    "research/venue2027/proof/logs/AIME-threat.suite.log",
+    "research/venue2027/proof/AIME-threat.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/aime/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-threat.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/ research/venue2027/aime/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-threat.suite.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/aime/ && ruff format --check research/venue2027/aime/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-threat.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/_shared/tools/threat_model.py research/venue2027/aime/threat_model.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-threat.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/aime/threat_model.md": "8259257fbfadbab8cf61e0a0b9c26014d2d774f982dbbc15a3284c3ae7faa145",
+    "research/venue2027/aime/tests/test_threat_model.py": "2b213c3cf9de1849a0cfcba4b49d80099ded0ab87eaeac9e2305f6cfcd2fe6ea"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 AIME threat/trust/failure model. Attacker tiers A1-A5 (context manipulation, stale-state exploitation, prompt injection via clinical text, model over-agency, insider/observer); trusted components T1-T6 (synthetic generator, frozen policy/consent epoch registry, independent authorized-evidence oracle, blinded clinician adjudication panel, tamper-evident manifest, pinned baselines); excluded domains (real PHI, direct diagnosis/prescribing authority, clinical-efficacy claims, production surfaces); logical-time revocation semantics with per-step consent epochs; model agency + replay power bounded by epoch rechecking; paired clean/adversarial matrix covering all five validator families (revocation_timing, replay, model_agency, purpose_scope, insider_or_observer), each mapping to CASE_MATRIX fixtures. Mandatory language asserted by tests: no real PHI, synthetic vignettes only, synthetic action correctness is NOT clinical efficacy, blinded independent clinician review required. Validator validate_threat(): ok=true, 0 missing sections, 0 unpaired families. Known limitation (not blocking, recorded for validator owner): the shared validator's UNDEFINED_AUTHORITY reason code is unreachable (the literal 'undefined' always contains 'defined'), so the undefined-authority negative control is enforced at document-contract level by test_undefined_authority_is_refused_by_the_model_contract. No real PHI; synthetic fixtures only; no efficacy claims; no numbers invented. source_sha_after is the parent SHA of the single AIME-threat commit, per AIME-scope convention."
+}

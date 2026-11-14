@@ -1,0 +1,42 @@
+{
+  "task_id": "SH-repair_immutable",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "changed_paths": [
+    "services/api/src/clara_api/db/models.py",
+    "services/api/tests/test_glhs_immutable_projection_contract.py",
+    "research/venue2027/_shared/glhs_immutable_lifecycle.md",
+    "research/venue2027/proof/SH-repair_immutable.json",
+    "research/venue2027/proof/logs/SH-repair_immutable_r4_gate_suite.log",
+    "research/venue2027/proof/logs/SH-repair_immutable_security_regression.log",
+    "research/venue2027/proof/logs/SH-repair_immutable_ruff_check.log"
+  ],
+  "commands": [
+    {
+      "argv": "cd services/api && DATABASE_URL=sqlite+pysqlite:////tmp/clara_repair.db AUTH_AUTO_PROVISION_USERS=true AUTH_BOOTSTRAP_ADMIN_ENABLED=true GLHS_RESEARCH_COMPARATORS_ENABLED=true PYTHONPATH=src:../ml/src:. uv run pytest -q tests/test_glhs_immutable_projection_contract.py tests/test_glhs_r4_admission.py tests/test_glhs_r4_comparators.py tests/test_glhs_comparator_policies.py tests/test_glhs_current_state_insufficiency.py tests/test_glhs_inference_envelope.py tests/test_glhs_reason_codes.py tests/test_glhs_attestation_receipts.py tests/test_inference_attestation.py tests/test_glhs_grwc_lineage.py tests/test_glhs_mandatory_thss_binding.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-repair_immutable_r4_gate_suite.log"
+    },
+    {
+      "argv": "cd services/api && uv run pytest -q tests/test_glhs_r4_admission.py tests/test_glhs_grwc_lineage.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-repair_immutable_security_regression.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check services/api/src/clara_api/db/models.py services/api/tests/test_glhs_immutable_projection_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-repair_immutable_ruff_check.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/glhs_immutable_lifecycle.md": "ac0f9965f449a440df149b0fadd6ffcacf3e20c48f66625840e66856a3c74335",
+    "research/venue2027/proof/logs/SH-repair_immutable_r4_gate_suite.log": "7af24371757ee26e9de3dc2f6b6a251fb19fb72267fa03dc94d395964ee1ee84",
+    "research/venue2027/proof/logs/SH-repair_immutable_security_regression.log": "fd45e40f494eb7dfaaed19647827eead6c5835287eab59d80e93a20eae91d3ea",
+    "research/venue2027/proof/logs/SH-repair_immutable_ruff_check.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "R4 fix: GlhsClinicalCommitmentProposal moved from the blanket immutable loop to _protect_glhs_proposal_content (projection allow-list frozenset({'admission_decision','sealed_at'})) with before_delete still _reject_glhs_ledger_mutation; before_delete for every other blanket-loop model unchanged. Obsolete xfail(strict) removed from test_projection_whitelist (XPASS defect marker); both real assertions kept. R4 gate suite: 64 passed, exit 0; security regression: 16 passed, exit 0; ruff 0.7.1 clean. Immutability preserved for all other GLHS models."
+}

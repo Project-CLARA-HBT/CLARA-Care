@@ -1,0 +1,40 @@
+{
+  "task_id": "COMPSAC-threat",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "changed_paths": [
+    "research/venue2027/compsac/threat_model.md",
+    "research/venue2027/compsac/tests/test_threat_model.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/threat_model.py research/venue2027/compsac/threat_model.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-threat.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/compsac/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-threat.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/compsac/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-threat.ruff.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 format --check research/venue2027/compsac/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-threat.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/compsac/threat_model.md": "8857bb582d2c4b6c2b426b3280d61d7d29a8055b9a2b541544a2f1398dc9e72a",
+    "research/venue2027/compsac/tests/test_threat_model.py": "30063567cb6b5a46a6a4bda1a1db888dd007fd998839eb0419a7e374cd05a81d"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 threat model: attacker (A1-A5) / observer (E1-E3) capabilities, trusted components (PostgreSQL pinned release, schema-defined dependency oracle, DB version/epoch anchors, canonical lock-order table, Elle-style independent checker), excluded domains (network-partition Byzantine nodes, compromised DB superuser, crypto breaks, side channels, real-patient harm), logical-time revocation/schedule semantics, untrusted model agency with bounded replay power, and the full paired attack/control matrix - every validator family row carries both clean: and adversarial: cases, including COMPSAC-specific concurrent-write, omitted-dependency write skew, consent/policy epoch race, stale read-set, lease/version forgery, SSI false-negative and actor/oracle confusion threats with stable reason codes. Real threat_model.md passes the shared validator (ok:true, all 5 families paired); 12/12 tests pass including the adversarial incomplete-model mutant (line-level family deletion) which fails with FAMILY_WITHOUT_PAIR. Validator-limitation disclosure: the shared validator's UNDEFINED_AUTHORITY probe is unsatisfiable as shipped ('undefined' always contains 'defined', so its tail guard can never fire); authority binding is therefore enforced structurally by test_oracle_authority_binding_is_structural. Deliverable commit SHA reported in task handoff (cannot embed a commit's own SHA)."
+}

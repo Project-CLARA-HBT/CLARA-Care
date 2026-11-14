@@ -1,0 +1,43 @@
+[
+  {
+    "schema_version": "1",
+    "independent_unit_id": "unit:2026-11-15:0101",
+    "case_id": "case-0101",
+    "arm_id": "B2",
+    "expected_outcome": "REJECT",
+    "observed_outcome": "REJECT",
+    "retriable": false,
+    "counted_as_success": true,
+    "evidence": [
+      {
+        "pointer_kind": "oracle_label",
+        "uri": "oracle/labels/unit-0101.json",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+      }
+    ],
+    "source_sha": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+    "backend": "postgresql",
+    "seed": 7
+  },
+  {
+    "schema_version": "1",
+    "independent_unit_id": "unit:2026-11-15:0102",
+    "case_id": "case-0102",
+    "arm_id": "B2",
+    "expected_outcome": "ADMIT",
+    "observed_outcome": "NOT_RUN_EXTERNAL",
+    "retriable": true,
+    "counted_as_success": true,
+    "evidence": [
+      {
+        "pointer_kind": "provider_trace",
+        "uri": "evidence/provider_outage/unit-0102.log",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+      }
+    ],
+    "source_sha": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+    "backend": "postgresql",
+    "seed": 7,
+    "notes": "ADVERSARIAL CONTROL: external provider outage invented as a success count."
+  }
+]

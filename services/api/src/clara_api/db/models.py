@@ -3117,6 +3117,17 @@ def _protect_glhs_inference_binding_content(
     )
 
 
+def _protect_glhs_proposal_content(
+    mapper: object, connection: object, target: object
+) -> None:
+    _reject_glhs_canonical_content_mutation(
+        mapper,
+        connection,
+        target,
+        projection_fields=frozenset({"admission_decision", "sealed_at"}),
+    )
+
+
 sa_event.listen(GlhsAssertion, "before_update", _protect_glhs_assertion_content)
 sa_event.listen(GlhsAssertion, "before_delete", _reject_glhs_ledger_mutation)
 sa_event.listen(GlhsConflict, "before_update", _protect_glhs_conflict_content)
@@ -3126,6 +3137,12 @@ sa_event.listen(
 )
 sa_event.listen(
     GlhsInferenceContextBinding, "before_delete", _reject_glhs_ledger_mutation
+)
+sa_event.listen(
+    GlhsClinicalCommitmentProposal, "before_update", _protect_glhs_proposal_content
+)
+sa_event.listen(
+    GlhsClinicalCommitmentProposal, "before_delete", _reject_glhs_ledger_mutation
 )
 
 
@@ -3139,7 +3156,6 @@ for _immutable_glhs_model in (
     GlhsSnapshotManifest,
     GlhsClinicalCommitment,
     GlhsClinicalCommitmentVersion,
-    GlhsClinicalCommitmentProposal,
     GlhsClinicalCommitmentTransition,
     GlhsProposalDependency,
     GlhsAppliedTransition,

@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://clara-care.dev/research/venue2027/schemas/outcome.v1.schema.json",
+  "title": "CLARA 2027 shared per-unit outcome record, version 1",
+  "description": "One per-arm outcome for one independently sampled unit. EXPECTED and OBSERVED outcomes are tracked as separate required enum fields so an oracle expectation can never be overwritten by, or collapsed into, what the arm actually did (INDEPENDENT_EVIDENCE_PROTOCOL.md rules 4 and 8). The observed enum is closed: ADMIT | REJECT | INDETERMINATE | NOT_RUN_EXTERNAL | EXECUTION_ERROR | TIMEOUT. INDETERMINATE, NOT_RUN_EXTERNAL, EXECUTION_ERROR and TIMEOUT are first-class outcomes and can never be tallied as success, so counted_as_success MUST be false for them: the oneOf constraint pair below admits exactly (a) observed in {ADMIT, REJECT} or (b) observed in {INDETERMINATE, NOT_RUN_EXTERNAL, EXECUTION_ERROR, TIMEOUT} with counted_as_success=false, so the schema itself rejects a false zero. No invented false zeros are permitted anywhere in the record.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1"
+    },
+    "independent_unit_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:.-]{1,128}$",
+      "description": "Required. The independent experimental unit this outcome belongs to; never inferred from timestamps."
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Case within the unit family that produced this outcome."
+    },
+    "arm_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Arm being measured (from the predeclared baseline tables)."
+    },
+    "expected_outcome": {
+      "enum": [
+        "ADMIT",
+        "REJECT",
+        "INDETERMINATE"
+      ],
+      "description": "Independent oracle expectation, frozen before the run. The oracle is independent of candidate code; only the oracle labels ADMIT/REJECT/INDETERMINATE expectations (indeterminable expectations are declared INDETERMINATE, never silently resolved)."
+    },
+    "observed_outcome": {
+      "enum": [
+        "ADMIT",
+        "REJECT",
+        "INDETERMINATE",
+        "NOT_RUN_EXTERNAL",
+        "EXECUTION_ERROR",
+        "TIMEOUT"
+      ],
+      "description": "What the arm actually did, decided by the independent oracle from persisted state and event evidence. INDETERMINATE = ground truth ambiguous. NOT_RUN_EXTERNAL = blocked by an unavailable external dependency (provider, PG, reviewer). EXECUTION_ERROR = the arm itself failed. TIMEOUT = the predeclared per-unit budget elapsed. None of these four may ever be counted as a success or safe rejection."
+    },
+    "retriable": {
+      "type": "boolean",
+      "description": "Required. True only for failures that a bounded retry (predeclared budget) could legitimately resolve (typically NOT_RUN_EXTERNAL / TIMEOUT). Distinguishes a retryable environment block from a durable outcome; retriable failures stay in their outcome bucket and are never folded into success."
+    },
+    "counted_as_success": {
+      "type": "boolean",
+      "description": "Required. True iff this unit counts toward the arm's success denominator. MUST be false for observed INDETERMINATE, NOT_RUN_EXTERNAL, EXECUTION_ERROR and TIMEOUT (enforced by allOf/if-then: the schema itself rejects a false zero)."
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "case.v1.schema.json#/$defs/evidence_pointer"
+      },
+      "description": "At least one frozen evidence pointer for the observation (persisted DB state, provider trace, oracle label, sealed log). Required for every outcome including NOT_RUN_EXTERNAL and TIMEOUT, so a missing observation is never silently serialized."
+    },
+    "source_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Frozen full git commit SHA the outcome applies to."
+    },
+    "backend": {
+      "enum": [
+        "postgresql",
+        "sqlite",
+        "synthetic"
+      ],
+      "description": "Required execution backend; PostgreSQL claims must use postgresql."
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 18446744073709551615,
+      "description": "Required RNG seed; untracked randomness is forbidden."
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Forensic timestamp only; no inferential weight."
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "independent_unit_id",
+    "case_id",
+    "arm_id",
+    "expected_outcome",
+    "observed_outcome",
+    "retriable",
+    "counted_as_success",
+    "evidence",
+    "source_sha",
+    "backend",
+    "seed"
+  ],
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "observed_outcome": {
+          "enum": [
+            "ADMIT",
+            "REJECT"
+          ]
+        }
+      },
+      "required": [
+        "observed_outcome"
+      ]
+    },
+    {
+      "properties": {
+        "observed_outcome": {
+          "enum": [
+            "INDETERMINATE",
+            "NOT_RUN_EXTERNAL",
+            "EXECUTION_ERROR",
+            "TIMEOUT"
+          ]
+        },
+        "counted_as_success": {
+          "const": false
+        },
+        "retriable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "observed_outcome",
+        "counted_as_success"
+      ]
+    }
+  ],
+  "$defs": {
+    "observed_outcome": {
+      "enum": [
+        "ADMIT",
+        "REJECT",
+        "INDETERMINATE",
+        "NOT_RUN_EXTERNAL",
+        "EXECUTION_ERROR",
+        "TIMEOUT"
+      ],
+      "description": "Reusable observed-outcome enum; INDETERMINATE, NOT_RUN_EXTERNAL, EXECUTION_ERROR and TIMEOUT are mandatory first-class outcomes that can never be folded into success."
+    },
+    "expected_outcome": {
+      "enum": [
+        "ADMIT",
+        "REJECT",
+        "INDETERMINATE"
+      ],
+      "description": "Reusable expected-outcome enum (independent oracle labels only; no NOT_RUN/EXECUTION_ERROR values on the expectation side)."
+    }
+  }
+}

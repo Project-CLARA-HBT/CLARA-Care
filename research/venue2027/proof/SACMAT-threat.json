@@ -1,0 +1,39 @@
+{
+  "task_id": "SACMAT-threat",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "changed_paths": [
+    "research/venue2027/sacmat/threat_model.md",
+    "research/venue2027/sacmat/tests/test_threat_model.py",
+    "research/venue2027/proof/logs/SACMAT-threat.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-threat.ruff.log",
+    "research/venue2027/proof/logs/SACMAT-threat.validator.log",
+    "research/venue2027/proof/SACMAT-threat.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/sacmat/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-threat.pytest.log"
+    },
+    {
+      "argv": "uvx ruff check research/venue2027/sacmat/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-threat.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/_shared/tools/threat_model.py research/venue2027/sacmat/threat_model.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-threat.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/sacmat/threat_model.md": "9cf458d05a4b596b413e255f0125021cb29999c979580b7726374046ac0c53e2",
+    "research/venue2027/sacmat/tests/test_threat_model.py": "0180e5ed6a79c0d5feb709eb7b36553077d0e92ed34e43c0f7aaea47105928e0"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 threat/trust/failure model signed: 5 canonical validator families + 6 extended SACMAT families (delegated-consent divergence, sub-chain forgery, policy-version skew, obligation/purpose mismatch, conformance-test evasion, expiry race) each with paired clean+adversarial cases; attacker grades A1-A5, trusted components with fail-closed failure semantics, excluded domains (engine implementation compromise et al.), revocation/schedule-time and replay-power declarations, undefined-authority negative control. Shared validator validate_threat() ok:true (exit 0); pytest 9 passed; ruff clean. Design-time document, PROSPECTIVE / NOT RUN, no empirical numbers; single-commit delivery on top of base f35af111."
+}

@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "reason_codes": [],
+  "missing_sections": [],
+  "families_without_pair": [],
+  "families_covered": [
+    "insider_or_observer",
+    "model_agency",
+    "purpose_scope",
+    "replay",
+    "revocation_timing"
+  ],
+  "version": "1.0.0"
+}

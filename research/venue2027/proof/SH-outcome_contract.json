@@ -1,0 +1,64 @@
+{
+  "task_id": "SH-outcome_contract",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "cfa868a4ad9c83ff97e422a62da74b5380631883",
+  "changed_paths": [
+    "research/venue2027/_shared/schemas/outcome.v1.schema.json",
+    "research/venue2027/_shared/tools/outcome_contract.py",
+    "research/venue2027/_shared/tests/test_outcome_contract.py",
+    "research/venue2027/_shared/fixtures/outcome/honest_outcomes.json",
+    "research/venue2027/_shared/fixtures/outcome/false_zero.json",
+    "research/venue2027/proof/logs/SH-outcome_contract.pytest.log",
+    "research/venue2027/proof/logs/SH-outcome_contract.ruff.log",
+    "research/venue2027/proof/logs/SH-outcome_contract.cli-honest.log",
+    "research/venue2027/proof/logs/SH-outcome_contract.cli-false-zero.log",
+    "research/venue2027/proof/logs/SH-outcome_contract.mypy.log",
+    "research/venue2027/proof/logs/SH-outcome_contract.pytest-apienv.log",
+    "research/venue2027/proof/logs/SH-outcome_contract.suite.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/test_outcome_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-outcome_contract.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/_shared/tools/outcome_contract.py research/venue2027/_shared/tests/test_outcome_contract.py --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-outcome_contract.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/_shared/tools/outcome_contract.py research/venue2027/_shared/fixtures/outcome/honest_outcomes.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-outcome_contract.cli-honest.log"
+    },
+    {
+      "argv": "uv run --frozen --extra dev --no-editable --project services/api mypy research/venue2027/_shared/tools/outcome_contract.py --ignore-missing-imports",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-outcome_contract.mypy.log"
+    },
+    {
+      "argv": "uv run --frozen --extra dev --no-editable --project services/api pytest -q research/venue2027/_shared/tests/test_outcome_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-outcome_contract.pytest-apienv.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-outcome_contract.suite.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/schemas/outcome.v1.schema.json": "e908c0f85b2290e012b2b258ce2f1719b89e8c3f8b0852c6fed9c95ea6b0afa3",
+    "research/venue2027/_shared/tools/outcome_contract.py": "842f0de15af0fb89dcd1687d213e9aef31a0a0c61687cc9c3bb66b3826c32338",
+    "research/venue2027/_shared/tests/test_outcome_contract.py": "6ff63677df0e1ee212970a0b12642a7469a9a7e17dd4523c21606cf6cc08f8c1",
+    "research/venue2027/_shared/fixtures/outcome/honest_outcomes.json": "f1d14f304dcf83fab05e56062afb30a172a46cf97d4c3a500826a565d340f773",
+    "research/venue2027/_shared/fixtures/outcome/false_zero.json": "cb0c6bc0af84211e05d692ee7a0ba50ca0ea1c1aa2282bba5b1d21d0fbb2167b",
+    "research/venue2027/proof/logs/SH-outcome_contract.cli-false-zero.log": "7b9aec4c3e59e0227976fe801cb7e4dca1f9916eb0efd4566c6fae5f6df30a59"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "outcome.v1 per-unit outcome record: independent expected_outcome (oracle-labelled ADMIT|REJECT|INDETERMINATE) and observed_outcome (closed enum ADMIT|REJECT|INDETERMINATE|NOT_RUN_EXTERNAL|EXECUTION_ERROR|TIMEOUT) tracked SEPARATELY and both required, retriable flag, >=1 frozen observation evidence pointer (shared case.v1 evidence_pointer), and counted_as_success. The false-zero ban is encoded IN THE SCHEMA as a oneOf constraint pair (the stdlib validator subset forbids if/then, failing closed with UNKNOWN_KEYWORD): exactly one branch may match - observed in {ADMIT,REJECT}, or observed in {INDETERMINATE,NOT_RUN_EXTERNAL,EXECUTION_ERROR,TIMEOUT} with counted_as_success=false - so a false zero is rejected with ONEOF_MISMATCH by schema_validator.py itself (reused, not reimplemented). validate_outcome(outcome)->bool and assert_no_false_zero(records) additionally refuse any NOT_RUN/INDETERMINATE/TIMEOUT/EXECUTION_ERROR counted as success or serialized as a numeric zero outcome, and require an explicit retriable flag for NOT_RUN_EXTERNAL/TIMEOUT. 21 tests (10 positive incl. expected-vs-observed mismatch surfaced-not-collapsed and retriable distinguished, 11 adversarial incl. parametrized false-zero refusal). Documented negative-control evidence (NOT a PASS command): python3 research/venue2027/_shared/tools/outcome_contract.py research/venue2027/_shared/fixtures/outcome/false_zero.json exited 1 with reason_code FALSE_ZERO_OUTCOME (the desired false-zero refusal), log at research/venue2027/proof/logs/SH-outcome_contract.cli-false-zero.log; the honest-fixture CLI run exits 0 (research/venue2027/proof/logs/SH-outcome_contract.cli-honest.log, denominator admit=0 reject=2 indeterminate=0 not_run_external=1 execution_error=1 timeout=1). mypy and the services/api pytest env run as extra gates. Full shared suite: 152 passed. STATE marking deferred to orchestrator (single-commit policy)."
+}

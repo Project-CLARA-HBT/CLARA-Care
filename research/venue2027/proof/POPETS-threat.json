@@ -1,0 +1,41 @@
+{
+  "task_id": "POPETS-threat",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "changed_paths": [
+    "research/venue2027/popets/threat_model.md",
+    "research/venue2027/popets/tests/test_threat_model.py",
+    "research/venue2027/proof/POPETS-threat.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/popets/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-threat.pytest.log"
+    },
+    {
+      "argv": "python3 research/venue2027/_shared/tools/threat_model.py research/venue2027/popets/threat_model.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-threat.validator.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/popets/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-threat.ruff.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 format --check research/venue2027/popets/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-threat.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/popets/threat_model.md": "6988c15f8ab4ba94616c0364db073fc8622fa14046800c8929209ff18846eb7b",
+    "research/venue2027/popets/tests/test_threat_model.py": "a957595dabc154185a2a4f3a6f650b2955b8f544e87eaf202788daa37c2fe676"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 threat model for Revocation-Complete Future Disclosure for Cached Longitudinal AI Contexts: attacker/observer capabilities A1-A8 incl. model agency and re-issue/replay power; trusted components (consent ledger, revocation propagation with Delta_max, lineage label service, byte-level sealed interceptor, logical scheduler); excluded domains (compromised provider infra beyond terms, already-delivered pre-revocation bytes =OUT_OF_SCOPE_PAST, no retroactive-erasure claim); revocation/schedule timing model t_r/t_e/t_d with races R1-R5; attack/control paired matrix covering revocation_timing, replay, model_agency, purpose_scope, insider_or_observer with clean+adversarial cases each, anchored to POPETS-CASE-01..09; defined oracle/actor authority partition; stable reason codes; falsification hook (B2 always-recompute). Validator validate_threat()=ok:true; pytest 8 passed; ruff check+format clean. No empirical numbers invented; synthetic-only."
+}
