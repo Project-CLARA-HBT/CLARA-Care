@@ -1,0 +1,35 @@
+{
+  "task_id": "ACNS-threat",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "changed_paths": [
+    "research/venue2027/acns/threat_model.md",
+    "research/venue2027/acns/tests/test_threat_model.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/acns/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-threat.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/acns/tests/test_threat_model.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-threat.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/_shared/tools/threat_model.py research/venue2027/acns/threat_model.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-threat.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/acns/threat_model.md": "1a316726630b6fb3b82f70259acee83a6b0d2f28851f9f62fb7fb71b64bf2e32",
+    "research/venue2027/acns/tests/test_threat_model.py": "f618566f9e9582a76b83653270cf147eee45ad27887c8d7d14a71e3bb326e1d1"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 threat/trust/failure model for the ACNS SoK. Attacks-on-attestation-evidence framing: forged provider receipts, attestation-level downgrade, evidence-boundary gaps, unsupported trust transitivity, timestamp-only evidence, incomplete disclosure. Declares SoK scope with explicit no-new-mechanism boundary and IFIP SEC/DIMVA firewall. 7 capability axes (A1-A7), 6 trusted components (TC1-TC6, pinned roots + receipt verification), 6 excluded domains (incl. hardware root-of-trust compromise), revocation/schedule-time semantics (mint vs verify time, revocation lag), model agency + artifact re-use power, 5-family attack/control paired matrix (clean+adversarial per family), 9-gap evidence-boundary register (G1-G9), defined oracle/actor authority with UNDEFINED_AUTHORITY->BLOCKED fail-closed handling. Passes shared validate_threat() (ok:true, all 5 families covered); 10/10 tests pass; ruff clean. No empirical values asserted; all outcomes route through artifacts/venue2027/acns/<run_id>/manifest.json post-freeze. source_sha_after is the base commit f35af111; the single task commit SHA is created immediately after this report and recorded in the commit body."
+}
