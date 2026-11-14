@@ -1,0 +1,33 @@
+{
+  "task_id": "SH-schedule_engine",
+  "status": "PASS",
+  "source_sha_before": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "source_sha_after": "f35af111cc04588c8c35705a53b47c4586db137d",
+  "changed_paths": [
+    "evaluation/venue2027/_shared/schedules.py",
+    "evaluation/venue2027/_shared/test_schedules.py",
+    "evaluation/venue2027/_shared/__init__.py",
+    "research/venue2027/proof/artifacts/schedules_sample.jsonl"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/test_schedules.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-schedule_engine.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/_shared/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-schedule_engine.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/_shared/schedules.py": "6ec3d7e45a302101aea94a84baeadb6aac611fbeb92f84a16d443fd3453ad843",
+    "evaluation/venue2027/_shared/test_schedules.py": "6764db7cb77ac8b99c6c39a8bd786807d0c51472cf33c2a67323216fe94d8675",
+    "research/venue2027/proof/artifacts/schedules_sample.jsonl": "e922c33cfe13f42f0e0b9cb3e74d45cfcc9c4dee5027a1c2281eef30987ae419"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Deterministic seeded permutation enumeration with monotonic logical clocks, canonical-digest dedup (24 generated = 24 unique) and BACKWARD_CLOCK refusal; 10 tests."
+}
