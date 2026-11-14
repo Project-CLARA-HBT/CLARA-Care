@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CLARA Connected Health & Wearables — Sync Adapter Protocol Schema",
+  "version": "1.0.0",
+  "phase_id": "PH13",
+  "agent_id": "A01",
+  "definitions": {
+    "SyncRateLimitPolicy": {
+      "type": "object",
+      "required": ["max_requests_per_minute", "max_records_per_batch", "max_payload_bytes", "sliding_window_seconds"],
+      "properties": {
+        "max_requests_per_minute": {
+          "type": "integer",
+          "default": 60,
+          "description": "Maximum requests permitted per connector per sliding minute"
+        },
+        "max_records_per_batch": {
+          "type": "integer",
+          "default": 500,
+          "description": "Maximum records allowed in a single sync batch (payload bomb guard)"
+        },
+        "max_payload_bytes": {
+          "type": "integer",
+          "default": 5242880,
+          "description": "Maximum raw payload size in bytes (5 MB limit)"
+        },
+        "sliding_window_seconds": {
+          "type": "integer",
+          "default": 60,
+          "description": "Rate limiting window duration in seconds"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SyncAdapterProtocolHandshake": {
+      "type": "object",
+      "required": [
+        "protocol_version",
+        "server_time",
+        "supported_providers",
+        "supported_data_types",
+        "rate_limits",
+        "idempotency_rules",
+        "supported_transports",
+        "data_protection_notice"
+      ],
+      "properties": {
+        "protocol_version": {
+          "type": "string",
+          "enum": ["connector.sync.v1"]
+        },
+        "server_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "supported_providers": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "supported_data_types": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "rate_limits": {
+          "$ref": "#/definitions/SyncRateLimitPolicy"
+        },
+        "idempotency_rules": {
+          "type": "object"
+        },
+        "supported_transports": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "data_protection_notice": {
+          "type": "string"
+        }
+      }
+    },
+    "CanonicalHealthValue": {
+      "type": "object",
+      "required": ["unit"],
+      "properties": {
+        "scalar": {
+          "type": ["number", "null"],
+          "description": "Numeric scalar measurement in declared unit"
+        },
+        "components": {
+          "type": ["object", "null"],
+          "additionalProperties": { "type": "number" },
+          "description": "Multicomponent measurement dictionary (e.g. systolic & diastolic mm[Hg])"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "Standard measurement unit (e.g. count, beats/min, mm[Hg], mg/dL)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CanonicalHealthRecord": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "profile_id",
+        "connector_id",
+        "provider",
+        "provider_record_id",
+        "record_type",
+        "value",
+        "observed_start",
+        "observed_end",
+        "data_origin"
+      ],
+      "properties": {
+        "schema_version": { "type": "string", "enum": ["1.0"] },
+        "profile_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$" },
+        "connector_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$" },
+        "provider": { "type": "string" },
+        "provider_record_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "record_type": { "type": "string" },
+        "value": { "$ref": "#/definitions/CanonicalHealthValue" },
+        "observed_start": { "type": "string", "format": "date-time" },
+        "observed_end": { "type": "string", "format": "date-time" },
+        "zone_offset_start": { "type": ["string", "null"] },
+        "zone_offset_end": { "type": ["string", "null"] },
+        "data_origin": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "device": { "type": "object" },
+        "recording_method": { "type": "string" },
+        "quality": { "type": "object" },
+        "provenance": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "ConnectorRecordTombstone": {
+      "type": "object",
+      "required": ["provider_record_id", "data_origin", "deleted_at"],
+      "properties": {
+        "provider_record_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "data_origin": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "deleted_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "SyncAdapterBatchRequest": {
+      "type": "object",
+      "required": [
+        "protocol_version",
+        "idempotency_key",
+        "profile_id",
+        "connector_id",
+        "provider"
+      ],
+      "properties": {
+        "protocol_version": { "type": "string", "default": "connector.sync.v1" },
+        "idempotency_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$" },
+        "profile_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$" },
+        "connector_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$" },
+        "provider": { "type": "string" },
+        "sync_mode": {
+          "type": "string",
+          "enum": ["incremental", "initial_sync", "catch_up", "backfill"],
+          "default": "incremental"
+        },
+        "cursor": { "type": ["string", "null"], "maxLength": 2048 },
+        "records": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CanonicalHealthRecord" },
+          "maxItems": 500
+        },
+        "tombstones": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ConnectorRecordTombstone" },
+          "maxItems": 500
+        },
+        "client_metadata": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "SyncRateLimitStatus": {
+      "type": "object",
+      "required": ["remaining", "limit", "reset_seconds"],
+      "properties": {
+        "remaining": { "type": "integer" },
+        "limit": { "type": "integer", "default": 60 },
+        "reset_seconds": { "type": "integer" }
+      }
+    },
+    "SyncAdapterBatchResponse": {
+      "type": "object",
+      "required": [
+        "protocol_version",
+        "batch_id",
+        "status",
+        "idempotent_replay",
+        "accepted_count",
+        "rejected_count",
+        "upserted_count",
+        "tombstoned_count",
+        "rate_limit_status",
+        "server_time"
+      ],
+      "properties": {
+        "protocol_version": { "type": "string", "enum": ["connector.sync.v1"] },
+        "batch_id": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["COMMITTED", "IDEMPOTENT_REPLAY", "PARTIAL", "FAILED"]
+        },
+        "idempotent_replay": { "type": "boolean" },
+        "accepted_count": { "type": "integer", "minimum": 0 },
+        "rejected_count": { "type": "integer", "minimum": 0 },
+        "upserted_count": { "type": "integer", "minimum": 0 },
+        "tombstoned_count": { "type": "integer", "minimum": 0 },
+        "next_cursor": { "type": ["string", "null"] },
+        "watermark": { "type": ["string", "null"], "format": "date-time" },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["error_code", "message"],
+            "properties": {
+              "index": { "type": ["integer", "null"] },
+              "provider_record_id": { "type": ["string", "null"] },
+              "error_code": { "type": "string" },
+              "message": { "type": "string" }
+            }
+          }
+        },
+        "rate_limit_status": { "$ref": "#/definitions/SyncRateLimitStatus" },
+        "server_time": { "type": "string", "format": "date-time" }
+      }
+    },
+    "SyncAdapterErrorEnvelope": {
+      "type": "object",
+      "required": ["error_code", "message", "correlation_id", "timestamp"],
+      "properties": {
+        "error_code": { "type": "string" },
+        "message": { "type": "string" },
+        "correlation_id": { "type": "string" },
+        "details": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

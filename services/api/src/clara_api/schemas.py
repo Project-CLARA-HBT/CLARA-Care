@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import math
 import re
 from datetime import date, datetime
 from enum import Enum
@@ -380,7 +383,7 @@ class OcrSourceCoordinate(BaseModel):
     end: int = Field(ge=0)
 
     @model_validator(mode="after")
-    def _ordered_offsets(self) -> "OcrSourceCoordinate":
+    def _ordered_offsets(self) -> OcrSourceCoordinate:
         if self.end < self.start:
             raise ValueError("OCR source coordinate end must not precede start")
         return self
@@ -854,7 +857,7 @@ class ResearchTier2JobCreateRequest(BaseModel):
     clarifying_answers: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def _reject_fast_personal(self) -> "ResearchTier2JobCreateRequest":
+    def _reject_fast_personal(self) -> ResearchTier2JobCreateRequest:
         # clara-research R15.2: preserve the invariant "never (fast && personal)".
         # Personalization is valid only in tier2 (deep / deep_beta); a fast request that
         # sets personal_mode is rejected rather than silently downgraded.
@@ -2186,3 +2189,249 @@ class TimelineContractMetadataResponse(BaseModel):
     bitemporal_axes: list[str] = Field(
         default_factory=lambda: ["valid_time (occurred_at)", "system_time (recorded_at)"]
     )
+
+
+# ============================================================================
+# Connected Health & Wearables — Sync Adapter Protocol & Safe DTOs (PH13 A01)
+# ============================================================================
+
+
+class SyncRateLimitPolicy(BaseModel):
+    """Rate limit configuration parameters exposed for sync adapter negotiation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    max_requests_per_minute: int = 60
+    max_records_per_batch: int = 500
+    max_payload_bytes: int = 5242880  # 5 MB
+    sliding_window_seconds: int = 60
+
+
+class SyncAdapterProtocolHandshakeResponse(BaseModel):
+    """Protocol negotiation response declaring sync adapter capabilities and constraints."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    protocol_version: str = "connector.sync.v1"
+    server_time: datetime
+    supported_providers: list[str] = Field(
+        default_factory=lambda: [
+            "health_connect",
+            "huawei_health",
+            "fitbit",
+            "wear_os",
+        ]
+    )
+    supported_data_types: list[str] = Field(
+        default_factory=lambda: [
+            "steps",
+            "activity",
+            "heart_rate",
+            "resting_heart_rate",
+            "sleep",
+            "weight",
+            "body_fat",
+            "blood_pressure",
+            "blood_glucose",
+            "oxygen_saturation",
+            "body_temperature",
+        ]
+    )
+    rate_limits: SyncRateLimitPolicy = Field(default_factory=SyncRateLimitPolicy)
+    idempotency_rules: dict[str, Any] = Field(
+        default_factory=lambda: {
+            "required_fields": ["idempotency_key"],
+            "header_override": "X-Idempotency-Key",
+            "hash_algorithm": "sha256",
+            "conflict_behavior": "HTTP 409 IDEMPOTENCY_CONFLICT on payload mismatch",
+            "replay_behavior": "HTTP 200 with idempotent_replay=true on identical payload",
+        }
+    )
+    supported_transports: list[str] = Field(
+        default_factory=lambda: ["device_push", "cloud_pull"]
+    )
+    data_protection_notice: str = (
+        "Dữ liệu đồng bộ thiết bị đeo được kiểm soát theo chuẩn PDPD Nghị định 13/2023/NĐ-CP "
+        "và Luật Khám bệnh, chữa bệnh 15/2023/QH15. Zero PII/PHI lộ lọt."
+    )
+
+
+class CanonicalHealthValueDTO(BaseModel):
+    """Scalar or component measurement with strict finiteness and unit validation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    scalar: float | None = None
+    components: dict[str, float] | None = None
+    unit: str = Field(min_length=1, max_length=32)
+
+    @model_validator(mode="after")
+    def validate_value_shape(self) -> CanonicalHealthValueDTO:
+        has_scalar = self.scalar is not None
+        has_components = self.components is not None
+        if has_scalar == has_components:
+            raise ValueError("value must contain exactly one of scalar or components")
+        numbers = [self.scalar] if has_scalar else list((self.components or {}).values())
+        if not numbers or any(n is None or not math.isfinite(n) for n in numbers):
+            raise ValueError("measurement numbers must be finite")
+        return self
+
+
+class CanonicalHealthRecordDTO(BaseModel):
+    """Safe, provider-neutral health observation record DTO."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["1.0"] = "1.0"
+    profile_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
+    connector_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
+    provider: str = Field(min_length=1, max_length=64)
+    provider_record_id: str = Field(min_length=1, max_length=512)
+    record_type: str = Field(min_length=1, max_length=64)
+    value: CanonicalHealthValueDTO
+    observed_start: datetime
+    observed_end: datetime
+    zone_offset_start: str | None = Field(default=None, max_length=6)
+    zone_offset_end: str | None = Field(default=None, max_length=6)
+    data_origin: str = Field(min_length=1, max_length=255)
+    device: dict[str, Any] = Field(default_factory=dict)
+    recording_method: str = Field(default="unknown")
+    quality: dict[str, Any] = Field(default_factory=dict)
+    provenance: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("observed_start", "observed_end")
+    @classmethod
+    def require_tz(cls, v: datetime) -> datetime:
+        if v.tzinfo is None or v.utcoffset() is None:
+            raise ValueError("timestamps must include timezone information")
+        return v
+
+    @model_validator(mode="after")
+    def validate_bounds(self) -> CanonicalHealthRecordDTO:
+        if self.observed_end < self.observed_start:
+            raise ValueError("observed_end cannot precede observed_start")
+        return self
+
+
+class ConnectorRecordTombstoneDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider_record_id: str = Field(min_length=1, max_length=512)
+    data_origin: str = Field(min_length=1, max_length=255)
+    deleted_at: datetime
+
+    @field_validator("deleted_at")
+    @classmethod
+    def require_tz(cls, v: datetime) -> datetime:
+        if v.tzinfo is None or v.utcoffset() is None:
+            raise ValueError("deleted_at must include timezone information")
+        return v
+
+
+class SyncAdapterBatchRequestDTO(BaseModel):
+    """Complete batch submission request for sync adapter."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    protocol_version: str = "connector.sync.v1"
+    idempotency_key: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
+    profile_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
+    connector_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
+    provider: str = Field(min_length=1, max_length=64)
+    sync_mode: Literal["incremental", "initial_sync", "catch_up", "backfill"] = "incremental"
+    cursor: str | None = Field(default=None, max_length=2048)
+    records: list[CanonicalHealthRecordDTO] = Field(default_factory=list, max_length=500)
+    tombstones: list[ConnectorRecordTombstoneDTO] = Field(default_factory=list, max_length=500)
+    client_metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_non_empty_and_scope(self) -> SyncAdapterBatchRequestDTO:
+        if not self.records and not self.tombstones:
+            raise ValueError("batch must include records or tombstones")
+        for rec in self.records:
+            if (
+                rec.profile_id != self.profile_id
+                or rec.connector_id != self.connector_id
+                or rec.provider != self.provider
+            ):
+                raise ValueError("records must match batch profile_id, connector_id, and provider")
+        return self
+
+
+class SyncRecordErrorDTO(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    index: int | None = None
+    provider_record_id: str | None = None
+    error_code: str
+    message: str
+
+
+class SyncRateLimitStatusDTO(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    remaining: int
+    limit: int = 60
+    reset_seconds: int = 60
+
+
+class SyncAdapterBatchResponseDTO(BaseModel):
+    """Safe response DTO for sync adapter batch ingestion."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    protocol_version: str = "connector.sync.v1"
+    batch_id: str
+    status: Literal["COMMITTED", "IDEMPOTENT_REPLAY", "PARTIAL", "FAILED"]
+    idempotent_replay: bool = False
+    accepted_count: int = 0
+    rejected_count: int = 0
+    upserted_count: int = 0
+    tombstoned_count: int = 0
+    next_cursor: str | None = None
+    watermark: datetime | None = None
+    errors: list[SyncRecordErrorDTO] = Field(default_factory=list)
+    rate_limit_status: SyncRateLimitStatusDTO
+    server_time: datetime
+
+
+class SyncAdapterCursorResponseDTO(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    connector_id: str
+    provider: str
+    status: str
+    active_cursor: str | None = None
+    last_sync_watermark: datetime | None = None
+    last_synced_at: datetime | None = None
+    uncommitted_records_pending: bool = False
+
+
+class SyncAdapterCursorAckRequestDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    connector_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
+    committed_cursor: str = Field(min_length=1, max_length=2048)
+    records_processed: int = Field(ge=0, default=0)
+
+
+class SyncAdapterCursorAckResponseDTO(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    connector_id: str
+    acknowledged: bool = True
+    updated_cursor: str
+    server_time: datetime
+
+
+class SyncAdapterErrorEnvelope(BaseModel):
+    """Standard safe error envelope for sync adapter protocol failures."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    error_code: str
+    message: str
+    correlation_id: str
+    details: dict[str, Any] = Field(default_factory=dict)
+    timestamp: datetime
+

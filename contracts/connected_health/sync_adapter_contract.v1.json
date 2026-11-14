@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CLARA Care Connected Health & Wearables — Sync Adapter Protocol Contract",
+  "version": "1.0.0",
+  "phase_id": "PH13",
+  "agent_id": "A01",
+  "conformance_status": "active",
+  "protocol_version": "connector.sync.v1",
+  "endpoints": [
+    {
+      "path": "/api/v1/connectors/sync/protocol",
+      "method": "GET",
+      "summary": "Handshake & capability discovery for mobile and cloud wearable sync adapters",
+      "auth_required": true,
+      "allowed_roles": ["normal", "researcher", "doctor", "admin"],
+      "rate_limited": false,
+      "response_schema": "SyncAdapterProtocolHandshake"
+    },
+    {
+      "path": "/api/v1/connectors/{connector_id}/sync/adapter",
+      "method": "POST",
+      "summary": "Synchronize batch of canonical health records with idempotency, rate limiting, and safe error envelopes",
+      "auth_required": true,
+      "allowed_roles": ["normal", "researcher", "doctor", "admin"],
+      "rate_limited": true,
+      "rate_limit_policy": {
+        "max_requests_per_minute": 60,
+        "sliding_window_seconds": 60,
+        "max_records_per_batch": 500,
+        "max_payload_bytes": 5242880
+      },
+      "headers": [
+        {
+          "name": "X-Idempotency-Key",
+          "required": false,
+          "description": "Optional HTTP header override for batch idempotency deduplication key"
+        }
+      ],
+      "request_schema": "SyncAdapterBatchRequest",
+      "response_schema": "SyncAdapterBatchResponse",
+      "error_schema": "SyncAdapterErrorEnvelope"
+    },
+    {
+      "path": "/api/v1/connectors/sync/batch",
+      "method": "POST",
+      "summary": "Body-addressed batch synchronization endpoint for sync adapter clients",
+      "auth_required": true,
+      "allowed_roles": ["normal", "researcher", "doctor", "admin"],
+      "rate_limited": true,
+      "request_schema": "SyncAdapterBatchRequest",
+      "response_schema": "SyncAdapterBatchResponse",
+      "error_schema": "SyncAdapterErrorEnvelope"
+    },
+    {
+      "path": "/api/v1/connectors/{connector_id}/sync/status",
+      "method": "GET",
+      "summary": "Query current sync cursor, watermark, and pending record state",
+      "auth_required": true,
+      "allowed_roles": ["normal", "researcher", "doctor", "admin"],
+      "rate_limited": false,
+      "response_schema": "SyncAdapterCursorResponseDTO"
+    },
+    {
+      "path": "/api/v1/connectors/{connector_id}/sync/ack",
+      "method": "POST",
+      "summary": "Acknowledge cursor commitment by the adapter client",
+      "auth_required": true,
+      "allowed_roles": ["normal", "researcher", "doctor", "admin"],
+      "rate_limited": false,
+      "request_schema": "SyncAdapterCursorAckRequestDTO",
+      "response_schema": "SyncAdapterCursorAckResponseDTO"
+    }
+  ],
+  "error_codes": {
+    "RATE_LIMIT_EXCEEDED": {
+      "http_status": 429,
+      "description": "Sync rate exceeded sliding window limit (60 req/min). Returns Retry-After header."
+    },
+    "PAYLOAD_TOO_LARGE": {
+      "http_status": 413,
+      "description": "Batch exceeds 500 records or 5MB payload size limit (payload bomb guard)."
+    },
+    "IDEMPOTENCY_CONFLICT": {
+      "http_status": 409,
+      "description": "Idempotency key was reused with differing record payload."
+    },
+    "IDEMPOTENCY_KEY_MISMATCH": {
+      "http_status": 400,
+      "description": "X-Idempotency-Key header does not match body payload idempotency_key."
+    },
+    "CONNECTOR_NOT_FOUND": {
+      "http_status": 404,
+      "description": "Connector ID does not exist or is not owned by the requesting user."
+    },
+    "CONNECTOR_NOT_READY": {
+      "http_status": 409,
+      "description": "Connector is not in connected or healthy status (e.g. paused or disconnected)."
+    },
+    "SCOPE_MISMATCH": {
+      "http_status": 403,
+      "description": "Batch profile_id or connector_id does not match authenticated connector scope."
+    },
+    "PROVIDER_MISMATCH": {
+      "http_status": 422,
+      "description": "Provider string does not match connector account provider."
+    },
+    "CONSENT_REVOKED": {
+      "http_status": 403,
+      "description": "User has revoked data processing consent for this connector."
+    },
+    "INVALID_PAYLOAD": {
+      "http_status": 422,
+      "description": "Record values, units, or temporal intervals violate schema semantics."
+    },
+    "INVALID_CONNECTOR_ID": {
+      "http_status": 422,
+      "description": "Connector ID format is not a valid integer."
+    }
+  },
+  "compliance_mapping": {
+    "vietnamese_pdpd_decree_13_2023": {
+      "article_9_data_minimization": "Direct identifiers, tokens, and hardware serials are omitted from sync DTOs and audit logs.",
+      "article_11_consent": "Consent check is enforced on every sync batch prior to database persistence.",
+      "article_12_withdrawal": "Consent revocation terminates adapter ingestion immediately with HTTP 403 CONSENT_REVOKED."
+    },
+    "law_on_medical_examination_15_2023_qh15": {
+      "article_65_electronic_health_records": "Standardized canonical observations retain immutable origin, timestamps, and recording method."
+    }
+  }
+}

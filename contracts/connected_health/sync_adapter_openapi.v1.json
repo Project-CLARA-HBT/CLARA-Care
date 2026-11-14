@@ -1,0 +1,340 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CLARA Care Connected Health & Wearables — Sync Adapter Protocol API",
+    "version": "1.0.0",
+    "description": "Safe, rate-limited, idempotent sync adapter protocol API for wearables and IoT health integrations (Health Connect, Huawei Health, Fitbit, Wear OS)."
+  },
+  "paths": {
+    "/api/v1/connectors/sync/protocol": {
+      "get": {
+        "summary": "Retrieve sync adapter protocol capabilities and limits",
+        "operationId": "getSyncProtocol",
+        "tags": ["connected-health-sync"],
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "responses": {
+          "200": {
+            "description": "Protocol handshake information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncAdapterProtocolHandshakeResponse"
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/connectors/{connector_id}/sync/adapter": {
+      "post": {
+        "summary": "Ingest batch of wearable observations via sync adapter protocol",
+        "operationId": "syncAdapterBatch",
+        "tags": ["connected-health-sync"],
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Identifier of the target connected health account"
+          },
+          {
+            "name": "X-Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Optional header idempotency key override"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncAdapterBatchRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Batch processed or idempotently replayed",
+            "headers": {
+              "X-RateLimit-Limit": { "schema": { "type": "integer" } },
+              "X-RateLimit-Remaining": { "schema": { "type": "integer" } },
+              "X-Idempotent-Replay": { "schema": { "type": "string" } }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncAdapterBatchResponseDTO"
+                }
+              }
+            }
+          },
+          "400": { "description": "Idempotency key mismatch" },
+          "403": { "description": "Scope mismatch or consent revoked" },
+          "404": { "description": "Connector not found" },
+          "409": { "description": "Idempotency conflict or connector not ready" },
+          "413": { "description": "Batch exceeds maximum record limit" },
+          "422": { "description": "Invalid record format or provider mismatch" },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": { "schema": { "type": "integer" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/connectors/sync/batch": {
+      "post": {
+        "summary": "Body-addressed sync adapter batch submission",
+        "operationId": "syncAdapterBatchBody",
+        "tags": ["connected-health-sync"],
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncAdapterBatchRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Batch processed or idempotently replayed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncAdapterBatchResponseDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/connectors/{connector_id}/sync/status": {
+      "get": {
+        "summary": "Query sync cursor and watermark status",
+        "operationId": "getConnectorSyncStatus",
+        "tags": ["connected-health-sync"],
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sync status and active cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncAdapterCursorResponseDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/connectors/{connector_id}/sync/ack": {
+      "post": {
+        "summary": "Acknowledge sync cursor commitment",
+        "operationId": "ackConnectorCursor",
+        "tags": ["connected-health-sync"],
+        "security": [{ "OAuth2PasswordBearer": [] }],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncAdapterCursorAckRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cursor acknowledged and persisted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncAdapterCursorAckResponseDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SyncAdapterProtocolHandshakeResponse": {
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "server_time",
+          "supported_providers",
+          "supported_data_types",
+          "rate_limits",
+          "idempotency_rules",
+          "supported_transports",
+          "data_protection_notice"
+        ],
+        "properties": {
+          "protocol_version": { "type": "string", "example": "connector.sync.v1" },
+          "server_time": { "type": "string", "format": "date-time" },
+          "supported_providers": { "type": "array", "items": { "type": "string" } },
+          "supported_data_types": { "type": "array", "items": { "type": "string" } },
+          "rate_limits": { "type": "object" },
+          "idempotency_rules": { "type": "object" },
+          "supported_transports": { "type": "array", "items": { "type": "string" } },
+          "data_protection_notice": { "type": "string" }
+        }
+      },
+      "CanonicalHealthValueDTO": {
+        "type": "object",
+        "required": ["unit"],
+        "properties": {
+          "scalar": { "type": "number", "nullable": true },
+          "components": { "type": "object", "nullable": true },
+          "unit": { "type": "string" }
+        }
+      },
+      "CanonicalHealthRecordDTO": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "profile_id",
+          "connector_id",
+          "provider",
+          "provider_record_id",
+          "record_type",
+          "value",
+          "observed_start",
+          "observed_end",
+          "data_origin"
+        ],
+        "properties": {
+          "schema_version": { "type": "string", "example": "1.0" },
+          "profile_id": { "type": "string" },
+          "connector_id": { "type": "string" },
+          "provider": { "type": "string" },
+          "provider_record_id": { "type": "string" },
+          "record_type": { "type": "string" },
+          "value": { "$ref": "#/components/schemas/CanonicalHealthValueDTO" },
+          "observed_start": { "type": "string", "format": "date-time" },
+          "observed_end": { "type": "string", "format": "date-time" },
+          "zone_offset_start": { "type": "string", "nullable": true },
+          "zone_offset_end": { "type": "string", "nullable": true },
+          "data_origin": { "type": "string" }
+        }
+      },
+      "SyncAdapterBatchRequestDTO": {
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "idempotency_key",
+          "profile_id",
+          "connector_id",
+          "provider"
+        ],
+        "properties": {
+          "protocol_version": { "type": "string", "default": "connector.sync.v1" },
+          "idempotency_key": { "type": "string" },
+          "profile_id": { "type": "string" },
+          "connector_id": { "type": "string" },
+          "provider": { "type": "string" },
+          "sync_mode": { "type": "string", "default": "incremental" },
+          "cursor": { "type": "string", "nullable": true },
+          "records": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CanonicalHealthRecordDTO" }
+          },
+          "tombstones": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "SyncAdapterBatchResponseDTO": {
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "batch_id",
+          "status",
+          "idempotent_replay",
+          "accepted_count",
+          "rejected_count",
+          "upserted_count",
+          "tombstoned_count",
+          "rate_limit_status",
+          "server_time"
+        ],
+        "properties": {
+          "protocol_version": { "type": "string" },
+          "batch_id": { "type": "string" },
+          "status": { "type": "string", "enum": ["COMMITTED", "IDEMPOTENT_REPLAY", "PARTIAL", "FAILED"] },
+          "idempotent_replay": { "type": "boolean" },
+          "accepted_count": { "type": "integer" },
+          "rejected_count": { "type": "integer" },
+          "upserted_count": { "type": "integer" },
+          "tombstoned_count": { "type": "integer" },
+          "next_cursor": { "type": "string", "nullable": true },
+          "watermark": { "type": "string", "format": "date-time", "nullable": true },
+          "rate_limit_status": { "type": "object" },
+          "server_time": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SyncAdapterCursorResponseDTO": {
+        "type": "object",
+        "required": ["connector_id", "provider", "status"],
+        "properties": {
+          "connector_id": { "type": "string" },
+          "provider": { "type": "string" },
+          "status": { "type": "string" },
+          "active_cursor": { "type": "string", "nullable": true },
+          "last_sync_watermark": { "type": "string", "format": "date-time", "nullable": true },
+          "last_synced_at": { "type": "string", "format": "date-time", "nullable": true },
+          "uncommitted_records_pending": { "type": "boolean" }
+        }
+      },
+      "SyncAdapterCursorAckRequestDTO": {
+        "type": "object",
+        "required": ["connector_id", "committed_cursor"],
+        "properties": {
+          "connector_id": { "type": "string" },
+          "committed_cursor": { "type": "string" },
+          "records_processed": { "type": "integer", "default": 0 }
+        }
+      },
+      "SyncAdapterCursorAckResponseDTO": {
+        "type": "object",
+        "required": ["connector_id", "acknowledged", "updated_cursor", "server_time"],
+        "properties": {
+          "connector_id": { "type": "string" },
+          "acknowledged": { "type": "boolean" },
+          "updated_cursor": { "type": "string" },
+          "server_time": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "phase_id": "PH13",
+  "agent_id": "A01",
+  "role": "API + Contract",
+  "task": "Connected Health sync adapter protocol, safe DTOs, and versioned contracts for wearables ingestion",
+  "status": "PASSED",
+  "base_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "frozen_head_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "branch": "phase/ph13-a01",
+  "worktree_path": "/dev/shm/clara_worktrees/PH13_A01",
+  "path_lane": "services/api/src/clara_api/api/;contracts/;services/api/src/clara_api/schemas.py;artifacts/PH13/A01/",
+  "files_changed": [
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py",
+    "services/api/src/clara_api/schemas.py",
+    "contracts/connected_health/sync_adapter_contract.v1.json",
+    "contracts/connected_health/sync_adapter_protocol.schema.json",
+    "contracts/connected_health/sync_adapter_openapi.v1.json",
+    "contracts/connected_health/test_sync_adapter_protocol.py",
+    "artifacts/PH13/A01/change_manifest.json",
+    "artifacts/PH13/A01/test_report.md",
+    "artifacts/PH13/A01/risk_register.md",
+    "artifacts/PH13/A01/rollback.md"
+  ],
+  "deliverables": [
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py",
+    "services/api/src/clara_api/schemas.py",
+    "contracts/connected_health/sync_adapter_contract.v1.json",
+    "contracts/connected_health/sync_adapter_protocol.schema.json",
+    "contracts/connected_health/sync_adapter_openapi.v1.json",
+    "contracts/connected_health/test_sync_adapter_protocol.py",
+    "artifacts/PH13/A01/change_manifest.json",
+    "artifacts/PH13/A01/test_report.md",
+    "artifacts/PH13/A01/risk_register.md",
+    "artifacts/PH13/A01/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:106",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:158",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:179",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:247",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:404",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:461",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:480",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:507",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:534",
+    "services/api/src/clara_api/schemas.py:2199",
+    "services/api/src/clara_api/schemas.py:2210",
+    "services/api/src/clara_api/schemas.py:2259",
+    "services/api/src/clara_api/schemas.py:2280",
+    "services/api/src/clara_api/schemas.py:2331",
+    "services/api/src/clara_api/schemas.py:2378",
+    "services/api/src/clara_api/schemas.py:2398",
+    "services/api/src/clara_api/schemas.py:2427",
+    "contracts/connected_health/sync_adapter_contract.v1.json:1",
+    "contracts/connected_health/sync_adapter_protocol.schema.json:1",
+    "contracts/connected_health/sync_adapter_openapi.v1.json:1",
+    "contracts/connected_health/test_sync_adapter_protocol.py:157",
+    "contracts/connected_health/test_sync_adapter_protocol.py:721"
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/api services/api/src/clara_api/schemas.py contracts/connected_health",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Bytecode compilation of modified API endpoints, shared schemas, and contract test module with zero syntax errors."
+    },
+    {
+      "command": "cd services/api && PYTHONPATH=src .venv/bin/python -m pytest ../../contracts/connected_health/test_sync_adapter_protocol.py -q",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "18 sync adapter protocol contract tests passed: handshake, idempotent replay, conflict rejection, rate limiting, payload bounds, scope/provider isolation, consent revocation, cursor status/ack, and zero-mock invariants."
+    },
+    {
+      "command": "cd services/api && PYTHONPATH=src .venv/bin/python -m pytest tests/test_connected_health_schemas.py -q",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "14 existing canonical health schema regression tests passed."
+    },
+    {
+      "command": "cd services/api && PYTHONPATH=src .venv/bin/python -m pytest tests/test_connected_health_control_plane.py tests/test_connectors_envelope.py -q",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "24 existing connected health control plane and connector envelope regression tests passed."
+    },
+    {
+      "command": "cd services/api && .venv/bin/python -m ruff check src/clara_api/api/v1/endpoints/connected_health.py src/clara_api/schemas.py ../../contracts/connected_health/test_sync_adapter_protocol.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Ruff lint clean across touched Python files; only four pre-existing UP042 findings remain in untouched legacy enum classes in schemas.py (present at base SHA)."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A01 -p PH13",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path ACL checker verified all touched files conform to the A01 PH13 write lane."
+    }
+  ],
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH13_A01 checkout bce92340e1f7a0709a96e9526e0682fa0fcb1e32 -- services/api/src/clara_api/api/v1/endpoints/connected_health.py services/api/src/clara_api/schemas.py",
+    "rm -rf /dev/shm/clara_worktrees/PH13_A01/contracts/connected_health",
+    "rm -rf /dev/shm/clara_worktrees/PH13_A01/artifacts/PH13/A01"
+  ],
+  "timestamp": "2026-11-14T12:20:00Z"
+}
