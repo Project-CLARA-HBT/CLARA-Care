@@ -1,0 +1,10 @@
+{
+  "phase_id": "PH13",
+  "phase_title": "Connected Health và wearables",
+  "status": "COMPLETED",
+  "completed_agents": 10,
+  "total_agents": 10,
+  "integrated_at": "2026-11-14T19:30:00Z",
+  "merge_manifest": "artifacts/PH13/integration/merge_manifest.json",
+  "notes": "A03 feature commit d04de72b cherry-picked separately because the agent split feature and artifact commits; merge queue only cherry-picks branch HEAD."
+}

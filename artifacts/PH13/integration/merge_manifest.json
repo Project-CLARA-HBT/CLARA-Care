@@ -1,0 +1,258 @@
+{
+  "schema_version": "1.0.0",
+  "phase_id": "PH13",
+  "phase_title": "Thi\u1ebft l\u1eadp t\u1ed5 ch\u1ee9c t\u00e1c nh\u00e2n v\u00e0 10 worktree song song",
+  "base_sha": "bce92340e190c62208a24aa3304f188080f6fd58",
+  "merge_commit_sha": "b5cec6fd0b83e327ac354d868aa75a0fdf54c24c",
+  "concurrent_agents_count": 10,
+  "dependency_order": [
+    "A02",
+    "A01",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "agents": [
+    {
+      "agent_id": "A02",
+      "role": "Data model + migration",
+      "task": "OAuth callback/refresh secure store",
+      "worktree": "/dev/shm/clara_worktrees/PH13_A02",
+      "branch": "phase/ph13-a02",
+      "commit": "7c725f67",
+      "full_commit": "7c725f67db6d752ce53d7ad01da3a5d6be0cb727",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/db/oauth_secure_models.py",
+        "services/api/src/clara_api/db/oauth_secure_store.py",
+        "services/api/src/clara_api/db/test_oauth_secure_store.py",
+        "services/api/src/clara_api/db/models.py",
+        "services/api/alembic/versions/20260909_0071_oauth_secure_store_and_lease.py",
+        "artifacts/PH13/A02/change_manifest.json",
+        "artifacts/PH13/A02/test_report.md",
+        "artifacts/PH13/A02/risk_register.md",
+        "artifacts/PH13/A02/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A01",
+      "role": "API + Contract",
+      "task": "Connected Health sync adapter protocol, safe DTOs, and versioned contracts for wearables ingestion",
+      "worktree": "/dev/shm/clara_worktrees/PH13_A01",
+      "branch": "phase/ph13-a01",
+      "commit": "86757770",
+      "full_commit": "8675777045029fa09d15dec2049c42e4061cb190",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/api/v1/endpoints/connected_health.py",
+        "services/api/src/clara_api/schemas.py",
+        "contracts/connected_health/sync_adapter_contract.v1.json",
+        "contracts/connected_health/sync_adapter_protocol.schema.json",
+        "contracts/connected_health/sync_adapter_openapi.v1.json",
+        "contracts/connected_health/test_sync_adapter_protocol.py",
+        "artifacts/PH13/A01/change_manifest.json",
+        "artifacts/PH13/A01/test_report.md",
+        "artifacts/PH13/A01/risk_register.md",
+        "artifacts/PH13/A01/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A03",
+      "role": "Domain + GLHS services",
+      "task": "dedup source and version mapping",
+      "worktree": "/dev/shm/clara_worktrees/PH13_A03",
+      "branch": "phase/ph13-a03",
+      "commit": "1b985e5f",
+      "full_commit": "1b985e5f7933f6cdd84750be339f6736841a1ecd",
+      "status": "PASSED",
+      "files": [
+        "services/api/src/clara_api/core/config.py",
+        "services/api/src/clara_api/lifemap/wearable_dedup.py",
+        "services/api/src/clara_api/lifemap/test_wearable_dedup.py",
+        "artifacts/PH13/A03/change_manifest.json",
+        "artifacts/PH13/A03/test_report.md",
+        "artifacts/PH13/A03/risk_register.md",
+        "artifacts/PH13/A03/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A04",
+      "role": "ML + retrieval",
+      "task": "wearable daily aggregates feature extraction and trend analysis",
+      "worktree": "/dev/shm/clara_worktrees/PH13_A04",
+      "branch": "phase/ph13-a04",
+      "commit": "6cda4baa",
+      "full_commit": "6cda4baa9255c5d8e13cfb055ac1f6b4bc112da0",
+      "status": "PASSED",
+      "files": [
+        "services/ml/src/clara_ml/config.py",
+        "services/ml/src/clara_ml/main.py",
+        "services/ml/src/clara_ml/wearables/__init__.py",
+        "services/ml/src/clara_ml/wearables/schemas.py",
+        "services/ml/src/clara_ml/wearables/aggregates.py",
+        "services/ml/src/clara_ml/wearables/trend_detection.py",
+        "evaluation/tests/test_wearable_aggregates_and_trends.py",
+        "artifacts/PH13/A04/change_manifest.json",
+        "artifacts/PH13/A04/test_report.md",
+        "artifacts/PH13/A04/risk_register.md",
+        "artifacts/PH13/A04/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A05",
+      "role": "Web UX",
+      "task": "Connected Health wearable sync errors, stale-data alerts, and reauthorization prompts",
+      "worktree": "/dev/shm/clara_worktrees/PH13_A05",
+      "branch": "phase/ph13-a05",
+      "commit": "1835ec7a",
+      "full_commit": "1835ec7ad363b7e4805c552a1a92a60dfa930791",
+      "status": "PASSED",
+      "files": [
+        "apps/web/app/(consumer)/health/health-pages.test.tsx",
+        "apps/web/app/(consumer)/health/measurements/page.tsx",
+        "apps/web/app/(consumer)/you/integrations/page.tsx",
+        "apps/web/app/(consumer)/you/you-pages.test.tsx",
+        "apps/web/components/health/wearable-reauth-modal.tsx",
+        "apps/web/components/health/wearable-stale-badge.tsx",
+        "apps/web/components/health/wearable-sync-alert-banner.tsx",
+        "apps/web/components/health/wearable-sync-alerts.test.tsx",
+        "apps/web/lib/api/v2-client.ts",
+        "apps/web/lib/wearable-sync.test.ts",
+        "apps/web/lib/wearable-sync.ts",
+        "artifacts/PH13/A05/change_manifest.json",
+        "artifacts/PH13/A05/test_report.md",
+        "artifacts/PH13/A05/risk_register.md",
+        "artifacts/PH13/A05/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A06",
+      "role": "Mobile UX",
+      "task": "Connected Health wearable provider catalog, manual sync, and connect flow on mobile",
+      "worktree": "/dev/shm/clara_worktrees/PH13_A06",
+      "branch": "phase/ph13-a06",
+      "commit": "93735a8b",
+      "full_commit": "93735a8ba8285b982f748fc5823d89a82b6df3d0",
+      "status": "PASSED",
+      "files": [
+        "apps/mobile/lib/core/api_client.dart",
+        "apps/mobile/lib/experience/connected_health/connected_health_screen.dart",
+        "apps/mobile/test/connected_health_screen_test.dart",
+        "artifacts/PH13/A06/change_manifest.json",
+        "artifacts/PH13/A06/test_report.md",
+        "artifacts/PH13/A06/risk_register.md",
+        "artifacts/PH13/A06/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A07",
+      "role": "Tests + CI",
+      "task": "mobile permission/resync flows",
+      "worktree": "/dev/shm/clara_worktrees/PH13_A07",
+      "branch": "phase/ph13-a07",
+      "commit": "97ec264a",
+      "full_commit": "97ec264aace229ce93f1f7c3f743c538b7b36106",
+      "status": "PASSED",
+      "files": [
+        "services/api/tests/test_connected_health_mobile_resync_integration.py",
+        "artifacts/PH13/A07/change_manifest.json",
+        "artifacts/PH13/A07/test_report.md",
+        "artifacts/PH13/A07/risk_register.md",
+        "artifacts/PH13/A07/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A08",
+      "role": "Security + privacy",
+      "task": "out-of-order replay simulations and wearable security threat model",
+      "worktree": "/dev/shm/clara_worktrees/PH13_A08",
+      "branch": "phase/ph13-a08",
+      "commit": "02ca8c3e",
+      "full_commit": "02ca8c3e0e8bd36eeeb3c0791b6d39c16f4c0b2c",
+      "status": "PASSED",
+      "files": [
+        "docs/security/WEARABLE_CONNECTED_HEALTH_THREAT_MODEL.md",
+        "docs/compliance/WEARABLE_DATA_RETENTION_AND_PRIVACY_IMPACT_ASSESSMENT.md",
+        "scripts/ops/simulate_wearable_security_threats.py",
+        "scripts/ops/test_audit_wearable_security_simulations.py",
+        "artifacts/PH13/A08/change_manifest.json",
+        "artifacts/PH13/A08/test_report.md",
+        "artifacts/PH13/A08/risk_register.md",
+        "artifacts/PH13/A08/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A09",
+      "role": "Docs + research evidence",
+      "task": "connector DPA/retention audit",
+      "worktree": "/dev/shm/clara_worktrees/PH13_A09",
+      "branch": "phase/ph13-a09",
+      "commit": "0c0400f5",
+      "full_commit": "0c0400f52d63269715d1d33445e5e126ca7ad8af",
+      "status": "PASSED",
+      "files": [
+        "docs/research/WEARABLE_CONNECTOR_DPA_AND_STATUTORY_RETENTION_AUDIT.md",
+        "docs/implementation/WEARABLE_DATA_PROCESSING_AGREEMENT_AND_RETENTION_SPEC.md",
+        "docs/interoperability/WEARABLE_VENDOR_INTEGRATION_BOUNDARIES_AND_DATA_FLOWS.md",
+        "artifacts/PH13/A09/test_wearable_dpa_and_retention_compliance.py",
+        "artifacts/PH13/A09/change_manifest.json",
+        "artifacts/PH13/A09/test_report.md",
+        "artifacts/PH13/A09/risk_register.md",
+        "artifacts/PH13/A09/rollback.md"
+      ],
+      "remediations": []
+    },
+    {
+      "agent_id": "A10",
+      "role": "Adversarial audit + integration proposals",
+      "task": "vendor sandbox instructions, adversarial wearable replay audit, and phase gate manifest",
+      "worktree": "/dev/shm/clara_worktrees/PH13_A10",
+      "branch": "phase/ph13-a10",
+      "commit": "26839264",
+      "full_commit": "268392644e51834eef04fb6cc5d6deb76b44c6cf",
+      "status": "PASSED",
+      "files": [
+        "docs/runbooks/connected-health-vendor-sandbox-instructions.md",
+        "docs/reports/ph13-adversarial-wearable-replay-audit.md",
+        "scripts/ci/ph13_quality_gate.py",
+        "artifacts/phase-gates/PH13_gate_manifest.json",
+        "artifacts/PH13/A10/change_manifest.json",
+        "artifacts/PH13/A10/test_report.md",
+        "artifacts/PH13/A10/risk_register.md",
+        "artifacts/PH13/A10/rollback.md"
+      ],
+      "remediations": []
+    }
+  ],
+  "file_conflict_count": 0,
+  "file_conflicts": [],
+  "integration_status": "PASSED",
+  "test_suite_results": [
+    {
+      "command": "/usr/bin/python3 -m compileall -q services/api/src services/ml/src scripts/ops",
+      "exit_code": 0,
+      "duration_seconds": 0.332,
+      "status": "PASSED"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions",
+      "exit_code": 0,
+      "duration_seconds": 0.139,
+      "status": "PASSED"
+    }
+  ],
+  "timestamp": "2026-11-14T12:19:10.183400+00:00"
+}
