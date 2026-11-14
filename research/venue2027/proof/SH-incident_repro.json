@@ -1,0 +1,26 @@
+{
+  "task_id": "SH-incident_repro",
+  "status": "PASS",
+  "source_sha_before": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
+  "source_sha_after": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
+  "changed_paths": [
+    "research/venue2027/_shared/tools/r4_regression.py",
+    "research/venue2027/_shared/r4_regression_trace.md",
+    "research/venue2027/_shared/r4_regression_trace.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/r4_regression.py --repo . --log research/venue2027/proof/logs/SH-incident_repro.log",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-incident_repro.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/r4_regression_trace.md": "45daff77617c001f70f06b30d8f3d60774f9e92267c68293a67f9305e387c3e9",
+    "research/venue2027/_shared/r4_regression_trace.json": "1776d46c29ebde5dbb1e8aab666b0b10206b2cfb49561b4157a40fe4d9bad481"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Exact R4 gate rerun reproduces the incident: 57 passed / 4 failed, all four expected ids, reason string and listener anchor confirmed; no test or model file modified."
+}

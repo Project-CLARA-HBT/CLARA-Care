@@ -1,0 +1,33 @@
+{
+  "task_id": "SH-research_ethics",
+  "status": "PASS",
+  "source_sha_before": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
+  "source_sha_after": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
+  "changed_paths": [
+    "research/venue2027/_shared/tools/research_ethics.py",
+    "research/venue2027/_shared/dataset_declarations.json",
+    "research/venue2027/_shared/data_ethics_and_irb.md",
+    "research/venue2027/_shared/tests/test_shared_foundations.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/research_ethics.py --declarations research/venue2027/_shared/dataset_declarations.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-research_ethics.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/shared_foundations.pytest.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/data_ethics_and_irb.md": "1a9f68e5dc6d9288e3fc85040bd1caf08b1126472086026ba0d9e452c158be7a",
+    "research/venue2027/_shared/dataset_declarations.json": "f807db7e46fb4b9e1331438cc1aaf2b5c8d90aed24514787ba72ad1da8a40c1a",
+    "research/venue2027/_shared/tools/research_ethics.py": "3f0ebad3d27c9360eefc7be8be1af01516ba8b24912c1df5e0b545d6be907853"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Synthetic-only policy enforced; non-synthetic provenance, missing license, unverifiable PHI fields, clinical claims from synthetic data and unacknowledged provider terms all block."
+}

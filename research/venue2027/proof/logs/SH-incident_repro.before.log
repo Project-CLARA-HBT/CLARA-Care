@@ -1,0 +1,708 @@
+F............F.......F.............................F.........            [100%]
+=================================== FAILURES ===================================
+________________________ test_full_valid_grwc_admission ________________________
+
+db = <sqlalchemy.orm.session.Session object at 0x7500e7a6d760>
+
+    def test_full_valid_grwc_admission(db: Session) -> None:
+        """Test 1: Verify full valid GRWC admission through admission.py and commit_kernel.py."""
+        owner_scope = _scope(db, actor_role="owner")
+        clinician_scope = _scope(db, actor_role="clinician")
+        at = datetime(2026, 3, 20, tzinfo=UTC)
+    
+        evidence = _evidence(db, owner_scope, at, label="t1-ev")
+        commitment = _commitment(db, owner_scope, label="t1-comm")
+        snapshot = _snapshot(db, owner_scope, evidence, at)
+        binding = _bind(db, owner_scope, snapshot, evidence)
+    
+        # 1. Model Proposal Creation
+        model_prop = propose_bound_commitment_transition(
+            db,
+            scope=owner_scope,
+            commitment=commitment,
+            observed_evidence=(evidence,),
+            proposed_transition="OPEN",
+            origin="model",
+            observed_base_state_version=snapshot.state_version,
+            task="r4_admission_task",
+            source_snapshot_id=snapshot.public_id,
+            source_snapshot_digest=snapshot.manifest_digest,
+            model_manifest_ref="model-ref-sha256:v1",
+            inference_context_binding_id=binding.public_id,
+        )
+    
+        # 2. Clinician Human Review
+        reviewed_prop = review_model_commitment_proposal(
+            db, scope=clinician_scope, proposal=model_prop
+        )
+    
+        # Revalidate through admission.py
+        adm_result = evaluate_grwc_admission(
+            db,
+            profile_id=owner_scope.profile.id,
+            proposal_id=reviewed_prop.id,
+            scope=clinician_scope,
+            purpose="self_care",
+            current_state_version=snapshot.state_version,
+            effective_policy_version=snapshot.policy_version,
+            effective_consent_version=snapshot.consent_version,
+        )
+        assert adm_result.admitted is True
+        assert adm_result.proposal_id == reviewed_prop.id
+        assert adm_result.root_proposal_id == model_prop.id
+        assert adm_result.consumed_thss is True
+    
+        # Also verify evaluate_r4_admission alias
+>       r4_result = evaluate_r4_admission(
+            db,
+            profile_id=owner_scope.profile.id,
+            proposal_id=reviewed_prop.id,
+        )
+
+tests/test_glhs_r4_admission.py:314: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/clara_api/glhs/admission.py:509: in evaluate_grwc_admission
+    proposal_row = db.execute(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2373: in execute
+    return self._execute_internal(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2250: in _execute_internal
+    ) = compile_state_cls.orm_pre_session_exec(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/context.py:577: in orm_pre_session_exec
+    session._autoflush()
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:3062: in _autoflush
+    self.flush()
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4353: in flush
+    self._flush(objects)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4488: in _flush
+    with util.safe_reraise():
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4449: in _flush
+    flush_context.execute()
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:465: in execute
+    rec.execute(self)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:641: in execute
+    util.preloaded.orm_persistence.save_obj(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:61: in save_obj
+    for (
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:237: in _organize_states_for_save
+    mapper.dispatch.before_update(mapper, connection, state)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/event/attr.py:516: in __call__
+    fn(*args, **kw)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/events.py:893: in wrap
+    fn(*arg, **kw)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_args = (<Mapper at 0x7500ec3fb1d0; GlhsClinicalCommitmentProposal>, <sqlalchemy.engine.base.Connection object at 0x7500eb33b5c0>, <clara_api.db.models.GlhsClinicalCommitmentProposal object at 0x7500e783e810>)
+_kwargs = {}
+
+    def _reject_glhs_ledger_mutation(*_args: object, **_kwargs: object) -> None:
+>       raise ValueError("GLHS ledger rows are immutable; append a governed transition")
+E       ValueError: GLHS ledger rows are immutable; append a governed transition
+
+src/clara_api/db/models.py:3040: ValueError
+------------------------------ Captured log setup ------------------------------
+WARNING  clara_api.core.bootstrap_admin:bootstrap_admin.py:87 Failed to seed admin clinical data: 'version_no' is an invalid keyword argument for PhrProfile
+WARNING  clara_api.core.bootstrap_admin:bootstrap_admin.py:87 Failed to seed admin clinical data: 'version_no' is an invalid keyword argument for PhrProfile
+_____________ test_benchmark_decision_concordance_schedule_matrix ______________
+
+db = <sqlalchemy.orm.session.Session object at 0x7500e67799d0>
+
+    def test_benchmark_decision_concordance_schedule_matrix(db: Session) -> None:
+        """Benchmark decision concordance across all 5 comparators on a standardized schedule matrix.
+    
+        Schedule Matrix (15 scenarios):
+        - S01..S03: Clean valid proposals -> All 5 arms admit (C0..C4 admit).
+        - S04..S06: Stale DB base state -> All 5 arms reject (C0..C4 reject).
+        - S07..S09: Prompt disclosure substitution (H_proj tampering) ->
+                    C0, C1, C2 falsely admit (blindness), C3 & C4 strictly reject!
+        - S10..S12: Undisclosed evidence injection ->
+                    C0, C1, C2 falsely admit (blindness), C3 & C4 strictly reject!
+        - S13..S15: Invalid HMAC signature / corrupted token ->
+                    C3 & C4 reject, C0, C1, C2 falsely admit!
+    
+        Concordance & Demarcation:
+        - Verifies C3 matches C4 on 100% of static single-step admission decisions (0 decision disagreement).
+        - Verifies that while C3 matches C4 on static decisions, C4 uniquely provides server-side
+          two-digest attestation receipts, immutable lineage binding, and bit-exact forensic reconstruction.
+        """
+        owner_scope = _scope(db, actor_role="owner")
+        at = datetime(2026, 3, 20, tzinfo=UTC)
+    
+        evidence = _evidence(db, owner_scope, at, label="bench-ev")
+        commitment = _commitment(db, owner_scope, label="bench-comm")
+        snapshot = _snapshot(db, owner_scope, evidence, at)
+        proj_dig = compute_projection_digest({"clean": "projection_data"})
+        binding = _bind(db, owner_scope, snapshot, evidence, projection_digest=proj_dig)
+    
+        c0 = CurrentStateOnlyValidator()
+        c1 = OccReadSetValidator()
+        c2 = ProvenanceOnlyValidator()
+        c3 = SignedExactDisclosureTokenValidator(secret_key=DEFAULT_C3_HMAC_SECRET)
+        c4 = FullGrwcValidator()
+    
+        clean_prop = propose_bound_commitment_transition(
+            db,
+            scope=owner_scope,
+            commitment=commitment,
+            observed_evidence=(evidence,),
+            proposed_transition="OPEN",
+            origin="model",
+            observed_base_state_version=snapshot.state_version,
+            task="comparator_matrix_task",
+            source_snapshot_id=snapshot.public_id,
+            source_snapshot_digest=snapshot.manifest_digest,
+            model_manifest_ref="model-ref-sha256:v1",
+            inference_context_binding_id=binding.public_id,
+        )
+    
+        base_ver = snapshot.state_version
+        now = datetime.now(UTC)
+        exp = now + timedelta(hours=2)
+    
+        valid_c3_token = SignedExactDisclosureToken.create(
+            projection_digest=snapshot.manifest_digest,
+            purpose="self_care",
+            task="comparator_matrix_task",
+            actor_user_id=owner_scope.actor.id,
+            expires_at=exp,
+            readset_caveats=[{"key": "Observation/bench-ev", "version": base_ver}],
+            disclosed_evidence_ids=[evidence.public_id],
+            secret_key=DEFAULT_C3_HMAC_SECRET,
+        )
+    
+        tampered_sig_c3_token = SignedExactDisclosureToken(
+            projection_digest=snapshot.manifest_digest,
+            purpose="self_care",
+            task="comparator_matrix_task",
+            actor_user_id=owner_scope.actor.id,
+            expires_at=exp.isoformat(),
+            signature="deadbeef_bad_signature",
+            disclosed_evidence_ids=(evidence.public_id,),
+        )
+    
+        schedules = [
+            # Clean control (S01-S03)
+            {"id": "S01", "kind": "clean"},
+            {"id": "S02", "kind": "clean"},
+            {"id": "S03", "kind": "clean"},
+            # Stale state (S04-S06)
+            {"id": "S04", "kind": "stale_state"},
+            {"id": "S05", "kind": "stale_state"},
+            {"id": "S06", "kind": "stale_state"},
+            # Prompt substitution (S07-S09)
+            {"id": "S07", "kind": "prompt_substitution"},
+            {"id": "S08", "kind": "prompt_substitution"},
+            {"id": "S09", "kind": "prompt_substitution"},
+            # Undisclosed evidence (S10-S12)
+            {"id": "S10", "kind": "undisclosed_evidence"},
+            {"id": "S11", "kind": "undisclosed_evidence"},
+            {"id": "S12", "kind": "undisclosed_evidence"},
+            # Corrupted signature (S13-S15)
+            {"id": "S13", "kind": "corrupted_signature"},
+            {"id": "S14", "kind": "corrupted_signature"},
+            {"id": "S15", "kind": "corrupted_signature"},
+        ]
+    
+        decisions: dict[str, list[bool]] = {"C0": [], "C1": [], "C2": [], "C3": [], "C4": []}
+        forensic_scores: dict[str, int] = {
+            "C0": 0,    # No prompt or context reconstruction possible
+            "C1": 20,   # Entity version IDs only
+            "C2": 50,   # Retrospective PROV graph without exact projection bytes
+            "C3": 75,   # Exact digest verified, but payload off-line
+            "C4": 100,  # Full bit-exact prompt, envelope, and evidence lineage directly reconstructible
+        }
+    
+        for sched in schedules:
+            kind = sched["kind"]
+            curr_ver = base_ver if kind != "stale_state" else base_ver + 1
+    
+            # Target proposal for this scenario
+            if kind == "prompt_substitution":
+                target_prop = GlhsClinicalCommitmentProposal(
+                    commitment_id=commitment.id,
+                    base_state_version=base_ver,
+                    target_profile_public_id=owner_scope.profile.public_id,
+                    observed_evidence_ids_json=[evidence.public_id],
+                    proposed_transition="OPEN",
+                    purpose="self_care",
+                    task="comparator_matrix_task",
+                    origin="model",
+                    actor_user_id=owner_scope.actor.id,
+                    actor_role=owner_scope.actor_role,
+                    source_snapshot_id=snapshot.public_id,
+                    source_snapshot_digest="sha256:TAMPERED_PROJECTION_DIGEST",
+                    policy_version="commitloop.v1",
+                    consent_version="medical_disclaimer:v1",
+                )
+                db.add(target_prop)
+                db.flush()
+            elif kind == "undisclosed_evidence":
+                secret_ev = _evidence(db, owner_scope, label="undisclosed-sec")
+                target_prop = GlhsClinicalCommitmentProposal(
+                    commitment_id=commitment.id,
+                    base_state_version=base_ver,
+                    target_profile_public_id=owner_scope.profile.public_id,
+                    observed_evidence_ids_json=[evidence.public_id, secret_ev.public_id],
+                    proposed_transition="OPEN",
+                    purpose="self_care",
+                    task="comparator_matrix_task",
+                    origin="model",
+                    actor_user_id=owner_scope.actor.id,
+                    actor_role=owner_scope.actor_role,
+                    source_snapshot_id=snapshot.public_id,
+                    source_snapshot_digest=snapshot.manifest_digest,
+                    policy_version="commitloop.v1",
+                    consent_version="medical_disclaimer:v1",
+                )
+                db.add(target_prop)
+                db.flush()
+            else:
+                target_prop = clean_prop
+    
+            # 1. Evaluate C0
+>           d0 = c0.evaluate_admission(
+                db,
+                target_prop,
+                context=owner_scope,
+                current_state_version=curr_ver,
+            )
+
+tests/test_glhs_r4_comparators.py:821: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/clara_api/glhs/comparator_policies.py:249: in evaluate_admission
+    profile_row = db.execute(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2373: in execute
+    return self._execute_internal(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2250: in _execute_internal
+    ) = compile_state_cls.orm_pre_session_exec(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/context.py:577: in orm_pre_session_exec
+    session._autoflush()
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:3062: in _autoflush
+    self.flush()
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4353: in flush
+    self._flush(objects)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4488: in _flush
+    with util.safe_reraise():
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4449: in _flush
+    flush_context.execute()
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:465: in execute
+    rec.execute(self)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:641: in execute
+    util.preloaded.orm_persistence.save_obj(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:61: in save_obj
+    for (
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:237: in _organize_states_for_save
+    mapper.dispatch.before_update(mapper, connection, state)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/event/attr.py:516: in __call__
+    fn(*args, **kw)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/events.py:893: in wrap
+    fn(*arg, **kw)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_args = (<Mapper at 0x7500ec3fb1d0; GlhsClinicalCommitmentProposal>, <sqlalchemy.engine.base.Connection object at 0x7500e67b5ee0>, <clara_api.db.models.GlhsClinicalCommitmentProposal object at 0x7500e744d730>)
+_kwargs = {}
+
+    def _reject_glhs_ledger_mutation(*_args: object, **_kwargs: object) -> None:
+>       raise ValueError("GLHS ledger rows are immutable; append a governed transition")
+E       ValueError: GLHS ledger rows are immutable; append a governed transition
+
+src/clara_api/db/models.py:3040: ValueError
+------------------------------ Captured log setup ------------------------------
+WARNING  clara_api.core.bootstrap_admin:bootstrap_admin.py:87 Failed to seed admin clinical data: 'version_no' is an invalid keyword argument for PhrProfile
+_________ test_penicillin_allergy_current_state_insufficiency_witness __________
+
+db_session = <sqlalchemy.orm.session.Session object at 0x7500e6c15970>
+
+    def test_penicillin_allergy_current_state_insufficiency_witness(db_session: Session) -> None:
+        """Witness Scenario: Evaluates P_good vs P_substituted across all 5 comparators.
+    
+        Setup:
+        - Patient with severe Penicillin allergy documented in EHR.
+        - DB State at commit time t_c: version v=1, active consent "v1", policy "glhs.v1".
+    
+        Proposals:
+        - P_good: Generated from disclosure H_good (containing allergy) -> proposes Azithromycin 500mg.
+        - P_substituted: Generated from disclosure H_bad (allergy omitted) -> proposes contraindicated Amoxicillin 500mg.
+    
+        Verification:
+        - C0 (CURRENT_STATE_ONLY): ADMITS P_substituted (Fatal safety failure!)
+        - C1 (OCC_READSET): ADMITS P_substituted (Fatal safety failure!)
+        - C2 (PROVENANCE_ONLY): ADMITS P_substituted (Provenance logged, write admitted!)
+        - C3 (SIGNED_EXACT_DISCLOSURE_TOKEN): REJECTS P_substituted with projection_digest_mismatch.
+        - C4 (FULL_GRWC): REJECTS P_substituted with projection_digest_mismatch.
+        """
+        scope = _create_scope(db_session, role="owner")
+        at = datetime(2026, 9, 30, 12, 0, 0, tzinfo=UTC)
+    
+        # 1. Document Penicillin Allergy in DB (Entity Version v=1)
+        allergy_ev = _record_allergy_evidence(db_session, scope, at, allergy_name="Penicillin")
+        commitment = get_or_create_commitment(
+            db_session,
+            scope=scope,
+            semantic_key="medication:antibiotic_therapy",
+            domain="medications",
+            supersession_key="medication:antibiotic",
+        )
+    
+        # 2. Compile H_good (contains allergy)
+        thss_good = compile_commitment_thss(
+            db_session,
+            scope=scope,
+            task="e17_antimicrobial_stewardship",
+            purpose="self_care",
+            valid_at=at,
+            known_at=at + timedelta(seconds=1),
+            allowed_domains=frozenset({"medications", "allergies", "observations"}),
+            disclosed_evidence=(allergy_ev,),
+            expires_in=timedelta(minutes=15),
+        )
+        snap_good = db_session.query(GlhsSnapshotManifest).filter_by(public_id=thss_good.snapshot_id).one()
+    
+        # Define model-visible projections
+        proj_good_payload = {
+            "patient_id": scope.profile.id,
+            "allergies": [{"substance": "Penicillin", "severity": "severe", "reaction": "anaphylaxis"}],
+            "diagnoses": [{"code": "J02.9", "display": "Acute pharyngitis"}],
+        }
+        d1_good = compute_projection_digest(proj_good_payload)
+        snap_good.projection_digest = d1_good
+        db_session.flush()
+    
+        binding_good = _create_binding(
+            db_session,
+            scope=scope,
+            snapshot=snap_good,
+            evidence=allergy_ev,
+            projection_digest=d1_good,
+            task="e17_antimicrobial_stewardship",
+        )
+    
+        # 3. Model Proposal P_good (Azithromycin 500mg, safe)
+        p_good = propose_bound_commitment_transition(
+            db_session,
+            scope=scope,
+            commitment=commitment,
+            observed_evidence=(allergy_ev,),
+            proposed_transition="OPEN",
+            origin="model",
+            observed_base_state_version=snap_good.state_version,
+            task="e17_antimicrobial_stewardship",
+            source_snapshot_id=snap_good.public_id,
+            source_snapshot_digest=snap_good.manifest_digest,
+            model_manifest_ref="model-deepseek-r1-medical:v1",
+            inference_context_binding_id=binding_good.public_id,
+        )
+    
+        # 4. Construct Substituted Execution P_substituted (Amoxicillin 500mg, fatal contraindication!)
+        # In H_bad, allergy was dropped/redacted from model-visible tokens:
+        proj_bad_payload = {
+            "patient_id": scope.profile.id,
+            "allergies": [],  # Allergy omitted by flawed retrieval or adversary
+            "diagnoses": [{"code": "J02.9", "display": "Acute pharyngitis"}],
+        }
+        d1_bad = compute_projection_digest(proj_bad_payload)
+        assert d1_bad != d1_good, "Projection digests must differ when allergy is omitted"
+    
+        # P_substituted is submitted against the system citing the commitment proposal
+        p_substituted = propose_bound_commitment_transition(
+            db_session,
+            scope=scope,
+            commitment=commitment,
+            observed_evidence=(allergy_ev,),
+            proposed_transition="OPEN",
+            origin="model",
+            observed_base_state_version=snap_good.state_version,
+            task="e17_antimicrobial_stewardship",
+            source_snapshot_id=snap_good.public_id,
+            source_snapshot_digest=snap_good.manifest_digest,
+            model_manifest_ref="model-deepseek-r1-medical:v1",
+            inference_context_binding_id=binding_good.public_id,
+        )
+    
+        # At commit time t_c, DB state is identical for both:
+        curr_state_ver = snap_good.state_version  # v=1
+        curr_policy_ver = snap_good.policy_version  # "glhs.v1"
+        curr_consent_ver = snap_good.consent_version  # "v1"
+        db_entity_versions = {
+            "Observation/allergy-penicillin": 1,
+            "medication:antibiotic_therapy": 0,
+        }
+        read_set = {"Observation/allergy-penicillin": 1}
+    
+        # =========================================================================
+        # Evaluate P_good across all 5 comparators (Clean Control Baseline)
+        # =========================================================================
+        c0 = CurrentStateOnlyValidator()
+        c1 = OccReadSetValidator()
+        c2 = ProvenanceOnlyValidator()
+        c3 = SignedExactDisclosureTokenValidator()
+        c4 = FullGrwcValidator()
+    
+        res_good_c0 = c0.evaluate_admission(
+            db_session, p_good,
+            current_state_version=curr_state_ver,
+            effective_policy_version=curr_policy_ver,
+            effective_consent_version=curr_consent_ver,
+        )
+        assert res_good_c0.admitted is True
+    
+        res_good_c1 = c1.evaluate_admission(
+            db_session, p_good,
+            current_state_version=curr_state_ver,
+            effective_policy_version=curr_policy_ver,
+            effective_consent_version=curr_consent_ver,
+            read_set=read_set,
+            db_entity_versions=db_entity_versions,
+        )
+        assert res_good_c1.admitted is True
+    
+        res_good_c2 = c2.evaluate_admission(
+            db_session, p_good,
+            current_state_version=curr_state_ver,
+            effective_policy_version=curr_policy_ver,
+            effective_consent_version=curr_consent_ver,
+        )
+        assert res_good_c2.admitted is True
+        assert res_good_c2.provenance_recorded is True
+    
+        res_good_c3 = c3.evaluate_admission(
+            db_session, p_good,
+            signed_projection_digest=d1_good,
+            observed_projection_digest=d1_good,
+            current_state_version=curr_state_ver,
+            effective_policy_version=curr_policy_ver,
+            effective_consent_version=curr_consent_ver,
+        )
+        assert res_good_c3.admitted is True
+    
+        res_good_c4 = c4.evaluate_admission(
+            db_session, p_good,
+            scope=scope,
+            current_state_version=curr_state_ver,
+            effective_policy_version=curr_policy_ver,
+            effective_consent_version=curr_consent_ver,
+            observed_model_visible_projection=proj_good_payload,
+        )
+        assert res_good_c4.admitted is True
+    
+        # =========================================================================
+        # Evaluate P_substituted across all 5 comparators (Adversarial Substitution)
+        # =========================================================================
+    
+        # C0: Re-checks DB state at commit time. DB state is unchanged -> ADMITS! (Fatal failure)
+        res_sub_c0 = c0.evaluate_admission(
+            db_session, p_substituted,
+            current_state_version=curr_state_ver,
+            effective_policy_version=curr_policy_ver,
+            effective_consent_version=curr_consent_ver,
+        )
+        assert res_sub_c0.admitted is True, "C0 must mistakenly ADMIT substituted proposal (fatal failure)"
+    
+        # C1: OCC read-set check. Allergy entity in DB is still version 1 -> ADMITS! (Fatal failure)
+        res_sub_c1 = c1.evaluate_admission(
+            db_session, p_substituted,
+            current_state_version=curr_state_ver,
+            effective_policy_version=curr_policy_ver,
+            effective_consent_version=curr_consent_ver,
+            read_set=read_set,
+            db_entity_versions=db_entity_versions,
+        )
+        assert res_sub_c1.admitted is True, "C1 must mistakenly ADMIT substituted proposal (fatal failure)"
+    
+        # C2: Provenance recorded post-hoc, but write admitted -> ADMITS!
+        res_sub_c2 = c2.evaluate_admission(
+            db_session, p_substituted,
+            current_state_version=curr_state_ver,
+            effective_policy_version=curr_policy_ver,
+            effective_consent_version=curr_consent_ver,
+        )
+        assert res_sub_c2.admitted is True, "C2 must ADMIT write while recording provenance"
+        assert res_sub_c2.provenance_recorded is True
+    
+        # C3: Signed Exact Disclosure Token compares signed D1_good against D1_bad -> REJECTS!
+        res_sub_c3 = c3.evaluate_admission(
+            db_session, p_substituted,
+            signed_projection_digest=d1_good,
+            observed_projection_digest=d1_bad,
+            current_state_version=curr_state_ver,
+            effective_policy_version=curr_policy_ver,
+            effective_consent_version=curr_consent_ver,
+        )
+        assert res_sub_c3.admitted is False, "C3 must REJECT substituted proposal"
+        assert "projection_digest_mismatch" in res_sub_c3.reason_codes
+        assert res_sub_c3.digest_mismatch_detected is True
+    
+        # C4: Full GRWC detects projection digest mismatch under PostgreSQL locks -> REJECTS!
+>       res_sub_c4 = c4.evaluate_admission(
+            db_session, p_substituted,
+            scope=scope,
+            current_state_version=curr_state_ver,
+            effective_policy_version=curr_policy_ver,
+            effective_consent_version=curr_consent_ver,
+            observed_model_visible_projection=proj_bad_payload,
+        )
+
+tests/test_glhs_current_state_insufficiency.py:648: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_glhs_current_state_insufficiency.py:284: in evaluate_admission
+    res = evaluate_grwc_admission(
+src/clara_api/glhs/admission.py:509: in evaluate_grwc_admission
+    proposal_row = db.execute(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2373: in execute
+    return self._execute_internal(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2250: in _execute_internal
+    ) = compile_state_cls.orm_pre_session_exec(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/context.py:577: in orm_pre_session_exec
+    session._autoflush()
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:3062: in _autoflush
+    self.flush()
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4353: in flush
+    self._flush(objects)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4488: in _flush
+    with util.safe_reraise():
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4449: in _flush
+    flush_context.execute()
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:465: in execute
+    rec.execute(self)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:641: in execute
+    util.preloaded.orm_persistence.save_obj(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:61: in save_obj
+    for (
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:237: in _organize_states_for_save
+    mapper.dispatch.before_update(mapper, connection, state)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/event/attr.py:516: in __call__
+    fn(*args, **kw)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/events.py:893: in wrap
+    fn(*arg, **kw)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_args = (<Mapper at 0x7500ec3fb1d0; GlhsClinicalCommitmentProposal>, <sqlalchemy.engine.base.Connection object at 0x7500ea856960>, <clara_api.db.models.GlhsClinicalCommitmentProposal object at 0x7500e6adff20>)
+_kwargs = {}
+
+    def _reject_glhs_ledger_mutation(*_args: object, **_kwargs: object) -> None:
+>       raise ValueError("GLHS ledger rows are immutable; append a governed transition")
+E       ValueError: GLHS ledger rows are immutable; append a governed transition
+
+src/clara_api/db/models.py:3040: ValueError
+------------------------------ Captured log setup ------------------------------
+WARNING  clara_api.core.bootstrap_admin:bootstrap_admin.py:87 Failed to seed admin clinical data: 'version_no' is an invalid keyword argument for PhrProfile
+_________________________ test_full_valid_review_chain _________________________
+
+db = <sqlalchemy.orm.session.Session object at 0x7500e7248170>
+
+    def test_full_valid_review_chain(db: Session) -> None:
+        """Verify complete review lifecycle: Model proposal -> Clinician review -> Commit transition."""
+        owner_scope = _scope(db, actor_role="owner")
+        clinician_scope = _scope(db, actor_role="clinician")
+        at = datetime(2026, 3, 15, tzinfo=UTC)
+    
+        evidence = _evidence(db, owner_scope, at, label="chain-ev")
+        commitment = _commitment(db, owner_scope, label="chain-comm")
+        snapshot = _snapshot(db, owner_scope, evidence, at)
+        binding = _bind(db, owner_scope, snapshot, evidence)
+    
+        # 1. Model Proposal Creation
+        model_prop = propose_bound_commitment_transition(
+            db,
+            scope=owner_scope,
+            commitment=commitment,
+            observed_evidence=(evidence,),
+            proposed_transition="OPEN",
+            origin="model",
+            observed_base_state_version=snapshot.state_version,
+            task="grwc_lineage_task",
+            source_snapshot_id=snapshot.public_id,
+            source_snapshot_digest=snapshot.manifest_digest,
+            model_manifest_ref="model-ref-sha256:v1",
+            inference_context_binding_id=binding.public_id,
+        )
+        assert model_prop.origin == "model"
+        assert model_prop.context_binding_mode == "snapshot_bound"
+        assert model_prop.inference_context_binding_id == binding.id
+    
+        # 2. Clinician Human Review
+        reviewed_prop = review_model_commitment_proposal(
+            db, scope=clinician_scope, proposal=model_prop
+        )
+        assert reviewed_prop.reviewed_proposal_id == model_prop.id
+        assert reviewed_prop.inference_context_binding_id == binding.id
+        assert reviewed_prop.context_binding_mode == "snapshot_bound"
+        assert reviewed_prop.origin == "clinician"
+        assert reviewed_prop.review_actor_user_id == clinician_scope.actor.id
+        assert reviewed_prop.review_actor_role == "clinician"
+        assert reviewed_prop.inference_actor_user_id == model_prop.actor_user_id
+        assert reviewed_prop.source_snapshot_id == snapshot.public_id
+        assert reviewed_prop.source_snapshot_digest == snapshot.manifest_digest
+    
+        # 3. Apply Transition (Commit)
+        idempotency_key = f"key_{uuid4().hex}"
+>       trans = apply_commitment_transition(
+            db,
+            scope=clinician_scope,
+            commitment=commitment,
+            proposal=reviewed_prop,
+            evidence=(evidence,),
+            data=_version_input(at),
+            expected_state_version=0,
+            idempotency_key=idempotency_key,
+            transition_kind="commitment_opened",
+            reason_code="clinician_approved_model_recommendation",
+        )
+
+tests/test_glhs_grwc_lineage.py:278: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/clara_api/glhs/commitment_gateway.py:1970: in apply_commitment_transition
+    root_binding = _require_lineage_binding(
+src/clara_api/glhs/commitment_gateway.py:423: in _require_lineage_binding
+    root_binding = db.execute(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2373: in execute
+    return self._execute_internal(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2250: in _execute_internal
+    ) = compile_state_cls.orm_pre_session_exec(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/context.py:577: in orm_pre_session_exec
+    session._autoflush()
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:3062: in _autoflush
+    self.flush()
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4353: in flush
+    self._flush(objects)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4488: in _flush
+    with util.safe_reraise():
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4449: in _flush
+    flush_context.execute()
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:465: in execute
+    rec.execute(self)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:641: in execute
+    util.preloaded.orm_persistence.save_obj(
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:61: in save_obj
+    for (
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:237: in _organize_states_for_save
+    mapper.dispatch.before_update(mapper, connection, state)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/event/attr.py:516: in __call__
+    fn(*args, **kw)
+/home/clue/.local/lib/python3.12/site-packages/sqlalchemy/orm/events.py:893: in wrap
+    fn(*arg, **kw)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_args = (<Mapper at 0x7500ec3fb1d0; GlhsClinicalCommitmentProposal>, <sqlalchemy.engine.base.Connection object at 0x7500e6192270>, <clara_api.db.models.GlhsClinicalCommitmentProposal object at 0x7500e6167ad0>)
+_kwargs = {}
+
+    def _reject_glhs_ledger_mutation(*_args: object, **_kwargs: object) -> None:
+>       raise ValueError("GLHS ledger rows are immutable; append a governed transition")
+E       ValueError: GLHS ledger rows are immutable; append a governed transition
+
+src/clara_api/db/models.py:3040: ValueError
+------------------------------ Captured log setup ------------------------------
+WARNING  clara_api.core.bootstrap_admin:bootstrap_admin.py:87 Failed to seed admin clinical data: 'version_no' is an invalid keyword argument for PhrProfile
+=========================== short test summary info ============================
+FAILED tests/test_glhs_r4_admission.py::test_full_valid_grwc_admission - Valu...
+FAILED tests/test_glhs_r4_comparators.py::test_benchmark_decision_concordance_schedule_matrix
+FAILED tests/test_glhs_current_state_insufficiency.py::test_penicillin_allergy_current_state_insufficiency_witness
+FAILED tests/test_glhs_grwc_lineage.py::test_full_valid_review_chain - ValueE...
+4 failed, 57 passed in 69.38s (0:01:09)

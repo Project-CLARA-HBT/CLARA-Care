@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "reason_code": "OK",
+  "counts": {
+    "VERIFIED_EXISTING": 19,
+    "NEW_PROPOSED": 315,
+    "MISSING_REQUIRED": 0
+  },
+  "missing_verified": [],
+  "out": "research/venue2027/_shared/source_reference_map.csv",
+  "rows": 334,
+  "version": "1.0.0"
+}

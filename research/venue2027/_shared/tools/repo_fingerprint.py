@@ -77,6 +77,12 @@ EXCLUDED_PREFIXES: tuple[str, ...] = (
     "apps/web/node_modules/",
 )
 
+# The fingerprint output and proof logs describe the snapshot, so including them
+# in the snapshot digest would make it self-referential and unstable.
+EXCLUDED_EXACT: tuple[str, ...] = (
+    "research/venue2027/_shared/repo_fingerprint.json",
+)
+
 
 @dataclasses.dataclass(frozen=True)
 class FileDigest:
@@ -182,6 +188,8 @@ def _sha256_file(path: Path) -> str:
 
 
 def _is_excluded(path: str) -> bool:
+    if path in EXCLUDED_EXACT:
+        return True
     return any(path == p.rstrip("/") or path.startswith(p) for p in EXCLUDED_PREFIXES)
 
 

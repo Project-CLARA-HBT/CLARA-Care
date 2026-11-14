@@ -1,0 +1,335 @@
+task_id,venue,phase,path,classification,symbol_or_contract
+(source_verified),shared,P00,.github/workflows/glhs-r4-novelty-gate.yml,VERIFIED_EXISTING,existing R4 gate
+(source_verified),shared,P00,research/PROGRAM_READINESS.md,VERIFIED_EXISTING,historical scientific readiness register
+(source_verified),shared,P00,research/glhs_journal/q4_r4/release/MANUSCRIPT_MASTER_R4.md,VERIFIED_EXISTING,historical main GLHS manuscript; do not overwrite
+(source_verified),shared,P00,research/publication_registry.yaml,VERIFIED_EXISTING,paper overlap and historical publication status
+(source_verified),shared,P00,services/api/pyproject.toml,VERIFIED_EXISTING,FastAPI/Pydantic/SQLAlchemy/psycopg/pytest environment
+(source_verified),shared,P00,services/api/src/clara_api/glhs/admission.py,VERIFIED_EXISTING,GRWC result/lineage verifier
+(source_verified),shared,P00,services/api/src/clara_api/glhs/canonical_json.py,VERIFIED_EXISTING,versioned canonical digest RFC 8785 profiles
+(source_verified),shared,P00,services/api/src/clara_api/glhs/commit_kernel.py,VERIFIED_EXISTING,"six-phase atomic commit kernel, DependencySpec and lock plan"
+(source_verified),shared,P00,services/api/src/clara_api/glhs/commitment_gateway.py,VERIFIED_EXISTING,"proposal, commitment, consent-aware transition gateway"
+(source_verified),shared,P00,services/api/src/clara_api/glhs/inference_attestation.py,VERIFIED_EXISTING,inference lifecycle and three-digest binding
+(source_verified),shared,P00,services/api/tests/test_glhs_r4_admission.py,VERIFIED_EXISTING,existing admission test suite (SQLite fixture)
+(source_verified),shared,P00,services/api/tests/test_glhs_r4_comparators.py,VERIFIED_EXISTING,existing comparator test suite
+ACNS-X01_review_protocol,acns,P01,research/venue2027/acns/design/sok_review_protocol.md,NEW_PROPOSED,"population, search dates, screening, coding and conflict rules"
+ACNS-X02_citation_corpus,acns,P02,research/venue2027/acns/design/sok_corpus.csv,NEW_PROPOSED,DOI/URL/year/venue/claim/evidence and provenance fields
+ACNS-X03_evidence_taxonomy,acns,P04,research/venue2027/acns/protocols/evidence_taxonomy.yaml,NEW_PROPOSED,"levels ASSUMED, ASSEMBLED, DISPATCHED, ACKNOWLEDGED, EXECUTED, COMMITTED"
+ACNS-X04_claim_extractor,acns,P04,evaluation/venue2027/acns/claim_extraction.py,NEW_PROPOSED,extract(paper)->list[Claim]
+ACNS-X05_rater_manual,acns,P02,research/venue2027/acns/design/annotation_handbook.md,NEW_PROPOSED,"definitions, decision tree, anchors, ambiguous examples"
+ACNS-X06_adjudication,acns,P05,evaluation/venue2027/acns/rater_agreement.py,NEW_PROPOSED,"measure(labels_a,labels_b)->Agreement"
+ACNS-X07_witness_gallery,acns,P04,evaluation/venue2027/acns/executable_counterexamples.py,NEW_PROPOSED,run_counterexample(level_transition)->ProofArtifact
+ACNS-X08_taxonomy_graph,acns,P05,evaluation/venue2027/acns/taxonomy_graph.py,NEW_PROPOSED,"render_graph(evidence_types,edges)->SVG"
+ACNS-X09_screening_flow,acns,P08,evaluation/venue2027/acns/screening_flow.py,NEW_PROPOSED,make_flow(screen_log)->SVG
+ACNS-X10_sok_synthesis,acns,P08,evaluation/venue2027/acns/claim_synthesis.py,NEW_PROPOSED,summarize(coded_claims)->Summary
+ACNS-ablation,acns,P04,evaluation/venue2027/acns/ablations.py,NEW_PROPOSED,"run_ablation(name,case)->Outcome"
+ACNS-baseline_tests,acns,P03,tests/venue2027/acns/test_baseline_fidelity.py,NEW_PROPOSED,pytest baseline_fidelity
+ACNS-baselines,acns,P03,evaluation/venue2027/acns/baselines.py,NEW_PROPOSED,"run_baseline(id,case,ctx)->Outcome"
+ACNS-candidate,acns,P04,evaluation/venue2027/acns/candidate.py,NEW_PROPOSED,"run_candidate(case,ctx)->Outcome"
+ACNS-confirm,acns,P07,evaluation/venue2027/acns/run_confirmatory.py,NEW_PROPOSED,run_confirmatory(freeze)->RunBundle
+ACNS-dataset,acns,P02,evaluation/venue2027/acns/generate_dataset.py,NEW_PROPOSED,"generate(seed:int,split:str,n:int)->Dataset"
+ACNS-figures,acns,P08,evaluation/venue2027/acns/figures.py,NEW_PROPOSED,render(analysis)->list[Artifact]
+ACNS-freeze,acns,P06,research/venue2027/acns/protocols/preregistration.yaml,NEW_PROPOSED,freeze_study()->FreezeManifest
+ACNS-funding,acns,P09,research/venue2027/acns/submission/funding_and_author_check.md,NEW_PROPOSED,check_submission()->Decision
+ACNS-oracle,acns,P02,evaluation/venue2027/acns/independent_oracle.py,NEW_PROPOSED,adjudicate(case)->OracleResult
+ACNS-overlap,acns,P01,research/venue2027/acns/overlap_audit.md,NEW_PROPOSED,audit(study)->OverlapDecision
+ACNS-paper,acns,P09,research/venue2027/acns/paper/manuscript.tex,NEW_PROPOSED,build_paper(venue)->PDF
+ACNS-pilot,acns,P06,research/venue2027/acns/protocols/pilot_plan.yaml,NEW_PROPOSED,pilot(config)->PilotReport
+ACNS-prior,acns,P01,research/venue2027/acns/literature_matrix.csv,NEW_PROPOSED,read_prior()->ComparatorMatrix
+ACNS-release,acns,P08,research/venue2027/acns/release/claim_ledger.csv,NEW_PROPOSED,release_gate(manifest)->Verdict
+ACNS-rq_registry,acns,P01,research/venue2027/acns/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
+ACNS-runner,acns,P05,evaluation/venue2027/acns/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
+ACNS-schema,acns,P02,research/venue2027/acns/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
+ACNS-scope,acns,P01,research/venue2027/acns/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+ACNS-stats,acns,P08,evaluation/venue2027/acns/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
+ACNS-threat,acns,P01,research/venue2027/acns/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
+ACNS-traces,acns,P05,evaluation/venue2027/acns/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
+ACNS-unit,acns,P05,tests/venue2027/acns/test_algorithm_properties.py,NEW_PROPOSED,pytest algorithm_properties
+AIME-X01_vignette_schema,aime,P02,research/venue2027/aime/protocols/vignette.schema.json,NEW_PROPOSED,"case_id, facts, evidence, consent, updates, task, eligibility, independent rationale"
+AIME-X02_case_generator,aime,P02,evaluation/venue2027/aime/vignette_generator.py,NEW_PROPOSED,"generate(seed,source_family,n)->list[Vignette]"
+AIME-X03_review_rubric,aime,P02,research/venue2027/aime/design/clinical_annotation_rubric.md,NEW_PROPOSED,"clinical correctness, omission, unsafe suggestion, permission error, indeterminate"
+AIME-X04_prompt_harmonize,aime,P03,evaluation/venue2027/aime/prompt_harmonizer.py,NEW_PROPOSED,"build_prompt(vignette,arm)->PromptPacket"
+AIME-X05_strict_refresh,aime,P03,evaluation/venue2027/aime/full_refresh_arm.py,NEW_PROPOSED,"run_full_refresh(vignette,model)->Action"
+AIME-X06_selective_refresh,aime,P04,evaluation/venue2027/aime/selective_refresh.py,NEW_PROPOSED,"update_context(current,dependencies)->RefreshPlan"
+AIME-X07_model_adapter,aime,P04,evaluation/venue2027/aime/model_adapter.py,NEW_PROPOSED,"invoke(prompt,model_id,seed)->ModelReceipt"
+AIME-X08_workflow_eval,aime,P05,evaluation/venue2027/aime/workflow_evaluator.py,NEW_PROPOSED,"grade(case,response,review)->WorkflowOutcome"
+AIME-X09_clinical_stats,aime,P08,evaluation/venue2027/aime/cluster_stats.py,NEW_PROPOSED,paired_effects(outcomes)->Report
+AIME-X10_case_study,aime,P09,evaluation/venue2027/aime/case_study_panel.py,NEW_PROPOSED,render_cases(adjudicated)->PDF
+AIME-ablation,aime,P04,evaluation/venue2027/aime/ablations.py,NEW_PROPOSED,"run_ablation(name,case)->Outcome"
+AIME-baseline_tests,aime,P03,tests/venue2027/aime/test_baseline_fidelity.py,NEW_PROPOSED,pytest baseline_fidelity
+AIME-baselines,aime,P03,evaluation/venue2027/aime/baselines.py,NEW_PROPOSED,"run_baseline(id,case,ctx)->Outcome"
+AIME-candidate,aime,P04,evaluation/venue2027/aime/candidate.py,NEW_PROPOSED,"run_candidate(case,ctx)->Outcome"
+AIME-confirm,aime,P07,evaluation/venue2027/aime/run_confirmatory.py,NEW_PROPOSED,run_confirmatory(freeze)->RunBundle
+AIME-dataset,aime,P02,evaluation/venue2027/aime/generate_dataset.py,NEW_PROPOSED,"generate(seed:int,split:str,n:int)->Dataset"
+AIME-figures,aime,P08,evaluation/venue2027/aime/figures.py,NEW_PROPOSED,render(analysis)->list[Artifact]
+AIME-freeze,aime,P06,research/venue2027/aime/protocols/preregistration.yaml,NEW_PROPOSED,freeze_study()->FreezeManifest
+AIME-funding,aime,P09,research/venue2027/aime/submission/funding_and_author_check.md,NEW_PROPOSED,check_submission()->Decision
+AIME-oracle,aime,P02,evaluation/venue2027/aime/independent_oracle.py,NEW_PROPOSED,adjudicate(case)->OracleResult
+AIME-overlap,aime,P01,research/venue2027/aime/overlap_audit.md,NEW_PROPOSED,audit(study)->OverlapDecision
+AIME-paper,aime,P09,research/venue2027/aime/paper/manuscript.tex,NEW_PROPOSED,build_paper(venue)->PDF
+AIME-pilot,aime,P06,research/venue2027/aime/protocols/pilot_plan.yaml,NEW_PROPOSED,pilot(config)->PilotReport
+AIME-prior,aime,P01,research/venue2027/aime/literature_matrix.csv,NEW_PROPOSED,read_prior()->ComparatorMatrix
+AIME-release,aime,P08,research/venue2027/aime/release/claim_ledger.csv,NEW_PROPOSED,release_gate(manifest)->Verdict
+AIME-rq_registry,aime,P01,research/venue2027/aime/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
+AIME-runner,aime,P05,evaluation/venue2027/aime/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
+AIME-schema,aime,P02,research/venue2027/aime/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
+AIME-scope,aime,P01,research/venue2027/aime/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+AIME-stats,aime,P08,evaluation/venue2027/aime/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
+AIME-threat,aime,P01,research/venue2027/aime/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
+AIME-traces,aime,P05,evaluation/venue2027/aime/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
+AIME-unit,aime,P05,tests/venue2027/aime/test_algorithm_properties.py,NEW_PROPOSED,pytest algorithm_properties
+COMPSAC-X01_readset_dsl,compsac,P02,evaluation/venue2027/compsac/dependency_dsl.py,NEW_PROPOSED,"compile_dependencies(op:Operation,schema)->FrozenSet[Dependency]"
+COMPSAC-X02_closure_oracle,compsac,P02,evaluation/venue2027/compsac/independent_closure_oracle.py,NEW_PROPOSED,"expected_dependencies(op,state)->FrozenSet[Dependency]"
+COMPSAC-X03_pg_schema,compsac,P04,research/venue2027/compsac/design/postgres_schema.sql,NEW_PROPOSED,SQL DDL for experiment-only namespace
+COMPSAC-X04_pg_ssi,compsac,P03,evaluation/venue2027/compsac/postgres_serializable.py,NEW_PROPOSED,"execute_serializable(op,session)->Outcome"
+COMPSAC-X05_silo_occ,compsac,P03,evaluation/venue2027/compsac/silo_readset_port.py,NEW_PROPOSED,"execute_occ(op,store)->Outcome"
+COMPSAC-X06_coarse_occ,compsac,P03,evaluation/venue2027/compsac/profile_coarse_version.py,NEW_PROPOSED,"execute_profile_occ(op,state)->Outcome"
+COMPSAC-X07_scope_occ,compsac,P04,evaluation/venue2027/compsac/dependency_scope_occ.py,NEW_PROPOSED,"admit(op,closure,locked_db)->Verdict"
+COMPSAC-X08_pg_barriers,compsac,P05,evaluation/venue2027/compsac/postgres_barrier_scheduler.py,NEW_PROPOSED,"execute_schedule(schedule,arm)->History"
+COMPSAC-X09_contention_matrix,compsac,P06,research/venue2027/compsac/protocols/contention_matrix.yaml,NEW_PROPOSED,workers x fanout x Zipf x updates x seeds
+COMPSAC-X10_tail_perf,compsac,P08,evaluation/venue2027/compsac/tail_latency.py,NEW_PROPOSED,estimate(histories)->Metrics
+COMPSAC-ablation,compsac,P04,evaluation/venue2027/compsac/ablations.py,NEW_PROPOSED,"run_ablation(name,case)->Outcome"
+COMPSAC-baseline_tests,compsac,P03,tests/venue2027/compsac/test_baseline_fidelity.py,NEW_PROPOSED,pytest baseline_fidelity
+COMPSAC-baselines,compsac,P03,evaluation/venue2027/compsac/baselines.py,NEW_PROPOSED,"run_baseline(id,case,ctx)->Outcome"
+COMPSAC-candidate,compsac,P04,evaluation/venue2027/compsac/candidate.py,NEW_PROPOSED,"run_candidate(case,ctx)->Outcome"
+COMPSAC-confirm,compsac,P07,evaluation/venue2027/compsac/run_confirmatory.py,NEW_PROPOSED,run_confirmatory(freeze)->RunBundle
+COMPSAC-dataset,compsac,P02,evaluation/venue2027/compsac/generate_dataset.py,NEW_PROPOSED,"generate(seed:int,split:str,n:int)->Dataset"
+COMPSAC-figures,compsac,P08,evaluation/venue2027/compsac/figures.py,NEW_PROPOSED,render(analysis)->list[Artifact]
+COMPSAC-freeze,compsac,P06,research/venue2027/compsac/protocols/preregistration.yaml,NEW_PROPOSED,freeze_study()->FreezeManifest
+COMPSAC-funding,compsac,P09,research/venue2027/compsac/submission/funding_and_author_check.md,NEW_PROPOSED,check_submission()->Decision
+COMPSAC-oracle,compsac,P02,evaluation/venue2027/compsac/independent_oracle.py,NEW_PROPOSED,adjudicate(case)->OracleResult
+COMPSAC-overlap,compsac,P01,research/venue2027/compsac/overlap_audit.md,NEW_PROPOSED,audit(study)->OverlapDecision
+COMPSAC-paper,compsac,P09,research/venue2027/compsac/paper/manuscript.tex,NEW_PROPOSED,build_paper(venue)->PDF
+COMPSAC-pilot,compsac,P06,research/venue2027/compsac/protocols/pilot_plan.yaml,NEW_PROPOSED,pilot(config)->PilotReport
+COMPSAC-prior,compsac,P01,research/venue2027/compsac/literature_matrix.csv,NEW_PROPOSED,read_prior()->ComparatorMatrix
+COMPSAC-release,compsac,P08,research/venue2027/compsac/release/claim_ledger.csv,NEW_PROPOSED,release_gate(manifest)->Verdict
+COMPSAC-rq_registry,compsac,P01,research/venue2027/compsac/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
+COMPSAC-runner,compsac,P05,evaluation/venue2027/compsac/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
+COMPSAC-schema,compsac,P02,research/venue2027/compsac/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
+COMPSAC-scope,compsac,P01,research/venue2027/compsac/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+COMPSAC-stats,compsac,P08,evaluation/venue2027/compsac/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
+COMPSAC-threat,compsac,P01,research/venue2027/compsac/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
+COMPSAC-traces,compsac,P05,evaluation/venue2027/compsac/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
+COMPSAC-unit,compsac,P05,tests/venue2027/compsac/test_algorithm_properties.py,NEW_PROPOSED,pytest algorithm_properties
+DIMVA-X01_event_schema,dimva,P02,research/venue2027/dimva/protocols/minimal_agent_event.schema.json,NEW_PROPOSED,JSON Schema without health text/raw user prompt
+DIMVA-X02_campaign_gen,dimva,P02,evaluation/venue2027/dimva/campaign_generator.py,NEW_PROPOSED,"generate(seed,family,tenant)->Campaign"
+DIMVA-X03_benign_gen,dimva,P02,evaluation/venue2027/dimva/benign_fault_generator.py,NEW_PROPOSED,"generate_benign(seed,workload)->Campaign"
+DIMVA-X04_feature_encoder,dimva,P04,evaluation/venue2027/dimva/feature_encoding.py,NEW_PROPOSED,"encode(events,window)->FeatureMatrix"
+DIMVA-X05_rules_detector,dimva,P03,evaluation/venue2027/dimva/rules_detector.py,NEW_PROPOSED,"detect_rules(stream,threshold)->Scores"
+DIMVA-X06_seq_detector,dimva,P04,evaluation/venue2027/dimva/sequence_detector.py,NEW_PROPOSED,"fit(train,dev)->Model; score(stream)->float"
+DIMVA-X07_adaptive_evasion,dimva,P05,evaluation/venue2027/dimva/adaptive_evasion.py,NEW_PROPOSED,"evaluate_adaptation(model,campaigns)->Metrics"
+DIMVA-X08_splitter,dimva,P02,evaluation/venue2027/dimva/group_split.py,NEW_PROPOSED,"split(groups,seed)->partitions"
+DIMVA-X09_fpr_calibrator,dimva,P06,evaluation/venue2027/dimva/fpr_calibration.py,NEW_PROPOSED,"calibrate(scores,dev,alpha)->threshold"
+DIMVA-X10_detector_metrics,dimva,P08,evaluation/venue2027/dimva/detector_report.py,NEW_PROPOSED,evaluate(scored_campaigns)->Report
+DIMVA-ablation,dimva,P04,evaluation/venue2027/dimva/ablations.py,NEW_PROPOSED,"run_ablation(name,case)->Outcome"
+DIMVA-baseline_tests,dimva,P03,tests/venue2027/dimva/test_baseline_fidelity.py,NEW_PROPOSED,pytest baseline_fidelity
+DIMVA-baselines,dimva,P03,evaluation/venue2027/dimva/baselines.py,NEW_PROPOSED,"run_baseline(id,case,ctx)->Outcome"
+DIMVA-candidate,dimva,P04,evaluation/venue2027/dimva/candidate.py,NEW_PROPOSED,"run_candidate(case,ctx)->Outcome"
+DIMVA-confirm,dimva,P07,evaluation/venue2027/dimva/run_confirmatory.py,NEW_PROPOSED,run_confirmatory(freeze)->RunBundle
+DIMVA-dataset,dimva,P02,evaluation/venue2027/dimva/generate_dataset.py,NEW_PROPOSED,"generate(seed:int,split:str,n:int)->Dataset"
+DIMVA-figures,dimva,P08,evaluation/venue2027/dimva/figures.py,NEW_PROPOSED,render(analysis)->list[Artifact]
+DIMVA-freeze,dimva,P06,research/venue2027/dimva/protocols/preregistration.yaml,NEW_PROPOSED,freeze_study()->FreezeManifest
+DIMVA-funding,dimva,P09,research/venue2027/dimva/submission/funding_and_author_check.md,NEW_PROPOSED,check_submission()->Decision
+DIMVA-oracle,dimva,P02,evaluation/venue2027/dimva/independent_oracle.py,NEW_PROPOSED,adjudicate(case)->OracleResult
+DIMVA-overlap,dimva,P01,research/venue2027/dimva/overlap_audit.md,NEW_PROPOSED,audit(study)->OverlapDecision
+DIMVA-paper,dimva,P09,research/venue2027/dimva/paper/manuscript.tex,NEW_PROPOSED,build_paper(venue)->PDF
+DIMVA-pilot,dimva,P06,research/venue2027/dimva/protocols/pilot_plan.yaml,NEW_PROPOSED,pilot(config)->PilotReport
+DIMVA-prior,dimva,P01,research/venue2027/dimva/literature_matrix.csv,NEW_PROPOSED,read_prior()->ComparatorMatrix
+DIMVA-release,dimva,P08,research/venue2027/dimva/release/claim_ledger.csv,NEW_PROPOSED,release_gate(manifest)->Verdict
+DIMVA-rq_registry,dimva,P01,research/venue2027/dimva/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
+DIMVA-runner,dimva,P05,evaluation/venue2027/dimva/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
+DIMVA-schema,dimva,P02,research/venue2027/dimva/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
+DIMVA-scope,dimva,P01,research/venue2027/dimva/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+DIMVA-stats,dimva,P08,evaluation/venue2027/dimva/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
+DIMVA-threat,dimva,P01,research/venue2027/dimva/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
+DIMVA-traces,dimva,P05,evaluation/venue2027/dimva/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
+DIMVA-unit,dimva,P05,tests/venue2027/dimva/test_algorithm_properties.py,NEW_PROPOSED,pytest algorithm_properties
+DSN-X01_state_spec,dsn,P02,evaluation/venue2027/dsn/state_machine.py,NEW_PROPOSED,recover(history: EventHistory)->RecoveryVerdict
+DSN-X02_recovery_tla,dsn,P02,research/venue2027/dsn/formal/recovery.tla,NEW_PROPOSED,"TLA+ Init, Next, Recovery, NoPhantomSuccess, ExactlyOnceEffect"
+DSN-X03_fault_windows,dsn,P04,evaluation/venue2027/dsn/fault_windows.py,NEW_PROPOSED,enumerate_windows(txn_map: Timeline)->list[FaultPoint]
+DSN-X04_outbox_reference,dsn,P03,evaluation/venue2027/dsn/outbox_reference.py,NEW_PROPOSED,"run_outbox(case: Case, tx: PGSession)->Outcome"
+DSN-X05_workflow_reference,dsn,P03,evaluation/venue2027/dsn/workflow_reference.py,NEW_PROPOSED,"run_workflow(case: Case, ctx: WorkflowCtx)->Outcome"
+DSN-X06_reconcile_journal,dsn,P04,evaluation/venue2027/dsn/reconciliation_journal.py,NEW_PROPOSED,"append_proof(op:Operation, commits:list[Receipt])->JournalState"
+DSN-X07_kill_driver,dsn,P05,evaluation/venue2027/dsn/kill_restart_driver.py,NEW_PROPOSED,"run_fault_schedule(schedule, pg, broker)->RawHistory"
+DSN-X08_elle_export,dsn,P05,evaluation/venue2027/dsn/history_to_elle.py,NEW_PROPOSED,to_elle(events:list[Event])->dict
+DSN-X09_recovery_analysis,dsn,P08,evaluation/venue2027/dsn/recovery_analysis.py,NEW_PROPOSED,"summarize(histories, baseline_ids)->Report"
+DSN-X10_operations_matrix,dsn,P06,research/venue2027/dsn/protocols/crash_matrix.yaml,NEW_PROPOSED,campaign: windows x orders x deliveries x seeds
+DSN-ablation,dsn,P04,evaluation/venue2027/dsn/ablations.py,NEW_PROPOSED,"run_ablation(name,case)->Outcome"
+DSN-baseline_tests,dsn,P03,tests/venue2027/dsn/test_baseline_fidelity.py,NEW_PROPOSED,pytest baseline_fidelity
+DSN-baselines,dsn,P03,evaluation/venue2027/dsn/baselines.py,NEW_PROPOSED,"run_baseline(id,case,ctx)->Outcome"
+DSN-candidate,dsn,P04,evaluation/venue2027/dsn/candidate.py,NEW_PROPOSED,"run_candidate(case,ctx)->Outcome"
+DSN-confirm,dsn,P07,evaluation/venue2027/dsn/run_confirmatory.py,NEW_PROPOSED,run_confirmatory(freeze)->RunBundle
+DSN-dataset,dsn,P02,evaluation/venue2027/dsn/generate_dataset.py,NEW_PROPOSED,"generate(seed:int,split:str,n:int)->Dataset"
+DSN-figures,dsn,P08,evaluation/venue2027/dsn/figures.py,NEW_PROPOSED,render(analysis)->list[Artifact]
+DSN-freeze,dsn,P06,research/venue2027/dsn/protocols/preregistration.yaml,NEW_PROPOSED,freeze_study()->FreezeManifest
+DSN-funding,dsn,P09,research/venue2027/dsn/submission/funding_and_author_check.md,NEW_PROPOSED,check_submission()->Decision
+DSN-oracle,dsn,P02,evaluation/venue2027/dsn/independent_oracle.py,NEW_PROPOSED,adjudicate(case)->OracleResult
+DSN-overlap,dsn,P01,research/venue2027/dsn/overlap_audit.md,NEW_PROPOSED,audit(study)->OverlapDecision
+DSN-paper,dsn,P09,research/venue2027/dsn/paper/manuscript.tex,NEW_PROPOSED,build_paper(venue)->PDF
+DSN-pilot,dsn,P06,research/venue2027/dsn/protocols/pilot_plan.yaml,NEW_PROPOSED,pilot(config)->PilotReport
+DSN-prior,dsn,P01,research/venue2027/dsn/literature_matrix.csv,NEW_PROPOSED,read_prior()->ComparatorMatrix
+DSN-release,dsn,P08,research/venue2027/dsn/release/claim_ledger.csv,NEW_PROPOSED,release_gate(manifest)->Verdict
+DSN-rq_registry,dsn,P01,research/venue2027/dsn/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
+DSN-runner,dsn,P05,evaluation/venue2027/dsn/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
+DSN-schema,dsn,P02,research/venue2027/dsn/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
+DSN-scope,dsn,P01,research/venue2027/dsn/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+DSN-stats,dsn,P08,evaluation/venue2027/dsn/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
+DSN-threat,dsn,P01,research/venue2027/dsn/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
+DSN-traces,dsn,P05,evaluation/venue2027/dsn/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
+DSN-unit,dsn,P05,tests/venue2027/dsn/test_algorithm_properties.py,NEW_PROPOSED,pytest algorithm_properties
+IFIP_SEC-X01_receipt_schema,ifip_sec,P02,research/venue2027/ifip_sec/protocols/receipt.schema.json,NEW_PROPOSED,JSON Schema draft 2020-12
+IFIP_SEC-X02_lineage_digest,ifip_sec,P04,evaluation/venue2027/ifip_sec/lineage_binding.py,NEW_PROPOSED,"bind(receipt, proposal)->BoundReceipt"
+IFIP_SEC-X03_nonce_store,ifip_sec,P04,evaluation/venue2027/ifip_sec/nonce_store.py,NEW_PROPOSED,"consume(nonce, tenant, tx)->ConsumeOutcome"
+IFIP_SEC-X04_context_verify,ifip_sec,P04,evaluation/venue2027/ifip_sec/receipt_verifier.py,NEW_PROPOSED,"verify(receipt, current, tx)->Verdict"
+IFIP_SEC-X05_macaroons_strong,ifip_sec,P03,evaluation/venue2027/ifip_sec/macaroon_adapter.py,NEW_PROPOSED,"authorize(token,caveats,tx)->Verdict"
+IFIP_SEC-X06_zanzibar_style,ifip_sec,P03,evaluation/venue2027/ifip_sec/consistency_token_adapter.py,NEW_PROPOSED,"check_with_revision(principal,resource,token)->Verdict"
+IFIP_SEC-X07_replay_generator,ifip_sec,P02,evaluation/venue2027/ifip_sec/replay_schedules.py,NEW_PROPOSED,"generate(seed,families)->list[Schedule]"
+IFIP_SEC-X08_concurrent_consumers,ifip_sec,P05,evaluation/venue2027/ifip_sec/concurrency_probe.py,NEW_PROPOSED,"run_consumers(n,barrier,case)->History"
+IFIP_SEC-X09_constant_time,ifip_sec,P05,evaluation/venue2027/ifip_sec/receipt_cost.py,NEW_PROPOSED,measure(requests)->DataFrame
+IFIP_SEC-X10_attack_table,ifip_sec,P08,evaluation/venue2027/ifip_sec/replay_attack_table.py,NEW_PROPOSED,make_table(histories)->CSV
+IFIP_SEC-ablation,ifip_sec,P04,evaluation/venue2027/ifip_sec/ablations.py,NEW_PROPOSED,"run_ablation(name,case)->Outcome"
+IFIP_SEC-baseline_tests,ifip_sec,P03,tests/venue2027/ifip_sec/test_baseline_fidelity.py,NEW_PROPOSED,pytest baseline_fidelity
+IFIP_SEC-baselines,ifip_sec,P03,evaluation/venue2027/ifip_sec/baselines.py,NEW_PROPOSED,"run_baseline(id,case,ctx)->Outcome"
+IFIP_SEC-candidate,ifip_sec,P04,evaluation/venue2027/ifip_sec/candidate.py,NEW_PROPOSED,"run_candidate(case,ctx)->Outcome"
+IFIP_SEC-confirm,ifip_sec,P07,evaluation/venue2027/ifip_sec/run_confirmatory.py,NEW_PROPOSED,run_confirmatory(freeze)->RunBundle
+IFIP_SEC-dataset,ifip_sec,P02,evaluation/venue2027/ifip_sec/generate_dataset.py,NEW_PROPOSED,"generate(seed:int,split:str,n:int)->Dataset"
+IFIP_SEC-figures,ifip_sec,P08,evaluation/venue2027/ifip_sec/figures.py,NEW_PROPOSED,render(analysis)->list[Artifact]
+IFIP_SEC-freeze,ifip_sec,P06,research/venue2027/ifip_sec/protocols/preregistration.yaml,NEW_PROPOSED,freeze_study()->FreezeManifest
+IFIP_SEC-funding,ifip_sec,P09,research/venue2027/ifip_sec/submission/funding_and_author_check.md,NEW_PROPOSED,check_submission()->Decision
+IFIP_SEC-oracle,ifip_sec,P02,evaluation/venue2027/ifip_sec/independent_oracle.py,NEW_PROPOSED,adjudicate(case)->OracleResult
+IFIP_SEC-overlap,ifip_sec,P01,research/venue2027/ifip_sec/overlap_audit.md,NEW_PROPOSED,audit(study)->OverlapDecision
+IFIP_SEC-paper,ifip_sec,P09,research/venue2027/ifip_sec/paper/manuscript.tex,NEW_PROPOSED,build_paper(venue)->PDF
+IFIP_SEC-pilot,ifip_sec,P06,research/venue2027/ifip_sec/protocols/pilot_plan.yaml,NEW_PROPOSED,pilot(config)->PilotReport
+IFIP_SEC-prior,ifip_sec,P01,research/venue2027/ifip_sec/literature_matrix.csv,NEW_PROPOSED,read_prior()->ComparatorMatrix
+IFIP_SEC-release,ifip_sec,P08,research/venue2027/ifip_sec/release/claim_ledger.csv,NEW_PROPOSED,release_gate(manifest)->Verdict
+IFIP_SEC-rq_registry,ifip_sec,P01,research/venue2027/ifip_sec/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
+IFIP_SEC-runner,ifip_sec,P05,evaluation/venue2027/ifip_sec/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
+IFIP_SEC-schema,ifip_sec,P02,research/venue2027/ifip_sec/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
+IFIP_SEC-scope,ifip_sec,P01,research/venue2027/ifip_sec/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+IFIP_SEC-stats,ifip_sec,P08,evaluation/venue2027/ifip_sec/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
+IFIP_SEC-threat,ifip_sec,P01,research/venue2027/ifip_sec/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
+IFIP_SEC-traces,ifip_sec,P05,evaluation/venue2027/ifip_sec/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
+IFIP_SEC-unit,ifip_sec,P05,tests/venue2027/ifip_sec/test_algorithm_properties.py,NEW_PROPOSED,pytest algorithm_properties
+POPETS-X01_lineage_graph,popets,P04,evaluation/venue2027/popets/lineage_graph.py,NEW_PROPOSED,"derive_graph(disclosures, transforms)->LineageGraph"
+POPETS-X02_revocation_events,popets,P02,evaluation/venue2027/popets/revocation_model.py,NEW_PROPOSED,"allowed(item,principal,purpose,time)->TriDecision"
+POPETS-X03_cache_control,popets,P04,evaluation/venue2027/popets/cache_invalidation.py,NEW_PROPOSED,"invalidate(graph, revoke)->InvalidationSet"
+POPETS-X04_redisclosure_probe,popets,P05,evaluation/venue2027/popets/redisclosure_probe.py,NEW_PROPOSED,"probe(history, config)->DisclosureReport"
+POPETS-X05_full_refresh,popets,P03,evaluation/venue2027/popets/full_refresh_reference.py,NEW_PROPOSED,"build_fresh(scope, timestamp)->Context"
+POPETS-X06_purpose_cache,popets,P03,evaluation/venue2027/popets/purpose_aware_cache.py,NEW_PROPOSED,"fetch(key,epoch,purpose)->Context"
+POPETS-X07_privacy_cases,popets,P02,evaluation/venue2027/popets/privacy_cases.py,NEW_PROPOSED,"generate_histories(seed,n,split)->Iterator[History]"
+POPETS-X08_minimal_privacy,popets,P04,evaluation/venue2027/popets/minimal_disclosure.py,NEW_PROPOSED,"select_fields(context,task)->FieldSet"
+POPETS-X09_linkability_eval,popets,P07,evaluation/venue2027/popets/linkability_eval.py,NEW_PROPOSED,"attack_advantage(receipts,aux,prior)->Metrics"
+POPETS-X10_privacy_cost,popets,P08,evaluation/venue2027/popets/privacy_cost.py,NEW_PROPOSED,aggregate(events)->Frontier
+POPETS-ablation,popets,P04,evaluation/venue2027/popets/ablations.py,NEW_PROPOSED,"run_ablation(name,case)->Outcome"
+POPETS-baseline_tests,popets,P03,tests/venue2027/popets/test_baseline_fidelity.py,NEW_PROPOSED,pytest baseline_fidelity
+POPETS-baselines,popets,P03,evaluation/venue2027/popets/baselines.py,NEW_PROPOSED,"run_baseline(id,case,ctx)->Outcome"
+POPETS-candidate,popets,P04,evaluation/venue2027/popets/candidate.py,NEW_PROPOSED,"run_candidate(case,ctx)->Outcome"
+POPETS-confirm,popets,P07,evaluation/venue2027/popets/run_confirmatory.py,NEW_PROPOSED,run_confirmatory(freeze)->RunBundle
+POPETS-dataset,popets,P02,evaluation/venue2027/popets/generate_dataset.py,NEW_PROPOSED,"generate(seed:int,split:str,n:int)->Dataset"
+POPETS-figures,popets,P08,evaluation/venue2027/popets/figures.py,NEW_PROPOSED,render(analysis)->list[Artifact]
+POPETS-freeze,popets,P06,research/venue2027/popets/protocols/preregistration.yaml,NEW_PROPOSED,freeze_study()->FreezeManifest
+POPETS-funding,popets,P09,research/venue2027/popets/submission/funding_and_author_check.md,NEW_PROPOSED,check_submission()->Decision
+POPETS-oracle,popets,P02,evaluation/venue2027/popets/independent_oracle.py,NEW_PROPOSED,adjudicate(case)->OracleResult
+POPETS-overlap,popets,P01,research/venue2027/popets/overlap_audit.md,NEW_PROPOSED,audit(study)->OverlapDecision
+POPETS-paper,popets,P09,research/venue2027/popets/paper/manuscript.tex,NEW_PROPOSED,build_paper(venue)->PDF
+POPETS-pilot,popets,P06,research/venue2027/popets/protocols/pilot_plan.yaml,NEW_PROPOSED,pilot(config)->PilotReport
+POPETS-prior,popets,P01,research/venue2027/popets/literature_matrix.csv,NEW_PROPOSED,read_prior()->ComparatorMatrix
+POPETS-release,popets,P08,research/venue2027/popets/release/claim_ledger.csv,NEW_PROPOSED,release_gate(manifest)->Verdict
+POPETS-rq_registry,popets,P01,research/venue2027/popets/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
+POPETS-runner,popets,P05,evaluation/venue2027/popets/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
+POPETS-schema,popets,P02,research/venue2027/popets/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
+POPETS-scope,popets,P01,research/venue2027/popets/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+POPETS-stats,popets,P08,evaluation/venue2027/popets/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
+POPETS-threat,popets,P01,research/venue2027/popets/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
+POPETS-traces,popets,P05,evaluation/venue2027/popets/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
+POPETS-unit,popets,P05,tests/venue2027/popets/test_algorithm_properties.py,NEW_PROPOSED,pytest algorithm_properties
+PST-X01_receipt_contract,pst,P02,research/venue2027/pst/protocols/minimal_receipt.schema.json,NEW_PROPOSED,JSON Schema query fields + retention epoch + scoped digest
+PST-X02_forensic_queries,pst,P02,research/venue2027/pst/protocols/forensic_query_catalog.yaml,NEW_PROPOSED,"query_id, witnesses_needed, trusted oracle answer"
+PST-X03_minimization,pst,P04,evaluation/venue2027/pst/purpose_minimizer.py,NEW_PROPOSED,"minimize(events,purpose)->Receipt"
+PST-X04_encrypted_ref,pst,P03,evaluation/venue2027/pst/encrypted_full_log.py,NEW_PROPOSED,"store_full_log(event,key)->EncryptedRecord"
+PST-X05_transparency_ref,pst,P03,evaluation/venue2027/pst/merkle_transparency.py,NEW_PROPOSED,"append(hash,tree)->Proof"
+PST-X06_key_rotation,pst,P04,evaluation/venue2027/pst/epoch_keys.py,NEW_PROPOSED,"rotate(epoch,tenant)->KeyRef"
+PST-X07_audit_reconstruct,pst,P05,evaluation/venue2027/pst/forensic_reconstruction.py,NEW_PROPOSED,"reconstruct(query,receipts,authority)->Answer"
+PST-X08_linkage_attacker,pst,P05,evaluation/venue2027/pst/auxiliary_linkage.py,NEW_PROPOSED,"attack(receipts,aux,prior)->AttackScores"
+PST-X09_retention_campaign,pst,P06,research/venue2027/pst/protocols/retention_campaign.yaml,NEW_PROPOSED,epochs x purpose x query x adversary x seeds
+PST-X10_receipt_frontier,pst,P08,evaluation/venue2027/pst/receipt_frontier.py,NEW_PROPOSED,frontier(raw)->Report
+PST-ablation,pst,P04,evaluation/venue2027/pst/ablations.py,NEW_PROPOSED,"run_ablation(name,case)->Outcome"
+PST-baseline_tests,pst,P03,tests/venue2027/pst/test_baseline_fidelity.py,NEW_PROPOSED,pytest baseline_fidelity
+PST-baselines,pst,P03,evaluation/venue2027/pst/baselines.py,NEW_PROPOSED,"run_baseline(id,case,ctx)->Outcome"
+PST-candidate,pst,P04,evaluation/venue2027/pst/candidate.py,NEW_PROPOSED,"run_candidate(case,ctx)->Outcome"
+PST-confirm,pst,P07,evaluation/venue2027/pst/run_confirmatory.py,NEW_PROPOSED,run_confirmatory(freeze)->RunBundle
+PST-dataset,pst,P02,evaluation/venue2027/pst/generate_dataset.py,NEW_PROPOSED,"generate(seed:int,split:str,n:int)->Dataset"
+PST-figures,pst,P08,evaluation/venue2027/pst/figures.py,NEW_PROPOSED,render(analysis)->list[Artifact]
+PST-freeze,pst,P06,research/venue2027/pst/protocols/preregistration.yaml,NEW_PROPOSED,freeze_study()->FreezeManifest
+PST-funding,pst,P09,research/venue2027/pst/submission/funding_and_author_check.md,NEW_PROPOSED,check_submission()->Decision
+PST-oracle,pst,P02,evaluation/venue2027/pst/independent_oracle.py,NEW_PROPOSED,adjudicate(case)->OracleResult
+PST-overlap,pst,P01,research/venue2027/pst/overlap_audit.md,NEW_PROPOSED,audit(study)->OverlapDecision
+PST-paper,pst,P09,research/venue2027/pst/paper/manuscript.tex,NEW_PROPOSED,build_paper(venue)->PDF
+PST-pilot,pst,P06,research/venue2027/pst/protocols/pilot_plan.yaml,NEW_PROPOSED,pilot(config)->PilotReport
+PST-prior,pst,P01,research/venue2027/pst/literature_matrix.csv,NEW_PROPOSED,read_prior()->ComparatorMatrix
+PST-release,pst,P08,research/venue2027/pst/release/claim_ledger.csv,NEW_PROPOSED,release_gate(manifest)->Verdict
+PST-rq_registry,pst,P01,research/venue2027/pst/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
+PST-runner,pst,P05,evaluation/venue2027/pst/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
+PST-schema,pst,P02,research/venue2027/pst/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
+PST-scope,pst,P01,research/venue2027/pst/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+PST-stats,pst,P08,evaluation/venue2027/pst/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
+PST-threat,pst,P01,research/venue2027/pst/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
+PST-traces,pst,P05,evaluation/venue2027/pst/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
+PST-unit,pst,P05,tests/venue2027/pst/test_algorithm_properties.py,NEW_PROPOSED,pytest algorithm_properties
+SACMAT-X01_policy_trace_dsl,sacmat,P02,evaluation/venue2027/sacmat/policy_trace_dsl.py,NEW_PROPOSED,parse_policy_trace(json)->Trace
+SACMAT-X02_reference_semantics,sacmat,P02,evaluation/venue2027/sacmat/reference_semantics.py,NEW_PROPOSED,"decide(trace,query)->TriDecision"
+SACMAT-X03_cedar_runner,sacmat,P03,evaluation/venue2027/sacmat/cedar_adapter.py,NEW_PROPOSED,"evaluate_cedar(policy,trace,query)->Decision"
+SACMAT-X04_openfga_runner,sacmat,P03,evaluation/venue2027/sacmat/openfga_adapter.py,NEW_PROPOSED,"evaluate_openfga(model,tuples,query)->Decision"
+SACMAT-X05_opa_runner,sacmat,P03,evaluation/venue2027/sacmat/opa_adapter.py,NEW_PROPOSED,"evaluate_opa(module,input)->Decision"
+SACMAT-X06_temporal_generator,sacmat,P04,evaluation/venue2027/sacmat/temporal_trace_generator.py,NEW_PROPOSED,"generate(seed,grammar,budget)->list[Trace]"
+SACMAT-X07_mutation_ops,sacmat,P04,evaluation/venue2027/sacmat/policy_mutants.py,NEW_PROPOSED,"mutate(policy,operators)->list[Mutant]"
+SACMAT-X08_budget_runner,sacmat,P05,evaluation/venue2027/sacmat/budget_fair_runner.py,NEW_PROPOSED,"run(methods,mutants,budget)->Events"
+SACMAT-X09_minimizer,sacmat,P05,evaluation/venue2027/sacmat/temporal_witness_minimizer.py,NEW_PROPOSED,"minimize(trace,predicate)->Trace"
+SACMAT-X10_crossengine,sacmat,P08,evaluation/venue2027/sacmat/cross_engine_report.py,NEW_PROPOSED,summarize(engine_runs)->Report
+SACMAT-ablation,sacmat,P04,evaluation/venue2027/sacmat/ablations.py,NEW_PROPOSED,"run_ablation(name,case)->Outcome"
+SACMAT-baseline_tests,sacmat,P03,tests/venue2027/sacmat/test_baseline_fidelity.py,NEW_PROPOSED,pytest baseline_fidelity
+SACMAT-baselines,sacmat,P03,evaluation/venue2027/sacmat/baselines.py,NEW_PROPOSED,"run_baseline(id,case,ctx)->Outcome"
+SACMAT-candidate,sacmat,P04,evaluation/venue2027/sacmat/candidate.py,NEW_PROPOSED,"run_candidate(case,ctx)->Outcome"
+SACMAT-confirm,sacmat,P07,evaluation/venue2027/sacmat/run_confirmatory.py,NEW_PROPOSED,run_confirmatory(freeze)->RunBundle
+SACMAT-dataset,sacmat,P02,evaluation/venue2027/sacmat/generate_dataset.py,NEW_PROPOSED,"generate(seed:int,split:str,n:int)->Dataset"
+SACMAT-figures,sacmat,P08,evaluation/venue2027/sacmat/figures.py,NEW_PROPOSED,render(analysis)->list[Artifact]
+SACMAT-freeze,sacmat,P06,research/venue2027/sacmat/protocols/preregistration.yaml,NEW_PROPOSED,freeze_study()->FreezeManifest
+SACMAT-funding,sacmat,P09,research/venue2027/sacmat/submission/funding_and_author_check.md,NEW_PROPOSED,check_submission()->Decision
+SACMAT-oracle,sacmat,P02,evaluation/venue2027/sacmat/independent_oracle.py,NEW_PROPOSED,adjudicate(case)->OracleResult
+SACMAT-overlap,sacmat,P01,research/venue2027/sacmat/overlap_audit.md,NEW_PROPOSED,audit(study)->OverlapDecision
+SACMAT-paper,sacmat,P09,research/venue2027/sacmat/paper/manuscript.tex,NEW_PROPOSED,build_paper(venue)->PDF
+SACMAT-pilot,sacmat,P06,research/venue2027/sacmat/protocols/pilot_plan.yaml,NEW_PROPOSED,pilot(config)->PilotReport
+SACMAT-prior,sacmat,P01,research/venue2027/sacmat/literature_matrix.csv,NEW_PROPOSED,read_prior()->ComparatorMatrix
+SACMAT-release,sacmat,P08,research/venue2027/sacmat/release/claim_ledger.csv,NEW_PROPOSED,release_gate(manifest)->Verdict
+SACMAT-rq_registry,sacmat,P01,research/venue2027/sacmat/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
+SACMAT-runner,sacmat,P05,evaluation/venue2027/sacmat/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
+SACMAT-schema,sacmat,P02,research/venue2027/sacmat/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
+SACMAT-scope,sacmat,P01,research/venue2027/sacmat/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+SACMAT-stats,sacmat,P08,evaluation/venue2027/sacmat/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
+SACMAT-threat,sacmat,P01,research/venue2027/sacmat/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
+SACMAT-traces,sacmat,P05,evaluation/venue2027/sacmat/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
+SACMAT-unit,sacmat,P05,tests/venue2027/sacmat/test_algorithm_properties.py,NEW_PROPOSED,pytest algorithm_properties
+SH-agent_protocol,shared,P00,AGENTS/EXECUTION_CONTRACT.md,NEW_PROPOSED,hand_off(task)->Report
+SH-analysis_policy,shared,P06,evaluation/venue2027/_shared/statistics.py,NEW_PROPOSED,"analyze(raw,frozen_plan)->Metrics"
+SH-base_contracts,shared,P02,research/venue2027/_shared/schemas/case.v1.schema.json,NEW_PROPOSED,validate_case_v1(case)->bool
+SH-baseline_registry,shared,P03,research/venue2027/_shared/baselines/registry.yaml,NEW_PROPOSED,"register_baseline(name,revision)->Entry"
+SH-claim_overlap,shared,P01,research/venue2027/_shared/publication_overlap_registry.yaml,VERIFIED_EXISTING,audit_overlap(studies)->Findings
+SH-freeze_tool,shared,P06,scripts/research/venue2027/freeze_protocol.py,NEW_PROPOSED,freeze(config)->FreezeManifest
+SH-guard_regression,shared,P00,services/api/tests/test_glhs_immutable_projection_contract.py,NEW_PROPOSED,test_projection_whitelist(); test_reject_canonical_update()
+SH-incident_repro,shared,P00,research/venue2027/_shared/r4_regression_trace.md,VERIFIED_EXISTING,reproduce_r4()->Trace
+SH-independent_oracle,shared,P02,evaluation/venue2027/_shared/oracle_contract.py,NEW_PROPOSED,oracle(case:Case)->OracleVerdict
+SH-literature_hardening,shared,P01,research/venue2027/_shared/literature_validity_ledger.csv,VERIFIED_EXISTING,verify_sources(registry)->Ledger
+SH-measurement,shared,P05,evaluation/venue2027/_shared/telemetry.py,NEW_PROPOSED,measure(operation)->Cost
+SH-outcome_contract,shared,P02,research/venue2027/_shared/schemas/outcome.v1.schema.json,NEW_PROPOSED,validate_outcome(outcome)->bool
+SH-postgres_isolation,shared,P03,infra/research/venue2027/docker-compose.pg.yaml,NEW_PROPOSED,provision_pg()->PGEnv
+SH-psc_interface,shared,P04,evaluation/venue2027/_shared/psc_contract.py,NEW_PROPOSED,"evaluate_shadow(snapshot,proposal,current)->PSCResult"
+SH-r4_ci_gate,shared,P00,research/venue2027/_shared/green_gate.json,NEW_PROPOSED,"gate()->{jobs,status,hashes}"
+SH-release_integrity,shared,P08,scripts/research/venue2027/verify_release.py,NEW_PROPOSED,verify(manifest)->GateReport
+SH-repair_immutable,shared,P00,services/api/src/clara_api/db/models.py,VERIFIED_EXISTING,"validate_immutability_on_before_update(mapper,connection,target)"
+SH-repo_fingerprint,shared,P00,research/venue2027/_shared/repo_fingerprint.json,VERIFIED_EXISTING,snapshot(repo)->Fingerprint
+SH-research_ethics,shared,P01,research/venue2027/_shared/data_ethics_and_irb.md,VERIFIED_EXISTING,check_data_policy(dataset)->Verdict
+SH-run_harness,shared,P05,evaluation/venue2027/_shared/harness.py,NEW_PROPOSED,"execute(campaign,arms)->RunBundle"
+SH-schedule_engine,shared,P02,evaluation/venue2027/_shared/schedules.py,NEW_PROPOSED,"generate_schedule(seed,scope)->Iterable[Schedule]"
+SH-source_reference_map,shared,P01,research/venue2027/_shared/source_reference_map.csv,VERIFIED_EXISTING,map_source(files)->CSV
+SH-unified_ci,shared,P08,research/venue2027/_shared/ci_policy.md,NEW_PROPOSED,choose_gate(change_set)->Checks
+SH-venue_formats,shared,P09,research/venue2027/_shared/submission_venue_checklist.md,NEW_PROPOSED,"check_venue(venue,date)->Checklist"
+SH-worktree_layout,shared,P00,research/venue2027/_shared/worktree_policy.md,NEW_PROPOSED,"allocate_worktree(study,task)->Path"

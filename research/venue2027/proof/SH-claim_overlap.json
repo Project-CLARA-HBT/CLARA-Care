@@ -1,0 +1,27 @@
+{
+  "task_id": "SH-claim_overlap",
+  "status": "PASS",
+  "source_sha_before": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
+  "source_sha_after": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
+  "changed_paths": [
+    "research/venue2027/_shared/tools/claim_overlap.py",
+    "research/venue2027/_shared/study_claims.json",
+    "research/venue2027/_shared/publication_overlap_registry.yaml",
+    "research/venue2027/_shared/tests/test_shared_foundations.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/shared_foundations.pytest.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/publication_overlap_registry.yaml": "79f33faca3c9d30b7cfc60573b583da39f9c9587dc16d4fcddfc44eb83d7cb0a",
+    "research/venue2027/_shared/study_claims.json": "d9ef5de39ade4feaf2883032a5ead02b256792601647c83e26b7ef1ecd90bb14"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Nine studies declared distinct RQ+endpoint; salami (same Q+endpoint) and archive-reuse-as-new are blocked."
+}

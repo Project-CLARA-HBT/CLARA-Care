@@ -1,5 +1,16 @@
 {
-  "schema_version": 1,
-  "completed": {},
-  "blocked": {}
+  "blocked": {},
+  "completed": {
+    "SH-agent_protocol": {
+      "marked_at": "2026-11-14T16:36:43.049178+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-agent_protocol.json",
+      "status": "PASS"
+    },
+    "SH-repo_fingerprint": {
+      "marked_at": "2026-11-14T16:36:42.956282+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-repo_fingerprint.json",
+      "status": "PASS"
+    }
+  },
+  "schema_version": 1
 }

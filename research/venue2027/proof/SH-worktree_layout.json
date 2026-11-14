@@ -1,0 +1,26 @@
+{
+  "task_id": "SH-worktree_layout",
+  "status": "PASS",
+  "source_sha_before": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
+  "source_sha_after": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
+  "changed_paths": [
+    "research/venue2027/_shared/tools/worktree_policy.py",
+    "research/venue2027/_shared/worktree_policy.md",
+    "research/venue2027/_shared/tests/test_shared_foundations.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/shared_foundations.pytest.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/tools/worktree_policy.py": "c18955d75cda6757893edb1d8c52178643a914f9a2ba2bf9f0040e1c74cfeeef",
+    "research/venue2027/_shared/worktree_policy.md": "954f9d3df0bffcd7994b3d2814ac6c2bf6bc915058d63784eab03f703b3c8711"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Deterministic worktree allocation, protected-path refusal, and exclusive shared-prefix locking covered by adversarial tests."
+}

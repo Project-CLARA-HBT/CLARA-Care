@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "reason_code": "OK",
+  "counts": {
+    "VERIFIED_BASELINE": 0,
+    "PRIMARY_READ_CODE_ABSENT": 0,
+    "UNVERIFIED": 24
+  },
+  "violations": [],
+  "out": "research/venue2027/_shared/literature_validity_ledger.csv",
+  "version": "1.0.0"
+}

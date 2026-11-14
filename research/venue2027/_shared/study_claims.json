@@ -1,0 +1,106 @@
+{
+  "schema_version": "1.0.0",
+  "studies": [
+    {
+      "study": "compsac",
+      "research_question": "Compared with globally versioned OCC, does a dependency-complete read set reduce unnecessary aborts without increasing forbidden commits?",
+      "primary_endpoint": "forbidden commit rate under dependency-complete schedules",
+      "dataset": "synthetic-compsac-2027",
+      "baselines": [
+        "global-profile version OCC",
+        "Silo-style entity readset OCC",
+        "PostgreSQL SERIALIZABLE SSI",
+        "entity-OCC without semantic dependency closure"
+      ],
+      "reuses_archive": []
+    },
+    {
+      "study": "popets",
+      "research_question": "Does revocation-complete future-disclosure control prevent re-disclosure of revoked longitudinal context to AI models with caching?",
+      "primary_endpoint": "revoked-context re-disclosure rate",
+      "dataset": "synthetic-popets-2027",
+      "baselines": [
+        "full cache refresh on revocation",
+        "purpose-bound cache keying"
+      ],
+      "reuses_archive": []
+    },
+    {
+      "study": "aime",
+      "research_question": "Does counterfactual clinical workflow safety under changing consent and medication history reduce unsafe recommendations?",
+      "primary_endpoint": "unsafe clinical action rate under consent/medication history changes",
+      "dataset": "synthetic-aime-2027",
+      "baselines": [
+        "single-history LLM recommendation",
+        "consent-agnostic retrieval"
+      ],
+      "reuses_archive": []
+    },
+    {
+      "study": "ifip_sec",
+      "research_question": "Does replay-closed authorization across purpose, delegation and AI proposal lineage prevent authorized-looking replay attacks?",
+      "primary_endpoint": "replay acceptance rate across purpose/delegation lineage",
+      "dataset": "synthetic-ifip_sec-2027",
+      "baselines": [
+        "token-only authorization",
+        "stateless purpose binding"
+      ],
+      "reuses_archive": []
+    },
+    {
+      "study": "acns",
+      "research_question": "What are the evidence boundaries of attestation in tool-using AI systems (SoK)?",
+      "primary_endpoint": "evidence-boundary coverage matrix",
+      "dataset": "synthetic-acns-2027",
+      "baselines": [
+        "attestation-only claims",
+        "provider receipt without binding"
+      ],
+      "reuses_archive": []
+    },
+    {
+      "study": "dsn",
+      "research_question": "Are recoverable safety journals crash-consistent for AI-mediated health-state mutations?",
+      "primary_endpoint": "crash-consistency violation rate after fault injection",
+      "dataset": "synthetic-dsn-2027",
+      "baselines": [
+        "single-write transactional commit",
+        "non-journaled update"
+      ],
+      "reuses_archive": []
+    },
+    {
+      "study": "dimva",
+      "research_question": "Can adaptive authorization-boundary probing be detected from minimal agent events?",
+      "primary_endpoint": "probing detection AUC at fixed false-positive budget",
+      "dataset": "synthetic-dimva-2027",
+      "baselines": [
+        "threshold on denied-request counts",
+        "static rule detection"
+      ],
+      "reuses_archive": []
+    },
+    {
+      "study": "pst",
+      "research_question": "How reconstructable is forensic evidence under purpose-bound audit minimization?",
+      "primary_endpoint": "forensic reconstructability score",
+      "dataset": "synthetic-pst-2027",
+      "baselines": [
+        "full audit retention",
+        "minimized audit without receipts"
+      ],
+      "reuses_archive": []
+    },
+    {
+      "study": "sacmat",
+      "research_question": "Does temporal conformance testing detect delegated-consent divergence across heterogeneous policy engines?",
+      "primary_endpoint": "delegation conformance divergence detection rate",
+      "dataset": "synthetic-sacmat-2027",
+      "baselines": [
+        "static policy diff",
+        "single-engine testing"
+      ],
+      "reuses_archive": []
+    }
+  ]
+}

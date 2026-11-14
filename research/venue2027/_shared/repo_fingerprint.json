@@ -1,6 +1,6 @@
 {
   "branch": "research/glhs-r4-novelty-hardening",
-  "content_sha256": "7196a17d87563ceb290f0cac983e85b5c3aea95aab3462be72e4c88d8f3d84b2",
+  "content_sha256": "6a3f34507ea17744e5a981854f05848480d01dfff368e721b5b445589d90743c",
   "db_fixture_type": "mixed-sqlite-and-postgresql",
   "detail": "",
   "files": [
@@ -26570,11 +26570,6 @@
       "size_bytes": 336
     },
     {
-      "path": "research/venue2027/_shared/repo_fingerprint.json",
-      "sha256": "6431bd38001421015e7e8a89f4b2c2dcaf5f195c402b5b29587928e2e84b6419",
-      "size_bytes": 1133672
-    },
-    {
       "path": "research/venue2027/_shared/tests/test_agent_protocol.py",
       "sha256": "fccfd0fe2fa141b8c6e331d7b941df129f419cb0f36ebb849848635baea3f0c0",
       "size_bytes": 6444
@@ -26591,8 +26586,33 @@
     },
     {
       "path": "research/venue2027/_shared/tools/repo_fingerprint.py",
-      "sha256": "6812ac1e0bfc132f3480194e5834b2ac780222f514860def781382c8b3fe80cb",
-      "size_bytes": 12781
+      "sha256": "0c5334f610a9833e32396c101f1af8a6616cdefb9e83602d8f0cf06daeaf40ed",
+      "size_bytes": 13078
+    },
+    {
+      "path": "research/venue2027/proof/SH-agent_protocol.json",
+      "sha256": "5e31ade70d7f8bcca0c207430e18d66a4ba1cb2a4336e03a2277dcece064ae41",
+      "size_bytes": 1241
+    },
+    {
+      "path": "research/venue2027/proof/SH-agent_protocol.pytest.log",
+      "sha256": "d5295754ac68f65672cab1f040f5594272c8e8a9ed1922436f6059efdaa21caf",
+      "size_bytes": 99
+    },
+    {
+      "path": "research/venue2027/proof/SH-repo_fingerprint.json",
+      "sha256": "9084908201a4275a874606a55b338e94269f260b6ca9b8a1a499185e76b6a627",
+      "size_bytes": 1505
+    },
+    {
+      "path": "research/venue2027/proof/SH-repo_fingerprint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "research/venue2027/proof/SH-repo_fingerprint.pytest.log",
+      "sha256": "1f9515430fa2c9cf392f9b4a09f61e48bdc865c0510149db2d2cefa7d676fa9c",
+      "size_bytes": 98
     },
     {
       "path": "research/venue2027/scripts/qa_full.py",
@@ -32275,7 +32295,7 @@
       "size_bytes": 13265
     }
   ],
-  "head_sha": "610c2f9335bb44a3077dd62ac7d3b4f4b9614d3d",
+  "head_sha": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
   "missing_required_files": [],
   "ok": true,
   "reason_code": "OK",
@@ -32290,7 +32310,7 @@
     "uv": "uv 0.13.4 (x86_64-unknown-linux-gnu)",
     "uv_lock_sha256": "1928a06c12b59ab97eb92fc385a51b11234511045d5883e8ee3f477528cf1f9c"
   },
-  "total_bytes": 196457214,
-  "tracked_file_count": 6454,
+  "total_bytes": 195326782,
+  "tracked_file_count": 6458,
   "worktree_clean": false
 }

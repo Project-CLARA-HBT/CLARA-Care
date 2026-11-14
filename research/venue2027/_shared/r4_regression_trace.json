@@ -1,0 +1,21 @@
+{
+  "reproduced": true,
+  "reason_code": "INCIDENT_REPRODUCED",
+  "failed_tests": [
+    "tests/test_glhs_current_state_insufficiency.py::test_penicillin_allergy_current_state_insufficiency_witness",
+    "tests/test_glhs_grwc_lineage.py::test_full_valid_review_chain",
+    "tests/test_glhs_r4_admission.py::test_full_valid_grwc_admission",
+    "tests/test_glhs_r4_comparators.py::test_benchmark_decision_concordance_schedule_matrix"
+  ],
+  "unexpected_failures": [],
+  "missing_expected_failures": [],
+  "reason_observed": true,
+  "passed_count": 57,
+  "failed_count": 4,
+  "duration_seconds": 66.86,
+  "exit_code": 1,
+  "log_path": "research/venue2027/proof/logs/SH-incident_repro.log",
+  "listener_anchor_present": true,
+  "mutation_site_present": true,
+  "version": "1.0.0"
+}

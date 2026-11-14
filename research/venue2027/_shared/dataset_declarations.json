@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0.0",
+  "datasets": [
+    {
+      "dataset_id": "synthetic-compsac-2027",
+      "provenance": "generated_synthetic",
+      "license": "project-internal-synthetic (no third-party data)",
+      "phi_fields": [],
+      "synthetic_verifiable": true,
+      "provider_terms_acknowledged": false,
+      "clinical_claim_allowed": false
+    },
+    {
+      "dataset_id": "synthetic-popets-2027",
+      "provenance": "generated_synthetic",
+      "license": "project-internal-synthetic (no third-party data)",
+      "phi_fields": [],
+      "synthetic_verifiable": true,
+      "provider_terms_acknowledged": false,
+      "clinical_claim_allowed": false
+    },
+    {
+      "dataset_id": "synthetic-aime-2027",
+      "provenance": "generated_synthetic",
+      "license": "project-internal-synthetic (no third-party data)",
+      "phi_fields": [],
+      "synthetic_verifiable": true,
+      "provider_terms_acknowledged": false,
+      "clinical_claim_allowed": false
+    },
+    {
+      "dataset_id": "synthetic-ifip_sec-2027",
+      "provenance": "generated_synthetic",
+      "license": "project-internal-synthetic (no third-party data)",
+      "phi_fields": [],
+      "synthetic_verifiable": true,
+      "provider_terms_acknowledged": false,
+      "clinical_claim_allowed": false
+    },
+    {
+      "dataset_id": "synthetic-sacmat-2027",
+      "provenance": "generated_synthetic",
+      "license": "project-internal-synthetic (no third-party data)",
+      "phi_fields": [],
+      "synthetic_verifiable": true,
+      "provider_terms_acknowledged": false,
+      "clinical_claim_allowed": false
+    },
+    {
+      "dataset_id": "synthetic-acns-2027",
+      "provenance": "generated_synthetic",
+      "license": "project-internal-synthetic (no third-party data)",
+      "phi_fields": [],
+      "synthetic_verifiable": true,
+      "provider_terms_acknowledged": false,
+      "clinical_claim_allowed": false
+    },
+    {
+      "dataset_id": "synthetic-dsn-2027",
+      "provenance": "generated_synthetic",
+      "license": "project-internal-synthetic (no third-party data)",
+      "phi_fields": [],
+      "synthetic_verifiable": true,
+      "provider_terms_acknowledged": false,
+      "clinical_claim_allowed": false
+    },
+    {
+      "dataset_id": "synthetic-dimva-2027",
+      "provenance": "generated_synthetic",
+      "license": "project-internal-synthetic (no third-party data)",
+      "phi_fields": [],
+      "synthetic_verifiable": true,
+      "provider_terms_acknowledged": false,
+      "clinical_claim_allowed": false
+    },
+    {
+      "dataset_id": "synthetic-pst-2027",
+      "provenance": "generated_synthetic",
+      "license": "project-internal-synthetic (no third-party data)",
+      "phi_fields": [],
+      "synthetic_verifiable": true,
+      "provider_terms_acknowledged": false,
+      "clinical_claim_allowed": false
+    }
+  ]
+}

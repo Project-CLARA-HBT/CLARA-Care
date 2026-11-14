@@ -1,0 +1,61 @@
+{
+  "ok": true,
+  "verdicts": [
+    {
+      "ok": true,
+      "reason_codes": [],
+      "dataset_id": "synthetic-compsac-2027",
+      "version": "1.0.0"
+    },
+    {
+      "ok": true,
+      "reason_codes": [],
+      "dataset_id": "synthetic-popets-2027",
+      "version": "1.0.0"
+    },
+    {
+      "ok": true,
+      "reason_codes": [],
+      "dataset_id": "synthetic-aime-2027",
+      "version": "1.0.0"
+    },
+    {
+      "ok": true,
+      "reason_codes": [],
+      "dataset_id": "synthetic-ifip_sec-2027",
+      "version": "1.0.0"
+    },
+    {
+      "ok": true,
+      "reason_codes": [],
+      "dataset_id": "synthetic-sacmat-2027",
+      "version": "1.0.0"
+    },
+    {
+      "ok": true,
+      "reason_codes": [],
+      "dataset_id": "synthetic-acns-2027",
+      "version": "1.0.0"
+    },
+    {
+      "ok": true,
+      "reason_codes": [],
+      "dataset_id": "synthetic-dsn-2027",
+      "version": "1.0.0"
+    },
+    {
+      "ok": true,
+      "reason_codes": [],
+      "dataset_id": "synthetic-dimva-2027",
+      "version": "1.0.0"
+    },
+    {
+      "ok": true,
+      "reason_codes": [],
+      "dataset_id": "synthetic-pst-2027",
+      "version": "1.0.0"
+    }
+  ],
+  "out": "research/venue2027/_shared/data_ethics_and_irb.md",
+  "version": "1.0.0"
+}
