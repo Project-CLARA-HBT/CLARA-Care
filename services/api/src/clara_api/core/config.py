@@ -931,6 +931,18 @@ class Settings(BaseSettings):
         le=20,
     )
 
+    # --- LifeMap wearable deduplication / multi-source version mapping (PH13) ---
+    # Additive + default OFF. When off, the deduplication engine fails closed:
+    # callers receive an explicit ``feature_disabled`` outcome and are expected to
+    # fall back to the pre-existing connector ingestion path unchanged. Enabling
+    # it applies deterministic provider-id de-duplication plus version precedence
+    # across sources while preserving conflicting values rather than overwriting
+    # them. Flipping it back off stops new dedup decisions with no data change.
+    lifemap_wearable_dedup_enabled: bool = Field(
+        default=False,
+        validation_alias="LIFEMAP_WEARABLE_DEDUP_ENABLED",
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:
