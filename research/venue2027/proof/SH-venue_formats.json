@@ -25,15 +25,18 @@
     },
     {
       "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
-      "exit_code": 0
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-venue_formats.ruff.log"
     },
     {
-      "argv": "ruff check research/venue2027/_shared/tools/venue_checklist.py research/venue2027/_shared/tests/test_venue_checklist.py --config ruff.toml",
-      "exit_code": 0
+      "argv": "uvx ruff@0.7.1 check research/venue2027/_shared/tools/venue_checklist.py research/venue2027/_shared/tests/test_venue_checklist.py --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-venue_formats.ruff.log"
     },
     {
-      "argv": "ruff format --check research/venue2027/_shared/tools/venue_checklist.py research/venue2027/_shared/tests/test_venue_checklist.py --config ruff.toml",
-      "exit_code": 0
+      "argv": "uvx ruff@0.7.1 format --check research/venue2027/_shared/tools/venue_checklist.py research/venue2027/_shared/tests/test_venue_checklist.py --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-venue_formats.ruff.log"
     }
   ],
   "artifacts_sha256": {

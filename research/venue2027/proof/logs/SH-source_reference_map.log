@@ -2,8 +2,8 @@
   "ok": true,
   "reason_code": "OK",
   "counts": {
-    "VERIFIED_EXISTING": 19,
-    "NEW_PROPOSED": 315,
+    "VERIFIED_EXISTING": 34,
+    "NEW_PROPOSED": 300,
     "MISSING_REQUIRED": 0
   },
   "missing_verified": [],

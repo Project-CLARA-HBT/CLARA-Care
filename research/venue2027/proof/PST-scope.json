@@ -10,15 +10,18 @@
   "commands": [
     {
       "argv": "python3 -m pytest -q research/venue2027/pst/tests/test_novelty_contract.py",
-      "exit_code": 0
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-scope.pytest.log"
     },
     {
       "argv": "python3 -m pytest -q research/venue2027/pst/tests/ research/venue2027/_shared/tests/",
-      "exit_code": 0
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-scope.pytest.log"
     },
     {
-      "argv": "ruff check research/venue2027/pst/tests/test_novelty_contract.py",
-      "exit_code": 0
+      "argv": "uvx ruff@0.7.1 check research/venue2027/pst/tests/test_novelty_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-scope.ruff.log"
     }
   ],
   "artifacts_sha256": {

@@ -1,31 +1,114 @@
 {
   "blocked": {},
   "completed": {
+    "ACNS-scope": {
+      "marked_at": "2026-11-14T18:51:15.478789+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-scope.json",
+      "status": "PASS"
+    },
+    "AIME-scope": {
+      "marked_at": "2026-11-14T18:51:15.668933+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/AIME-scope.json",
+      "status": "PASS"
+    },
+    "COMPSAC-scope": {
+      "marked_at": "2026-11-14T18:51:15.573652+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/COMPSAC-scope.json",
+      "status": "PASS"
+    },
+    "DIMVA-scope": {
+      "marked_at": "2026-11-14T18:51:15.864974+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-scope.json",
+      "status": "PASS"
+    },
+    "DSN-scope": {
+      "marked_at": "2026-11-14T18:51:15.202253+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DSN-scope.json",
+      "status": "PASS"
+    },
     "IFIP_SEC-scope": {
-      "marked_at": "2026-11-14T17:22:37.958005+00:00",
-      "report": "/dev/shm/clara_worktrees/v27_ifip-sec-scope/research/venue2027/proof/IFIP_SEC-scope.json",
+      "marked_at": "2026-11-14T18:51:15.386924+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-scope.json",
+      "status": "PASS"
+    },
+    "POPETS-scope": {
+      "marked_at": "2026-11-14T18:51:15.295718+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/POPETS-scope.json",
+      "status": "PASS"
+    },
+    "PST-scope": {
+      "marked_at": "2026-11-14T18:51:15.961247+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-scope.json",
+      "status": "PASS"
+    },
+    "SACMAT-scope": {
+      "marked_at": "2026-11-14T18:51:15.764177+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SACMAT-scope.json",
       "status": "PASS"
     },
     "SH-agent_protocol": {
-      "marked_at": "2026-11-14T16:36:43.049178+00:00",
+      "marked_at": "2026-11-14T18:51:14.036479+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-agent_protocol.json",
       "status": "PASS"
     },
+    "SH-base_contracts": {
+      "marked_at": "2026-11-14T18:51:15.008503+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-base_contracts.json",
+      "status": "PASS"
+    },
+    "SH-baseline_registry": {
+      "marked_at": "2026-11-14T18:51:14.818875+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-baseline_registry.json",
+      "status": "PASS"
+    },
     "SH-claim_overlap": {
-      "marked_at": "2026-11-14T16:36:43.049178+00:00",
-      "registered_from": "committed proof report at base SHA 7ebdbbf0",
-      "report": "/dev/shm/clara_worktrees/v27_ifip-sec-scope/research/venue2027/proof/SH-claim_overlap.json",
+      "marked_at": "2026-11-14T18:51:14.415573+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-claim_overlap.json",
+      "status": "PASS"
+    },
+    "SH-guard_regression": {
+      "marked_at": "2026-11-14T18:51:14.717759+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-guard_regression.json",
+      "status": "PASS"
+    },
+    "SH-incident_repro": {
+      "marked_at": "2026-11-14T18:51:14.132461+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-incident_repro.json",
       "status": "PASS"
     },
     "SH-literature_hardening": {
-      "marked_at": "2026-11-14T16:36:43.049178+00:00",
-      "registered_from": "committed proof report at base SHA 7ebdbbf0",
-      "report": "/dev/shm/clara_worktrees/v27_ifip-sec-scope/research/venue2027/proof/SH-literature_hardening.json",
+      "marked_at": "2026-11-14T18:51:14.513860+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-literature_hardening.json",
+      "status": "PASS"
+    },
+    "SH-postgres_isolation": {
+      "marked_at": "2026-11-14T18:51:15.103619+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-postgres_isolation.json",
       "status": "PASS"
     },
     "SH-repo_fingerprint": {
-      "marked_at": "2026-11-14T16:36:42.956282+00:00",
+      "marked_at": "2026-11-14T18:51:13.937200+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-repo_fingerprint.json",
+      "status": "PASS"
+    },
+    "SH-research_ethics": {
+      "marked_at": "2026-11-14T18:51:14.613284+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-research_ethics.json",
+      "status": "PASS"
+    },
+    "SH-source_reference_map": {
+      "marked_at": "2026-11-14T18:51:14.320431+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-source_reference_map.json",
+      "status": "PASS"
+    },
+    "SH-venue_formats": {
+      "marked_at": "2026-11-14T18:51:14.913188+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-venue_formats.json",
+      "status": "PASS"
+    },
+    "SH-worktree_layout": {
+      "marked_at": "2026-11-14T18:51:14.226496+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-worktree_layout.json",
       "status": "PASS"
     }
   },

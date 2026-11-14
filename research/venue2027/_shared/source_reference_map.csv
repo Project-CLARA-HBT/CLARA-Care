@@ -39,7 +39,7 @@ ACNS-release,acns,P08,research/venue2027/acns/release/claim_ledger.csv,NEW_PROPO
 ACNS-rq_registry,acns,P01,research/venue2027/acns/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
 ACNS-runner,acns,P05,evaluation/venue2027/acns/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
 ACNS-schema,acns,P02,research/venue2027/acns/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
-ACNS-scope,acns,P01,research/venue2027/acns/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+ACNS-scope,acns,P01,research/venue2027/acns/novelty_contract.md,VERIFIED_EXISTING,design_scope()->NoveltyRegister
 ACNS-stats,acns,P08,evaluation/venue2027/acns/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
 ACNS-threat,acns,P01,research/venue2027/acns/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
 ACNS-traces,acns,P05,evaluation/venue2027/acns/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
@@ -72,7 +72,7 @@ AIME-release,aime,P08,research/venue2027/aime/release/claim_ledger.csv,NEW_PROPO
 AIME-rq_registry,aime,P01,research/venue2027/aime/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
 AIME-runner,aime,P05,evaluation/venue2027/aime/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
 AIME-schema,aime,P02,research/venue2027/aime/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
-AIME-scope,aime,P01,research/venue2027/aime/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+AIME-scope,aime,P01,research/venue2027/aime/novelty_contract.md,VERIFIED_EXISTING,design_scope()->NoveltyRegister
 AIME-stats,aime,P08,evaluation/venue2027/aime/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
 AIME-threat,aime,P01,research/venue2027/aime/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
 AIME-traces,aime,P05,evaluation/venue2027/aime/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
@@ -105,7 +105,7 @@ COMPSAC-release,compsac,P08,research/venue2027/compsac/release/claim_ledger.csv,
 COMPSAC-rq_registry,compsac,P01,research/venue2027/compsac/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
 COMPSAC-runner,compsac,P05,evaluation/venue2027/compsac/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
 COMPSAC-schema,compsac,P02,research/venue2027/compsac/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
-COMPSAC-scope,compsac,P01,research/venue2027/compsac/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+COMPSAC-scope,compsac,P01,research/venue2027/compsac/novelty_contract.md,VERIFIED_EXISTING,design_scope()->NoveltyRegister
 COMPSAC-stats,compsac,P08,evaluation/venue2027/compsac/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
 COMPSAC-threat,compsac,P01,research/venue2027/compsac/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
 COMPSAC-traces,compsac,P05,evaluation/venue2027/compsac/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
@@ -138,7 +138,7 @@ DIMVA-release,dimva,P08,research/venue2027/dimva/release/claim_ledger.csv,NEW_PR
 DIMVA-rq_registry,dimva,P01,research/venue2027/dimva/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
 DIMVA-runner,dimva,P05,evaluation/venue2027/dimva/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
 DIMVA-schema,dimva,P02,research/venue2027/dimva/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
-DIMVA-scope,dimva,P01,research/venue2027/dimva/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+DIMVA-scope,dimva,P01,research/venue2027/dimva/novelty_contract.md,VERIFIED_EXISTING,design_scope()->NoveltyRegister
 DIMVA-stats,dimva,P08,evaluation/venue2027/dimva/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
 DIMVA-threat,dimva,P01,research/venue2027/dimva/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
 DIMVA-traces,dimva,P05,evaluation/venue2027/dimva/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
@@ -171,7 +171,7 @@ DSN-release,dsn,P08,research/venue2027/dsn/release/claim_ledger.csv,NEW_PROPOSED
 DSN-rq_registry,dsn,P01,research/venue2027/dsn/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
 DSN-runner,dsn,P05,evaluation/venue2027/dsn/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
 DSN-schema,dsn,P02,research/venue2027/dsn/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
-DSN-scope,dsn,P01,research/venue2027/dsn/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+DSN-scope,dsn,P01,research/venue2027/dsn/novelty_contract.md,VERIFIED_EXISTING,design_scope()->NoveltyRegister
 DSN-stats,dsn,P08,evaluation/venue2027/dsn/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
 DSN-threat,dsn,P01,research/venue2027/dsn/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
 DSN-traces,dsn,P05,evaluation/venue2027/dsn/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
@@ -204,7 +204,7 @@ IFIP_SEC-release,ifip_sec,P08,research/venue2027/ifip_sec/release/claim_ledger.c
 IFIP_SEC-rq_registry,ifip_sec,P01,research/venue2027/ifip_sec/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
 IFIP_SEC-runner,ifip_sec,P05,evaluation/venue2027/ifip_sec/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
 IFIP_SEC-schema,ifip_sec,P02,research/venue2027/ifip_sec/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
-IFIP_SEC-scope,ifip_sec,P01,research/venue2027/ifip_sec/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+IFIP_SEC-scope,ifip_sec,P01,research/venue2027/ifip_sec/novelty_contract.md,VERIFIED_EXISTING,design_scope()->NoveltyRegister
 IFIP_SEC-stats,ifip_sec,P08,evaluation/venue2027/ifip_sec/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
 IFIP_SEC-threat,ifip_sec,P01,research/venue2027/ifip_sec/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
 IFIP_SEC-traces,ifip_sec,P05,evaluation/venue2027/ifip_sec/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
@@ -237,7 +237,7 @@ POPETS-release,popets,P08,research/venue2027/popets/release/claim_ledger.csv,NEW
 POPETS-rq_registry,popets,P01,research/venue2027/popets/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
 POPETS-runner,popets,P05,evaluation/venue2027/popets/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
 POPETS-schema,popets,P02,research/venue2027/popets/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
-POPETS-scope,popets,P01,research/venue2027/popets/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+POPETS-scope,popets,P01,research/venue2027/popets/novelty_contract.md,VERIFIED_EXISTING,design_scope()->NoveltyRegister
 POPETS-stats,popets,P08,evaluation/venue2027/popets/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
 POPETS-threat,popets,P01,research/venue2027/popets/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
 POPETS-traces,popets,P05,evaluation/venue2027/popets/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
@@ -270,7 +270,7 @@ PST-release,pst,P08,research/venue2027/pst/release/claim_ledger.csv,NEW_PROPOSED
 PST-rq_registry,pst,P01,research/venue2027/pst/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
 PST-runner,pst,P05,evaluation/venue2027/pst/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
 PST-schema,pst,P02,research/venue2027/pst/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
-PST-scope,pst,P01,research/venue2027/pst/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+PST-scope,pst,P01,research/venue2027/pst/novelty_contract.md,VERIFIED_EXISTING,design_scope()->NoveltyRegister
 PST-stats,pst,P08,evaluation/venue2027/pst/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
 PST-threat,pst,P01,research/venue2027/pst/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
 PST-traces,pst,P05,evaluation/venue2027/pst/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
@@ -303,24 +303,24 @@ SACMAT-release,sacmat,P08,research/venue2027/sacmat/release/claim_ledger.csv,NEW
 SACMAT-rq_registry,sacmat,P01,research/venue2027/sacmat/rq_and_estimands.yaml,NEW_PROPOSED,read_rqs()->RQPlan
 SACMAT-runner,sacmat,P05,evaluation/venue2027/sacmat/runner.py,NEW_PROPOSED,run_campaign(config)->RunBundle
 SACMAT-schema,sacmat,P02,research/venue2027/sacmat/protocols/study.schema.json,NEW_PROPOSED,validate_study_json(record)->bool
-SACMAT-scope,sacmat,P01,research/venue2027/sacmat/novelty_contract.md,NEW_PROPOSED,design_scope()->NoveltyRegister
+SACMAT-scope,sacmat,P01,research/venue2027/sacmat/novelty_contract.md,VERIFIED_EXISTING,design_scope()->NoveltyRegister
 SACMAT-stats,sacmat,P08,evaluation/venue2027/sacmat/analyze.py,NEW_PROPOSED,"analyze(freeze,raw)->AnalysisBundle"
 SACMAT-threat,sacmat,P01,research/venue2027/sacmat/threat_model.md,NEW_PROPOSED,validate_threat()->Coverage
 SACMAT-traces,sacmat,P05,evaluation/venue2027/sacmat/trace_writer.py,NEW_PROPOSED,write_trace(event)->sha256
 SACMAT-unit,sacmat,P05,tests/venue2027/sacmat/test_algorithm_properties.py,NEW_PROPOSED,pytest algorithm_properties
 SH-agent_protocol,shared,P00,AGENTS/EXECUTION_CONTRACT.md,NEW_PROPOSED,hand_off(task)->Report
 SH-analysis_policy,shared,P06,evaluation/venue2027/_shared/statistics.py,NEW_PROPOSED,"analyze(raw,frozen_plan)->Metrics"
-SH-base_contracts,shared,P02,research/venue2027/_shared/schemas/case.v1.schema.json,NEW_PROPOSED,validate_case_v1(case)->bool
-SH-baseline_registry,shared,P03,research/venue2027/_shared/baselines/registry.yaml,NEW_PROPOSED,"register_baseline(name,revision)->Entry"
+SH-base_contracts,shared,P02,research/venue2027/_shared/schemas/case.v1.schema.json,VERIFIED_EXISTING,validate_case_v1(case)->bool
+SH-baseline_registry,shared,P03,research/venue2027/_shared/baselines/registry.yaml,VERIFIED_EXISTING,"register_baseline(name,revision)->Entry"
 SH-claim_overlap,shared,P01,research/venue2027/_shared/publication_overlap_registry.yaml,VERIFIED_EXISTING,audit_overlap(studies)->Findings
 SH-freeze_tool,shared,P06,scripts/research/venue2027/freeze_protocol.py,NEW_PROPOSED,freeze(config)->FreezeManifest
-SH-guard_regression,shared,P00,services/api/tests/test_glhs_immutable_projection_contract.py,NEW_PROPOSED,test_projection_whitelist(); test_reject_canonical_update()
+SH-guard_regression,shared,P00,services/api/tests/test_glhs_immutable_projection_contract.py,VERIFIED_EXISTING,test_projection_whitelist(); test_reject_canonical_update()
 SH-incident_repro,shared,P00,research/venue2027/_shared/r4_regression_trace.md,VERIFIED_EXISTING,reproduce_r4()->Trace
 SH-independent_oracle,shared,P02,evaluation/venue2027/_shared/oracle_contract.py,NEW_PROPOSED,oracle(case:Case)->OracleVerdict
 SH-literature_hardening,shared,P01,research/venue2027/_shared/literature_validity_ledger.csv,VERIFIED_EXISTING,verify_sources(registry)->Ledger
 SH-measurement,shared,P05,evaluation/venue2027/_shared/telemetry.py,NEW_PROPOSED,measure(operation)->Cost
 SH-outcome_contract,shared,P02,research/venue2027/_shared/schemas/outcome.v1.schema.json,NEW_PROPOSED,validate_outcome(outcome)->bool
-SH-postgres_isolation,shared,P03,infra/research/venue2027/docker-compose.pg.yaml,NEW_PROPOSED,provision_pg()->PGEnv
+SH-postgres_isolation,shared,P03,infra/research/venue2027/docker-compose.pg.yaml,VERIFIED_EXISTING,provision_pg()->PGEnv
 SH-psc_interface,shared,P04,evaluation/venue2027/_shared/psc_contract.py,NEW_PROPOSED,"evaluate_shadow(snapshot,proposal,current)->PSCResult"
 SH-r4_ci_gate,shared,P00,research/venue2027/_shared/green_gate.json,NEW_PROPOSED,"gate()->{jobs,status,hashes}"
 SH-release_integrity,shared,P08,scripts/research/venue2027/verify_release.py,NEW_PROPOSED,verify(manifest)->GateReport
@@ -331,5 +331,5 @@ SH-run_harness,shared,P05,evaluation/venue2027/_shared/harness.py,NEW_PROPOSED,"
 SH-schedule_engine,shared,P02,evaluation/venue2027/_shared/schedules.py,NEW_PROPOSED,"generate_schedule(seed,scope)->Iterable[Schedule]"
 SH-source_reference_map,shared,P01,research/venue2027/_shared/source_reference_map.csv,VERIFIED_EXISTING,map_source(files)->CSV
 SH-unified_ci,shared,P08,research/venue2027/_shared/ci_policy.md,NEW_PROPOSED,choose_gate(change_set)->Checks
-SH-venue_formats,shared,P09,research/venue2027/_shared/submission_venue_checklist.md,NEW_PROPOSED,"check_venue(venue,date)->Checklist"
-SH-worktree_layout,shared,P00,research/venue2027/_shared/worktree_policy.md,NEW_PROPOSED,"allocate_worktree(study,task)->Path"
+SH-venue_formats,shared,P09,research/venue2027/_shared/submission_venue_checklist.md,VERIFIED_EXISTING,"check_venue(venue,date)->Checklist"
+SH-worktree_layout,shared,P00,research/venue2027/_shared/worktree_policy.md,VERIFIED_EXISTING,"allocate_worktree(study,task)->Path"

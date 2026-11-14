@@ -1,8 +1,8 @@
 {
   "task_id": "SH-source_reference_map",
   "status": "PASS",
-  "source_sha_before": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
-  "source_sha_after": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
+  "source_sha_before": "c687a72cea179cbb0dea2e1d58a3946a16a0c3e0",
+  "source_sha_after": "c687a72cea179cbb0dea2e1d58a3946a16a0c3e0",
   "changed_paths": [
     "research/venue2027/_shared/tools/source_reference_map.py",
     "research/venue2027/_shared/source_reference_map.csv",
@@ -21,11 +21,11 @@
     }
   ],
   "artifacts_sha256": {
-    "research/venue2027/_shared/source_reference_map.csv": "d739f7a25eb5b896ced11c400974a5ea4a1fe99a76073c4eb7691e5c3fad136b",
-    "research/venue2027/_shared/tools/source_reference_map.py": "5ee74e5c0f32a680938160766f740a3f009a8c93d775108918990d92bdded547"
+    "research/venue2027/_shared/source_reference_map.csv": "f6a7f5039070a3be66dc9a7858e1278fb09355db7e40ba9f015bbedc4693f11f",
+    "research/venue2027/_shared/tools/source_reference_map.py": "8db1bc1d8a89f0f30cffd5985025477dce97f400dfa0f7e377d453c57c2caa8f"
   },
   "oracle_disagreement_count": null,
   "baseline_parity": "NOT_APPLICABLE",
   "unresolved": [],
-  "notes": "15 verified-existing anchors, 319 new-proposed paths, 0 missing required; missing verified anchor is a hard failure."
+  "notes": "v1.1: manifest paths confined to repo root closes audit F8."
 }

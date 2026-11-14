@@ -1,8 +1,8 @@
 {
   "task_id": "SH-literature_hardening",
   "status": "PASS",
-  "source_sha_before": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
-  "source_sha_after": "6237cbce7ed3ffc10fddff276833667aa57ea23d",
+  "source_sha_before": "c687a72cea179cbb0dea2e1d58a3946a16a0c3e0",
+  "source_sha_after": "c687a72cea179cbb0dea2e1d58a3946a16a0c3e0",
   "changed_paths": [
     "research/venue2027/_shared/tools/literature_ledger.py",
     "research/venue2027/_shared/literature_validity_ledger.csv",
@@ -22,10 +22,10 @@
   ],
   "artifacts_sha256": {
     "research/venue2027/_shared/literature_validity_ledger.csv": "53025fe21969b868e988dab6fcb9f666fec109b097e35924ea0cbb7fa5457827",
-    "research/venue2027/_shared/tools/literature_ledger.py": "6997e6f5b656bca8067062330d75c76aebc09a857d3488ebfa9240d5c852cc60"
+    "research/venue2027/_shared/tools/literature_ledger.py": "c52028006d3131d71fe1886f603254a045aeb4ead940c1e9f5a7a7574d7ed6a9"
   },
   "oracle_disagreement_count": null,
   "baseline_parity": "NOT_APPLICABLE",
   "unresolved": [],
-  "notes": "24 registry sources classified; VERIFIED_BASELINE requires both primary read and runnable code URL; reproduced-without-code and missing-DOI are violations."
+  "notes": "v1.1.0: false verified-baseline claims fail closed; honest code absence is non-fatal (audit F7)."
 }
