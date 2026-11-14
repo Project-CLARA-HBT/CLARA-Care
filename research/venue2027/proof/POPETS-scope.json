@@ -1,0 +1,32 @@
+{
+  "task_id": "POPETS-scope",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "changed_paths": [
+    "research/venue2027/popets/novelty_contract.md",
+    "research/venue2027/popets/tests/test_novelty_contract.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/popets/tests/test_novelty_contract.py",
+      "exit_code": 0
+    },
+    {
+      "argv": "/home/clue/.local/bin/ruff check research/venue2027/popets/tests/test_novelty_contract.py",
+      "exit_code": 0
+    },
+    {
+      "argv": "/home/clue/.local/bin/ruff format --check research/venue2027/popets/tests/test_novelty_contract.py",
+      "exit_code": 0
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/popets/novelty_contract.md": "0467cdcb44a2b1c7b5fd8580fe555cb24a58f9435ae19885952f5d166ae8da7a",
+    "research/venue2027/popets/tests/test_novelty_contract.py": "9d1f3a1fd69b9ac904b60b6e4b27b4a4d0320de351fcabda3ee5d87e9b7a2b85"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 scope register: paper title + target reader; claim-to-prior-work falsification matrix with real ledger prior-work ids; 3 RQs each with primary endpoint, strongest blueprint baseline, independent oracle, statistical test, falsification condition; truly distinct endpoint (revoked-context re-disclosure rate) vs GLHS R4 and the other eight venues; refusal of frozen E15-E22 as new evidence; Decision: GO conditional on blueprint falsification rule. Stdlib structural test enforces all required sections (8 passed). No empirical numbers invented; no E15-E22 values used."
+}

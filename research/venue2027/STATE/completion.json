@@ -1,9 +1,26 @@
 {
   "blocked": {},
   "completed": {
+    "IFIP_SEC-scope": {
+      "marked_at": "2026-11-14T17:22:37.958005+00:00",
+      "report": "/dev/shm/clara_worktrees/v27_ifip-sec-scope/research/venue2027/proof/IFIP_SEC-scope.json",
+      "status": "PASS"
+    },
     "SH-agent_protocol": {
       "marked_at": "2026-11-14T16:36:43.049178+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-agent_protocol.json",
+      "status": "PASS"
+    },
+    "SH-claim_overlap": {
+      "marked_at": "2026-11-14T16:36:43.049178+00:00",
+      "registered_from": "committed proof report at base SHA 7ebdbbf0",
+      "report": "/dev/shm/clara_worktrees/v27_ifip-sec-scope/research/venue2027/proof/SH-claim_overlap.json",
+      "status": "PASS"
+    },
+    "SH-literature_hardening": {
+      "marked_at": "2026-11-14T16:36:43.049178+00:00",
+      "registered_from": "committed proof report at base SHA 7ebdbbf0",
+      "report": "/dev/shm/clara_worktrees/v27_ifip-sec-scope/research/venue2027/proof/SH-literature_hardening.json",
       "status": "PASS"
     },
     "SH-repo_fingerprint": {

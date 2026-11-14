@@ -1,0 +1,35 @@
+{
+  "task_id": "IFIP_SEC-scope",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "changed_paths": [
+    "research/venue2027/ifip_sec/novelty_contract.md",
+    "research/venue2027/ifip_sec/tests/test_novelty_contract.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/ifip_sec/tests/test_novelty_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-scope.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/ifip_sec/ && ruff format --check research/venue2027/ifip_sec/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-scope.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-scope.shared_regression.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/ifip_sec/novelty_contract.md": "3e3443af1c613df6b8b2247496af246ba19e68903543015a0219013f9c265611",
+    "research/venue2027/ifip_sec/tests/test_novelty_contract.py": "d14bb4d33e81bcab52f03db08ff89b952053e4c174ffb9e46ce8f931a7238fb1"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 scope contract frozen: falsification matrix vs real ledger prior-work ids, exactly 3 RQs each with 5 mandated fields and blueprint baselines B1/B3/B2, single truly-distinct endpoint (replay acceptance rate across purpose/delegation lineage), E15-E22 archive refused as new evidence, explicit ACNS-SoK and DIMVA-detection differentiation, Decision: GO (conditional). Stdlib structural test enforces all sections; adversarial mutations refused. No empirical numbers invented; all claims prospective. SHA convention follows repo precedent (SH-claim_overlap/SH-literature_hardening): before==after==parent source state, because the single required commit contains this report and its own SHA is self-referential; final deliverable commit SHA is reported in the handoff."
+}

@@ -1,0 +1,36 @@
+{
+  "task_id": "AIME-scope",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "changed_paths": [
+    "research/venue2027/aime/novelty_contract.md",
+    "research/venue2027/aime/tests/test_novelty_contract.py",
+    "research/venue2027/proof/AIME-scope.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/aime/tests/test_novelty_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-scope.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/ research/venue2027/aime/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-scope.suite.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/aime/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-scope.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/aime/novelty_contract.md": "994be4302bd511e73d59f3ee7825ccac80fe9c438ee04670a770d41ce5342452",
+    "research/venue2027/aime/tests/test_novelty_contract.py": "9a875af0537123662c3cf8bb2c6fa84eff9c6db200e192a82487e0bc40148958"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 novelty contract signed with Decision: GO (conditional gates recorded). Claim-to-prior-work falsification matrix uses real registry ids (medhelm2026, cse2026, healthbench25, amie2026, healthinf_2026, fhir5, who21, e15_e22_frozen, glhs_r4, govred_rivf, govmut_soict); frozen E15-E22 archive refused as new evidence; HEALTHINF differentiated (governance protocol vs clinical task quality); exactly 3 RQs each with primary endpoint, strongest competing baseline, blinded-clinician independent oracle, statistical test, falsification condition; mandatory clinical-venue language present (no real PHI, synthetic vignettes only, blinded independent clinician review required, synthetic action correctness is NOT clinical efficacy). No empirical numbers; no clinical efficacy claims. Structural tests: 8 passed; combined shared+aime suite: 47 passed. source_sha_after is the parent SHA of the single AIME-scope commit, per SH-claim_overlap convention."
+}

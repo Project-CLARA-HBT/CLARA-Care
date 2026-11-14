@@ -1,0 +1,32 @@
+{
+  "task_id": "SACMAT-scope",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "changed_paths": [
+    "research/venue2027/sacmat/novelty_contract.md",
+    "research/venue2027/sacmat/tests/test_novelty_contract.py",
+    "research/venue2027/proof/logs/SACMAT-scope.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-scope.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/sacmat/tests/test_novelty_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-scope.pytest.log"
+    },
+    {
+      "argv": "uvx ruff check research/venue2027/sacmat/tests/test_novelty_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-scope.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/sacmat/novelty_contract.md": "2e5245b4c53c0f2c631c651369f56a7b87d92a13537b3e0af4867d698b894594",
+    "research/venue2027/sacmat/tests/test_novelty_contract.py": "c85a2d1c9e9ffe7b9c5593f96ca4b4207c68e20d9c1ef22199e37551eca33bf2"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 scope register signed: falsification matrix vs xacml18/xacbench20/zanzibar19/cedar/openfga/opa, exactly 3 RQs with 5 fields each, GovMut adequacy contrast, E15-E22 archive refusal, Decision: GO (conditional on equal-budget B1/B3 outperformance). Structural test 9 passed; ruff clean. Single-commit delivery on top of base 7ebdbbf0. No empirical numbers invented; study NOT_RUN."
+}

@@ -1,0 +1,32 @@
+{
+  "task_id": "PST-scope",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "changed_paths": [
+    "research/venue2027/pst/novelty_contract.md",
+    "research/venue2027/pst/tests/test_novelty_contract.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/pst/tests/test_novelty_contract.py",
+      "exit_code": 0
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/pst/tests/ research/venue2027/_shared/tests/",
+      "exit_code": 0
+    },
+    {
+      "argv": "ruff check research/venue2027/pst/tests/test_novelty_contract.py",
+      "exit_code": 0
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/pst/novelty_contract.md": "e8b9c229cdd48270048accf6db6a6253a28f8950cba9c38fde4ea7fe3aa111ad",
+    "research/venue2027/pst/tests/test_novelty_contract.py": "774cbaa03b2e7636cff5b3929f7b4fcf352c77bf25d3e69fa28b05239a10925b"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Scope-only task: signed novelty contract freezing title/target reader, claim-to-prior-work falsification matrix over real ledger/registry ids (ct9162, macaroons14, fhir5, muse, rats9334, nistabac, zanzibar19, who21, glhs-journal), exactly 3 RQs each with primary endpoint/strongest competing baseline/independent oracle/statistical test/falsification condition, 5 baseline arms, PoPETs future-context vs PST post hoc forensic distinction, refusal of frozen E15-E22 as new evidence, no-new-access-control-mechanism boundary, Decision: GO. No empirical numbers invented; stdlib structural tests verify all required sections. ruff 0.17.5 with repo ruff.toml."
+}

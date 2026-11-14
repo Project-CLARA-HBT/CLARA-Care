@@ -1,0 +1,35 @@
+{
+  "task_id": "DIMVA-scope",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "changed_paths": [
+    "research/venue2027/dimva/novelty_contract.md",
+    "research/venue2027/dimva/tests/test_novelty_contract.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest research/venue2027/dimva/tests/test_novelty_contract.py -q",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-scope.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/dimva/tests/test_novelty_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-scope.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest research/venue2027/_shared/tests/ -q",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-scope.shared_pytest.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/dimva/novelty_contract.md": "b321f4d881a3a0772966a4846f3312d5b819f560fd07d50735574d944deb124e",
+    "research/venue2027/dimva/tests/test_novelty_contract.py": "c22a703331c7388f6c922b2e36fe5ed8fa3cc99287f4497869f469e70affdfad"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 scope register signed. Claim-to-prior-work falsification matrix uses verified ledger ids (agentdojo24, toolemu24, tauben25, injecagent24, sommer10, zanzibar19, macaroons14) plus registry study glhs-journal. Exactly 3 RQs, each with primary endpoint / strongest competing baseline / independent oracle / statistical test / falsification condition. Distinct endpoint: campaign-level probing detection PR-AUC at fixed false-positive budget (detection, not prevention). IFIP SEC differentiated as prevention study; frozen GLHS E15-E22 refused as new evidence. No empirical numbers asserted; structural tests 16/16 pass."
+}

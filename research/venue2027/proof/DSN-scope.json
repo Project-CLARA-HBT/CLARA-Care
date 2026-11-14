@@ -1,0 +1,30 @@
+{
+  "task_id": "DSN-scope",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "66e0d48a797c8d2d9ec5a57f7b4e35b5322d25fa",
+  "changed_paths": [
+    "research/venue2027/dsn/novelty_contract.md",
+    "research/venue2027/dsn/tests/test_novelty_contract.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dsn/tests/test_novelty_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-scope.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/dsn/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-scope.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/dsn/novelty_contract.md": "896cc879590adc221886c48c338da759330b18fb0fbcff05c405a0efeec513c4",
+    "research/venue2027/dsn/tests/test_novelty_contract.py": "e771795b75e31f3979b928e59f63d1eaca6572dcf9321e3a5459bcc0a38fff5c"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Design artifact only; no empirical numbers. Structure enforced by 10-test stdlib suite (sections, 3 RQs x 5 fields, baselines B0-B3, distinct-endpoint sentence, E15-E22 reuse refusal, Decision: GO)."
+}

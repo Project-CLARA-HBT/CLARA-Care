@@ -1,0 +1,30 @@
+{
+  "task_id": "ACNS-scope",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "changed_paths": [
+    "research/venue2027/acns/novelty_contract.md",
+    "research/venue2027/acns/tests/test_novelty_contract.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/acns/tests/test_novelty_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-scope.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/acns/tests/test_novelty_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-scope.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/acns/novelty_contract.md": "07b2986a81a33617db2fce9f1b3c8758e0713b9733dee839646de9c709362d12",
+    "research/venue2027/acns/tests/test_novelty_contract.py": "022ca408860c0c1d8dc5bd02f3201f194504e200c76af14bddce17409e5c5232"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 scope register for the ACNS SoK. Contract declares SoK class (evidence-boundary taxonomy + coverage matrix), explicitly refuses new-mechanism claims, refuses frozen E15-E22 archive as new evidence (reuses_archive: []), differentiates from IFIP SEC (mechanism) and DIMVA (detection), and records Decision: GO with pre-registered falsification gates. No empirical numbers asserted; all observed values route through artifacts/venue2027/acns/<run_id>/manifest.json. source_sha_after is the base commit 7ebdbbf0; the single task commit SHA is created immediately after this report and recorded in the commit body."
+}

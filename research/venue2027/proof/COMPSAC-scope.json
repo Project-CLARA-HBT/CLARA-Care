@@ -1,0 +1,33 @@
+{
+  "task_id": "COMPSAC-scope",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "changed_paths": [
+    "research/venue2027/compsac/novelty_contract.md",
+    "research/venue2027/compsac/tests/test_novelty_contract.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/compsac/tests/test_novelty_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-scope.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/compsac/tests/test_novelty_contract.py",
+      "exit_code": 0
+    },
+    {
+      "argv": "ruff format --check research/venue2027/compsac/tests/test_novelty_contract.py",
+      "exit_code": 0
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/compsac/novelty_contract.md": "a9637df0bff271dd83e97f741c2a495a2479199b0a3a21ddeddd3373b1d908e8",
+    "research/venue2027/compsac/tests/test_novelty_contract.py": "026257ee1cbf48187124cc452d3e9eb8e66d57f18ca76eb90cb33166dfd16871"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 scope register: falsification matrix over real prior work (silo13, elle20, zanzibar19, macaroons14, Ports&Grittner PG SSI, B0-B4), exactly 3 RQs with 5 preregistered fields each, DSN differentiation, E15-E22 archive refusal, Decision: GO. Deliverable commit SHA reported in task handoff (cannot embed a commit's own SHA)."
+}
