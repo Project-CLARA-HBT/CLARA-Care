@@ -1618,6 +1618,29 @@ class ApiClient {
     return _asMapList(data['items'] ?? data['data']);
   }
 
+  Future<Map<String, dynamic>> createDeviceConnector({
+    required String accessToken,
+    required String provider,
+    required String externalSubjectRef,
+    required String displayLabel,
+    List<String> purposes = const ['personal_health_assistance'],
+    List<String> dataTypes = const ['steps', 'heart_rate', 'sleep'],
+    String consentVersion = '1.0',
+  }) {
+    return _post(
+      '/api/v1/connectors/device',
+      body: <String, dynamic>{
+        'provider': provider,
+        'external_subject_ref': externalSubjectRef,
+        'display_label': displayLabel,
+        'consent_version': consentVersion,
+        'purposes': purposes,
+        'data_types': dataTypes,
+      },
+      accessToken: accessToken,
+    );
+  }
+
   Future<Map<String, dynamic>> pauseConnectedHealthSource({
     required String accessToken,
     required String connectorId,

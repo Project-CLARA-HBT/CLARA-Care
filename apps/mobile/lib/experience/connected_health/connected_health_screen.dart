@@ -8,9 +8,79 @@ import '../../theme/tokens.dart';
 import '../fhir/fhir_sync_dashboard_screen.dart';
 import '../language_controller.dart';
 
+/// Supported external health/wearable provider catalog.
+class SupportedProviderInfo {
+  const SupportedProviderInfo({
+    required this.id,
+    required this.name,
+    required this.title,
+    required this.descriptionVi,
+    required this.descriptionEn,
+    required this.icon,
+    required this.isDeviceAdapter,
+    this.defaultTypes = const ['steps', 'heart_rate', 'sleep'],
+  });
+
+  final String id;
+  final String name;
+  final String title;
+  final String descriptionVi;
+  final String descriptionEn;
+  final IconData icon;
+  final bool isDeviceAdapter;
+  final List<String> defaultTypes;
+}
+
+const List<SupportedProviderInfo> kSupportedProviders = [
+  SupportedProviderInfo(
+    id: 'health_connect',
+    name: 'health_connect',
+    title: 'Health Connect',
+    descriptionVi:
+        'Cổng chuẩn Google Health Connect cho Android (bước chân, nhịp tim, giấc ngủ).',
+    descriptionEn:
+        'Android Health Connect platform bridge for steps, vitals, and sleep.',
+    icon: Icons.android_outlined,
+    isDeviceAdapter: true,
+  ),
+  SupportedProviderInfo(
+    id: 'huawei_health',
+    name: 'huawei_health',
+    title: 'Huawei Health',
+    descriptionVi:
+        'Đồng bộ dữ liệu thiết bị đeo thông minh Huawei Health Kit trên điện thoại.',
+    descriptionEn:
+        'On-device health and vitals synchronization from Huawei Health Kit.',
+    icon: Icons.watch_outlined,
+    isDeviceAdapter: true,
+  ),
+  SupportedProviderInfo(
+    id: 'fitbit',
+    name: 'fitbit',
+    title: 'Fitbit',
+    descriptionVi:
+        'Đồng bộ đám mây thiết bị Fitbit và tài khoản Google Fit qua API an toàn.',
+    descriptionEn:
+        'Cloud-to-cloud secure sync for Fitbit wearable trackers and scales.',
+    icon: Icons.directions_walk_outlined,
+    isDeviceAdapter: false,
+  ),
+  SupportedProviderInfo(
+    id: 'garmin',
+    name: 'garmin',
+    title: 'Garmin Connect',
+    descriptionVi:
+        'Dữ liệu biến thiên nhịp tim HRV, thể lực và theo dõi Garmin Health API.',
+    descriptionEn:
+        'Continuous HRV, training load, and activity from Garmin Health API.',
+    icon: Icons.speed_outlined,
+    isDeviceAdapter: false,
+  ),
+];
+
 /// Clear, ownership-first management for health sources already authorized on
-/// the user's device. Native permission discovery/import lives behind the
-/// Android connector bridge; this screen never fabricates a connected device.
+/// the user's device or cloud integrations. Native permission discovery/import
+/// lives behind the platform connector bridge; this screen never fabricates a connected device.
 class ConnectedHealthScreen extends StatefulWidget {
   const ConnectedHealthScreen({
     super.key,
@@ -34,8 +104,10 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _sources = const [];
+  final Set<String> _syncingIds = <String>{};
 
   String? get _token => widget.sessionStore.accessToken;
+  bool get _isEn => widget.languageController?.languageCode == 'en';
   ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
         widget.languageController?.languageCode,
       );
@@ -82,6 +154,64 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
         await widget.apiClient.pauseConnectedHealthSource(
           accessToken: token,
           connectorId: id,
+        );
+      }
+      await _load();
+    } on ApiException catch (error) {
+      if (mounted) _showMessage(error.message);
+    }
+  }
+
+  Future<void> _triggerSync(Map<String, dynamic> source) async {
+    final token = _token;
+    if (token == null || token.isEmpty) return;
+    final id = source['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+
+    setState(() => _syncingIds.add(id));
+    try {
+      await widget.apiClient.syncConnector(
+        accessToken: token,
+        connectorId: id,
+      );
+      if (mounted) {
+        final label = source['display_label']?.toString() ??
+            source['provider']?.toString() ??
+            '';
+        _showMessage(
+          _isEn
+              ? 'Data sync triggered for $label'
+              : 'Đã kích hoạt đồng bộ dữ liệu cho $label',
+        );
+      }
+      await _load();
+    } on ApiException catch (error) {
+      if (mounted) _showMessage(error.message);
+    } finally {
+      if (mounted) {
+        setState(() => _syncingIds.remove(id));
+      }
+    }
+  }
+
+  Future<void> _connectProvider(SupportedProviderInfo provider) async {
+    final token = _token;
+    if (token == null || token.isEmpty) return;
+
+    try {
+      await widget.apiClient.createDeviceConnector(
+        accessToken: token,
+        provider: provider.id,
+        externalSubjectRef: '${provider.id}-mobile-ref',
+        displayLabel: provider.title,
+        purposes: const ['personal_health_assistance'],
+        dataTypes: provider.defaultTypes,
+      );
+      if (mounted) {
+        _showMessage(
+          _isEn
+              ? '${provider.title} connected successfully.'
+              : 'Đã kết nối thành công với ${provider.title}.',
         );
       }
       await _load();
@@ -184,6 +314,16 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
   }
 
   Widget _buildLocalized(BuildContext context, ConsumerTerminology copy) {
+    // Determine which supported providers are already connected
+    final connectedProviders = _sources
+        .map((s) => s['provider']?.toString().toLowerCase() ?? '')
+        .where((p) => p.isNotEmpty)
+        .toSet();
+
+    final availableProviders = kSupportedProviders
+        .where((p) => !connectedProviders.contains(p.id))
+        .toList();
+
     return Scaffold(
       appBar: AppBar(
         title: Text(copy[ConsumerTerm.connectedHealthTitle]),
@@ -243,11 +383,47 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
                       _SourceCard(
                         copy: copy,
                         source: source,
+                        isSyncing: _syncingIds.contains(source['id']?.toString()),
                         onPauseResume: () => _changeState(source),
+                        onSyncNow: () => _triggerSync(source),
                         onDisconnect: () => _disconnect(source),
                         onDeleteData: () => _deleteImportedData(source),
+                        isEn: _isEn,
                       ),
                   ],
+                  const SizedBox(height: ClaraTokens.spaceLg),
+                  SectionHeader(
+                    title: _isEn
+                        ? 'Available Health Providers'
+                        : 'Nguồn sức khỏe có thể kết nối',
+                  ),
+                  const SizedBox(height: ClaraTokens.spaceXs),
+                  Text(
+                    _isEn
+                        ? 'Connect wearable platforms (Health Connect, Huawei Health, Fitbit, Garmin) to sync steps, heart rate, and sleep.'
+                        : 'Kết nối nền tảng thiết bị đeo (Health Connect, Huawei Health, Fitbit, Garmin) để đồng bộ bước chân, nhịp tim và giấc ngủ.',
+                    style: const TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                  const SizedBox(height: ClaraTokens.spaceSm),
+                  if (availableProviders.isEmpty)
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+                        child: Text(
+                          _isEn
+                              ? 'All supported providers are currently connected.'
+                              : 'Tất cả các nguồn được hỗ trợ hiện đã được kết nối.',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    )
+                  else
+                    for (final provider in availableProviders)
+                      _AvailableProviderCard(
+                        provider: provider,
+                        isEn: _isEn,
+                        onConnect: () => _connectProvider(provider),
+                      ),
                   const SizedBox(height: ClaraTokens.spaceLg),
                   SectionHeader(
                     title:
@@ -300,16 +476,22 @@ class _SourceCard extends StatelessWidget {
   const _SourceCard({
     required this.copy,
     required this.source,
+    required this.isSyncing,
     required this.onPauseResume,
+    required this.onSyncNow,
     required this.onDisconnect,
     required this.onDeleteData,
+    required this.isEn,
   });
 
   final ConsumerTerminology copy;
   final Map<String, dynamic> source;
+  final bool isSyncing;
   final VoidCallback onPauseResume;
+  final VoidCallback onSyncNow;
   final VoidCallback onDisconnect;
   final VoidCallback onDeleteData;
+  final bool isEn;
 
   @override
   Widget build(BuildContext context) {
@@ -320,7 +502,10 @@ class _SourceCard extends StatelessWidget {
         : source['provider']?.toString() ??
             copy[ConsumerTerm.connectedHealthFallbackSourceTitle];
     final types = (source['data_types'] as List? ?? const []).join(', ');
+    final lastSynced = source['last_synced_at']?.toString();
+
     return Card(
+      key: Key('source-card-${source['id'] ?? source['provider']}'),
       margin: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
       child: Padding(
         padding: const EdgeInsets.all(ClaraTokens.spaceMd),
@@ -329,8 +514,26 @@ class _SourceCard extends StatelessWidget {
             const Icon(Icons.watch_outlined),
             const SizedBox(width: ClaraTokens.spaceSm),
             Expanded(
-                child: Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w700))),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  if (lastSynced != null && lastSynced.isNotEmpty)
+                    Text(
+                      isEn
+                          ? 'Last sync: $lastSynced'
+                          : 'Đồng bộ lần cuối: $lastSynced',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.black54,
+                      ),
+                    ),
+                ],
+              ),
+            ),
             Chip(label: Text(_statusLabel(status))),
           ]),
           if (types.isNotEmpty) ...[
@@ -343,31 +546,65 @@ class _SourceCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: ClaraTokens.spaceSm),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                isEn ? 'Sync toggle' : 'Bật/Tắt đồng bộ',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+              Switch(
+                key: Key('sync-toggle-${source['id'] ?? source['provider']}'),
+                value: !isPaused,
+                onChanged: (_) => onPauseResume(),
+              ),
+            ],
+          ),
+          const SizedBox(height: ClaraTokens.spaceXs),
           Wrap(
-              spacing: ClaraTokens.spaceXs,
-              runSpacing: ClaraTokens.spaceXs,
-              children: [
-                OutlinedButton(
-                  onPressed: onPauseResume,
-                  child: Text(
-                    isPaused
-                        ? copy[ConsumerTerm.connectedHealthResume]
-                        : copy[ConsumerTerm.connectedHealthPause],
-                  ),
+            spacing: ClaraTokens.spaceXs,
+            runSpacing: ClaraTokens.spaceXs,
+            children: [
+              OutlinedButton.icon(
+                key: Key('sync-now-button-${source['id'] ?? source['provider']}'),
+                onPressed: isSyncing || isPaused ? null : onSyncNow,
+                icon: isSyncing
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.sync, size: 16),
+                label: Text(
+                  isSyncing
+                      ? (isEn ? 'Syncing...' : 'Đang đồng bộ...')
+                      : (isEn ? 'Sync now' : 'Đồng bộ ngay'),
                 ),
-                TextButton(
-                  onPressed: onDisconnect,
-                  child: Text(copy[ConsumerTerm.connectedHealthDisconnect]),
+              ),
+              OutlinedButton(
+                key: Key('pause-resume-button-${source['id'] ?? source['provider']}'),
+                onPressed: onPauseResume,
+                child: Text(
+                  isPaused
+                      ? copy[ConsumerTerm.connectedHealthResume]
+                      : copy[ConsumerTerm.connectedHealthPause],
                 ),
-                TextButton(
-                  onPressed: onDeleteData,
-                  child: Text(
-                    copy[ConsumerTerm.connectedHealthDeleteImportedData],
-                    style:
-                        TextStyle(color: Theme.of(context).colorScheme.error),
-                  ),
+              ),
+              TextButton(
+                key: Key('disconnect-button-${source['id'] ?? source['provider']}'),
+                onPressed: onDisconnect,
+                child: Text(copy[ConsumerTerm.connectedHealthDisconnect]),
+              ),
+              TextButton(
+                key: Key('delete-data-button-${source['id'] ?? source['provider']}'),
+                onPressed: onDeleteData,
+                child: Text(
+                  copy[ConsumerTerm.connectedHealthDeleteImportedData],
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
-              ]),
+              ),
+            ],
+          ),
         ]),
       ),
     );
@@ -381,6 +618,42 @@ class _SourceCard extends StatelessWidget {
         'disconnected' => copy[ConsumerTerm.connectedHealthStatusDisconnected],
         _ => copy[ConsumerTerm.connectedHealthStatusUnknown],
       };
+}
+
+class _AvailableProviderCard extends StatelessWidget {
+  const _AvailableProviderCard({
+    required this.provider,
+    required this.isEn,
+    required this.onConnect,
+  });
+
+  final SupportedProviderInfo provider;
+  final bool isEn;
+  final VoidCallback onConnect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      key: Key('available-provider-${provider.id}'),
+      margin: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
+      child: ListTile(
+        leading: Icon(provider.icon, size: 28),
+        title: Text(
+          provider.title,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          isEn ? provider.descriptionEn : provider.descriptionVi,
+          style: const TextStyle(fontSize: 12),
+        ),
+        trailing: FilledButton.tonal(
+          key: Key('connect-button-${provider.id}'),
+          onPressed: onConnect,
+          child: Text(isEn ? 'Connect' : 'Kết nối'),
+        ),
+      ),
+    );
+  }
 }
 
 class _InfoCard extends StatelessWidget {
@@ -420,3 +693,4 @@ class _RetryCard extends StatelessWidget {
         ),
       );
 }
+

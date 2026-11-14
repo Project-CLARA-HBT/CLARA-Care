@@ -1,0 +1,78 @@
+{
+  "phase_id": "PH13",
+  "agent_id": "A06",
+  "role": "Mobile UX",
+  "task": "Connected Health wearable provider catalog, manual sync, and connect flow on mobile",
+  "status": "PASSED",
+  "base_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "frozen_head_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "branch": "phase/ph13-a06",
+  "worktree_path": "/dev/shm/clara_worktrees/PH13_A06",
+  "path_lane": "apps/mobile/;artifacts/PH13/A06/",
+  "files_changed": [
+    "apps/mobile/lib/core/api_client.dart",
+    "apps/mobile/lib/experience/connected_health/connected_health_screen.dart",
+    "apps/mobile/test/connected_health_screen_test.dart",
+    "artifacts/PH13/A06/change_manifest.json",
+    "artifacts/PH13/A06/test_report.md",
+    "artifacts/PH13/A06/risk_register.md",
+    "artifacts/PH13/A06/rollback.md"
+  ],
+  "deliverables": [
+    "apps/mobile/lib/core/api_client.dart",
+    "apps/mobile/lib/experience/connected_health/connected_health_screen.dart",
+    "apps/mobile/test/connected_health_screen_test.dart",
+    "artifacts/PH13/A06/change_manifest.json",
+    "artifacts/PH13/A06/test_report.md",
+    "artifacts/PH13/A06/risk_register.md",
+    "artifacts/PH13/A06/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    "apps/mobile/lib/core/api_client.dart:1621",
+    "apps/mobile/lib/core/api_client.dart:1730",
+    "apps/mobile/lib/experience/connected_health/connected_health_screen.dart:12",
+    "apps/mobile/lib/experience/connected_health/connected_health_screen.dart:34",
+    "apps/mobile/lib/experience/connected_health/connected_health_screen.dart:165",
+    "apps/mobile/lib/experience/connected_health/connected_health_screen.dart:197",
+    "apps/mobile/lib/experience/connected_health/connected_health_screen.dart:323",
+    "apps/mobile/lib/experience/connected_health/connected_health_screen.dart:556",
+    "apps/mobile/lib/experience/connected_health/connected_health_screen.dart:569",
+    "apps/mobile/lib/experience/connected_health/connected_health_screen.dart:623",
+    "apps/mobile/lib/experience/connected_health/connected_health_screen.dart:637",
+    "apps/mobile/test/connected_health_screen_test.dart:51",
+    "apps/mobile/test/connected_health_screen_test.dart:106",
+    "apps/mobile/test/connected_health_screen_test.dart:165",
+    "apps/mobile/test/connected_health_screen_test.dart:226",
+    "apps/mobile/test/connected_health_screen_test.dart:296",
+    "apps/mobile/test/connected_health_screen_test.dart:363"
+  ],
+  "tests_run": [
+    {
+      "command": "cd apps/mobile && dart analyze lib/core/api_client.dart lib/experience/connected_health/connected_health_screen.dart test/connected_health_screen_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Dart static analysis on changed source and test files: No issues found."
+    },
+    {
+      "command": "cd apps/mobile && flutter test --no-pub test/connected_health_screen_test.dart",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "ConnectedHealthScreen widget suite: 6 tests passed, covering render/catalog, pause-resume toggle, manual sync, connect via POST /api/v1/connectors/device, delete imported data, and disconnect."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A06 -p PH13",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Agent path ACL gate: all touched files conform to apps/mobile/ and artifacts/PH13/A06/ lanes."
+    }
+  ],
+  "rollback_steps": [
+    "git -C /dev/shm/clara_worktrees/PH13_A06 revert --no-edit <A06_COMMIT_SHA>",
+    "git -C /dev/shm/clara_worktrees/PH13_A06 checkout bce92340e1f7a0709a96e9526e0682fa0fcb1e32 -- apps/mobile/lib/core/api_client.dart apps/mobile/lib/experience/connected_health/connected_health_screen.dart",
+    "rm -f /dev/shm/clara_worktrees/PH13_A06/apps/mobile/test/connected_health_screen_test.dart",
+    "rm -rf /dev/shm/clara_worktrees/PH13_A06/artifacts/PH13/A06",
+    "git -C /dev/shm/clara_worktrees/PH13_A06 status --porcelain"
+  ],
+  "timestamp": "2026-11-14T11:53:44Z"
+}
