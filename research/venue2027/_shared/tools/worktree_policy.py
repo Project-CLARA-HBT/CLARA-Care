@@ -27,6 +27,7 @@ Version
 from __future__ import annotations
 
 import dataclasses
+import posixpath
 import re
 from pathlib import Path
 
@@ -99,23 +100,46 @@ def allocate_worktree(study: str, task_id: str) -> WorktreeAllocation:
     return WorktreeAllocation(study=study_slug, task_id=task_id, path=path, branch=branch)
 
 
+def _normalize_path(path: str) -> str | None:
+    """Lexically normalize a repo-relative path, rejecting escapes.
+
+    Returns None if the path is absolute or traverses above the repository root.
+    This closes the auditor's F4 (``..`` traversal) and F5 (``./`` lock split)
+    defects: every check and lock key operates on this normalized form.
+    """
+
+    raw = path.strip().replace("\\", "/")
+    if not raw or raw.startswith("/") or re.match(r"^[A-Za-z]:", raw):
+        return None
+    normalized = posixpath.normpath(raw)
+    if normalized == ".." or normalized.startswith("../"):
+        return None
+    return normalized.lstrip("./") if normalized != "." else None
+
+
 def _matches(path: str, prefixes: tuple[str, ...]) -> bool:
-    norm = path.strip().lstrip("./")
-    return any(norm == p.rstrip("/") or norm.startswith(p) for p in prefixes)
+    return any(path == p.rstrip("/") or path.startswith(p) for p in prefixes)
 
 
 def assert_writable(paths: list[str] | tuple[str, ...]) -> None:
     """Refuse any path outside the research tree or in a protected production area."""
 
     for path in paths:
-        if _matches(path, PROTECTED_PREFIXES):
-            raise WorktreePolicyError(
-                "PROTECTED_PATH", f"{path} is production/clinical and cannot be edited by a research agent"
-            )
-        if not path.strip().lstrip("./").startswith("research/"):
+        normalized = _normalize_path(path)
+        if normalized is None:
             raise WorktreePolicyError(
                 "OUTSIDE_RESEARCH_TREE",
-                f"{path} is outside research/ and is not owned by the 2027 program",
+                f"{path} is absolute or escapes the repository root",
+            )
+        if _matches(normalized, PROTECTED_PREFIXES):
+            raise WorktreePolicyError(
+                "PROTECTED_PATH",
+                f"{normalized} is production/clinical and cannot be edited by a research agent",
+            )
+        if not normalized.startswith("research/"):
+            raise WorktreePolicyError(
+                "OUTSIDE_RESEARCH_TREE",
+                f"{normalized} is outside research/ and is not owned by the 2027 program",
             )
 
 
@@ -129,7 +153,14 @@ class PathLockRegistry:
         """Atomically claim ``paths`` for ``agent_id`` or raise :class:`LockConflict`."""
 
         assert_writable(paths)
-        keys = [self._lock_key(p.strip().lstrip("./")) for p in paths]
+        keys = []
+        for p in paths:
+            normalized = _normalize_path(p)
+            if normalized is None:
+                raise WorktreePolicyError(
+                    "OUTSIDE_RESEARCH_TREE", f"{p} is absolute or escapes the repository root"
+                )
+            keys.append(self._lock_key(normalized))
         conflicts: list[str] = []
         for path, key in zip(paths, keys, strict=True):
             owner = self._locks.get(key)

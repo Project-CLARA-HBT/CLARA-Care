@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import re
 from pathlib import Path
 
 CLAIM_OVERLAP_VERSION = "1.0.0"
@@ -112,14 +113,33 @@ def _normalize(text: str) -> str:
     return " ".join(text.lower().split())
 
 
+def _normalize_archive(name: str) -> str:
+    """Canonicalize an archive id so case/whitespace/suffix variants cannot evade.
+
+    ``E15_E22_FROZEN``, ``" e15_e22_frozen "`` and ``e15_e22_frozen_v2`` all
+    canonicalize to ``e15_e22_frozen`` (auditor defect F6).
+    """
+
+    canonical = re.sub(r"[^a-z0-9]+", "_", name.strip().lower()).strip("_")
+    # Strip trailing version/part suffixes: _v2, _v3, _part1, _copy, _frozen when
+    # repeated, etc. Repeat until stable so chained suffixes are removed.
+    while True:
+        stripped = re.sub(r"_(v\d+|part\d+|copy|dup|dup\d+|rev\d*)$", "", canonical)
+        if stripped == canonical:
+            break
+        canonical = stripped
+    return canonical
+
+
 def audit_overlap(studies: list[StudyClaim]) -> OverlapFindings:
     """Audit pairwise publication overlap and archive reuse."""
 
     findings: list[OverlapFinding] = []
+    known_archives = {_normalize_archive(a) for a in HISTORICAL_ARCHIVE}
 
     for study in studies:
         for archive in study.reuses_archive:
-            if archive in HISTORICAL_ARCHIVE:
+            if _normalize_archive(archive) in known_archives:
                 findings.append(
                     OverlapFinding(
                         pair=(study.study, archive),

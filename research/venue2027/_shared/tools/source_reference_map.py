@@ -90,8 +90,25 @@ class SourceMap:
         return buffer.getvalue()
 
 
+def _confined(root: Path, path: str) -> Path | None:
+    """Resolve a manifest path inside ``root``; None on escape (auditor F8)."""
+
+    candidate = Path(path)
+    if candidate.is_absolute():
+        return None
+    try:
+        resolved_root = root.resolve()
+        resolved = (resolved_root / candidate).resolve()
+    except (OSError, RuntimeError):
+        return None
+    if resolved != resolved_root and resolved_root not in resolved.parents:
+        return None
+    return resolved
+
+
 def _classify(root: Path, path: str, verified: dict[str, str]) -> str:
-    exists = (root / path).is_file()
+    resolved = _confined(root, path)
+    exists = resolved is not None and resolved.is_file()
     if path in verified:
         return VERIFIED_EXISTING if exists else MISSING_REQUIRED
     return VERIFIED_EXISTING if exists else NEW_PROPOSED

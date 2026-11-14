@@ -1,0 +1,36 @@
+{
+  "task_id": "AUDIT-shared_toolchain",
+  "status": "PASS",
+  "source_sha_before": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "source_sha_after": "7ebdbbf0740e87ffebe3538d6893a53eaccf2216",
+  "changed_paths": [
+    "research/venue2027/_shared/audit/test_independent_shared_audit.py",
+    "research/venue2027/_shared/audit/SHARED_TOOLCHAIN_INDEPENDENT_AUDIT.md",
+    "research/venue2027/proof/AUDIT-shared_toolchain.json",
+    "research/venue2027/proof/logs/AUDIT-revalidate-SH-repo_fingerprint.log",
+    "research/venue2027/proof/logs/AUDIT-revalidate-SH-agent_protocol.log",
+    "research/venue2027/proof/logs/AUDIT-shared_toolchain.pytest.log",
+    "research/venue2027/proof/logs/AUDIT-shared_toolchain.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/audit/test_independent_shared_audit.py research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AUDIT-shared_toolchain.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/_shared/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AUDIT-shared_toolchain.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/audit/test_independent_shared_audit.py": "c046a0d1170a64333fcd02bdaf7b7b54ec6da2744daecb392e70022375cb5c99",
+    "research/venue2027/_shared/audit/SHARED_TOOLCHAIN_INDEPENDENT_AUDIT.md": "67ce98317de1d9fe50b51f3a479d55388a015ccb3a999bd9668f38cc2662fe48"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "baseline_parity_notes": "Not applicable: audit task, no baseline parity claim.",
+  "notes": "Independent adversarial audit of the venue2027 shared toolchain at 7ebdbbf0. 52 new adversarial probes written (suite green, exit 0); 8 guards defeated (F1-F8) and asserted at CURRENT behaviour per audit protocol, so status=FAIL is program-level, not suite-level. Per-tool verdicts: repo_fingerprint PASS, research_ethics PASS, r4_regression PASS, agent_protocol FAIL (F1,F2,F3), worktree_policy FAIL (F4,F5), claim_overlap FAIL (F6), literature_ledger FAIL (F7), source_reference_map FAIL (F8). Prior proof reports SH-repo_fingerprint and SH-agent_protocol re-validated today with exit 0 (artifact hashes and source SHAs match this checkout). Full findings and residual risk: research/venue2027/_shared/audit/SHARED_TOOLCHAIN_INDEPENDENT_AUDIT.md. | REMEDIATED: F1-F8 fixed and re-verified; audit suite flipped to assert refusals; 179 shared+audit tests pass."
+}

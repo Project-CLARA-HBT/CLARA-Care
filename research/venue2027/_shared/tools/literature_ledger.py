@@ -17,13 +17,17 @@ A literature registry (JSON) of citation records.
 
 Failure semantics
 -----------------
-Any record marked ``VERIFIED_BASELINE`` without a code URL yields
-``ok=False`` with ``reason_code=VERIFIED_WITHOUT_CODE``. Unverified records are
-counted and surfaced but do not silently pass as strong comparators.
+A record that explicitly declares a runnable/verified baseline claim
+(``claims_verified_baseline=True``) but has no usable code URL (empty or
+whitespace-only) yields ``ok=False`` with
+``reason_code=INVALID_BASELINE_CLAIM``. Reading a source that simply has no
+public code is *not* an error: it is honestly classified
+``PRIMARY_READ_CODE_ABSENT``. Unverified records are counted and surfaced but
+never silently presented as strong comparators.
 
 Version
 -------
-``LITERATURE_LEDGER_VERSION = "1.0.0"``
+``LITERATURE_LEDGER_VERSION = "1.1.0"``
 """
 
 from __future__ import annotations
@@ -35,7 +39,7 @@ import json
 import sys
 from pathlib import Path
 
-LITERATURE_LEDGER_VERSION = "1.0.0"
+LITERATURE_LEDGER_VERSION = "1.1.0"
 
 VERIFIED_BASELINE = "VERIFIED_BASELINE"
 PRIMARY_READ_CODE_ABSENT = "PRIMARY_READ_CODE_ABSENT"
@@ -68,11 +72,12 @@ class LiteratureRecord:
     guarantee: str = ""
     relevance: str = ""
     reproduced: bool = False
+    claims_verified_baseline: bool = False
 
     def classify(self) -> str:
         if not self.primary_source_read:
             return UNVERIFIED
-        if self.code_url:
+        if self.code_url.strip():
             return VERIFIED_BASELINE
         return PRIMARY_READ_CODE_ABSENT
 
@@ -117,11 +122,17 @@ def verify_sources(records: list[LiteratureRecord]) -> LedgerResult:
     for record in records:
         status = record.classify()
         counts[status] += 1
-        if not record.doi_or_url:
+        if not record.doi_or_url.strip():
             violations.append(f"{record.id}: missing DOI/URL (cannot be a primary source)")
         if record.reproduced and status != VERIFIED_BASELINE:
             violations.append(
                 f"{record.id}: marked reproduced but status is {status} (no runnable code)"
+            )
+        # Enforce the documented gate: an explicit runnable-baseline claim with
+        # no usable code URL is an impossible baseline claim.
+        if record.claims_verified_baseline and not record.code_url.strip():
+            violations.append(
+                f"{record.id}: VERIFIED_BASELINE claimed without a code URL"
             )
     ok = not violations
     return LedgerResult(

@@ -44,6 +44,7 @@ ReasonCode = Literal[
     "TASK_MISMATCH",
     "NO_COMMANDS",
     "NONZERO_EXIT",
+    "MISSING_LOG",
     "MISSING_SOURCE_SHA",
     "SHA_NOT_IN_REPO",
     "ARTIFACT_MISSING",
@@ -88,6 +89,27 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _confined_path(root: Path, rel: str) -> Path | None:
+    """Resolve ``rel`` inside ``root`` or return None if it escapes.
+
+    Rejects absolute paths, ``..`` traversal, symlink escapes and anything whose
+    resolved location is not a descendant of the repository root. This closes the
+    auditor's F1 defect (hash binding to arbitrary host files).
+    """
+
+    candidate = Path(rel)
+    if candidate.is_absolute():
+        return None
+    try:
+        resolved_root = root.resolve()
+        resolved = (resolved_root / candidate).resolve()
+    except (OSError, RuntimeError):
+        return None
+    if resolved != resolved_root and resolved_root not in resolved.parents:
+        return None
+    return resolved
 
 
 def _sha_exists(repo: Path, sha: str) -> bool:
@@ -171,15 +193,37 @@ def validate_report(
         nonzero = [
             str(c.get("argv", "?"))
             for c in commands
-            if not isinstance(c, dict) or c.get("exit_code") != 0
+            if not isinstance(c, dict)
+            or isinstance(c.get("exit_code"), bool)
+            or not isinstance(c.get("exit_code"), int)
+            or c.get("exit_code") != 0
         ]
         if nonzero:
             return ValidationResult(
                 False,
                 "NONZERO_EXIT",
-                tuple(f"non-zero/absent exit_code: {a}" for a in nonzero),
+                tuple(f"non-zero/absent/ill-typed exit_code: {a}" for a in nonzero),
                 task_id,
             )
+        # A PASS must carry a real, on-disk log for every command. This is what
+        # makes "never claim PASS without process output" mechanically enforced.
+        for command in commands:
+            rel_log = command.get("log_path")
+            if not isinstance(rel_log, str) or not rel_log.strip():
+                return ValidationResult(
+                    False,
+                    "MISSING_LOG",
+                    (f"command {command.get('argv', '?')!r} has no log_path",),
+                    task_id,
+                )
+            log_file = _confined_path(root, rel_log)
+            if log_file is None or not log_file.is_file() or log_file.stat().st_size == 0:
+                return ValidationResult(
+                    False,
+                    "MISSING_LOG",
+                    (f"log_path is absent/empty/outside repo: {rel_log}",),
+                    task_id,
+                )
         if not _sha_exists(root, source_sha_after):
             return ValidationResult(
                 False,
@@ -199,7 +243,14 @@ def validate_report(
                 )
         if verify_artifacts:
             for rel, declared in report.get("artifacts_sha256", {}).items():
-                path = root / rel
+                path = _confined_path(root, rel)
+                if path is None:
+                    return ValidationResult(
+                        False,
+                        "ARTIFACT_MISSING",
+                        (f"artifact path escapes repository root: {rel}",),
+                        task_id,
+                    )
                 if not path.is_file():
                     return ValidationResult(
                         False, "ARTIFACT_MISSING", (f"artifact not found: {rel}",), task_id
@@ -236,8 +287,8 @@ def build_report(
     root = Path(repo)
     artifacts: dict[str, str] = {}
     for rel in artifact_paths:
-        path = root / rel
-        artifacts[rel] = _sha256_file(path) if path.is_file() else ""
+        path = _confined_path(root, rel)
+        artifacts[rel] = _sha256_file(path) if path is not None and path.is_file() else ""
     payload: dict[str, Any] = {
         "task_id": task_id,
         "status": status,

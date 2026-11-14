@@ -56,13 +56,15 @@ def _sha(repo: pathlib.Path) -> str:
 def _good_report(repo: pathlib.Path, **overrides: object) -> dict[str, object]:
     artifact = repo / "artifact.txt"
     digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    log = repo / "artifact.log"
+    log.write_text("pytest -q\ncollected 1 item\n1 passed\n", encoding="utf-8")
     base: dict[str, object] = {
         "task_id": "SH-repo_fingerprint",
         "status": "PASS",
         "source_sha_before": _sha(repo),
         "source_sha_after": _sha(repo),
         "changed_paths": ["artifact.txt"],
-        "commands": [{"argv": "pytest -q", "exit_code": 0}],
+        "commands": [{"argv": "pytest -q", "exit_code": 0, "log_path": "artifact.log"}],
         "artifacts_sha256": {"artifact.txt": digest},
         "oracle_disagreement_count": 0,
         "baseline_parity": "NOT_APPLICABLE",
@@ -138,13 +140,14 @@ def test_blocked_report_needs_no_commands(repo: pathlib.Path) -> None:
 
 
 def test_build_report_hashes_artifacts(repo: pathlib.Path) -> None:
+    (repo / "artifact.log").write_text("1 passed\n", encoding="utf-8")
     report = ap.build_report(
         task_id="SH-repo_fingerprint",
         status="PASS",
         source_sha_before=_sha(repo),
         source_sha_after=_sha(repo),
         changed_paths=["artifact.txt"],
-        commands=[{"argv": "pytest -q", "exit_code": 0}],
+        commands=[{"argv": "pytest -q", "exit_code": 0, "log_path": "artifact.log"}],
         artifact_paths=["artifact.txt"],
         repo=repo,
     )
