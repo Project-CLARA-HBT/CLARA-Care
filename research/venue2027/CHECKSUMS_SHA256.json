@@ -1,0 +1,2079 @@
+{
+  "bundle_revision": "v3",
+  "task_count": 322,
+  "file_count_excluding_checksum": 518,
+  "files": {
+    "AGENTS/DEEPSEEK_GEMINI_WORKFLOW.md": {
+      "sha256": "19f0e5939a80575261fc02a56f9207f40cdd569dc3848951c64c1f2292f1faac",
+      "bytes": 2964
+    },
+    "AGENTS/EXECUTION_CONTRACT.md": {
+      "sha256": "9d19a9d51afbd5b07b6dccd02b3e2bd49a0772abf0f6f2be9ba318a628af3e26",
+      "bytes": 3387
+    },
+    "AGENTS/FIRST_WAVE_P00_P02.md": {
+      "sha256": "547d6264619f274bacc51986485de9b8407a503e9a94fa2a44782424445c55e7",
+      "bytes": 2738
+    },
+    "AGENTS/MASTER_GOAL_DEEPSEEK.md": {
+      "sha256": "fc05254d20e1eeb95a5e903a28d60ede724d227181998ea1422dcbeec4519151",
+      "bytes": 2890
+    },
+    "AGENTS/MASTER_GOAL_GEMINI.md": {
+      "sha256": "6cabf33d14c90016ae422e13fba8ec29966de0fe45e47f5a79151d216f2c65eb",
+      "bytes": 1721
+    },
+    "AGENTS/RESOURCE_SCHEDULING.md": {
+      "sha256": "e66579491e30aa305c59d9d229d4bf99982d904fe33ecd34b215d10643f5dee8",
+      "bytes": 4564
+    },
+    "AGENTS/TASK_REPORT_SCHEMA.json": {
+      "sha256": "92a1be4e7d0627c7871c42b5dc0e5d03619190a9e069cb5f6e036fdff0a0c3d1",
+      "bytes": 1726
+    },
+    "CLARA_2027_V3_EXECUTION_HANDBOOK.md": {
+      "sha256": "3a0b6167ae0555d3214dfac3f3943b796fe055e034ccafdf5719e9846af87755",
+      "bytes": 205509
+    },
+    "CLARA_2027_V3_EXECUTION_HANDBOOK.pdf": {
+      "sha256": "d842d3c25044cf9e451f44d0a66afccc6bc97cd1165ee3fb47aa2722e7ba86d1",
+      "bytes": 316606
+    },
+    "CONTEXT/CLARA_2027_NINE_POLISHED_MANUSCRIPTS.pdf": {
+      "sha256": "75fe45762e14eed507ea18dd5803b8110c0cc319cb448bb8d8aa9e401dcdb9a5",
+      "bytes": 2065412
+    },
+    "CONTEXT/CLARA_2027_RQ_REGISTER.pdf": {
+      "sha256": "c7cb987e2599bd5231804af1ed21fcbf4bff423d2d9d0ab8dcc3845389e57c1c",
+      "bytes": 10106
+    },
+    "CONTEXT/PAPERS/acns/BASELINE_IMPLEMENTATION_MATRIX.json": {
+      "sha256": "cba7c3ccb178c319c6a53c094a5879ce07a1c4735d17f2a9251889755ee6bae5",
+      "bytes": 3186
+    },
+    "CONTEXT/PAPERS/acns/NOVELTY_RQ_RESEARCH_GAP.md": {
+      "sha256": "eaf50bf264c52c49dc9f59f0ffa663ba3d24e49a354b5166695261c5b42b4840",
+      "bytes": 8186
+    },
+    "CONTEXT/PAPERS/acns/PSC_METHOD_EXTENSION.md": {
+      "sha256": "499ec35fcd690b585436a014dd78a2436ddd798574f98fb476a9f3ebc9f5f32e",
+      "bytes": 4904
+    },
+    "CONTEXT/PAPERS/acns/SPEC.md": {
+      "sha256": "789f959261cdf1ed9c5c15695137f8210068f43c85ac93023f3f50891efb5cea",
+      "bytes": 17112
+    },
+    "CONTEXT/PAPERS/acns/manuscript.tex": {
+      "sha256": "d55bfdf4a0d077a08252888deaaf85c35bc80ded50f00adcbacbfcfbc2b80e52",
+      "bytes": 14436
+    },
+    "CONTEXT/PAPERS/acns/references.bib": {
+      "sha256": "8bfdafce808e8aefd4b032fcb7130e33255bccc674e22659971a894fe9dfc453",
+      "bytes": 3561
+    },
+    "CONTEXT/PAPERS/aime/BASELINE_IMPLEMENTATION_MATRIX.json": {
+      "sha256": "9f41482479eba7027478381bddb79d059d900f222a4027353e6e330a7ed17c2c",
+      "bytes": 3750
+    },
+    "CONTEXT/PAPERS/aime/NOVELTY_RQ_RESEARCH_GAP.md": {
+      "sha256": "37340a74e18e232fa737f67912d5693ab122bcb94091493886aa5a1cc198091d",
+      "bytes": 8490
+    },
+    "CONTEXT/PAPERS/aime/PSC_METHOD_EXTENSION.md": {
+      "sha256": "228de305f9dbe9167456ae1c10a5ac5b79956c4fabc862d3ac0e80d6ba3cf9ce",
+      "bytes": 5185
+    },
+    "CONTEXT/PAPERS/aime/SPEC.md": {
+      "sha256": "ae430122c2c8a0e129eadafebf2ed7726b377ca3fa3bd4d4b7ef446eb00ae13a",
+      "bytes": 17363
+    },
+    "CONTEXT/PAPERS/aime/manuscript.tex": {
+      "sha256": "e913f366d33765ab178d6e548c411f8a24948aa614094e146e831473704e26ea",
+      "bytes": 15313
+    },
+    "CONTEXT/PAPERS/aime/references.bib": {
+      "sha256": "8bfdafce808e8aefd4b032fcb7130e33255bccc674e22659971a894fe9dfc453",
+      "bytes": 3561
+    },
+    "CONTEXT/PAPERS/compsac/BASELINE_IMPLEMENTATION_MATRIX.json": {
+      "sha256": "a446417a27cef81d01c882ad56596827ba52e3bc746d5aec54418fd41b051f6a",
+      "bytes": 3457
+    },
+    "CONTEXT/PAPERS/compsac/NOVELTY_RQ_RESEARCH_GAP.md": {
+      "sha256": "c71b10c052104884989cf5d9da75375d76364df36e0d705f8b14ebd1257a32b8",
+      "bytes": 8082
+    },
+    "CONTEXT/PAPERS/compsac/PSC_METHOD_EXTENSION.md": {
+      "sha256": "ea3b2dc73834e3238d2d7ef6e37065296ec5c511ed7381d3734452959d54e4f1",
+      "bytes": 5027
+    },
+    "CONTEXT/PAPERS/compsac/SPEC.md": {
+      "sha256": "8aeaa85fbc383672c4f7ab3ccd860b13ac269e64995cf363f558bf4fec3dfbef",
+      "bytes": 16961
+    },
+    "CONTEXT/PAPERS/compsac/manuscript.tex": {
+      "sha256": "36167e473ba722bc4ce1c6f91b4ca5d501a157bf37747b0e0ac765a8a3ae135a",
+      "bytes": 15201
+    },
+    "CONTEXT/PAPERS/compsac/references.bib": {
+      "sha256": "8bfdafce808e8aefd4b032fcb7130e33255bccc674e22659971a894fe9dfc453",
+      "bytes": 3561
+    },
+    "CONTEXT/PAPERS/dimva/BASELINE_IMPLEMENTATION_MATRIX.json": {
+      "sha256": "a9f78a18e7fa095fdccb77d6edfe99db03899aeba31163d973d5599d64e3fba2",
+      "bytes": 3707
+    },
+    "CONTEXT/PAPERS/dimva/NOVELTY_RQ_RESEARCH_GAP.md": {
+      "sha256": "d7cb29eb36042d14588d2b1edd7a72b53bd758d205a6657ce5e883bf812e3521",
+      "bytes": 8565
+    },
+    "CONTEXT/PAPERS/dimva/PSC_METHOD_EXTENSION.md": {
+      "sha256": "b821744f48ac7a2527de372af71855663baa81d164733ca3c21515397cefda73",
+      "bytes": 4875
+    },
+    "CONTEXT/PAPERS/dimva/SPEC.md": {
+      "sha256": "a6586c6697951e4eafd67f80df654ba749c1165b196ba3e5e90516b54ba0c08b",
+      "bytes": 16643
+    },
+    "CONTEXT/PAPERS/dimva/manuscript.tex": {
+      "sha256": "ec4296e9a6034a76da0032c450fee56c0b49b746fe720a19814dd5026b261681",
+      "bytes": 14432
+    },
+    "CONTEXT/PAPERS/dimva/references.bib": {
+      "sha256": "8bfdafce808e8aefd4b032fcb7130e33255bccc674e22659971a894fe9dfc453",
+      "bytes": 3561
+    },
+    "CONTEXT/PAPERS/dsn/BASELINE_IMPLEMENTATION_MATRIX.json": {
+      "sha256": "6a62a16c03461e93e4c484a54162733384d75a31c62f68ef537d20d210b857dd",
+      "bytes": 3046
+    },
+    "CONTEXT/PAPERS/dsn/NOVELTY_RQ_RESEARCH_GAP.md": {
+      "sha256": "b10e7de308942135e04428671f5c28209309cb93f9202d7acd9e9aa061c1ad12",
+      "bytes": 8109
+    },
+    "CONTEXT/PAPERS/dsn/PSC_METHOD_EXTENSION.md": {
+      "sha256": "8a203d619e1de57f045491cffb35e1fa41aeac4ad51cafc4a2e8f7c552a30afa",
+      "bytes": 4975
+    },
+    "CONTEXT/PAPERS/dsn/SPEC.md": {
+      "sha256": "202706a909460bec26b3cd46877996ba29e31930cb9abb419f90ceebac77b984",
+      "bytes": 17087
+    },
+    "CONTEXT/PAPERS/dsn/manuscript.tex": {
+      "sha256": "849a6117febc2616ccbdfa4c88726412c1bc26da3df6e8b51b37b7b6fc2a57b2",
+      "bytes": 16588
+    },
+    "CONTEXT/PAPERS/dsn/references.bib": {
+      "sha256": "8bfdafce808e8aefd4b032fcb7130e33255bccc674e22659971a894fe9dfc453",
+      "bytes": 3561
+    },
+    "CONTEXT/PAPERS/ifip_sec/BASELINE_IMPLEMENTATION_MATRIX.json": {
+      "sha256": "8294cc1e25fd3f3ae826dce8e48befc2c2c69a7294f60d9fe198d4020e580305",
+      "bytes": 3534
+    },
+    "CONTEXT/PAPERS/ifip_sec/NOVELTY_RQ_RESEARCH_GAP.md": {
+      "sha256": "051cf3c198614c419d5b7b085bff8190b4463233dc6cbda1caa0af86449ca32f",
+      "bytes": 8255
+    },
+    "CONTEXT/PAPERS/ifip_sec/PSC_METHOD_EXTENSION.md": {
+      "sha256": "331a92486b542a02d6fe08f9aa5dc09ab6c631a24762b01fee5051348c50bc9f",
+      "bytes": 4870
+    },
+    "CONTEXT/PAPERS/ifip_sec/SPEC.md": {
+      "sha256": "128824772363c7a85088b2e60fce1d699580e21dae607419f966d5876b9d1091",
+      "bytes": 16633
+    },
+    "CONTEXT/PAPERS/ifip_sec/manuscript.tex": {
+      "sha256": "90f9863450c32a93a115e23b15b430d368754d8f174e2b264a9e5c5c7284589a",
+      "bytes": 14642
+    },
+    "CONTEXT/PAPERS/ifip_sec/references.bib": {
+      "sha256": "8bfdafce808e8aefd4b032fcb7130e33255bccc674e22659971a894fe9dfc453",
+      "bytes": 3561
+    },
+    "CONTEXT/PAPERS/popets/BASELINE_IMPLEMENTATION_MATRIX.json": {
+      "sha256": "0b21d915f3c4e67419548bed4d5b6cebc16b4aafb686d3d791f1c9ae5ed90399",
+      "bytes": 3751
+    },
+    "CONTEXT/PAPERS/popets/NOVELTY_RQ_RESEARCH_GAP.md": {
+      "sha256": "ac1e6b048ae50b988a9c0bb3ddebeeb002734b94bf2c086c35f8ef3aaf10404c",
+      "bytes": 8585
+    },
+    "CONTEXT/PAPERS/popets/PSC_METHOD_EXTENSION.md": {
+      "sha256": "85aa9ca8a6bc2824ecd1c75169f648dbc461e823f47597dd25486c90e3b97ba3",
+      "bytes": 5042
+    },
+    "CONTEXT/PAPERS/popets/SPEC.md": {
+      "sha256": "a0250345e817180c5a8673ef63b6f871719228458e755c81d19584d6873baa5d",
+      "bytes": 17368
+    },
+    "CONTEXT/PAPERS/popets/manuscript.tex": {
+      "sha256": "c392337c7927a3fef9b9989d8bcee07e30d248a522665afe7ba87a401e184a75",
+      "bytes": 15387
+    },
+    "CONTEXT/PAPERS/popets/references.bib": {
+      "sha256": "8bfdafce808e8aefd4b032fcb7130e33255bccc674e22659971a894fe9dfc453",
+      "bytes": 3561
+    },
+    "CONTEXT/PAPERS/pst/BASELINE_IMPLEMENTATION_MATRIX.json": {
+      "sha256": "cd9065525fa09669564abe681b1fb5feed2c7f9f8c3b96d14931f20428c76b8b",
+      "bytes": 3536
+    },
+    "CONTEXT/PAPERS/pst/NOVELTY_RQ_RESEARCH_GAP.md": {
+      "sha256": "7454d637ae7a0f77f37af0aaad4c57a3215e02843c135cfc41907fac945445d3",
+      "bytes": 8037
+    },
+    "CONTEXT/PAPERS/pst/PSC_METHOD_EXTENSION.md": {
+      "sha256": "2e30eb87561de9bd696bcb36a54d41197c26b44644c795a423f8abbf1a2e37fe",
+      "bytes": 4845
+    },
+    "CONTEXT/PAPERS/pst/SPEC.md": {
+      "sha256": "2046dd3a3c706ba20ff07093f24567da8c597a47eff5b7eeb073990b4fc3a36f",
+      "bytes": 16654
+    },
+    "CONTEXT/PAPERS/pst/manuscript.tex": {
+      "sha256": "653874a930f36d5a2add6edcc88d97efc0bad2d2b54898ffff576f78a082c976",
+      "bytes": 14634
+    },
+    "CONTEXT/PAPERS/pst/references.bib": {
+      "sha256": "8bfdafce808e8aefd4b032fcb7130e33255bccc674e22659971a894fe9dfc453",
+      "bytes": 3561
+    },
+    "CONTEXT/PAPERS/sacmat/BASELINE_IMPLEMENTATION_MATRIX.json": {
+      "sha256": "fe5c4a42a9d6e24260098ec82cd3e1246e386c601545b8c4af44eb636bc44729",
+      "bytes": 3595
+    },
+    "CONTEXT/PAPERS/sacmat/NOVELTY_RQ_RESEARCH_GAP.md": {
+      "sha256": "73a87c8014db05b87fd8f89c8c7ff5d45f17850085567addf3780ebdd4366ef1",
+      "bytes": 8328
+    },
+    "CONTEXT/PAPERS/sacmat/PSC_METHOD_EXTENSION.md": {
+      "sha256": "ebd0002c3e05fb4bc3ee9fc5662315262cfe81387bf8e49226187a8ae9dcaa38",
+      "bytes": 4840
+    },
+    "CONTEXT/PAPERS/sacmat/SPEC.md": {
+      "sha256": "b5962b122a91a5f2354a49f5e8ed13c04b07c1f79f8a68c0e85dd63d24b409b1",
+      "bytes": 16867
+    },
+    "CONTEXT/PAPERS/sacmat/manuscript.tex": {
+      "sha256": "bb01f65bd9cfa82030ad43a6ae92d9bbb8c8d55b5ae020c93c42dfcbeb433d23",
+      "bytes": 14511
+    },
+    "CONTEXT/PAPERS/sacmat/references.bib": {
+      "sha256": "8bfdafce808e8aefd4b032fcb7130e33255bccc674e22659971a894fe9dfc453",
+      "bytes": 3561
+    },
+    "CONTEXT/PREVIOUS_ANTI_OVERLAP_MATRIX.md": {
+      "sha256": "46b2585d0a14d626784575ecabc3f3e189d2efaab6bee5fbc89ab0257c4967b7",
+      "bytes": 3988
+    },
+    "CONTEXT/PREVIOUS_RQ_REGISTER.md": {
+      "sha256": "ec198486116e05f01e147b73bc737af6aa59822a8e41bf84adb3fa0f9df68367",
+      "bytes": 9095
+    },
+    "CONTEXT/PSC_FORMAL_OBLIGATIONS.md": {
+      "sha256": "2401c6dc803566348f47b0c27ac1be45d64b090df28a5f664e9ee5c7c0b521f6",
+      "bytes": 3178
+    },
+    "CONTEXT/PSC_METHOD_CARD.md": {
+      "sha256": "c45faa7fce97d99c0134f1cb6b5382c3263ed8e7aaf1667f8b9d3d6ddff6912b",
+      "bytes": 9348
+    },
+    "CONTEXT/SOURCE_AUDIT_2026_11_14.md": {
+      "sha256": "0f005addbffd8122b6db6f3a0bb2492a508102782ee72fa0f92661772d2b582a",
+      "bytes": 2114
+    },
+    "GATES/ANTI_SALAMI_REVIEW.md": {
+      "sha256": "d845f8a233938da3beb31d2f46e855bb1024dd0c175bda9377250f20de28feef",
+      "bytes": 1182
+    },
+    "GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md": {
+      "sha256": "f8a0220f20fec9b00e29df817f2762f18ff4bfaf393f2de4f56e1c09bbf191bc",
+      "bytes": 2328
+    },
+    "GATES/PHASE_GATE_MATRIX.md": {
+      "sha256": "2bbffee41be4792f56e9ce24a904c6c74be6f7fdb0fb7c341693d1c56466dee2",
+      "bytes": 1622
+    },
+    "GATES/SCIENTIFIC_METRICS_CONTRACT.md": {
+      "sha256": "87903ffddd3341663ab4359b07ecfdc4c0e651d5708942206e23408e212163e6",
+      "bytes": 2718
+    },
+    "HUONG_DAN_TIEN_G_VI.md": {
+      "sha256": "7891b13acd6d5ae5b69617168493276b02c482e36f15e3ec90d585bdb1215400",
+      "bytes": 2789
+    },
+    "MANIFESTS/PHASE_DEPENDENCY_NAVIGATOR.md": {
+      "sha256": "926d9c09e25d8a64f270e93936c7c60e3620782f30ac7a2836a2fcd8b65983cc",
+      "bytes": 1521
+    },
+    "MANIFESTS/literature_registry.json": {
+      "sha256": "0edb279e30b34a4d873a676e4439de3a8559ce09f2bcf4a925db15e627eb820c",
+      "bytes": 9085
+    },
+    "MANIFESTS/priority_roadmap.csv": {
+      "sha256": "129f1f3e72767e388fee6512c28e059b87a79f753f1d51d90929df8761296f49",
+      "bytes": 2248
+    },
+    "MANIFESTS/scientific_program.json": {
+      "sha256": "6d179e59be04f740cc02165aa9666a7d688b23d050468eb4ad6ca17f194566af",
+      "bytes": 29938
+    },
+    "MANIFESTS/source_verified.json": {
+      "sha256": "aeb933e70c83d3e0772b8410b3364cd6b01767fc15e219e7148b63ded6adc21e",
+      "bytes": 1476
+    },
+    "MANIFESTS/tasks.csv": {
+      "sha256": "9f22f1cbc57a8c9738a1353ac35e60ae325062f81042c8546f71570beb789a74",
+      "bytes": 55452
+    },
+    "MANIFESTS/tasks.json": {
+      "sha256": "8baa1bb73db78d489aca01c37edaf3e820c25124effff3554bce032b76c02a0e",
+      "bytes": 1078541
+    },
+    "MANIFESTS/topological_order.json": {
+      "sha256": "d311b68f5faf2dbbe7cf043bafb136ee27bdcc716c34ce28bb4b0b078565d6f6",
+      "bytes": 7203
+    },
+    "README.md": {
+      "sha256": "aa5d0fd6d614306b658c9094f38806a6fadf000a82b809627025205cbafb1806",
+      "bytes": 4315
+    },
+    "SHARED/TASKS/SH-agent_protocol.md": {
+      "sha256": "4e497608aa2e87ac3c6e3004332e21bf3b56173bc2835862a25162741111144d",
+      "bytes": 7493
+    },
+    "SHARED/TASKS/SH-analysis_policy.md": {
+      "sha256": "311d1da87ed1773605b53b8b3215b8f07876953c1676ef32a42a4a83ba58a0ba",
+      "bytes": 7689
+    },
+    "SHARED/TASKS/SH-base_contracts.md": {
+      "sha256": "acdd75040eb3b3619858956ff9e218e8bc150403c9bcabb1e3bfa1bcf3380696",
+      "bytes": 7592
+    },
+    "SHARED/TASKS/SH-baseline_registry.md": {
+      "sha256": "490b5982cc594f9626f73db152ed4f2f059b9f9b2df6b6a07f209a2dd565e1e6",
+      "bytes": 7631
+    },
+    "SHARED/TASKS/SH-claim_overlap.md": {
+      "sha256": "2076d92a6fbccbd93c5f0caa32a31a00c1460693eab1496c1361bea507955983",
+      "bytes": 7699
+    },
+    "SHARED/TASKS/SH-freeze_tool.md": {
+      "sha256": "5172f774c0a2a31a12ff965cf3c084e25b13c4a4546bfcde6961ae111673e58e",
+      "bytes": 7644
+    },
+    "SHARED/TASKS/SH-guard_regression.md": {
+      "sha256": "87281e74a809fa74c79a0a71914087ad5b68e01dcd6e1ca97a52fabc07d59d66",
+      "bytes": 7792
+    },
+    "SHARED/TASKS/SH-incident_repro.md": {
+      "sha256": "e99c7b4a697d1ac114de90f99257795fc4669ec92d8c2b976e5b14fe43bbfe0c",
+      "bytes": 7656
+    },
+    "SHARED/TASKS/SH-independent_oracle.md": {
+      "sha256": "de8d83a245b77b797b909f4ebab9154a1a608065eadeca8199ed029c1a3a062b",
+      "bytes": 7668
+    },
+    "SHARED/TASKS/SH-literature_hardening.md": {
+      "sha256": "bc1f6b88edb966c2656f9b4820d30b3c8cbd7354cafcbeacf9222d791fff8e34",
+      "bytes": 7704
+    },
+    "SHARED/TASKS/SH-measurement.md": {
+      "sha256": "5f83162d398257e9e57c8d96412b87a5c4daef0d8d206d57b3b73dd491e62678",
+      "bytes": 7520
+    },
+    "SHARED/TASKS/SH-outcome_contract.md": {
+      "sha256": "249f6f354458f914db6cc859f305872ca1c076465d5e841ae48c67617e5e1f8e",
+      "bytes": 7585
+    },
+    "SHARED/TASKS/SH-postgres_isolation.md": {
+      "sha256": "a6809faf5318064047f80f900e2c860ded90290757157a6f5d26664609fef76d",
+      "bytes": 7635
+    },
+    "SHARED/TASKS/SH-psc_interface.md": {
+      "sha256": "3dab075ab125f7305c7da2dee0afd288213363819929b9d8864658079c1ce583",
+      "bytes": 7731
+    },
+    "SHARED/TASKS/SH-r4_ci_gate.md": {
+      "sha256": "8fa8c883b31c66eef528a52ff3e1ab58aab03ea596597e9bbbb6965a0c11ea84",
+      "bytes": 7601
+    },
+    "SHARED/TASKS/SH-release_integrity.md": {
+      "sha256": "5e5aa78ee73c039ebca836a5d54c4073c11f733c7dc09dd263110fc646510a41",
+      "bytes": 7648
+    },
+    "SHARED/TASKS/SH-repair_immutable.md": {
+      "sha256": "54e5a26c9436f6856ca0781d0778d21c3b59bc68b746122bf8d7db97bb525543",
+      "bytes": 7770
+    },
+    "SHARED/TASKS/SH-repo_fingerprint.md": {
+      "sha256": "ef0879b28cd7e0830e85bc934e792d654b0b8f20602b69d3458a62979d8ad739",
+      "bytes": 7607
+    },
+    "SHARED/TASKS/SH-research_ethics.md": {
+      "sha256": "aaecf0a7c22a9515f38f37999f5816a50d40598dec4f4a703508db899baadaa3",
+      "bytes": 7606
+    },
+    "SHARED/TASKS/SH-run_harness.md": {
+      "sha256": "b27b97a6f1431592a1d9823919b161bef93f61cdee0c0e355d6876cab050d825",
+      "bytes": 7629
+    },
+    "SHARED/TASKS/SH-schedule_engine.md": {
+      "sha256": "67abd941c1d063fe9a827ce6871498604219d200ba5e762af5f3bd1dcae871f5",
+      "bytes": 7584
+    },
+    "SHARED/TASKS/SH-source_reference_map.md": {
+      "sha256": "34261fcb79a398c7cf1d4553896cd02a266fdbe0e9274a2202058c0f50cf52db",
+      "bytes": 7618
+    },
+    "SHARED/TASKS/SH-unified_ci.md": {
+      "sha256": "09698b2d004564260e72e06e86255b6e2c920f892722b704d9b5c52abcaba8f6",
+      "bytes": 7526
+    },
+    "SHARED/TASKS/SH-venue_formats.md": {
+      "sha256": "8bb44feeeea412c37921d6ae1f3981ec8621694251e6564fdd085d4eeb1e2ff5",
+      "bytes": 7627
+    },
+    "SHARED/TASKS/SH-worktree_layout.md": {
+      "sha256": "8e841565aa59844cbee7b56c0f6d4311cbbce82a8b5f435517723d7f4caaade5",
+      "bytes": 7667
+    },
+    "STATE/completion.json": {
+      "sha256": "7688da18476666610063b2540519a32c640e689886b239857cbcd643e0ae4d24",
+      "bytes": 62
+    },
+    "VENUES/acns/CASE_MATRIX.md": {
+      "sha256": "2ab8e526affc2e1920ac84e19838ec92a0db90dc2d0fb4128ca3651803cd7fae",
+      "bytes": 4072
+    },
+    "VENUES/acns/PHASES/P01.md": {
+      "sha256": "ae97e2790ea046870710d62ec2d243ecc21c636077d37631197550cdaf0c40b2",
+      "bytes": 1511
+    },
+    "VENUES/acns/PHASES/P02.md": {
+      "sha256": "30ea098c561268faf610f989af4ee6fd9014e5cc72d7d75a47cfce748b1b892b",
+      "bytes": 1381
+    },
+    "VENUES/acns/PHASES/P03.md": {
+      "sha256": "5c1005627ce47df0386810d65d68cc3ba717563d0d41ba3edfe08ab33b4c3f91",
+      "bytes": 881
+    },
+    "VENUES/acns/PHASES/P04.md": {
+      "sha256": "3307a6f67171c0414163ef8987941b97a7cb21b1fa362d2aa4c28e5faf3c6376",
+      "bytes": 1321
+    },
+    "VENUES/acns/PHASES/P05.md": {
+      "sha256": "1e9366690cbefb9da0b237bc6c9c875fbfe4a42a5add3c603af7624de2367ff4",
+      "bytes": 1331
+    },
+    "VENUES/acns/PHASES/P06.md": {
+      "sha256": "3e42a51f255f08a699f285c9f8a6ae3cc0804fb1dd01b41f4780cb8bace6cd3f",
+      "bytes": 891
+    },
+    "VENUES/acns/PHASES/P07.md": {
+      "sha256": "3532a98396eefe22ed4595939c4389b90ab344caee0fceffa70cd37c30166c0a",
+      "bytes": 725
+    },
+    "VENUES/acns/PHASES/P08.md": {
+      "sha256": "77165d07386ff00be05da232f961369ba91944c7a05eb4d28eade5d541aa8476",
+      "bytes": 1300
+    },
+    "VENUES/acns/PHASES/P09.md": {
+      "sha256": "2267ca188285803728ed6e2125fb784b634c62bac3819a99bb878a8ad797b303",
+      "bytes": 890
+    },
+    "VENUES/acns/RESEARCH_BLUEPRINT.md": {
+      "sha256": "cab899d8db2156fe35dd9ab341d54232e1a257a0266abc98d526db95dbaa7d40",
+      "bytes": 4102
+    },
+    "VENUES/acns/TASKS/ACNS-X01_review_protocol.md": {
+      "sha256": "6506366ab854b992bc1a6bbe8714ca0770fe28adccbd01ed1b4528b7b7b58be9",
+      "bytes": 9683
+    },
+    "VENUES/acns/TASKS/ACNS-X02_citation_corpus.md": {
+      "sha256": "5cb480242aceea712cd38fe2e0083551f3d68c8131b5e2257c843c3e341a7510",
+      "bytes": 9599
+    },
+    "VENUES/acns/TASKS/ACNS-X03_evidence_taxonomy.md": {
+      "sha256": "1b4c6120a8ad17a4281ff165c43d1cfd1ac1e3ea68de9ba9a5a81d7f0000e974",
+      "bytes": 9722
+    },
+    "VENUES/acns/TASKS/ACNS-X04_claim_extractor.md": {
+      "sha256": "710c645d670c4feb6744c254182478ea41ec1c04c0834d1d136adf1b536b8b08",
+      "bytes": 9570
+    },
+    "VENUES/acns/TASKS/ACNS-X05_rater_manual.md": {
+      "sha256": "1e8d57f7de1ba4e916c9006ab3ee72b6e2cf86b02c241b5cece01a13860c56fc",
+      "bytes": 9583
+    },
+    "VENUES/acns/TASKS/ACNS-X06_adjudication.md": {
+      "sha256": "1d2c32d3efda5fba8f88d7aac23c326078e7ef701c6f4503c6c7a616b3cb6797",
+      "bytes": 9549
+    },
+    "VENUES/acns/TASKS/ACNS-X07_witness_gallery.md": {
+      "sha256": "faa08a2d1c5499923ff0bb77d3c83f51c4f9736d35ba030ed3172c234ec33c11",
+      "bytes": 9672
+    },
+    "VENUES/acns/TASKS/ACNS-X08_taxonomy_graph.md": {
+      "sha256": "5b684f7e245fa6493575704b8eeaa0d77a75ef3c6e8f1464e483dd81dd0fb837",
+      "bytes": 9570
+    },
+    "VENUES/acns/TASKS/ACNS-X09_screening_flow.md": {
+      "sha256": "4e44dfbb20c189d475777503219bd8de3e9b82e67e86bfd07abf60de23b7f495",
+      "bytes": 9527
+    },
+    "VENUES/acns/TASKS/ACNS-X10_sok_synthesis.md": {
+      "sha256": "b035deeabbb0bdfd36fc63ea1bb795f84d9ce314cd1e665894ba67d1e52a1b0b",
+      "bytes": 9577
+    },
+    "VENUES/acns/TASKS/ACNS-ablation.md": {
+      "sha256": "b4f5613ec5227fe6ea75dac8887a9490f1772eb0fda5cf996be0d1df79bbfee3",
+      "bytes": 9617
+    },
+    "VENUES/acns/TASKS/ACNS-baseline_tests.md": {
+      "sha256": "6f6328cb1d1ed3c324fc2be1a22f7a0c18bfd60a5a568e86d6e5e73b65ffabce",
+      "bytes": 9708
+    },
+    "VENUES/acns/TASKS/ACNS-baselines.md": {
+      "sha256": "4c89002f80ae42858bbe3a1334e7c0ca4f834df25e6dce5cdb217de58e2aa7f3",
+      "bytes": 9759
+    },
+    "VENUES/acns/TASKS/ACNS-candidate.md": {
+      "sha256": "6533fdf741b24fdc480734c43a6ffb840eaf5be75e7c8ff1e8079816f9af4f27",
+      "bytes": 9736
+    },
+    "VENUES/acns/TASKS/ACNS-confirm.md": {
+      "sha256": "2edf19b8b6b1445f27724aec4101f990fed60a68572e8d8ea99c93613ea572b6",
+      "bytes": 9735
+    },
+    "VENUES/acns/TASKS/ACNS-dataset.md": {
+      "sha256": "1b0e2b9f8e52ff24473d3cdee78077bc9c37a3efcf6b4863a9c07ea021461d80",
+      "bytes": 9781
+    },
+    "VENUES/acns/TASKS/ACNS-figures.md": {
+      "sha256": "9c1c95656952b9c0f62947b2cdb3997989ba689e96897bd265ca9a20dfaf5b95",
+      "bytes": 9609
+    },
+    "VENUES/acns/TASKS/ACNS-freeze.md": {
+      "sha256": "427e817de28af50551da06a91adb429d0e43186fa0e09c96f7a0daf8e405eae1",
+      "bytes": 9842
+    },
+    "VENUES/acns/TASKS/ACNS-funding.md": {
+      "sha256": "4394f5008a5edcd69615011b9d3430c30e0d64d39f20611bf16a05dd67fffa21",
+      "bytes": 9853
+    },
+    "VENUES/acns/TASKS/ACNS-oracle.md": {
+      "sha256": "9b78854bbca91e80f5fa66d789eea2effe388f9f3b0f3c4816345dd9189a5417",
+      "bytes": 9825
+    },
+    "VENUES/acns/TASKS/ACNS-overlap.md": {
+      "sha256": "7c7ea3abe0d3d9806b573082bdb17d3f1e62d403c4e33b5273e2ef5124e1c87f",
+      "bytes": 9751
+    },
+    "VENUES/acns/TASKS/ACNS-paper.md": {
+      "sha256": "df686619b5019db0c2139a0ead9bd205b074188606fbe95f1b54ae39d42b07d6",
+      "bytes": 9804
+    },
+    "VENUES/acns/TASKS/ACNS-pilot.md": {
+      "sha256": "c86f7d975ca28228c818150d766e3c8a1f4bf8aaa1a91d138d946797d4d0d365",
+      "bytes": 10398
+    },
+    "VENUES/acns/TASKS/ACNS-prior.md": {
+      "sha256": "3594c34871ff760b6fc27f41a2b974041abb48c8f08c2b8f57194f0838fdf6e9",
+      "bytes": 9759
+    },
+    "VENUES/acns/TASKS/ACNS-release.md": {
+      "sha256": "57c559029b8a6935b5869825ea9bf7d3c9ec0d3ebc1cebd22ddb602807c3ae71",
+      "bytes": 9980
+    },
+    "VENUES/acns/TASKS/ACNS-rq_registry.md": {
+      "sha256": "1cce8ef27b2f1194e8f35162758eea5d015c832c8f10a80ef4f9fe1ae2c931e7",
+      "bytes": 9755
+    },
+    "VENUES/acns/TASKS/ACNS-runner.md": {
+      "sha256": "ee301adb718fe6b6b5825b8a3296886f2e2e0593a48df83a6e27121a4ff3696c",
+      "bytes": 9768
+    },
+    "VENUES/acns/TASKS/ACNS-schema.md": {
+      "sha256": "d316df822c2b10a4c43f8e3d5e3623ae725dbe81ea8afe3de7cc28886aff0071",
+      "bytes": 9804
+    },
+    "VENUES/acns/TASKS/ACNS-scope.md": {
+      "sha256": "ec7244b04c57d74d9b747d13aeb8ddc489dbb469dadd9b70a78c1343d5ccaac8",
+      "bytes": 9797
+    },
+    "VENUES/acns/TASKS/ACNS-stats.md": {
+      "sha256": "6864f2297dd5e5cdcab2ffffc7470b4a028df62ae99ab73c3fab547465005263",
+      "bytes": 9792
+    },
+    "VENUES/acns/TASKS/ACNS-threat.md": {
+      "sha256": "941808d16c500660752290a493a0dc9e829e33e12494087276b708f79f3e0afc",
+      "bytes": 9745
+    },
+    "VENUES/acns/TASKS/ACNS-traces.md": {
+      "sha256": "7fbb506c9b3708c07558c2d395a7000d839ca811372ac0e1c5fe80744239eb5f",
+      "bytes": 9706
+    },
+    "VENUES/acns/TASKS/ACNS-unit.md": {
+      "sha256": "27b71de89db8363317759a8f9f30926145183139b08c094e34d47f9c69c0128c",
+      "bytes": 9711
+    },
+    "VENUES/acns/cases/schema_example.json": {
+      "sha256": "4ee012e917a11edf6a386c79656a94b0a52642b61003d24c32b0b507f6a2a7aa",
+      "bytes": 337
+    },
+    "VENUES/aime/CASE_MATRIX.md": {
+      "sha256": "e1b9975bc495f580711688c93c1bf415a67407bc9dca8e50f988273b0515d8bb",
+      "bytes": 4007
+    },
+    "VENUES/aime/PHASES/P01.md": {
+      "sha256": "1708e9f2b8f27a8d561bfccf3547fdbc1d169cc9a61ec8eb33b2473c95c820a7",
+      "bytes": 1351
+    },
+    "VENUES/aime/PHASES/P02.md": {
+      "sha256": "78b331fe0342c93cf67e891a730ed08e0864c0a16e4a4739f1ec41ed3927cffb",
+      "bytes": 1571
+    },
+    "VENUES/aime/PHASES/P03.md": {
+      "sha256": "0d080d1e68f63c1f42a40c2003a288aa47c6cdfb15b6d71091e3f3c4398ae7af",
+      "bytes": 1194
+    },
+    "VENUES/aime/PHASES/P04.md": {
+      "sha256": "e4d6e6a0ea7d732b12618509271116ff34529b6cdc86b44aff301c76133a1e9e",
+      "bytes": 1147
+    },
+    "VENUES/aime/PHASES/P05.md": {
+      "sha256": "76a751cd379f03f50f9ca072099f99a208932c72be0f5eb22178c32f655c2e2c",
+      "bytes": 1187
+    },
+    "VENUES/aime/PHASES/P06.md": {
+      "sha256": "ff9969e93b21b61cb9f491587eb02d14931cad08d982d0b2ba94161d6d23aa39",
+      "bytes": 891
+    },
+    "VENUES/aime/PHASES/P07.md": {
+      "sha256": "d6f9ad0758b03d18e5da9b77fd7c0d0c404d064957740807507a425e27c6e518",
+      "bytes": 725
+    },
+    "VENUES/aime/PHASES/P08.md": {
+      "sha256": "f32175a3ac8009d46cba10d4766b335280a836c4266d9defd53dbbabf64aa5b4",
+      "bytes": 1152
+    },
+    "VENUES/aime/PHASES/P09.md": {
+      "sha256": "b26d525118f26242c778bf626bef9f934e7100a7e7d32f64f4d2f650da942326",
+      "bytes": 1055
+    },
+    "VENUES/aime/RESEARCH_BLUEPRINT.md": {
+      "sha256": "d8a4915c4912fa66b9449033efda9a62f0ce315a01e691686dae937220021acf",
+      "bytes": 4371
+    },
+    "VENUES/aime/TASKS/AIME-X01_vignette_schema.md": {
+      "sha256": "c03832842510459acf2342e4ae900fdfb69fe976840ddd0d1fb1aca43cb76e84",
+      "bytes": 9922
+    },
+    "VENUES/aime/TASKS/AIME-X02_case_generator.md": {
+      "sha256": "e3e8d62ee44a75dc09ef489dfafd28ee0720c68a8d0129c689a3440598bbb676",
+      "bytes": 9836
+    },
+    "VENUES/aime/TASKS/AIME-X03_review_rubric.md": {
+      "sha256": "35a5066d61cbaa3fe0d51b74e594ac2165a2156a6e3f211b6bec85384e0e3c0e",
+      "bytes": 9932
+    },
+    "VENUES/aime/TASKS/AIME-X04_prompt_harmonize.md": {
+      "sha256": "5e6f61a69451ba39ae4692e3fcb053164f348b8de14f4db8e605b9511817699a",
+      "bytes": 9842
+    },
+    "VENUES/aime/TASKS/AIME-X05_strict_refresh.md": {
+      "sha256": "ce2fe39518fdb8c4724e5a6d8665af4e9000018e91f13b31ba9d2378309eb703",
+      "bytes": 9825
+    },
+    "VENUES/aime/TASKS/AIME-X06_selective_refresh.md": {
+      "sha256": "97ddc15ea43634131bb90b5f4562ce28190f5b10b24d6ec8b4c46276628f3549",
+      "bytes": 9893
+    },
+    "VENUES/aime/TASKS/AIME-X07_model_adapter.md": {
+      "sha256": "08c4b6b76643c5a061e1619356f3c42a36b38f4f286e707d5f35e248edd0b276",
+      "bytes": 9861
+    },
+    "VENUES/aime/TASKS/AIME-X08_workflow_eval.md": {
+      "sha256": "e7a95c63c6329cff0d0a93d8d5479add8e7fa216b58974c4eddd16c932f69570",
+      "bytes": 9847
+    },
+    "VENUES/aime/TASKS/AIME-X09_clinical_stats.md": {
+      "sha256": "571b94aa15cf5bb89a251c635925d31e3b20060fa92c4e332e91353e2f782667",
+      "bytes": 9841
+    },
+    "VENUES/aime/TASKS/AIME-X10_case_study.md": {
+      "sha256": "66af3c7c565b375d9088993acee10a3797870490b50aed428372e7b129b986d6",
+      "bytes": 9804
+    },
+    "VENUES/aime/TASKS/AIME-ablation.md": {
+      "sha256": "5a25e550faef8064118e6e9b4d6d5a94281fe3436673fcd9e6500bae8c4a0c66",
+      "bytes": 9808
+    },
+    "VENUES/aime/TASKS/AIME-baseline_tests.md": {
+      "sha256": "31a1106ad42122c3a3f7a7605ee3829bf18495561243226131b1f8e778d0ae9d",
+      "bytes": 9899
+    },
+    "VENUES/aime/TASKS/AIME-baselines.md": {
+      "sha256": "3fcc8005d08827b6591b7bea42dd5364be95d17f85df1439caafa7d44463c2de",
+      "bytes": 9950
+    },
+    "VENUES/aime/TASKS/AIME-candidate.md": {
+      "sha256": "0068d0910931e6efa59b331d240e713563ff195cc449b6011cfbb066f93f132e",
+      "bytes": 9927
+    },
+    "VENUES/aime/TASKS/AIME-confirm.md": {
+      "sha256": "032b5e959e288663f55546ae13b5ee5a2c69778803ef8da8e73cfaad3867d69d",
+      "bytes": 9926
+    },
+    "VENUES/aime/TASKS/AIME-dataset.md": {
+      "sha256": "e8a0844868b8077b87194dc9340cf9c15cd6bd3c29b3792dfac4100a8a2a18e3",
+      "bytes": 9972
+    },
+    "VENUES/aime/TASKS/AIME-figures.md": {
+      "sha256": "a33e777034119fdff49f701777ec785b5aee7cf825aede97de25374dadf4f16e",
+      "bytes": 9800
+    },
+    "VENUES/aime/TASKS/AIME-freeze.md": {
+      "sha256": "80c50f47e04b626e128eba6376ec429417d5fc7de198b5f46e6e94bc0cae2cbf",
+      "bytes": 10033
+    },
+    "VENUES/aime/TASKS/AIME-funding.md": {
+      "sha256": "b87640683fe466607609894692b0c6db561daaf568d0c5693ad8c7b974b85339",
+      "bytes": 10044
+    },
+    "VENUES/aime/TASKS/AIME-oracle.md": {
+      "sha256": "659263cef87832365f1b2e2bf54551caf7ad16702419f3c96a15647e0719b19f",
+      "bytes": 10028
+    },
+    "VENUES/aime/TASKS/AIME-overlap.md": {
+      "sha256": "5c05d1ef496876c70afa067aef7cbb8236cf0220eab50364d510b7dda53520bf",
+      "bytes": 9942
+    },
+    "VENUES/aime/TASKS/AIME-paper.md": {
+      "sha256": "b54d1a2d793eeebe3093bfae5284123f46da4ec4bddc859bfadac0690ee5b844",
+      "bytes": 10062
+    },
+    "VENUES/aime/TASKS/AIME-pilot.md": {
+      "sha256": "05a8d5052315819a4a36fff819d66f2d9ef699eb2f82f76a4f580ad85cee3878",
+      "bytes": 10674
+    },
+    "VENUES/aime/TASKS/AIME-prior.md": {
+      "sha256": "91abf22110c82ca117b59b30cb702467b29aea4866e176cd451841290a4b9aaf",
+      "bytes": 9950
+    },
+    "VENUES/aime/TASKS/AIME-release.md": {
+      "sha256": "1767edf9feecbd41cc355f7df66eca58131b18f438bddda65796ffefefc4339c",
+      "bytes": 10118
+    },
+    "VENUES/aime/TASKS/AIME-rq_registry.md": {
+      "sha256": "80f7817f6eb4de19d1372a7d14fa7fd955cd724eee60bf3850e0baea8d4cd4a9",
+      "bytes": 9946
+    },
+    "VENUES/aime/TASKS/AIME-runner.md": {
+      "sha256": "107462693225bd2b801b1548b27c77c7dd92fbaf4045c9a045d482f9abe2683e",
+      "bytes": 9959
+    },
+    "VENUES/aime/TASKS/AIME-schema.md": {
+      "sha256": "3f81071301f2bf8f6559636bad44a4fe5b76d367d8c34001f9a89f0fd2e6f624",
+      "bytes": 9995
+    },
+    "VENUES/aime/TASKS/AIME-scope.md": {
+      "sha256": "67ebd22d62e3285e7c7068b72dccb074b74a5e25f131e7975a98378dcab64970",
+      "bytes": 9988
+    },
+    "VENUES/aime/TASKS/AIME-stats.md": {
+      "sha256": "87ab98ecef070e6f63a3ec827a21c54cec4250ebb42b311a4e6648a872d986dd",
+      "bytes": 9983
+    },
+    "VENUES/aime/TASKS/AIME-threat.md": {
+      "sha256": "e1d44687f6ddc0a89a529385e35b5728dcc0e92badfb7c5705e66b75ee61691e",
+      "bytes": 9936
+    },
+    "VENUES/aime/TASKS/AIME-traces.md": {
+      "sha256": "1e7e12af245f07c5981d177e0c77f6426aebaa15033f97ddeb72755491922112",
+      "bytes": 9897
+    },
+    "VENUES/aime/TASKS/AIME-unit.md": {
+      "sha256": "6a4c3180ae4b97d3cead94a85bee41d6ed1df3af1987677a094f3ab451bc41de",
+      "bytes": 9902
+    },
+    "VENUES/aime/cases/schema_example.json": {
+      "sha256": "da4088deb50c61708177bcaa513b48d1b0f7a2a3594bb92f23a675b3947751a7",
+      "bytes": 334
+    },
+    "VENUES/compsac/CASE_MATRIX.md": {
+      "sha256": "c125a5d0d7bd6bbe395c0df4c381f4437391c12688b9ceba60714917584d3672",
+      "bytes": 4098
+    },
+    "VENUES/compsac/PHASES/P01.md": {
+      "sha256": "6dcd4f0b87915e3748ca6d9293a78eecb2eee40326cd7e78093f6b11de8ef774",
+      "bytes": 1411
+    },
+    "VENUES/compsac/PHASES/P02.md": {
+      "sha256": "e062c0c8f96d097c9c4f1194c8c51726e3adfb0ea058533a2ecf93d406cf6174",
+      "bytes": 1442
+    },
+    "VENUES/compsac/PHASES/P03.md": {
+      "sha256": "97e9ef03857095a32d53c128e7423f0f4b808c7cb65ccf34224ab9cfb32a1513",
+      "bytes": 1379
+    },
+    "VENUES/compsac/PHASES/P04.md": {
+      "sha256": "7cc4017eb17f769ef4138dadc5fd1b3b974e9527b0c73a7646944b56613b0e1c",
+      "bytes": 1215
+    },
+    "VENUES/compsac/PHASES/P05.md": {
+      "sha256": "0d415779f2fc32982f36de7f595bf738ac307e4237a49fbc1ae2c78853a69479",
+      "bytes": 1271
+    },
+    "VENUES/compsac/PHASES/P06.md": {
+      "sha256": "650f6f8446a451dfc1620f3938cc5f97d8dcdf73fef75195e03afc835073f3c9",
+      "bytes": 1109
+    },
+    "VENUES/compsac/PHASES/P07.md": {
+      "sha256": "b67c12388ae7c47dfa8b60cdc82bc0e5e260c599f81e5cbfbdb442c083479f33",
+      "bytes": 776
+    },
+    "VENUES/compsac/PHASES/P08.md": {
+      "sha256": "98a3dd777b29a80eeb53632efbf09ae3a7fc82f8079c5ba5e09d2063263ca472",
+      "bytes": 1193
+    },
+    "VENUES/compsac/PHASES/P09.md": {
+      "sha256": "4c8ba069cd6dc4e2bab1afc2b2196a332c8be19b2db271b7cd14448c5adc4a6a",
+      "bytes": 917
+    },
+    "VENUES/compsac/RESEARCH_BLUEPRINT.md": {
+      "sha256": "62af9ee2a03a5e66f3ae89ae448fe1013adf1fcabd79287df60ac30d6fdc3728",
+      "bytes": 4367
+    },
+    "VENUES/compsac/TASKS/COMPSAC-X01_readset_dsl.md": {
+      "sha256": "accb2f84df233970a33984a9aa0b49f01e6407da19144ee6f1d8a8ff8a05b0f2",
+      "bytes": 9796
+    },
+    "VENUES/compsac/TASKS/COMPSAC-X02_closure_oracle.md": {
+      "sha256": "a14271f31e4c14fdff7ccbdcfb1f1605d79f1926d885992a69a472a0c16896dc",
+      "bytes": 9843
+    },
+    "VENUES/compsac/TASKS/COMPSAC-X03_pg_schema.md": {
+      "sha256": "9a70b68f35957290225a85b8f6d8d1fda491fd2dd48ac187404f66c31521da81",
+      "bytes": 9885
+    },
+    "VENUES/compsac/TASKS/COMPSAC-X04_pg_ssi.md": {
+      "sha256": "13e9ee512d6b74ff62ce2473f6f786f6c1af52b8d0d49cfd5ee2eb36f0dce878",
+      "bytes": 9807
+    },
+    "VENUES/compsac/TASKS/COMPSAC-X05_silo_occ.md": {
+      "sha256": "5c88bd1770e172464322d529a81ca05b69f991cbb4d74da8a754020683f7faa6",
+      "bytes": 9745
+    },
+    "VENUES/compsac/TASKS/COMPSAC-X06_coarse_occ.md": {
+      "sha256": "6bd933091f75cb012f4f8e931cec38052d77b531f775d0cfd3c430cac0a63839",
+      "bytes": 9744
+    },
+    "VENUES/compsac/TASKS/COMPSAC-X07_scope_occ.md": {
+      "sha256": "40152d04d79a0c1eb53807836b6674c46175b8b8414e9bea034f569e83771874",
+      "bytes": 9889
+    },
+    "VENUES/compsac/TASKS/COMPSAC-X08_pg_barriers.md": {
+      "sha256": "a08214b36312b1a512853bc97acce33897da5d9b123e97a47c6fc3079b1a194c",
+      "bytes": 9867
+    },
+    "VENUES/compsac/TASKS/COMPSAC-X09_contention_matrix.md": {
+      "sha256": "7731ea15f4bc5e0ca4ec843aa042745ad554e59971f1c888a9795d3f96dcfa0b",
+      "bytes": 9832
+    },
+    "VENUES/compsac/TASKS/COMPSAC-X10_tail_perf.md": {
+      "sha256": "0a0b908293720f900486ce6e03cc19cbfaa98a642027a907263bb59b6aa4ce21",
+      "bytes": 9770
+    },
+    "VENUES/compsac/TASKS/COMPSAC-ablation.md": {
+      "sha256": "391338787a60c1985ae108bd7e157c0aecf3c7d009d0ea02f71659541b1f4715",
+      "bytes": 9796
+    },
+    "VENUES/compsac/TASKS/COMPSAC-baseline_tests.md": {
+      "sha256": "18a42e77039f35838020106c372be193d92bc314615f19a1c519071aec6df96d",
+      "bytes": 9890
+    },
+    "VENUES/compsac/TASKS/COMPSAC-baselines.md": {
+      "sha256": "d016a23543679380a5213509de90e83a131693806b604b791403fe637477c585",
+      "bytes": 9938
+    },
+    "VENUES/compsac/TASKS/COMPSAC-candidate.md": {
+      "sha256": "1bc5792bca8adcbe7b8eaf9b533b335bd8f5ef62bc6b04ce96d746ac97fe4b06",
+      "bytes": 9915
+    },
+    "VENUES/compsac/TASKS/COMPSAC-confirm.md": {
+      "sha256": "5f185378ee0c0d2064f2e8a09d80fc3662106919446029d494d0a91c5f4eb12b",
+      "bytes": 10004
+    },
+    "VENUES/compsac/TASKS/COMPSAC-dataset.md": {
+      "sha256": "0dd4487c19d28913aca552001875980e9a3650e55ff4271757dfdd34d2072091",
+      "bytes": 9960
+    },
+    "VENUES/compsac/TASKS/COMPSAC-figures.md": {
+      "sha256": "3402fc26303503db8bedd5e651afb96968e0900db3d5703075007ccd79ae4d10",
+      "bytes": 9788
+    },
+    "VENUES/compsac/TASKS/COMPSAC-freeze.md": {
+      "sha256": "d56f751fb59ed6395b876812a8ad8fe7282bfa593d8faff4d18b590d73771e35",
+      "bytes": 10024
+    },
+    "VENUES/compsac/TASKS/COMPSAC-funding.md": {
+      "sha256": "c06363e1404fbf723aaded7333c92ad9bfeb6ff69e4273b322bbb34ba8e50718",
+      "bytes": 10032
+    },
+    "VENUES/compsac/TASKS/COMPSAC-oracle.md": {
+      "sha256": "9279f0b68683f5a3dad0734bd9ebcee42bb433318332cba5e7b888c6cee550fc",
+      "bytes": 10007
+    },
+    "VENUES/compsac/TASKS/COMPSAC-overlap.md": {
+      "sha256": "8bd487883b0e5d96309a55823dc128bf4f3a032555412485aa04a29c4fb1a9aa",
+      "bytes": 9930
+    },
+    "VENUES/compsac/TASKS/COMPSAC-paper.md": {
+      "sha256": "cf733e2151db7ab593b9977e05c0a2b378848f6c58baca6d08f1b527b1b00334",
+      "bytes": 9983
+    },
+    "VENUES/compsac/TASKS/COMPSAC-pilot.md": {
+      "sha256": "bcc66876bed9a1d99671a7da54ea1317654fc288b208389adafbbfcf0aee3ce6",
+      "bytes": 10641
+    },
+    "VENUES/compsac/TASKS/COMPSAC-prior.md": {
+      "sha256": "bc12626c19e2683b5c5236b82920842af90c645b5b2e7d123b054c245fca1a77",
+      "bytes": 9938
+    },
+    "VENUES/compsac/TASKS/COMPSAC-release.md": {
+      "sha256": "fe38bae7e3461a767d978362fa7af932445831da37c8b5c756557c65a225aea8",
+      "bytes": 10100
+    },
+    "VENUES/compsac/TASKS/COMPSAC-rq_registry.md": {
+      "sha256": "7e40bfe8530910967c6816cfc06c5afcad6e45571ef78446786930839103e3c5",
+      "bytes": 9934
+    },
+    "VENUES/compsac/TASKS/COMPSAC-runner.md": {
+      "sha256": "263550e87f3af2519ef3c2f7e395d927c22b832a7fead0dc704d73aeca36ffaf",
+      "bytes": 9955
+    },
+    "VENUES/compsac/TASKS/COMPSAC-schema.md": {
+      "sha256": "94292b8d66277f2210073ce50c2eca981c0620f0ebbe64e9d4056b7e236e5bcc",
+      "bytes": 9986
+    },
+    "VENUES/compsac/TASKS/COMPSAC-scope.md": {
+      "sha256": "b2506cfb9f7a0c68bfc3c6a0c22d5099df9db6a38a6838c31dab8f5a4cca4cf2",
+      "bytes": 9973
+    },
+    "VENUES/compsac/TASKS/COMPSAC-stats.md": {
+      "sha256": "0c9f55580d981680bcfcd7010820be160d9b326ceab92d6e158a21cb8c0d71ca",
+      "bytes": 9971
+    },
+    "VENUES/compsac/TASKS/COMPSAC-threat.md": {
+      "sha256": "8ad9725d7a0035671f7c283e9836679a230f6598100e83d68121ae67851071ec",
+      "bytes": 9924
+    },
+    "VENUES/compsac/TASKS/COMPSAC-traces.md": {
+      "sha256": "9a957033897c446137a0ed82cdb6f6aa08d50ff6b5d5a2ae221ddb96d3fb308d",
+      "bytes": 9885
+    },
+    "VENUES/compsac/TASKS/COMPSAC-unit.md": {
+      "sha256": "db8fe85cc95fe209b67f34a37636205fd7180e927d18c7aba935c92759af1774",
+      "bytes": 9893
+    },
+    "VENUES/compsac/cases/schema_example.json": {
+      "sha256": "1029fb3b34fc696df465a3a962c7c16ed7799011c475c9516e56d402cbf5db42",
+      "bytes": 337
+    },
+    "VENUES/dimva/CASE_MATRIX.md": {
+      "sha256": "4d200e6e8e452834810ea113706877c2d24a13258a9fbca5bed8a1a63ab5f43b",
+      "bytes": 3932
+    },
+    "VENUES/dimva/PHASES/P01.md": {
+      "sha256": "d1952656798855ba147c9381f6700255dd46962c75278db062eeb788a4ddd880",
+      "bytes": 1371
+    },
+    "VENUES/dimva/PHASES/P02.md": {
+      "sha256": "b0149242bf8867c74fdf83ec3a0edfae0976591276dc4ae2301dad481bd92d93",
+      "bytes": 1699
+    },
+    "VENUES/dimva/PHASES/P03.md": {
+      "sha256": "6806fa2b1c93de14ba2a4df0268ff1e63df80d6ac4e881a795536759a2b789b0",
+      "bytes": 1046
+    },
+    "VENUES/dimva/PHASES/P04.md": {
+      "sha256": "45e11d594b3e89c652709582a40dd41963d284fa0ac1eccaf69e8344c7201121",
+      "bytes": 1153
+    },
+    "VENUES/dimva/PHASES/P05.md": {
+      "sha256": "a04bdb5e30209a1b8280bdf1fcee566d2ef189be6ebc3510bfd490eb8284df62",
+      "bytes": 1209
+    },
+    "VENUES/dimva/PHASES/P06.md": {
+      "sha256": "e8c99e9661e82eb9667541e007a091af5470aaabeebef395cb83f5e6cd420522",
+      "bytes": 1055
+    },
+    "VENUES/dimva/PHASES/P07.md": {
+      "sha256": "f3f241bd0dcb7e2e52e90e8f55395c9c593296e0839af86f52b346ebbf8ae108",
+      "bytes": 756
+    },
+    "VENUES/dimva/PHASES/P08.md": {
+      "sha256": "51dfea0004a94a32c4c30859eccb71104dda8441293a8f3cfdc59ff5351d8516",
+      "bytes": 1175
+    },
+    "VENUES/dimva/PHASES/P09.md": {
+      "sha256": "e41c5c5842359a75677807b6e52661d0701ec5b63ab648bfc73df2e1eabd9ae5",
+      "bytes": 899
+    },
+    "VENUES/dimva/RESEARCH_BLUEPRINT.md": {
+      "sha256": "b6edf96b6e21e7d5335d3d2622c3f669f47e5126144b9114c12cb50a87692e50",
+      "bytes": 4316
+    },
+    "VENUES/dimva/TASKS/DIMVA-X01_event_schema.md": {
+      "sha256": "1776403b7f8c1137dc0127c4d59a702717aa335579c42e8bf05b65783d530ee0",
+      "bytes": 9852
+    },
+    "VENUES/dimva/TASKS/DIMVA-X02_campaign_gen.md": {
+      "sha256": "3c6dbf0e6e5de8032e72fb122da989acae5d51958acca3e5ba65e61cea0ae57a",
+      "bytes": 9808
+    },
+    "VENUES/dimva/TASKS/DIMVA-X03_benign_gen.md": {
+      "sha256": "925803fc04d775c8ebb40ccb417e54e5cbfa7bb7d99475324ae14119a7075705",
+      "bytes": 9770
+    },
+    "VENUES/dimva/TASKS/DIMVA-X04_feature_encoder.md": {
+      "sha256": "ee4b9ea5a4cfdc62000bce7e43cd8e2d4d2794feb3e56eedfcc1f6c4181c3c90",
+      "bytes": 9783
+    },
+    "VENUES/dimva/TASKS/DIMVA-X05_rules_detector.md": {
+      "sha256": "cdc25e30ca335a7cf4d4df7c54b74298fa2fb1eda247fa9b3698b0af82fd5d47",
+      "bytes": 9742
+    },
+    "VENUES/dimva/TASKS/DIMVA-X06_seq_detector.md": {
+      "sha256": "87bca9a3475337ede177e4aec78114e5c213ab90e249c05f6bbe81c4a9bf18fa",
+      "bytes": 9784
+    },
+    "VENUES/dimva/TASKS/DIMVA-X07_adaptive_evasion.md": {
+      "sha256": "0d4804097d01756f2d1196143874c081e18e4ee8d33e27de531eec846e7eced9",
+      "bytes": 9796
+    },
+    "VENUES/dimva/TASKS/DIMVA-X08_splitter.md": {
+      "sha256": "22095d2377097f9d733159a32c539a03b9f61e5dbf26fb2a28cd458ea9b30a97",
+      "bytes": 9737
+    },
+    "VENUES/dimva/TASKS/DIMVA-X09_fpr_calibrator.md": {
+      "sha256": "24217af3c355618be5aaa98d2a475628a9931a2af5fd50441477bed0d1fc1bc1",
+      "bytes": 9782
+    },
+    "VENUES/dimva/TASKS/DIMVA-X10_detector_metrics.md": {
+      "sha256": "35cb78a8334bd41b1b5f5cac51d4a3db0129d67477fb59c30035234cdd1cf9c0",
+      "bytes": 9816
+    },
+    "VENUES/dimva/TASKS/DIMVA-ablation.md": {
+      "sha256": "dd7ee97703163ac90746da11235c1f1ce4e735185183740d6d09c668711f97cf",
+      "bytes": 9791
+    },
+    "VENUES/dimva/TASKS/DIMVA-baseline_tests.md": {
+      "sha256": "63be280fdcfa16faa7b5f68dd0ad4c5e7a1ae31336fd18c0a717f7898c2a5976",
+      "bytes": 9883
+    },
+    "VENUES/dimva/TASKS/DIMVA-baselines.md": {
+      "sha256": "9ef69f5bf249fc210370e563d2feb298577e9ea9f9263b38a7caf5480821c82f",
+      "bytes": 9933
+    },
+    "VENUES/dimva/TASKS/DIMVA-candidate.md": {
+      "sha256": "906b4e66cd2b0c078a7f3b165291f2d3582e4d76f792d0054104b5f7db0bcdab",
+      "bytes": 9910
+    },
+    "VENUES/dimva/TASKS/DIMVA-confirm.md": {
+      "sha256": "9828431d4f7cd206f70daa6c36546f3b6e6d7dfb5566758dfbc8ef2b272ea1a0",
+      "bytes": 9987
+    },
+    "VENUES/dimva/TASKS/DIMVA-dataset.md": {
+      "sha256": "1dc7e345d588de45137437d8e24d09ce120acfc82d784f644b7c9070c279cb57",
+      "bytes": 9955
+    },
+    "VENUES/dimva/TASKS/DIMVA-figures.md": {
+      "sha256": "c95856ce481b903d9c0dce9a4921227018c6476d601fb4377926326cc7031cea",
+      "bytes": 9783
+    },
+    "VENUES/dimva/TASKS/DIMVA-freeze.md": {
+      "sha256": "97e5392057391e4734761a6f3dd6fca8ce64d6f3655bc813db4229d525bb39ef",
+      "bytes": 10017
+    },
+    "VENUES/dimva/TASKS/DIMVA-funding.md": {
+      "sha256": "923513f5c30a85771c51f46fd13eee76f3bde98923f92aa7df731bae3aa49928",
+      "bytes": 10027
+    },
+    "VENUES/dimva/TASKS/DIMVA-oracle.md": {
+      "sha256": "23db2f1133141337411f5acbb0a5498cec4fe75ccf78c442e7d6fcf7533e795d",
+      "bytes": 10000
+    },
+    "VENUES/dimva/TASKS/DIMVA-overlap.md": {
+      "sha256": "7294c858df19544ba08da1d9eeb3cac940ee6b0344eab3cd73cd0a17a34192fe",
+      "bytes": 9925
+    },
+    "VENUES/dimva/TASKS/DIMVA-paper.md": {
+      "sha256": "201ea14945660ad82415870275fb3cfd983f01161d8e25a750bc4a13bf090d6b",
+      "bytes": 9978
+    },
+    "VENUES/dimva/TASKS/DIMVA-pilot.md": {
+      "sha256": "3eea197c9ab0f095b1682db2753b778cb06e34d33f3b05171e6f6ae26abf2a75",
+      "bytes": 10645
+    },
+    "VENUES/dimva/TASKS/DIMVA-prior.md": {
+      "sha256": "0d1baa493ea7351f6807144365e5e2abe16ea9fe6287574aeefa6ca6db7938b1",
+      "bytes": 9933
+    },
+    "VENUES/dimva/TASKS/DIMVA-release.md": {
+      "sha256": "69741c5e40c15158a852c52566d463a1a518133ced58e9f3ce54e92974dc79f3",
+      "bytes": 10097
+    },
+    "VENUES/dimva/TASKS/DIMVA-rq_registry.md": {
+      "sha256": "ddd24e76e99524be37db0b1bf7af26a2774051e04ce7207fae090f3fcf8ac114",
+      "bytes": 9929
+    },
+    "VENUES/dimva/TASKS/DIMVA-runner.md": {
+      "sha256": "406f5ffba62fce3b1818a77b8dce77d1a26d57d5edd709f68eb37beb7c2a3ab0",
+      "bytes": 9943
+    },
+    "VENUES/dimva/TASKS/DIMVA-schema.md": {
+      "sha256": "8d0ced357ba20563f1e30b40a7b3f6c323d37f02b68d40166be4eb3413879f32",
+      "bytes": 9979
+    },
+    "VENUES/dimva/TASKS/DIMVA-scope.md": {
+      "sha256": "7a00c8a9d653818a2672705127573a59be145f5d2673a3754710b6a203eb172d",
+      "bytes": 9970
+    },
+    "VENUES/dimva/TASKS/DIMVA-stats.md": {
+      "sha256": "78ac01e00163df3e5d6a1509aad47028cfad16985ab6250a7d0a1150614fdccc",
+      "bytes": 9966
+    },
+    "VENUES/dimva/TASKS/DIMVA-threat.md": {
+      "sha256": "5d9432b9dd7d406d44d325461b9ffe27fc1dc92ce8ea3daf8ba423bc6d4aaecf",
+      "bytes": 9919
+    },
+    "VENUES/dimva/TASKS/DIMVA-traces.md": {
+      "sha256": "2ea75d79ddb965043e3e836ca1d1a376e54ca461bc3c10280f00fdbc067d0907",
+      "bytes": 9880
+    },
+    "VENUES/dimva/TASKS/DIMVA-unit.md": {
+      "sha256": "d3b493dc17adf40a9bec3c661b075f07f25025551c13dedba57d2df5af6ebcf5",
+      "bytes": 9886
+    },
+    "VENUES/dimva/cases/schema_example.json": {
+      "sha256": "2fa2efcb6561e28a88a72500e6fd5fbe59287d31aa367799adf71f81f7bbf2c1",
+      "bytes": 334
+    },
+    "VENUES/dsn/CASE_MATRIX.md": {
+      "sha256": "35c663c105d796dfe1a1448d2aad30a8741a1f75fa48b09d9e0d54b11841845a",
+      "bytes": 4353
+    },
+    "VENUES/dsn/PHASES/P01.md": {
+      "sha256": "2c5c4ded18811833c5dd1d30172557c1d471e72da648eab19397ed003a643325",
+      "bytes": 1331
+    },
+    "VENUES/dsn/PHASES/P02.md": {
+      "sha256": "560d318047ab01e7ded366d91a4f7bc688f85840ffdae1bbfda1f50e0f267e7e",
+      "bytes": 1331
+    },
+    "VENUES/dsn/PHASES/P03.md": {
+      "sha256": "4a74c6fcbb4e9642a993eec366a17139beb021392a057318d36637daf08a3069",
+      "bytes": 1181
+    },
+    "VENUES/dsn/PHASES/P04.md": {
+      "sha256": "a9863557b65279ec71aa812690d557868ff2dd7aed817aa54e032b2a27a8c195",
+      "bytes": 1165
+    },
+    "VENUES/dsn/PHASES/P05.md": {
+      "sha256": "2eafe1d86dacf65a23d6ef59d921822511f509cd394c85220851403ab66526f8",
+      "bytes": 1346
+    },
+    "VENUES/dsn/PHASES/P06.md": {
+      "sha256": "c46b773ae58a4fb0a20491299cf811181a170f365533e959856d653a948ba126",
+      "bytes": 1040
+    },
+    "VENUES/dsn/PHASES/P07.md": {
+      "sha256": "0c1d6f3a4b51e9963c61dddd440975fbbf5a1cc38b4a987872bc735a810f65fb",
+      "bytes": 752
+    },
+    "VENUES/dsn/PHASES/P08.md": {
+      "sha256": "43f7572ffb40de2dad79ee85e6bfa51bf4655d80e872c79aa272dfdd53d05fa1",
+      "bytes": 1142
+    },
+    "VENUES/dsn/PHASES/P09.md": {
+      "sha256": "019d626264f219005c9a2eeacb48ae366cbd03381c95ea50c9f836eff3974aae",
+      "bytes": 881
+    },
+    "VENUES/dsn/RESEARCH_BLUEPRINT.md": {
+      "sha256": "c426f8db680863b80a2d2eb043c74369e1f40c83d7141ef7f63051396d1624f0",
+      "bytes": 4471
+    },
+    "VENUES/dsn/TASKS/DSN-X01_state_spec.md": {
+      "sha256": "315617658fef568ffb458bb2bbb3c458ca3deb9ebe4245151170effa87363536",
+      "bytes": 9919
+    },
+    "VENUES/dsn/TASKS/DSN-X02_recovery_tla.md": {
+      "sha256": "8a91c162727f95865b85e014cdeeea04231f02806c9822ac10d1d34ee8450627",
+      "bytes": 9929
+    },
+    "VENUES/dsn/TASKS/DSN-X03_fault_windows.md": {
+      "sha256": "4c499a1ff9bccfeeeeacff0fac90fd750218c131de8b26c316e37d0d61bfc881",
+      "bytes": 9933
+    },
+    "VENUES/dsn/TASKS/DSN-X04_outbox_reference.md": {
+      "sha256": "21fb64248cf57ca3d55d5332c05d64b30a1a790ea2382d2101f81dcfd6b66885",
+      "bytes": 9877
+    },
+    "VENUES/dsn/TASKS/DSN-X05_workflow_reference.md": {
+      "sha256": "3c90a6f2685c29c45f9febb5fb3ad81f926b481cd6139d2d2a898212c5aa9c26",
+      "bytes": 9867
+    },
+    "VENUES/dsn/TASKS/DSN-X06_reconcile_journal.md": {
+      "sha256": "82f69022972ac94740859466fcc54d018a4dace07a77b8ccd6f2e008d271f51c",
+      "bytes": 9984
+    },
+    "VENUES/dsn/TASKS/DSN-X07_kill_driver.md": {
+      "sha256": "fe09d245420fd877fbf817ab37270cd6294e7b49b250ffbfa1b640de4e2ac505",
+      "bytes": 9941
+    },
+    "VENUES/dsn/TASKS/DSN-X08_elle_export.md": {
+      "sha256": "0c9c6a5ac4a896bf65208cfe59ac50986f6cbcc3e162da587f5121530231c31a",
+      "bytes": 9881
+    },
+    "VENUES/dsn/TASKS/DSN-X09_recovery_analysis.md": {
+      "sha256": "c72d0ab2ab26661693944cb1e2de0ea6a9123d7ff0c8f5b36ad53d2a98013677",
+      "bytes": 9849
+    },
+    "VENUES/dsn/TASKS/DSN-X10_operations_matrix.md": {
+      "sha256": "ec0fe3f2cbb7637d578a67f08e7e7aa631694343c4635d69e4308fdbda5198e9",
+      "bytes": 9879
+    },
+    "VENUES/dsn/TASKS/DSN-ablation.md": {
+      "sha256": "5992dc9a882aef0d8fef9567b8e8e07b42f7f68b57fd9cb68749248502e96e9a",
+      "bytes": 9900
+    },
+    "VENUES/dsn/TASKS/DSN-baseline_tests.md": {
+      "sha256": "be6f269122616b5f5f3374f98d295e0546fe9a48eaacc255c9001fbc1665010f",
+      "bytes": 9990
+    },
+    "VENUES/dsn/TASKS/DSN-baselines.md": {
+      "sha256": "131dc2503b3b8c3b363873d8a818dd87c7b36182c78e2fe4462ff29051b0c37b",
+      "bytes": 10042
+    },
+    "VENUES/dsn/TASKS/DSN-candidate.md": {
+      "sha256": "43f85b44d2b12cbb726a804a59e4fa3300773d42e3f61e5594f370d3ea55b473",
+      "bytes": 10019
+    },
+    "VENUES/dsn/TASKS/DSN-confirm.md": {
+      "sha256": "0f39e79e3593bdf85c74605d75acb6f0e5277b475c72ab7fe3e1915e955f3bb1",
+      "bytes": 10084
+    },
+    "VENUES/dsn/TASKS/DSN-dataset.md": {
+      "sha256": "669b66b9fe4b6d20001b2dec0ecaba4c252b79006d111da86d2e098be72a4a89",
+      "bytes": 10064
+    },
+    "VENUES/dsn/TASKS/DSN-figures.md": {
+      "sha256": "4d7eb97fa0c9f333fb53faa99b2b3f0537ab05856428eabf2e267304b361e02a",
+      "bytes": 9892
+    },
+    "VENUES/dsn/TASKS/DSN-freeze.md": {
+      "sha256": "594c74703096389890e4b3dfdf8c021c3efcbd912ed43c9362d9b8b76d7aa801",
+      "bytes": 10124
+    },
+    "VENUES/dsn/TASKS/DSN-funding.md": {
+      "sha256": "0665e0fc4d394806d6e6972ae6c9b58284cd0c1a2fe364e432d949955171309e",
+      "bytes": 10136
+    },
+    "VENUES/dsn/TASKS/DSN-oracle.md": {
+      "sha256": "62084c07cb8332b99850bca00c581d3171a4243d4fb42d6f1b84007bca9867a8",
+      "bytes": 10107
+    },
+    "VENUES/dsn/TASKS/DSN-overlap.md": {
+      "sha256": "2793b003009c2798ed32951674be0bae8cc60d971ca413cd7722ffe117c960a2",
+      "bytes": 10034
+    },
+    "VENUES/dsn/TASKS/DSN-paper.md": {
+      "sha256": "4722530d7d2ee26ef44b920518800584bd8e59b9b1dd2dc6f923cf5e0b505d88",
+      "bytes": 10087
+    },
+    "VENUES/dsn/TASKS/DSN-pilot.md": {
+      "sha256": "1215a2627839db6ebfcbd6861ed121bf9c04d9d3a84d70e3070de8d226084107",
+      "bytes": 10737
+    },
+    "VENUES/dsn/TASKS/DSN-prior.md": {
+      "sha256": "0d3bbe0b1b6cc9f3435da879e8e72028303f9f16680f036bde33f5ef99a051b0",
+      "bytes": 10042
+    },
+    "VENUES/dsn/TASKS/DSN-release.md": {
+      "sha256": "223d6d9117a7673075fe2e0aec76bd626e8f42427988dcf07626f399039b6359",
+      "bytes": 10197
+    },
+    "VENUES/dsn/TASKS/DSN-rq_registry.md": {
+      "sha256": "512cf32f5eac31c26338b849e8413cc83e329dee5a699cde51ddd9dd5f4ff9a4",
+      "bytes": 10038
+    },
+    "VENUES/dsn/TASKS/DSN-runner.md": {
+      "sha256": "b589e87918e564e6bb14c2592b7ba2e849d6696ff83f797cb4af578484bbb676",
+      "bytes": 10055
+    },
+    "VENUES/dsn/TASKS/DSN-schema.md": {
+      "sha256": "c8fc096515485c0c001448f5b8186322ac99ee9f58454dc0de45505148c0a6cb",
+      "bytes": 10086
+    },
+    "VENUES/dsn/TASKS/DSN-scope.md": {
+      "sha256": "eeea2aac329166b858b25f43aa24c210160ec0e1c0b708f72d039ddc9919a2f8",
+      "bytes": 10081
+    },
+    "VENUES/dsn/TASKS/DSN-stats.md": {
+      "sha256": "20264447d11cd42142b7a0394cbe24189905c57d97989bfb7df25316ef9ab776",
+      "bytes": 10075
+    },
+    "VENUES/dsn/TASKS/DSN-threat.md": {
+      "sha256": "ef13eff4e915b8b550152005fd9d7f4a1dc91766c5e5dd64c9d9a39780039d3c",
+      "bytes": 10028
+    },
+    "VENUES/dsn/TASKS/DSN-traces.md": {
+      "sha256": "3e23820b9395524752e21284b88e8823ca208c11dc2a474ad457bae1ae976e45",
+      "bytes": 9989
+    },
+    "VENUES/dsn/TASKS/DSN-unit.md": {
+      "sha256": "1282b8b0b974e8e44ab64c52864a54d76abde1a70d26f855e3958872de5b7b8b",
+      "bytes": 9993
+    },
+    "VENUES/dsn/cases/schema_example.json": {
+      "sha256": "faf16697fc6ecaf0947466eab82e0c662f6d3bdab3bd4638e22cff41caba7e8f",
+      "bytes": 333
+    },
+    "VENUES/ifip_sec/CASE_MATRIX.md": {
+      "sha256": "9373845995c55a3f1388fec355540b9f2b83dc6777fedab81d8472877af48651",
+      "bytes": 4017
+    },
+    "VENUES/ifip_sec/PHASES/P01.md": {
+      "sha256": "034c7d2730342d2372bc6d10e88523c20fa3422bd6d69cc66f542f0a276c75dc",
+      "bytes": 1431
+    },
+    "VENUES/ifip_sec/PHASES/P02.md": {
+      "sha256": "0e9706b5a178b866413ce1223992075d3d0e9633ce95f324c65adcf3f38a8d7a",
+      "bytes": 1477
+    },
+    "VENUES/ifip_sec/PHASES/P03.md": {
+      "sha256": "535f73ddea3f8d300117795404e824d1c757dbd4512d62a0b222ac224c74bcd0",
+      "bytes": 1272
+    },
+    "VENUES/ifip_sec/PHASES/P04.md": {
+      "sha256": "be7588af32399d5421d5dcd86948cc2e8142c03c2532c90719d9a58a7eb01ec9",
+      "bytes": 1419
+    },
+    "VENUES/ifip_sec/PHASES/P05.md": {
+      "sha256": "748b27803f6f05288ee5d458a92ac3f046bfba823280dcc99f6a9b278a6bd56a",
+      "bytes": 1480
+    },
+    "VENUES/ifip_sec/PHASES/P06.md": {
+      "sha256": "ad3c589ee6ab4b4b545f6fde12b9257a111c39d50071c37748b03ee744a55eb4",
+      "bytes": 944
+    },
+    "VENUES/ifip_sec/PHASES/P07.md": {
+      "sha256": "5609cc0f669c8fb00eded8c765d39749b7721a19e2c35905c11e014db57cdf87",
+      "bytes": 750
+    },
+    "VENUES/ifip_sec/PHASES/P08.md": {
+      "sha256": "e78cdac8f143712712495fab04aa794060356dd439df9908805c26cac7568bea",
+      "bytes": 1225
+    },
+    "VENUES/ifip_sec/PHASES/P09.md": {
+      "sha256": "83b66322e31a2ff30bbce6b097b159709314a68416b0730b516712d181b330b4",
+      "bytes": 926
+    },
+    "VENUES/ifip_sec/RESEARCH_BLUEPRINT.md": {
+      "sha256": "e117af8ee333f1957aaee011118310f0e75abcf3849c6eb4d7b225d61c1b153e",
+      "bytes": 4303
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-X01_receipt_schema.md": {
+      "sha256": "d2291dc05f2d2647893edf2caef514284eb57102f39189ca49077be85108aac2",
+      "bytes": 9809
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-X02_lineage_digest.md": {
+      "sha256": "5a600daf43a2f23e0551f0729aeab8b54787edfbcae0578c9ecc7c57ecab9f6f",
+      "bytes": 9853
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-X03_nonce_store.md": {
+      "sha256": "ff6e9bdee392129f636b177a6b3191162d717c4803ed29ca9e4bfed2dae336d6",
+      "bytes": 9807
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-X04_context_verify.md": {
+      "sha256": "bb1d390e90af7bc8c8ea4984e5b4f2c592a5cd39c37e2f3a5c3c61375b781ca1",
+      "bytes": 9815
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-X05_macaroons_strong.md": {
+      "sha256": "70030b21461b1a831c1e463e6ffa81c0bb424300c6893ac4013a8cb60cb2fa7a",
+      "bytes": 9759
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-X06_zanzibar_style.md": {
+      "sha256": "7cea901b031ab209cf56ab7e2c14527b0a3f245764ba3efc16d0c1e747e15abf",
+      "bytes": 9792
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-X07_replay_generator.md": {
+      "sha256": "4e72752253b841d30d01df8bc195ac17dff85f97bd2f65597f33cf1793e00838",
+      "bytes": 9725
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-X08_concurrent_consumers.md": {
+      "sha256": "514b49389f783f73aa9e54a2fb80b9d49ac1fdb2914a53254e56e5c79c362c8c",
+      "bytes": 9807
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-X09_constant_time.md": {
+      "sha256": "b1170a9ece0ae791c6d77b46f3af50a75e8c26afdb784ce1fb601d3cd520538b",
+      "bytes": 9779
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-X10_attack_table.md": {
+      "sha256": "cb038741093d70ca7c6b4141fcf2df1e02ded5954cf905450ce9b241b3432c00",
+      "bytes": 9709
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-ablation.md": {
+      "sha256": "691445e1a94f7c2f9e1fe46dc461e0e209fe7f0bf466844046415a449effb155",
+      "bytes": 9792
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-baseline_tests.md": {
+      "sha256": "d2ad59581f28d079f43b81c981629793c5cbac2d22d5f5008df70111636b45c4",
+      "bytes": 9887
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-baselines.md": {
+      "sha256": "b7dc2b0b52ffc41ac528ad311329770ae900ff29fe30b3284234654f53d04e91",
+      "bytes": 9934
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-candidate.md": {
+      "sha256": "dfca98ef147d839260d547269e197b96625ee2f8566d604c46c0b72224ab38e3",
+      "bytes": 9911
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-confirm.md": {
+      "sha256": "418bb9b7c118ee4a869766f1ee04d470669adf922598daa490a78c825ffbfcea",
+      "bytes": 9915
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-dataset.md": {
+      "sha256": "f416ce55921a7fccd4ac0d83e4a0adc62ef8f1ae3daa7b38cbb5032748ec4810",
+      "bytes": 9956
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-figures.md": {
+      "sha256": "5cd2bf738c0fdce16f697dc13105645e66899528de9eac84bd2a57fc72a2e571",
+      "bytes": 9784
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-freeze.md": {
+      "sha256": "49eca9d711a640a5fb56475ce3662795e20ac4b381fd3380834aedfc1185ac24",
+      "bytes": 10021
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-funding.md": {
+      "sha256": "e0445b19c7bc4ed298d6fdb5dea739fe58f8728b595f5744dbff0e74708a1f2b",
+      "bytes": 10028
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-oracle.md": {
+      "sha256": "f783d5eaea51c58c9c1f43acee3f200cf506304ff6f06e6c43e295de224e2e28",
+      "bytes": 10004
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-overlap.md": {
+      "sha256": "17015c287742b90c678bee3f509dc5b65e13ed3fac9870326a015dd60a68a3d9",
+      "bytes": 9926
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-paper.md": {
+      "sha256": "f3ae52c04f597fd730dfc69f761b151864a9df1393effe4b17ffb31215cea85c",
+      "bytes": 9979
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-pilot.md": {
+      "sha256": "cb4377cff43941a1d9db507b023920df7e2950d41d787bbe2e8041f0ab92ec91",
+      "bytes": 10815
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-prior.md": {
+      "sha256": "b7e6cad18d764b7cc85b551f92ae8a43f47a4465ab0e996b7079bb09dc454bb3",
+      "bytes": 9934
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-release.md": {
+      "sha256": "f6383f7047e09261bc352de934838467808cdebd801650d58fbb3b8d4496cb54",
+      "bytes": 10100
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-rq_registry.md": {
+      "sha256": "008915192e3f16e4f73e561d63317ec8618eeb644d5d81d86515e494642c0100",
+      "bytes": 9930
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-runner.md": {
+      "sha256": "d3e2da4b0fd65bf293e622618ac02f6038de78ae0c82364b2179dd47076c57e4",
+      "bytes": 9952
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-schema.md": {
+      "sha256": "8cba0f4055824b86ab61cfaa0fdfb0d801b51649cb00527f013e8e60e6be923a",
+      "bytes": 9983
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-scope.md": {
+      "sha256": "978aa2fbd22582f7da77094ed9c15199b96d4cad75a43f915c46f1954432675e",
+      "bytes": 9968
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-stats.md": {
+      "sha256": "c0cbc9245c132873f9ce754236ec442cf3dd889fde29ba183c320b47a44818f4",
+      "bytes": 9967
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-threat.md": {
+      "sha256": "1e9f279ebdf61448315b2b27974327920fdfa4b097c27f5d8f00369705176ee9",
+      "bytes": 9920
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-traces.md": {
+      "sha256": "38844e71f3f76702736ce9869b065a2d8f2cd9434ac9e40e75ba49eb041f7a4b",
+      "bytes": 9881
+    },
+    "VENUES/ifip_sec/TASKS/IFIP_SEC-unit.md": {
+      "sha256": "4d889a8fb4e3ead4e43b739c79f20e0b67d915c97944abcfc379e9ed41c4fc4d",
+      "bytes": 9890
+    },
+    "VENUES/ifip_sec/cases/schema_example.json": {
+      "sha256": "402b1d03a839d073634e7e61b583f17af18902e3ac46b57071b83823f4773e1a",
+      "bytes": 339
+    },
+    "VENUES/popets/CASE_MATRIX.md": {
+      "sha256": "0433e0288405c2c7951166ba26470576b9ef82704f7be358a7ef4dd49f240b7d",
+      "bytes": 4187
+    },
+    "VENUES/popets/PHASES/P01.md": {
+      "sha256": "fceb50b327cdb2c1d273985c16e77e9d995e8274997511a6154198871b312888",
+      "bytes": 1391
+    },
+    "VENUES/popets/PHASES/P02.md": {
+      "sha256": "aa26d9957dd08f8e846bc06a393b2a8f7b7925a5c740077223363733ed11503e",
+      "bytes": 1420
+    },
+    "VENUES/popets/PHASES/P03.md": {
+      "sha256": "7867dc0eb605dcff477728571e3a9c75a48bd6844a93c74fa909c074b993e9d6",
+      "bytes": 1226
+    },
+    "VENUES/popets/PHASES/P04.md": {
+      "sha256": "4c37919316a0e1b6e7ff3548c6d314cfbc29f0e78acfc3b85ba7a12d06232795",
+      "bytes": 1328
+    },
+    "VENUES/popets/PHASES/P05.md": {
+      "sha256": "0aab850323b56623e29e25d09e5f1bb84af0ce72d6ea3029755be911429209e8",
+      "bytes": 1234
+    },
+    "VENUES/popets/PHASES/P06.md": {
+      "sha256": "d054d9ab197bf39134bc287c3b2d5053b02dbccd2398a30b7a1b09fdf8b5ec68",
+      "bytes": 915
+    },
+    "VENUES/popets/PHASES/P07.md": {
+      "sha256": "a76e90af99d27a5b0621e94909349889062edde39334e5e7937c2fd4603fbce1",
+      "bytes": 897
+    },
+    "VENUES/popets/PHASES/P08.md": {
+      "sha256": "00cd3dc38f752a239900c04731a098d74dd7b0db06af94ea0585826bc42aaeef",
+      "bytes": 1182
+    },
+    "VENUES/popets/PHASES/P09.md": {
+      "sha256": "bab55e3f26066a39332f7289b48fdd734997d3ccda476f6d6c27dd4daf1d88fe",
+      "bytes": 908
+    },
+    "VENUES/popets/RESEARCH_BLUEPRINT.md": {
+      "sha256": "c84cfc2e19d0c4ea212523cc8dea88d5529bf82234114835132799a51d86d868",
+      "bytes": 4552
+    },
+    "VENUES/popets/TASKS/POPETS-X01_lineage_graph.md": {
+      "sha256": "d943d8a0f6315e11f9e4a91f37abd537684319be8156ba597a5619f01fd35890",
+      "bytes": 10006
+    },
+    "VENUES/popets/TASKS/POPETS-X02_revocation_events.md": {
+      "sha256": "ad557ed74ad509cb241bd69e812e4acddd2411649633229432ee318a93af7a20",
+      "bytes": 9966
+    },
+    "VENUES/popets/TASKS/POPETS-X03_cache_control.md": {
+      "sha256": "c1da25163cabc0c2b8fa3946971dc40019e4d8bae95476ccaaad2f5d2a2ae079",
+      "bytes": 9978
+    },
+    "VENUES/popets/TASKS/POPETS-X04_redisclosure_probe.md": {
+      "sha256": "d68e1238ae97c47b61177d8993ab958f951466cd9e627b147f08e19d36be83d0",
+      "bytes": 9972
+    },
+    "VENUES/popets/TASKS/POPETS-X05_full_refresh.md": {
+      "sha256": "54377c015c075c1e26964077dbb79bf292c5352c75618113a0d3188629af9a0e",
+      "bytes": 9908
+    },
+    "VENUES/popets/TASKS/POPETS-X06_purpose_cache.md": {
+      "sha256": "1dd1ba2b3ce13b6158037093d4385c64d6d1b6fec7ad92da79e64929b3c60f9b",
+      "bytes": 9858
+    },
+    "VENUES/popets/TASKS/POPETS-X07_privacy_cases.md": {
+      "sha256": "bcad2dd73421001cc1d1a3fe61e9e55ddbb188aa0a11097a6092ac842b922d87",
+      "bytes": 9951
+    },
+    "VENUES/popets/TASKS/POPETS-X08_minimal_privacy.md": {
+      "sha256": "495bde3916f16a2b12292064c59c637f82b942a883a18da4a3c51a716108057b",
+      "bytes": 9894
+    },
+    "VENUES/popets/TASKS/POPETS-X09_linkability_eval.md": {
+      "sha256": "a876c06349a8b4a0f0ff2251c2a6030425330f1af403c6a3c2d994387cf3ea7f",
+      "bytes": 9952
+    },
+    "VENUES/popets/TASKS/POPETS-X10_privacy_cost.md": {
+      "sha256": "11b465d11b0954ae068e3b338b775e460f0237cab99e5db69b7fcc0db8d18985",
+      "bytes": 9863
+    },
+    "VENUES/popets/TASKS/POPETS-ablation.md": {
+      "sha256": "f2bd2c9a9666bebc49a8a6cfeef43ab005358e10da23a22584230a9b51953ce7",
+      "bytes": 10021
+    },
+    "VENUES/popets/TASKS/POPETS-baseline_tests.md": {
+      "sha256": "0722db8ca0ee8f1ae925d4d64849c89f04ca961395b8ead1ea7ddf70d4f644dd",
+      "bytes": 10114
+    },
+    "VENUES/popets/TASKS/POPETS-baselines.md": {
+      "sha256": "39f073ac6a0d3054b920ff5e8c09b85c7d176286b2c6511de93063f73205b25a",
+      "bytes": 10163
+    },
+    "VENUES/popets/TASKS/POPETS-candidate.md": {
+      "sha256": "a71e81bff6f380a1411100514be891b28dc58b1601db2933605924c11f96be60",
+      "bytes": 10140
+    },
+    "VENUES/popets/TASKS/POPETS-confirm.md": {
+      "sha256": "c3c887889dab32f4eca55658ef96fa3c0436b70543750a919af73d3f22c64890",
+      "bytes": 10139
+    },
+    "VENUES/popets/TASKS/POPETS-dataset.md": {
+      "sha256": "7612a6fc5f065fea6f664eeb4f847c13b90e00b93e5705845116912b5c1eec98",
+      "bytes": 10185
+    },
+    "VENUES/popets/TASKS/POPETS-figures.md": {
+      "sha256": "12efb17e7b0024d1f0bf5061b38beba4d81750a7bb3c4902d66c83b9060d71d6",
+      "bytes": 10013
+    },
+    "VENUES/popets/TASKS/POPETS-freeze.md": {
+      "sha256": "cec34ada9f41906d86be6266f7588a92b1cedd45dc0d71b5a4b7a2ea0ed8f019",
+      "bytes": 10248
+    },
+    "VENUES/popets/TASKS/POPETS-funding.md": {
+      "sha256": "13062c7ef402aa32e7dcc6314a58e50817021d8fd0a7890708c8a978945fb9ae",
+      "bytes": 10257
+    },
+    "VENUES/popets/TASKS/POPETS-oracle.md": {
+      "sha256": "3dab1aae14012cd9be380e24e1f8364dcb60877a936ff713939b309c915aaae0",
+      "bytes": 10231
+    },
+    "VENUES/popets/TASKS/POPETS-overlap.md": {
+      "sha256": "23cdbe5ad3b1e63e782e938d36f95f4916accfd2c3af9702c3d220176a5fa806",
+      "bytes": 10155
+    },
+    "VENUES/popets/TASKS/POPETS-paper.md": {
+      "sha256": "ddc33980c15649bcf4f85e504fb0faa3583c3b4d31d0b83b23c2ed8d2c28cb0b",
+      "bytes": 10208
+    },
+    "VENUES/popets/TASKS/POPETS-pilot.md": {
+      "sha256": "67f87b8643e74ee9d18555c587e972bdb5e74e44190c29722454110fc93a3c59",
+      "bytes": 10914
+    },
+    "VENUES/popets/TASKS/POPETS-prior.md": {
+      "sha256": "283e77b45e98019e369bab66120749dfa5fdba46c525d1e0277c891fa15b38fe",
+      "bytes": 10163
+    },
+    "VENUES/popets/TASKS/POPETS-release.md": {
+      "sha256": "763a97a3444455b41e236ace7db79a6c38543423034d11cef1357bc147dd9d1f",
+      "bytes": 10386
+    },
+    "VENUES/popets/TASKS/POPETS-rq_registry.md": {
+      "sha256": "ada6292b9eb378f1f9e5cebcd6a820787554a45e0993796f6f9b2c0cc958e3c8",
+      "bytes": 10159
+    },
+    "VENUES/popets/TASKS/POPETS-runner.md": {
+      "sha256": "39f1d4de727aed527fc3179783e03b9b3bd5c881de9a1a7402aad811ddd590d4",
+      "bytes": 10174
+    },
+    "VENUES/popets/TASKS/POPETS-schema.md": {
+      "sha256": "2c0703a2cf1674f3f1813dd22e86822b98e3cacde93c59fc642e0dfbbfaa470f",
+      "bytes": 10210
+    },
+    "VENUES/popets/TASKS/POPETS-scope.md": {
+      "sha256": "9ed32fe3efe8b91fe0f9ffde74539a3c38641dde93b8b8ac1282b3fcf62fd970",
+      "bytes": 10199
+    },
+    "VENUES/popets/TASKS/POPETS-stats.md": {
+      "sha256": "9ff060f48fd1bb09dab62dc17a237c04cdae82fa709d290e75846986829d9d3c",
+      "bytes": 10196
+    },
+    "VENUES/popets/TASKS/POPETS-threat.md": {
+      "sha256": "a8c2f3b5d4bde429b2d595a6960f7d1db2ea856e7adaf6e6783ef4384fab4c04",
+      "bytes": 10149
+    },
+    "VENUES/popets/TASKS/POPETS-traces.md": {
+      "sha256": "1dc02f93835f8dc3b601cd91874df5c399b13778575158939daff62804a33c77",
+      "bytes": 10110
+    },
+    "VENUES/popets/TASKS/POPETS-unit.md": {
+      "sha256": "0594536610340d0448cce7b4a6abae9d3c29a1a6bc4e5ba79caf426e15369ca8",
+      "bytes": 10117
+    },
+    "VENUES/popets/cases/schema_example.json": {
+      "sha256": "706dfdde750f327f3c438ead70d8ad5512ef78ee0308b1a3e20d595d59510b99",
+      "bytes": 335
+    },
+    "VENUES/pst/CASE_MATRIX.md": {
+      "sha256": "0b56c8697add0883dbbfbefe3d47b114d94a080f58d094c9d2a39dd90e211511",
+      "bytes": 3911
+    },
+    "VENUES/pst/PHASES/P01.md": {
+      "sha256": "8587e316875fd82a9cab10c9c7e209c8bae64fa250b84faad7b6935924ce639e",
+      "bytes": 1331
+    },
+    "VENUES/pst/PHASES/P02.md": {
+      "sha256": "4b282b3a2d636ed5f6f498e0fceb29591661cec1797d7b4f6c7e7486fc0d10ea",
+      "bytes": 1390
+    },
+    "VENUES/pst/PHASES/P03.md": {
+      "sha256": "467db38bb03a073f8d01db90a663fdefeb9cc0fc0fabea44da44d2b7f3fa3940",
+      "bytes": 1176
+    },
+    "VENUES/pst/PHASES/P04.md": {
+      "sha256": "92eef8c0d9e5d802453cbdf055553c07bb99a241682145539dd3263acfcad3a6",
+      "bytes": 1107
+    },
+    "VENUES/pst/PHASES/P05.md": {
+      "sha256": "28de6c6f709f1b8779559b5775f423e5801213137f43040b72f03caad8c1ff7e",
+      "bytes": 1331
+    },
+    "VENUES/pst/PHASES/P06.md": {
+      "sha256": "cdd75c4e08899ec46540b6c13609a9ec72f83d9017af89cf1f0189b4210d8b75",
+      "bytes": 1044
+    },
+    "VENUES/pst/PHASES/P07.md": {
+      "sha256": "1861b9a5132bc5110ee8f69e40eec2ffb233350f72d97239a2d4c3244ce5e7db",
+      "bytes": 748
+    },
+    "VENUES/pst/PHASES/P08.md": {
+      "sha256": "a522a86f29e48217b5cdab771c9e7927160659c5dad44a14369ed2c87f730c4f",
+      "bytes": 1140
+    },
+    "VENUES/pst/PHASES/P09.md": {
+      "sha256": "2382e3a8b91eac09909b7a91b3d3533a65b325b1f070a7f16b3e06bf132a96fa",
+      "bytes": 881
+    },
+    "VENUES/pst/RESEARCH_BLUEPRINT.md": {
+      "sha256": "4ff35b42a0398b3238b0a396dbe6b9f1f77c32b9a0a5bbba496615f0f4e9af7c",
+      "bytes": 4151
+    },
+    "VENUES/pst/TASKS/PST-X01_receipt_contract.md": {
+      "sha256": "2705f17a9a8adc02b2a9a0ce5ed6a68ec7fc7659c89653d80fdd0965d4a05173",
+      "bytes": 9600
+    },
+    "VENUES/pst/TASKS/PST-X02_forensic_queries.md": {
+      "sha256": "9a3ed2c42c8ffc460cfc57daebab691dd3b9bced39253618f91b86fb8674c3a3",
+      "bytes": 9662
+    },
+    "VENUES/pst/TASKS/PST-X03_minimization.md": {
+      "sha256": "adf3439e3f3002b76897e94e1070aabe3313f3355b2a7861fdc534e2dad2f756",
+      "bytes": 9575
+    },
+    "VENUES/pst/TASKS/PST-X04_encrypted_ref.md": {
+      "sha256": "51703f81cecaf3375f7d1c91ac63096306b607ad79fd7b712691a5f991bf405d",
+      "bytes": 9574
+    },
+    "VENUES/pst/TASKS/PST-X05_transparency_ref.md": {
+      "sha256": "c1dd7a81b550408b2d2de0a9abbc514bc02b38c91a3115aff9260fafebfbe40d",
+      "bytes": 9513
+    },
+    "VENUES/pst/TASKS/PST-X06_key_rotation.md": {
+      "sha256": "bfa86a7ae2ae7348f1cde5a6e40093a22a552498f221e994bea3215db2c708ed",
+      "bytes": 9562
+    },
+    "VENUES/pst/TASKS/PST-X07_audit_reconstruct.md": {
+      "sha256": "cce4b876a8147443d514f7ea6b8166185f75a06022cf28eb5d8dfabb4bcb9724",
+      "bytes": 9617
+    },
+    "VENUES/pst/TASKS/PST-X08_linkage_attacker.md": {
+      "sha256": "ce340fc994ff684b9587c404620055c5be048f28ca32dbd3b9c698b95f62be1e",
+      "bytes": 9596
+    },
+    "VENUES/pst/TASKS/PST-X09_retention_campaign.md": {
+      "sha256": "35bd66a226e845e66859ceb1f705ded753f75934bba8728ebe26f120ffb7d700",
+      "bytes": 9611
+    },
+    "VENUES/pst/TASKS/PST-X10_receipt_frontier.md": {
+      "sha256": "d53106577f107b4a1ccb400114cdff55fde593bbe53196cb4c401a1d9cd99dd1",
+      "bytes": 9575
+    },
+    "VENUES/pst/TASKS/PST-ablation.md": {
+      "sha256": "36f8382f4c5c678cba75a0c54a8bab266e18cc6d7c5a0b6485b7c4582b634d97",
+      "bytes": 9561
+    },
+    "VENUES/pst/TASKS/PST-baseline_tests.md": {
+      "sha256": "e053cd4080dcccf440776aa4055012e758dbe4b94c28f96f894248a16d6854f1",
+      "bytes": 9651
+    },
+    "VENUES/pst/TASKS/PST-baselines.md": {
+      "sha256": "096657260e1f1c3f8ca8273a2017c7a1ef65cb6a38e0d2811dfa8d65c9490602",
+      "bytes": 9703
+    },
+    "VENUES/pst/TASKS/PST-candidate.md": {
+      "sha256": "da0b34deaf0d23f00034def677f26744026ed19d408f1b8adb6ce02ef573c96e",
+      "bytes": 9680
+    },
+    "VENUES/pst/TASKS/PST-confirm.md": {
+      "sha256": "9fcf39f0f3f0683b3212abe74ebf57a0109e5a000f11d3cbf529f2c65fb15df2",
+      "bytes": 9749
+    },
+    "VENUES/pst/TASKS/PST-dataset.md": {
+      "sha256": "a5e5b0ea07e5a20b8d7ca47cb15080eaebca8df820c7d44d01621deb928da47e",
+      "bytes": 9725
+    },
+    "VENUES/pst/TASKS/PST-figures.md": {
+      "sha256": "01dbbc69d6221ed8e0dd2104266743db563d73367dece407e5da594058e50c2b",
+      "bytes": 9553
+    },
+    "VENUES/pst/TASKS/PST-freeze.md": {
+      "sha256": "2ed5401e150701e13a3d88cd00d867f0f5201eb6496c7685cb0ff03c540833cf",
+      "bytes": 9785
+    },
+    "VENUES/pst/TASKS/PST-funding.md": {
+      "sha256": "fc435494f6b21b3dd23876023bfc3d21e41e5bb46c696fc84be2fd93b4a3d5cd",
+      "bytes": 9797
+    },
+    "VENUES/pst/TASKS/PST-oracle.md": {
+      "sha256": "b5ac04ce8be8fa8fdba38f5e2437a9e10f84faff9ca0dd9adc4c5dc6ff48f974",
+      "bytes": 9768
+    },
+    "VENUES/pst/TASKS/PST-overlap.md": {
+      "sha256": "f03d763762843824ec46a25033b2319ed41a054116c2c515c5afeb4c3d794374",
+      "bytes": 9695
+    },
+    "VENUES/pst/TASKS/PST-paper.md": {
+      "sha256": "1f45e3273943ce00d20b5717629319bd25d6c5926b24fb8b50b9db882fb063cb",
+      "bytes": 9748
+    },
+    "VENUES/pst/TASKS/PST-pilot.md": {
+      "sha256": "1b118e864978f7b6ccfea00077ddd97c5ec16dfa3b837696f615a907dff118dd",
+      "bytes": 10407
+    },
+    "VENUES/pst/TASKS/PST-prior.md": {
+      "sha256": "ac2727950568d68b4b988bacd9164922594f886cc54a3c4d0966b445beacfef2",
+      "bytes": 9703
+    },
+    "VENUES/pst/TASKS/PST-release.md": {
+      "sha256": "65163334bc693b992d991aa73301bd067664c2637e38c6e5d3556c55df752686",
+      "bytes": 9854
+    },
+    "VENUES/pst/TASKS/PST-rq_registry.md": {
+      "sha256": "948a77feabcafb6171a5bcf4668d0be89e69400acee26abb92e8d26d96d3ebdc",
+      "bytes": 9699
+    },
+    "VENUES/pst/TASKS/PST-runner.md": {
+      "sha256": "345d1df2cc6d682bb97f1c370334a15c1d827948561430ed516469ec7cccc0cf",
+      "bytes": 9711
+    },
+    "VENUES/pst/TASKS/PST-schema.md": {
+      "sha256": "6f623b6e51b05eef8eb70d1d5592a0b6661bf95f03da68e4c3e99250eb9849c6",
+      "bytes": 9747
+    },
+    "VENUES/pst/TASKS/PST-scope.md": {
+      "sha256": "a9ea150b9356294c6a4fe5490e9b75647f03026025a08468e4380a24e02aee32",
+      "bytes": 9742
+    },
+    "VENUES/pst/TASKS/PST-stats.md": {
+      "sha256": "f5432934c4d70aefa0514435a29e87be38e86d76598bb219d8263cee87e7a4e1",
+      "bytes": 9736
+    },
+    "VENUES/pst/TASKS/PST-threat.md": {
+      "sha256": "6da48b37e89abe3ebcf1154ef0515230b09bb8fa418c060e9780c500a2d97887",
+      "bytes": 9689
+    },
+    "VENUES/pst/TASKS/PST-traces.md": {
+      "sha256": "e879a4b2c30ff0fa1cb5e3594b47a74bd1f150138aa2d8861bb5f7c406917734",
+      "bytes": 9650
+    },
+    "VENUES/pst/TASKS/PST-unit.md": {
+      "sha256": "37f5e2ccff2d5246a47dfa3ff624c3e1fa73fdf2ad34a97d08ee1c3d02b34e9e",
+      "bytes": 9654
+    },
+    "VENUES/pst/cases/schema_example.json": {
+      "sha256": "d893bed57af2ca874fc57e181988fb4c63584132891c7803dbfab98f1b3af22d",
+      "bytes": 335
+    },
+    "VENUES/sacmat/CASE_MATRIX.md": {
+      "sha256": "22665b7b4c95c5c7a86cc99f194e2e396f75113add2d6681ee852557722ffe59",
+      "bytes": 3928
+    },
+    "VENUES/sacmat/PHASES/P01.md": {
+      "sha256": "ac923c99c9a7aa0bbd6770bb91c7ceb71f7212c3c3e01a7204ca2cd64c04586a",
+      "bytes": 1391
+    },
+    "VENUES/sacmat/PHASES/P02.md": {
+      "sha256": "dac7c23c1f7fa70a43f7fa072c1bbb6d73def9b490a363baca46d10b692b7657",
+      "bytes": 1436
+    },
+    "VENUES/sacmat/PHASES/P03.md": {
+      "sha256": "fc25960a701e3a231714e60d76caf9e49c90838d4952c720dd69bb33ee559372",
+      "bytes": 1363
+    },
+    "VENUES/sacmat/PHASES/P04.md": {
+      "sha256": "9a42705dddf7f08f4c604cd03eee68287637f772ed6496530195c92d7fd3d74d",
+      "bytes": 1181
+    },
+    "VENUES/sacmat/PHASES/P05.md": {
+      "sha256": "33b76f48a5937e936bcd9cb51e3e52daeae9326065501c9440257cda84fbf4d6",
+      "bytes": 1382
+    },
+    "VENUES/sacmat/PHASES/P06.md": {
+      "sha256": "0acceb5069ec446c2d2295f14b0a8377dcbb5619b61b141c0e1386d5b0ae71d8",
+      "bytes": 915
+    },
+    "VENUES/sacmat/PHASES/P07.md": {
+      "sha256": "11823ded61d106fd5a69bdbf51a8cdac3ef4d7f8b9c296e13e87a93e8bacfce0",
+      "bytes": 735
+    },
+    "VENUES/sacmat/PHASES/P08.md": {
+      "sha256": "3cb0835668919577046e778107d9417f9801a5155ea43129df157066378a0ff9",
+      "bytes": 1187
+    },
+    "VENUES/sacmat/PHASES/P09.md": {
+      "sha256": "5154fcfa710c5714a1929db7e38e3c11a79b088d0d7c62834ba026a0eabbf769",
+      "bytes": 908
+    },
+    "VENUES/sacmat/RESEARCH_BLUEPRINT.md": {
+      "sha256": "45e9682f2a09030d893c879b6a8f057c887c5039670abcf0bb0352042333b9df",
+      "bytes": 4263
+    },
+    "VENUES/sacmat/TASKS/SACMAT-X01_policy_trace_dsl.md": {
+      "sha256": "4c33e5d4cb58ceb4b6253024cdac929f4137d45f67552f852a99070ee4081d88",
+      "bytes": 9866
+    },
+    "VENUES/sacmat/TASKS/SACMAT-X02_reference_semantics.md": {
+      "sha256": "60442cf7d3d74c3b9f780c9249759432ce5dfdf0967ffe4627845132e2888578",
+      "bytes": 9843
+    },
+    "VENUES/sacmat/TASKS/SACMAT-X03_cedar_runner.md": {
+      "sha256": "367fa491dbcefb3369bdd425237eaa85ae5c8b74ff6ff109c8f096bb13934754",
+      "bytes": 9805
+    },
+    "VENUES/sacmat/TASKS/SACMAT-X04_openfga_runner.md": {
+      "sha256": "ed471493bf5f8e03f7db2fb3a47353e000f629781a5b324dfa59dda36e7561c0",
+      "bytes": 9840
+    },
+    "VENUES/sacmat/TASKS/SACMAT-X05_opa_runner.md": {
+      "sha256": "40494cec893fb7c4eb2ed56f5a6db49cffb291138a5d7daf2f4df81ffd0f1a4c",
+      "bytes": 9771
+    },
+    "VENUES/sacmat/TASKS/SACMAT-X06_temporal_generator.md": {
+      "sha256": "ce57b400712f8b94e50922a33988914208e20a7b3cba21f2973cc23c6dc3ad26",
+      "bytes": 9895
+    },
+    "VENUES/sacmat/TASKS/SACMAT-X07_mutation_ops.md": {
+      "sha256": "c76d9bb34cd3e1bff2ad2ffec57a79cc8a486beb2c960e07e77e3f238dd56922",
+      "bytes": 9846
+    },
+    "VENUES/sacmat/TASKS/SACMAT-X08_budget_runner.md": {
+      "sha256": "a13b90093bc4a77acdc51d98969ca58c51f2caf8f758be30d3716e9bb6b4a1d2",
+      "bytes": 9853
+    },
+    "VENUES/sacmat/TASKS/SACMAT-X09_minimizer.md": {
+      "sha256": "fc99ffbb1b228206a9952a9c2ea86e8ff4ce952ee5b630000976098d2431fea3",
+      "bytes": 9829
+    },
+    "VENUES/sacmat/TASKS/SACMAT-X10_crossengine.md": {
+      "sha256": "e266cf9cefd96dfddafae24e28c3308d2d7f692faff48eb78e5468e429322bc0",
+      "bytes": 9849
+    },
+    "VENUES/sacmat/TASKS/SACMAT-ablation.md": {
+      "sha256": "e3b41f9172f989da40812a094e0679f60b6381e6f7b9d191c14529da4c1e72dc",
+      "bytes": 9841
+    },
+    "VENUES/sacmat/TASKS/SACMAT-baseline_tests.md": {
+      "sha256": "274e719e55fe47e823d8a93dd1e5c5ccaef9b3346e09aec43bc1859da6999eca",
+      "bytes": 9934
+    },
+    "VENUES/sacmat/TASKS/SACMAT-baselines.md": {
+      "sha256": "493dfe9ea32836907cdb7421096769bedc6c4356b5d851d3f8c424c85340d397",
+      "bytes": 9983
+    },
+    "VENUES/sacmat/TASKS/SACMAT-candidate.md": {
+      "sha256": "d8df85f4d021e97e23ac9cf1cc6a86323f24be434b97bb8f34725af3d3c1d964",
+      "bytes": 9960
+    },
+    "VENUES/sacmat/TASKS/SACMAT-confirm.md": {
+      "sha256": "f1a82d9dee2312c75ba06eef806e2d3122570e624bbe1bd7e65173d856636945",
+      "bytes": 9959
+    },
+    "VENUES/sacmat/TASKS/SACMAT-dataset.md": {
+      "sha256": "7a09a7dca6c9fb0113a7f161712904260fd84e22df44fdad84e59f1d4979022d",
+      "bytes": 10005
+    },
+    "VENUES/sacmat/TASKS/SACMAT-figures.md": {
+      "sha256": "8a27e3d40fd067ac0c68c1027548532774aba8acf254250eb1cfadfe03985409",
+      "bytes": 9833
+    },
+    "VENUES/sacmat/TASKS/SACMAT-freeze.md": {
+      "sha256": "0cb3474a47e870c9bd7fc325e5655d2d67abdef5959dd585d0d327f69f7820e8",
+      "bytes": 10068
+    },
+    "VENUES/sacmat/TASKS/SACMAT-funding.md": {
+      "sha256": "fab41bf5cdd8bb664ffd324c3b0602ca711df636e11bdc875114c630ebac593c",
+      "bytes": 10077
+    },
+    "VENUES/sacmat/TASKS/SACMAT-oracle.md": {
+      "sha256": "146a9b087dcdc06937be407df52390fc4bf6b5be21c395e768df21e75ed22916",
+      "bytes": 10051
+    },
+    "VENUES/sacmat/TASKS/SACMAT-overlap.md": {
+      "sha256": "c9e14808fc86158e4c4da5148bfcc838cc12cf0b692426f89adb7070cfd8a88d",
+      "bytes": 9975
+    },
+    "VENUES/sacmat/TASKS/SACMAT-paper.md": {
+      "sha256": "9a0d780fb9bf2d43627164aa90f500459799c85af270d075684d54f2f4fe378c",
+      "bytes": 10028
+    },
+    "VENUES/sacmat/TASKS/SACMAT-pilot.md": {
+      "sha256": "14e70a48f05ab544d2fc0b9e5d9e75eba94ebba7d0f6e87ff12ae32d999d5e6d",
+      "bytes": 10734
+    },
+    "VENUES/sacmat/TASKS/SACMAT-prior.md": {
+      "sha256": "216e3382ebaf918333dfd82c107751e522c231a2b859d8dde05eabf41843801c",
+      "bytes": 9983
+    },
+    "VENUES/sacmat/TASKS/SACMAT-release.md": {
+      "sha256": "84af08204fcf5f788e0e3229fc3e320a19c81c45fe66b24feae6a640d8b96ea6",
+      "bytes": 10140
+    },
+    "VENUES/sacmat/TASKS/SACMAT-rq_registry.md": {
+      "sha256": "784cb42fb3f8d26d8689378d69ef4d7bf4178f27ce3bfca1763625b1b13c6462",
+      "bytes": 9979
+    },
+    "VENUES/sacmat/TASKS/SACMAT-runner.md": {
+      "sha256": "c5fce13eacf965bb82abbabf75d6c2438676a9dffb4c611e8717a5ac849ff62f",
+      "bytes": 9994
+    },
+    "VENUES/sacmat/TASKS/SACMAT-schema.md": {
+      "sha256": "24d56dee21cf5c4ca33310220754ff1682150dd474a0046aed2e663ae4241fde",
+      "bytes": 10030
+    },
+    "VENUES/sacmat/TASKS/SACMAT-scope.md": {
+      "sha256": "73e59ed7883bf17a2f1e1f32049dcbff090930bf44bbba546c9020f3ddde1cb2",
+      "bytes": 10019
+    },
+    "VENUES/sacmat/TASKS/SACMAT-stats.md": {
+      "sha256": "a66007bb4c1a6d6b3b97207b7987b6e607cc6db7a377b4423cc89678c50ce014",
+      "bytes": 10016
+    },
+    "VENUES/sacmat/TASKS/SACMAT-threat.md": {
+      "sha256": "6828191d7d153f3d7ad97e0fd15a1ca9119c5711d65256f45964fe8a28678ca3",
+      "bytes": 9969
+    },
+    "VENUES/sacmat/TASKS/SACMAT-traces.md": {
+      "sha256": "f6390d5fee63a81cec54e039966ff846d210dd6927ebe60bb795c310f62754d9",
+      "bytes": 9930
+    },
+    "VENUES/sacmat/TASKS/SACMAT-unit.md": {
+      "sha256": "1e3db4271afabf18364c2f6f09bb9c9466f9b651032e9d7ccd0f0ebe8e77d300",
+      "bytes": 9937
+    },
+    "VENUES/sacmat/cases/schema_example.json": {
+      "sha256": "8ef918364f9d93fc92e613fc06cf387478a816580d7af2b83137f83b79398710",
+      "bytes": 336
+    },
+    "scripts/qa_full.py": {
+      "sha256": "8c97ab7a7a020eae72e4bb0abdd9274d3000d8965fd914598bc57b69f67cbee7",
+      "bytes": 1381
+    },
+    "scripts/taskctl.py": {
+      "sha256": "0e2f14c645c5d5cfc868f4d34417e474283b8e848a41873086b823a7e73891af",
+      "bytes": 5297
+    },
+    "scripts/test_manifest.py": {
+      "sha256": "793c98ec58639031092ee56a7e1b511ef852d3654c8fc82d122721dd5a34ea18",
+      "bytes": 908
+    }
+  }
+}

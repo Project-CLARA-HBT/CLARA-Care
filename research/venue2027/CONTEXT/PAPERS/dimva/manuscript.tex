@@ -1,0 +1,145 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry,microtype,setspace,amsmath,amssymb,amsthm}
+\usepackage{booktabs,tabularx,array,graphicx,xcolor,url,hyperref}
+\usepackage{algorithm,algpseudocode}
+\geometry{margin=1.03in}
+\emergencystretch=2.5em
+\setstretch{1.12}
+\hypersetup{colorlinks=false,pdfborder={0 0 0},pdftitle={CLARA-Care Research Manuscript}}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\title{\vspace{-1em}\textbf{Detecting Governance-Bypass Attempts in Agentic Health Workflows from Minimal Audit Events}} 
+\author{Nguyen Ngoc Thien \and Trinh Minh Quang}\date{November 2026}
+\begin{document}
+\maketitle
+\begin{center}\small Hai Ba Trung High School, Hue, Vietnam\end{center}
+\begin{abstract}
+Repeated authorization failures can indicate a misconfigured client, intermittent connectivity, or a deliberate attempt to discover weaknesses in a governed AI workflow. Discriminating these cases is challenging when privacy requirements prohibit retaining raw patient content. We introduce GovernanceTrace, a sequence-based detection framework built on minimal audit metadata and explicit threat-family holdouts. The design represents the evolution of purposes, nonce use, delegation scopes, and coarse timing while excluding patient text and direct identifiers. We formulate the problem as campaign-level detection and compare interpretable temporal rules, Isolation Forest, boosted trees, and sequence models under matched information budgets. Evaluation emphasizes low false-alarm rates, time to detection, unseen-family generalization, and the additional privacy cost of retained metadata.
+\end{abstract}
+\noindent\textbf{Keywords:} intrusion detection; authorization probing; agent security; privacy-minimized logs.
+\medskip\hrule\medskip
+
+\section{Introduction}
+A fail-closed gateway can reject an unauthorized request without identifying the campaign behind it. In health-oriented agent systems, attackers may probe different purposes, reuse receipts, or vary the timing of requests across several sessions. Similar patterns can also arise innocently when a client retries after outages or users switch devices. A detector that merely counts denials is therefore likely either to miss carefully paced probing or to burden administrators with false alarms.
+
+The problem becomes sharper when the audit stream is deliberately minimized to protect patient information. Raw prompts and clinical records would provide rich features but impose unacceptable retention risks. The research question is whether relationships among sparse authorization events still contain enough temporal structure to distinguish sustained probing from benign retries.
+
+We investigate this question through GovernanceTrace, which encodes short sequences of purpose transitions, nonce events, permission changes, and coarse delays. The work emphasizes cross-family generalization and adaptive attackers; a detector that succeeds only because a reason code encodes the attack label does not answer the intended problem.
+
+\paragraph{Contributions.} We define privacy-constrained campaign detection from minimized governance events, introduce an attack-family-disjoint benchmark, and compare temporal detectors under common false-alarm and metadata budgets.
+
+\section{Prior Work and Research Gap}
+Intrusion detection research has long distinguished behavior models from signatures \cite{denning1987}, while later analyses caution against optimistic evaluation when training and test conditions share the same artifacts \cite{sommer2010}. Provenance and access-control systems supply useful event sources \cite{sandhu1996,hu2014}. The proposed contribution is not simply applying a classifier to logs. It is a privacy-constrained campaign definition, a benchmark with disjoint attacker families and tenants, and an explicit test of whether temporal context improves detection over strong operational rules under the same observable metadata.
+
+\paragraph{Research positioning.} The detection study treats GLHS as an event-producing environment. Its contribution concerns sequence-level identification of probing campaigns under metadata minimization, separate from prevention by the gateway itself.
+
+\section{Research Questions and Study Setting}
+\paragraph{RQ1 — Detection under data minimization} Can malicious boundary-probing campaigns be detected at a fixed low false-alarm budget without raw clinical content or label-leaking reason codes? Report campaign-level area under the precision–recall curve and recall at a preregistered false-alarm threshold.
+
+\paragraph{RQ2 — Robustness to novel campaigns} How does generalization change when attacker families, tenants, and tooling templates are held out entirely from training? Measure unseen-family detection, time to detection, and degradation from in-distribution evaluation.
+
+\paragraph{RQ3 — Adaptation and privacy cost} How do paced retries, benign network faults, and stronger metadata minimization affect detection performance and diagnostic value? Compare adaptive evasion rates and retained metadata bytes at equivalent false-alarm budgets.
+
+\paragraph{Study boundary.} The attacker may control a client and observe ordinary API responses, but not privileged audit records. Every event is synthetic and generated in an isolated workload. The detector observes minimized metadata rather than source clinical text.
+
+\subsection{Controlled challenge families}
+\begin{table}[ht]
+\centering\small
+\caption{Prespecified workload and challenge families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+ID & Prespecified condition \\ \midrule
+F1 & Purpose-hopping reconnaissance \\ 
+F2 & Nonce replay campaigns \\ 
+F3 & Slow low-and-slow probe sequences \\ 
+F4 & Cross-tenant role confusion attempts \\ 
+F5 & Adaptive mimicry of benign retry patterns \\ 
+\bottomrule\end{tabularx}\end{table}
+
+\section{Method and Implementation Architecture}
+A lightweight event extractor converts synthetic gateway interactions into purpose transitions, nonce-use indicators, delegation changes, and coarsened timestamps. Session identifiers are bounded and privacy-minimized; patient text and direct account identifiers are omitted. Candidate detectors operate on the same serialized feature stream, with thresholds calibrated on a disjoint development set. The evaluation includes benign outage and retry campaigns as hard negatives and generates attacker behavior that adapts to ordinary gateway feedback. Detection is assessed at the campaign level under family- and tenant-disjoint splits.
+
+\subsection{A detection, not prevention, research question}
+Let $z=(e_1,\ldots,e_T)$ be a campaign of audit events with an oracle label $y\in\{0,1\}$. The defender observes only a minimal feature projection $\phi(z)$ built from coarse time gaps, denial-code transitions, purpose mismatch counts and nonce-reuse patterns; raw patient contents are explicitly unavailable. The detector returns a score $s(z)$ and an alarm threshold chosen on a validation partition. The main test is whether alarms remain useful under campaigns and tenants not represented in training. It is not a proof that the underlying gateway is unexploitable.
+
+\subsection{Adaptive attacker and realistic negative examples}
+An attacker may slow their requests, interleave benign tasks, vary purpose labels and distribute probes across synthetic accounts within declared permissions. Clean negative campaigns include ordinary retries, intermittent network failures and legitimate consent edits, which can resemble suspicious sequences. Synthetic labels are assigned by the attack generator's control state, never encoded as a direct detector feature. Training, threshold selection and test split are separated by campaign and tenant before any normalization, avoiding the common leakage of nearly duplicate events into both sides.
+
+\subsection{Class-imbalance-aware reporting}
+Rare attack prevalence makes overall accuracy uninformative. The primary metrics are precision-recall area and recall at a fixed prespecified false-alarm rate, with alarm load per 10,000 benign events reported separately. Confidence intervals are bootstrapped over independent campaigns, not log rows. Under distribution shift, a simple temporal rule may beat a complex sequence classifier; that negative result is not grounds to exclude the baseline. Results will include adversarial stress sweeps with documented attack budget, temporal horizons, and held-out family definitions.
+
+
+\subsection{Decision model}
+An event encoder maps each gateway interaction to a bounded feature tuple comprising anonymized session continuity, coarse timing, operation class, purpose transition, nonce state, and policy-version change. A campaign is a temporal collection of interactions whose hidden generating process is attacker or benign. The detector produces a score from a sequence window, while operational decisions use a frozen false-alarm threshold.
+\begin{equation}
+\hat y_c=\mathbf{1}\{s(E_{1:T}^{(c)})\ge\tau\},\qquad
+\Pr(\hat y_c=1\mid\mathrm{benign})\le\alpha.
+\end{equation}
+The false-alarm constraint is evaluated on held-out benign campaigns; threshold selection must not use the confirmatory attack families.
+
+\section{Comparative Hypotheses}
+We hypothesize that temporal relations between minimized authorization events can improve campaign detection over strong rule-based monitors under attack-family holdout.
+
+Recall at a fixed false-alarm budget and time to detection are evaluated across synthetic tenants and previously unseen attack families. Metadata suppression is varied independently to characterize how much detection depends on potentially identifying features.
+
+\section{Experimental Design}
+\subsection{Comparative systems}
+We compare systems under matched input histories, authorization information, and resource budgets. Baseline configurations, including their own retry or cache policy where relevant, are established on development data and frozen before independent evaluation.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Comparator implementations and their role in the study.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Arm & Implementation \\ \midrule
+B0 & static threshold on failures per window. strong operational baseline. \\ 
+B1 & temporal rule sequence / finite-state signature. strong interpretable baseline. \\ 
+B2 & Isolation Forest on privacy-minimized counts. unsupervised comparator. \\ 
+B3 & gradient-boosted trees with controlled features. supervised comparator. \\ 
+B4 & sequence model with time-aware features. candidate; only if holdout gain. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Study population and protocol}
+Create campaign histories with nested purpose probing, nonce reuse, credential pivots, benign outage retries, and rate-limited backoff. Split training and testing by attack family, synthetic tenant, and template generator. Compare fixed thresholds, finite-state signatures, Isolation Forest, gradient-boosted trees, and temporal sequence models with identical permitted features.
+
+\paragraph{Dataset construction.} Multi-stage synthetic sessions plus benign retries, outages, latency spikes; attacker cannot read privileged logs; frozen family-holdout groups with no shared templates across train/test..
+
+\section{Measurement and Statistical Analysis}
+\subsection{Outcomes and estimands}
+The primary endpoint is campaign-level AUCPR. Alongside it, we measure false alarms per 1000 benign sessions, so that favorable outcomes can be interpreted in relation to the operational service delivered. The sampling unit, exclusions, and uncertainty procedure are specified before confirmatory execution.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Prespecified outcome families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Type & Outcome recorded for each comparator \\ \midrule
+Primary & campaign-level AUCPR. \\ 
+Co-primary control & false alarms per 1000 benign sessions. \\ 
+Secondary & time-to-detect. \\ 
+Secondary & unseen-family recall. \\ 
+Secondary & bytes of retained sensitive metadata. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Statistical analysis}
+Campaigns—not individual requests—are the independent units. Use stratified precision–recall analysis, sensitivity at fixed false-alarm budgets, and time-to-detection distributions. Run feature ablations that remove reason codes, detailed timing, or cross-session linkability to expose privacy–detection trade-offs.
+
+\section{Analysis and Reporting Plan}
+Figures will show campaign-level precision–recall, false alarms by benign failure mode, and detection delay under adaptive pacing and metadata minimization.
+
+For each endpoint, the analysis will report numerators, denominators, independent study units, matched comparator settings, and uncertainty intervals. All tables and figures will be generated directly from a pinned confirmatory research release, with exclusions and incomplete observations accounted for separately.
+
+\section{Reproducibility and Ethical Considerations}
+The attack generator and all monitored clients run in a segregated synthetic environment. The benchmark will publish campaign-generation seeds, permissible feature definitions, disjoint split identities, and label provenance without exposing patient content. Reproducibility includes fixed detector thresholds and a complete account of benign failures and attacker adaptations.
+
+\section{Scope and Threats to Validity}
+Evaluation is restricted to the declared attacker capabilities and synthetic campaign generators. Attack-family holdout reduces, but does not eliminate, the risk of common artifacts. A classifier is not evidence of prevention: the underlying gateway remains responsible for authorization enforcement.
+
+The study reports unsuccessful, inconclusive, and excluded runs as distinct outcome categories, preserving the interpretation of the measured denominator and the comparison across systems.
+
+\section{Conclusion}
+Detecting governance abuse without patient content requires attention to event sequences, credible benign controls, and independent attack-family evaluation. GovernanceTrace frames this as a measurable privacy–detection trade-off rather than a classification problem on raw sensitive logs.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

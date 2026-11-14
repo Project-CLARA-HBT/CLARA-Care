@@ -1,0 +1,582 @@
+{
+  "01_DSN_2027": {
+    "short": "dsn",
+    "paper": "Recoverable Safety Journals for Crash-Consistent AI-Mediated Health-State Mutations",
+    "novelty": "Recoverability is a safety property of the *joint* clinical row, immutable decision lineage, and asynchronous side-effect record, not just of one database commit. Define a recoverable outcome function that returns COMMITTED, REJECTED, or INDETERMINATE until reconcilable ground truth exists.",
+    "gap": "Transactional outbox and database WAL already give crash-safe writes; the unresolved issue worth testing is whether an AI proposal lineage and user-visible decision stay consistent across crash windows and arbitrary duplicate deliveries. Without a new counterexample to a careful outbox baseline, this is an application paper, not a DSN A contribution.",
+    "rqs": [
+      "RQ1: Across crash cut points, are there executions where the clinical state, decision receipt, and outbox state disagree after bounded recovery?",
+      "RQ2: Under at-least-once replay and concurrent consent revocation, does recovery preserve idempotence, causal order, and correct INDETERMINATE labels?",
+      "RQ3: What is the added durable-write, p99 latency and recovery-time cost compared with transactional outbox and durable workflow baselines?"
+    ],
+    "falsify": "If a correctly engineered PostgreSQL transaction + outbox + idempotent consumer achieves the same invariants and equal/better recovery cost, discard the new mechanism superiority claim.",
+    "baseline": [
+      [
+        "B0",
+        "DB transaction only + fire-and-forget side effect",
+        "weak control; measures lost side effects"
+      ],
+      [
+        "B1",
+        "PostgreSQL atomic write + transactional outbox + idempotent consumer",
+        "strong practical baseline; must implement fully"
+      ],
+      [
+        "B2",
+        "Durable workflow/saga with compensation and stable operation IDs",
+        "strong operational baseline; record precise engine/version"
+      ],
+      [
+        "B3",
+        "Proposed reconciliation safety journal",
+        "candidate; no pre-existing performance assumed"
+      ]
+    ],
+    "related": [
+      "silo13",
+      "elle20",
+      "ct9162",
+      "zanzibar19"
+    ],
+    "metrics": [
+      "orphan clinical writes per independent history",
+      "phantom user-visible success",
+      "eventual safe reconciliation fraction",
+      "duplicate side effects",
+      "RTO p50/p95/p99",
+      "extra fsyncs per operation"
+    ],
+    "design": "A reconciler checks a versioned decision receipt against the committed row, independent outbox receipt and consent epoch. Invalid/ambiguous evidence never becomes a positive outcome; retry decisions are keyed to immutable operation IDs.",
+    "dataset": "Generate 48 crash windows x 4 commit/revocation orderings x 3 delivery schedules x 5 independent seeds. Confirm final N only after schedule deduplication; benchmark 1/2/4/8 worker settings.",
+    "oracle": "Jepsen/Elle-compatible history export plus deterministic SQL-state audit; manually review anomaly witnesses.",
+    "special": [
+      "fault_injection.py",
+      "recovery_oracle.py",
+      "outbox_adapter.py",
+      "history_to_elle.py",
+      "reconciliation_state_machine.py"
+    ],
+    "risks": "Very high novelty bar, deadline nearly immediate. Do not submit a routine outbox implementation as a breakthrough."
+  },
+  "02_PoPETs_2027": {
+    "short": "popets",
+    "paper": "Revocation-Complete Future Disclosure for Cached Longitudinal AI Contexts",
+    "novelty": "Define *future dispatch noninterference* under consent revocation for every derivation path (prompt segment, cached summary, embedding pointer, retry payload, and fallback transport). Provide a dependency-closure invalidation algorithm and leakage audit that explicitly excludes information already delivered to any external provider.",
+    "gap": "Existing access control and cache invalidation can block future reads, and machine unlearning targets a different threat. A research gap exists only if persistent indirect derived context, retry queues, and fallback paths cause measurable post-revocation leakage that strong per-use reauthorization baselines miss.",
+    "rqs": [
+      "RQ1: Can any post-revocation model dispatch contain disallowed attributes through transitive caches or retries, even when direct record access is denied?",
+      "RQ2: Does origin- and purpose-labeled dependency closure match a full always-recompute authorized view on disclosure traces?",
+      "RQ3: What are cache hit, bytes transferred, re-computation, false invalidation and authorized utility costs at increasing lineage density?"
+    ],
+    "falsify": "If complete per-dispatch authorization + recompute matches the candidate with negligible overhead and zero leakage, narrow novelty to an engineering performance trade-off; never assert erasure of prior external disclosures.",
+    "baseline": [
+      [
+        "B0",
+        "TTL-only cache",
+        "weak lower bound"
+      ],
+      [
+        "B1",
+        "coarse cache purge on consent change",
+        "strong simple safety baseline"
+      ],
+      [
+        "B2",
+        "always-recompute authorized projection per dispatch",
+        "privacy reference upper bound, cost comparator"
+      ],
+      [
+        "B3",
+        "Zanzibar-like consistency-token authorization + derived-cache tagging",
+        "strong architecture baseline if adapter truly supports derivations"
+      ],
+      [
+        "B4",
+        "proposed transitive provenance-label invalidation",
+        "candidate"
+      ]
+    ],
+    "related": [
+      "zanzibar19",
+      "muse",
+      "macaroons14",
+      "rats9334",
+      "ct9162"
+    ],
+    "metrics": [
+      "future unauthorized disclosure rate",
+      "attribute-exposure byte count",
+      "conditional cache hit rate",
+      "false invalidation rate",
+      "latency and rebuild cost",
+      "replay-path coverage"
+    ],
+    "design": "For grant g, purpose p, and dispatch d after revocation time t_r, require forbidden_label(g,p) ∩ lineage(d)=∅ under a declared observation model. Label derived artifacts at creation; invalidate reverse edges on revocation; reauthorize at every dispatch.",
+    "dataset": "Synthetic 1200 unique subjects with 3-6 longitudinal contexts each; factorial lineage fanout, delayed cache writes, retries, and policy changes; source-disjoint holdout; label N by subject not number of dispatches.",
+    "oracle": "Independent recomputation of all live-purpose permission clauses from source snapshots; byte-level dispatch interceptor and sealed cancellation log.",
+    "special": [
+      "taint_graph.py",
+      "revocation_scheduler.py",
+      "cache_adapters.py",
+      "dispatch_interceptor.py",
+      "noninterference_checker.py"
+    ],
+    "risks": "Inability to retract already delivered content must be stated prominently. Post-revocation future leakage only; no claim of cryptographic retroactive erasure."
+  },
+  "03_IFIP_SEC_2027": {
+    "short": "ifipsec",
+    "paper": "Replay-Closed Authorization Across Purpose, Delegation, and AI Proposal Lineage",
+    "novelty": "Study a *multi-principal interleaving* in which a valid consent-purpose receipt is delegated, refreshed and consumed across policy-epoch changes and concurrent replay. Define a consumed-once invariant and a tested provenance binding for delegated proposal chains.",
+    "gap": "Macaroons and Zanzibar already solve substantial parts of contextual authorization and consistency. A credible new claim must show a specific multi-hop lineage/replay counterexample against strong correctly configured caveat-token and versioned authorization baselines, not just signature checking.",
+    "rqs": [
+      "RQ1: Under which delegation and epoch interleavings do signed context-bound capability baselines admit an invalid replay or reject valid operations?",
+      "RQ2: Is the proposed consume-once transition linearizable under two or more real PostgreSQL sessions and revoked scope?",
+      "RQ3: What are token size, verification latency and legitimate operation rejection costs relative to well-configured Macaroons and Zanzibar-like policies?"
+    ],
+    "falsify": "If a properly scoped Macaroon plus consistent authorization check is decision-equivalent on all attacks, state equivalence and do not claim stronger security.",
+    "baseline": [
+      [
+        "B0",
+        "bearer signed receipt",
+        "weak control"
+      ],
+      [
+        "B1",
+        "Macaroon HMAC caveats: actor, purpose, task, expiry, nonce",
+        "strong token baseline, correct semantics"
+      ],
+      [
+        "B2",
+        "Zanzibar/OpenFGA with consistency token and fresh policy evaluation",
+        "strong relationship consistency baseline"
+      ],
+      [
+        "B3",
+        "Cedar/OPA policy decision with replay nonce registry",
+        "strong security-engineering comparator"
+      ],
+      [
+        "B4",
+        "proposed delegated lineage transition verifier",
+        "candidate"
+      ]
+    ],
+    "related": [
+      "macaroons14",
+      "zanzibar19",
+      "cedar",
+      "openfga",
+      "rats9334"
+    ],
+    "metrics": [
+      "invalid replay admissions",
+      "valid control acceptance",
+      "duplicate consumption race",
+      "token bytes",
+      "p95 verify latency",
+      "authorization DB round trips"
+    ],
+    "design": "Receipts are typed commitments: HMAC over actor, patient, tenant, purpose, task, consent/policy epoch, dispatch digest, nonce and parent reference. Verify the full delegation ancestry and atomically consume the nonce, not just signature equality.",
+    "dataset": "Distinct 900 adversarial interleavings in isolated synthetic accounts across delegation/revocation/retry/tenant switches; clean controls matched per threat family.",
+    "oracle": "Independent allow/deny oracle based on frozen principal graph and commit-time consent epoch, not candidate verifier output.",
+    "special": [
+      "receipt_codec.py",
+      "macaroon_adapter.py",
+      "policy_engine_adapter.py",
+      "delegation_chain.py",
+      "nonce_consumer.py"
+    ],
+    "risks": "Potentially weak novelty relative to existing capability systems; reject manuscript if B1/B2 already meet every invariant."
+  },
+  "04_ACNS_2027": {
+    "short": "acns",
+    "paper": "SoK: Evidence Boundaries of Attestation in Tool-Using AI Systems",
+    "novelty": "An evidence-to-claim lattice for assembly, egress, transport acknowledgment, provider-attested receipt, execution trace and semantic consumption, with mechanized *counterexample witnesses* showing which implications fail absent explicit trust assumptions.",
+    "gap": "Existing cryptographic attestation terminology (IETF RATS) and agent safety benchmarks address related but nonidentical assurance claims. A SoK contributes only if its systematic taxonomy is reproducible, independently double-coded and resolves real disagreements, not if it rebrands provenance as new.",
+    "rqs": [
+      "RQ1: Which attestation claims are actually supported by which observable evidence and trusted parties in published agent systems?",
+      "RQ2: Which claimed implication pairs are invalid under explicit adversarial and provider models, and can small executable witnesses demonstrate this?",
+      "RQ3: How consistently can independent reviewers classify claims and reproduce counterexamples across a pre-registered corpus?"
+    ],
+    "falsify": "If taxonomy fails coder agreement or merely restates RFC 9334 / existing provenance literature without new cases and insights, do not claim SoK contribution.",
+    "baseline": [
+      [
+        "B0",
+        "RFC 9334/RATS attestation evidence framework",
+        "normative taxonomy baseline"
+      ],
+      [
+        "B1",
+        "W3C PROV provenance and audit events",
+        "retrospective lineage baseline"
+      ],
+      [
+        "B2",
+        "AgentDojo/ToolEmu evidence and attack observability categories",
+        "empirical study taxonomy"
+      ],
+      [
+        "B3",
+        "two independent human-coded new taxonomy",
+        "candidate SoK; needs actual reviewers"
+      ]
+    ],
+    "related": [
+      "rats9334",
+      "ct9162",
+      "agentdojo24",
+      "toolemu24",
+      "injecagent24"
+    ],
+    "metrics": [
+      "inter-rater Cohen kappa",
+      "ambiguous claim fraction",
+      "counterexample reproduction rate",
+      "coverage of evidence-strength lattice",
+      "disagreement resolution rate"
+    ],
+    "design": "Define observation/trust axes, mechanically enumerate implication candidates, construct counterexamples for false implications, and publish extraction rules and independently adjudicated study selection ledger.",
+    "dataset": "Search ACM/IEEE/USENIX/NDSS/ICLR/NeurIPS publications from pre-registered 2019-2026 window; freeze duplicate resolution, screening decisions and extraction workbook.",
+    "oracle": "Independent dual human coders; no internal LLM agents represented as independent reviewers.",
+    "special": [
+      "search_registry.py",
+      "screening_form.json",
+      "claim_coder.py",
+      "lattice_checker.py",
+      "counterexample_witnesses.py"
+    ],
+    "risks": "ACNS 2027 CFP may not offer SoK-specific track; only submit after checking venue scope and completed original systematic method."
+  },
+  "05_COMPSAC_2027": {
+    "short": "compsac",
+    "paper": "Dependency-Complete Optimistic Admission for Concurrent Clinical AI Writes",
+    "novelty": "A machine-checkable *dependency-closure oracle* for schema-defined clinical write operations, coupled with scope-local optimistic versioning that minimizes false-stale rejection without allowing write skew under changing consent and policy.",
+    "gap": "Silo/OCC and PostgreSQL Serializable Snapshot Isolation already address concurrency; original value must come from automatically deriving semantically required cross-resource dependencies for *AI-generated* clinical writes and quantifying the safety/throughput frontier.",
+    "rqs": [
+      "RQ1: Compared with globally versioned OCC, does a dependency-complete read set reduce unnecessary aborts without increasing forbidden commits?",
+      "RQ2: How does omitted dependency failure propagate under explicit write-skew and policy-epoch races, and can a separate oracle detect each flaw?",
+      "RQ3: At what graph fanout and contention does dependency-scope overhead erase throughput gains relative to PostgreSQL SERIALIZABLE?"
+    ],
+    "falsify": "Any forbidden commit under a complete, independently labeled dependency schedule falsifies the safety claim; if fully serializable PostgreSQL is as fast, candidly report the null performance benefit.",
+    "baseline": [
+      [
+        "B0",
+        "global-profile version OCC",
+        "common coarse implementation"
+      ],
+      [
+        "B1",
+        "Silo-style entity readset OCC with commit-time validation",
+        "strong algorithmic comparator; disclose that port is not Silo source code"
+      ],
+      [
+        "B2",
+        "PostgreSQL SERIALIZABLE (SSI) with schema-check predicates",
+        "strong DB-native comparator"
+      ],
+      [
+        "B3",
+        "entity-OCC without semantic dependency closure",
+        "ablation exposing write skew"
+      ],
+      [
+        "B4",
+        "proposed dependency-complete scope-local OCC",
+        "candidate"
+      ]
+    ],
+    "related": [
+      "silo13",
+      "elle20",
+      "zanzibar19",
+      "macaroons14"
+    ],
+    "metrics": [
+      "forbidden commit rate",
+      "oracle-defined false-stale rate",
+      "throughput committed ops/sec",
+      "p50/p95/p99 latency",
+      "retry amplification",
+      "dependency graph completeness"
+    ],
+    "design": "Freeze per-operation dependency schema and required read/write edges. Validate all required edge versions and consent/policy epochs in one DB transaction with canonical lock ordering. Export histories to Elle/independent serializability checker.",
+    "dataset": "Deterministic family of medication/allergy/history/purpose grants; 1, 2, 4, 8, 16 workers; workload partitions with Zipf skew and dependency density; ≥ 5 independent seeds per setting before deciding power.",
+    "oracle": "Independent dependency oracle plus transaction-history consistency checker; record kernel SHA, PG release/version and isolation setting.",
+    "special": [
+      "dependency_dsl.py",
+      "dependency_oracle.py",
+      "postgres_schedule_runner.py",
+      "silo_style_occ.py",
+      "ssi_adapter.py",
+      "elle_export.py"
+    ],
+    "risks": "A large/sound baseline (PG SSI) is essential; avoid weak baselines only and never reuse R4 SQLite as PG performance."
+  },
+  "06_AIME_2027": {
+    "short": "aime",
+    "paper": "Counterfactual Clinical Workflow Safety under Changing Consent and Medication Histories",
+    "novelty": "A paired *two-axis error decomposition* separating unauthorized data use from clinically incorrect permitted recommendations under longitudinal context change, with avoidable-refusal cost reported rather than hidden.",
+    "gap": "MedHELM, HealthBench and clinical safety benchmarks evaluate medical quality; existing governance systems evaluate authorization. A joint longitudinal workflow protocol with independent clinician adjudication may expose the gap between clinically correct advice and *permitted* actions.",
+    "rqs": [
+      "RQ1: How often does each method make an action-eligibility mistake versus a clinical-fact omission when medications or consent change during the task?",
+      "RQ2: Does purpose-aware selective regeneration preserve appropriate task completion while reducing forbidden data use relative to full restart and static context?",
+      "RQ3: Are effects stable across update types, at least two actual providers, and an independent physician-adjudicated case set?"
+    ],
+    "falsify": "No clinician reviewer or independent original vignettes = no clinical validity claim. If selective regeneration gains no utility over complete refresh, narrow to a descriptive workflow evaluation.",
+    "baseline": [
+      [
+        "B0",
+        "full authorized history, single snapshot",
+        "clinical information-rich static baseline"
+      ],
+      [
+        "B1",
+        "full per-step refresh + current policy filter",
+        "strong correctness/privacy control"
+      ],
+      [
+        "B2",
+        "HealthBench-/MedHELM-informed evaluation rubric for clinical utility",
+        "benchmark rubric, not a decision algorithm"
+      ],
+      [
+        "B3",
+        "static model + output post-filter",
+        "common LLM guardrail comparator"
+      ],
+      [
+        "B4",
+        "proposed selective consent-aware context regeneration",
+        "candidate"
+      ]
+    ],
+    "related": [
+      "cse2026",
+      "medhelm2026",
+      "healthbench25",
+      "amie2026",
+      "fhir5",
+      "who21"
+    ],
+    "metrics": [
+      "action eligibility error",
+      "clinician adjudicated clinical omission",
+      "unnecessary refusal",
+      "useful authorized completion",
+      "token cost",
+      "inter-rater reliability"
+    ],
+    "design": "Compare four truly matched provider-prompt arms on case histories with independently frozen clinical and policy labels. Reviewers separately rate medical appropriateness and authority of used evidence, blinded to method.",
+    "dataset": "Synthetic source-disjoint vignettes with counterfactual pairs: baseline H, medication update, allergy, revocation, unrelated edit, clinical task. Target N determined by pilot variance and planned power; never label small LLM probes clinical trials.",
+    "oracle": "Independent authorized evidence oracle and qualified clinician review; patient-level paired bootstrap/clustered CI.",
+    "special": [
+      "case_generator.py",
+      "policy_labeler.py",
+      "model_connector.py",
+      "prompt_harmonizer.py",
+      "clinician_review_packet.py",
+      "clinical_scoring.py"
+    ],
+    "risks": "High dependency on physician reviewers, model access costs, and exact clinical statements. Short paper only if results and validation adequate."
+  },
+  "07_SACMAT_2027": {
+    "short": "sacmat",
+    "paper": "PolicyTrace: Temporal Conformance Testing of Delegated Consent across Heterogeneous Policy Engines",
+    "novelty": "A *history-sensitive conformance property* for delegated consent and purpose-bound access with trace-level metamorphic test generation and independent oracle adjudication across Cedar, OpenFGA and OPA encodings.",
+    "gap": "MC/DC XACML policy testing and XACBench cover static policy structures; what must be demonstrated as new is systematic conformance testing of policy *histories* with revocation/redelegation and replay, including portability failures attributable to mismatched semantics.",
+    "rqs": [
+      "RQ1: Which distinct trace-level policy errors are undetected by static rule/decision coverage but exposed by temporal metamorphic tests?",
+      "RQ2: How many executable mutants representing revocation, delegation, purpose and temporal precedence are killed by comparable budgets for random, MC/DC-inspired and PolicyTrace generation?",
+      "RQ3: Across Cedar, OpenFGA and OPA, which semantics are faithfully expressible, and where do adapters necessarily diverge?"
+    ],
+    "falsify": "If trace generator does not outperform stateful and MC/DC-guided baselines at equal oracle-call budget, do not claim novel fault detection; publish portability limits transparently.",
+    "baseline": [
+      [
+        "B0",
+        "uniform random authorization requests",
+        "weak reference"
+      ],
+      [
+        "B1",
+        "MC/DC-inspired XACML policy testing (Xu et al. SACMAT 2018)",
+        "strong coverage baseline"
+      ],
+      [
+        "B2",
+        "XACBench policy profile–driven synthetic tests",
+        "strong benchmark baseline"
+      ],
+      [
+        "B3",
+        "property-based history generator without temporal metamorphs",
+        "strong stateful testing baseline"
+      ],
+      [
+        "B4",
+        "PolicyTrace temporal generator plus oracle",
+        "candidate"
+      ]
+    ],
+    "related": [
+      "xacml18",
+      "xacbench20",
+      "cedar",
+      "openfga",
+      "nistabac",
+      "zanzibar19"
+    ],
+    "metrics": [
+      "mutation score at fixed oracle budget",
+      "trace witness detection coverage",
+      "policy-engine disagreement",
+      "invalid/indeterminate parity",
+      "generation runtime",
+      "minimal failure trace length"
+    ],
+    "design": "Define a portable three/four-valued decision oracle (PERMIT/DENY/NOT_APPLICABLE/INDETERMINATE) and a partial mapping to each PDP; test revocation-before-replay, delegation expiration, explicit-deny precedence and temporal reorderings.",
+    "dataset": "Versioned synthetic policy and principal graphs + 50 independently designed mutants; reserve fresh holdout mutant families; source/seed freeze prior to scoring.",
+    "oracle": "Executable declarative reference semantics and independent human review of semantically non-equivalent mutants.",
+    "special": [
+      "temporal_policy_dsl.py",
+      "oracle_reference.py",
+      "cedar_adapter.py",
+      "openfga_adapter.py",
+      "opa_adapter.py",
+      "mcdc_generator.py",
+      "temporal_mutants.py"
+    ],
+    "risks": "SACMAT Dataset/Tool track is likely better than a main claim. Need actual external engine execution rather than merely naming them."
+  },
+  "08_DIMVA_2027": {
+    "short": "dimva",
+    "paper": "GovernanceTrace: Detecting Adaptive Authorization-Boundary Probing from Minimal Agent Events",
+    "novelty": "A *privacy-constrained sequence detector* distinguishing benign retry bursts from deliberate multi-step policy/receipt boundary reconnaissance; generalization measured on unseen attack families and tooling changes.",
+    "gap": "AgentDojo and ToolEmu provide realistic agent safety attacks; IDS literature warns models can memorize environments. Novelty demands detector evaluation on independently generated multi-stage traces with constrained PHI metadata and rigorous cross-family holdout, rather than training on rejection reason codes that trivially reveal labels.",
+    "rqs": [
+      "RQ1: Can a detector identify attack campaigns from PHI-minimized events at bounded benign false alarms, without using attack-specific reason-code leakage?",
+      "RQ2: How does cross-family/cross-tenant holdout change precision-recall and time-to-detect relative to rule-based, IsolationForest, boosted-tree and sequence models?",
+      "RQ3: How do adaptive attacker retries and privacy budgets affect detection and diagnostic reconstruction?"
+    ],
+    "falsify": "If rule thresholds perform as well as sequence models on family-held-out traces, do not claim ML necessity; if detector depends on post-hoc failure labels, invalidate primary experiment.",
+    "baseline": [
+      [
+        "B0",
+        "static threshold on failures per window",
+        "strong operational baseline"
+      ],
+      [
+        "B1",
+        "temporal rule sequence / finite-state signature",
+        "strong interpretable baseline"
+      ],
+      [
+        "B2",
+        "Isolation Forest on privacy-minimized counts",
+        "unsupervised comparator"
+      ],
+      [
+        "B3",
+        "gradient-boosted trees with controlled features",
+        "supervised comparator"
+      ],
+      [
+        "B4",
+        "sequence model with time-aware features",
+        "candidate; only if holdout gain"
+      ]
+    ],
+    "related": [
+      "agentdojo24",
+      "toolemu24",
+      "injecagent24",
+      "sommer10",
+      "tauben25"
+    ],
+    "metrics": [
+      "campaign-level AUCPR",
+      "false alarms per 1000 benign sessions",
+      "time-to-detect",
+      "unseen-family recall",
+      "bytes of retained sensitive metadata",
+      "adaptive evasion success"
+    ],
+    "design": "Derive minimal log schema independent of raw patient data; split by attack family and synthetic tenant; keep rejection codes masked in leak-safe primary test, then disclose effect of allowing them in an ablation.",
+    "dataset": "Multi-stage synthetic sessions plus benign retries, outages, latency spikes; attacker cannot read privileged logs; frozen family-holdout groups with no shared templates across train/test.",
+    "oracle": "Campaign intent and authorized action adjudicated from simulator ground truth, never from detector score or gateway final reason code.",
+    "special": [
+      "event_minimizer.py",
+      "trace_generator.py",
+      "leakage_audit.py",
+      "rule_detector.py",
+      "isolation_forest_adapter.py",
+      "gbt_adapter.py",
+      "sequence_model_adapter.py"
+    ],
+    "risks": "Security venue will require demonstrated attack novelty and realism. Explicit avoid simplistic generated labels."
+  },
+  "09_PST_2027": {
+    "short": "pst",
+    "paper": "ReceiptMin: Measuring Forensic Reconstructability under Purpose-Bound Audit Minimization",
+    "novelty": "A formally defined *reconstruction-versus-linkability frontier* for AI health action receipts, separating proof of an event commitment from recovery of sensitive content under post-retention access privileges.",
+    "gap": "Hash chains, transparency logs, HMAC identifiers and encryption already exist; a useful contribution requires new quantitative evidence about audit decision reconstructability versus attacker attribute/linkage inference for longitudinal health workflows.",
+    "rqs": [
+      "RQ1: What fraction of legitimate forensic questions remain answerable under hash-only, encrypted, and selective retention receipts?",
+      "RQ2: Can linkage and attribute exposure be bounded under compromised read-only audit access, including auxiliary-data joins?",
+      "RQ3: What retention, key deletion and proof-generation costs emerge across audit volumes and retention epochs?"
+    ],
+    "falsify": "If encrypted full logs with a well-managed retention policy dominate minimized receipts on privacy and reconstruction, reject novelty superiority claim.",
+    "baseline": [
+      [
+        "B0",
+        "full plaintext append-only log",
+        "utility upper bound / privacy lower bound"
+      ],
+      [
+        "B1",
+        "hash-only log or content digests",
+        "storage/privacy baseline, weak audit utility"
+      ],
+      [
+        "B2",
+        "encrypted log with role-gated decryption and deletion",
+        "strong confidentiality comparator"
+      ],
+      [
+        "B3",
+        "RFC 9162-like Merkle append-only integrity + authorized material retrieval",
+        "strong integrity baseline"
+      ],
+      [
+        "B4",
+        "proposed purpose-bound minimized receipt and retention map",
+        "candidate"
+      ]
+    ],
+    "related": [
+      "ct9162",
+      "rats9334",
+      "zanzibar19",
+      "macaroons14",
+      "who21"
+    ],
+    "metrics": [
+      "forensic query answerability",
+      "record-level linkability risk",
+      "attribute inference risk",
+      "retained bytes",
+      "proof generation latency",
+      "authorized investigation recovery"
+    ],
+    "design": "Define forensic query set ex ante; preserve commitment and consent/policy epoch proofs while removing patient detail; test attacker with auxiliary linkage metadata and a realistic audit-reader privilege.",
+    "dataset": "Synthetic records/events with explicit correlation surfaces, varying log sizes, user identifiers, retention windows, backups; externality of key deletion declared in threat model.",
+    "oracle": "Trusted offline complete ledger retained only for evaluation; blinded authorized forensic queries and attacker inference tests.",
+    "special": [
+      "receipt_schema.py",
+      "retention_engine.py",
+      "merkle_integrity.py",
+      "forensic_query_oracle.py",
+      "attacker_linkage_model.py"
+    ],
+    "risks": "Avoid claiming content deletion from immutable historical disclosures or from unverified cloud backups."
+  }
+}

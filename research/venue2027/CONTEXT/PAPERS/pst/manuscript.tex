@@ -1,0 +1,146 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry,microtype,setspace,amsmath,amssymb,amsthm}
+\usepackage{booktabs,tabularx,array,graphicx,xcolor,url,hyperref}
+\usepackage{algorithm,algpseudocode}
+\geometry{margin=1.03in}
+\emergencystretch=2.5em
+\setstretch{1.12}
+\hypersetup{colorlinks=false,pdfborder={0 0 0},pdftitle={CLARA-Care Research Manuscript}}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\title{\vspace{-1em}\textbf{Minimized Forensic Receipts for Accountable and Private Medical-AI Workflows}} 
+\author{Nguyen Ngoc Thien \and Trinh Minh Quang}\date{November 2026}
+\begin{document}
+\maketitle
+\begin{center}\small Hai Ba Trung High School, Hue, Vietnam\end{center}
+\begin{abstract}
+Audit logs can support accountability while creating a secondary repository of sensitive relationships, access patterns, and retained clinical context. In AI-mediated health workflows, complete plaintext logs maximize forensic detail but also enlarge the consequences of audit-reader compromise. We introduce ReceiptMin, a purpose-bound receipt representation that separates proof of an action from access to the sensitive evidence supporting it. The design combines commitment links, governed retrieval pointers, and retention-aware key management to preserve a declared set of forensic questions while reducing linkability after an access-window expires. We define a reconstruction–exposure frontier and compare minimized receipts with plaintext, digest-only, encrypted, and transparency-log baselines. The evaluation measures forensic answerability, attacker attribute inference, retained bytes, and verification latency using synthetic longitudinal histories and controlled insider-query workloads.
+\end{abstract}
+\noindent\textbf{Keywords:} forensic accountability; audit data minimization; linkability; provenance receipts.
+\medskip\hrule\medskip
+
+\section{Introduction}
+An application audit log is often treated as a protective record of past activity. It can also be a durable source of sensitive information. Timestamps, participant identifiers, delegated purposes, and diagnostic context can reveal associations even when a record's explicit clinical text is encrypted or replaced by a hash. In a longitudinal AI workflow, these links accumulate across repeated interactions.
+
+A useful forensic record must answer a limited set of questions: which principal authorized an action, which versioned context supported it, whether policy changed before commitment, and which durable effect followed. Retaining the entire prompt or complete patient history is one way to answer these questions, but it is not necessarily the least revealing way.
+
+We propose ReceiptMin as a method for specifying this trade-off. It encodes immutable commitments and purpose-scoped references while allowing sensitive evidence to follow a separate retention policy. The study asks how much reconstruction can be preserved when an attacker obtains read-only access to the audit store, possibly augmented with public or otherwise accessible auxiliary information.
+
+\paragraph{Contributions.} We formalize authorized forensic sufficiency, introduce purpose-bound minimized receipts with retention-aware references, and evaluate the resulting reconstruction--linkability frontier against strong encrypted and append-only logging designs.
+
+\section{Prior Work and Research Gap}
+Classical security design emphasizes least privilege and separation of mechanisms \cite{saltzer1975}; cryptographic digests and append-only structures protect integrity, while encryption and access control restrict direct disclosure. Membership-inference work illustrates that auxiliary observations can expose sensitive relationships even when raw records are absent \cite{shokri2017}. Our contribution is a measurable relationship between a formally specified set of forensic queries and the information retained by different receipt architectures. The benchmark includes strong encrypted-log and append-only proof baselines, so improvement cannot be attributed merely to replacing plaintext with a hash.
+
+\paragraph{Research positioning.} The project’s existing immutable lineage provides a source of realistic event relationships, while the paper examines a distinct information-minimization and forensic-query design problem.
+
+\section{Research Questions and Study Setting}
+\paragraph{RQ1 — Forensic sufficiency} Which authorization, provenance, and commit questions remain answerable from minimized receipts at different retention stages? Measure query answerability and reconstruction accuracy against independent ground truth.
+
+\paragraph{RQ2 — Metadata disclosure} How much identity linkage and attribute inference remains possible when an audit reader combines receipts with auxiliary information? Report attacker advantage over a declared prior and linkability precision across independent synthetic subjects.
+
+\paragraph{RQ3 — Operating costs} What are the storage, lookup, proof-generation, and controlled-recovery costs of minimization and retention-epoch changes? Compare retained bytes, verification latency, and authorized investigation completion with strong encrypted and transparency-log baselines.
+
+\paragraph{Study boundary.} The threat is a read-only audit-store compromise with declared auxiliary data. Cryptographic keys held outside the compromised domain are assumed protected until their scheduled deletion; key compromise is evaluated as a separate sensitivity condition.
+
+\subsection{Controlled challenge families}
+\begin{table}[ht]
+\centering\small
+\caption{Prespecified workload and challenge families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+ID & Prespecified condition \\ \midrule
+F1 & Cross-session linkage by stable IDs \\ 
+F2 & Insider attribute inference from timing and reason codes \\ 
+F3 & Backup log persistence after retention expiry \\ 
+F4 & Unauthorized forensic lookup \\ 
+F5 & Over-minimization preventing incident reconstruction \\ 
+\bottomrule\end{tabularx}\end{table}
+
+\section{Method and Implementation Architecture}
+ReceiptMin stores a compact causal commitment to an AI-mediated action and a purpose-scoped reference to sensitive supporting evidence. Integrity proof and content recovery are deliberately separated: a commitment can remain verifiable after a key or mapping is retired, even when the associated plaintext is no longer recoverable. The prototype exposes a fixed set of forensic queries and a separate audit-reader attack interface. Retention schedules and auxiliary-information assumptions can then be varied without changing the meaning of a correct forensic reconstruction.
+
+\subsection{Audit reconstruction versus privacy exposure}
+Define $A(R)$ as the fraction of independently specified governance questions answerable from receipts $R$ by an authorized auditor, and $L(R)$ as an attacker's advantage in inferring a synthetic hidden attribute under an explicitly fixed observation channel. The desired design surface is the Pareto curve $(A(R),L(R))$, not a single universal privacy score. A receipt can prove that a signed transition occurred while revealing little of its underlying clinical text; however, stable hashes, timestamps and reason codes may still be linkable.
+
+\subsection{Purpose- and epoch-bounded receipt representation}
+Each receipt includes a short-lived local pseudonym, action type, scoped purpose, signed decision digest, policy epoch and integrity links. Optional forensic mappings are held separately behind explicitly logged privileged access and discarded or rekeyed according to retention policy. Deleting the mapping cannot imply that all downstream backups or external disclosures have disappeared, so the release protocol must record physical deletion and backup-lifecycle limitations. The design must also admit that aggressive minimization may make legitimate reconstruction impossible.
+
+\subsection{Two competing attack perspectives}
+The authorized investigator receives a question (e.g., whether a consent denial preceded a write attempt) and must reconstruct a correct decision trace. The insider privacy attacker receives the declared subset of logs and tries to infer an attribute or link two sessions. The two evaluators never share access to their hidden oracle. Compare raw logs, stable hashes, conventional pseudonyms and purpose/epoch-scoped receipts under identical workflows. An honest result might favor simpler logs or disclose an unacceptable loss of forensic utility; the methodology is intended to detect both outcomes.
+
+
+\subsection{Decision model}
+Each action emits a commitment to the operation identity, authorization epoch, and causal outcome; clinically sensitive evidence is kept behind a purpose-bound, independently managed retrieval reference. A forensic query $q$ has a declared required evidence set $D_q$. Receipt minimization selects the retained feature set $M$ to reduce attacker exposure while preserving verifiability for a selected authorized query family $Q$.
+\begin{equation}
+\min_M\ \mathrm{Exposure}(M)\quad
+\text{subject to}\quad
+\forall q\in Q:\ \mathrm{Reconstruct}(q,M)=\mathrm{GroundTruth}(q).
+\end{equation}
+Integrity commitments remain distinct from recoverable plaintext. Once a decryption key is deleted, later evidence retrieval may become impossible even though the prior commitment remains verifiable.
+
+\section{Comparative Hypotheses}
+We hypothesize that purpose-bound selective receipts can improve the reconstruction--exposure frontier relative to plaintext and conventional hashed or encrypted logging.
+
+Reconstruction quality is assessed on a predefined set of forensic questions; disclosure is assessed under an attacker with explicit auxiliary knowledge. Neither an unreadable log nor an overly revealing perfect audit can dominate the comparison by construction.
+
+\section{Experimental Design}
+\subsection{Comparative systems}
+We compare systems under matched input histories, authorization information, and resource budgets. Baseline configurations, including their own retry or cache policy where relevant, are established on development data and frozen before independent evaluation.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Comparator implementations and their role in the study.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Arm & Implementation \\ \midrule
+B0 & full plaintext append-only log. utility upper bound / privacy lower bound. \\ 
+B1 & hash-only log or content digests. storage/privacy baseline, weak audit utility. \\ 
+B2 & encrypted log with role-gated decryption and deletion. strong confidentiality comparator. \\ 
+B3 & RFC 9162-like Merkle append-only integrity + authorized material retrieval. strong integrity baseline. \\ 
+B4 & proposed purpose-bound minimized receipt and retention map. Proposed method. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Study population and protocol}
+Construct synthetic longitudinal receipts with known causal chains and explicit adversarial auxiliary knowledge. Compare full plaintext logging, digest-only logs, encrypted role-gated logs with deletion, append-only integrity proofs, and purpose-bound minimized receipts. Evaluate each across retention windows, event volume, and authorized forensic queries defined before observing outcomes.
+
+\paragraph{Dataset construction.} Synthetic records/events with explicit correlation surfaces, varying log sizes, user identifiers, retention windows, backups; externality of key deletion declared in threat model..
+
+\section{Measurement and Statistical Analysis}
+\subsection{Outcomes and estimands}
+The primary endpoint is forensic query answerability. Alongside it, we measure record-level linkability risk, so that favorable outcomes can be interpreted in relation to the operational service delivered. The sampling unit, exclusions, and uncertainty procedure are specified before confirmatory execution.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Prespecified outcome families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Type & Outcome recorded for each comparator \\ \midrule
+Primary & forensic query answerability. \\ 
+Co-primary control & record-level linkability risk. \\ 
+Secondary & attribute inference risk. \\ 
+Secondary & retained bytes. \\ 
+Secondary & proof generation latency. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Statistical analysis}
+Report query-level and subject-level uncertainty separately. For attacker inference, define prior knowledge and baseline guessing accuracy, then estimate incremental advantage; for authorized reconstruction, measure both correct answers and abstentions. Present the privacy–answerability frontier rather than a single composite score.
+
+\section{Analysis and Reporting Plan}
+The planned evaluation includes a forensic-query answerability matrix, linkage attack advantage by retention epoch, and storage and lookup costs against encrypted and append-only alternatives.
+
+For each endpoint, the analysis will report numerators, denominators, independent study units, matched comparator settings, and uncertainty intervals. All tables and figures will be generated directly from a pinned confirmatory research release, with exclusions and incomplete observations accounted for separately.
+
+\section{Reproducibility and Ethical Considerations}
+Reproducibility requires synthetic event histories, predeclared forensic queries, attacker auxiliary-data configurations, and versioned retention policies. Cryptographic key lifetimes are modeled explicitly; public artifacts contain test keys only. Results are reported separately for intact, retired, and compromised key states to avoid conflating integrity with confidentiality.
+
+\section{Scope and Threats to Validity}
+A privacy guarantee depends on key isolation, side-channel assumptions, and the specified auxiliary-information model. Cryptographic integrity does not imply content confidentiality. Retention policies may face legal or institutional obligations that differ by deployment.
+
+The study reports unsuccessful, inconclusive, and excluded runs as distinct outcome categories, preserving the interpretation of the measured denominator and the comparison across systems.
+
+\section{Conclusion}
+The value of an audit trail lies in the questions it can answer, not in the volume of sensitive material it retains. ReceiptMin turns that principle into a controlled comparison of reconstruction, linkability, and operational cost for longitudinal AI health workflows.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

@@ -1,0 +1,74 @@
+{
+  "study_id": "dsn",
+  "source_branch": "research/glhs-r4-novelty-hardening",
+  "status": "PROPOSED_NOT_RUN",
+  "primary_metric": "orphan clinical writes per independent history",
+  "dataset_plan": "Generate 48 crash windows x 4 commit/revocation orderings x 3 delivery schedules x 5 independent seeds. Confirm final N only after schedule deduplication; benchmark 1/2/4/8 worker settings.",
+  "oracle": "Jepsen/Elle-compatible history export plus deterministic SQL-state audit; manually review anomaly witnesses.",
+  "baselines": [
+    {
+      "id": "B0",
+      "design": "DB transaction only + fire-and-forget side effect",
+      "role": "weak control; measures lost side effects",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B1",
+      "design": "PostgreSQL atomic write + transactional outbox + idempotent consumer",
+      "role": "strong practical baseline; must implement fully",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B2",
+      "design": "Durable workflow/saga with compensation and stable operation IDs",
+      "role": "strong operational baseline; record precise engine/version",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B3",
+      "design": "Proposed reconciliation safety journal",
+      "role": "candidate; no pre-existing performance assumed",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    }
+  ],
+  "risks": "Very high novelty bar, deadline nearly immediate. Do not submit a routine outbox implementation as a breakthrough.",
+  "stop_rule": "If a correctly engineered PostgreSQL transaction + outbox + idempotent consumer achieves the same invariants and equal/better recovery cost, discard the new mechanism superiority claim.",
+  "source_records": [
+    {
+      "id": "silo13",
+      "url": "https://doi.org/10.1145/2517349.2522713",
+      "venue": "SOSP 2013"
+    },
+    {
+      "id": "elle20",
+      "url": "https://github.com/jepsen-io/elle",
+      "venue": "OSDI 2020"
+    },
+    {
+      "id": "ct9162",
+      "url": "https://www.rfc-editor.org/rfc/rfc9162.html",
+      "venue": "IETF RFC 9162"
+    },
+    {
+      "id": "zanzibar19",
+      "url": "https://www.usenix.org/conference/atc19/presentation/pang",
+      "venue": "USENIX ATC 2019"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "study_id": "ifipsec",
+  "source_branch": "research/glhs-r4-novelty-hardening",
+  "status": "PROPOSED_NOT_RUN",
+  "primary_metric": "invalid replay admissions",
+  "dataset_plan": "Distinct 900 adversarial interleavings in isolated synthetic accounts across delegation/revocation/retry/tenant switches; clean controls matched per threat family.",
+  "oracle": "Independent allow/deny oracle based on frozen principal graph and commit-time consent epoch, not candidate verifier output.",
+  "baselines": [
+    {
+      "id": "B0",
+      "design": "bearer signed receipt",
+      "role": "weak control",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B1",
+      "design": "Macaroon HMAC caveats: actor, purpose, task, expiry, nonce",
+      "role": "strong token baseline, correct semantics",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B2",
+      "design": "Zanzibar/OpenFGA with consistency token and fresh policy evaluation",
+      "role": "strong relationship consistency baseline",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B3",
+      "design": "Cedar/OPA policy decision with replay nonce registry",
+      "role": "strong security-engineering comparator",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B4",
+      "design": "proposed delegated lineage transition verifier",
+      "role": "candidate",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    }
+  ],
+  "risks": "Potentially weak novelty relative to existing capability systems; reject manuscript if B1/B2 already meet every invariant.",
+  "stop_rule": "If a properly scoped Macaroon plus consistent authorization check is decision-equivalent on all attacks, state equivalence and do not claim stronger security.",
+  "source_records": [
+    {
+      "id": "macaroons14",
+      "url": "https://research.google/pubs/macaroons-cookies-with-contextual-caveats-for-decentralized-authorization-in-the-cloud/",
+      "venue": "NDSS 2014"
+    },
+    {
+      "id": "zanzibar19",
+      "url": "https://www.usenix.org/conference/atc19/presentation/pang",
+      "venue": "USENIX ATC 2019"
+    },
+    {
+      "id": "cedar",
+      "url": "https://github.com/cedar-policy/cedar",
+      "venue": "Open source reference policy engine"
+    },
+    {
+      "id": "openfga",
+      "url": "https://github.com/openfga/openfga",
+      "venue": "Open source reference policy engine"
+    },
+    {
+      "id": "rats9334",
+      "url": "https://www.rfc-editor.org/rfc/rfc9334.html",
+      "venue": "IETF RFC 9334"
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "study_id": "acns",
+  "source_branch": "research/glhs-r4-novelty-hardening",
+  "status": "PROPOSED_NOT_RUN",
+  "primary_metric": "inter-rater Cohen kappa",
+  "dataset_plan": "Search ACM/IEEE/USENIX/NDSS/ICLR/NeurIPS publications from pre-registered 2019-2026 window; freeze duplicate resolution, screening decisions and extraction workbook.",
+  "oracle": "Independent dual human coders; no internal LLM agents represented as independent reviewers.",
+  "baselines": [
+    {
+      "id": "B0",
+      "design": "RFC 9334/RATS attestation evidence framework",
+      "role": "normative taxonomy baseline",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B1",
+      "design": "W3C PROV provenance and audit events",
+      "role": "retrospective lineage baseline",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B2",
+      "design": "AgentDojo/ToolEmu evidence and attack observability categories",
+      "role": "empirical study taxonomy",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B3",
+      "design": "two independent human-coded new taxonomy",
+      "role": "candidate SoK; needs actual reviewers",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    }
+  ],
+  "risks": "ACNS 2027 CFP may not offer SoK-specific track; only submit after checking venue scope and completed original systematic method.",
+  "stop_rule": "If taxonomy fails coder agreement or merely restates RFC 9334 / existing provenance literature without new cases and insights, do not claim SoK contribution.",
+  "source_records": [
+    {
+      "id": "rats9334",
+      "url": "https://www.rfc-editor.org/rfc/rfc9334.html",
+      "venue": "IETF RFC 9334"
+    },
+    {
+      "id": "ct9162",
+      "url": "https://www.rfc-editor.org/rfc/rfc9162.html",
+      "venue": "IETF RFC 9162"
+    },
+    {
+      "id": "agentdojo24",
+      "url": "https://proceedings.nips.cc/paper_files/paper/2024/hash/97091a5177d8dc64b1da8bf3e1f6fb54-Abstract-Datasets_and_Benchmarks_Track.html",
+      "venue": "NeurIPS 2024 Datasets & Benchmarks"
+    },
+    {
+      "id": "toolemu24",
+      "url": "https://proceedings.iclr.cc/paper_files/paper/2024/file/7274ed909a312d4d869cc328ad1c5f04-Paper-Conference.pdf",
+      "venue": "ICLR 2024"
+    },
+    {
+      "id": "injecagent24",
+      "url": "https://aclanthology.org/2024.findings-acl.624/",
+      "venue": "Findings of ACL 2024"
+    }
+  ]
+}

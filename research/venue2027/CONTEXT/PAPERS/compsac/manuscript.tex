@@ -1,0 +1,151 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry,microtype,setspace,amsmath,amssymb,amsthm}
+\usepackage{booktabs,tabularx,array,graphicx,xcolor,url,hyperref}
+\usepackage{algorithm,algpseudocode}
+\geometry{margin=1.03in}
+\emergencystretch=2.5em
+\setstretch{1.12}
+\hypersetup{colorlinks=false,pdfborder={0 0 0},pdftitle={CLARA-Care Research Manuscript}}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\title{\vspace{-1em}\textbf{Dependency-Scoped Versioning for Contention-Aware AI Health-State Writes}} 
+\author{Nguyen Ngoc Thien \and Trinh Minh Quang}\date{November 2026}
+\begin{document}
+\maketitle
+\begin{center}\small Hai Ba Trung High School, Hue, Vietnam\end{center}
+\begin{abstract}
+Version checks are a common defense against stale AI-generated updates to longitudinal health records, but profile-wide versions conflate unrelated edits with changes that invalidate a proposed action. Fine-grained versions reduce unnecessary conflict only when the system captures every clinical and governance dependency relevant to that action. We develop a schema-derived dependency-closure model for optimistic admission of AI-mediated writes. The method binds an operation to its required read set while retaining current consent, policy, and authorization checks inside the commit transaction. We construct independent dependency oracles and evaluate the design against full-profile versioning, classical optimistic concurrency control, and PostgreSQL serializable transactions. A paired contention benchmark separates forbidden commits, unnecessary rejections, successful throughput, and latency across increasingly skewed workloads. The study establishes a precise safety–performance question for dependency-aware admission rather than assuming finer granularity is always beneficial.
+\end{abstract}
+\noindent\textbf{Keywords:} optimistic concurrency control; dependency completeness; PostgreSQL; health AI.
+\medskip\hrule\medskip
+
+\section{Introduction}
+An AI assistant may prepare a structured update from a patient's longitudinal record and submit it after another operation has modified that record. A profile-global version check treats every intervening edit as a conflict. This is conservative, but it can reject a valid medication annotation merely because an unrelated preference or demographic field changed. Reducing this friction requires more than smaller version counters: the system must know which source facts and permissions the proposed operation actually depends upon.
+
+Optimistic concurrency control and serializable transactions provide the natural starting points \cite{kung1981,herlihy1990}. A dependency-aware health workflow adds two complications. Dependencies can be implicit in clinical schemas—for example, medication changes may depend on allergies even when the allergy entity is not written—and authorization coordinates can change independently from clinical rows. A fine-grained policy that overlooks either kind of dependency risks admitting a stale or forbidden action.
+
+We formulate dependency-complete admission as a schema-level contract. For every mutation kind, the contract defines a required read closure and a mandatory governance scope; the commit kernel validates both with the database's transactional guarantees. We then measure the safety and performance consequences under independent, dependent, and high-contention workloads, with special attention to unnecessary rejection of legitimate operations.
+
+\paragraph{Contributions.} We define a schema-derived dependency-completeness contract, implement scope-local admission with mandatory governance revalidation, and establish a paired PostgreSQL benchmark separating safety from unnecessary contention.
+
+\section{Prior Work and Research Gap}
+Classic optimistic concurrency control compares a transaction's observed versions with the state at commit \cite{kung1981}. Linearizability and serializable execution provide reference correctness conditions for concurrent histories \cite{herlihy1990,lamport1978}. Authorization can introduce additional state outside the ordinary application read set \cite{hu2014}. The proposed gap is therefore not the existence of entity-level versioning; it is an independently checkable method for deriving the entire action-relevant dependency set, including governance dependencies, and quantifying whether that set yields a practical advantage over a correctly configured serializable baseline.
+
+\paragraph{Research positioning.} This investigation uses GLHS as a governed-write substrate but asks a new systems question: the marginal cost and correctness of schema-complete, scope-local concurrency control.
+
+\section{Research Questions and Study Setting}
+\paragraph{RQ1 — Safety of dependency closure} Does a schema-derived read closure prevent forbidden dependent commits under concurrent clinical and authorization updates? Count forbidden commits per independent logical schedule using an oracle defined separately from the implementation.
+
+\paragraph{RQ2 — Avoidable contention} How much legitimate work is rejected by profile-wide versions when intervening edits do not affect required dependencies? Estimate false-stale rejection and completed legitimate throughput under matched schedule pairs.
+
+\paragraph{RQ3 — Scaling costs} How do dependency fanout, hot-key skew, and worker count affect throughput and tail latency relative to PostgreSQL Serializable? Measure p95/p99 latency, retry amplification, and database operations at fixed workload and correctness.
+
+\paragraph{Study boundary.} Transactions contend over synthetic clinical facts and consent/policy epochs. Independent ground truth identifies mandatory dependencies, including omitted-read attacks. Observations require a real PostgreSQL deployment at a declared isolation level.
+
+\subsection{Controlled challenge families}
+\begin{table}[ht]
+\centering\small
+\caption{Prespecified workload and challenge families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+ID & Prespecified condition \\ \midrule
+F1 & Two independent medication writes \\ 
+F2 & Allergy update racing medication order \\ 
+F3 & Grant revocation racing dependent write \\ 
+F4 & Write-skew with omitted dependency \\ 
+F5 & Hot-key and Zipfian contention skew \\ 
+\bottomrule\end{tabularx}\end{table}
+
+\section{Method and Implementation Architecture}
+The system derives a required read dependency set from each mutation kind and its declared clinical context. Schema rules identify mandatory dependencies, including facts used by the proposal but not modified by the transaction. The commit path validates those versions alongside current governance epochs before applying a change under a real PostgreSQL transaction. A separate oracle labels the complete dependency set in generated histories, permitting independent measurement of forbidden write skew and unnecessary rejection. The benchmark varies dependency density and contention while retaining identical schedules across strong comparator systems.
+
+\subsection{Dependency-scope admission}
+For an operation $o$, let $D(o)$ be the set of entity versions that are semantically required to compute or authorize the operation, and let $v_e^{\mathrm{read}}$ be the version disclosed at inference. Dependency-scoped admission checks
+\begin{equation}
+  \bigwedge_{e\in D(o)}v_e^{\mathrm{now}}=v_e^{\mathrm{read}}
+  \quad\land\quad\mathrm{ConsentCurrent}(o)\land\mathrm{PolicyCurrent}(o).
+\end{equation}
+The dependency extractor is a security boundary. For example, a proposed medication order may depend on allergy information even when no allergy row is modified. Missing mandatory dependencies cannot be rescued by correct version checks on unrelated rows; the operation must fail closed. Dependencies must be derived from frozen mutation schemas and separately tested against an oracle.
+
+\subsection{Workload and contention model}
+Define $\alpha$ as the fraction of operations writing shared hot keys and $\delta$ as the mean number of required cross-entity dependencies. The confirmatory experiment crosses worker count $w\in\{1,2,4,8,16\}$ with workload families spanning independent modifications, shared-key contention, policy-epoch drift and clinically coupled writes. Report throughput conditional on successful and rejected operations, not only attempted request rate. A metric of unnecessary rejection is a rejection where no mandatory dependency, authorization, policy or consent coordinate actually changed. Label it against a separately implemented oracle, not the proposed algorithm's own conclusion.
+
+\subsection{Interpretation of scalability}
+Latency and throughput are evaluated under a real PostgreSQL version and declared isolation level, warmup period, connection pool, CPU budget and workload generator. The planned plots include the correctness/false-stale Pareto frontier and a stratified p95 latency comparison. The study measures the net impact of lock scheduling, dependency fanout, and serialization retries on throughput rather than treating finer-grained versioning as a proxy for performance.
+
+
+\subsection{Decision model}
+For mutation kind $k$, the schema registry derives a required dependency closure $D(k,H)$ from the disclosed history $H$. The admission verifier checks all versions in $D(k,H)$ and the governance epochs under which the action was authorized. Missing mandatory elements cause rejection; unrelated version changes need not. Validation and mutation occur in the same transaction with canonical lock order to avoid converting a read check into a time-of-check/time-of-use gap.
+\begin{equation}
+\mathrm{Admit}(o,t)=\mathrm{Complete}(D_o)\land
+\bigwedge_{e\in D_o}(v_e^t=v_e^{\mathrm{read}})\land
+\mathrm{Governed}(o,t).
+\end{equation}
+The safety proof obligation is relative to the completeness of $D_o$; an incomplete oracle is explicitly represented as a separate failure mode.
+
+\section{Comparative Hypotheses}
+We hypothesize that schema-complete dependency sets preserve the safety of dependent operations while reducing avoidable aborts produced by profile-global version checks.
+
+A correct PostgreSQL Serializable implementation is the principal systems reference. The comparison reports the full safety--throughput frontier, including the cost of discovering and validating dependencies under skew and varying worker counts.
+
+\section{Experimental Design}
+\subsection{Comparative systems}
+We compare systems under matched input histories, authorization information, and resource budgets. Baseline configurations, including their own retry or cache policy where relevant, are established on development data and frozen before independent evaluation.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Comparator implementations and their role in the study.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Arm & Implementation \\ \midrule
+B0 & global-profile version OCC. common coarse implementation. \\ 
+B1 & Silo-style entity readset OCC with commit-time validation. strong algorithmic comparator; disclose that port is not Silo source code. \\ 
+B2 & PostgreSQL SERIALIZABLE (SSI) with schema-check predicates. strong DB-native comparator. \\ 
+B3 & entity-OCC without semantic dependency closure. ablation exposing write skew. \\ 
+B4 & proposed dependency-complete scope-local OCC. Proposed method. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Study population and protocol}
+The design crosses worker counts of 1, 2, 4, 8, and 16 with independent field updates, medication–allergy dependencies, policy revocation, and skewed contention. All baselines run against identical synthetic PostgreSQL schedules; each includes its own faithful retry policy and instrumentation. A full serializable transaction is the reference competitor, not a deliberately weakened substitute.
+
+\paragraph{Dataset construction.} Deterministic family of medication/allergy/history/purpose grants; 1, 2, 4, 8, 16 workers; workload partitions with Zipf skew and dependency density; at least 5 independent seeds per setting before deciding power..
+
+\section{Measurement and Statistical Analysis}
+\subsection{Outcomes and estimands}
+The primary endpoint is forbidden commit rate. Alongside it, we measure oracle-defined false-stale rate, so that favorable outcomes can be interpreted in relation to the operational service delivered. The sampling unit, exclusions, and uncertainty procedure are specified before confirmatory execution.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Prespecified outcome families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Type & Outcome recorded for each comparator \\ \midrule
+Primary & forbidden commit rate. \\ 
+Co-primary control & oracle-defined false-stale rate. \\ 
+Secondary & throughput committed ops/sec. \\ 
+Secondary & p50/p95/p99 latency. \\ 
+Secondary & retry amplification. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Statistical analysis}
+Use unique logical schedules as paired units. Report exact confidence intervals for forbidden commits and cluster-bootstrap intervals for false-stale and latency contrasts. Throughput is compared only at equal safety constraints and with both rejected and successfully completed operations visible.
+
+\section{Analysis and Reporting Plan}
+The evaluation will contain correctness by dependency family, false-stale versus contention skew, and a throughput–p95 latency frontier annotated with forbidden-commit counts.
+
+For each endpoint, the analysis will report numerators, denominators, independent study units, matched comparator settings, and uncertainty intervals. All tables and figures will be generated directly from a pinned confirmatory research release, with exclusions and incomplete observations accounted for separately.
+
+\section{Reproducibility and Ethical Considerations}
+Each experiment will record the tested code SHA, PostgreSQL version and isolation level, worker configuration, workload seed, and independent transaction history. Raw traces will support re-analysis by a separate serializability oracle. All clinical entities are synthetic; the benchmark is designed to measure transactional correctness rather than to advise patient treatment.
+
+\section{Scope and Threats to Validity}
+The scope is bounded by the encoded clinical dependency schema and the tested concurrency model. Novelty is established by better dependency accounting or a measured trade-off, not by renaming optimistic concurrency control. Findings from synthetic workloads do not on their own validate treatment decisions.
+
+The study reports unsuccessful, inconclusive, and excluded runs as distinct outcome categories, preserving the interpretation of the measured denominator and the comparison across systems.
+
+\section{Conclusion}
+Dependency-scoped admission turns an intuitive optimization into a verifiable contract: reject changes that invalidate an action, but preserve legitimate work when only unrelated state has changed. The proposed framework makes both sides of that trade-off measurable against rigorous transactional baselines.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

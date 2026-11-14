@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "clara.venue2027.agent-task-report.v1",
+  "type": "object",
+  "required": [
+    "task_id",
+    "status",
+    "source_sha_before",
+    "source_sha_after",
+    "changed_paths",
+    "commands",
+    "artifacts_sha256",
+    "unresolved"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "BLOCKED"
+      ]
+    },
+    "source_sha_before": {
+      "type": "string",
+      "minLength": 7
+    },
+    "source_sha_after": {
+      "type": "string",
+      "minLength": 7
+    },
+    "changed_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "argv": {
+            "type": "string"
+          },
+          "exit_code": {
+            "type": "integer"
+          },
+          "log_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "argv",
+          "exit_code"
+        ]
+      }
+    },
+    "artifacts_sha256": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "oracle_disagreement_count": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "baseline_parity": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "NOT_APPLICABLE",
+        "BLOCKED"
+      ]
+    },
+    "unresolved": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

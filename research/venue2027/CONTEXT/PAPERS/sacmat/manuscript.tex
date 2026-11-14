@@ -1,0 +1,149 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry,microtype,setspace,amsmath,amssymb,amsthm}
+\usepackage{booktabs,tabularx,array,graphicx,xcolor,url,hyperref}
+\usepackage{algorithm,algpseudocode}
+\geometry{margin=1.03in}
+\emergencystretch=2.5em
+\setstretch{1.12}
+\hypersetup{colorlinks=false,pdfborder={0 0 0},pdftitle={CLARA-Care Research Manuscript}}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\title{\vspace{-1em}\textbf{PolicyTrace: A Reproducible Conformance Corpus for Purpose-Scoped Consent Delegation}} 
+\author{Nguyen Ngoc Thien \and Trinh Minh Quang}\date{November 2026}
+\begin{document}
+\maketitle
+\begin{center}\small Hai Ba Trung High School, Hue, Vietnam\end{center}
+\begin{abstract}
+Access-control policies are commonly tested as isolated requests, yet delegated consent is a temporal process in which permissions are granted, narrowed, revoked, and sometimes renewed. Two policy engines may agree on a static decision while diverging after a sequence of delegation and revocation events. We introduce PolicyTrace, a history-sensitive conformance framework that combines a reference transition semantics with temporal metamorphic testing. PolicyTrace generates policy and principal histories, translates them into engine-specific representations, and checks both decisions and the validity of each translation. We design a comparative mutation-testing study against random requests, MC/DC-inspired policy tests, and stateful property-based generation under equal oracle budgets. The primary contributions are a portable trace semantics, an interpretable failure taxonomy, and a method for exposing policy portability differences without concealing unsupported constructs.
+\end{abstract}
+\noindent\textbf{Keywords:} access control testing; delegated consent; metamorphic testing; conformance.
+\medskip\hrule\medskip
+
+\section{Introduction}
+A policy decision can be correct at one instant and incorrect one step later. A delegated clinician might legitimately access a record before a grant expires, but the same request should be denied after revocation. Single-request test suites can verify both endpoints individually without exercising the transition that connects them, leaving implementations vulnerable to stale caches, precedence errors, and inconsistent interpretations of re-delegation.
+
+Policy languages and enforcement engines make different choices about relationships, attributes, precedence, and indeterminate outcomes. A benchmark that sends superficially similar requests to multiple engines can therefore mistake a translation mismatch for an implementation defect. A useful cross-engine conformance test must represent the intended policy semantics independently of any one engine and record where that representation cannot be faithfully translated.
+
+We propose PolicyTrace as a temporal testing framework for purpose-bound delegated consent. It combines a small reference calculus with metamorphic transformations of entire event histories. In addition to decision accuracy, the framework measures the detection of policy faults at fixed test budgets and describes the semantic conditions under which cross-engine comparison is meaningful.
+
+\paragraph{Contributions.} We introduce a reference semantics for delegated-consent histories, a temporal metamorphic test generator, and a portable cross-policy-engine conformance protocol based on independently judged mutation outcomes.
+
+\section{Prior Work and Research Gap}
+RBAC and ABAC form well-established foundations for authorization systems \cite{sandhu1996,hu2014}. Policy testing has developed decision coverage and structural adequacy criteria, including MC/DC-inspired designs. These approaches motivate strong competitors for PolicyTrace. Our research gap concerns state transitions: authorization outcomes that depend on event order, delegation ancestry, and revocation precedence. We test that gap against stateful property-based generation, not only against independent random requests, and distinguish policy-engine disagreement from unfaithful policy translation.
+
+\paragraph{Research positioning.} The access-control paper studies policy-history semantics across independent engines. CLARA policies provide one adapter and case study, rather than supplying the paper’s defining algorithm or ground truth.
+
+\section{Research Questions and Study Setting}
+\paragraph{RQ1 — Temporal fault coverage} Which authorization defects become observable only when tests preserve the order of grants, revocations, delegation, and replay? Measure distinct trace-level fault families found beyond matched static decision coverage.
+
+\paragraph{RQ2 — Mutation-testing efficiency} Does temporal metamorphic generation detect more non-equivalent mutants than competing methods at equal oracle-call and generation budgets? Compare paired mutation scores, detection cost, and minimal witness length.
+
+\paragraph{RQ3 — Cross-engine semantics} Which policy histories can be represented consistently across Cedar, OpenFGA, and OPA, and where do translation semantics diverge? Report supported construct coverage, decision parity, and explicit indeterminate/untranslatable cases.
+
+\paragraph{Study boundary.} The system under test is a policy decision point driven by synthetic grants and request histories. Policy adapters may return INDETERMINATE or UNSUPPORTED, and such cases remain visible instead of being coerced to DENY or PERMIT.
+
+\subsection{Controlled challenge families}
+\begin{table}[ht]
+\centering\small
+\caption{Prespecified workload and challenge families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+ID & Prespecified condition \\ \midrule
+F1 & Expired delegate role \\ 
+F2 & Policy inheritance conflict \\ 
+F3 & Revoke then regrant with ordering \\ 
+F4 & Purpose mismatch across nested grants \\ 
+F5 & Emergency override with absent approval obligation \\ 
+\bottomrule\end{tabularx}\end{table}
+
+\section{Method and Implementation Architecture}
+PolicyTrace defines a reference transition system for role assignments, purpose-specific grants, delegation, expiry, and revocation. A history generator applies controlled metamorphic transformations that create related traces with expected authorization relationships. Each trace is translated to a target policy engine through a typed adapter that records semantic coverage. The evaluator compares the engine decision with an independent oracle, minimizing failing traces for diagnosis. This arrangement exposes order-sensitive faults while distinguishing implementation disagreements from unsupported language constructs.
+
+\subsection{Purpose-scoped policy calculus}
+A policy decision point receives request $r=(u,p,x,t)$ with actor $u$, purpose $p$, resource $x$ and time $t$, together with a policy history $H$. Its decision is defined by the three-valued relation
+\[
+\mathrm{PDP}(r,H)\in\{\mathsf{Permit},\mathsf{Deny},\mathsf{Indeterminate}\}.
+\] A delegation grants a capability only while its own validity window and parent grant remain satisfied; a revocation event with later effective order supersedes an otherwise valid older grant. Emergency access is a separately modeled rule with explicit review obligations, not an implicit override of all restrictions. In the corpus, semantics must be formalized before generating expected labels.
+
+\subsection{Metamorphic oracle checks}
+A syntactic request duplication should not alter a deterministic decision. Adding a disjoint irrelevant grant should preserve the result. Within a fixed policy semantics, revoking the sole applicable grant cannot turn a denial into a permit unless a distinct explicit override has become active. These properties create metamorphic test families independent from the target access-control engine. Any ambiguous policy precedence is recorded as an oracle dispute and held out of a claim-bearing set until resolved by an agreed specification.
+
+\subsection{Dataset and tool evaluation}
+The proposed tool provides three public outputs: a versioned policy JSON schema, a human-readable policy history explanation and machine-readable expected decision traces. Evaluate portability by replaying the same corpus through two independently implemented policy engines or adapters and reporting disagreement classes, not merely the number of generated histories. Crucially, this is not GovMut's mutation testing of 45 faults: the central question is semantic conformance under delegation and consent timelines. If existing XACML-style suites reproduce all transition coverage, the paper must report limited novelty.
+
+
+\subsection{Decision model}
+Let $h=e_1,\ldots,e_n$ be a sequence of policy events, and let $\mathcal{P}(h,q)$ be the reference decision for request $q$ after replaying $h$. Metamorphic operators transform histories by, for example, inserting a revocation, changing event order, or narrowing a purpose while preserving the logical preconditions of the expected relation. Adapters implement partial mappings $T_j$ to each policy engine $j$.
+\begin{equation}
+\mathrm{Conforms}_j(h,q)\Longleftrightarrow
+\mathrm{Supported}(T_j,h,q)\land
+\mathrm{PDP}_j(T_j(h),T_j(q))=\mathcal{P}(h,q).
+\end{equation}
+Unsupported mappings are reported as capability differences; they are not scored as correctness failures.
+
+\section{Comparative Hypotheses}
+We hypothesize that temporal metamorphic histories expose sequence-dependent delegation and revocation faults missed by coverage-matched static policy tests.
+
+The principal contrast is mutation detection at an equal test-oracle budget. A separate portability analysis distinguishes unsupported expressiveness from mismatched implementations, preventing cross-engine differences from being misclassified as test victories.
+
+\section{Experimental Design}
+\subsection{Comparative systems}
+We compare systems under matched input histories, authorization information, and resource budgets. Baseline configurations, including their own retry or cache policy where relevant, are established on development data and frozen before independent evaluation.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Comparator implementations and their role in the study.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Arm & Implementation \\ \midrule
+B0 & uniform random authorization requests. weak reference. \\ 
+B1 & MC/DC-inspired XACML policy testing (Xu et al. SACMAT 2018). strong coverage baseline. \\ 
+B2 & XACBench policy profile–driven synthetic tests. strong benchmark baseline. \\ 
+B3 & property-based history generator without temporal metamorphs. strong stateful testing baseline. \\ 
+B4 & PolicyTrace temporal generator plus oracle. Proposed method. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Study population and protocol}
+Freeze a synthetic policy-history corpus and independent non-equivalent mutants spanning delegation expiry, explicit-deny precedence, purpose mismatch, and stale authorization cache. Compare random requests, MC/DC-inspired test selection, stateful property-based histories, and temporal metamorphs at identical oracle budgets. Run each across supported policy engines with adapter-conformance tests preceding the main analysis.
+
+\paragraph{Dataset construction.} Versioned synthetic policy and principal graphs + 50 independently designed mutants; reserve fresh holdout mutant families; source/seed freeze prior to scoring..
+
+\section{Measurement and Statistical Analysis}
+\subsection{Outcomes and estimands}
+The primary endpoint is mutation score at fixed oracle budget. Alongside it, we measure trace witness detection coverage, so that favorable outcomes can be interpreted in relation to the operational service delivered. The sampling unit, exclusions, and uncertainty procedure are specified before confirmatory execution.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Prespecified outcome families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Type & Outcome recorded for each comparator \\ \midrule
+Primary & mutation score at fixed oracle budget. \\ 
+Co-primary control & trace witness detection coverage. \\ 
+Secondary & policy-engine disagreement. \\ 
+Secondary & invalid/indeterminate parity. \\ 
+Secondary & generation runtime. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Statistical analysis}
+The primary endpoint is paired mutant detection at a fixed test budget, clustered by independent mutant family. Report exact differences, witness lengths, and false-positive rates on unmutated policies. Inter-engine agreement is conditioned on supported semantics and decomposed into policy interpretation versus adapter errors.
+
+\section{Analysis and Reporting Plan}
+Include a trace semantics diagram, mutation-score versus test-budget curves, and a portability matrix showing where policy constructs translate faithfully or remain unsupported.
+
+For each endpoint, the analysis will report numerators, denominators, independent study units, matched comparator settings, and uncertainty intervals. All tables and figures will be generated directly from a pinned confirmatory research release, with exclusions and incomplete observations accounted for separately.
+
+\section{Reproducibility and Ethical Considerations}
+PolicyTrace will release the reference transition semantics, generated policy histories, mutant catalog, supported-construct manifests, and adapter conformance tests. All principal graphs and permissions are synthetic. Every scored mismatch will include a minimized trace and an explanation of whether the target language can express the required relation.
+
+\section{Scope and Threats to Validity}
+Conformance is relative to the published reference semantics and independently reviewed mutant labels. Portability results cannot be generalized to policy constructs absent from the corpus; the study explicitly separates limits of expressibility from software defects.
+
+The study reports unsuccessful, inconclusive, and excluded runs as distinct outcome categories, preserving the interpretation of the measured denominator and the comparison across systems.
+
+\section{Conclusion}
+Delegated consent is inherently historical. By testing histories rather than isolated decisions, PolicyTrace creates a disciplined way to evaluate temporal authorization behavior and compare heterogeneous policy engines without reducing their semantics to an artificial common denominator.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

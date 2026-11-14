@@ -1,0 +1,20 @@
+{
+  "repo": "Project-CLARA-HBT/CLARA-Care",
+  "branch": "research/glhs-r4-novelty-hardening",
+  "audited_head_2026_11_14": "bce92340e190c62208a24aa3304f188080f6fd58",
+  "paths": {
+    "services/api/src/clara_api/glhs/admission.py": "GRWC result/lineage verifier",
+    "services/api/src/clara_api/glhs/commitment_gateway.py": "proposal, commitment, consent-aware transition gateway",
+    "services/api/src/clara_api/glhs/commit_kernel.py": "six-phase atomic commit kernel, DependencySpec and lock plan",
+    "services/api/src/clara_api/glhs/canonical_json.py": "versioned canonical digest RFC 8785 profiles",
+    "services/api/src/clara_api/glhs/inference_attestation.py": "inference lifecycle and three-digest binding",
+    "services/api/src/clara_api/db/models.py": "SQLAlchemy ORM, immutable GLHS ledger event listeners",
+    "services/api/tests/test_glhs_r4_admission.py": "existing admission test suite (SQLite fixture)",
+    "services/api/tests/test_glhs_r4_comparators.py": "existing comparator test suite",
+    "services/api/pyproject.toml": "FastAPI/Pydantic/SQLAlchemy/psycopg/pytest environment",
+    ".github/workflows/glhs-r4-novelty-gate.yml": "existing R4 gate",
+    "research/publication_registry.yaml": "paper overlap and historical publication status",
+    "research/glhs_journal/q4_r4/release/MANUSCRIPT_MASTER_R4.md": "historical main GLHS manuscript; do not overwrite",
+    "research/PROGRAM_READINESS.md": "historical scientific readiness register"
+  }
+}

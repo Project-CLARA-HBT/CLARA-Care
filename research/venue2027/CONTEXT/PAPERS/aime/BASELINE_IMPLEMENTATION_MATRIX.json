@@ -1,0 +1,94 @@
+{
+  "study_id": "aime",
+  "source_branch": "research/glhs-r4-novelty-hardening",
+  "status": "PROPOSED_NOT_RUN",
+  "primary_metric": "action eligibility error",
+  "dataset_plan": "Synthetic source-disjoint vignettes with counterfactual pairs: baseline H, medication update, allergy, revocation, unrelated edit, clinical task. Target N determined by pilot variance and planned power; never label small LLM probes clinical trials.",
+  "oracle": "Independent authorized evidence oracle and qualified clinician review; patient-level paired bootstrap/clustered CI.",
+  "baselines": [
+    {
+      "id": "B0",
+      "design": "full authorized history, single snapshot",
+      "role": "clinical information-rich static baseline",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B1",
+      "design": "full per-step refresh + current policy filter",
+      "role": "strong correctness/privacy control",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B2",
+      "design": "HealthBench-/MedHELM-informed evaluation rubric for clinical utility",
+      "role": "benchmark rubric, not a decision algorithm",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B3",
+      "design": "static model + output post-filter",
+      "role": "common LLM guardrail comparator",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B4",
+      "design": "proposed selective consent-aware context regeneration",
+      "role": "candidate",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    }
+  ],
+  "risks": "High dependency on physician reviewers, model access costs, and exact clinical statements. Short paper only if results and validation adequate.",
+  "stop_rule": "No clinician reviewer or independent original vignettes = no clinical validity claim. If selective regeneration gains no utility over complete refresh, narrow to a descriptive workflow evaluation.",
+  "source_records": [
+    {
+      "id": "cse2026",
+      "url": "https://www.nature.com/articles/s41746-025-02277-8",
+      "venue": "npj Digital Medicine (2026)"
+    },
+    {
+      "id": "medhelm2026",
+      "url": "https://www.nature.com/articles/s41591-025-04151-2",
+      "venue": "Nature Medicine (2026)"
+    },
+    {
+      "id": "healthbench25",
+      "url": "https://openai.com/index/healthbench/",
+      "venue": "OpenAI 2025 research benchmark"
+    },
+    {
+      "id": "amie2026",
+      "url": "https://doi.org/10.1038/s41586-026-10764-5",
+      "venue": "Nature 2026"
+    },
+    {
+      "id": "fhir5",
+      "url": "https://hl7.org/fhir/R5/",
+      "venue": "HL7 FHIR specification"
+    },
+    {
+      "id": "who21",
+      "url": "https://www.who.int/publications/i/item/9789240029200",
+      "venue": "World Health Organization"
+    }
+  ]
+}

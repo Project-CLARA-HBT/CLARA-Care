@@ -1,0 +1,151 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry,microtype,setspace,amsmath,amssymb,amsthm}
+\usepackage{booktabs,tabularx,array,graphicx,xcolor,url,hyperref}
+\usepackage{algorithm,algpseudocode}
+\geometry{margin=1.03in}
+\emergencystretch=2.5em
+\setstretch{1.12}
+\hypersetup{colorlinks=false,pdfborder={0 0 0},pdftitle={CLARA-Care Research Manuscript}}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\title{\vspace{-1em}\textbf{Cross-Purpose Replay Resistance for Governed AI Context Receipts}} 
+\author{Nguyen Ngoc Thien \and Trinh Minh Quang}\date{November 2026}
+\begin{document}
+\maketitle
+\begin{center}\small Hai Ba Trung High School, Hue, Vietnam\end{center}
+\begin{abstract}
+AI-generated action proposals frequently move across roles, tasks, and delegated authorization scopes before they reach a persistent write boundary. A signed receipt can remain cryptographically valid even when its use is no longer authorized, and concurrent attempts may consume the same receipt more than once. We study the integrity of delegated proposal chains under policy changes and cross-purpose replay. Our method binds a receipt to its actor, tenant, target, purpose, task, dispatch evidence, and governing epochs, then consumes its nonce atomically with authorization revalidation. We specify an interleaving-aware threat model and a comparative study against correctly configured capability tokens, consistency-aware relationship authorization, and policy engines with replay registries. The primary question is whether lineage-aware consumption yields a stronger security–availability trade-off under concurrent delegation and revocation.
+\end{abstract}
+\noindent\textbf{Keywords:} authorization; replay resistance; delegation; capability receipts; clinical workflows.
+\medskip\hrule\medskip
+
+\section{Introduction}
+A model-generated proposal may be created under one scope of authority and applied by a different actor minutes later. During that interval, a delegated permission can expire, a purpose can change, or an attacker can replay a previously valid receipt through another tenant or workflow. The signature on the receipt establishes its integrity; it does not, by itself, establish authorization for the later operation.
+
+Contextual capability systems and relationship-based authorization already offer expressive checks, so the security contribution cannot be reduced to adding more fields to a token. The difficult case is an interleaving: a proposal inherits delegated authority, undergoes review, and races with a policy update while two consumers attempt to spend the same authorization evidence.
+
+We formalize this case as a single-use authorization transition over the complete proposal lineage. The proposed verifier makes both the ancestry and the current permission state explicit at the point of consumption. The experimental program is designed around strong baselines that combine token caveats with fresh authorization checks, allowing a meaningful comparison of attack resistance, legitimate acceptance, and processing cost.
+
+\paragraph{Contributions.} We formalize authorization receipt consumption over delegated proposal chains, specify an atomic lineage-and-epoch verification procedure, and benchmark it against mature capability and relationship-based authorization mechanisms.
+
+\section{Prior Work and Research Gap}
+Macaroons provide contextual caveats for delegated capabilities \cite{birgisson2014}; role-based and attribute-based frameworks express the policy context in which those capabilities are interpreted \cite{sandhu1996,hu2014}. These approaches form substantive baselines, not weak straw men. Our research question is narrower: whether a persisted, multi-hop proposal lineage and atomic nonce consumption resolve interleavings that are otherwise difficult to express or observe in a loosely composed application. The proposed result must be evaluated against a capability implementation with the same available policy information and an equivalent anti-replay registry.
+
+\paragraph{Research positioning.} Existing GLHS bindings provide proposal provenance. This work isolates multi-hop delegated receipt consumption, cross-context replay, and concurrent nonce expenditure as the security questions.
+
+\section{Research Questions and Study Setting}
+\paragraph{RQ1 — Cross-context replay} Which delegation, purpose, tenant, and epoch interleavings permit misuse of a previously valid receipt under each authorization architecture? Measure invalid replay admission per unique attack history, with paired clean authorization controls.
+
+\paragraph{RQ2 — Atomic consumption} Can two or more concurrent consumers produce a duplicate accepted effect or bypass a revocation boundary? Measure duplicate consumption and invalid concurrent admissions using persisted PostgreSQL executions.
+
+\paragraph{RQ3 — Operational cost} How do lineage verification and atomic nonce consumption affect valid acceptance, token size, and verification latency? Report clean acceptance and p95 verification cost at matched concurrency and permission semantics.
+
+\paragraph{Study boundary.} The attacker can reuse valid receipts and race requests across permitted APIs but cannot forge the server authentication key or alter PostgreSQL storage directly. All experiments operate on isolated synthetic principals and policies.
+
+\subsection{Controlled challenge families}
+\begin{table}[ht]
+\centering\small
+\caption{Prespecified workload and challenge families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+ID & Prespecified condition \\ \midrule
+F1 & Cross-actor token replay \\ 
+F2 & Cross-purpose reuse under same actor \\ 
+F3 & Cross-tenant replay with colliding identifiers \\ 
+F4 & After-revocation retry and nonce reuse \\ 
+F5 & Role delegation revoked between dispatch and write \\ 
+\bottomrule\end{tabularx}\end{table}
+
+\section{Method and Implementation Architecture}
+The protocol treats each disclosure receipt as a typed authorization object with a stable nonce and an immutable parent pointer. Its signed fields bind the action to the issuing principal, patient, tenant, purpose, task, consent and policy epochs, and the evidence supplied at dispatch. A consumer verifies the delegated ancestry and attempts an atomic nonce transition in the same transaction as the current-policy check. This positioning is essential: the signature and its contextual caveats are necessary inputs, while authorization at the moment of consumption decides whether the action is permitted.
+
+\subsection{Context-bound receipt contract}
+A receipt $\rho$ carries a tuple $(u,t,p,k,e_c,e_p,n,d)$: principal $u$, tenant $t$, purpose $p$, task $k$, consent epoch $e_c$, policy epoch $e_p$, nonce $n$ and dispatch digest $d$. A keyed authenticator covers a canonical encoding of the entire tuple. A valid signature is necessary but not sufficient; the verifier must also ensure scope equality, expiry, current epoch compatibility, and nonce freshness. Formally, acceptance is contingent on
+\begin{equation}
+\mathrm{VerifyMAC}(\rho)\wedge \mathrm{ScopeEq}(\rho,R)\wedge
+\mathrm{EpochOK}(\rho,S)\wedge\mathrm{Fresh}(n).
+\end{equation}
+An authenticated receipt is evidence of a dispatched request under the stated server trust boundary. It is neither evidence of a clinician's approval nor cryptographic proof that a neural model attended to all disclosed clinical facts.
+
+\subsection{A coordinated replay taxonomy}
+The attack design crosses a receipt from one legitimate domain into another. A controlled cross-tenant test reuses numerically equal local patient identifiers to expose accidental equality assumptions; a cross-purpose test keeps actor and source version fixed while changing task intent. A role-revocation test preserves a valid historical signature but changes current policy. Every malicious case has a legitimate counterpart with the same payload size, request metadata shape and scheduling budget. This protects against a superficial classifier-like baseline that rejects anomalous formatting instead of verifying the scope.
+
+\subsection{Novelty threshold against capability systems}
+The strongest comparator is a well-formed authenticated capability carrying precisely the same caveats. If this competitor and the proposed receipt have identical authorization decisions on all tested attacks, a claim of new decision safety is not supported. Remaining potentially meaningful differences would be binding of a multi-stage proposal lineage, interpretability of error evidence, or auditable token consumption across distributed services. These are secondary hypotheses needing independent data and should never be described as a cryptographic breakthrough merely because more fields were hashed.
+
+
+\subsection{Decision model}
+A receipt is a typed commitment over the principal, tenant, resource, purpose, task, dispatch digest, governing epoch, expiry, and one-time nonce. Its parent reference forms an immutable chain of delegated or reviewed proposals. The verifier checks the full ancestry, evaluates current policy within the consume transaction, and atomically records nonce expenditure. A valid signature without a valid current context is therefore insufficient.
+\begin{equation}
+\mathrm{Accept}(r,t)\Rightarrow
+\mathrm{ValidChain}(r)\land\mathrm{Authorized}(r,t)\land
+\mathrm{Unspent}(r.nonce,t^-).
+\end{equation}
+The last predicate must be enforced by a persistent uniqueness or transactional condition, not by a process-local check.
+
+\section{Comparative Hypotheses}
+We hypothesize that atomic lineage-bound receipt consumption reduces invalid cross-context admission under delegated replay and revocation races while retaining a high acceptance rate for clean requests.
+
+A carefully configured Macaroon with fresh authorization and replay tracking is the decisive security reference. The study compares both authorization decisions and the additional evidence produced for multi-hop proposal chains.
+
+\section{Experimental Design}
+\subsection{Comparative systems}
+We compare systems under matched input histories, authorization information, and resource budgets. Baseline configurations, including their own retry or cache policy where relevant, are established on development data and frozen before independent evaluation.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Comparator implementations and their role in the study.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Arm & Implementation \\ \midrule
+B0 & bearer signed receipt. weak control. \\ 
+B1 & Macaroon HMAC caveats: actor, purpose, task, expiry, nonce. Strong token baseline, correct semantics. \\ 
+B2 & Zanzibar/OpenFGA with consistency token and fresh policy evaluation. strong relationship consistency baseline. \\ 
+B3 & Cedar/OPA policy decision with replay nonce registry. strong security-engineering comparator. \\ 
+B4 & proposed delegated lineage transition verifier. Proposed method. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Study population and protocol}
+Construct adversarial histories spanning delegated scopes, nested reviews, expired permissions, concurrent duplicates, and changed policy epochs. Include valid authorized controls in each family. Comparator implementations receive the same credential material, policy state, and database isolation semantics; security comparisons are reported separately from implementation complexity.
+
+\paragraph{Dataset construction.} Distinct 900 adversarial interleavings in isolated synthetic accounts across delegation/revocation/retry/tenant switches; clean controls matched per threat family..
+
+\section{Measurement and Statistical Analysis}
+\subsection{Outcomes and estimands}
+The primary endpoint is invalid replay admissions. Alongside it, we measure valid control acceptance, so that favorable outcomes can be interpreted in relation to the operational service delivered. The sampling unit, exclusions, and uncertainty procedure are specified before confirmatory execution.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Prespecified outcome families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Type & Outcome recorded for each comparator \\ \midrule
+Primary & invalid replay admissions. \\ 
+Co-primary control & valid control acceptance. \\ 
+Secondary & duplicate consumption race. \\ 
+Secondary & token bytes. \\ 
+Secondary & p95 verify latency. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Statistical analysis}
+For paired attack histories, report invalid-admission differences and exact confidence bounds, supplemented by a concurrent linearizability-style history check. Analyze token size, database round trips, and verification latency across workloads with comparable legitimate acceptance.
+
+\section{Analysis and Reporting Plan}
+The principal evidence will be a matrix of successful and blocked interleavings, a persisted concurrent-consumption history, and a security–latency frontier that includes clean controls.
+
+For each endpoint, the analysis will report numerators, denominators, independent study units, matched comparator settings, and uncertainty intervals. All tables and figures will be generated directly from a pinned confirmatory research release, with exclusions and incomplete observations accounted for separately.
+
+\section{Reproducibility and Ethical Considerations}
+All principals, tenants, policies, and keys in the experiments are generated for the study and isolated from production deployments. The release includes signed-request test vectors, serialized nonce histories, database attestations, and conformance checks for the comparator implementations. Cryptographic secrets and service credentials from deployed systems are never included.
+
+\section{Scope and Threats to Validity}
+The assurance is bounded by correct cryptography, clock handling, and transaction isolation. The work does not establish the security of external identity providers or prove that a model used the disclosed evidence in its internal reasoning.
+
+The study reports unsuccessful, inconclusive, and excluded runs as distinct outcome categories, preserving the interpretation of the measured denominator and the comparison across systems.
+
+\section{Conclusion}
+Cross-context authorization is a temporal property: a receipt must still represent a valid delegation chain at the instant it is consumed. The proposed lineage transition provides a concrete model for that property and a comparison framework against mature capability and policy architectures.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

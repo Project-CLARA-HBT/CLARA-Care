@@ -1,0 +1,32 @@
+{
+  "task_id": "SH-repo_fingerprint",
+  "status": "PASS",
+  "source_sha_before": "610c2f9335bb44a3077dd62ac7d3b4f4b9614d3d",
+  "source_sha_after": "610c2f9335bb44a3077dd62ac7d3b4f4b9614d3d",
+  "changed_paths": [
+    "research/venue2027/_shared/tools/repo_fingerprint.py",
+    "research/venue2027/_shared/tests/test_repo_fingerprint.py",
+    "research/venue2027/_shared/repo_fingerprint.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/repo_fingerprint.py . --out research/venue2027/_shared/repo_fingerprint.json --allow-dirty",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/SH-repo_fingerprint.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/test_repo_fingerprint.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/SH-repo_fingerprint.pytest.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/tools/repo_fingerprint.py": "6812ac1e0bfc132f3480194e5834b2ac780222f514860def781382c8b3fe80cb",
+    "research/venue2027/_shared/repo_fingerprint.json": "6431bd38001421015e7e8a89f4b2c2dcaf5f195c402b5b29587928e2e84b6419",
+    "research/venue2027/_shared/tests/test_repo_fingerprint.py": "15333f38277edca549a6b549443b9d0d6addb757a21f9abe84ee135717b994a4"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Read-only repo fingerprint; dirty-tree refusal and missing-anchor refusal covered by adversarial tests."
+}

@@ -1,0 +1,323 @@
+id,venue,phase,title,priority,resource,agent,dependencies,target_file,status
+SH-repo_fingerprint,shared,P00,Create source inventory and reproducibility snapshot,P0,cpu,auditor,,research/venue2027/_shared/repo_fingerprint.json,TODO
+SH-incident_repro,shared,P00,Reproduce known R4 append-only regression,P0,cpu,maintainer,SH-repo_fingerprint,research/venue2027/_shared/r4_regression_trace.md,TODO
+SH-guard_regression,shared,P00,Add failing tests for permitted projection and prohibited canonical mutation,P0,cpu,maintainer,SH-incident_repro,services/api/tests/test_glhs_immutable_projection_contract.py,TODO
+SH-repair_immutable,shared,P00,Repair proposal model update without removing immutability,P0,cpu,maintainer,SH-guard_regression,services/api/src/clara_api/db/models.py,TODO
+SH-r4_ci_gate,shared,P00,Make R4 baseline release gate green,P0,cpu,auditor,SH-repair_immutable,research/venue2027/_shared/green_gate.json,TODO
+SH-worktree_layout,shared,P00,Create isolated research worktrees and exclusion policies,P0,cpu,orchestrator,SH-repo_fingerprint,research/venue2027/_shared/worktree_policy.md,TODO
+SH-source_reference_map,shared,P01,Map existing code vs newly proposed paths,P0,cpu,architect,SH-repo_fingerprint,research/venue2027/_shared/source_reference_map.csv,TODO
+SH-claim_overlap,shared,P01,Enforce publication overlap and scope firewall,P0,cpu,research_lead,SH-repo_fingerprint,research/venue2027/_shared/publication_overlap_registry.yaml,TODO
+SH-literature_hardening,shared,P01,Lock strongest Q1/A/A* comparators from primary sources,P0,cpu,researcher,SH-repo_fingerprint,research/venue2027/_shared/literature_validity_ledger.csv,TODO
+SH-research_ethics,shared,P01,Document synthetic-only clinical and privacy ethics constraints,P0,cpu,security,SH-repo_fingerprint,research/venue2027/_shared/data_ethics_and_irb.md,TODO
+SH-base_contracts,shared,P02,"Define common schemas of cases, traces and runs",P0,cpu,architect,SH-source_reference_map,research/venue2027/_shared/schemas/case.v1.schema.json,TODO
+SH-outcome_contract,shared,P02,Define tri-state and error-code taxonomy,P0,cpu,architect,SH-base_contracts,research/venue2027/_shared/schemas/outcome.v1.schema.json,TODO
+SH-independent_oracle,shared,P02,Build independent truth derivation boundary,P0,cpu,scientist,SH-base_contracts;SH-outcome_contract,evaluation/venue2027/_shared/oracle_contract.py,TODO
+SH-schedule_engine,shared,P02,Implement deterministic event schedule specification,P0,cpu,engineer,SH-base_contracts,evaluation/venue2027/_shared/schedules.py,TODO
+SH-postgres_isolation,shared,P03,Provision disposable PostgreSQL 16 environment,P1,cpu,infra,SH-worktree_layout,infra/research/venue2027/docker-compose.pg.yaml,TODO
+SH-baseline_registry,shared,P03,Create fair strong-baseline provenance registry,P1,cpu,researcher,SH-literature_hardening,research/venue2027/_shared/baselines/registry.yaml,TODO
+SH-psc_interface,shared,P04,Define common PSC advisory witness interface,P1,cpu,architect,SH-independent_oracle;SH-r4_ci_gate,evaluation/venue2027/_shared/psc_contract.py,TODO
+SH-run_harness,shared,P05,Create deterministic isolated multi-arm harness,P1,cpu,engineer,SH-schedule_engine;SH-outcome_contract,evaluation/venue2027/_shared/harness.py,TODO
+SH-measurement,shared,P05,Implement non-invasive cost and trace instrumentation,P1,cpu,systems,SH-run_harness,evaluation/venue2027/_shared/telemetry.py,TODO
+SH-analysis_policy,shared,P06,Define inferential/uncertainty analysis contract,P1,cpu,statistician,SH-independent_oracle,evaluation/venue2027/_shared/statistics.py,TODO
+SH-freeze_tool,shared,P06,Prospective freeze/hash and chronology validator,P1,cpu,auditor,SH-analysis_policy;SH-baseline_registry,scripts/research/venue2027/freeze_protocol.py,TODO
+SH-release_integrity,shared,P08,Offline checksum and denominator release validator,P1,cpu,auditor,SH-freeze_tool;SH-run_harness,scripts/research/venue2027/verify_release.py,TODO
+SH-unified_ci,shared,P08,Set research CI with artifact and SUT separation,P1,cpu,infra,SH-r4_ci_gate,research/venue2027/_shared/ci_policy.md,TODO
+SH-agent_protocol,shared,P00,Define DeepSeek/Gemini execution and handoff contract,P0,cpu,orchestrator,,AGENTS/EXECUTION_CONTRACT.md,TODO
+SH-venue_formats,shared,P09,Provide venue-specific template conversion and funding register,P1,cpu,research_lead,SH-claim_overlap,research/venue2027/_shared/submission_venue_checklist.md,TODO
+DSN-scope,dsn,P01,Independent contribution and objective,P0,cpu,researcher,SH-claim_overlap;SH-literature_hardening,research/venue2027/dsn/novelty_contract.md,TODO
+DSN-rq_registry,dsn,P01,"RQ, estimand, hypotheses and metrics",P0,cpu,statistician,DSN-scope;SH-analysis_policy,research/venue2027/dsn/rq_and_estimands.yaml,TODO
+DSN-threat,dsn,P01,"Threat, trust and failure model",P0,cpu,security,DSN-scope;SH-research_ethics,research/venue2027/dsn/threat_model.md,TODO
+DSN-prior,dsn,P01,Prior-art implementation and verification ledger,P0,cpu,researcher,DSN-scope;SH-baseline_registry,research/venue2027/dsn/literature_matrix.csv,TODO
+DSN-overlap,dsn,P01,Venue publication and evidence isolation,P0,cpu,research_lead,DSN-scope;SH-claim_overlap,research/venue2027/dsn/overlap_audit.md,TODO
+DSN-schema,dsn,P02,Case/run/output JSON schemas,P0,cpu,architect,DSN-rq_registry;DSN-threat;SH-base_contracts,research/venue2027/dsn/protocols/study.schema.json,TODO
+DSN-dataset,dsn,P02,Synthetic dataset and split builder,P0,cpu,engineer,DSN-schema;SH-schedule_engine,evaluation/venue2027/dsn/generate_dataset.py,TODO
+DSN-oracle,dsn,P02,Independent per-case truth oracle,P0,cpu,scientist,DSN-schema;DSN-dataset;SH-independent_oracle,evaluation/venue2027/dsn/independent_oracle.py,TODO
+DSN-baselines,dsn,P03,Baseline fidelity adapters,P1,cpu,engineer,DSN-prior;SH-baseline_registry,evaluation/venue2027/dsn/baselines.py,TODO
+DSN-baseline_tests,dsn,P03,Baseline conformance test suite,P1,cpu,auditor,DSN-baselines;DSN-oracle,tests/venue2027/dsn/test_baseline_fidelity.py,TODO
+DSN-candidate,dsn,P04,Candidate algorithm boundary,P1,cpu,engineer,DSN-oracle;SH-psc_interface,evaluation/venue2027/dsn/candidate.py,TODO
+DSN-ablation,dsn,P04,Causal mechanism ablation variants,P1,cpu,scientist,DSN-candidate,evaluation/venue2027/dsn/ablations.py,TODO
+DSN-runner,dsn,P05,Uniform arm executor,P1,postgres,engineer,DSN-candidate;DSN-baseline_tests;SH-run_harness,evaluation/venue2027/dsn/runner.py,TODO
+DSN-traces,dsn,P05,Immutable trace and measurement capture,P1,cpu,systems,DSN-runner;SH-measurement,evaluation/venue2027/dsn/trace_writer.py,TODO
+DSN-unit,dsn,P05,Deterministic property and adversarial tests,P1,cpu,auditor,DSN-candidate;DSN-baseline_tests,tests/venue2027/dsn/test_algorithm_properties.py,TODO
+DSN-pilot,dsn,P06,Development pilot and resource/power estimate,P1,postgres,statistician,DSN-unit;DSN-ablation;DSN-runner;DSN-traces;DSN-X01_state_spec;DSN-X02_recovery_tla;DSN-X03_fault_windows;DSN-X04_outbox_reference;DSN-X05_workflow_reference;DSN-X06_reconcile_journal;DSN-X07_kill_driver;DSN-X08_elle_export,research/venue2027/dsn/protocols/pilot_plan.yaml,TODO
+DSN-freeze,dsn,P06,Confirmatory preregistration freeze,P1,cpu,auditor,DSN-pilot;DSN-overlap;SH-freeze_tool,research/venue2027/dsn/protocols/preregistration.yaml,TODO
+DSN-confirm,dsn,P07,Independent holdout evaluation,P1,postgres,orchestrator,DSN-freeze;SH-r4_ci_gate;DSN-X10_operations_matrix,evaluation/venue2027/dsn/run_confirmatory.py,TODO
+DSN-stats,dsn,P08,Preregistered statistical analysis,P1,cpu,statistician,DSN-confirm;SH-analysis_policy,evaluation/venue2027/dsn/analyze.py,TODO
+DSN-figures,dsn,P08,Manuscript result tables and figures,P1,cpu,writer,DSN-stats,evaluation/venue2027/dsn/figures.py,TODO
+DSN-release,dsn,P08,Independent reproduction and claim ledger,P1,cpu,auditor,DSN-stats;DSN-figures;SH-release_integrity;DSN-X09_recovery_analysis,research/venue2027/dsn/release/claim_ledger.csv,TODO
+DSN-paper,dsn,P09,Update manuscript in correct venue template,P1,cpu,writer,DSN-release;SH-venue_formats,research/venue2027/dsn/paper/manuscript.tex,TODO
+DSN-funding,dsn,P09,"Submission, funding, and sponsorship route",P1,cpu,research_lead,DSN-scope;SH-venue_formats,research/venue2027/dsn/submission/funding_and_author_check.md,TODO
+DSN-X01_state_spec,dsn,P02,Define crash/recovery semantics,P1,cpu,systems,DSN-schema,evaluation/venue2027/dsn/state_machine.py,TODO
+DSN-X02_recovery_tla,dsn,P02,Formalize interleavings and recovery invariants,P1,cpu,systems,DSN-schema,research/venue2027/dsn/formal/recovery.tla,TODO
+DSN-X03_fault_windows,dsn,P04,Enumerate precise crash cut-points,P1,postgres,systems,DSN-oracle;SH-r4_ci_gate,evaluation/venue2027/dsn/fault_windows.py,TODO
+DSN-X04_outbox_reference,dsn,P03,Implement honest transactional-outbox competitor,P1,cpu,systems,DSN-baselines,evaluation/venue2027/dsn/outbox_reference.py,TODO
+DSN-X05_workflow_reference,dsn,P03,Add durable workflow / saga competitor,P1,cpu,systems,DSN-baselines,evaluation/venue2027/dsn/workflow_reference.py,TODO
+DSN-X06_reconcile_journal,dsn,P04,Candidate recovery-state journal,P1,postgres,systems,DSN-oracle;SH-r4_ci_gate,evaluation/venue2027/dsn/reconciliation_journal.py,TODO
+DSN-X07_kill_driver,dsn,P05,Execute isolated PG/container fault injection,P1,postgres,systems,DSN-runner;SH-r4_ci_gate,evaluation/venue2027/dsn/kill_restart_driver.py,TODO
+DSN-X08_elle_export,dsn,P05,Export durable operation histories,P1,postgres,systems,DSN-runner;SH-r4_ci_gate,evaluation/venue2027/dsn/history_to_elle.py,TODO
+DSN-X09_recovery_analysis,dsn,P08,Estimate safety/liveness/latency frontier,P1,cpu,systems,DSN-stats,evaluation/venue2027/dsn/recovery_analysis.py,TODO
+DSN-X10_operations_matrix,dsn,P06,Predeclare campaign matrix,P1,cpu,systems,DSN-pilot,research/venue2027/dsn/protocols/crash_matrix.yaml,TODO
+POPETS-scope,popets,P01,Independent contribution and objective,P0,cpu,researcher,SH-claim_overlap;SH-literature_hardening,research/venue2027/popets/novelty_contract.md,TODO
+POPETS-rq_registry,popets,P01,"RQ, estimand, hypotheses and metrics",P0,cpu,statistician,POPETS-scope;SH-analysis_policy,research/venue2027/popets/rq_and_estimands.yaml,TODO
+POPETS-threat,popets,P01,"Threat, trust and failure model",P0,cpu,security,POPETS-scope;SH-research_ethics,research/venue2027/popets/threat_model.md,TODO
+POPETS-prior,popets,P01,Prior-art implementation and verification ledger,P0,cpu,researcher,POPETS-scope;SH-baseline_registry,research/venue2027/popets/literature_matrix.csv,TODO
+POPETS-overlap,popets,P01,Venue publication and evidence isolation,P0,cpu,research_lead,POPETS-scope;SH-claim_overlap,research/venue2027/popets/overlap_audit.md,TODO
+POPETS-schema,popets,P02,Case/run/output JSON schemas,P0,cpu,architect,POPETS-rq_registry;POPETS-threat;SH-base_contracts,research/venue2027/popets/protocols/study.schema.json,TODO
+POPETS-dataset,popets,P02,Synthetic dataset and split builder,P0,cpu,engineer,POPETS-schema;SH-schedule_engine,evaluation/venue2027/popets/generate_dataset.py,TODO
+POPETS-oracle,popets,P02,Independent per-case truth oracle,P0,cpu,scientist,POPETS-schema;POPETS-dataset;SH-independent_oracle,evaluation/venue2027/popets/independent_oracle.py,TODO
+POPETS-baselines,popets,P03,Baseline fidelity adapters,P1,cpu,engineer,POPETS-prior;SH-baseline_registry,evaluation/venue2027/popets/baselines.py,TODO
+POPETS-baseline_tests,popets,P03,Baseline conformance test suite,P1,cpu,auditor,POPETS-baselines;POPETS-oracle,tests/venue2027/popets/test_baseline_fidelity.py,TODO
+POPETS-candidate,popets,P04,Candidate algorithm boundary,P1,cpu,engineer,POPETS-oracle;SH-psc_interface,evaluation/venue2027/popets/candidate.py,TODO
+POPETS-ablation,popets,P04,Causal mechanism ablation variants,P1,cpu,scientist,POPETS-candidate,evaluation/venue2027/popets/ablations.py,TODO
+POPETS-runner,popets,P05,Uniform arm executor,P1,cpu,engineer,POPETS-candidate;POPETS-baseline_tests;SH-run_harness,evaluation/venue2027/popets/runner.py,TODO
+POPETS-traces,popets,P05,Immutable trace and measurement capture,P1,cpu,systems,POPETS-runner;SH-measurement,evaluation/venue2027/popets/trace_writer.py,TODO
+POPETS-unit,popets,P05,Deterministic property and adversarial tests,P1,cpu,auditor,POPETS-candidate;POPETS-baseline_tests,tests/venue2027/popets/test_algorithm_properties.py,TODO
+POPETS-pilot,popets,P06,Development pilot and resource/power estimate,P1,cpu,statistician,POPETS-unit;POPETS-ablation;POPETS-runner;POPETS-traces;POPETS-X01_lineage_graph;POPETS-X02_revocation_events;POPETS-X03_cache_control;POPETS-X04_redisclosure_probe;POPETS-X05_full_refresh;POPETS-X06_purpose_cache;POPETS-X07_privacy_cases;POPETS-X08_minimal_privacy,research/venue2027/popets/protocols/pilot_plan.yaml,TODO
+POPETS-freeze,popets,P06,Confirmatory preregistration freeze,P1,cpu,auditor,POPETS-pilot;POPETS-overlap;SH-freeze_tool,research/venue2027/popets/protocols/preregistration.yaml,TODO
+POPETS-confirm,popets,P07,Independent holdout evaluation,P1,cpu,orchestrator,POPETS-freeze;SH-r4_ci_gate,evaluation/venue2027/popets/run_confirmatory.py,TODO
+POPETS-stats,popets,P08,Preregistered statistical analysis,P1,cpu,statistician,POPETS-confirm;SH-analysis_policy,evaluation/venue2027/popets/analyze.py,TODO
+POPETS-figures,popets,P08,Manuscript result tables and figures,P1,cpu,writer,POPETS-stats,evaluation/venue2027/popets/figures.py,TODO
+POPETS-release,popets,P08,Independent reproduction and claim ledger,P1,cpu,auditor,POPETS-stats;POPETS-figures;SH-release_integrity;POPETS-X09_linkability_eval;POPETS-X10_privacy_cost,research/venue2027/popets/release/claim_ledger.csv,TODO
+POPETS-paper,popets,P09,Update manuscript in correct venue template,P1,cpu,writer,POPETS-release;SH-venue_formats,research/venue2027/popets/paper/manuscript.tex,TODO
+POPETS-funding,popets,P09,"Submission, funding, and sponsorship route",P1,cpu,research_lead,POPETS-scope;SH-venue_formats,research/venue2027/popets/submission/funding_and_author_check.md,TODO
+POPETS-X01_lineage_graph,popets,P04,Construct purpose-labeled transitive data lineage,P1,cpu,security,POPETS-oracle,evaluation/venue2027/popets/lineage_graph.py,TODO
+POPETS-X02_revocation_events,popets,P02,Define post-revocation security semantics,P1,cpu,security,POPETS-schema,evaluation/venue2027/popets/revocation_model.py,TODO
+POPETS-X03_cache_control,popets,P04,Transitive revocation-aware invalidation,P1,cpu,security,POPETS-oracle,evaluation/venue2027/popets/cache_invalidation.py,TODO
+POPETS-X04_redisclosure_probe,popets,P05,Instrument future dispatches and retries,P1,cpu,security,POPETS-runner,evaluation/venue2027/popets/redisclosure_probe.py,TODO
+POPETS-X05_full_refresh,popets,P03,Strong recompute-from-source baseline,P1,cpu,security,POPETS-baselines,evaluation/venue2027/popets/full_refresh_reference.py,TODO
+POPETS-X06_purpose_cache,popets,P03,Strong purpose/epoch-tagged cache baseline,P1,cpu,security,POPETS-baselines,evaluation/venue2027/popets/purpose_aware_cache.py,TODO
+POPETS-X07_privacy_cases,popets,P02,Generate independent synthetic longitudinal histories,P1,cpu,security,POPETS-schema,evaluation/venue2027/popets/privacy_cases.py,TODO
+POPETS-X08_minimal_privacy,popets,P04,Minimize future outbound data,P1,cpu,security,POPETS-oracle,evaluation/venue2027/popets/minimal_disclosure.py,TODO
+POPETS-X09_linkability_eval,popets,P07,Evaluate inference from caches/logs,P1,cpu,security,POPETS-freeze,evaluation/venue2027/popets/linkability_eval.py,TODO
+POPETS-X10_privacy_cost,popets,P08,Quantify privacy–utility frontiers,P1,cpu,security,POPETS-stats,evaluation/venue2027/popets/privacy_cost.py,TODO
+IFIP_SEC-scope,ifip_sec,P01,Independent contribution and objective,P0,cpu,researcher,SH-claim_overlap;SH-literature_hardening,research/venue2027/ifip_sec/novelty_contract.md,TODO
+IFIP_SEC-rq_registry,ifip_sec,P01,"RQ, estimand, hypotheses and metrics",P0,cpu,statistician,IFIP_SEC-scope;SH-analysis_policy,research/venue2027/ifip_sec/rq_and_estimands.yaml,TODO
+IFIP_SEC-threat,ifip_sec,P01,"Threat, trust and failure model",P0,cpu,security,IFIP_SEC-scope;SH-research_ethics,research/venue2027/ifip_sec/threat_model.md,TODO
+IFIP_SEC-prior,ifip_sec,P01,Prior-art implementation and verification ledger,P0,cpu,researcher,IFIP_SEC-scope;SH-baseline_registry,research/venue2027/ifip_sec/literature_matrix.csv,TODO
+IFIP_SEC-overlap,ifip_sec,P01,Venue publication and evidence isolation,P0,cpu,research_lead,IFIP_SEC-scope;SH-claim_overlap,research/venue2027/ifip_sec/overlap_audit.md,TODO
+IFIP_SEC-schema,ifip_sec,P02,Case/run/output JSON schemas,P0,cpu,architect,IFIP_SEC-rq_registry;IFIP_SEC-threat;SH-base_contracts,research/venue2027/ifip_sec/protocols/study.schema.json,TODO
+IFIP_SEC-dataset,ifip_sec,P02,Synthetic dataset and split builder,P0,cpu,engineer,IFIP_SEC-schema;SH-schedule_engine,evaluation/venue2027/ifip_sec/generate_dataset.py,TODO
+IFIP_SEC-oracle,ifip_sec,P02,Independent per-case truth oracle,P0,cpu,scientist,IFIP_SEC-schema;IFIP_SEC-dataset;SH-independent_oracle,evaluation/venue2027/ifip_sec/independent_oracle.py,TODO
+IFIP_SEC-baselines,ifip_sec,P03,Baseline fidelity adapters,P1,cpu,engineer,IFIP_SEC-prior;SH-baseline_registry,evaluation/venue2027/ifip_sec/baselines.py,TODO
+IFIP_SEC-baseline_tests,ifip_sec,P03,Baseline conformance test suite,P1,cpu,auditor,IFIP_SEC-baselines;IFIP_SEC-oracle,tests/venue2027/ifip_sec/test_baseline_fidelity.py,TODO
+IFIP_SEC-candidate,ifip_sec,P04,Candidate algorithm boundary,P1,cpu,engineer,IFIP_SEC-oracle;SH-psc_interface,evaluation/venue2027/ifip_sec/candidate.py,TODO
+IFIP_SEC-ablation,ifip_sec,P04,Causal mechanism ablation variants,P1,cpu,scientist,IFIP_SEC-candidate,evaluation/venue2027/ifip_sec/ablations.py,TODO
+IFIP_SEC-runner,ifip_sec,P05,Uniform arm executor,P1,postgres,engineer,IFIP_SEC-candidate;IFIP_SEC-baseline_tests;SH-run_harness,evaluation/venue2027/ifip_sec/runner.py,TODO
+IFIP_SEC-traces,ifip_sec,P05,Immutable trace and measurement capture,P1,cpu,systems,IFIP_SEC-runner;SH-measurement,evaluation/venue2027/ifip_sec/trace_writer.py,TODO
+IFIP_SEC-unit,ifip_sec,P05,Deterministic property and adversarial tests,P1,cpu,auditor,IFIP_SEC-candidate;IFIP_SEC-baseline_tests,tests/venue2027/ifip_sec/test_algorithm_properties.py,TODO
+IFIP_SEC-pilot,ifip_sec,P06,Development pilot and resource/power estimate,P1,postgres,statistician,IFIP_SEC-unit;IFIP_SEC-ablation;IFIP_SEC-runner;IFIP_SEC-traces;IFIP_SEC-X01_receipt_schema;IFIP_SEC-X02_lineage_digest;IFIP_SEC-X03_nonce_store;IFIP_SEC-X04_context_verify;IFIP_SEC-X05_macaroons_strong;IFIP_SEC-X06_zanzibar_style;IFIP_SEC-X07_replay_generator;IFIP_SEC-X08_concurrent_consumers;IFIP_SEC-X09_constant_time,research/venue2027/ifip_sec/protocols/pilot_plan.yaml,TODO
+IFIP_SEC-freeze,ifip_sec,P06,Confirmatory preregistration freeze,P1,cpu,auditor,IFIP_SEC-pilot;IFIP_SEC-overlap;SH-freeze_tool,research/venue2027/ifip_sec/protocols/preregistration.yaml,TODO
+IFIP_SEC-confirm,ifip_sec,P07,Independent holdout evaluation,P1,postgres,orchestrator,IFIP_SEC-freeze;SH-r4_ci_gate,evaluation/venue2027/ifip_sec/run_confirmatory.py,TODO
+IFIP_SEC-stats,ifip_sec,P08,Preregistered statistical analysis,P1,cpu,statistician,IFIP_SEC-confirm;SH-analysis_policy,evaluation/venue2027/ifip_sec/analyze.py,TODO
+IFIP_SEC-figures,ifip_sec,P08,Manuscript result tables and figures,P1,cpu,writer,IFIP_SEC-stats,evaluation/venue2027/ifip_sec/figures.py,TODO
+IFIP_SEC-release,ifip_sec,P08,Independent reproduction and claim ledger,P1,cpu,auditor,IFIP_SEC-stats;IFIP_SEC-figures;SH-release_integrity;IFIP_SEC-X10_attack_table,research/venue2027/ifip_sec/release/claim_ledger.csv,TODO
+IFIP_SEC-paper,ifip_sec,P09,Update manuscript in correct venue template,P1,cpu,writer,IFIP_SEC-release;SH-venue_formats,research/venue2027/ifip_sec/paper/manuscript.tex,TODO
+IFIP_SEC-funding,ifip_sec,P09,"Submission, funding, and sponsorship route",P1,cpu,research_lead,IFIP_SEC-scope;SH-venue_formats,research/venue2027/ifip_sec/submission/funding_and_author_check.md,TODO
+IFIP_SEC-X01_receipt_schema,ifip_sec,P02,Define canonical context-bound receipt fields,P1,cpu,security,IFIP_SEC-schema,research/venue2027/ifip_sec/protocols/receipt.schema.json,TODO
+IFIP_SEC-X02_lineage_digest,ifip_sec,P04,Bind receipt to immutable model proposal lineage,P1,postgres,security,IFIP_SEC-oracle;SH-r4_ci_gate,evaluation/venue2027/ifip_sec/lineage_binding.py,TODO
+IFIP_SEC-X03_nonce_store,ifip_sec,P04,Atomic once-only receipt consumption,P1,postgres,security,IFIP_SEC-oracle;SH-r4_ci_gate,evaluation/venue2027/ifip_sec/nonce_store.py,TODO
+IFIP_SEC-X04_context_verify,ifip_sec,P04,Full online context and epoch recheck,P1,postgres,security,IFIP_SEC-oracle;SH-r4_ci_gate,evaluation/venue2027/ifip_sec/receipt_verifier.py,TODO
+IFIP_SEC-X05_macaroons_strong,ifip_sec,P03,Use genuine caveat-bound capability baseline,P1,cpu,security,IFIP_SEC-baselines,evaluation/venue2027/ifip_sec/macaroon_adapter.py,TODO
+IFIP_SEC-X06_zanzibar_style,ifip_sec,P03,Provide revision-aware authorization reference,P1,cpu,security,IFIP_SEC-baselines,evaluation/venue2027/ifip_sec/consistency_token_adapter.py,TODO
+IFIP_SEC-X07_replay_generator,ifip_sec,P02,Generate replay/consent/delegation sequences,P1,cpu,security,IFIP_SEC-schema,evaluation/venue2027/ifip_sec/replay_schedules.py,TODO
+IFIP_SEC-X08_concurrent_consumers,ifip_sec,P05,Run real concurrent nonce consumption in PostgreSQL,P1,postgres,security,IFIP_SEC-runner;SH-r4_ci_gate,evaluation/venue2027/ifip_sec/concurrency_probe.py,TODO
+IFIP_SEC-X09_constant_time,ifip_sec,P05,Measure verification and receipt-size cost,P1,postgres,security,IFIP_SEC-runner;SH-r4_ci_gate,evaluation/venue2027/ifip_sec/receipt_cost.py,TODO
+IFIP_SEC-X10_attack_table,ifip_sec,P08,Generate publication-ready paired attack matrix,P1,cpu,security,IFIP_SEC-stats,evaluation/venue2027/ifip_sec/replay_attack_table.py,TODO
+ACNS-scope,acns,P01,Independent contribution and objective,P0,cpu,researcher,SH-claim_overlap;SH-literature_hardening,research/venue2027/acns/novelty_contract.md,TODO
+ACNS-rq_registry,acns,P01,"RQ, estimand, hypotheses and metrics",P0,cpu,statistician,ACNS-scope;SH-analysis_policy,research/venue2027/acns/rq_and_estimands.yaml,TODO
+ACNS-threat,acns,P01,"Threat, trust and failure model",P0,cpu,security,ACNS-scope;SH-research_ethics,research/venue2027/acns/threat_model.md,TODO
+ACNS-prior,acns,P01,Prior-art implementation and verification ledger,P0,cpu,researcher,ACNS-scope;SH-baseline_registry,research/venue2027/acns/literature_matrix.csv,TODO
+ACNS-overlap,acns,P01,Venue publication and evidence isolation,P0,cpu,research_lead,ACNS-scope;SH-claim_overlap,research/venue2027/acns/overlap_audit.md,TODO
+ACNS-schema,acns,P02,Case/run/output JSON schemas,P0,cpu,architect,ACNS-rq_registry;ACNS-threat;SH-base_contracts,research/venue2027/acns/protocols/study.schema.json,TODO
+ACNS-dataset,acns,P02,Synthetic dataset and split builder,P0,cpu,engineer,ACNS-schema;SH-schedule_engine,evaluation/venue2027/acns/generate_dataset.py,TODO
+ACNS-oracle,acns,P02,Independent per-case truth oracle,P0,cpu,scientist,ACNS-schema;ACNS-dataset;SH-independent_oracle,evaluation/venue2027/acns/independent_oracle.py,TODO
+ACNS-baselines,acns,P03,Baseline fidelity adapters,P1,cpu,engineer,ACNS-prior;SH-baseline_registry,evaluation/venue2027/acns/baselines.py,TODO
+ACNS-baseline_tests,acns,P03,Baseline conformance test suite,P1,cpu,auditor,ACNS-baselines;ACNS-oracle,tests/venue2027/acns/test_baseline_fidelity.py,TODO
+ACNS-candidate,acns,P04,Candidate algorithm boundary,P1,cpu,engineer,ACNS-oracle;SH-psc_interface,evaluation/venue2027/acns/candidate.py,TODO
+ACNS-ablation,acns,P04,Causal mechanism ablation variants,P1,cpu,scientist,ACNS-candidate,evaluation/venue2027/acns/ablations.py,TODO
+ACNS-runner,acns,P05,Uniform arm executor,P1,cpu,engineer,ACNS-candidate;ACNS-baseline_tests;SH-run_harness,evaluation/venue2027/acns/runner.py,TODO
+ACNS-traces,acns,P05,Immutable trace and measurement capture,P1,cpu,systems,ACNS-runner;SH-measurement,evaluation/venue2027/acns/trace_writer.py,TODO
+ACNS-unit,acns,P05,Deterministic property and adversarial tests,P1,cpu,auditor,ACNS-candidate;ACNS-baseline_tests,tests/venue2027/acns/test_algorithm_properties.py,TODO
+ACNS-pilot,acns,P06,Development pilot and resource/power estimate,P1,cpu,statistician,ACNS-unit;ACNS-ablation;ACNS-runner;ACNS-traces;ACNS-X02_citation_corpus;ACNS-X03_evidence_taxonomy;ACNS-X04_claim_extractor;ACNS-X05_rater_manual;ACNS-X06_adjudication;ACNS-X07_witness_gallery;ACNS-X08_taxonomy_graph,research/venue2027/acns/protocols/pilot_plan.yaml,TODO
+ACNS-freeze,acns,P06,Confirmatory preregistration freeze,P1,cpu,auditor,ACNS-pilot;ACNS-overlap;SH-freeze_tool,research/venue2027/acns/protocols/preregistration.yaml,TODO
+ACNS-confirm,acns,P07,Independent holdout evaluation,P1,cpu,orchestrator,ACNS-freeze;SH-r4_ci_gate,evaluation/venue2027/acns/run_confirmatory.py,TODO
+ACNS-stats,acns,P08,Preregistered statistical analysis,P1,cpu,statistician,ACNS-confirm;SH-analysis_policy,evaluation/venue2027/acns/analyze.py,TODO
+ACNS-figures,acns,P08,Manuscript result tables and figures,P1,cpu,writer,ACNS-stats,evaluation/venue2027/acns/figures.py,TODO
+ACNS-release,acns,P08,Independent reproduction and claim ledger,P1,cpu,auditor,ACNS-stats;ACNS-figures;SH-release_integrity;ACNS-X09_screening_flow;ACNS-X10_sok_synthesis,research/venue2027/acns/release/claim_ledger.csv,TODO
+ACNS-paper,acns,P09,Update manuscript in correct venue template,P1,cpu,writer,ACNS-release;SH-venue_formats,research/venue2027/acns/paper/manuscript.tex,TODO
+ACNS-funding,acns,P09,"Submission, funding, and sponsorship route",P1,cpu,research_lead,ACNS-scope;SH-venue_formats,research/venue2027/acns/submission/funding_and_author_check.md,TODO
+ACNS-X01_review_protocol,acns,P01,Register systematic SoK review inclusion policy,P1,cpu,scientist,ACNS-scope,research/venue2027/acns/design/sok_review_protocol.md,TODO
+ACNS-X02_citation_corpus,acns,P02,Build deduplicated primary source corpus,P1,cpu,scientist,ACNS-schema,research/venue2027/acns/design/sok_corpus.csv,TODO
+ACNS-X03_evidence_taxonomy,acns,P04,Formalize layered attestation taxonomy,P1,cpu,scientist,ACNS-oracle,research/venue2027/acns/protocols/evidence_taxonomy.yaml,TODO
+ACNS-X04_claim_extractor,acns,P04,Extract claim/evidence pairs with traceability,P1,cpu,scientist,ACNS-oracle,evaluation/venue2027/acns/claim_extraction.py,TODO
+ACNS-X05_rater_manual,acns,P02,Write inter-rater codebook,P1,cpu,scientist,ACNS-schema,research/venue2027/acns/design/annotation_handbook.md,TODO
+ACNS-X06_adjudication,acns,P05,Compute independent coder agreement,P1,cpu,scientist,ACNS-runner,evaluation/venue2027/acns/rater_agreement.py,TODO
+ACNS-X07_witness_gallery,acns,P04,Build illustrative evidence fallacy witnesses,P1,cpu,scientist,ACNS-oracle,evaluation/venue2027/acns/executable_counterexamples.py,TODO
+ACNS-X08_taxonomy_graph,acns,P05,Visualize supported/unsupported implications,P1,cpu,scientist,ACNS-runner,evaluation/venue2027/acns/taxonomy_graph.py,TODO
+ACNS-X09_screening_flow,acns,P08,Produce systematic selection diagram,P1,cpu,scientist,ACNS-stats,evaluation/venue2027/acns/screening_flow.py,TODO
+ACNS-X10_sok_synthesis,acns,P08,Estimate evidence boundary distributions,P1,cpu,scientist,ACNS-stats,evaluation/venue2027/acns/claim_synthesis.py,TODO
+COMPSAC-scope,compsac,P01,Independent contribution and objective,P0,cpu,researcher,SH-claim_overlap;SH-literature_hardening,research/venue2027/compsac/novelty_contract.md,TODO
+COMPSAC-rq_registry,compsac,P01,"RQ, estimand, hypotheses and metrics",P0,cpu,statistician,COMPSAC-scope;SH-analysis_policy,research/venue2027/compsac/rq_and_estimands.yaml,TODO
+COMPSAC-threat,compsac,P01,"Threat, trust and failure model",P0,cpu,security,COMPSAC-scope;SH-research_ethics,research/venue2027/compsac/threat_model.md,TODO
+COMPSAC-prior,compsac,P01,Prior-art implementation and verification ledger,P0,cpu,researcher,COMPSAC-scope;SH-baseline_registry,research/venue2027/compsac/literature_matrix.csv,TODO
+COMPSAC-overlap,compsac,P01,Venue publication and evidence isolation,P0,cpu,research_lead,COMPSAC-scope;SH-claim_overlap,research/venue2027/compsac/overlap_audit.md,TODO
+COMPSAC-schema,compsac,P02,Case/run/output JSON schemas,P0,cpu,architect,COMPSAC-rq_registry;COMPSAC-threat;SH-base_contracts,research/venue2027/compsac/protocols/study.schema.json,TODO
+COMPSAC-dataset,compsac,P02,Synthetic dataset and split builder,P0,cpu,engineer,COMPSAC-schema;SH-schedule_engine,evaluation/venue2027/compsac/generate_dataset.py,TODO
+COMPSAC-oracle,compsac,P02,Independent per-case truth oracle,P0,cpu,scientist,COMPSAC-schema;COMPSAC-dataset;SH-independent_oracle,evaluation/venue2027/compsac/independent_oracle.py,TODO
+COMPSAC-baselines,compsac,P03,Baseline fidelity adapters,P1,cpu,engineer,COMPSAC-prior;SH-baseline_registry,evaluation/venue2027/compsac/baselines.py,TODO
+COMPSAC-baseline_tests,compsac,P03,Baseline conformance test suite,P1,cpu,auditor,COMPSAC-baselines;COMPSAC-oracle,tests/venue2027/compsac/test_baseline_fidelity.py,TODO
+COMPSAC-candidate,compsac,P04,Candidate algorithm boundary,P1,cpu,engineer,COMPSAC-oracle;SH-psc_interface,evaluation/venue2027/compsac/candidate.py,TODO
+COMPSAC-ablation,compsac,P04,Causal mechanism ablation variants,P1,cpu,scientist,COMPSAC-candidate,evaluation/venue2027/compsac/ablations.py,TODO
+COMPSAC-runner,compsac,P05,Uniform arm executor,P1,postgres,engineer,COMPSAC-candidate;COMPSAC-baseline_tests;SH-run_harness,evaluation/venue2027/compsac/runner.py,TODO
+COMPSAC-traces,compsac,P05,Immutable trace and measurement capture,P1,cpu,systems,COMPSAC-runner;SH-measurement,evaluation/venue2027/compsac/trace_writer.py,TODO
+COMPSAC-unit,compsac,P05,Deterministic property and adversarial tests,P1,cpu,auditor,COMPSAC-candidate;COMPSAC-baseline_tests,tests/venue2027/compsac/test_algorithm_properties.py,TODO
+COMPSAC-pilot,compsac,P06,Development pilot and resource/power estimate,P1,postgres,statistician,COMPSAC-unit;COMPSAC-ablation;COMPSAC-runner;COMPSAC-traces;COMPSAC-X01_readset_dsl;COMPSAC-X02_closure_oracle;COMPSAC-X03_pg_schema;COMPSAC-X04_pg_ssi;COMPSAC-X05_silo_occ;COMPSAC-X06_coarse_occ;COMPSAC-X07_scope_occ;COMPSAC-X08_pg_barriers,research/venue2027/compsac/protocols/pilot_plan.yaml,TODO
+COMPSAC-freeze,compsac,P06,Confirmatory preregistration freeze,P1,cpu,auditor,COMPSAC-pilot;COMPSAC-overlap;SH-freeze_tool,research/venue2027/compsac/protocols/preregistration.yaml,TODO
+COMPSAC-confirm,compsac,P07,Independent holdout evaluation,P1,postgres,orchestrator,COMPSAC-freeze;SH-r4_ci_gate;COMPSAC-X09_contention_matrix,evaluation/venue2027/compsac/run_confirmatory.py,TODO
+COMPSAC-stats,compsac,P08,Preregistered statistical analysis,P1,cpu,statistician,COMPSAC-confirm;SH-analysis_policy,evaluation/venue2027/compsac/analyze.py,TODO
+COMPSAC-figures,compsac,P08,Manuscript result tables and figures,P1,cpu,writer,COMPSAC-stats,evaluation/venue2027/compsac/figures.py,TODO
+COMPSAC-release,compsac,P08,Independent reproduction and claim ledger,P1,cpu,auditor,COMPSAC-stats;COMPSAC-figures;SH-release_integrity;COMPSAC-X10_tail_perf,research/venue2027/compsac/release/claim_ledger.csv,TODO
+COMPSAC-paper,compsac,P09,Update manuscript in correct venue template,P1,cpu,writer,COMPSAC-release;SH-venue_formats,research/venue2027/compsac/paper/manuscript.tex,TODO
+COMPSAC-funding,compsac,P09,"Submission, funding, and sponsorship route",P1,cpu,research_lead,COMPSAC-scope;SH-venue_formats,research/venue2027/compsac/submission/funding_and_author_check.md,TODO
+COMPSAC-X01_readset_dsl,compsac,P02,Typed transaction dependency language,P1,cpu,systems,COMPSAC-schema,evaluation/venue2027/compsac/dependency_dsl.py,TODO
+COMPSAC-X02_closure_oracle,compsac,P02,Derive oracle graph separately from candidate,P1,cpu,systems,COMPSAC-schema,evaluation/venue2027/compsac/independent_closure_oracle.py,TODO
+COMPSAC-X03_pg_schema,compsac,P04,Create isolated benchmark partition/version tables,P1,postgres,systems,COMPSAC-oracle;SH-r4_ci_gate,research/venue2027/compsac/design/postgres_schema.sql,TODO
+COMPSAC-X04_pg_ssi,compsac,P03,Strong PostgreSQL SSI with retry baseline,P1,cpu,systems,COMPSAC-baselines,evaluation/venue2027/compsac/postgres_serializable.py,TODO
+COMPSAC-X05_silo_occ,compsac,P03,Silo-style read-set OCC competitor,P1,cpu,systems,COMPSAC-baselines,evaluation/venue2027/compsac/silo_readset_port.py,TODO
+COMPSAC-X06_coarse_occ,compsac,P03,Global profile-version comparator,P1,cpu,systems,COMPSAC-baselines,evaluation/venue2027/compsac/profile_coarse_version.py,TODO
+COMPSAC-X07_scope_occ,compsac,P04,Candidate scoped admission,P1,postgres,systems,COMPSAC-oracle;SH-r4_ci_gate,evaluation/venue2027/compsac/dependency_scope_occ.py,TODO
+COMPSAC-X08_pg_barriers,compsac,P05,Deterministic interleaving controller,P1,postgres,systems,COMPSAC-runner;SH-r4_ci_gate,evaluation/venue2027/compsac/postgres_barrier_scheduler.py,TODO
+COMPSAC-X09_contention_matrix,compsac,P06,Freeze fair skew/dependency/concurrency matrix,P1,cpu,systems,COMPSAC-pilot,research/venue2027/compsac/protocols/contention_matrix.yaml,TODO
+COMPSAC-X10_tail_perf,compsac,P08,Safety-first throughput and false-stale frontier,P1,cpu,systems,COMPSAC-stats,evaluation/venue2027/compsac/tail_latency.py,TODO
+AIME-scope,aime,P01,Independent contribution and objective,P0,cpu,researcher,SH-claim_overlap;SH-literature_hardening,research/venue2027/aime/novelty_contract.md,TODO
+AIME-rq_registry,aime,P01,"RQ, estimand, hypotheses and metrics",P0,cpu,statistician,AIME-scope;SH-analysis_policy,research/venue2027/aime/rq_and_estimands.yaml,TODO
+AIME-threat,aime,P01,"Threat, trust and failure model",P0,cpu,security,AIME-scope;SH-research_ethics,research/venue2027/aime/threat_model.md,TODO
+AIME-prior,aime,P01,Prior-art implementation and verification ledger,P0,cpu,researcher,AIME-scope;SH-baseline_registry,research/venue2027/aime/literature_matrix.csv,TODO
+AIME-overlap,aime,P01,Venue publication and evidence isolation,P0,cpu,research_lead,AIME-scope;SH-claim_overlap,research/venue2027/aime/overlap_audit.md,TODO
+AIME-schema,aime,P02,Case/run/output JSON schemas,P0,cpu,architect,AIME-rq_registry;AIME-threat;SH-base_contracts,research/venue2027/aime/protocols/study.schema.json,TODO
+AIME-dataset,aime,P02,Synthetic dataset and split builder,P0,cpu,engineer,AIME-schema;SH-schedule_engine,evaluation/venue2027/aime/generate_dataset.py,TODO
+AIME-oracle,aime,P02,Independent per-case truth oracle,P0,clinical-review,scientist,AIME-schema;AIME-dataset;SH-independent_oracle,evaluation/venue2027/aime/independent_oracle.py,TODO
+AIME-baselines,aime,P03,Baseline fidelity adapters,P1,cpu,engineer,AIME-prior;SH-baseline_registry,evaluation/venue2027/aime/baselines.py,TODO
+AIME-baseline_tests,aime,P03,Baseline conformance test suite,P1,cpu,auditor,AIME-baselines;AIME-oracle,tests/venue2027/aime/test_baseline_fidelity.py,TODO
+AIME-candidate,aime,P04,Candidate algorithm boundary,P1,cpu,engineer,AIME-oracle;SH-psc_interface,evaluation/venue2027/aime/candidate.py,TODO
+AIME-ablation,aime,P04,Causal mechanism ablation variants,P1,cpu,scientist,AIME-candidate,evaluation/venue2027/aime/ablations.py,TODO
+AIME-runner,aime,P05,Uniform arm executor,P1,cpu,engineer,AIME-candidate;AIME-baseline_tests;SH-run_harness,evaluation/venue2027/aime/runner.py,TODO
+AIME-traces,aime,P05,Immutable trace and measurement capture,P1,cpu,systems,AIME-runner;SH-measurement,evaluation/venue2027/aime/trace_writer.py,TODO
+AIME-unit,aime,P05,Deterministic property and adversarial tests,P1,cpu,auditor,AIME-candidate;AIME-baseline_tests,tests/venue2027/aime/test_algorithm_properties.py,TODO
+AIME-pilot,aime,P06,Development pilot and resource/power estimate,P1,cpu,statistician,AIME-unit;AIME-ablation;AIME-runner;AIME-traces;AIME-X01_vignette_schema;AIME-X02_case_generator;AIME-X03_review_rubric;AIME-X04_prompt_harmonize;AIME-X05_strict_refresh;AIME-X06_selective_refresh;AIME-X07_model_adapter;AIME-X08_workflow_eval,research/venue2027/aime/protocols/pilot_plan.yaml,TODO
+AIME-freeze,aime,P06,Confirmatory preregistration freeze,P1,cpu,auditor,AIME-pilot;AIME-overlap;SH-freeze_tool,research/venue2027/aime/protocols/preregistration.yaml,TODO
+AIME-confirm,aime,P07,Independent holdout evaluation,P1,cpu,orchestrator,AIME-freeze;SH-r4_ci_gate,evaluation/venue2027/aime/run_confirmatory.py,TODO
+AIME-stats,aime,P08,Preregistered statistical analysis,P1,cpu,statistician,AIME-confirm;SH-analysis_policy,evaluation/venue2027/aime/analyze.py,TODO
+AIME-figures,aime,P08,Manuscript result tables and figures,P1,cpu,writer,AIME-stats,evaluation/venue2027/aime/figures.py,TODO
+AIME-release,aime,P08,Independent reproduction and claim ledger,P1,cpu,auditor,AIME-stats;AIME-figures;SH-release_integrity;AIME-X09_clinical_stats,research/venue2027/aime/release/claim_ledger.csv,TODO
+AIME-paper,aime,P09,Update manuscript in correct venue template,P1,cpu,writer,AIME-release;SH-venue_formats;AIME-X10_case_study,research/venue2027/aime/paper/manuscript.tex,TODO
+AIME-funding,aime,P09,"Submission, funding, and sponsorship route",P1,cpu,research_lead,AIME-scope;SH-venue_formats,research/venue2027/aime/submission/funding_and_author_check.md,TODO
+AIME-X01_vignette_schema,aime,P02,Typed source-disjoint synthetic clinical case,P1,cpu,scientist,AIME-schema,research/venue2027/aime/protocols/vignette.schema.json,TODO
+AIME-X02_case_generator,aime,P02,Generate stratified synthetic vignettes,P1,cpu,scientist,AIME-schema,evaluation/venue2027/aime/vignette_generator.py,TODO
+AIME-X03_review_rubric,aime,P02,Separate clinical and authorization labels,P1,cpu,clinician-review,AIME-schema,research/venue2027/aime/design/clinical_annotation_rubric.md,TODO
+AIME-X04_prompt_harmonize,aime,P03,Matched base context and token budget,P1,cpu,scientist,AIME-baselines,evaluation/venue2027/aime/prompt_harmonizer.py,TODO
+AIME-X05_strict_refresh,aime,P03,Recompute source with current consent baseline,P1,cpu,scientist,AIME-baselines,evaluation/venue2027/aime/full_refresh_arm.py,TODO
+AIME-X06_selective_refresh,aime,P04,PSC selective clinical re-generation,P1,cpu,scientist,AIME-oracle,evaluation/venue2027/aime/selective_refresh.py,TODO
+AIME-X07_model_adapter,aime,P04,Multi-provider fixed-model invoker,P1,model-api,scientist,AIME-oracle,evaluation/venue2027/aime/model_adapter.py,TODO
+AIME-X08_workflow_eval,aime,P05,Independent task completion and refusal grader,P1,cpu,scientist,AIME-runner,evaluation/venue2027/aime/workflow_evaluator.py,TODO
+AIME-X09_clinical_stats,aime,P08,Paired vignette-level effects with reviewer uncertainty,P1,cpu,scientist,AIME-stats,evaluation/venue2027/aime/cluster_stats.py,TODO
+AIME-X10_case_study,aime,P09,Reviewer-transparent qualitative cases,P1,cpu,scientist,AIME-release,evaluation/venue2027/aime/case_study_panel.py,TODO
+SACMAT-scope,sacmat,P01,Independent contribution and objective,P0,cpu,researcher,SH-claim_overlap;SH-literature_hardening,research/venue2027/sacmat/novelty_contract.md,TODO
+SACMAT-rq_registry,sacmat,P01,"RQ, estimand, hypotheses and metrics",P0,cpu,statistician,SACMAT-scope;SH-analysis_policy,research/venue2027/sacmat/rq_and_estimands.yaml,TODO
+SACMAT-threat,sacmat,P01,"Threat, trust and failure model",P0,cpu,security,SACMAT-scope;SH-research_ethics,research/venue2027/sacmat/threat_model.md,TODO
+SACMAT-prior,sacmat,P01,Prior-art implementation and verification ledger,P0,cpu,researcher,SACMAT-scope;SH-baseline_registry,research/venue2027/sacmat/literature_matrix.csv,TODO
+SACMAT-overlap,sacmat,P01,Venue publication and evidence isolation,P0,cpu,research_lead,SACMAT-scope;SH-claim_overlap,research/venue2027/sacmat/overlap_audit.md,TODO
+SACMAT-schema,sacmat,P02,Case/run/output JSON schemas,P0,cpu,architect,SACMAT-rq_registry;SACMAT-threat;SH-base_contracts,research/venue2027/sacmat/protocols/study.schema.json,TODO
+SACMAT-dataset,sacmat,P02,Synthetic dataset and split builder,P0,cpu,engineer,SACMAT-schema;SH-schedule_engine,evaluation/venue2027/sacmat/generate_dataset.py,TODO
+SACMAT-oracle,sacmat,P02,Independent per-case truth oracle,P0,cpu,scientist,SACMAT-schema;SACMAT-dataset;SH-independent_oracle,evaluation/venue2027/sacmat/independent_oracle.py,TODO
+SACMAT-baselines,sacmat,P03,Baseline fidelity adapters,P1,cpu,engineer,SACMAT-prior;SH-baseline_registry,evaluation/venue2027/sacmat/baselines.py,TODO
+SACMAT-baseline_tests,sacmat,P03,Baseline conformance test suite,P1,cpu,auditor,SACMAT-baselines;SACMAT-oracle,tests/venue2027/sacmat/test_baseline_fidelity.py,TODO
+SACMAT-candidate,sacmat,P04,Candidate algorithm boundary,P1,cpu,engineer,SACMAT-oracle;SH-psc_interface,evaluation/venue2027/sacmat/candidate.py,TODO
+SACMAT-ablation,sacmat,P04,Causal mechanism ablation variants,P1,cpu,scientist,SACMAT-candidate,evaluation/venue2027/sacmat/ablations.py,TODO
+SACMAT-runner,sacmat,P05,Uniform arm executor,P1,cpu,engineer,SACMAT-candidate;SACMAT-baseline_tests;SH-run_harness,evaluation/venue2027/sacmat/runner.py,TODO
+SACMAT-traces,sacmat,P05,Immutable trace and measurement capture,P1,cpu,systems,SACMAT-runner;SH-measurement,evaluation/venue2027/sacmat/trace_writer.py,TODO
+SACMAT-unit,sacmat,P05,Deterministic property and adversarial tests,P1,cpu,auditor,SACMAT-candidate;SACMAT-baseline_tests,tests/venue2027/sacmat/test_algorithm_properties.py,TODO
+SACMAT-pilot,sacmat,P06,Development pilot and resource/power estimate,P1,cpu,statistician,SACMAT-unit;SACMAT-ablation;SACMAT-runner;SACMAT-traces;SACMAT-X01_policy_trace_dsl;SACMAT-X02_reference_semantics;SACMAT-X03_cedar_runner;SACMAT-X04_openfga_runner;SACMAT-X05_opa_runner;SACMAT-X06_temporal_generator;SACMAT-X07_mutation_ops;SACMAT-X08_budget_runner;SACMAT-X09_minimizer,research/venue2027/sacmat/protocols/pilot_plan.yaml,TODO
+SACMAT-freeze,sacmat,P06,Confirmatory preregistration freeze,P1,cpu,auditor,SACMAT-pilot;SACMAT-overlap;SH-freeze_tool,research/venue2027/sacmat/protocols/preregistration.yaml,TODO
+SACMAT-confirm,sacmat,P07,Independent holdout evaluation,P1,cpu,orchestrator,SACMAT-freeze;SH-r4_ci_gate,evaluation/venue2027/sacmat/run_confirmatory.py,TODO
+SACMAT-stats,sacmat,P08,Preregistered statistical analysis,P1,cpu,statistician,SACMAT-confirm;SH-analysis_policy,evaluation/venue2027/sacmat/analyze.py,TODO
+SACMAT-figures,sacmat,P08,Manuscript result tables and figures,P1,cpu,writer,SACMAT-stats,evaluation/venue2027/sacmat/figures.py,TODO
+SACMAT-release,sacmat,P08,Independent reproduction and claim ledger,P1,cpu,auditor,SACMAT-stats;SACMAT-figures;SH-release_integrity;SACMAT-X10_crossengine,research/venue2027/sacmat/release/claim_ledger.csv,TODO
+SACMAT-paper,sacmat,P09,Update manuscript in correct venue template,P1,cpu,writer,SACMAT-release;SH-venue_formats,research/venue2027/sacmat/paper/manuscript.tex,TODO
+SACMAT-funding,sacmat,P09,"Submission, funding, and sponsorship route",P1,cpu,research_lead,SACMAT-scope;SH-venue_formats,research/venue2027/sacmat/submission/funding_and_author_check.md,TODO
+SACMAT-X01_policy_trace_dsl,sacmat,P02,Define temporal grant/revoke/delegation trace grammar,P1,cpu,security,SACMAT-schema,evaluation/venue2027/sacmat/policy_trace_dsl.py,TODO
+SACMAT-X02_reference_semantics,sacmat,P02,Language-independent policy oracle,P1,cpu,security,SACMAT-schema,evaluation/venue2027/sacmat/reference_semantics.py,TODO
+SACMAT-X03_cedar_runner,sacmat,P03,Cedar real-engine adapter,P1,cpu,security,SACMAT-baselines,evaluation/venue2027/sacmat/cedar_adapter.py,TODO
+SACMAT-X04_openfga_runner,sacmat,P03,OpenFGA real-engine adapter,P1,cpu,security,SACMAT-baselines,evaluation/venue2027/sacmat/openfga_adapter.py,TODO
+SACMAT-X05_opa_runner,sacmat,P03,OPA/Rego real-engine adapter,P1,cpu,security,SACMAT-baselines,evaluation/venue2027/sacmat/opa_adapter.py,TODO
+SACMAT-X06_temporal_generator,sacmat,P04,Generate temporally ordered discriminating tests,P1,cpu,security,SACMAT-oracle,evaluation/venue2027/sacmat/temporal_trace_generator.py,TODO
+SACMAT-X07_mutation_ops,sacmat,P04,Mutation operator library,P1,cpu,security,SACMAT-oracle,evaluation/venue2027/sacmat/policy_mutants.py,TODO
+SACMAT-X08_budget_runner,sacmat,P05,Equal-budget competitor benchmark,P1,cpu,security,SACMAT-runner,evaluation/venue2027/sacmat/budget_fair_runner.py,TODO
+SACMAT-X09_minimizer,sacmat,P05,Reduce fault-revealing trace,P1,cpu,security,SACMAT-runner,evaluation/venue2027/sacmat/temporal_witness_minimizer.py,TODO
+SACMAT-X10_crossengine,sacmat,P08,Report expressivity and parity by construct,P1,cpu,security,SACMAT-stats,evaluation/venue2027/sacmat/cross_engine_report.py,TODO
+DIMVA-scope,dimva,P01,Independent contribution and objective,P0,cpu,researcher,SH-claim_overlap;SH-literature_hardening,research/venue2027/dimva/novelty_contract.md,TODO
+DIMVA-rq_registry,dimva,P01,"RQ, estimand, hypotheses and metrics",P0,cpu,statistician,DIMVA-scope;SH-analysis_policy,research/venue2027/dimva/rq_and_estimands.yaml,TODO
+DIMVA-threat,dimva,P01,"Threat, trust and failure model",P0,cpu,security,DIMVA-scope;SH-research_ethics,research/venue2027/dimva/threat_model.md,TODO
+DIMVA-prior,dimva,P01,Prior-art implementation and verification ledger,P0,cpu,researcher,DIMVA-scope;SH-baseline_registry,research/venue2027/dimva/literature_matrix.csv,TODO
+DIMVA-overlap,dimva,P01,Venue publication and evidence isolation,P0,cpu,research_lead,DIMVA-scope;SH-claim_overlap,research/venue2027/dimva/overlap_audit.md,TODO
+DIMVA-schema,dimva,P02,Case/run/output JSON schemas,P0,cpu,architect,DIMVA-rq_registry;DIMVA-threat;SH-base_contracts,research/venue2027/dimva/protocols/study.schema.json,TODO
+DIMVA-dataset,dimva,P02,Synthetic dataset and split builder,P0,cpu,engineer,DIMVA-schema;SH-schedule_engine,evaluation/venue2027/dimva/generate_dataset.py,TODO
+DIMVA-oracle,dimva,P02,Independent per-case truth oracle,P0,cpu,scientist,DIMVA-schema;DIMVA-dataset;SH-independent_oracle,evaluation/venue2027/dimva/independent_oracle.py,TODO
+DIMVA-baselines,dimva,P03,Baseline fidelity adapters,P1,cpu,engineer,DIMVA-prior;SH-baseline_registry,evaluation/venue2027/dimva/baselines.py,TODO
+DIMVA-baseline_tests,dimva,P03,Baseline conformance test suite,P1,cpu,auditor,DIMVA-baselines;DIMVA-oracle,tests/venue2027/dimva/test_baseline_fidelity.py,TODO
+DIMVA-candidate,dimva,P04,Candidate algorithm boundary,P1,cpu,engineer,DIMVA-oracle;SH-psc_interface,evaluation/venue2027/dimva/candidate.py,TODO
+DIMVA-ablation,dimva,P04,Causal mechanism ablation variants,P1,cpu,scientist,DIMVA-candidate,evaluation/venue2027/dimva/ablations.py,TODO
+DIMVA-runner,dimva,P05,Uniform arm executor,P1,cpu,engineer,DIMVA-candidate;DIMVA-baseline_tests;SH-run_harness,evaluation/venue2027/dimva/runner.py,TODO
+DIMVA-traces,dimva,P05,Immutable trace and measurement capture,P1,cpu,systems,DIMVA-runner;SH-measurement,evaluation/venue2027/dimva/trace_writer.py,TODO
+DIMVA-unit,dimva,P05,Deterministic property and adversarial tests,P1,cpu,auditor,DIMVA-candidate;DIMVA-baseline_tests,tests/venue2027/dimva/test_algorithm_properties.py,TODO
+DIMVA-pilot,dimva,P06,Development pilot and resource/power estimate,P1,cpu,statistician,DIMVA-unit;DIMVA-ablation;DIMVA-runner;DIMVA-traces;DIMVA-X01_event_schema;DIMVA-X02_campaign_gen;DIMVA-X03_benign_gen;DIMVA-X04_feature_encoder;DIMVA-X05_rules_detector;DIMVA-X06_seq_detector;DIMVA-X07_adaptive_evasion;DIMVA-X08_splitter,research/venue2027/dimva/protocols/pilot_plan.yaml,TODO
+DIMVA-freeze,dimva,P06,Confirmatory preregistration freeze,P1,cpu,auditor,DIMVA-pilot;DIMVA-overlap;SH-freeze_tool,research/venue2027/dimva/protocols/preregistration.yaml,TODO
+DIMVA-confirm,dimva,P07,Independent holdout evaluation,P1,cpu,orchestrator,DIMVA-freeze;SH-r4_ci_gate;DIMVA-X09_fpr_calibrator,evaluation/venue2027/dimva/run_confirmatory.py,TODO
+DIMVA-stats,dimva,P08,Preregistered statistical analysis,P1,cpu,statistician,DIMVA-confirm;SH-analysis_policy,evaluation/venue2027/dimva/analyze.py,TODO
+DIMVA-figures,dimva,P08,Manuscript result tables and figures,P1,cpu,writer,DIMVA-stats,evaluation/venue2027/dimva/figures.py,TODO
+DIMVA-release,dimva,P08,Independent reproduction and claim ledger,P1,cpu,auditor,DIMVA-stats;DIMVA-figures;SH-release_integrity;DIMVA-X10_detector_metrics,research/venue2027/dimva/release/claim_ledger.csv,TODO
+DIMVA-paper,dimva,P09,Update manuscript in correct venue template,P1,cpu,writer,DIMVA-release;SH-venue_formats,research/venue2027/dimva/paper/manuscript.tex,TODO
+DIMVA-funding,dimva,P09,"Submission, funding, and sponsorship route",P1,cpu,research_lead,DIMVA-scope;SH-venue_formats,research/venue2027/dimva/submission/funding_and_author_check.md,TODO
+DIMVA-X01_event_schema,dimva,P02,Minimized authorized telemetry contract,P1,cpu,security,DIMVA-schema,research/venue2027/dimva/protocols/minimal_agent_event.schema.json,TODO
+DIMVA-X02_campaign_gen,dimva,P02,Generate synthetic adaptive attack campaigns,P1,cpu,security,DIMVA-schema,evaluation/venue2027/dimva/campaign_generator.py,TODO
+DIMVA-X03_benign_gen,dimva,P02,Generate realistic nonmalicious retries,P1,cpu,security,DIMVA-schema,evaluation/venue2027/dimva/benign_fault_generator.py,TODO
+DIMVA-X04_feature_encoder,dimva,P04,Sequence features without content leakage,P1,cpu,security,DIMVA-oracle,evaluation/venue2027/dimva/feature_encoding.py,TODO
+DIMVA-X05_rules_detector,dimva,P03,Strong tuned deterministic baseline,P1,cpu,security,DIMVA-baselines,evaluation/venue2027/dimva/rules_detector.py,TODO
+DIMVA-X06_seq_detector,dimva,P04,Candidate campaign detector,P1,cpu,security,DIMVA-oracle,evaluation/venue2027/dimva/sequence_detector.py,TODO
+DIMVA-X07_adaptive_evasion,dimva,P05,Low-and-slow and metadata-tampering evaluation,P1,cpu,security,DIMVA-runner,evaluation/venue2027/dimva/adaptive_evasion.py,TODO
+DIMVA-X08_splitter,dimva,P02,Enforce strict independent cross-domain holdout,P1,cpu,security,DIMVA-schema,evaluation/venue2027/dimva/group_split.py,TODO
+DIMVA-X09_fpr_calibrator,dimva,P06,Lock decision threshold for low false alarms,P1,cpu,security,DIMVA-pilot,evaluation/venue2027/dimva/fpr_calibration.py,TODO
+DIMVA-X10_detector_metrics,dimva,P08,Calculate campaign PR-AUC and detection utility,P1,cpu,security,DIMVA-stats,evaluation/venue2027/dimva/detector_report.py,TODO
+PST-scope,pst,P01,Independent contribution and objective,P0,cpu,researcher,SH-claim_overlap;SH-literature_hardening,research/venue2027/pst/novelty_contract.md,TODO
+PST-rq_registry,pst,P01,"RQ, estimand, hypotheses and metrics",P0,cpu,statistician,PST-scope;SH-analysis_policy,research/venue2027/pst/rq_and_estimands.yaml,TODO
+PST-threat,pst,P01,"Threat, trust and failure model",P0,cpu,security,PST-scope;SH-research_ethics,research/venue2027/pst/threat_model.md,TODO
+PST-prior,pst,P01,Prior-art implementation and verification ledger,P0,cpu,researcher,PST-scope;SH-baseline_registry,research/venue2027/pst/literature_matrix.csv,TODO
+PST-overlap,pst,P01,Venue publication and evidence isolation,P0,cpu,research_lead,PST-scope;SH-claim_overlap,research/venue2027/pst/overlap_audit.md,TODO
+PST-schema,pst,P02,Case/run/output JSON schemas,P0,cpu,architect,PST-rq_registry;PST-threat;SH-base_contracts,research/venue2027/pst/protocols/study.schema.json,TODO
+PST-dataset,pst,P02,Synthetic dataset and split builder,P0,cpu,engineer,PST-schema;SH-schedule_engine,evaluation/venue2027/pst/generate_dataset.py,TODO
+PST-oracle,pst,P02,Independent per-case truth oracle,P0,cpu,scientist,PST-schema;PST-dataset;SH-independent_oracle,evaluation/venue2027/pst/independent_oracle.py,TODO
+PST-baselines,pst,P03,Baseline fidelity adapters,P1,cpu,engineer,PST-prior;SH-baseline_registry,evaluation/venue2027/pst/baselines.py,TODO
+PST-baseline_tests,pst,P03,Baseline conformance test suite,P1,cpu,auditor,PST-baselines;PST-oracle,tests/venue2027/pst/test_baseline_fidelity.py,TODO
+PST-candidate,pst,P04,Candidate algorithm boundary,P1,cpu,engineer,PST-oracle;SH-psc_interface,evaluation/venue2027/pst/candidate.py,TODO
+PST-ablation,pst,P04,Causal mechanism ablation variants,P1,cpu,scientist,PST-candidate,evaluation/venue2027/pst/ablations.py,TODO
+PST-runner,pst,P05,Uniform arm executor,P1,cpu,engineer,PST-candidate;PST-baseline_tests;SH-run_harness,evaluation/venue2027/pst/runner.py,TODO
+PST-traces,pst,P05,Immutable trace and measurement capture,P1,cpu,systems,PST-runner;SH-measurement,evaluation/venue2027/pst/trace_writer.py,TODO
+PST-unit,pst,P05,Deterministic property and adversarial tests,P1,cpu,auditor,PST-candidate;PST-baseline_tests,tests/venue2027/pst/test_algorithm_properties.py,TODO
+PST-pilot,pst,P06,Development pilot and resource/power estimate,P1,cpu,statistician,PST-unit;PST-ablation;PST-runner;PST-traces;PST-X01_receipt_contract;PST-X02_forensic_queries;PST-X03_minimization;PST-X04_encrypted_ref;PST-X05_transparency_ref;PST-X06_key_rotation;PST-X07_audit_reconstruct;PST-X08_linkage_attacker,research/venue2027/pst/protocols/pilot_plan.yaml,TODO
+PST-freeze,pst,P06,Confirmatory preregistration freeze,P1,cpu,auditor,PST-pilot;PST-overlap;SH-freeze_tool,research/venue2027/pst/protocols/preregistration.yaml,TODO
+PST-confirm,pst,P07,Independent holdout evaluation,P1,cpu,orchestrator,PST-freeze;SH-r4_ci_gate;PST-X09_retention_campaign,evaluation/venue2027/pst/run_confirmatory.py,TODO
+PST-stats,pst,P08,Preregistered statistical analysis,P1,cpu,statistician,PST-confirm;SH-analysis_policy,evaluation/venue2027/pst/analyze.py,TODO
+PST-figures,pst,P08,Manuscript result tables and figures,P1,cpu,writer,PST-stats,evaluation/venue2027/pst/figures.py,TODO
+PST-release,pst,P08,Independent reproduction and claim ledger,P1,cpu,auditor,PST-stats;PST-figures;SH-release_integrity;PST-X10_receipt_frontier,research/venue2027/pst/release/claim_ledger.csv,TODO
+PST-paper,pst,P09,Update manuscript in correct venue template,P1,cpu,writer,PST-release;SH-venue_formats,research/venue2027/pst/paper/manuscript.tex,TODO
+PST-funding,pst,P09,"Submission, funding, and sponsorship route",P1,cpu,research_lead,PST-scope;SH-venue_formats,research/venue2027/pst/submission/funding_and_author_check.md,TODO
+PST-X01_receipt_contract,pst,P02,Purpose-bound forensic receipt grammar,P1,cpu,security,PST-schema,research/venue2027/pst/protocols/minimal_receipt.schema.json,TODO
+PST-X02_forensic_queries,pst,P02,Predeclare answerable audit questions,P1,cpu,security,PST-schema,research/venue2027/pst/protocols/forensic_query_catalog.yaml,TODO
+PST-X03_minimization,pst,P04,Minimize receipts by forensic purpose,P1,cpu,security,PST-oracle,evaluation/venue2027/pst/purpose_minimizer.py,TODO
+PST-X04_encrypted_ref,pst,P03,Strong encrypted full log comparator,P1,cpu,security,PST-baselines,evaluation/venue2027/pst/encrypted_full_log.py,TODO
+PST-X05_transparency_ref,pst,P03,Append-only transparency baseline,P1,cpu,security,PST-baselines,evaluation/venue2027/pst/merkle_transparency.py,TODO
+PST-X06_key_rotation,pst,P04,Retention epoch and pseudonym key lifecycle,P1,cpu,security,PST-oracle,evaluation/venue2027/pst/epoch_keys.py,TODO
+PST-X07_audit_reconstruct,pst,P05,Reconstruct admissible answers from limited receipts,P1,cpu,security,PST-runner,evaluation/venue2027/pst/forensic_reconstruction.py,TODO
+PST-X08_linkage_attacker,pst,P05,Explicit metadata attacker evaluation,P1,cpu,security,PST-runner,evaluation/venue2027/pst/auxiliary_linkage.py,TODO
+PST-X09_retention_campaign,pst,P06,Freeze retention/cost query matrix,P1,cpu,security,PST-pilot,research/venue2027/pst/protocols/retention_campaign.yaml,TODO
+PST-X10_receipt_frontier,pst,P08,Privacy-forensics-cost Pareto analysis,P1,cpu,security,PST-stats,evaluation/venue2027/pst/receipt_frontier.py,TODO

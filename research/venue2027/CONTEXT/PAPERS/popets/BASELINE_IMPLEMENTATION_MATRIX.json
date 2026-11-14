@@ -1,0 +1,89 @@
+{
+  "study_id": "popets",
+  "source_branch": "research/glhs-r4-novelty-hardening",
+  "status": "PROPOSED_NOT_RUN",
+  "primary_metric": "future unauthorized disclosure rate",
+  "dataset_plan": "Synthetic 1200 unique subjects with 3-6 longitudinal contexts each; factorial lineage fanout, delayed cache writes, retries, and policy changes; source-disjoint holdout; label N by subject not number of dispatches.",
+  "oracle": "Independent recomputation of all live-purpose permission clauses from source snapshots; byte-level dispatch interceptor and sealed cancellation log.",
+  "baselines": [
+    {
+      "id": "B0",
+      "design": "TTL-only cache",
+      "role": "weak lower bound",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B1",
+      "design": "coarse cache purge on consent change",
+      "role": "strong simple safety baseline",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B2",
+      "design": "always-recompute authorized projection per dispatch",
+      "role": "privacy reference upper bound, cost comparator",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B3",
+      "design": "Zanzibar-like consistency-token authorization + derived-cache tagging",
+      "role": "strong architecture baseline if adapter truly supports derivations",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B4",
+      "design": "proposed transitive provenance-label invalidation",
+      "role": "candidate",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    }
+  ],
+  "risks": "Inability to retract already delivered content must be stated prominently. Post-revocation future leakage only; no claim of cryptographic retroactive erasure.",
+  "stop_rule": "If complete per-dispatch authorization + recompute matches the candidate with negligible overhead and zero leakage, narrow novelty to an engineering performance trade-off; never assert erasure of prior external disclosures.",
+  "source_records": [
+    {
+      "id": "zanzibar19",
+      "url": "https://www.usenix.org/conference/atc19/presentation/pang",
+      "venue": "USENIX ATC 2019"
+    },
+    {
+      "id": "muse",
+      "url": "https://research.google/pubs/muse-machine-unlearning-six-way-evaluation-for-language-models/",
+      "venue": "Research evaluation work"
+    },
+    {
+      "id": "macaroons14",
+      "url": "https://research.google/pubs/macaroons-cookies-with-contextual-caveats-for-decentralized-authorization-in-the-cloud/",
+      "venue": "NDSS 2014"
+    },
+    {
+      "id": "rats9334",
+      "url": "https://www.rfc-editor.org/rfc/rfc9334.html",
+      "venue": "IETF RFC 9334"
+    },
+    {
+      "id": "ct9162",
+      "url": "https://www.rfc-editor.org/rfc/rfc9162.html",
+      "venue": "IETF RFC 9162"
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry,microtype,setspace,amsmath,amssymb,amsthm}
+\usepackage{booktabs,tabularx,array,graphicx,xcolor,url,hyperref}
+\usepackage{algorithm,algpseudocode}
+\geometry{margin=1.03in}
+\emergencystretch=2.5em
+\setstretch{1.12}
+\hypersetup{colorlinks=false,pdfborder={0 0 0},pdftitle={CLARA-Care Research Manuscript}}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\title{\vspace{-1em}\textbf{SoK: What Can Inference Attestation Prove About AI-Visible Context?}} 
+\author{Nguyen Ngoc Thien \and Trinh Minh Quang}\date{November 2026}
+\begin{document}
+\maketitle
+\begin{center}\small Hai Ba Trung High School, Hue, Vietnam\end{center}
+\begin{abstract}
+Attestation claims in tool-using AI systems range from evidence that a prompt was assembled to evidence that a transport channel acknowledged bytes and, more ambitiously, assertions that a model used those bytes in generating an action. These statements are often treated as interchangeable even though they depend on different observation points and trust assumptions. We present an evidence-to-claim lattice for AI action pipelines, relating local assembly logs, egress records, transport receipts, provider attestations, and execution traces. The framework specifies the claims each evidence class supports and constructs minimal counterexamples to invalid implications. We describe a reproducible systematic review with independently coded studies and an executable witness corpus that separates observability from semantic inference. The aim is a precise vocabulary and evaluation method for assurance claims about agentic systems.
+\end{abstract}
+\noindent\textbf{Keywords:} systematization of knowledge; remote attestation; AI agents; provenance; evidence taxonomy.
+\medskip\hrule\medskip
+
+\section{Introduction}
+An audit trail may establish that an application constructed a prompt, that its gateway sent a request, or that a remote service acknowledged a message. These are different events. Yet descriptions of trustworthy AI pipelines frequently compress them into the assertion that an agent "used" a given source. That compression obscures the trust assumptions on which later decisions depend.
+
+Established remote attestation and provenance frameworks provide essential concepts for evaluating such statements. What remains challenging for tool-using AI systems is the changing observer: local instrumentation, a network intermediary, a remote provider, and an application-level task evaluator see different portions of the same execution. A useful assurance claim must state whose evidence is trusted and which implication follows from that evidence.
+
+This work organizes those claims into a lattice and examines implications through executable counterexample witnesses. It combines a systematic literature protocol with a small formal observation model, so that contested categories can be evaluated rather than resolved by terminology alone. The resulting SoK is intended to improve experimental reporting and the design of verifiable action pipelines.
+
+\paragraph{Contributions.} We contribute an observer-sensitive assurance taxonomy, executable witnesses for unsupported evidence-to-claim implications, and a reproducible literature coding protocol with independent reviewer agreement.
+
+\section{Prior Work and Research Gap}
+Provenance records, reference monitors, and formal specifications already distinguish events, evidence, and claims \cite{saltzer1975,lamport2002,fhir2023}. Security research on model evaluation further highlights the gap between observable behavior and underlying properties \cite{sculley2015}. We use the established attestation and provenance vocabulary as the starting point. The synthesis contribution lies in mapping AI-specific claim language to observer capabilities, cataloguing unsupported implication steps, and testing the resulting taxonomy for repeatability across independent coders and published examples.
+
+\paragraph{Research positioning.} CLARA-Care serves as one illustrative pipeline for the taxonomy, not as the sole evidence source. The contribution lies in systematic comparative assurance reasoning across the literature.
+
+\section{Research Questions and Study Setting}
+\paragraph{RQ1 — Evidence strength} Which AI assurance statements are justified by assembly, dispatch, acknowledgment, provider receipt, and execution evidence under explicit trust assumptions? The unit is an extracted claim from the reviewed corpus; record its evidence source, observer, and supported level.
+
+\paragraph{RQ2 — Invalid implications} Which commonly implied transitions between evidence levels have executable counterexamples? Measure reproducible witness coverage and classify the assumptions needed to remove each counterexample.
+
+\paragraph{RQ3 — Taxonomic reliability} Can independent reviewers apply the evidence taxonomy consistently across systems and publication styles? Report inter-rater agreement, adjudicated disagreements, and retained ambiguous cases.
+
+\paragraph{Study boundary.} The threat model allows log omission, message substitution, and disagreement between local and remote observers. It does not infer a model’s internal causal use of an input from a transport receipt.
+
+\subsection{Controlled challenge families}
+\begin{table}[ht]
+\centering\small
+\caption{Prespecified workload and challenge families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+ID & Prespecified condition \\ \midrule
+F1 & Server constructs context but does not transmit it \\ 
+F2 & Transport retry changes payload after receipt creation \\ 
+F3 & Provider receives content but ignores it \\ 
+F4 & Audit receipt lacks actor or purpose semantics \\ 
+F5 & Provider claims are unverified self-reports \\ 
+\bottomrule\end{tabularx}\end{table}
+
+\section{Method and Implementation Architecture}
+The study constructs a two-dimensional classification system. One axis records the point of observation in an AI action pipeline; the other records the trust assumptions required to treat that observation as evidence. Candidate implications are mechanically checked against a small execution model, and disputed implications are accompanied by minimal counterexample pairs. In parallel, two independent reviewers code assurance claims from a preregistered publication sample using the same definitions. Agreement and witness reproduction provide complementary tests of the taxonomy.
+
+\subsection{Claim-evidence strata}
+The SoK categorizes six claims that should not be used interchangeably: $L_0$ artifact existence; $L_1$ authenticated server assembly; $L_2$ verified outbound bytes; $L_3$ peer-delivery evidence; $L_4$ provider-side statement of processing; and $L_5$ semantic or causal use by an internal model. A lower-level proof cannot automatically imply a higher-level claim. For example, cryptographic verification of an outbound digest does not establish that an unobservable provider's internal model attended to the bytes. Each reviewed publication receives a vector of claimed levels and an independent vector of actually justified levels.
+
+\subsection{Systematic search and coding}
+The search protocol records database, date, exact query, index filters, deduplication keys and citation snowballing decisions. Inclusion requires a technical statement about model-visible contexts, provenance, request authentication, verifiable inference, or post-inference action authorization; purely generic AI ethics opinion pieces are excluded unless they define an operational claim. Two independent human coders annotate a blinded subset before agreeing on the final codebook. The final report will distinguish publications from individual claim sentences and compute inter-rater agreement at the chosen unit; an LLM assistant is not counted as an independent coder.
+
+\subsection{Executable counterexamples}
+Three minimal witnesses separate the strata. First, a server assembles context and writes an audit digest without emitting a transport request. Second, a retry path changes the final payload after the original digest was computed. Third, a provider returns a plausible result without using a supplied irrelevant attribute; the third witness cannot generally prove the internal cause of a black-box model's response. Each example states only the evidence that is observable under its trust model. The counterexample suite validates the taxonomy but does not justify any unmeasured prevalence claim about the literature.
+
+
+\subsection{Decision model}
+Define evidence classes $E_0$ (local assembly), $E_1$ (observed egress), $E_2$ (transport acknowledgment), $E_3$ (provider-authenticated receipt), and $E_4$ (independently observed external action). A claim $C$ is supported by evidence set $E$ only relative to an explicit trust assumption set $T$. The relation
+\begin{equation}
+E,T\models C
+\end{equation}
+is deliberately not replaced by an informal implication from "logged" to "understood". For each claimed edge of the lattice, the witness generator attempts to construct two executions with indistinguishable observed evidence and different truth values for the stronger claim. Such pairs identify the exact observation or trust assumption that is missing.
+
+\section{Comparative Hypotheses}
+We hypothesize that an explicit observer-and-trust lattice improves consistency in the classification of AI attestation claims and exposes implication errors that remain implicit in unstructured assurance descriptions.
+
+Independent coder agreement, the reproducibility of minimal counterexamples, and the explanation of residual disagreements are evaluated together. Each proposed lattice relation is associated with an observable witness rather than an appeal to terminology.
+
+\section{Experimental Design}
+\subsection{Comparative systems}
+We compare systems under matched input histories, authorization information, and resource budgets. Baseline configurations, including their own retry or cache policy where relevant, are established on development data and frozen before independent evaluation.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Comparator implementations and their role in the study.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Arm & Implementation \\ \midrule
+B0 & RFC 9334/RATS attestation evidence framework. normative taxonomy baseline. \\ 
+B1 & W3C PROV provenance and audit events. retrospective lineage baseline. \\ 
+B2 & AgentDojo/ToolEmu evidence and attack observability categories. empirical study taxonomy. \\ 
+B3 & two independent human-coded new taxonomy. candidate SoK; needs actual reviewers. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Study population and protocol}
+Register search strings and venue ranges before screening. Two reviewers independently code a stratified study corpus, recording inclusion decisions, evidence sources, claim language, and disagreement reasons. Develop the taxonomy on a training corpus, then evaluate on held-out papers. The executable witness suite exercises the same observer interfaces rather than arbitrary verbal hypotheticals.
+
+\paragraph{Dataset construction.} Search ACM/IEEE/USENIX/NDSS/ICLR/NeurIPS publications from pre-registered 2019-2026 window; freeze duplicate resolution, screening decisions and extraction workbook..
+
+\section{Measurement and Statistical Analysis}
+\subsection{Outcomes and estimands}
+The primary endpoint is inter-rater Cohen kappa. Alongside it, we measure ambiguous claim fraction, so that favorable outcomes can be interpreted in relation to the operational service delivered. The sampling unit, exclusions, and uncertainty procedure are specified before confirmatory execution.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Prespecified outcome families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Type & Outcome recorded for each comparator \\ \midrule
+Primary & inter-rater Cohen kappa. \\ 
+Co-primary control & ambiguous claim fraction. \\ 
+Secondary & counterexample reproduction rate. \\ 
+Secondary & coverage of evidence-strength lattice. \\ 
+Secondary & disagreement resolution rate. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Statistical analysis}
+Report agreement by claim class and evidence level, with Cohen’s kappa for nominal labels and an explicit disagreement adjudication log. Reproduction rate is computed over distinct witness cases, not reruns. Qualitative exceptions are discussed with their trust assumptions rather than forced into a universal hierarchy.
+
+\section{Analysis and Reporting Plan}
+The main outputs are an evidence–claim lattice, a coded study matrix with reviewer agreement, and an executable counterexample atlas keyed to unsupported implication patterns.
+
+For each endpoint, the analysis will report numerators, denominators, independent study units, matched comparator settings, and uncertainty intervals. All tables and figures will be generated directly from a pinned confirmatory research release, with exclusions and incomplete observations accounted for separately.
+
+\section{Reproducibility and Ethical Considerations}
+The review will preserve search strings, screening decisions, extraction forms, and adjudicated coder labels. Counterexamples will be published as minimized synthetic execution traces with pinned source and runner versions. Studies that cannot be independently inspected will be classified according to their observable claims, not assigned undocumented provider behavior.
+
+\section{Scope and Threats to Validity}
+Systematic reviews depend on search scope and consistent interpretation. Provider-side claims require independent evidence rather than assumptions about proprietary implementations. The lattice describes supportable assurance language; it does not establish semantic attention or general clinical effectiveness.
+
+The study reports unsuccessful, inconclusive, and excluded runs as distinct outcome categories, preserving the interpretation of the measured denominator and the comparison across systems.
+
+\section{Conclusion}
+A trustworthy AI attestation claim should be as precise as the evidence that supports it. By connecting observation levels to explicit assumptions and reproducible counterexamples, the proposed taxonomy helps make agent-assurance arguments auditable and comparable.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

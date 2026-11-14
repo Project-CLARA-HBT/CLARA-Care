@@ -1,0 +1,16 @@
+{
+  "schema_version": "clara.venue2027.scenario.v1",
+  "venue": "popets",
+  "case_id": "POPETS-CASE-01",
+  "status": "SPECIFICATION_ONLY",
+  "timeline": [
+    {
+      "order": 0,
+      "kind": "INITIAL_STATE",
+      "logical_time": 0
+    }
+  ],
+  "oracle_expected": "ALLOW",
+  "independent_label_required": true,
+  "executed": false
+}

@@ -1,0 +1,150 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry,microtype,setspace,amsmath,amssymb,amsthm}
+\usepackage{booktabs,tabularx,array,graphicx,xcolor,url,hyperref}
+\usepackage{algorithm,algpseudocode}
+\geometry{margin=1.03in}
+\emergencystretch=2.5em
+\setstretch{1.12}
+\hypersetup{colorlinks=false,pdfborder={0 0 0},pdftitle={CLARA-Care Research Manuscript}}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\title{\vspace{-1em}\textbf{Recoverable Safety Journals for Crash-Consistent AI-Mediated Health-State Mutations}} 
+\author{Nguyen Ngoc Thien \and Trinh Minh Quang}\date{November 2026}
+\begin{document}
+\maketitle
+\begin{center}\small Hai Ba Trung High School, Hue, Vietnam\end{center}
+\begin{abstract}
+Clinical AI systems are increasingly organized as workflows in which a model-derived proposal, a governed database mutation, and an asynchronous notification are observed at different times. Conventional atomic transactions protect the database boundary, while transactional outboxes make event delivery recoverable; neither mechanism alone specifies how the user-visible account of an AI-mediated action should be reconciled with its provenance after a crash. We introduce a recoverable safety-journal model that relates immutable proposal identities, commit decisions, and externally visible effects through an explicit recovery state machine. A reconciliation operator distinguishes committed, rejected, and unresolved operations using durable evidence rather than process-local status. We develop an executable fault model and a paired crash-injection methodology that compares this design with carefully implemented transactional-outbox and durable-workflow systems. The investigation focuses on safety, liveness, and recovery cost across consent changes, duplicate deliveries, and crash cut points.
+\end{abstract}
+\noindent\textbf{Keywords:} dependability; crash consistency; transactional outbox; AI action provenance; recovery.
+\medskip\hrule\medskip
+
+\section{Introduction}
+A clinical AI workflow does not end when a model emits a recommendation. A proposed medication reconciliation, for example, may be reviewed, checked against contemporary consent and policy, committed to persistent state, and then propagated to a notification service. A failure between any two of these steps creates an ambiguity that matters to both operators and users: was the proposed change rejected, committed but not reported, or reported without a corresponding durable effect?
+
+Database transactions, write-ahead logging, transactional outboxes, and durable workflows offer powerful recovery primitives \cite{kung1981,herlihy1990}. Yet these primitives solve different portions of a larger accounting problem. In an AI-mediated operation the provenance of the proposal and the permitted scope of the action are part of the recovery contract. Replaying a message correctly is insufficient if its underlying proposal was revoked or if a user-visible completion receipt refers to an operation that never committed.
+
+We study this boundary as a joint recoverability property of clinical state, decision evidence, and asynchronous effects. Our design combines immutable operation identifiers with a monotonic reconciliation state machine whose outcomes follow directly from the durable database and outbox record. The central research question is whether this additional representation improves the auditability of crash recovery without imposing unnecessary latency or write amplification.
+
+\paragraph{Contributions.} This study formalizes cross-boundary recovery as a joint state property, introduces a causal decision journal with explicit unresolved outcomes, and establishes a fault-injection protocol that can distinguish recovery correctness from notification delivery.
+
+\section{Prior Work and Research Gap}
+Atomic commits and serializable histories provide a foundation for durable state transitions \cite{kung1981,herlihy1990}. Idempotent consumers, outbox patterns, and workflow engines extend this foundation to asynchronous communication but necessarily expose choices about delivery semantics and failure recovery. For governed AI actions, access-control decisions also depend on the authorization context under which a proposal was produced \cite{sandhu1996,hu2014}. The gap investigated here is not a new database commit protocol; it is the consistency of the cross-boundary explanation of an action after a crash. We make that gap measurable by requiring a reviewer to reconstruct the operation's persistent effect, authorization state, and notification status from a bounded set of durable records.
+
+\paragraph{Research positioning.} The research extends the existing GLHS action lineage into recovery semantics; the central evaluation concerns crash consistency and state reconciliation, rather than the earlier disclosure-to-commit admission experiments.
+
+\section{Research Questions and Study Setting}
+\paragraph{RQ1 — Cross-boundary recoverability} Can the clinical row, immutable decision receipt, and outbox event be reconciled into a consistent outcome after crashes at each persistence boundary? The primary observation is the fraction of independent histories with an orphaned mutation, phantom success, or unresolved outcome after a bounded recovery interval.
+
+\paragraph{RQ2 — Replay and governance} Does reconciliation remain idempotent when deliveries are duplicated, workers restart, and consent is revoked during execution? Report duplicate externally visible effects and causal-order violations per independent crash/revocation history.
+
+\paragraph{RQ3 — Cost of stronger accounting} How does explicit recovery evidence affect completion latency, durable writes, and time to recovery relative to strong workflow baselines? Compare p95 and p99 operation latency, recovery time, and write amplification under matched throughput.
+
+\paragraph{Study boundary.} A crash may occur at any declared cut point, messages may be redelivered, and consent may change concurrently. Storage corruption or colluding database administrators are outside the stated failure model.
+
+\subsection{Controlled challenge families}
+\begin{table}[ht]
+\centering\small
+\caption{Prespecified workload and challenge families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+ID & Prespecified condition \\ \midrule
+F1 & Crash after intent persisted but before DB mutation \\ 
+F2 & Crash after commit but before outbox acknowledgement \\ 
+F3 & Duplicate worker delivery and retry storms \\ 
+F4 & Partial network partition between API and worker \\ 
+F5 & Stale worker fence and concurrent recoveries \\ 
+\bottomrule\end{tabularx}\end{table}
+
+\section{Method and Implementation Architecture}
+The recovery coordinator maintains a monotonic journal with states PREPARED, COMMITTING, COMMITTED, EFFECT RECORDED, and RECONCILED. Each transition carries an immutable operation identity and is interpreted against persisted clinical and outbox state. A bounded recovery procedure reconstructs the outcome from database truth, reconciles asynchronous effects, and records any remaining ambiguity explicitly. A dedicated fault-injection harness places crashes at persistence boundaries while a separate observer records the clinical row, audit receipt, and downstream event.
+
+\subsection{Crash-consistency semantics}
+A clinical state transition and a downstream notification are distinct durable effects. Let $x$ denote a logical operation, $C(x)$ the commit record, and $E(x)$ the externally visible outbox effect. We do not assume that the network transport and the database share an atomic transaction. The intended safety condition is that an acknowledged operation has exactly one durable clinical effect, and that each recorded external effect can be traced to a committed operation:
+\begin{equation}
+  \forall x:\quad \mathrm{count}(C(x))\leq 1,\qquad E(x)\Rightarrow C(x).
+\end{equation}
+Recovery liveness is conditional on an eventually available database and a bounded stable worker pool; it is not guaranteed under permanent partitions. The main falsification witness is a crash cut-point that leaves two distinct durable clinical effects for the same operation ID or permanently loses an acknowledged committed effect.
+
+\subsection{A recovery state machine}
+The journal records the following immutable evidence: operation identity, preparing snapshot coordinates, commit transaction identity, outbox event identity, last reconciled epoch, and a monotonic fencing token. A recovery worker must first query canonical database state; it cannot infer the operation's fate solely from a stale outbox queue status. A worker with an old fencing epoch is denied mutation of reconciliation state. The journal's states label what was established by persisted facts, not predictions about possible later completion. The transition relation is checked under two concurrent recovery workers and under deterministic crash cut-points before/after each flush, acknowledgement, enqueue and retry.
+
+\subsection{Experimental separation from normal concurrency}
+DSN's study is of crash-resilience, not of eliminating version conflicts. The independent variable is a crash or partial failure injected at a controlled persistence boundary. It will be compared against a competent transactional-outbox implementation and an idempotent consumer with the same maximum attempts and network/DB availability schedule. A clean baseline without failure provides a latency cost estimate but is not counted as an attack trial. If the transactional outbox baseline already satisfies the complete recovery contract, the paper must narrow its thesis to forensic reconstruction or describe the proposed journal as unnecessary.
+
+
+\subsection{Decision model}
+The journal stores a stable operation identifier and a causal reference to the original proposal. Recovery begins by reading committed PostgreSQL state and the outbox delivery ledger; it never promotes a volatile worker status to a definitive decision. A prepared operation may become committed only through a durable database witness, and an outbox delivery acknowledgment cannot establish a clinical mutation by itself. The two-view check compares the action as authorized when proposed with the operation as observed after recovery, while a final reconciliation rule binds the user-visible decision to durable evidence.
+
+For an operation $o$, let $C(o)$ mean that its clinical transition is durably committed, $E(o)$ that its side-effect receipt is durably recorded, and $R(o)$ that its provenance and authorization remain reconstructable. We require
+\begin{equation}
+\mathrm{AdvertiseSuccess}(o)\Rightarrow C(o)\land R(o),\qquad
+E(o)\Rightarrow \mathrm{LinkedTo}(E(o),o).
+\end{equation}
+The model deliberately distinguishes observed delivery from guaranteed external consumption; asynchronous sinks may provide only at-least-once delivery.
+
+\section{Comparative Hypotheses}
+The safety-journal hypothesis is that durable reconciliation can reduce inconsistencies between user-visible decisions and committed effects relative to an otherwise equivalent transactional outbox, while preserving bounded recovery time.
+
+The comparison is tested across identical crash points and at-least-once delivery histories. Recoverability and added durable-write overhead are interpreted jointly; a solution that only delays every result indefinitely does not satisfy the service objective.
+
+\section{Experimental Design}
+\subsection{Comparative systems}
+We compare systems under matched input histories, authorization information, and resource budgets. Baseline configurations, including their own retry or cache policy where relevant, are established on development data and frozen before independent evaluation.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Comparator implementations and their role in the study.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Arm & Implementation \\ \midrule
+B0 & DB transaction only + fire-and-forget side effect. Diagnostic control; measures lost side effects. \\ 
+B1 & PostgreSQL atomic write + transactional outbox + idempotent consumer. Strong operational baseline; must implement fully. \\ 
+B2 & Durable workflow/saga with compensation and stable operation IDs. strong operational baseline; record precise engine/version. \\ 
+B3 & Proposed reconciliation safety journal. candidate; no pre-existing performance assumed. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Study population and protocol}
+Crash histories are generated from a fixed matrix of persistence cut points, commit/revocation orders, message deliveries, and worker interleavings. Each baseline receives the same operation IDs, transaction boundaries, and sink failure schedules. A database-only implementation is retained as a diagnostic lower bound, while the main comparison is against a fully configured transactional outbox and a durable workflow with idempotent completion.
+
+\paragraph{Dataset construction.} Generate 48 crash windows by 4 commit/revocation orderings by 3 delivery schedules by 5 independent seeds. Confirm final N only after schedule deduplication; benchmark one, two, four, or eight worker settings..
+
+\section{Measurement and Statistical Analysis}
+\subsection{Outcomes and estimands}
+The primary endpoint is orphan clinical writes per independent history. Alongside it, we measure phantom user-visible success, so that favorable outcomes can be interpreted in relation to the operational service delivered. The sampling unit, exclusions, and uncertainty procedure are specified before confirmatory execution.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Prespecified outcome families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Type & Outcome recorded for each comparator \\ \midrule
+Primary & orphan clinical writes per independent history. \\ 
+Co-primary control & phantom user-visible success. \\ 
+Secondary & eventual safe reconciliation fraction. \\ 
+Secondary & duplicate side effects. \\ 
+Secondary & RTO p50/p95/p99. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Statistical analysis}
+Use independent crash histories as paired units. For binary integrity outcomes, report exact paired discordances and confidence intervals; for recovery time and added write costs, use clustered intervals by history and workload. A zero-violation observation is reported with its finite-sample upper bound rather than as an absolute guarantee.
+
+\section{Analysis and Reporting Plan}
+The primary figure will separate failure outcomes by crash cut point and baseline. A second figure will show recovery-time distributions and user-visible inconsistency windows. A third will report write amplification and latency at matched successful throughput.
+
+For each endpoint, the analysis will report numerators, denominators, independent study units, matched comparator settings, and uncertainty intervals. All tables and figures will be generated directly from a pinned confirmatory research release, with exclusions and incomplete observations accounted for separately.
+
+\section{Reproducibility and Ethical Considerations}
+Reproducibility depends on a pinned PostgreSQL image, deterministic crash scheduling, and durable logs from both the operation database and event sink. The release will include the full fault matrix, operation identifiers, replay controls, and recovery-state oracle. Synthetic clinical records avoid the use of patient data; downstream services operate entirely within the test environment.
+
+\section{Scope and Threats to Validity}
+The study concerns bounded failures in a declared storage and messaging environment. Its guarantees depend on durable acknowledgment semantics and correct idempotency keys. They do not imply that an external recipient has consumed a notification or that a clinical intervention was appropriate.
+
+The study reports unsuccessful, inconclusive, and excluded runs as distinct outcome categories, preserving the interpretation of the measured denominator and the comparison across systems.
+
+\section{Conclusion}
+Recoverability in AI-mediated health workflows is most informative when the system can explain not only what was stored but also why the write was authorized and how its effects became visible. By making that explanation a durable reconciliation obligation, the proposed safety journal offers a precise basis for comparing cross-boundary correctness, recovery time, and operational cost.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

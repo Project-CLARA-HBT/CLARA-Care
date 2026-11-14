@@ -1,0 +1,89 @@
+{
+  "study_id": "dimva",
+  "source_branch": "research/glhs-r4-novelty-hardening",
+  "status": "PROPOSED_NOT_RUN",
+  "primary_metric": "campaign-level AUCPR",
+  "dataset_plan": "Multi-stage synthetic sessions plus benign retries, outages, latency spikes; attacker cannot read privileged logs; frozen family-holdout groups with no shared templates across train/test.",
+  "oracle": "Campaign intent and authorized action adjudicated from simulator ground truth, never from detector score or gateway final reason code.",
+  "baselines": [
+    {
+      "id": "B0",
+      "design": "static threshold on failures per window",
+      "role": "strong operational baseline",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B1",
+      "design": "temporal rule sequence / finite-state signature",
+      "role": "strong interpretable baseline",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B2",
+      "design": "Isolation Forest on privacy-minimized counts",
+      "role": "unsupervised comparator",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B3",
+      "design": "gradient-boosted trees with controlled features",
+      "role": "supervised comparator",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B4",
+      "design": "sequence model with time-aware features",
+      "role": "candidate; only if holdout gain",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    }
+  ],
+  "risks": "Security venue will require demonstrated attack novelty and realism. Explicit avoid simplistic generated labels.",
+  "stop_rule": "If rule thresholds perform as well as sequence models on family-held-out traces, do not claim ML necessity; if detector depends on post-hoc failure labels, invalidate primary experiment.",
+  "source_records": [
+    {
+      "id": "agentdojo24",
+      "url": "https://proceedings.nips.cc/paper_files/paper/2024/hash/97091a5177d8dc64b1da8bf3e1f6fb54-Abstract-Datasets_and_Benchmarks_Track.html",
+      "venue": "NeurIPS 2024 Datasets & Benchmarks"
+    },
+    {
+      "id": "toolemu24",
+      "url": "https://proceedings.iclr.cc/paper_files/paper/2024/file/7274ed909a312d4d869cc328ad1c5f04-Paper-Conference.pdf",
+      "venue": "ICLR 2024"
+    },
+    {
+      "id": "injecagent24",
+      "url": "https://aclanthology.org/2024.findings-acl.624/",
+      "venue": "Findings of ACL 2024"
+    },
+    {
+      "id": "sommer10",
+      "url": "https://doi.org/10.1109/SP.2010.25",
+      "venue": "IEEE Symposium on Security and Privacy 2010"
+    },
+    {
+      "id": "tauben25",
+      "url": "https://proceedings.iclr.cc/paper_files/paper/2025/hash/1b126cc38b8638e07bef37e7b2bb72bf-Abstract-Conference.html",
+      "venue": "ICLR 2025"
+    }
+  ]
+}

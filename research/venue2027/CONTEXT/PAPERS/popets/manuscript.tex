@@ -1,0 +1,150 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry,microtype,setspace,amsmath,amssymb,amsthm}
+\usepackage{booktabs,tabularx,array,graphicx,xcolor,url,hyperref}
+\usepackage{algorithm,algpseudocode}
+\geometry{margin=1.03in}
+\emergencystretch=2.5em
+\setstretch{1.12}
+\hypersetup{colorlinks=false,pdfborder={0 0 0},pdftitle={CLARA-Care Research Manuscript}}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\title{\vspace{-1em}\textbf{Revocation-Aware Context Caches: Limiting Future Disclosures in Longitudinal Health Agents}} 
+\author{Nguyen Ngoc Thien \and Trinh Minh Quang}\date{November 2026}
+\begin{document}
+\maketitle
+\begin{center}\small Hai Ba Trung High School, Hue, Vietnam\end{center}
+\begin{abstract}
+Consent revocation is commonly enforced at the point of record access, whereas contemporary AI applications also reuse derived context in summaries, embedding indexes, retry queues, and model-request caches. A record may therefore become inaccessible while information derived from it remains eligible for a later disclosure. We formalize future-dispatch noninterference for purpose-labeled context derivations and introduce a transitive invalidation mechanism that tracks the provenance of cached artifacts. The mechanism associates each outbound model request with a time-specific authorization witness and verifies that no subsequently revoked source contributes to a new dispatch. We design a privacy evaluation comparing provenance-aware invalidation with complete re-computation, coarse cache purging, and consistency-aware authorization services. The principal outcomes are post-revocation exposure, unnecessary invalidation, latency, and the accuracy of legitimate authorized context reconstruction.
+\end{abstract}
+\noindent\textbf{Keywords:} consent revocation; derived context; provenance; future disclosure; privacy.
+\medskip\hrule\medskip
+
+\section{Introduction}
+Modern longitudinal assistants compose prompts from more than current database rows. A retrieval result may be summarized, embedded, cached, scheduled for retry, or carried into a fallback request long after its initial authorization. These derived objects create useful efficiency, but they also enlarge the surface over which a consent revocation must take effect.
+
+Consider a patient who withdraws permission to use an earlier medication history for a particular purpose. A direct read of the corresponding source record may now fail, yet a summary created before revocation could still appear in a later model request. The privacy question is not whether information already disclosed can be recalled; it is whether a system can ensure that future transmissions respect the current authorization boundary across every derivation path.
+
+We investigate this question by representing context construction as a dependency graph whose edges preserve provenance and purpose. The proposed revocation operation closes over descendant artifacts, while the dispatch gate independently checks the sources actually assembled for the next request. The research contribution is an explicit future-disclosure semantics together with a practical comparison of selective invalidation against stronger, simpler alternatives.
+
+\paragraph{Contributions.} This study defines future-dispatch noninterference for derived AI context, develops transitive provenance-label invalidation with a final egress check, and evaluates the privacy and availability consequences of these choices against full authorized re-computation.
+
+\section{Prior Work and Research Gap}
+Attribute-based authorization and centralized relationship checks can constrain access to original data \cite{hu2014,sandhu1996}; provenance mechanisms describe how derived objects depend on sources, and privacy research distinguishes exposure from subsequent inference \cite{shokri2017,dwork2014}. Cache invalidation and per-use reauthorization are established engineering tools. What requires direct investigation is the interaction of these mechanisms when prompt material is produced through chained derivations and asynchronous retries. Our unit of analysis is therefore the \emph{future outbound disclosure}, rather than record-read success or deletion of an already transmitted message.
+
+\paragraph{Research positioning.} The underlying GLHS governance service supplies authorization state, but the privacy study is centered on future information egress through derived caches and retry paths.
+
+\section{Research Questions and Study Setting}
+\paragraph{RQ1 — Post-revocation disclosure} Do indirect derivations, retries, and fallback requests cause prohibited post-revocation disclosure despite correct authorization at the source-record boundary? Measure the rate and volume of forbidden attributes reaching subsequent outbound dispatches, with independent provenance-based labels.
+
+\paragraph{RQ2 — Semantic completeness of invalidation} Does transitive, purpose-labeled invalidation produce the same authorized disclosure as a full re-computation reference? Compare disclosure equivalence and false invalidation at the level of independent patient histories.
+
+\paragraph{RQ3 — Privacy–availability trade-off} What latency, cache-hit, and legitimate-context costs arise under different lineage fanout and update rates? Report cache hits conditional on authorization, reconstructed-context completeness, bytes transferred, and p95 latency.
+
+\paragraph{Study boundary.} The observer controls the application cache, retry scheduler, and provider-dispatch boundary. The study protects future application-originated disclosure; it makes no retroactive deletion claim for information already transmitted or learned by an external provider.
+
+\subsection{Controlled challenge families}
+\begin{table}[ht]
+\centering\small
+\caption{Prespecified workload and challenge families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+ID & Prespecified condition \\ \midrule
+F1 & Cross-purpose cache key collision \\ 
+F2 & Revoked attribute reappearing in retry prompts \\ 
+F3 & Prefetch race against consent revocation \\ 
+F4 & Cross-session embedding reuse \\ 
+F5 & Inference of sensitive category from retained log metadata \\ 
+\bottomrule\end{tabularx}\end{table}
+
+\section{Method and Implementation Architecture}
+We represent prompt assembly as a provenance-labeled graph connecting authorized source records with summaries, embeddings, prefetch caches, retries, and the final provider payload. Every derived object inherits the purpose and grant dependencies of its inputs. Revocation invalidates the transitive descendants of the affected authorization, and the dispatch gate then checks the assembled payload against the current grant state. Both operations are instrumented in the evaluation so that missed invalidation, delayed cache updates, and over-redaction can be distinguished.
+
+\subsection{A precise, prospective privacy goal}
+Let $r=(a,\tau)$ revoke attribute class $a$ at logical time $\tau$. Write $D_t$ for all bytes dispatched at time $t$ to a provider for a specified purpose, and $\mathrm{Attr}(D_t)$ for the set of sensitive labels appearing in that disclosure. The primary prospective guarantee is:
+\begin{equation}
+  \forall t>\tau:\quad a\notin\mathrm{Attr}(D_t)\quad
+  \text{unless a later valid grant authorizes }a.
+\end{equation}
+This is a property of future outbound material, not a claim that an earlier model input can be forgotten. It is also weaker than differential privacy: the mechanism does not by itself enforce any $\varepsilon$-differential privacy bound. Residual metadata must therefore be attacked and measured separately, with an explicit attacker prior.
+
+\subsection{Dependency-aware invalidation}
+Each cache or retrieval artifact has a dependency set $\Delta(k)$ of consent labels and an authorization scope $\sigma(k)$. On revocation $r$, the invalidator marks as unusable every cached artifact satisfying $a\in\Delta(k)$ and any artifact whose provenance is unknown. Unknown dependencies trigger conservative denial, never continued disclosure. At dispatch time, the gateway reconstructs the permitted projection and verifies that the final serialized provider payload is derived exclusively from current grants. This final egress check is deliberately positioned after retry and provider-fallback assembly, because an earlier validation can be invalidated by later pipeline changes.
+
+\subsection{Testing real privacy consequences}
+We distinguish three outcomes: forbidden future attribute disclosure, over-redaction of authorized content, and adversarial inference from permitted metadata. The privacy attacker receives a fixed observation channel (e.g., coarsened timestamps and cache-hit metadata) and tries to infer a synthetic sensitive label. Success is compared with both a majority-class attack and a controlled oracle with direct access; reporting accuracy alone without class priors would be misleading. A zero rate of invalid database commits is analyzed separately from the future-disclosure privacy endpoint.
+
+
+\subsection{Decision model}
+For source object $x$, purpose $p$, and derived artifact $a$, store a label $L(a)$ containing the source-and-purpose dependencies accumulated during its construction. When grant $g$ is revoked, descendant artifacts are invalidated through reverse reachability. Before model egress, the gate computes the transitive lineage of the assembled request and checks it against the latest consent epoch. These two operations address complementary failure modes: invalidation reduces stale cache reuse, while the egress check catches delayed writes and incomplete cache updates.
+\begin{equation}
+\forall d:t(d)>t_r,\quad
+\mathrm{Lineage}(d)\cap\mathrm{Revoked}(p,t(d))=\varnothing.
+\end{equation}
+The predicate refers to application-observable dispatch bytes and their labeled sources, not to a model's internal memory or subsequent inferences.
+
+\section{Comparative Hypotheses}
+Our principal hypothesis is that provenance-closed invalidation matches the future-disclosure protection of complete authorized re-computation while retaining more reusable context than a coarse purge.
+
+We test privacy at the final provider egress and context availability on the same synthetic histories. The conservative full-recompute method defines the disclosure reference, while over-invalidation and rebuild time measure the operational value of a more selective method.
+
+\section{Experimental Design}
+\subsection{Comparative systems}
+We compare systems under matched input histories, authorization information, and resource budgets. Baseline configurations, including their own retry or cache policy where relevant, are established on development data and frozen before independent evaluation.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Comparator implementations and their role in the study.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Arm & Implementation \\ \midrule
+B0 & TTL-only cache. Diagnostic reference. \\ 
+B1 & coarse cache purge on consent change. Fully specified safety baseline. \\ 
+B2 & always-recompute authorized projection per dispatch. privacy reference upper bound, cost comparator. \\ 
+B3 & Zanzibar-like consistency-token authorization + derived-cache tagging. strong architecture baseline if adapter truly supports derivations. \\ 
+B4 & proposed transitive provenance-label invalidation. Proposed method. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Study population and protocol}
+Generate source-disjoint synthetic longitudinal histories with summaries, embedding pointers, deferred retries, and purpose-specific grants. Randomize derivation depth, cache-write delay, and revocation placement. Compare the proposed closure mechanism with full authorized recomputation, complete cache invalidation, and a consistency-token authorization service configured to protect derived reads where supported.
+
+\paragraph{Dataset construction.} Synthetic 1200 unique subjects with three to six longitudinal contexts each; factorial lineage fanout, delayed cache writes, retries, and policy changes; source-disjoint holdout; label N by subject not number of dispatches..
+
+\section{Measurement and Statistical Analysis}
+\subsection{Outcomes and estimands}
+The primary endpoint is future unauthorized disclosure rate. Alongside it, we measure attribute-exposure byte count, so that favorable outcomes can be interpreted in relation to the operational service delivered. The sampling unit, exclusions, and uncertainty procedure are specified before confirmatory execution.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Prespecified outcome families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Type & Outcome recorded for each comparator \\ \midrule
+Primary & future unauthorized disclosure rate. \\ 
+Co-primary control & attribute-exposure byte count. \\ 
+Secondary & conditional cache hit rate. \\ 
+Secondary & false invalidation rate. \\ 
+Secondary & latency and rebuild cost. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Statistical analysis}
+Estimate patient-clustered forbidden-disclosure differences and precision of invalidation decisions. Report the privacy–utility frontier using authorized-context completeness as an explicit control; cache savings do not count as an improvement when the method produces an incomplete or unauthorized prompt.
+
+\section{Analysis and Reporting Plan}
+Report a provenance-path coverage matrix, a plot of post-revocation exposure by derivation depth, and a privacy–availability frontier against full recomputation and complete purge.
+
+For each endpoint, the analysis will report numerators, denominators, independent study units, matched comparator settings, and uncertainty intervals. All tables and figures will be generated directly from a pinned confirmatory research release, with exclusions and incomplete observations accounted for separately.
+
+\section{Reproducibility and Ethical Considerations}
+The privacy evaluation uses synthetic subject histories with known source-to-derivation dependencies and explicitly specified attacker observations. The release will provide revocation times, cache lineage graphs, outbound payload labels, and a replayable egress audit. Identifiers and sensitive attributes in the public corpus are synthetic, and external provider requests are replaced by instrumented test transports.
+
+\section{Scope and Threats to Validity}
+The observation model covers application-controlled cache and dispatch paths. End-to-end protection requires every egress path to be instrumented, and empirical claims about external model retention are outside the study. Synthetic lineage graphs allow controlled stress testing but do not reproduce every organizational consent workflow.
+
+The study reports unsuccessful, inconclusive, and excluded runs as distinct outcome categories, preserving the interpretation of the measured denominator and the comparison across systems.
+
+\section{Conclusion}
+Purpose-aware provenance makes future-disclosure protection a property of the full context-production path rather than of individual records. The proposed design offers a way to test that property directly, while quantifying the computation and authorized-context costs of selective revocation.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

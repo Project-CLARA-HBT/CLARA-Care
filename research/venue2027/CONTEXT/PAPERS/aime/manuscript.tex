@@ -1,0 +1,145 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry,microtype,setspace,amsmath,amssymb,amsthm}
+\usepackage{booktabs,tabularx,array,graphicx,xcolor,url,hyperref}
+\usepackage{algorithm,algpseudocode}
+\geometry{margin=1.03in}
+\emergencystretch=2.5em
+\setstretch{1.12}
+\hypersetup{colorlinks=false,pdfborder={0 0 0},pdftitle={CLARA-Care Research Manuscript}}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\title{\vspace{-1em}\textbf{Clinical Workflow Robustness under Dynamic Consent and Evolving Medication Context}} 
+\author{Nguyen Ngoc Thien \and Trinh Minh Quang}\date{November 2026}
+\begin{document}
+\maketitle
+\begin{center}\small Hai Ba Trung High School, Hue, Vietnam\end{center}
+\begin{abstract}
+Longitudinal medical assistants make recommendations from health information that may change during inference. At the same time, the authorization to use particular records can be withdrawn or narrowed, creating two distinct sources of error: clinically relevant omissions and the use of information that is no longer permitted for the task. We introduce a counterfactual workflow evaluation that separates these dimensions through paired synthetic cases, synchronized consent histories, and blinded clinical adjudication. A selective context-regeneration strategy identifies task-relevant changes and refreshes only the authorized evidence needed for a new proposal. The study contrasts this strategy with a full current-context refresh, static prompting, and output-stage policy filtering. Primary outcomes distinguish inappropriate action eligibility, clinically consequential omissions, unnecessary refusal, and useful authorized task completion across update families and model providers.
+\end{abstract}
+\noindent\textbf{Keywords:} medical AI; longitudinal context; dynamic consent; clinical workflow evaluation.
+\medskip\hrule\medskip
+
+\section{Introduction}
+A longitudinal assistant may begin answering a patient question with a medication list, allergy record, and recent observations. Before its recommendation is ready, a medication can be discontinued or a previously authorized history section may become unavailable for that purpose. A system that ignores the change risks an outdated suggestion; one that simply blocks every changed case may fail to complete many legitimate tasks.
+
+These are not interchangeable errors. A recommendation may be medically plausible but rely on records that were not authorized for the action, while an authorized response can still overlook a clinically relevant fact. Clinical AI evaluation benefits from judging the medical content and the permission to use its supporting evidence separately \cite{who2021,fhir2023}. Existing transaction and authorization mechanisms contribute important safeguards, but they do not by themselves measure whether a workflow preserves useful task completion as the underlying context evolves.
+
+We propose a paired counterfactual protocol in which one controlled change separates a baseline history from its updated version. Each case is assessed against an independently specified eligibility decision and an adjudicated clinical rubric. This design supports an interpretable comparison between full re-computation and selective regeneration, including the cost of unnecessary refusal and additional review.
+
+\paragraph{Contributions.} We introduce a paired longitudinal vignette protocol with independent medical and authorization labels, investigate task-aware context regeneration, and measure safe authorized completion alongside clinical error and unnecessary refusal.
+
+\section{Prior Work and Research Gap}
+FHIR resources provide structures for clinical provenance, consent, and audit events \cite{fhir2023}; health-AI governance guidance emphasizes safe use and accountable evaluation \cite{who2021}. Static medical question answering benchmarks measure aspects of factual and clinical response quality, while access-control tests assess whether a request may use a source. Our contribution joins these axes in a longitudinal action workflow, with independent labels for medical appropriateness and task-specific authorization. The comparison is explicitly against a strong per-step authorized refresh, so the study tests whether selective regeneration adds efficiency without sacrificing decision quality.
+
+\paragraph{Research positioning.} The study uses GLHS authorization primitives to construct fair workflow conditions; its primary contribution is a longitudinal medical-AI evaluation and context-refresh method, not another transaction-safety benchmark.
+
+\section{Research Questions and Study Setting}
+\paragraph{RQ1 — Distinct error mechanisms} How frequently do changing medications, allergies, or consent cause clinical-content errors as opposed to authorization errors? Report separate blinded labels for clinical omission and impermissible evidence use per independent vignette.
+
+\paragraph{RQ2 — Value of selective regeneration} Can selective re-generation maintain authorized task completion while reducing avoidable refusal and processing cost relative to full refresh? Compare paired correct completion, unnecessary refusal, clinician-review load, and token/latency cost.
+
+\paragraph{RQ3 — Robustness across conditions} How consistent are these effects across update types, independent case sources, and at least two verified model families? Estimate stratified paired contrasts and reviewer agreement, with case-family clustered uncertainty.
+
+\paragraph{Study boundary.} The study uses synthetic patient histories and bounded decision-support tasks. Cases are labeled with independent clinical expertise where the outcome requires medical judgment. The system is not evaluated as an autonomous treatment provider.
+
+\subsection{Controlled challenge families}
+\begin{table}[ht]
+\centering\small
+\caption{Prespecified workload and challenge families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+ID & Prespecified condition \\ \midrule
+F1 & New allergy between summary and proposal \\ 
+F2 & Medication discontinued during inference \\ 
+F3 & Consent revoked for one history domain \\ 
+F4 & Conflicting prescription evidence \\ 
+F5 & Unrelated profile edit testing unnecessary refusal \\ 
+\bottomrule\end{tabularx}\end{table}
+
+\section{Method and Implementation Architecture}
+Each evaluation case begins with a longitudinal history, a defined task, and an initial permission state. A controlled counterfactual change then modifies clinical facts, authorization, or an unrelated record. The selective-regeneration component identifies which portions of the updated record matter to the task and assembles a new permitted context. Two independent label sets capture whether the recommended action is clinically appropriate and whether its supporting evidence is authorized. Blinded reviewers adjudicate the medically consequential cases, while the experimental harness holds provider identity, prompt format, and retrieval budget constant across the compared strategies.
+
+\subsection{Clinical-vignette construction and adjudication}
+Each independent synthetic vignette is encoded as $(H_0,\Delta H,G_0,\Delta G,q,y)$: a baseline health history, a controlled factual update, a baseline and updated grant state, a user task, and independently adjudicated action-eligibility label. Clinical content errors and authorization errors receive distinct labels. A legal workflow may require refusal when permission is absent even if the proposed answer would be medically reasonable; the opposite mistake is a clinically implausible but technically permitted suggestion. This separation is essential to interpret safety-related outcomes.
+
+\subsection{Paired workflow comparisons}
+For each vignette, the four arms receive the same authorized facts up to the intended intervention and matched response budgets. Provider/model identifiers, retry attempts, response validation, token counts and order randomization are recorded. Clinically meaningful scoring is blinded to system arm and requires qualified external review if safety claims are made. The primary binary endpoint is inappropriate action eligibility, not final clinical outcome or diagnostic accuracy. Unnecessary refusal on an unrelated profile update is a secondary harm metric, and must be shown beside any safety improvement.
+
+\subsection{Decision utility and uncertainty}
+If $e_i(b)$ records whether comparator $b$ makes an inappropriate action-eligibility decision on vignette $i$, the paired contrast is $\widehat{\Delta}=n^{-1}\sum_i[e_i(b_1)-e_i(b_0)]$. Confidence intervals are computed over independent vignettes, not repeated model responses. Multiple prompts derived from one synthetic patient belong to the same statistical cluster. Noninferiority is assessed using a prospectively justified margin and sufficient independent cases, rather than inferred from a nonsignificant $p$-value. A physician-reviewed high-level workflow rubric is a prerequisite, not a replaceable software artifact.
+
+
+\subsection{Decision model}
+Each case comprises an initial record $H_0$, a controlled update $\Delta H$, a permission state $G_t$, and a task $q$. A task-specific dependency extractor identifies which new facts could change the proposed action; a consent-aware refresh rebuilds the model-visible context only from currently permitted information. The two-view decision then distinguishes an outdated but authorized recommendation from an updated recommendation relying on prohibited data.
+\begin{equation}
+\mathrm{Eligible}(a\mid q,t)=\mathrm{AuthorizedEvidence}(a,G_t)
+\land\mathrm{ClinicallyAdmissible}(a,H_t,q).
+\end{equation}
+These two components are judged independently. The second is a case-specific adjudication outcome, not a cryptographic property of the model.
+
+\section{Comparative Hypotheses}
+We hypothesize that task-aware selective regeneration can retain the action-eligibility accuracy of full authorized-context refresh while reducing unnecessary refusal, token use, and review burden.
+
+Clinically meaningful changes and authorization changes are adjudicated as separate error categories. Comparison with complete refresh is central: improvement in efficiency is assessed only alongside appropriate authorized completion and medical-review outcomes.
+
+\section{Experimental Design}
+\subsection{Comparative systems}
+We compare systems under matched input histories, authorization information, and resource budgets. Baseline configurations, including their own retry or cache policy where relevant, are established on development data and frozen before independent evaluation.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Comparator implementations and their role in the study.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Arm & Implementation \\ \midrule
+B0 & full authorized history, single snapshot. clinical information-rich static baseline. \\ 
+B1 & full per-step refresh + current policy filter. strong correctness/privacy control. \\ 
+B2 & HealthBench-/MedHELM-informed evaluation rubric for clinical utility. benchmark rubric, not a decision algorithm. \\ 
+B3 & static model + output post-filter. common LLM guardrail comparator. \\ 
+B4 & proposed selective consent-aware context regeneration. Proposed method. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Study population and protocol}
+Generate counterfactual vignette pairs with controlled medication discontinuation, newly documented allergy, changed permission, conflicting evidence, and unrelated edits. Hold source families apart between development and evaluation. Compare static context, output filtering, full authorized refresh, and selective refresh using harmonized prompts, identical models, equal retrieval permissions, and a predeclared evaluation budget.
+
+\paragraph{Dataset construction.} Synthetic source-disjoint vignettes with counterfactual pairs: baseline H, medication update, allergy, revocation, unrelated edit, clinical task. Target N determined by pilot variance and planned power; never label small LLM probes clinical trials..
+
+\section{Measurement and Statistical Analysis}
+\subsection{Outcomes and estimands}
+The primary endpoint is action eligibility error. Alongside it, we measure clinician adjudicated clinical omission, so that favorable outcomes can be interpreted in relation to the operational service delivered. The sampling unit, exclusions, and uncertainty procedure are specified before confirmatory execution.
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Prespecified outcome families.}
+\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+Type & Outcome recorded for each comparator \\ \midrule
+Primary & action eligibility error. \\ 
+Co-primary control & clinician adjudicated clinical omission. \\ 
+Secondary & unnecessary refusal. \\ 
+Secondary & useful authorized completion. \\ 
+Secondary & token cost. \\ 
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Statistical analysis}
+Analyze errors at the vignette level with paired confidence intervals; use blinded, independent clinical adjudication to estimate agreement and classify disagreements. Noninferiority in authorized completion requires a justified margin and power analysis, while safety reporting retains all abstentions and provider failures in the denominator.
+
+\section{Analysis and Reporting Plan}
+The evidence will separate medical omissions from authorization errors, show legitimate completion versus unnecessary refusal, and compare the processing costs of full and selective refresh across update types.
+
+For each endpoint, the analysis will report numerators, denominators, independent study units, matched comparator settings, and uncertainty intervals. All tables and figures will be generated directly from a pinned confirmatory research release, with exclusions and incomplete observations accounted for separately.
+
+\section{Reproducibility and Ethical Considerations}
+Clinical cases are synthetic and contain no identifiable patient records. Provider calls, prompt templates, and retrieval permissions will be version-pinned; reviewers will evaluate outcomes blinded to the producing method. The release will separate technical authorization labels from human clinical judgments and preserve disagreements alongside the final adjudication.
+
+\section{Scope and Threats to Validity}
+Synthetic cases provide controlled causal contrasts but not clinical trial evidence. Clinical judgments depend on the rubric, reviewer qualifications, and the defined task scope; any conclusions about deployed patient outcomes require separate prospective evaluation.
+
+The study reports unsuccessful, inconclusive, and excluded runs as distinct outcome categories, preserving the interpretation of the measured denominator and the comparison across systems.
+
+\section{Conclusion}
+Medical AI workflows are best evaluated against the context and permissions valid at the point of action, not solely against the information available when generation began. A paired counterfactual design makes clinical omissions, impermissible evidence use, and unnecessary refusal separately visible, creating a foundation for evaluating more selective and accountable context refresh.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

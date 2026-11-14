@@ -1,0 +1,89 @@
+{
+  "study_id": "pst",
+  "source_branch": "research/glhs-r4-novelty-hardening",
+  "status": "PROPOSED_NOT_RUN",
+  "primary_metric": "forensic query answerability",
+  "dataset_plan": "Synthetic records/events with explicit correlation surfaces, varying log sizes, user identifiers, retention windows, backups; externality of key deletion declared in threat model.",
+  "oracle": "Trusted offline complete ledger retained only for evaluation; blinded authorized forensic queries and attacker inference tests.",
+  "baselines": [
+    {
+      "id": "B0",
+      "design": "full plaintext append-only log",
+      "role": "utility upper bound / privacy lower bound",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B1",
+      "design": "hash-only log or content digests",
+      "role": "storage/privacy baseline, weak audit utility",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B2",
+      "design": "encrypted log with role-gated decryption and deletion",
+      "role": "strong confidentiality comparator",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B3",
+      "design": "RFC 9162-like Merkle append-only integrity + authorized material retrieval",
+      "role": "strong integrity baseline",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B4",
+      "design": "proposed purpose-bound minimized receipt and retention map",
+      "role": "candidate",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    }
+  ],
+  "risks": "Avoid claiming content deletion from immutable historical disclosures or from unverified cloud backups.",
+  "stop_rule": "If encrypted full logs with a well-managed retention policy dominate minimized receipts on privacy and reconstruction, reject novelty superiority claim.",
+  "source_records": [
+    {
+      "id": "ct9162",
+      "url": "https://www.rfc-editor.org/rfc/rfc9162.html",
+      "venue": "IETF RFC 9162"
+    },
+    {
+      "id": "rats9334",
+      "url": "https://www.rfc-editor.org/rfc/rfc9334.html",
+      "venue": "IETF RFC 9334"
+    },
+    {
+      "id": "zanzibar19",
+      "url": "https://www.usenix.org/conference/atc19/presentation/pang",
+      "venue": "USENIX ATC 2019"
+    },
+    {
+      "id": "macaroons14",
+      "url": "https://research.google/pubs/macaroons-cookies-with-contextual-caveats-for-decentralized-authorization-in-the-cloud/",
+      "venue": "NDSS 2014"
+    },
+    {
+      "id": "who21",
+      "url": "https://www.who.int/publications/i/item/9789240029200",
+      "venue": "World Health Organization"
+    }
+  ]
+}

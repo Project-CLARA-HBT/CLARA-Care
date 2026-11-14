@@ -1,0 +1,84 @@
+{
+  "study_id": "compsac",
+  "source_branch": "research/glhs-r4-novelty-hardening",
+  "status": "PROPOSED_NOT_RUN",
+  "primary_metric": "forbidden commit rate",
+  "dataset_plan": "Deterministic family of medication/allergy/history/purpose grants; 1, 2, 4, 8, 16 workers; workload partitions with Zipf skew and dependency density; ≥ 5 independent seeds per setting before deciding power.",
+  "oracle": "Independent dependency oracle plus transaction-history consistency checker; record kernel SHA, PG release/version and isolation setting.",
+  "baselines": [
+    {
+      "id": "B0",
+      "design": "global-profile version OCC",
+      "role": "common coarse implementation",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B1",
+      "design": "Silo-style entity readset OCC with commit-time validation",
+      "role": "strong algorithmic comparator; disclose that port is not Silo source code",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B2",
+      "design": "PostgreSQL SERIALIZABLE (SSI) with schema-check predicates",
+      "role": "strong DB-native comparator",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B3",
+      "design": "entity-OCC without semantic dependency closure",
+      "role": "ablation exposing write skew",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B4",
+      "design": "proposed dependency-complete scope-local OCC",
+      "role": "candidate",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    }
+  ],
+  "risks": "A large/sound baseline (PG SSI) is essential; avoid weak baselines only and never reuse R4 SQLite as PG performance.",
+  "stop_rule": "Any forbidden commit under a complete, independently labeled dependency schedule falsifies the safety claim; if fully serializable PostgreSQL is as fast, candidly report the null performance benefit.",
+  "source_records": [
+    {
+      "id": "silo13",
+      "url": "https://doi.org/10.1145/2517349.2522713",
+      "venue": "SOSP 2013"
+    },
+    {
+      "id": "elle20",
+      "url": "https://github.com/jepsen-io/elle",
+      "venue": "OSDI 2020"
+    },
+    {
+      "id": "zanzibar19",
+      "url": "https://www.usenix.org/conference/atc19/presentation/pang",
+      "venue": "USENIX ATC 2019"
+    },
+    {
+      "id": "macaroons14",
+      "url": "https://research.google/pubs/macaroons-cookies-with-contextual-caveats-for-decentralized-authorization-in-the-cloud/",
+      "venue": "NDSS 2014"
+    }
+  ]
+}

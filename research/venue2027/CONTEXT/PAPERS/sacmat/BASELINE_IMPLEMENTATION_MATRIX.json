@@ -1,0 +1,94 @@
+{
+  "study_id": "sacmat",
+  "source_branch": "research/glhs-r4-novelty-hardening",
+  "status": "PROPOSED_NOT_RUN",
+  "primary_metric": "mutation score at fixed oracle budget",
+  "dataset_plan": "Versioned synthetic policy and principal graphs + 50 independently designed mutants; reserve fresh holdout mutant families; source/seed freeze prior to scoring.",
+  "oracle": "Executable declarative reference semantics and independent human review of semantically non-equivalent mutants.",
+  "baselines": [
+    {
+      "id": "B0",
+      "design": "uniform random authorization requests",
+      "role": "weak reference",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B1",
+      "design": "MC/DC-inspired XACML policy testing (Xu et al. SACMAT 2018)",
+      "role": "strong coverage baseline",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B2",
+      "design": "XACBench policy profile–driven synthetic tests",
+      "role": "strong benchmark baseline",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B3",
+      "design": "property-based history generator without temporal metamorphs",
+      "role": "strong stateful testing baseline",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    },
+    {
+      "id": "B4",
+      "design": "PolicyTrace temporal generator plus oracle",
+      "role": "candidate",
+      "implementation_state": "NOT_RUN",
+      "fidelity_review": "REQUIRED",
+      "source_commit": "UNSET",
+      "license_review": "REQUIRED",
+      "status_note": "Implementation or faithful port must be verified; no experiment claim."
+    }
+  ],
+  "risks": "SACMAT Dataset/Tool track is likely better than a main claim. Need actual external engine execution rather than merely naming them.",
+  "stop_rule": "If trace generator does not outperform stateful and MC/DC-guided baselines at equal oracle-call budget, do not claim novel fault detection; publish portability limits transparently.",
+  "source_records": [
+    {
+      "id": "xacml18",
+      "url": "https://doi.org/10.1145/3205977.3205979",
+      "venue": "ACM SACMAT 2018"
+    },
+    {
+      "id": "xacbench20",
+      "url": "https://doi.org/10.1007/s00500-020-04925-5",
+      "venue": "Soft Computing"
+    },
+    {
+      "id": "cedar",
+      "url": "https://github.com/cedar-policy/cedar",
+      "venue": "Open source reference policy engine"
+    },
+    {
+      "id": "openfga",
+      "url": "https://github.com/openfga/openfga",
+      "venue": "Open source reference policy engine"
+    },
+    {
+      "id": "nistabac",
+      "url": "https://doi.org/10.6028/NIST.SP.800-162",
+      "venue": "NIST SP 800-162 updated 2019"
+    },
+    {
+      "id": "zanzibar19",
+      "url": "https://www.usenix.org/conference/atc19/presentation/pang",
+      "venue": "USENIX ATC 2019"
+    }
+  ]
+}

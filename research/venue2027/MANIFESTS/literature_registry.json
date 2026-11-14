@@ -1,0 +1,197 @@
+{
+  "silo13": {
+    "title": "Speedy Transactions in Multicore In-Memory Databases",
+    "venue": "SOSP 2013",
+    "year": 2013,
+    "url": "https://doi.org/10.1145/2517349.2522713",
+    "class_": "A* systems",
+    "relation": "Serializable optimistic concurrency, scalable in-memory baseline; not a health-specific disclosure mechanism"
+  },
+  "elle20": {
+    "title": "Elle: Inferring Isolation Anomalies from Experimental Observations",
+    "venue": "OSDI 2020",
+    "year": 2020,
+    "url": "https://github.com/jepsen-io/elle",
+    "class_": "A* systems",
+    "relation": "Independent black-box transaction-history checker; requires truthful export of histories"
+  },
+  "zanzibar19": {
+    "title": "Zanzibar: Google’s Consistent, Global Authorization System",
+    "venue": "USENIX ATC 2019",
+    "year": 2019,
+    "url": "https://www.usenix.org/conference/atc19/presentation/pang",
+    "class_": "top-tier systems",
+    "relation": "Consistency-aware authorization; tests novelty beyond permission re-evaluation"
+  },
+  "macaroons14": {
+    "title": "Macaroons: Cookies with Contextual Caveats for Decentralized Authorization in the Cloud",
+    "venue": "NDSS 2014",
+    "year": 2014,
+    "url": "https://research.google/pubs/macaroons-cookies-with-contextual-caveats-for-decentralized-authorization-in-the-cloud/",
+    "class_": "A* security",
+    "relation": "Strong caveat-bound HMAC capability; prevents overstating novelty of scoped tokens"
+  },
+  "agentdojo24": {
+    "title": "AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents",
+    "venue": "NeurIPS 2024 Datasets & Benchmarks",
+    "year": 2024,
+    "url": "https://proceedings.nips.cc/paper_files/paper/2024/hash/97091a5177d8dc64b1da8bf3e1f6fb54-Abstract-Datasets_and_Benchmarks_Track.html",
+    "code": "https://github.com/ethz-spylab/agentdojo",
+    "class_": "A* ML",
+    "relation": "Stateful tool-agent attack/defense benchmark, not a direct authorization system"
+  },
+  "toolemu24": {
+    "title": "ToolEmu: Identifying the Risks of LM Agents with an LM-Emulated Sandbox",
+    "venue": "ICLR 2024",
+    "year": 2024,
+    "url": "https://proceedings.iclr.cc/paper_files/paper/2024/file/7274ed909a312d4d869cc328ad1c5f04-Paper-Conference.pdf",
+    "code": "https://github.com/ryoungj/ToolEmu",
+    "class_": "A* ML",
+    "relation": "Risk-oriented emulation and judge validation; do not equate simulated tool outcomes with persisted transactions"
+  },
+  "tauben25": {
+    "title": "tau-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains",
+    "venue": "ICLR 2025",
+    "year": 2025,
+    "url": "https://proceedings.iclr.cc/paper_files/paper/2025/hash/1b126cc38b8638e07bef37e7b2bb72bf-Abstract-Conference.html",
+    "code": "https://github.com/sierra-research/tau-bench",
+    "class_": "A* ML",
+    "relation": "Final database-state / policy-following evaluation; historical repo warns tasks outdated"
+  },
+  "cedar": {
+    "title": "Cedar policy language and authorization reference implementation",
+    "venue": "Open source reference policy engine",
+    "year": 2026,
+    "url": "https://github.com/cedar-policy/cedar",
+    "class_": "industry research implementation",
+    "relation": "Executable ABAC/PBAC comparator with expressivity and schema limits documented"
+  },
+  "openfga": {
+    "title": "OpenFGA: Zanzibar-inspired fine-grained authorization",
+    "venue": "Open source reference policy engine",
+    "year": 2026,
+    "url": "https://github.com/openfga/openfga",
+    "class_": "industry research implementation",
+    "relation": "Executable ReBAC/ABAC control with policy/consent model mapping limits"
+  },
+  "xacml18": {
+    "title": "Automated Coverage-Based Testing of XACML Policies",
+    "venue": "ACM SACMAT 2018",
+    "year": 2018,
+    "url": "https://doi.org/10.1145/3205977.3205979",
+    "class_": "specialized access-control conference",
+    "relation": "MC/DC and mutation-adequacy baseline; must not compare naive only"
+  },
+  "xacbench20": {
+    "title": "XACBench: a XACML policy benchmark",
+    "venue": "Soft Computing",
+    "year": 2020,
+    "url": "https://doi.org/10.1007/s00500-020-04925-5",
+    "class_": "journal, quartile requires year-specific verification",
+    "relation": "Policy generation and evaluation benchmark; explicit scope difference from longitudinal traces"
+  },
+  "nistabac": {
+    "title": "Guide to Attribute Based Access Control (ABAC) Definition and Considerations",
+    "venue": "NIST SP 800-162 updated 2019",
+    "year": 2019,
+    "url": "https://doi.org/10.6028/NIST.SP.800-162",
+    "class_": "standard, not conference",
+    "relation": "Formal authorization vocabulary and policy attributes"
+  },
+  "rats9334": {
+    "title": "Remote ATtestation procedureS (RATS) Architecture",
+    "venue": "IETF RFC 9334",
+    "year": 2023,
+    "url": "https://www.rfc-editor.org/rfc/rfc9334.html",
+    "class_": "standard, not A* paper",
+    "relation": "Strict evidence / attester / verifier boundary; prevents calling a SHA-256 hash hardware attestation"
+  },
+  "ct9162": {
+    "title": "Certificate Transparency Version 2.0",
+    "venue": "IETF RFC 9162",
+    "year": 2021,
+    "url": "https://www.rfc-editor.org/rfc/rfc9162.html",
+    "class_": "standard, not A* paper",
+    "relation": "Merkle append-only transparency model, integrity != confidentiality"
+  },
+  "who21": {
+    "title": "Ethics and Governance of Artificial Intelligence for Health",
+    "venue": "World Health Organization",
+    "year": 2021,
+    "url": "https://www.who.int/publications/i/item/9789240029200",
+    "class_": "clinical governance guidance",
+    "relation": "Ethics, purpose and clinical claims boundary"
+  },
+  "cse2026": {
+    "title": "A novel evaluation benchmark for medical LLMs illuminating safety and effectiveness in clinical domains",
+    "venue": "npj Digital Medicine (2026)",
+    "year": 2026,
+    "url": "https://www.nature.com/articles/s41746-025-02277-8",
+    "class_": "medical journal; quartile subject to index/year",
+    "relation": "Physician-consensus evaluation quality baseline, not a tested consent-enforcement system"
+  },
+  "medhelm2026": {
+    "title": "Holistic evaluation of large language models for medical tasks with MedHELM",
+    "venue": "Nature Medicine (2026)",
+    "year": 2026,
+    "url": "https://www.nature.com/articles/s41591-025-04151-2",
+    "class_": "high-impact clinical journal",
+    "relation": "Broad clinical task taxonomy; evaluate workflows, not MCQ clinical recall"
+  },
+  "healthbench25": {
+    "title": "HealthBench: A benchmark for AI systems and human health",
+    "venue": "OpenAI 2025 research benchmark",
+    "year": 2025,
+    "url": "https://openai.com/index/healthbench/",
+    "class_": "research benchmark, peer-review status separate",
+    "relation": "Doctor-authored multi-turn health scoring; no automatic clinical validation"
+  },
+  "amie2026": {
+    "title": "Towards conversational artificial intelligence for disease management",
+    "venue": "Nature 2026",
+    "year": 2026,
+    "url": "https://doi.org/10.1038/s41586-026-10764-5",
+    "class_": "high-impact clinical journal",
+    "relation": "Multivisit medical management, human evaluation; not a direct static record benchmark"
+  },
+  "muse": {
+    "title": "MUSE: Machine Unlearning Six-Way Evaluation for Language Models",
+    "venue": "Research evaluation work",
+    "year": 2024,
+    "url": "https://research.google/pubs/muse-machine-unlearning-six-way-evaluation-for-language-models/",
+    "class_": "research work; venue not assumed",
+    "relation": "Strong distinction between unlearning, future disclosure prevention and utility"
+  },
+  "injecagent24": {
+    "title": "InjecAgent: Benchmarking Indirect Prompt Injections in Tool-Integrated Large Language Model Agents",
+    "venue": "Findings of ACL 2024",
+    "year": 2024,
+    "url": "https://aclanthology.org/2024.findings-acl.624/",
+    "class_": "NLP research conference",
+    "relation": "External tool injection attacks; semantic threat families not equivalent to write admission"
+  },
+  "opa": {
+    "title": "Open Policy Agent (OPA): policy-as-code engine",
+    "venue": "Open source policy implementation",
+    "year": 2026,
+    "url": "https://www.openpolicyagent.org/",
+    "class_": "implementation, not peer-reviewed paper",
+    "relation": "Concrete rule-engine comparator; no built-in temporal consent unless encoded"
+  },
+  "fhir5": {
+    "title": "FHIR R5 Consent, AuditEvent, Provenance resources",
+    "venue": "HL7 FHIR specification",
+    "year": 2023,
+    "url": "https://hl7.org/fhir/R5/",
+    "class_": "standard",
+    "relation": "Structure / interoperability only; FHIR compliance is not clinical safety"
+  },
+  "sommer10": {
+    "title": "Outside the Closed World: On Using Machine Learning for Network Intrusion Detection",
+    "venue": "IEEE Symposium on Security and Privacy 2010",
+    "year": 2010,
+    "url": "https://doi.org/10.1109/SP.2010.25",
+    "class_": "A* security",
+    "relation": "Warns against test-train environmental leakage and unrealistic anomaly-detection labels"
+  }
+}

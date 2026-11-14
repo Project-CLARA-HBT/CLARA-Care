@@ -1,0 +1,27 @@
+{
+  "task_id": "SH-agent_protocol",
+  "status": "PASS",
+  "source_sha_before": "610c2f9335bb44a3077dd62ac7d3b4f4b9614d3d",
+  "source_sha_after": "610c2f9335bb44a3077dd62ac7d3b4f4b9614d3d",
+  "changed_paths": [
+    "research/venue2027/_shared/tools/agent_protocol.py",
+    "research/venue2027/_shared/tests/test_agent_protocol.py",
+    "research/venue2027/AGENTS/EXECUTION_CONTRACT.md"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/test_agent_protocol.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/SH-agent_protocol.pytest.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/tools/agent_protocol.py": "8b869d146b404086c798f54e01051806eb119f59f3efc7e1fc1ee7dbfe46b78d",
+    "research/venue2027/_shared/tests/test_agent_protocol.py": "fccfd0fe2fa141b8c6e331d7b941df129f419cb0f36ebb849848635baea3f0c0",
+    "research/venue2027/AGENTS/EXECUTION_CONTRACT.md": "9d19a9d51afbd5b07b6dccd02b3e2bd49a0772abf0f6f2be9ba318a628af3e26"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Executable handoff validator enforcing schema, zero-exit, in-repo SHA, artifact hashes and DAG dependencies."
+}
