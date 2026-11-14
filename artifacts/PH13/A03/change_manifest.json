@@ -1,0 +1,92 @@
+{
+  "phase_id": "PH13",
+  "agent_id": "A03",
+  "role": "Domain + GLHS services",
+  "task": "dedup source and version mapping",
+  "status": "PASSED",
+  "base_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "frozen_head_sha": "d04de72b6f9b09aefbe7c32ef85bca92b97bbf8d",
+  "branch": "phase/ph13-a03",
+  "worktree_path": "/dev/shm/clara_worktrees/PH13_A03",
+  "path_lane": "services/api/src/clara_api/glhs/;services/api/src/clara_api/lifemap/;services/api/src/clara_api/phr/;services/api/src/clara_api/compliance/;services/api/src/clara_api/core/;artifacts/PH13/A03/",
+  "files_changed": [
+    "services/api/src/clara_api/core/config.py",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py",
+    "services/api/src/clara_api/lifemap/test_wearable_dedup.py",
+    "artifacts/PH13/A03/change_manifest.json",
+    "artifacts/PH13/A03/test_report.md",
+    "artifacts/PH13/A03/risk_register.md",
+    "artifacts/PH13/A03/rollback.md"
+  ],
+  "deliverables": [
+    "services/api/src/clara_api/lifemap/wearable_dedup.py",
+    "services/api/src/clara_api/lifemap/test_wearable_dedup.py",
+    "services/api/src/clara_api/core/config.py",
+    "artifacts/PH13/A03/change_manifest.json",
+    "artifacts/PH13/A03/test_report.md",
+    "artifacts/PH13/A03/risk_register.md",
+    "artifacts/PH13/A03/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/core/config.py:941",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py:47",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py:51",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py:60",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py:83",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py:91",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py:149",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py:209",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py:225",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py:240",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py:253",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py:301",
+    "services/api/src/clara_api/lifemap/wearable_dedup.py:406",
+    "services/api/src/clara_api/lifemap/test_wearable_dedup.py:70"
+  ],
+  "tests_run": [
+    {
+      "command": "python3 -m compileall -q services/api/src/clara_api/lifemap services/api/src/clara_api/core",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Bytecode compilation of the new domain module, its colocated test module, and the modified Settings module."
+    },
+    {
+      "command": "cd services/api && PYTHONPATH=src python3 -m pytest src/clara_api/lifemap/test_wearable_dedup.py -q",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "16 pure-logic unit tests: deterministic key derivation, duplicate detection, revision supersession, cross-source conflict preservation, device-over-cloud precedence, order-independent batch mapping, and fail-closed feature flag."
+    },
+    {
+      "command": "services/api/.venv/bin/ruff check services/api/src/clara_api/lifemap/wearable_dedup.py services/api/src/clara_api/lifemap/test_wearable_dedup.py services/api/src/clara_api/core/config.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Repository lint profile (E, F, I, UP, B) over all changed Python files."
+    },
+    {
+      "command": "services/api/.venv/bin/mypy services/api/src/clara_api/lifemap/wearable_dedup.py --ignore-missing-imports",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Type check of the new deduplication module under the repo mypy configuration."
+    },
+    {
+      "command": "cd services/api && PYTHONPATH=src python3 -m pytest tests/test_connected_health_schemas.py -q",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Existing connected-health canonical schema regression suite unchanged by this work (14 tests)."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A03 -p PH13",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane isolation validation; every touched file is inside the A03 write lane."
+    }
+  ],
+  "rollback_steps": [
+    "Set LIFEMAP_WEARABLE_DEDUP_ENABLED=false (default) to stop all dedup decisions without a deploy.",
+    "git checkout bce92340e1f7a0709a96e9526e0682fa0fcb1e32 -- services/api/src/clara_api/core/config.py",
+    "rm -f services/api/src/clara_api/lifemap/wearable_dedup.py services/api/src/clara_api/lifemap/test_wearable_dedup.py",
+    "rm -rf artifacts/PH13/A03"
+  ],
+  "timestamp": "2026-11-14T12:08:37Z"
+}
