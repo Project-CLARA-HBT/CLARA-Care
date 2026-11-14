@@ -1,0 +1,79 @@
+{
+  "phase_id": "PH13",
+  "agent_id": "A07",
+  "role": "Tests + CI",
+  "task": "mobile permission/resync flows",
+  "status": "PASSED",
+  "base_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "frozen_head_sha": "bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+  "branch": "phase/ph13-a07",
+  "worktree_path": "/dev/shm/clara_worktrees/PH13_A07",
+  "path_lane": "services/api/tests/;services/ml/tests/;apps/web/e2e/;.github/workflows/;artifacts/PH13/A07/",
+  "files_changed": [
+    "services/api/tests/test_connected_health_mobile_resync_integration.py",
+    "artifacts/PH13/A07/change_manifest.json",
+    "artifacts/PH13/A07/test_report.md",
+    "artifacts/PH13/A07/risk_register.md",
+    "artifacts/PH13/A07/rollback.md"
+  ],
+  "deliverables": [
+    "services/api/tests/test_connected_health_mobile_resync_integration.py",
+    "artifacts/PH13/A07/change_manifest.json",
+    "artifacts/PH13/A07/test_report.md",
+    "artifacts/PH13/A07/risk_register.md",
+    "artifacts/PH13/A07/rollback.md"
+  ],
+  "blockers": [],
+  "verified_source_anchors": [
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:108",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:117",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:133",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:177",
+    "services/api/src/clara_api/api/v1/endpoints/connected_health.py:194",
+    "services/api/src/clara_api/connected_health/ingestion.py:67",
+    "services/api/src/clara_api/connected_health/ingestion.py:79",
+    "services/api/src/clara_api/connected_health/ingestion.py:84",
+    "services/api/src/clara_api/connected_health/ingestion.py:89",
+    "services/api/src/clara_api/connected_health/ingestion.py:104",
+    "services/api/src/clara_api/connected_health/ingestion.py:118",
+    "services/api/src/clara_api/connected_health/service.py:204",
+    "services/api/src/clara_api/connected_health/service.py:215",
+    "services/api/src/clara_api/connected_health/service.py:221",
+    "services/api/src/clara_api/connected_health/service.py:237",
+    "services/api/src/clara_api/connected_health/service.py:241",
+    "services/api/src/clara_api/connected_health/service.py:274",
+    "services/api/src/clara_api/connected_health/service.py:313",
+    "services/api/src/clara_api/db/models.py:1885",
+    "services/api/src/clara_api/db/models.py:3629",
+    "services/api/src/clara_api/db/models.py:3662",
+    "services/api/src/clara_api/db/models.py:3680",
+    "services/api/src/clara_api/db/models.py:3699",
+    "services/api/src/clara_api/db/models.py:3724",
+    "services/api/src/clara_api/db/models.py:3768",
+    "services/api/src/clara_api/db/models.py:3785",
+    "services/api/src/clara_api/db/models.py:3830",
+    "services/api/src/clara_api/core/config.py:105",
+    "services/api/src/clara_api/main.py:344"
+  ],
+  "tests_run": [
+    {
+      "command": "cd services/api && DATABASE_URL=sqlite+pysqlite:////tmp/clara_api_ci.db AUTH_AUTO_PROVISION_USERS=true AUTH_BOOTSTRAP_ADMIN_ENABLED=true uv run pytest -q tests/test_connected_health_mobile_resync_integration.py",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "14 integration tests covering multi-type wearable ingestion and daily aggregates, version snapshots, tombstones, scope/provider rejection, consent revocation and unconsented data blocking, hard deletion with aggregate invalidation, resync idempotency exact-replay and key-reuse conflict, transactional outbox event on sync, and CSRF enforcement for cookie-auth mutations with Bearer exemption."
+    },
+    {
+      "command": "python3 /home/clue/Documents/CLARA-Care/scripts/ci/check_agent_path_acl.py -a A07 -p PH13",
+      "exit_code": 0,
+      "status": "PASSED",
+      "description": "Path lane conformance verified for the new test suite and artifacts/PH13/A07/ against the A07 lane."
+    }
+  ],
+  "rollback_steps": [
+    "rm -f /dev/shm/clara_worktrees/PH13_A07/services/api/tests/test_connected_health_mobile_resync_integration.py",
+    "rm -rf /dev/shm/clara_worktrees/PH13_A07/artifacts/PH13/A07",
+    "git -C /dev/shm/clara_worktrees/PH13_A07 reset --hard bce92340e1f7a0709a96e9526e0682fa0fcb1e32",
+    "git -C /dev/shm/clara_worktrees/PH13_A07 status --short"
+  ],
+  "timestamp": "2026-11-14T11:41:12Z"
+}
