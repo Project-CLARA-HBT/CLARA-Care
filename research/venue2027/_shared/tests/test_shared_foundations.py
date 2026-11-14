@@ -195,3 +195,55 @@ def test_clinical_claim_from_synthetic_blocked() -> None:
 def test_provider_terms_required() -> None:
     assert re_.check_provider_use(_ds()).ok is False
     assert re_.check_provider_use(_ds(provider_terms_acknowledged=True)).ok is True
+
+
+# ------------------------------------------------------------------ threat model
+import threat_model as tm  # noqa: E402
+
+
+def _pair_rows() -> str:
+    return "\n".join(
+        f"| {f} | paired | a | c | clean: ok | adversarial: x | reject |"
+        for f in tm.ATTACK_FAMILIES
+    )
+
+
+def _good_threat() -> str:
+    return (
+        "# Threat\n"
+        "## Attacker and observer capabilities\nCAP\n"
+        "## Trusted components\nTC\n"
+        "## Excluded domains\nED\n"
+        "## Attack family and control matrix\n"
+        + _pair_rows()
+        + "\n## Oracle and actor authority\nDefined: oracle X, actor Y.\n"
+    )
+
+
+def test_threat_model_complete_passes() -> None:
+    assert tm.validate_threat(_good_threat()).ok is True
+
+
+def test_threat_model_missing_section_refused() -> None:
+    result = tm.validate_threat("# Threat\n## Attacker and observer capabilities\nx\n")
+    assert result.ok is False
+    assert "MISSING_SECTION" in result.reason_codes
+
+
+def test_threat_model_family_without_pair_refused() -> None:
+    text = "\n".join(
+        line for line in _good_threat().splitlines() if "| replay |" not in line
+    )
+    result = tm.validate_threat(text)
+    assert result.ok is False
+    assert "replay" in result.families_without_pair
+
+
+def test_threat_model_render_template_is_valid() -> None:
+    template = (
+        "# T\n## Attacker and observer capabilities\n## Trusted components\n"
+        "## Excluded domains\n## Attack family and control matrix\n"
+        + tm.render_matrix_template()
+        + "\n## Oracle and actor authority\nDefined.\n"
+    )
+    assert tm.validate_threat(template).ok is True
