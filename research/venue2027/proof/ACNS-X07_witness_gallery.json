@@ -1,6 +1,5 @@
 {
   "artifacts_sha256": {
-    "artifacts/venue2027/acns/acns-x07-witness-gallery-1.0.0/witness_gallery.json": "1a078c4e4d780bc2a5f501b3f4884ca945fddc18d3df0597d0226ca8f193ad87",
     "evaluation/venue2027/acns/executable_counterexamples.py": "5c1f4fe683bdc672f3ac7d64ad283cb1577416c531e4d1b6da7ab71e8b5316c3",
     "research/venue2027/acns/tests/test_witness_gallery.py": "96c3182dc821456e9b0c285a5d78919085b61a313f4afff79846cabc9a310b37",
     "research/venue2027/proof/logs/ACNS-X07_witness_gallery.emit.log": "6a086507cbee85077e1f1de17fc8eb6b84dad06ae4077109df1655f3ebb33d17",
