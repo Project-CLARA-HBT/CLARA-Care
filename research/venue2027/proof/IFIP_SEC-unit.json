@@ -1,0 +1,33 @@
+{
+  "task_id": "IFIP_SEC-unit",
+  "status": "PASS",
+  "source_sha_before": "5f97bc366a18a2d3722884cfc44a25fb2d6bee59",
+  "source_sha_after": "5f97bc366a18a2d3722884cfc44a25fb2d6bee59",
+  "changed_paths": [
+    "tests/venue2027/ifip_sec/__init__.py",
+    "tests/venue2027/ifip_sec/test_algorithm_properties.py",
+    "research/venue2027/proof/logs/IFIP_SEC-unit.pytest.log",
+    "research/venue2027/proof/logs/IFIP_SEC-unit.ruff.log",
+    "research/venue2027/proof/IFIP_SEC-unit.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q tests/venue2027/ifip_sec/test_algorithm_properties.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-unit.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check tests/venue2027/ --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-unit.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "tests/venue2027/ifip_sec/__init__.py": "1ff22abf08f722c9610b9fa6622cf3326c006665d8a8b5b4a3e0ebd88645fc05",
+    "tests/venue2027/ifip_sec/test_algorithm_properties.py": "63ea3af9666be93930c90f554316377bac8f42994c2d232ede013b1d6c87f3a2"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "IFIP_SEC-unit (Phase P05, auditor agent, RQ1-RQ3): deterministic property/metamorphic/mutation suite over the REAL IFIP components, imported directly (never reimplemented, stubbed or toyed; execution contract rule 8): candidate.py (authorize/issue_receipt/AuthorizationLedger + the REAL ablation hooks), baselines.py (arms B0/B1/B2/B3 + B2_INPROCESS_ZANZIBAR via run_baseline), consistency_token_adapter.py (check_with_revision zookie semantics), nonce_store.py (thread-safe NonceStore consume-once transition) and replay_generator.py (seeded attack families). New driver tests/venue2027/ifip_sec/test_algorithm_properties.py (28 tests, all randomness seeded/folded through deterministic arithmetic, injected frozen clock, no network/db/PII) covers: (1) boundaries - fresh ADMIT with NONCE_CONSUMED_OK; every determined binding attack DENYed with its stable code and the nonce NEVER consumed on DENY; validly-signed unregistered receipt fail-closed RECEIPT_UNKNOWN; oracle UNKNOWN boundary INDETERMINATE for unmodelled families (+ MISSING_CASE_ID raise). (2) replay/delegation races - exact-replay second-identical-request DENY (NONCE_REPLAYED); signature-valid replay across a live policy-epoch revocation DENYed POLICY_EPOCH_STALE before the nonce; grantor/delegate interleaving over one shared nonce pool; real-threads 8-way concurrent double-consumption race where exactly 1 thread observes CONSUMED and 7 observe REPLAY_DETECTED; expired/skewed nonce windows fail closed in every branch (EXPIRED never reshares; consumed-then-expired replay never converts to admission). (3) two-step metamorphic relations - appending a caveat byte never widens B2 authority (grown set fails the honest signature); consuming a nonce makes a second identical request fail for BOTH the B3 arm and the full candidate pipeline; delegation never broadens scope (child binds parent scope + strictly extends the chain; swapped chain DENYed DELEGATION_CHAIN_CHANGED); lineage append is a new commitment that never resurrects a denied receipt (LINEAGE_SPLICED) while the unchanged request still admits (purity); zookie snapshot reads are monotone in the revision (pre-grant ABSENT / granted PRESENT / post-revoke REVOKED, head never more permissive); zookie byte-mutation fails closed (UNPARSEABLE/SIGNATURE_INVALID, never a different allowed verdict). (4) mutation checks - REAL ablation hooks: ablation_no_nonce ADMITs the exact replay the full mechanism DENYs and never consumes; ablation_no_lineage_binding ADMITs the splice the full mechanism DENYs (LINEAGE_UNBOUND); single-field signed-claim mutations all break the HMAC (RECEIPT_SIGNATURE_INVALID, nonce intact); unsigned transport drift with the HONEST mac is caught by commitment re-derivation (DELEGATION_CHAIN_CHANGED / LINEAGE_SPLICED); every CAVEAT_KEYS single-byte mutation fails B2 verification; seeded generate_replays (SEED_A/SEED_B, n=16) is deterministic, mutates exactly the family's primary field, and every attack is decision-separated from its paired legitimate control (cross_purpose/lineage_splice realized as mutated-request REJECTs; delegation_replay/nonce_replay realized as second-presentation NONCE_REPLAYED after the faithful first consume). (5) determinism + RQ3 markers - identical inputs yield identical verdict dicts; token_bytes/zookie_bytes positive and stable; zanzibar walk counts (tuples_examined/nodes_visited/db_round_trips) real, positive and deterministic; B2 parity_check round-trip admits honest + rejects tampered variant; cross-arm RQ1 separation (B0/B1 ADMIT the replay their published stateless semantics allow, B3 rejects consume-once); fresh-vs-stale zookie boundary via run_baseline (FRESH rejects post-revocation replay RELATION_REVOKED; pre-revocation token ADMITs inside the bounded-staleness window - asserted, never hidden). Test evidence: 28 passed (pytest exit 0, 0.42s); regression: 187 passed on tests/venue2027/ifip_sec/ + evaluation/venue2027/ifip_sec/; uvx ruff@0.7.1 check tests/venue2027/ exit 0 (log archived). source_sha_after records HEAD at emission time per the established sibling convention (IFIP_SEC-baseline_tests): the single task commit is created immediately after this report and the commit SHA is recorded in the commit body. No PostgreSQL/LLM/external-upstream claims: in-process unit scope only (real PostgreSQL linearizability belongs to IFIP_SEC-X03/X08 and stays explicitly out of this report)."
+}

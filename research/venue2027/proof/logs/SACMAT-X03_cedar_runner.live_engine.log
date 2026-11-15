@@ -1,0 +1,7 @@
+# SACMAT-X03_cedar_runner — live upstream engine probe
+# Engine: REAL cedar-policy-cli 4.14.1 (cargo install cedar-policy-cli --version 4.14.1 --locked)
+cedar-policy-cli 4.14.1
+
+active_grant_PERMIT: engine=cedar-upstream-cli decision=PERMIT reason=OK version=cedar-policy-cli 4.14.1
+revoked_DENY: engine=cedar-upstream-cli decision=DENY reason=OK version=cedar-policy-cli 4.14.1
+live upstream verdicts recorded; binary path: /home/clue/.cargo/bin/cedar

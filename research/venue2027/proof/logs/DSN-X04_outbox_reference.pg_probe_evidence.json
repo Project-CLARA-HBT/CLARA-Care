@@ -1,0 +1,28 @@
+{
+  "tool": "run_outbox_real_postgres_probe",
+  "task_id": "DSN-X04_outbox_reference",
+  "execution_context": "docker run --network pg_research_net (inside the isolated compose network; the cluster publishes no host port by design)",
+  "image": "python@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b",
+  "psycopg": "3.2.3 (installed inside the probe container)",
+  "dsn_host": "pg_research",
+  "database": "clara_research",
+  "guard_version": "1.0.0",
+  "server_version": "16.4 (Debian 16.4-1.pgdg120+2)",
+  "server_version_num": "160004",
+  "backend_label_in_outcomes": "postgresql-16.0.4",
+  "backend_label_note": "backend string decodes the libpq server_version number 160004 as 16.0.4; SHOW server_version reports the Debian point release 16.4",
+  "pytest_in_network": "python3 -m pytest -q tests/venue2027/dsn/test_outbox_reference.py -rs",
+  "pytest_result": "32 passed, 1 warning (28 in-memory + 4 real-PostgreSQL vectors, all 4 PG vectors executed, none skipped)",
+  "durable_evidence_checked": {
+    "outboxref_effect_rows_per_operation": {"op:pg-clean": 1, "op:pg-dup": 1, "op:pg-ack": 1},
+    "outboxref_idempotency_effect_applied": {"op:pg-clean": true, "op:pg-dup": true, "op:pg-ack": true},
+    "outboxref_outbox_acked": {"op:pg-clean": true, "op:pg-dup": true, "op:pg-ack": true}
+  },
+  "atomicity_probes": {
+    "one_transaction_persists_row_outbox_idem": "verified by test_clean_commit_on_real_postgres (row+outbox+idem durable_writes=3 in one tx)",
+    "pre_commit_writes_nothing": "verified by test_pre_commit_crash_writes_nothing_on_real_postgres (zero rows in all three tables)",
+    "duplicate_delivery_no_second_effect": "verified by test_idempotent_redelivery_on_real_postgres (exactly 1 effect row after 2 deliveries)",
+    "post_commit_recovery_dedups": "verified by test_post_commit_recovery_on_real_postgres (1 effect row, no re-commit)"
+  },
+  "captured_at_utc": "2026-11-15 (host clock; probe runtime evidence in logs/DSN-X04_outbox_reference.pg-pytest.log)"
+}

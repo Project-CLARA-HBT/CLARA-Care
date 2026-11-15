@@ -1,0 +1,45 @@
+{
+  "results": {
+    "clean_commit": {
+      "backend": "in-memory-reference",
+      "counted_as_success": true,
+      "crash_point": "none",
+      "deliveries": 1,
+      "detail": "OP_COMMITTED",
+      "durable_writes": 4,
+      "full_retries": 0,
+      "observed_outcome": "ADMIT",
+      "operation_id": "op:demo-clean",
+      "retriable": false,
+      "version": "clara.dsn.outbox-reference-v1"
+    },
+    "pre_commit_crash": {
+      "backend": "in-memory-reference",
+      "counted_as_success": false,
+      "crash_point": "pre_commit",
+      "deliveries": 0,
+      "detail": "OP_NOT_DURABLE_CRASH_BEFORE_WRITE",
+      "durable_writes": 0,
+      "full_retries": 0,
+      "observed_outcome": "REJECT",
+      "operation_id": "op:demo-crash",
+      "retriable": true,
+      "version": "clara.dsn.outbox-reference-v1"
+    },
+    "triple_replay_dedup": {
+      "backend": "in-memory-reference",
+      "counted_as_success": true,
+      "crash_point": "none",
+      "deliveries": 3,
+      "detail": "OP_COMMITTED_IDEMPOTENT_RETRY",
+      "durable_writes": 4,
+      "full_retries": 2,
+      "observed_outcome": "ADMIT",
+      "operation_id": "op:demo-replay",
+      "retriable": false,
+      "version": "clara.dsn.outbox-reference-v1"
+    }
+  },
+  "version": "clara.dsn.outbox-reference-v1"
+}
+EXIT=0

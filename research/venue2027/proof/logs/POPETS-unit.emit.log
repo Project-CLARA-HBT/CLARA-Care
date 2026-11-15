@@ -1,0 +1,10 @@
+wrote /dev/shm/cw/wb_popets-unit/research/venue2027/proof/POPETS-unit.json
+{
+ "ok": false,
+ "reason_code": "MISSING_LOG",
+ "errors": [
+  "log_path is absent/empty/outside repo: research/venue2027/proof/logs/POPETS-unit.validator.log"
+ ],
+ "task_id": "POPETS-unit",
+ "protocol_version": "1.0.0"
+}

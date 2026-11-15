@@ -1,0 +1,6 @@
+discovered OpenFGA server: http://127.0.0.1:18080
+pinned: openfga/openfga:v1.22.1 44054f542f64e9b9589dd26a595081b3d2cfd942 consistency: HIGHER_CONSISTENCY
+clean_grant -> ADMIT | engine=openfga-http|decision=PERMIT|evidence={"authorization_model": "consent/consent_record schema 1.1", "consistency":
+regrant -> ADMIT | engine=openfga-http|decision=PERMIT|evidence={"authorization_model": "consent/consent_record schema 1.1", "consistency":
+revoked -> REJECT | engine=openfga-http|decision=NOT_APPLICABLE|evidence={"authorization_model": "consent/consent_record schema 1.1", "consi
+artifact written

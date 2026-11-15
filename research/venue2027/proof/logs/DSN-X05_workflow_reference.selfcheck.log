@@ -1,0 +1,21 @@
+{
+  "engine_outcome": {
+    "counted_as_success": false,
+    "detail": "WORKFLOW_ENGINE_UNAVAILABLE:temporalio@1.19.0 not importable; pinned engine arm not executed (in-memory saga reference available via run_saga_reference, labelled as such)",
+    "observed_outcome": "NOT_RUN_EXTERNAL",
+    "retriable": false
+  },
+  "probe": {
+    "engine": "temporalio",
+    "installed": false,
+    "pinned_upstream_revision": "11e8650c7c8b89af45fab328e400d2fd5a9af16c",
+    "pinned_version": "1.19.0",
+    "reason": "WORKFLOW_ENGINE_UNAVAILABLE"
+  },
+  "saga_interrupted": {
+    "counted_as_success": false,
+    "detail": "IN_MEMORY_SAGA_REFERENCE:SAGA_INTERRUPTED_PENDING_RECOVERY:before=emit_receipt",
+    "observed_outcome": "INDETERMINATE",
+    "retriable": true
+  }
+}

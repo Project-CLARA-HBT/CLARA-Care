@@ -785,6 +785,11 @@
       "marked_at": "2026-11-14T18:51:14.226496+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-worktree_layout.json",
       "status": "PASS"
+    },
+    "PST-dataset": {
+      "report": "/dev/shm/cw/wb_pst-dataset/research/venue2027/proof/PST-dataset.json",
+      "status": "PASS",
+      "marked_at": "2026-11-15T15:38:21.577589+00:00"
     }
   },
   "schema_version": 1

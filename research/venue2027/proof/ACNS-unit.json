@@ -1,0 +1,40 @@
+{
+  "task_id": "ACNS-unit",
+  "status": "PASS",
+  "source_sha_before": "5f97bc366a18a2d3722884cfc44a25fb2d6bee59",
+  "source_sha_after": "5f97bc366a18a2d3722884cfc44a25fb2d6bee59",
+  "changed_paths": [
+    "tests/venue2027/acns/test_algorithm_properties.py",
+    "tests/venue2027/acns/__init__.py",
+    "research/venue2027/proof/ACNS-unit.json",
+    "research/venue2027/proof/logs/ACNS-unit.pytest.log",
+    "research/venue2027/proof/logs/ACNS-unit.ruff.log",
+    "research/venue2027/proof/logs/ACNS-unit.suite.log",
+    "research/venue2027/proof/logs/ACNS-unit.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q tests/venue2027/acns/test_algorithm_properties.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-unit.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check tests/venue2027/acns/test_algorithm_properties.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-unit.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/ tests/venue2027/acns/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-unit.suite.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "tests/venue2027/acns/test_algorithm_properties.py": "46b90789be63b94ab23d2a56bdac87c0f65d94ff16bdf05920b9ce8b1b20eb25",
+    "tests/venue2027/acns/__init__.py": "ec1103c333ad86b12997fc8c3230f0a3c97ccf5c6bbe7de02ee16380360de41d"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Task ACNS-unit (P05, venue acns, SoK): deterministic property, metamorphic and mutation tests over the REAL ACNS evidence-boundary classifiers (evaluation/venue2027/acns/baselines.py, candidate.py, independent_oracle.py \u2014 all imported directly, no stub). Positive/negative/unknown boundary vectors over the four reference classes (B0-B3) on the pinned synthetic records (synthetic-acns-2027); INDETERMINATE retention (FIELD_UNDECIDABLE_* / PENDING_ADJUDICATION / UNMODELLED_FAMILY never coerced to a safe verdict); fail-closed reason codes (UNKNOWN_ARM, UNKNOWN_BASELINE, MALFORMED_CASE, NOT_RUN_EXTERNAL) never counted as acceptances. Two-step metamorphic relations: stripping a receipt binding then removing the receipt verification table can only weaken a claim's evidence-boundary status (IN_BOUNDARY -> BOUNDARY_GAP monotone, granted-level rank monotone, REJECT never flips back to ACCEPT); stance-differential witnesses (B0 binding-blind, B1 detect-or-preserve). Deterministic seeded sampling schedule (explicit LCG, replay-identical, no global RNG). Mutation checks kill five canonical mutants: G4 row deletion, accept-all, all-deny (killed by the liveness positive control \u2014 an arbitrary all-deny never passes correctness), oracle rule flip (caught by the frozen self-check matrix) and oracle candidate-import (caught by verify_independence CANDIDATE_IMPORT). SoK framing asserted: ANALYTIC_INSTRUMENT / is_mechanism=False / study_class=SoK, payloads carry evidence-boundary verdicts (granted lattice level, G1-G9 register rows, refused claim), never mechanism outcomes. Tests: 31 passed. ACNS suite regression: 154 passed (evaluation/venue2027/acns/ + tests/venue2027/acns/). ruff@0.7.1 check + format clean. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

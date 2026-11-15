@@ -1,0 +1,127 @@
+{
+  "adapter": "postgresql-ssi",
+  "adapter_version": "1.0.0",
+  "b2_default_schedule_outcome": {
+    "counted_as_success": true,
+    "detail": "{\"aborted\": 0, \"baseline\": \"postgresql-ssi\", \"committed\": 2, \"final_versions\": {}, \"forbidden_commits\": 0, \"transactions\": [{\"outcome\": \"COMMIT\", \"reason_code\": \"OK\", \"tx_id\": \"t1-medication-write\"}, {\"outcome\": \"COMMIT\", \"reason_code\": \"OK\", \"tx_id\": \"t2-allergy-write\"}], \"tx_count\": 2, \"version\": \"1.0.0\"}",
+    "observed_outcome": "ADMIT",
+    "parsed_detail": {
+      "aborted": 0,
+      "baseline": "postgresql-ssi",
+      "committed": 2,
+      "final_versions": {},
+      "forbidden_commits": 0,
+      "transactions": [
+        {
+          "outcome": "COMMIT",
+          "reason_code": "OK",
+          "tx_id": "t1-medication-write"
+        },
+        {
+          "outcome": "COMMIT",
+          "reason_code": "OK",
+          "tx_id": "t2-allergy-write"
+        }
+      ],
+      "tx_count": 2,
+      "version": "1.0.0"
+    }
+  },
+  "driver_executed_in_network": "pg_research_net",
+  "driver_version": "1.0.0",
+  "dsn_ok": true,
+  "read_committed_contrast": {
+    "aborted": 0,
+    "aborted_write_installed": null,
+    "committed": 2,
+    "expected_final_versions": {
+      "allergy_list": 2,
+      "medication_order": 2
+    },
+    "final_versions": {
+      "allergy_list": 2,
+      "medication_order": 2
+    },
+    "isolation": "READ COMMITTED",
+    "outcome": "ADMIT",
+    "readback_rows": [
+      [
+        "allergy_list",
+        2,
+        "metformin-500mg"
+      ],
+      [
+        "medication_order",
+        2,
+        "sulfa"
+      ]
+    ],
+    "sqlstates": [
+      null,
+      null
+    ],
+    "transactions": [
+      {
+        "outcome": "COMMIT",
+        "reason_code": "OK",
+        "tx_id": "t1-medication-write"
+      },
+      {
+        "outcome": "COMMIT",
+        "reason_code": "OK",
+        "tx_id": "t2-allergy-write"
+      }
+    ]
+  },
+  "retry_policy": {
+    "idempotent_operation_id": "(case_id, tx_id)",
+    "max_attempts": 3,
+    "retries_executed_by_adapter": 0
+  },
+  "server_version": "16.4 (Debian 16.4-1.pgdg120+2)",
+  "ssi_pair": {
+    "aborted": 1,
+    "aborted_write_installed": false,
+    "committed": 1,
+    "expected_final_versions": {
+      "allergy_list": 1,
+      "medication_order": 2
+    },
+    "final_versions": {
+      "allergy_list": 1,
+      "medication_order": 2
+    },
+    "isolation": "SERIALIZABLE",
+    "outcome": "ADMIT",
+    "readback_rows": [
+      [
+        "allergy_list",
+        1,
+        "penicillin"
+      ],
+      [
+        "medication_order",
+        2,
+        "sulfa"
+      ]
+    ],
+    "sqlstates": [
+      "40001",
+      null
+    ],
+    "transactions": [
+      {
+        "outcome": "ABORT",
+        "reason_code": "SERIALIZATION_FAILURE",
+        "sqlstate": "40001",
+        "tx_id": "t1-medication-write"
+      },
+      {
+        "outcome": "COMMIT",
+        "reason_code": "OK",
+        "tx_id": "t2-allergy-write"
+      }
+    ]
+  },
+  "task_id": "COMPSAC-X04_pg_ssi"
+}

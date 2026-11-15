@@ -1,0 +1,35 @@
+{
+  "artifacts_sha256": {
+    "research/venue2027/proof/logs/DSN-baseline_tests.pytest.log": "1e85e6eddbd8be3495606b59ea0afe7c9e87f519b1007e99977fbf4e16056bfa",
+    "research/venue2027/proof/logs/DSN-baseline_tests.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "tests/venue2027/dsn/__init__.py": "a8946d03ef1abedeacff716492d24770654940728bde8023efd8d9946ddfb395",
+    "tests/venue2027/dsn/test_baseline_fidelity.py": "454f5bcfebfd623e902eeabf17d1caf93976e838bd3b3c044a364b882da7ddb1"
+  },
+  "baseline_parity": "PASS",
+  "changed_paths": [
+    "tests/venue2027/dsn/__init__.py",
+    "tests/venue2027/dsn/test_baseline_fidelity.py",
+    "research/venue2027/proof/logs/DSN-baseline_tests.pytest.log",
+    "research/venue2027/proof/logs/DSN-baseline_tests.ruff.log",
+    "research/venue2027/proof/DSN-baseline_tests.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q tests/venue2027/dsn/test_baseline_fidelity.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-baseline_tests.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check tests/venue2027/ --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-baseline_tests.ruff.log"
+    }
+  ],
+  "notes": "P03 baseline fidelity suite (task DSN-baseline_tests, depends DSN-baselines PASS in-repo): tests/venue2027/dsn/test_baseline_fidelity.py imports the REAL evaluation.venue2027.dsn.baselines module (BASELINES_VERSION 1.0.0, asserted; no fork, no stub) and drives every implemented arm (B0-single-write, B1-outbox-idempotent, B3-fsync, B4-candidate-journal, B5-monotonic-journal) through the public dispatcher run_baseline(id, case, ctx) -> Outcome with fresh injected BaselineContext stores (synthetic crash-window cases only: case_id/operation_id/crash_point/delivery_schedule/consent_epoch; logical time, no network, no DB, no clock, no randomness, no PHI). Per implemented arm: one UPSTREAM POSITIVE vector on the documented guarantee (B0 clean-window commit; B1 duplicate deliveries deduped by the durable idempotency key; B3 fsync'd clean-window commit; B4 write-ahead journal replay after a crash dedups exactly-once; B5 fresh write advances the monotonic watermark and replays dedup) and one or more ADVERSARIAL NEGATIVE vectors into the arm's documented weak spot, asserted as observable behaviour: B0 loses the operation on a pre-commit crash (silent REJECT, empty store) AND leaves an orphaned side effect after a post-commit crash whose blind recovery retry re-applies the write (store row >= 2: the duplicate the blueprint keeps B0 to measure); B3 loses the side effect in its pre-WAL cross-channel window, reported honestly as REJECT/OP_LOST_SIDE_EFFECT_PRE_WAL (paired clean run commits, so the window not the arm is the weakness); B4/B5 fail closed with retriable REJECT when the journal write itself is lost (never coerced into a commit); B5 rejects a stale journal entry behind the watermark non-retriably with the watermark untouched. Cross-arm separation: identical post-commit crash window yields B4 journal-dedup exactly-once vs B0 duplicate re-apply vs B3 lost side effect (the RQ1 witness as fidelity). Pinned external arm B2-durable-workflow (registry durable-workflow-saga, engine absent from the worktree) returns NOT_RUN_EXTERNAL / BASELINE_UNAVAILABLE across every crash window: never counted, never retriable, never silently treated as a passing comparison arm (execution contract rule 8, no toy under the pinned name). Rule-8 hygiene: refuse_constant_stub refuses a crash-insensitive candidate; unknown baseline ids and malformed cases raise BaselineError with stable reason codes (wiring errors, never silent counted outcomes). 20 tests pass; uvx ruff@0.7.1 clean on tests/venue2027/. source_sha_after records the base commit 5f97bc36 (sibling convention: the single task commit is created immediately after the report and recorded in the commit body).",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "5f97bc366a18a2d3722884cfc44a25fb2d6bee59",
+  "source_sha_before": "5f97bc366a18a2d3722884cfc44a25fb2d6bee59",
+  "status": "PASS",
+  "task_id": "DSN-baseline_tests",
+  "unresolved": []
+}

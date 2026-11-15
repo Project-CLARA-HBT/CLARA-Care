@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "reason_code": "OK",
+  "errors": [],
+  "task_id": "DSN-X04_outbox_reference",
+  "protocol_version": "1.0.0"
+}
+EXIT=0

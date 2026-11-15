@@ -18,7 +18,7 @@ sys.path.insert(0, str(TOOLS))
 import agent_protocol as ap  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-BASE = "604642528f95e9f10052bd4bc0334bdb1c84358a"
+BASE = "5f97bc366a18a2d3722884cfc44a25fb2d6bee59"
 
 CHANGED = [
     "evaluation/venue2027/pst/__init__.py",
@@ -117,10 +117,11 @@ def main() -> int:
             "idempotency; 11 adversarial incl. UNKNOWN_SPLIT, INVALID_N, UNKNOWN_PST_FAMILY, "
             "PHI_FIELD_PRESENT, SPLIT_LEAKAGE, INVALID_FAMILY_FREQUENCY with no directory "
             "created, kernel registry drift guard, cross-venue unit-id collision guard) pass; "
-            "uvx ruff@0.7.1 clean; full evaluation/venue2027/ regression 510 passed. "
-            "source_sha_after = base commit 60464252 per sibling dataset-task convention "
-            "(IFIP_SEC-dataset, DIMVA-dataset): the single task commit is created immediately "
-            "after this report and recorded in the commit body."
+            "uvx ruff@0.7.1 clean on evaluation/venue2027/pst/; full evaluation/venue2027/ "
+            "regression 1661 passed at base 5f97bc36. source_sha_after = base commit 5f97bc36 "
+            "per sibling dataset-task convention (IFIP_SEC-dataset, DIMVA-dataset): the single "
+            "task commit is created immediately after this report and recorded in the commit "
+            "body."
         ),
     )
 

@@ -1,0 +1,53 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/dsn/workflow_reference.py": "97599b0c0369a57f86ce2a5954565c458bbb060cb3c24aa8e9f9721c0784e3ad",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.pytest.log": "69641c993313ce2ba07b76ec74753dfb56dd5c9c445e13219b5bc03139c22332",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.selfcheck.log": "c6623e0081eaa477b94cd99a9bff33f33b2b238d22b9f0e60f34dcabcb1e1052",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.suite.log": "daf3ca15b828f97f3f61c0c86a46b8e7746ccd8a55e8c3a6ad330fa22bcdcfa4",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.testsdir.log": "749fb9a613d9114bb2edfebb8ffb08efa6219bfa3f8c8cb206de8ee0e5453f3c",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.validator.log": "4624c41039834dddcaa60cd26fc62c62ce244bf8310a0c033432dd980486d959",
+    "tests/venue2027/dsn/test_workflow_reference.py": "5d50e60c43921aa5408fdb0db40d868a9d74ffafb8d12af6a16a7f1f7f464b92"
+  },
+  "baseline_parity": "NOT_RUN_EXTERNAL",
+  "changed_paths": [
+    "evaluation/venue2027/dsn/workflow_reference.py",
+    "tests/venue2027/dsn/test_workflow_reference.py",
+    "research/venue2027/proof/DSN-X05_workflow_reference.json",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.pytest.log",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.ruff.log",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.suite.log",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.testsdir.log",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.selfcheck.log",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q tests/venue2027/dsn/test_workflow_reference.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-X05_workflow_reference.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dsn/workflow_reference.py tests/venue2027/dsn/test_workflow_reference.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-X05_workflow_reference.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-X05_workflow_reference.suite.log"
+    },
+    {
+      "argv": "python3 -m pytest -q tests/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-X05_workflow_reference.testsdir.log"
+    }
+  ],
+  "notes": "P03 task DSN-X05_workflow_reference (RQ3) for DSN 2027 (Recoverable Safety Journals for Crash-Consistent AI-Mediated Health-State Mutations): durable workflow/saga strong-baseline arm B2. Engine pinning: temporalio 1.19.0 (tag 1.19.0 -> commit 11e8650c7c8b89af45fab328e400d2fd5a9af16c via git ls-remote; PyPI License-Expression MIT verified 2026-11-15; matches research/venue2027/_shared/baselines/registry.yaml arm durable-workflow-saga-compensation) with unit runs on the Temporal test-server harness only (never a live service) and durability configuration WorkflowIDReusePolicy=REJECT_DUPLICATE keyed on the stable logical operation_id. TRUTHFUL ENGINE STATUS: the pinned SDK is NOT importable in this environment (probe_engine() -> installed=false, reason=WORKFLOW_ENGINE_UNAVAILABLE), so the engine arm was NOT executed; run_workflow(case, ctx) returns the first-class harness outcome NOT_RUN_EXTERNAL / WORKFLOW_ENGINE_UNAVAILABLE (counted_as_success=False, harness-invariant FALSE_ZERO_OUTCOME forbids counting it as success). NO real engine ran and NO result in this report is presented as an engine run; no comparative claim versus the engine is derivable. In-memory saga reference (run_saga_reference, dependency-free, deterministic, injected store, labelled IN_MEMORY_SAGA_REFERENCE in every detail string): three forward steps with declared compensations (reserve_slot/release_slot, apply_state/revert_state, emit_receipt/retract_receipt); forward failure compensates completed steps in strict reverse order (SAGA_COMPENSATED_ON_STEP_FAILURE); a failing compensation is an explicit non-retriable INDETERMINATE (SAGA_COMPENSATION_INDETERMINATE), never a silent success; pre_outbox_delivery interrupts before the delivery step and reports retriable INDETERMINATE (SAGA_INTERRUPTED_PENDING_RECOVERY); recovery replay under the same operation id resumes at the first not-applied step and dedups applied ones exactly-once (SAGA_RECOVERY_RESUMED / SAGA_RECOVERY_DEDUPED); pre_commit loses the journal write and reports a retriable REJECT with an empty store (SAGA_NOT_DURABLE_CRASH_BEFORE_WRITE). Fail-closed reason codes: SAGA_COMPENSATION_STEP_MISSING (incomplete definition refused BEFORE any journal write; missing-compensation + empty-catalog guards), CONTEXT_MALFORMED for bad ctx; malformed cases raise BaselineError via the shared baselines._validate_case schema (exact 5-key case contract, shared crash vocabulary). Tests tests/venue2027/dsn/test_workflow_reference.py: 20 tests (stdlib pytest only, no third-party deps, no DB/network) -- positive: engine identity pinned to the registry arm, truthful JSON-serializable probe, reverse-order compensation on step failure, first-step failure compensates nothing, clean commit, recovery resumption after interruption with exactly-once dedup, replay dedup over committed/running journals, IN_MEMORY_SAGA_REFERENCE label present on every saga outcome -- adversarial: missing compensation step detected before any execution (store untouched), empty saga catalog refused, engine-absent path returns NOT_RUN_EXTERNAL (never a fake success; FALSE_ZERO_OUTCOME harness invariant asserted), engine-absent outcome never conflated with the saga reference, failing compensation stays INDETERMINATE on replay, crash-before-write leaves nothing durable, malformed case/ctx wiring errors with stable codes. 20 passed in ~0.3s; full evaluation/venue2027 suite 1661 passed; full tests/venue2027 suite 148 passed; uvx ruff@0.7.1 check clean on both files; selfcheck log records probe installed=false and the engine-absent NOT_RUN_EXTERNAL outcome verbatim. source_sha_after records the base commit 5f97bc36 per sibling convention (DSN-X01/X02/X03/X06); the single task commit SHA is created immediately after this report and reported in the handoff. Baseline parity NOT_RUN_EXTERNAL: the pinned engine itself did not run in this environment (transparent status permitted by the blueprint; prevents any unsupported comparative claim). Dependencies: DSN-baselines PASS verified in research/venue2027/STATE/completion.json before start. Next ready tasks: none blocked by this task; DSN-X04_outbox_reference (sibling P03) remains open in its own worktree.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "5f97bc366a18a2d3722884cfc44a25fb2d6bee59",
+  "source_sha_before": "5f97bc366a18a2d3722884cfc44a25fb2d6bee59",
+  "status": "PASS",
+  "task_id": "DSN-X05_workflow_reference",
+  "unresolved": []
+}
