@@ -1,0 +1,35 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/ifip_sec/nonce_store.py": "93ee9d00376500340b2fa0c47101549df61b996e78f22829b7b98f4103736163",
+    "evaluation/venue2027/ifip_sec/test_nonce_store.py": "ff8e906b364a3497da2b75443ae696aeaea0f6439b047e7b6d1a22afcddbfb00",
+    "research/venue2027/proof/logs/IFIP_SEC-X03_nonce_store.pytest.log": "47696f928685c672618ae15b7619c9bcd40cf896615bf5b17fab21ff3e2e43ba",
+    "research/venue2027/proof/logs/IFIP_SEC-X03_nonce_store.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/ifip_sec/nonce_store.py",
+    "evaluation/venue2027/ifip_sec/test_nonce_store.py",
+    "research/venue2027/proof/IFIP_SEC-X03_nonce_store.json",
+    "research/venue2027/proof/logs/IFIP_SEC-X03_nonce_store.pytest.log",
+    "research/venue2027/proof/logs/IFIP_SEC-X03_nonce_store.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/ifip_sec/test_nonce_store.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-X03_nonce_store.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/ifip_sec/nonce_store.py evaluation/venue2027/ifip_sec/test_nonce_store.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-X03_nonce_store.ruff.log"
+    }
+  ],
+  "notes": "IFIP_SEC-X03_nonce_store (P04, venue ifip_sec, RQ2): delivered the linearizable consume-once nonce store at evaluation/venue2027/ifip_sec/nonce_store.py (NONCE_STORE_VERSION 1.0.0) with the manifest contract specialised as consume(nonce, expires_at, now) -> ConsumeResult over CONSUMED / REPLAY_DETECTED / EXPIRED (time always injected, no hidden clock; half-open validity window [issue, expires_at) so consumption at exactly expires_at fails closed as EXPIRED). InMemoryNonceBackend holds one real threading.Lock across check-and-claim (single critical section => N concurrent consumers of the SAME nonce admit exactly one, proven by barrier-synchronized threads at N in {2,4,8,16} x 5 repetitions); memory is bounded by expiry sweeps (opportunistic auto-sweep every sweep_interval consumes plus explicit sweep(now) reclaiming expired records). Pluggable backend seam is a runtime_checkable NonceBackend Protocol (reserve/lookup/release/expired/size) so the real PostgreSQL backend can be injected later; PostgresNonceBackend is an honest STUB: construction without a real connection raises PostgresBackendUnavailable (BACKEND_UNAVAILABLE), and even with a connection object every operation raises rather than silently pretending durable storage (execution contract rule 8, never a toy under the same name). Validation fails closed with stable uppercase reason codes (NONCE_MISSING / NONCE_TOO_SHORT for receipt v1 16-char floor / EXPIRES_AT_BAD_TYPE / NOW_BAD_TYPE); per-presentation faults are first-class ConsumeResult values, never exceptions miscounted as safe rejections. TESTS: 17 passed (0 failed, 0 errors) \u2014 positive: first consume CONSUMED, second consume REPLAY_DETECTED, expired nonce EXPIRED, sweep reclaims memory to size 0, auto-sweep bounds memory across 16 consumes; adversarial: threading race on the same nonce admits exactly one CONSUMED, conflicting-expiry race fails closed, Postgres stub raises for all five operations instead of faking, custom backend plugs in through the Protocol seam (runtime_checkable isinstance proof). COMMANDS: pytest -q (exit 0), uvx ruff@0.7.1 check (exit 0, All checks passed). LIMITATIONS: single-process linearizability only (threading + real locks); the durable two-session PostgreSQL linearizability proof (unique index + serializable transaction) remains with the real PostgreSQL harness per the task manifest resources:postgres row and is recorded as unresolved scope, not claimed here.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "source_sha_before": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "status": "PASS",
+  "task_id": "IFIP_SEC-X03_nonce_store",
+  "unresolved": []
+}

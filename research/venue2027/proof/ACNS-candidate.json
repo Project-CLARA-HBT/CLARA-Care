@@ -1,0 +1,39 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/acns/candidate.py": "23e60afd904d7a4f10f525e10dd720eda27aaf288467baccedad0569e9bbca6c",
+    "evaluation/venue2027/acns/test_candidate.py": "4ab0ed6dc6349a926b303fde7c19cca3f57e699deeab9e1b6b2a4d51f05d74c6"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/acns/candidate.py",
+    "evaluation/venue2027/acns/test_candidate.py",
+    "research/venue2027/proof/ACNS-candidate.json",
+    "research/venue2027/proof/logs/ACNS-candidate.pytest.log",
+    "research/venue2027/proof/logs/ACNS-candidate.ruff.log",
+    "research/venue2027/proof/logs/ACNS-candidate.ablation.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-candidate.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/acns/candidate.py evaluation/venue2027/acns/test_candidate.py && uvx ruff@0.7.1 format --check evaluation/venue2027/acns/candidate.py evaluation/venue2027/acns/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-candidate.ruff.log"
+    },
+    {
+      "argv": "python3 ablation demo (see log)",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-candidate.ablation.log"
+    }
+  ],
+  "notes": "ACNS-candidate (Phase P04; SoK contribution class per novelty_contract.md section 1): implemented the evidence-boundary ANALYTIC INSTRUMENT at evaluation/venue2027/acns/candidate.py (CANDIDATE_ID=clara.acns.candidate.evidence-boundary-sok-instrument, v1.0.0). NOT a mechanism: no new primitive/protocol/detector/benchmark; nothing enforces, prevents, or detects at runtime. Core API: classify_claim(claim, receipts=None) -> BoundaryAssessment decides (a) IN_BOUNDARY (claim stays within the evidence boundary its bound artifacts support), (b) BOUNDARY_GAP (asserted level not bound by the record's evidence; annotated with the failing rows of the pre-registered G1-G9 register, threat_model.md section 6, restated locally in GAP_REGISTER), (c) INDETERMINATE (undecidable coding input: missing asserted_level/dimension or malformed claim -> retained with undecidable_fields, never coerced to a safe verdict, rater manual section 5 IND rules). Register rows detected: G1 transport-ack-as-processing, G2 receipt-as-execution (receipt alone caps execution at L2), G3 execution-as-consumption, G4 signature-valid-context-invalid (receipt verified against the record's receipt table: transplanted receipt flagged; missing table -> declared binding taken as declared, no fabricated G4), G5 mint-time-as-rely-time, G6 timestamp-as-ordering, G7 residual implicit level upgrade (no binding on the claimed dimension), G8 purpose/tenant authority crossing, G9 claim outside disclosed evidence dimensions. coverage_matrix(claims, receipts=None) -> Coverage quantifies evidence-boundary coverage across records: exact in_boundary/gap/indeterminate partition, gap_register_coverage over the nine register rows, per-code counts, deterministic digest. ablation_ignore_gaps() treats every claim as in-boundary. run_candidate(case,ctx)->Outcome adapter: UNKNOWN_ARM refusal, MALFORMED_CASE fail-closed, NOT_RUN_EXTERNAL (retriable, never counted as success) for records outside the synthetic fixture set, ADMIT/REJECT with structured payload otherwise. Tests: 30 passed (positive: bound claims IN_BOUNDARY on the clean fixture record and inline literals; all 4 synthetic-acns-2027 fixture records classified by run_candidate; per-register-row G1-G9 gap controls with the correct G-code; INDETERMINATE retention (never coerced); coverage matrix exact partition + empty-corpus all-zero). ABLATION CONTRAST SHOWN on the full fixture corpus: real instrument in_boundary=1 gaps=3 register_coverage=0.2222 vs ablation_ignore_gaps in_boundary=4 gaps=0 register_coverage=0.0000 (unsound 1.0 in-boundary fraction, collapsed register coverage, ablated=True flag) - proving gap detection is the instrument and the accounting is not. Adversarial: describe_mechanism() declares contribution_class=ANALYTIC_INSTRUMENT, is_mechanism=false, is_new_mechanism_claim=false, runtime_enforcement/detects_attacks/prevents_attacks all false; determinism (repeated classifications, matrices and run payloads byte-identical); constant-allow stub refused (UNKNOWN_ARM); synthetic-only (synthetic-acns-2027 fixtures/inline literals; no PHI/PII, no network, no clock, no provider). ruff@0.7.1 check + format --check clean on touched paths. Shared + acns suite regression: 258 passed. source_sha_after = base SHA per established repo convention (proof report committed together with the work).",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "source_sha_before": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "status": "PASS",
+  "task_id": "ACNS-candidate",
+  "unresolved": []
+}

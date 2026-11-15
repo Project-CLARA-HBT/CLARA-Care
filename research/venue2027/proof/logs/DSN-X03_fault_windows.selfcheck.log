@@ -1,0 +1,5 @@
+BEFORE_WAL                   case=DSN-CASE-02  injected=True barrier_before=WAL_WRITE
+AFTER_WAL_BEFORE_APPLY       case=DSN-CASE-02  injected=True barrier_before=APPLY
+AFTER_APPLY_BEFORE_RECEIPT   case=DSN-CASE-03  injected=True barrier_before=PERSIST_RECEIPT
+AFTER_RECEIPT                case=DSN-CASE-03  injected=True barrier_before=OUTBOX_DELIVER
+DOUBLE_FAULT                 case=DSN-CASE-02  injected=True barrier_before=WAL_WRITE

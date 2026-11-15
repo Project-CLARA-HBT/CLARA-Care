@@ -1,0 +1,42 @@
+{
+  "task_id": "SACMAT-candidate",
+  "status": "PASS",
+  "source_sha_before": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "source_sha_after": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "changed_paths": [
+    "evaluation/venue2027/sacmat/candidate.py",
+    "evaluation/venue2027/sacmat/test_candidate.py",
+    "research/venue2027/proof/SACMAT-candidate.json",
+    "research/venue2027/proof/emit_SACMAT-candidate_report.py",
+    "research/venue2027/proof/logs/SACMAT-candidate.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-candidate.ruff.log",
+    "research/venue2027/proof/logs/SACMAT-candidate.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/sacmat/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-candidate.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/sacmat/candidate.py evaluation/venue2027/sacmat/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-candidate.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_SACMAT-candidate_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/SACMAT-candidate.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-candidate.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/sacmat/candidate.py": "88e60387e862bad322449aaa8af89b2b54ad6e46b0b3c1aaead611a901be59cf",
+    "evaluation/venue2027/sacmat/test_candidate.py": "aa78f1559183c47274be012fc351e5f4197f61709c92bb30ac3761aac965ac69",
+    "research/venue2027/proof/logs/SACMAT-candidate.pytest.log": "251e9a2c95ee9153fa08b2da8a77c93c75d6cdbbe246980eaf42bdd0c7652c97",
+    "research/venue2027/proof/logs/SACMAT-candidate.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P04 task SACMAT-candidate (PolicyTrace RQ1-RQ3): temporal conformance testing candidate. evaluation/venue2027/sacmat/candidate.py implements conformance_test(trace, engines) -> ConformanceResult: ONE delegated-consent trace is replayed through MULTIPLE heterogeneous in-process policy-engine models over LOGICAL time (state events GRANT/REVOKE/DELEGATE applied tick by tick; every ACCESS tick evaluates every engine) and the FIRST pairwise divergence is reported with the EXACT logical timestamp and the two disagreeing engines plus both decisions (TEMPORAL_CONFORMANCE_DIVERGENCE; four-valued vocabulary PERMIT/DENY/NOT_APPLICABLE/INDETERMINATE). Engine models implement pinned upstreams' documented semantics with mismatched portability surfaces: cedar (Cedar v4.14.1: permit/forbid set, forbid precedence, expiry caller-encoded and NOT honored), openfga (Zanzibar ATC 2019 / OpenFGA v1.22.1: relation-tuple walk at read time, expired/revoked tuples absent, two-valued check) and opa (fail-closed temporal evaluation: lapsed delegation is an explicit DENY). The divergence class detected is structurally invisible to static diffs and single-engine tests: a delegation expiring between grant and access whose terminal state is later healed \u2014 cedar permits at the expiry tick while openfga denies, and every terminal-state view agrees again. Ablations prove each component load-bearing: ablation_single_engine (same replay, ONE engine: no pairwise comparison, misses the divergence with ABLATION_SINGLE_ENGINE_NO_COMPARISON) and ablation_no_time (all engines, terminal state only: access decision time and intermediate ticks discarded, misses the healed divergence with ABLATION_NO_TIME_TERMINAL_VIEW_ONLY while still catching unhealed divergence). describe_mechanism() emits the JSON-serializable mechanism description (components, engine semantics, ablations, witness form). Harness adapter run_candidate(case, ctx) -> Outcome maps DIVERGENCE->REJECT / NO_DIVERGENCE->ADMIT (both counted_as_success=True) and malformed cases -> INDETERMINATE (never counted, never a silent safe rejection); simulate_unavailable_upstream returns NOT_RUN_EXTERNAL / BASELINE_UNAVAILABLE (never counted, retriable). Wiring errors (unknown engine, non-sequence engines, unrecognized trace input, non-mapping case) raise TemporalConformanceError with stable reason codes; data faults (empty trace, missing logical time, unordered/duplicate timestamps, unsupported constructs, malformed DELEGATE) are first-class INDETERMINATE results. No wall clock, randomness, network or I/O; determinism asserted byte-identical. Machine-checked: 26 new tests pass (positive: conformant trace NO_DIVERGENCE with full-timeline agreement, expiry divergence at EXACT tick 2500 with cedar-vs-openfga witness, revoked-source delegation divergence NOT_APPLICABLE-vs-DENY at tick 1000, delegation-chain agreement, run_candidate mapping, NOT_RUN_EXTERNAL, determinism, describe_mechanism; adversarial: ablation_single_engine MISSES the expiry divergence for every single engine, ablation_no_time MISSES the healed divergence (terminal tick 3000, all engines PERMIT) yet still catches the unhealed variant, composed ablation misses, insufficient/duplicate engines INDETERMINATE, malformed-trace battery, wiring-error reason codes, to_dict round trip); full evaluation/venue2027 suite 1403 passed; ruff check + format clean on touched files. Oracle independence: candidate imports no oracle module and the verdict derives from pairwise engine disagreement only. source_sha_after = commit HEAD at proof-emission time."
+}

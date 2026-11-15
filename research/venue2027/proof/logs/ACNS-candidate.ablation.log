@@ -1,0 +1,5 @@
+corpus: synthetic-acns-2027 full fixture corpus (4 claims)
+real instrument: in_boundary=1 gaps=3 indeterminate=0 register_coverage=0.2222
+ablation_ignore_gaps: in_boundary=4 gaps=0 register_coverage=0.0000
+ablation inflates in_boundary_fraction to 1.0000 (unsound)
+gap-register coverage collapses 0.2222 -> 0.0000: gap detection is the instrument

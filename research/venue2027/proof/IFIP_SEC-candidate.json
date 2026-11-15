@@ -1,0 +1,33 @@
+{
+  "task_id": "IFIP_SEC-candidate",
+  "status": "PASS",
+  "source_sha_before": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "source_sha_after": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "changed_paths": [
+    "evaluation/venue2027/ifip_sec/candidate.py",
+    "evaluation/venue2027/ifip_sec/test_candidate.py",
+    "research/venue2027/proof/IFIP_SEC-candidate.json",
+    "research/venue2027/proof/logs/IFIP_SEC-candidate.pytest.log",
+    "research/venue2027/proof/logs/IFIP_SEC-candidate.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/ifip_sec/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-candidate.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/ifip_sec/candidate.py evaluation/venue2027/ifip_sec/test_candidate.py --config ruff.toml && uvx ruff@0.7.1 format --check evaluation/venue2027/ifip_sec/candidate.py evaluation/venue2027/ifip_sec/test_candidate.py --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-candidate.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/ifip_sec/candidate.py": "c56599a26062b4cae3b1db3b79892bac66956bdaf17d2b60452570679c3ce551",
+    "evaluation/venue2027/ifip_sec/test_candidate.py": "d0fbf1a1658ed401e353e70161dfd71ea6f662f7eedface081373f489b579e75"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "IFIP_SEC-candidate (Phase P04; CANDIDATE DESIGN ONLY - no empirical results, no performance numbers, no win rates): implemented the replay-closed authorization candidate at evaluation/venue2027/ifip_sec/candidate.py behind authorize(receipt, request, nonce_store, ledger) -> Verdict (ALLOW/DENY with stable reason codes; CANDIDATE_ID=clara.ifip_sec.candidate.replay-closed-lineage-authorization, v1.0.0; describe_mechanism() exposes the machine-readable design record; run_candidate(case, ctx) -> Outcome is the task-contract adapter, ALLOW->ADMIT / DENY->REJECT). Mechanism: every authorization binds a real HMAC-SHA256 typed-commitment receipt (hmac+hashlib, constant-time compare) over actor, patient, tenant, purpose, task, consent/policy epochs, dispatch digest, nonce, parent reference, delegation-chain hash + depth and proposal-lineage hash, PLUS a consume-once nonce in an injected store and a delegation-ancestry walk over an injected ledger - so ANY change in purpose, delegation chain, proposal lineage or epochs makes a replayed (still signature-valid) receipt fail closed before the nonce step, and an unchanged replay fails closed on the consumed nonce. Canonical pipeline (first-failure-wins, fixed binding order): shape validation (fail closed, never raising) -> HMAC verification -> expiry -> ledger registration (RECEIPT_UNKNOWN) -> cycle-safe bounded ancestry walk (DELEGATION_ANCESTRY_BROKEN) -> commitment re-derivation from unsigned transport copies (DELEGATION_CHAIN_CHANGED / LINEAGE_SPLICED) -> request-context binding against the SIGNED claims (PURPOSE/TENANT/ACTOR/PATIENT/TASK/CONSENT_EPOCH/POLICY_EPOCH_MISMATCH, DISPATCH_MISMATCH) -> optional live governance epochs (CONSENT_EPOCH_REVOKED / POLICY_EPOCH_STALE, CASE-04) -> request-presented chain/lineage binding -> consume-once nonce LAST (NONCE_REPLAYED), so binding failures never consume. ABLATION CONTRASTS SHOWN (each removes exactly one mechanism): ablation_no_lineage_binding() ADMITs the very splice authorize() DENYs with LINEAGE_SPLICED (ALLOW reason LINEAGE_UNBOUND), proving the lineage binding is the mechanism; ablation_no_nonce() ADMITs the very exact replay authorize() DENYs with NONCE_REPLAYED (ALLOW reason NONCE_UNPROTECTED, store demonstrably never consulted/consumed), proving the consume-once nonce is the mechanism; both ablated authorizers still DENY cross-purpose replay (PURPOSE_MISMATCH) - the security envelope minus one axis. Fail-closed controls: tampered claim + original MAC -> RECEIPT_SIGNATURE_INVALID; unregistered receipt -> RECEIPT_UNKNOWN; expired -> RECEIPT_EXPIRED; dangling parent and ancestor-cycle -> DELEGATION_ANCESTRY_BROKEN; consent revoked between issue and presentation -> CONSENT_EPOCH_REVOKED; malformed receipt/request/store/ledger -> DENY with fail_closed=True and nothing consumed; boundary faults via run_candidate become first-class REJECT Outcomes with stable reason codes (never uncounted exceptions). Determinism: identical inputs across repeats yield identical verdict dicts and digests; bindings_evaluated order is fixed (shape ... consume_once_nonce); receipt JSON round-trip preserves all commitments and re-verifies. Tests: 23 passed (evaluation/venue2027/ifip_sec full suite: 124 passed). uvx ruff@0.7.1 check + format --check clean. Independence preserved: the candidate imports neither the independent oracle, any baseline adapter nor any label file; the PostgreSQL-serializable nonce registry/race (IFIP_SEC-X03) and lineage digest storage (IFIP_SEC-X02) are declared out of scope. source_sha_after = base SHA per established repo convention (proof report committed together with the work); the single task commit SHA is created immediately after this report."
+}

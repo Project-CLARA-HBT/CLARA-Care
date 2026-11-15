@@ -1,0 +1,43 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/dsn/reconcile_journal.py": "44a2ba9a10370d2ac8e73a07a9ea9d5199377f236fb57e32f28eaf27dcf0f8cd",
+    "evaluation/venue2027/dsn/test_reconcile_journal.py": "5980dda1dcfe3d2e0a3bf297a41c1c2c2f0a30c7da2f06919727d8a748e995d9",
+    "research/venue2027/proof/logs/DSN-X06_reconcile_journal.pytest.log": "3c5c77ae771d9e4e2c2a7779f4ad977f04cafb131264ff2e7a91de0e254f44fb",
+    "research/venue2027/proof/logs/DSN-X06_reconcile_journal.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/DSN-X06_reconcile_journal.suite.log": "20e3abe436c54764ac232106b7f5edb6055c02791d2b6b93f92c325fae92761c"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/dsn/reconcile_journal.py",
+    "evaluation/venue2027/dsn/test_reconcile_journal.py",
+    "research/venue2027/proof/DSN-X06_reconcile_journal.json",
+    "research/venue2027/proof/logs/DSN-X06_reconcile_journal.pytest.log",
+    "research/venue2027/proof/logs/DSN-X06_reconcile_journal.ruff.log",
+    "research/venue2027/proof/logs/DSN-X06_reconcile_journal.suite.log",
+    "research/venue2027/proof/logs/DSN-X06_reconcile_journal.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dsn/test_reconcile_journal.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-X06_reconcile_journal.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dsn/reconcile_journal.py evaluation/venue2027/dsn/test_reconcile_journal.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-X06_reconcile_journal.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-X06_reconcile_journal.suite.log"
+    }
+  ],
+  "notes": "P04 task DSN-X06_reconcile_journal (RQ2) for DSN 2027 (Recoverable Safety Journals for Crash-Consistent AI-Mediated Health-State Mutations). evaluation/venue2027/dsn/reconcile_journal.py implements the reconciliation routine over the three durable views read after bounded recovery -- the committed clinical row (ClinicalView), the immutable versioned decision receipt ledger (LedgerView) and the transactional outbox with partial-effect delivery receipts (OutboxView): reconcile(clinical, ledger, outbox) -> ReconcileVerdict returns exactly one of CONSISTENT / REPAIRABLE / IRRECONCILABLE / INDETERMINATE with a stable reason code (26-code registry) and a JSON-serializable body version-pinned to clara.dsn.reconcile-journal-v1. Positive outcomes: CONSISTENT only when all present views carry matching, well-formed evidence for one operation (CONSISTENT_ALL_VIEWS_AGREE with the applied effect receipt digest, or CONSISTENT_PENDING_DELIVERY separating storage commit from downstream delivery, DSN-CASE-07); durable success is NEVER invented -- a missing delivery receipt never counts as an applied effect, a committed row alone (missing ledger) is never CONSISTENT, and no HTTP ACK or non-durable signal is admissible evidence. REPAIRABLE carries an explicit, deterministic, idempotent repair plan (ordered RepairSteps from the frozen action registry MARK_LEDGER_COMMITTED / ENQUEUE_OUTBOX / RECORD_DELIVERY, keyed by the immutable operation ID and bound to the committed row version): the canonical missing-outbox-row-with-committed-ledger case maps to REPAIRABLE_MISSING_OUTBOX with a single ENQUEUE_OUTBOX step; a missing ledger with a committed row maps to REPAIRABLE_MISSING_LEDGER (row is the sole anchor, receipt stamped from it); tests simulate idempotent plan application step-by-step to convergence at CONSISTENT, and re-applying a step is a no-op. IRRECONCILABLE covers positive cross-view contradictions -- ledger row_version or stored transition digest disagreeing with the committed row (IRRECONCILABLE_ROW_VERSION_MISMATCH / IRRECONCILABLE_DIGEST_MISMATCH, DSN-CASE-06 tamper), non-ACCEPT ledger decision, cross-view operation-ID mismatch, divergent effect digests across duplicate deliveries (DSN-CASE-04), orphan ledger / orphan outbox without a committed row -- and never carries a repair plan, so contradicting evidence is never mechanically laundered. INDETERMINATE is the fail-closed default and is never coerced to CONSISTENT or a safe rejection: corrupt views (tamper/torn write), timestamp-ordering anomalies (evidence after the reconciler horizon, receipt/outbox before the WAL commit, delivery before the outbox record), the all-views-absent picture, malformed views (typed invalid_fields) and malformed governance inputs all stay INDETERMINATE with stable reason codes; reconcile is wrapped in a fail-closed guard so an unexpected internal error yields INDETERMINATE/INTERNAL_RECONCILIATION_ERROR instead of raising. Purity: identical inputs yield identical verdicts (sha256-stable via verdict_sha256), no hidden clock, no randomness, no I/O, no provider calls; logical timestamps only; synthetic digests only (no patient data). 26 tests passed (test_reconcile_journal.py), full evaluation/venue2027/ suite 1403 passed, uvx ruff@0.7.1 check clean. source_sha_after records the base commit 6fe5fe19 per sibling convention (DSN-X01, DSN-X02); the single task commit SHA is created immediately after this report and reported in the handoff. Baseline parity NOT_APPLICABLE (candidate reconciliation routine; arms B0-B3 execute in DSN-X03/X04/X05 benchmarking). Dependencies DSN-oracle and SH-r4_ci_gate PASS verified in research/venue2027/STATE/completion.json before start.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "source_sha_before": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "status": "PASS",
+  "task_id": "DSN-X06_reconcile_journal",
+  "unresolved": []
+}

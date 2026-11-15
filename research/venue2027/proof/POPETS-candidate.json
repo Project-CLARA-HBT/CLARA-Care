@@ -1,0 +1,40 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/popets/candidate.py": "d91297b7296328d4b056f6d0618f2fc0406fcd9ce3149ae6b6c431e4265322f0",
+    "evaluation/venue2027/popets/test_candidate.py": "41038b6bb834e60aeac78175161f64bc47f43136e82dc74f1fb3546a804de4eb",
+    "research/venue2027/proof/logs/POPETS-candidate.pytest.log": "915abf6e3013302ef73970c963eb3c6ab123954f7590724a18abe0f03b651f65",
+    "research/venue2027/proof/logs/POPETS-candidate.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/popets/candidate.py",
+    "evaluation/venue2027/popets/test_candidate.py",
+    "research/venue2027/proof/POPETS-candidate.json",
+    "research/venue2027/proof/logs/POPETS-candidate.pytest.log",
+    "research/venue2027/proof/logs/POPETS-candidate.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/popets/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-candidate.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/popets/candidate.py evaluation/venue2027/popets/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-candidate.ruff.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 format --check evaluation/venue2027/popets/candidate.py evaluation/venue2027/popets/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-candidate.ruff.log"
+    }
+  ],
+  "notes": "POPETS-candidate (Phase P04): implemented the revocation-complete future-disclosure candidate (blueprint arm B4) as a real deterministic in-process cache: every entry carries a (subject, purpose, consent_epoch) dependency set plus reverse derivation edges; revoke() tombstones exactly the direct dependency intersection AND all transitively derived entries to closure (BFS over reverse edges) - never a full flush. put() refuses revoked dependencies/parents; get() reauthorizes per dispatch and refuses cross-purpose (PURPOSE_MISMATCH) and stale-epoch (EPOCH_STALE) reads. Mechanism-isolation ablation ablation_no_reverse_edges() (direct invalidation only) demonstrably LEAKS the transitive entry (served_from_revoked_ancestry=True on a HIT; leaks>=1 in run_candidate detail), proving reverse edges are the load-bearing mechanism; candidate mode raises CLOSURE_INVARIANT_VIOLATION if closure is ever corrupted. 16 positive+adversarial tests pass (direct revocation blocks re-disclosure; transitive-derived entry blocked; ablation leak shown; unknown purpose and stale epoch refused; put refusals; determinism byte-identical detail). CANDIDATE DESIGN ONLY: no empirical claims, no measured rates, no dataset results; bytes already delivered pre-revocation remain OUT_OF_SCOPE_PAST and no model-memorization erasure is claimed (blueprint guarantee boundary). pytest exit 0, ruff 0.7.1 check+format exit 0.",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "source_sha_before": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "status": "PASS",
+  "task_id": "POPETS-candidate",
+  "unresolved": []
+}

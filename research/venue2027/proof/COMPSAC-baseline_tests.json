@@ -1,0 +1,38 @@
+{
+  "artifacts_sha256": {
+    "tests/venue2027/compsac/test_baseline_fidelity.py": "2929fee70236e3c3806c1cf9de01e8dc681cc6544ebc20d6e2cf75f9ab158261"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "tests/venue2027/compsac/test_baseline_fidelity.py",
+    "tests/venue2027/compsac/__init__.py",
+    "research/venue2027/proof/COMPSAC-baseline_tests.json",
+    "research/venue2027/proof/logs/COMPSAC-baseline_tests.pytest.log",
+    "research/venue2027/proof/logs/COMPSAC-baseline_tests.ruff.log",
+    "research/venue2027/proof/logs/COMPSAC-baseline_tests.suite.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q tests/venue2027/compsac/test_baseline_fidelity.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-baseline_tests.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check tests/venue2027/compsac/test_baseline_fidelity.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-baseline_tests.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/compsac/ tests/venue2027/compsac/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-baseline_tests.suite.log"
+    }
+  ],
+  "notes": "Task COMPSAC-baseline_tests (P03, venue compsac). Baseline fidelity vectors over the REAL module evaluation/venue2027/compsac/baselines.py via the public run_baseline entry point (imported, never reimplemented). For EACH implemented arm \u2014 B0 global-profile-version-occ, B1 silo-style-entity-readset-occ, B3 entity-occ-no-closure-ablation, B4 dependency-complete-scope-local-occ \u2014 one POSITIVE vector on a clean schedule (uncontended first commit never falsely aborted; contended second commit fails on the arm's own declared fence: B0 GLOBAL_PROFILE_STALE, B1/B3 READSET_VERSION_STALE, B4 REQUIRED_READ_EDGE_STALE) and one ADVERSARIAL NEGATIVE vector on the canonical omitted-dependency write-skew schedule, with the expected contrast asserted explicitly as fidelity evidence: B4 REJECTs the second commit (REQUIRED_READ_EDGE_STALE, skew blocked in final store state) while B1 and B3 ADMIT both transactions (skew installed in final store state); B0's coarse fence rejects for scope-wide reasons, never a dependency-edge reason. postgresql-ssi (B2) without a genuine PG connection asserts NOT_RUN_EXTERNAL / BASELINE_UNAVAILABLE (never faked, never counted as success, retriable); a SQLite connection is refused before execution with PG_CONNECTION_REQUIRED \u2014 no simulated SERIALIZABLE result. Constant stubs are structurally refused: the arm differential (B1 skew 0 aborts vs B4 1 abort) is schedule-dependent per-transaction output a constant cannot reproduce. Tests: 16 passed. COMPSAC suite regression: 277 passed (evaluation/venue2027/compsac/ + tests/venue2027/compsac/). ruff@0.7.1 clean on the touched path. source_sha_after = HEAD at report time; proof report committed together with the work per repo convention.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "source_sha_before": "6fe5fe193a5a55f456f163a853c1b2c41c0c869f",
+  "status": "PASS",
+  "task_id": "COMPSAC-baseline_tests",
+  "unresolved": []
+}

@@ -1,0 +1,132 @@
+"""Emit the COMPSAC-ablation proof report via agent_protocol.build_report.
+
+Allowed input: this worktree's git state and the on-disk artifacts produced by
+the COMPSAC-ablation task. No network access.
+
+Failure semantics: exits non-zero if report construction or validation fails.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "_shared" / "tools"))
+
+import agent_protocol as ap  # noqa: E402
+
+REPO = Path(__file__).resolve().parents[3]
+TASK = "COMPSAC-ablation"
+BASE_SHA = "6fe5fe193a5a55f456f163a853c1b2c41c0c869f"
+
+CHANGED = [
+    "evaluation/venue2027/compsac/ablation.py",
+    "evaluation/venue2027/compsac/test_ablation.py",
+    "research/venue2027/proof/COMPSAC-ablation.json",
+    "research/venue2027/proof/logs/COMPSAC-ablation.pytest.log",
+    "research/venue2027/proof/logs/COMPSAC-ablation.ruff.log",
+]
+
+COMMANDS = [
+    {
+        "argv": "python3 -m pytest -q evaluation/venue2027/compsac/test_ablation.py",
+        "exit_code": 0,
+        "log_path": "research/venue2027/proof/logs/COMPSAC-ablation.pytest.log",
+    },
+    {
+        "argv": "uvx ruff@0.7.1 check evaluation/venue2027/compsac/ablation.py evaluation/venue2027/compsac/test_ablation.py && uvx ruff@0.7.1 format --check evaluation/venue2027/compsac/ablation.py evaluation/venue2027/compsac/test_ablation.py",
+        "exit_code": 0,
+        "log_path": "research/venue2027/proof/logs/COMPSAC-ablation.ruff.log",
+    },
+]
+
+
+def main() -> int:
+    report = ap.build_report(
+        task_id=TASK,
+        status="PASS",
+        source_sha_before=BASE_SHA,
+        source_sha_after=BASE_SHA,
+        changed_paths=CHANGED,
+        commands=COMMANDS,
+        artifact_paths=CHANGED[:2],
+        repo=REPO,
+        unresolved=[],
+        baseline_parity="NOT_APPLICABLE",
+        notes=(
+            "COMPSAC-ablation (Phase P04, priority; DEVELOPMENT-SCALE mechanism "
+            "ablation - never confirmatory results): implemented the causal "
+            "mechanism ablation harness at evaluation/venue2027/compsac/ablation.py "
+            "(ABLATION_VERSION=clara.compsac.ablation-v1) behind the task-manifest "
+            "signature run_ablation(name, case) -> Outcome plus run_variant/"
+            "run_ablation_suite/build_frozen_cases returning typed AblationRow "
+            "results. The candidate (evaluation/venue2027/compsac/candidate.py) is "
+            "run against ITSELF with one mechanism toggled off at a time over the "
+            "SAME frozen suite of 40 synthetic concurrency cases built "
+            "deterministically from the venue dataset generator (shared kernel "
+            "generate_dataset, seed=2027, all four COMPSAC families: clean / "
+            "omitted_dependency / epoch_race / stale_readset; kernel "
+            "determinant/sequence integers select the store-mutation arm per "
+            "family with pure parity arithmetic - no RNG object, no clock, no "
+            "hash randomization). VARIANTS (registry with typed VariantSpec "
+            "provenance): full_candidate (safety reference); "
+            "no_dependency_closure via the candidate's own hook "
+            "cand.ablation_no_closure (RQ2); global_version_coarse via "
+            "cand.ablation_global_version (B0 semantics, RQ1); "
+            "no_epoch_validation via candidate mutation M1-drop-epoch-validation "
+            "through admit_with_mutation (harness-applied, baselines.py NOT "
+            "touched); no_lock_ordering harness-modeled as an order-invariance "
+            "confirmation because the candidate's canonical lock order is a "
+            "built-in total order that cannot be disabled without collapsing the "
+            "fence - any behavioral difference would falsify COMPSAC-CASE-06 "
+            "order-independence and none was manufactured. CLASSIFICATION: "
+            "frozen per-case family ground truth (_expected_safe_outcome, "
+            "mechanically derived, carried in the typed AblationCase) - a "
+            "committed op on an expected-REJECT case is a forbidden commit; a "
+            "refused op on an expected-ADMIT case is a false-stale abort; "
+            "candidate ERROR outcomes are tallied separately as error_ops and "
+            "never counted as safe rejections or forbidden commits. CAUSAL "
+            "MECHANISM RESULT over the frozen suite (development-scale): "
+            "full_candidate 0 forbidden commits / 0 false-stale aborts / 19 "
+            "committed ops; no_dependency_closure 5 forbidden commits (admits "
+            "the canonical omitted-dependency write skew the candidate REJECTs "
+            "via REQUIRED_EDGE_STALE - the closure is the mechanism, RQ2); "
+            "no_epoch_validation 5 forbidden commits (admits the "
+            "consent-revoked epoch-race write - governance axis); "
+            "global_version_coarse 0 forbidden commits but 11 false-stale "
+            "aborts and only 8 committed ops (safe-but-coarse false-stale "
+            "upper bound, RQ1); no_lock_ordering byte-identical decision "
+            "records to full_candidate (shared variant digest over per-case "
+            "decision records; tallies all equal). Same-cases invariant: all "
+            "five variants run over the identical frozen unit-id tuple and "
+            "seed (comparison.same_cases_across_variants=true, all six "
+            "causal_mechanism flags true). Tests: 24 passed (positive: every "
+            "variant runs, tally conservation, full candidate 0 forbidden "
+            "commits, no_dependency_closure >0 forbidden commits, "
+            "no_epoch_validation >0, global_version safe-but-false-stale with "
+            "strictly fewer commits, lock-order invariance, manifest signature "
+            "run_ablation on every variant, three single-case contrast pairs "
+            "isolating one mechanism axis each; adversarial: unknown variant "
+            "refused UNKNOWN_ABLATION_VARIANT by run_variant and run_ablation "
+            "and inside the suite path, seeds/cases equal across variants, "
+            "byte-identical determinism on rerun for both rows and suites, "
+            "malformed case payloads refused CASE_MALFORMED, unknown family "
+            "refused UNKNOWN_CASE_FAMILY, payload round-trip lossless, ERROR "
+            "admissions never counted as safe rejections). Fail-closed: "
+            "unknown variant id never silently runs as the full candidate; "
+            "malformed/unknown-family cases refused with stable reason codes. "
+            "Full compsac suite regression: 285 passed. source_sha_after = "
+            "base SHA per established repo convention (proof report committed "
+            "together with the work)."
+        ),
+    )
+    out = REPO / "research" / "venue2027" / "proof" / "COMPSAC-ablation.json"
+    out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    result = ap.validate_report(report, repo=REPO, expected_task_id=TASK)
+    print(json.dumps(result.to_dict(), indent=2))
+    return 0 if result.ok else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
