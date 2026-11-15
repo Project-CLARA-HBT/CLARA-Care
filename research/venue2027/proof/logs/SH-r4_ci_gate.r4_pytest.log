@@ -1,0 +1,9 @@
+................................................................         [100%]
+=============================== warnings summary ===============================
+tests/test_glhs_r4_admission.py::test_full_valid_grwc_admission
+tests/test_glhs_grwc_lineage.py::test_full_valid_review_chain
+  /dev/shm/clara_worktrees/v27b_sh-r4-ci-gate/services/api/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: DeprecationWarning: The default datetime adapter is deprecated as of Python 3.12; see the sqlite3 documentation for suggested replacement recipes
+    cursor.execute(statement, parameters)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+64 passed, 2 warnings in 70.87s (0:01:10)

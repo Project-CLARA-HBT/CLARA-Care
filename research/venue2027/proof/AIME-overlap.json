@@ -1,0 +1,45 @@
+{
+  "task_id": "AIME-overlap",
+  "status": "PASS",
+  "source_sha_before": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "source_sha_after": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "changed_paths": [
+    "research/venue2027/aime/overlap_audit.md",
+    "research/venue2027/aime/tests/test_overlap_audit.py",
+    "research/venue2027/proof/AIME-overlap.json",
+    "research/venue2027/proof/logs/AIME-overlap.claim_overlap.log",
+    "research/venue2027/proof/logs/AIME-overlap.pytest.log",
+    "research/venue2027/proof/logs/AIME-overlap.ruff.log",
+    "research/venue2027/proof/logs/AIME-overlap.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/overlap_contract.py research/venue2027/aime/overlap_audit.md --venue aime",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-overlap.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/aime/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-overlap.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/aime/tests/test_overlap_audit.py && ruff format --check research/venue2027/aime/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-overlap.ruff.log"
+    },
+    {
+      "argv": "python3 - # claim_overlap.py executable check against research/venue2027/_shared/study_claims.json: assert aime shares no question+endpoint with any other venue and reuses no archive",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-overlap.claim_overlap.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/aime/overlap_audit.md": "e16d7eced04721612b555358f2792c33381c4f2ea11d6f9333a93adad698af17",
+    "research/venue2027/aime/tests/test_overlap_audit.py": "1da1f7aad4c43adb22fbe6f1275e9737fd84f29f0164f0309071d0e15c19ae7d"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 overlap gate: comparison vs all eight sibling 2027 venues (compsac, popets, ifip_sec, sacmat, acns, dsn, dimva, pst) and historical GLHS R4 / GovRed / GovMut / CareGuard / HEALTHINF; explicit AIME-HEALTHINF contrast (clinical task quality under changing consent/medication history vs HEALTHINF governance protocol) refusing the merge on question, endpoint, and evidence; artifact reuse table with no reused raw case IDs, labels, figures, or endpoints; frozen E15-E22 outcomes explicitly NOT reused as new independent evidence; mandatory synthetic-only / no-real-PHI / no-clinical-efficacy / blinded-independent-clinician-review language. Shared overlap_contract validator ok=true (exit 0). 16 tests pass including real-passes / mutants-fail probes (MISSING_SIBLING_VENUE, MISSING_HISTORICAL_COMPARISON, MISSING_FROZEN_REFUSAL, MISSING_DECISION) against the shared validator; combined shared+aime suite 198 tests pass; ruff clean. Executable claim_overlap.py check over study_claims.json: aime shares no question+endpoint pair with any other venue, reuses_archive=[], zero findings. Exactly one 'Decision: PASS' line. SHA convention follows repo precedent (SH-claim_overlap/IFIP_SEC-scope/COMPSAC-overlap): before==after==parent source state because the single required commit contains this self-referential report; the final deliverable commit SHA is reported in the handoff."
+}

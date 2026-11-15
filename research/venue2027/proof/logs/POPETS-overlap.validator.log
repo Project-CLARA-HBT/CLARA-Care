@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "reason_codes": [],
+  "missing_venues": [],
+  "missing_historical": [],
+  "has_frozen_refusal": true,
+  "has_decision": true,
+  "version": "1.0.0"
+}

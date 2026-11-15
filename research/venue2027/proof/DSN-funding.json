@@ -1,0 +1,51 @@
+{
+  "task_id": "DSN-funding",
+  "status": "PASS",
+  "source_sha_before": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "source_sha_after": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "changed_paths": [
+    "research/venue2027/dsn/submission/funding_and_author_check.md",
+    "research/venue2027/dsn/tests/test_funding_check.py",
+    "research/venue2027/proof/DSN-funding.json",
+    "research/venue2027/proof/logs/DSN-funding.validator.log",
+    "research/venue2027/proof/logs/DSN-funding.pytest.log",
+    "research/venue2027/proof/logs/DSN-funding.ruff.log",
+    "research/venue2027/proof/logs/DSN-funding.suite.log",
+    "research/venue2027/proof/logs/DSN-funding.shared_regression.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/submission_contract.py research/venue2027/dsn/submission/funding_and_author_check.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-funding.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dsn/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-funding.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/dsn/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-funding.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dsn/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-funding.suite.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-funding.shared_regression.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/dsn/submission/funding_and_author_check.md": "1219486a9ed2e095f52284c05a8c7a4de4eac2aac677e4f5affeaf1cf3ea045e",
+    "research/venue2027/dsn/tests/test_funding_check.py": "10f91d4496d3190baa4986b2915a72b9a9a74647bda2cb3ee9d9c0cdcb0082f7"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P09 submission/funding readiness artifact for DSN 2027: research/venue2027/dsn/submission/funding_and_author_check.md declares all ten REQUIRED_FIELDS as labeled lines (cfp_url, template, page_limit, fee_or_registration, waiver_path, authorship_and_contribution, conflicts_policy, simultaneous_submission_policy, verification_status, decision). Every external CFP/fee/waiver fact is UNVERIFIED with reason 'live CFP not fetched; re-verify at submission'; decision is HOLD (not GO) because verification is pending; no waiver is claimed as guaranteed; the action ledger states no submission, registration, fee, or waiver action was taken and human authorization is required. Includes a sponsor/registration request packet outline (post-acceptance only). Machine-checked: shared submission_contract validate ok:true (exit 0); 13 new tests pass including adversarial cases (CONFIRMED without URL+date refused; guaranteed waiver without source refused; missing REQUIRED field refused; missing simultaneous-submission policy refused); DSN suite 38 passed; shared foundations regression 167 passed; ruff clean. No external submission or payment action was performed by this agent; artifact derives from the DSN SPEC and SH-venue_formats checklist only."
+}

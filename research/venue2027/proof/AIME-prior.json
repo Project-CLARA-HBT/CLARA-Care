@@ -1,0 +1,45 @@
+{
+  "task_id": "AIME-prior",
+  "status": "PASS",
+  "source_sha_before": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "source_sha_after": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "changed_paths": [
+    "research/venue2027/aime/literature_matrix.csv",
+    "research/venue2027/aime/tests/test_literature_matrix.py",
+    "research/venue2027/proof/AIME-prior.json",
+    "research/venue2027/proof/logs/AIME-prior.validator.log",
+    "research/venue2027/proof/logs/AIME-prior.pytest.log",
+    "research/venue2027/proof/logs/AIME-prior.suite.log",
+    "research/venue2027/proof/logs/AIME-prior.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/comparator_matrix.py research/venue2027/aime/literature_matrix.csv",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-prior.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/aime/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-prior.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/ research/venue2027/aime/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-prior.suite.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/aime/ && ruff format --check research/venue2027/aime/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-prior.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/aime/literature_matrix.csv": "a150df61a8d72e3bf066a74ba842db47d162fa188285cb6f6ab23ba9ba680d27",
+    "research/venue2027/aime/tests/test_literature_matrix.py": "1bc8b47fc544d7550e9147ae41097887b1ed8e22606b6bd5fd3dcff35f41aa0d"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 prior-art implementation and verification ledger for AIME (Counterfactual Clinical Workflow Safety under Changing Consent and Medication Histories): literature_matrix.csv with 13 comparators carrying exactly comparator_matrix.REQUIRED_COLUMNS and >=40-char mechanism_analysis on every row. Arms: B0 single-history full-snapshot LLM recommendation, B1 full per-step refresh + current policy filter, B2 HealthBench-/MedHELM-informed rubric (pinned openai/simple-evals 652c89d0, ORIGINAL_UPSTREAM, code_url present), B3 static model + output post-filter, B4 selective consent-aware context regeneration (candidate, declared falsifiably), B5 consent-agnostic retrieval reference. Clinical-AI literature comparators use ONLY real registry ids present in MANIFESTS/literature_registry.json (medhelm2026, healthbench25, amie2026, cse2026, tauben25, fhir5, who21; each row cites its registered URL, verified by test). Provider-dependent arms (B0, B1, B3, B4, B5) and registry entries without a verified code pin (medhelm2026, amie2026, cse2026, fhir5, who21) are honestly UNAVAILABLE_NOT_RUN; no implementation was fabricated and no comparative claim leans on a not-run arm. Shared validator: ok=true, row_count=13, exit 0. Tests: 18 passed (validator pass + adversarial failures: fabricated id UNKNOWN_COMPARATOR_ID, missing link MISSING_SOURCE_LINK, thin mechanism MECHANISM_ANALYSIS_MISSING, available_code=yes without code_url AVAILABLE_CODE_WITHOUT_URL, ORIGINAL_UPSTREAM without code UPSTREAM_WITHOUT_CODE; registry-locator consistency; no clinical efficacy claim asserted). Combined shared + aime suite: 200 passed. ruff check + format clean. No empirical numbers, no efficacy claims, no real PHI; source_sha_after records the parent SHA of the single task commit per sibling convention (AIME-scope / AIME-threat / POPETS-prior)."
+}

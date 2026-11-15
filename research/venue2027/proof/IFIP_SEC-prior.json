@@ -1,0 +1,46 @@
+{
+  "task_id": "IFIP_SEC-prior",
+  "status": "PASS",
+  "source_sha_before": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "source_sha_after": "06f6facf4c396ba20d140ac16f37146cf5712fd7",
+  "changed_paths": [
+    "research/venue2027/ifip_sec/literature_matrix.csv",
+    "research/venue2027/ifip_sec/tests/test_literature_matrix.py",
+    "research/venue2027/proof/logs/IFIP_SEC-prior.pytest.log",
+    "research/venue2027/proof/logs/IFIP_SEC-prior.ruff.log",
+    "research/venue2027/proof/logs/IFIP_SEC-prior.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/comparator_matrix.py research/venue2027/ifip_sec/literature_matrix.csv",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-prior.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/ifip_sec/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-prior.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/ifip_sec/tests/test_literature_matrix.py research/venue2027/_shared/tools/comparator_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-prior.ruff.log"
+    },
+    {
+      "argv": "ruff format --check research/venue2027/ifip_sec/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-prior.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/ifip_sec/literature_matrix.csv": "eae44984d18c4a3a7774157f6ce4ba3e642184a6851b441900ab1dabb6e8bb54",
+    "research/venue2027/ifip_sec/tests/test_literature_matrix.py": "61d157046ef5e61f5b8cdfd1c242720ddf3d5a89d2e93ae0dbcf8f3efbd02577",
+    "research/venue2027/proof/logs/IFIP_SEC-prior.pytest.log": "43e8a207772d15eaf1c6d862548540f0c5c8786cc7be8b5e7667080534034ead",
+    "research/venue2027/proof/logs/IFIP_SEC-prior.ruff.log": "ce04ce92b16073000b77c97a42c00b98b96305692d9d5ed4dcfa5a9ca9ea62d6",
+    "research/venue2027/proof/logs/IFIP_SEC-prior.validator.log": "45d4bbe6aade4d8e7ba9ca57a2a9d12a445984df0a300d35272da38f6eea4518"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 prior-art ledger: literature_matrix.csv with 17 comparators - 11 real literature-registry ids (macaroons14, zanzibar19, openfga, cedar, opa, rats9334, nistabac, elle20, silo13, injecagent24, agentdojo24; metadata and source locators pulled mechanically from MANIFESTS/literature_registry.json and re-verified live via HTTP 200 on 2026-11-15) plus blueprint arms B0-B4 (B4 = candidate, recorded for falsification transparency, never presented as an external comparator) mapped to shared-baseline-registry entries bearer-signed-receipt, macaroon-hmac-caveats, zanzibar-openfga, cedar-opa-policy-decision-nonce-registry. Verified upstream code: libmacaroons ca0211d8 (macaroons.io official reference implementation, BSD-3-Clause), OpenFGA v1.22.1->44054f54, Cedar v4.14.1->47d82a82, OPA v1.22.4->ba39415d, elle v0.2.8->28433446 (all ORIGINAL_UPSTREAM, available_code=yes with code_url); zanzibar19/silo13/rats9334/nistabac are design papers or standards with no official implementation (honestly UNAVAILABLE_NOT_RUN, never replaced by a toy under the same name per execution contract rule 8); all B-arm ports/adapters do not exist yet in evaluation/venue2027 and are honestly UNAVAILABLE_NOT_RUN with registered parity fixtures. Every row carries >=40-char mechanism_analysis; registry rows cite the exact registered locator. Test file imports the SHARED validator comparator_matrix (never reimplements it): real CSV passes and adversarial tampering (unknown comparator id, available_code=yes without code_url, thin mechanism_analysis, ORIGINAL_UPSTREAM without code) fails loudly with stable reason codes - 12 tests pass; ruff check + format clean; shared validator exit 0 with ok:true, row_count 17. No empirical numbers invented; all guarantees quoted from registry/ledger entries. source_sha_after records the work commit whose tree contains the hashed artifacts (sibling-convention: report JSON committed alongside in the same single task commit)."
+}

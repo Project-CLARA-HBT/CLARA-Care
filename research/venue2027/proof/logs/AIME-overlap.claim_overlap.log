@@ -1,0 +1,12 @@
+claim_overlap.py executable check — task AIME-overlap
+tool version: 1.0.0
+claims loaded: ['acns', 'aime', 'compsac', 'dimva', 'dsn', 'ifip_sec', 'popets', 'pst', 'sacmat']
+aime research_question: Does counterfactual clinical workflow safety under changing consent and medication history reduce unsafe recommendations?
+aime primary_endpoint:  unsafe clinical action rate under consent/medication history changes
+aime reuses_archive:    []
+endpoint shared with:      ['aime']
+question shared with:      ['aime']
+findings involving aime: []
+audit ok: True
+RESULT: aime shares no question+endpoint pair with any other venue; no archive reuse. PASS
+All checks passed!

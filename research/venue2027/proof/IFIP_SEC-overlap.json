@@ -1,0 +1,51 @@
+{
+  "task_id": "IFIP_SEC-overlap",
+  "status": "PASS",
+  "source_sha_before": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "source_sha_after": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "changed_paths": [
+    "research/venue2027/ifip_sec/overlap_audit.md",
+    "research/venue2027/ifip_sec/tests/test_overlap_audit.py",
+    "research/venue2027/proof/IFIP_SEC-overlap.json",
+    "research/venue2027/proof/logs/IFIP_SEC-overlap.validator.log",
+    "research/venue2027/proof/logs/IFIP_SEC-overlap.claim_overlap.log",
+    "research/venue2027/proof/logs/IFIP_SEC-overlap.pytest.log",
+    "research/venue2027/proof/logs/IFIP_SEC-overlap.ruff.log",
+    "research/venue2027/proof/logs/IFIP_SEC-overlap.shared_regression.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/overlap_contract.py research/venue2027/ifip_sec/overlap_audit.md --venue ifip_sec",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-overlap.validator.log"
+    },
+    {
+      "argv": "python3 - # claim_overlap.py executable check against research/venue2027/_shared/study_claims.json: assert ifip_sec shares no question+endpoint with any other venue and reuses no archive",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-overlap.claim_overlap.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/ifip_sec/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-overlap.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/ifip_sec/tests/test_overlap_audit.py && ruff format --check research/venue2027/ifip_sec/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-overlap.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-overlap.shared_regression.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/ifip_sec/overlap_audit.md": "b00282f723fb83aaac914db6d93ea90f6723b2024dbbfc41cd86eaf7163aef95",
+    "research/venue2027/ifip_sec/tests/test_overlap_audit.py": "d6b3ed0d61f9d97dec19dcccfd3015bb0e7e71db0fb0879dc3e6f8c8b0cc8ebb"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 overlap gate: comparison vs all eight sibling venues (compsac, popets, aime, sacmat, acns, dsn, dimva, pst) and historical GLHS R4 / GovRed / GovMut / CareGuard / HEALTHINF; artifact reuse table (no reused raw case IDs, labels, figures, endpoints); frozen E15-E22 outcomes explicitly NOT reused as new independent evidence (E15-E19 attested sqlite:///:memory:, E20 NOT_RUN_PROVIDER_ATTESTATION_UNAVAILABLE); ACNS contrast (replay-closed prevention mechanism vs systematic literature SoK) and DIMVA contrast (prevention vs campaign detection) both refuse the merge by endpoint separation. Shared overlap_contract.py validator ok:true; executable claim_overlap.py over study_claims.json: ifip_sec shares no question+endpoint pair with any other venue, reuses_archive=[], zero findings. 18/18 structural+adversarial tests pass (dropped sibling, dropped CareGuard, missing refusal, missing decision, duplicate decision mutants all refused). Decision: PASS. SHA convention follows repo precedent (SH-claim_overlap/IFIP_SEC-scope): before==after==parent source state, because the single required commit contains this report and its own SHA is self-referential; the final deliverable commit SHA is reported in the task handoff."
+}

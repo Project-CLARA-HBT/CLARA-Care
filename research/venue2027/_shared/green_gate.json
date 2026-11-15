@@ -1,0 +1,87 @@
+{
+  "schema": "CLARA-VENUE2027-GREEN-GATE/1.0.0",
+  "task_id": "SH-r4_ci_gate",
+  "generated_utc": "2026-11-15T02:02:30Z",
+  "source_sha_before": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "first_green_commit_sha": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "workflow": ".github/workflows/glhs-r4-novelty-gate.yml",
+  "environment": {
+    "python": "3.12.x (services/api/.venv via uv)",
+    "db": "sqlite+pysqlite (file, /tmp/clara_gate.db); no PostgreSQL claimed",
+    "notes": "E22 sweep is hermetic offline (socket/DNS blocked by reproduce_q4_r4.py). Chronology validator verifies protocols E15-E22 frozen at 2026-10-02T02:05:00Z."
+  },
+  "jobs": [
+    {
+      "job_id": "secret_scan",
+      "workflow_job": "secret-scan (Secret & Credential Leak Scan)",
+      "argv": "python3 (inline GitHub Actions secret scan: FORBIDDEN_PATTERNS aura_prod_x7k9m2, sk-[a-zA-Z0-9]{32,}; walks .py/.json/.md/.csv/.yml/.yaml excluding .git/.venv/node_modules)",
+      "log_path": "research/venue2027/proof/logs/SH-r4_ci_gate.secret_scan.log",
+      "status": "PASS",
+      "exit_code": 0,
+      "blocker": null,
+      "log_sha256": "557d723101ef14beca9428e562ab37c1646dc7a9f299675323bfa32b839bd7cf"
+    },
+    {
+      "job_id": "chronology",
+      "workflow_job": "chronology-audit (Prospective Chronology Audit R4)",
+      "argv": "PYTHONPATH=services/api/src:services/ml/src:. python3 research/glhs_journal/q4_r4/chronology_validator_r4.py",
+      "log_path": "research/venue2027/proof/logs/SH-r4_ci_gate.chronology.log",
+      "status": "PASS",
+      "exit_code": 0,
+      "blocker": null,
+      "log_sha256": "b5efe87f422282a0d34d8a818bf5023f0dcfeb05a4020329d0f9a7ee67314908"
+    },
+    {
+      "job_id": "r4_pytest",
+      "workflow_job": "r4-admission-and-comparator-tests (R4 GRWC Admission & Comparator Tests)",
+      "argv": "cd services/api && DATABASE_URL=sqlite+pysqlite:////tmp/clara_gate.db AUTH_AUTO_PROVISION_USERS=true AUTH_BOOTSTRAP_ADMIN_ENABLED=true GLHS_RESEARCH_COMPARATORS_ENABLED=true PYTHONPATH=src:../ml/src:. uv run pytest -q tests/test_glhs_immutable_projection_contract.py tests/test_glhs_r4_admission.py tests/test_glhs_r4_comparators.py tests/test_glhs_comparator_policies.py tests/test_glhs_current_state_insufficiency.py tests/test_glhs_inference_envelope.py tests/test_glhs_reason_codes.py tests/test_glhs_attestation_receipts.py tests/test_inference_attestation.py tests/test_glhs_grwc_lineage.py tests/test_glhs_mandatory_thss_binding.py",
+      "log_path": "research/venue2027/proof/logs/SH-r4_ci_gate.r4_pytest.log",
+      "status": "PASS",
+      "exit_code": 0,
+      "blocker": null,
+      "log_sha256": "bcdcfb5a048f26d212a49f0b2af7610acafccaaddca2b763525b62b2792500c5"
+    },
+    {
+      "job_id": "claim_lint",
+      "workflow_job": "r4-claim-lint (R4 Prohibited Phrase & Claim Budget Lint)",
+      "argv": "python3 scripts/ci/r4_claim_lint.py",
+      "log_path": "research/venue2027/proof/logs/SH-r4_ci_gate.claim_lint.log",
+      "status": "PASS",
+      "exit_code": 0,
+      "blocker": null,
+      "log_sha256": "78317e63697652bc660d9cf37877079ed7d9022aa544adad2aff8d5d0c987eb2"
+    },
+    {
+      "job_id": "e22_offline",
+      "workflow_job": "offline-reproducibility-sweep (Hermetic Offline Reproducibility Sweep E22)",
+      "argv": "python3 reproduce_q4_r4.py",
+      "log_path": "research/venue2027/proof/logs/SH-r4_ci_gate.e22_offline.log",
+      "status": "PASS",
+      "exit_code": 0,
+      "blocker": null,
+      "log_sha256": "dece91e4a40d2fc53524b5cd34ecdfdae9f665e84e0532e9d3e631d5ee9ec6f4"
+    }
+  ],
+  "required_jobs": [
+    "chronology",
+    "claim_lint",
+    "e22_offline",
+    "r4_pytest",
+    "secret_scan"
+  ],
+  "overall_status": "PASS",
+  "hashes": {
+    "research/venue2027/proof/logs/SH-r4_ci_gate.secret_scan.log": "557d723101ef14beca9428e562ab37c1646dc7a9f299675323bfa32b839bd7cf",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.chronology.log": "b5efe87f422282a0d34d8a818bf5023f0dcfeb05a4020329d0f9a7ee67314908",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.r4_pytest.log": "bcdcfb5a048f26d212a49f0b2af7610acafccaaddca2b763525b62b2792500c5",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.claim_lint.log": "78317e63697652bc660d9cf37877079ed7d9022aa544adad2aff8d5d0c987eb2",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.e22_offline.log": "dece91e4a40d2fc53524b5cd34ecdfdae9f665e84e0532e9d3e631d5ee9ec6f4"
+  },
+  "honesty_notes": [
+    "All five CI jobs from .github/workflows/glhs-r4-novelty-gate.yml were executed locally with real logs; exit codes are recorded per job.",
+    "r4_pytest includes tests/test_glhs_immutable_projection_contract.py beyond the workflow's 10-file list (11 files total); 64 passed matches the known-correct count.",
+    "E22 (reproduce_q4_r4.py) regenerates evidence bundles under research/glhs_journal/q4_r4/ as a side effect; those regenerated working-tree files were git-restored to the committed frozen bundles so the tree stays clean. The E22 exit code and log are the evidence; bundle contents were not modified in the commit.",
+    "pytest runs against SQLite, not PostgreSQL; no PG-only condition is claimed."
+  ],
+  "first_green_note": "All five jobs were executed against tree state 152c89116069072bcb82678702c7b0d70a0fccfb (the immutable-projection repair 2c282710 is an ancestor). Only untracked log files were added during verification; tracked content is identical to that commit. The evidence commit (gate JSON, proof report and logs) is created immediately after and recorded in the proof report notes."
+}

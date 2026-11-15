@@ -1,0 +1,45 @@
+{
+  "task_id": "ACNS-overlap",
+  "status": "PASS",
+  "source_sha_before": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "source_sha_after": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "changed_paths": [
+    "research/venue2027/acns/overlap_audit.md",
+    "research/venue2027/acns/tests/test_overlap_audit.py",
+    "research/venue2027/proof/ACNS-overlap.json",
+    "research/venue2027/proof/logs/ACNS-overlap.claim_overlap.log",
+    "research/venue2027/proof/logs/ACNS-overlap.pytest.log",
+    "research/venue2027/proof/logs/ACNS-overlap.ruff.log",
+    "research/venue2027/proof/logs/ACNS-overlap.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/overlap_contract.py research/venue2027/acns/overlap_audit.md --venue acns",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-overlap.validator.log"
+    },
+    {
+      "argv": "python3 - # claim_overlap.py executable check against research/venue2027/_shared/study_claims.json: assert acns shares no question+endpoint with any other venue and reuses no archive",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-overlap.claim_overlap.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/acns/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-overlap.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/acns/tests/test_overlap_audit.py && uvx ruff@0.7.1 format --check research/venue2027/acns/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-overlap.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/acns/overlap_audit.md": "8d70ade1eb79d6ae522b3a796fa34f7094fc22c48dac0bf27c24e8f1e55db031",
+    "research/venue2027/acns/tests/test_overlap_audit.py": "9e8c8ecd1138121565651fa21d6ee9ba00a91a6808c6d6b80237a38e574df567"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 overlap gate: comparison vs all eight sibling 2027 venues (compsac/popets/aime/ifip_sec/sacmat/dsn/dimva/pst) and historical GLHS R4 / GovRed / GovMut / CareGuard / HEALTHINF; artifact reuse table (no reused raw case IDs, labels, figures, endpoints); frozen E15-E22 outcomes explicitly NOT reused as new independent evidence (unreproduced sqlite:///:memory: backends + NOT_RUN provider receipts excluded). Contrasts: IFIP SEC mechanism vs ACNS SoK evidence-boundary taxonomy (merge pair refused); DIMVA detection (PR-AUC event streams) orthogonal to ACNS evidence-semantics mapping. Shared overlap_contract validator ok:true; mutants (sibling/historical/refusal/decision dropped) fail it in tests. Executable claim_overlap.py check: acns shares no question+endpoint pair, reuses_archive=[], zero findings. Exactly one 'Decision: PASS'. Deliverable commit SHA reported in task handoff (cannot embed a commit's own SHA)."
+}

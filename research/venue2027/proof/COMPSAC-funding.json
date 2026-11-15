@@ -1,0 +1,46 @@
+{
+  "task_id": "COMPSAC-funding",
+  "status": "PASS",
+  "source_sha_before": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "source_sha_after": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "changed_paths": [
+    "research/venue2027/compsac/submission/funding_and_author_check.md",
+    "research/venue2027/compsac/tests/test_funding_check.py",
+    "research/venue2027/proof/COMPSAC-funding.json",
+    "research/venue2027/proof/logs/COMPSAC-funding.validator.log",
+    "research/venue2027/proof/logs/COMPSAC-funding.pytest.log",
+    "research/venue2027/proof/logs/COMPSAC-funding.ruff.check.log",
+    "research/venue2027/proof/logs/COMPSAC-funding.ruff.format.log",
+    "research/venue2027/proof/logs/COMPSAC-funding.report_validate.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/submission_contract.py research/venue2027/compsac/submission/funding_and_author_check.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-funding.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/compsac/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-funding.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/compsac/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-funding.ruff.check.log"
+    },
+    {
+      "argv": "ruff format --check research/venue2027/compsac/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-funding.ruff.format.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/compsac/submission/funding_and_author_check.md": "def3337360590139d22d66f414e34d45170bd84c6606571a922050ebf23d180b",
+    "research/venue2027/compsac/tests/test_funding_check.py": "a717d0607617e81031b40bbac074f94c1caee769c41f749f739d18896b2bb53b"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P09 funding/author check for IEEE COMPSAC 2027 (priority venue). Every fee amount, tier and waiver path marked UNVERIFIED (live CFP not fetched; no network access); IEEE member/non-member/student tier structure, membership discount path and student travel support named as candidate routes; no guaranteed waiver; no submission/fee action taken, human authorization required; IEEE double-submission policy stated. Decision: HOLD. Shared validator submission_contract.validate_submission_check: ok=true (exit 0); 15/15 tests pass; ruff check + format clean. Deliverable commit SHA reported in task handoff (cannot embed a commit's own SHA)."
+}

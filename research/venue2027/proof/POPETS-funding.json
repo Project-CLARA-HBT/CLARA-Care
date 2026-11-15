@@ -1,0 +1,50 @@
+{
+  "task_id": "POPETS-funding",
+  "status": "PASS",
+  "source_sha_before": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "source_sha_after": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "changed_paths": [
+    "research/venue2027/popets/submission/funding_and_author_check.md",
+    "research/venue2027/popets/tests/test_funding_check.py",
+    "research/venue2027/proof/POPETS-funding.json",
+    "research/venue2027/proof/logs/POPETS-funding.livefetch.log",
+    "research/venue2027/proof/logs/POPETS-funding.validator.log",
+    "research/venue2027/proof/logs/POPETS-funding.pytest.log",
+    "research/venue2027/proof/logs/POPETS-funding.ruff.log",
+    "research/venue2027/proof/logs/POPETS-funding.protocol.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/submission_contract.py research/venue2027/popets/submission/funding_and_author_check.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-funding.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/popets/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-funding.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/popets/tests/test_funding_check.py && ruff format --check research/venue2027/popets/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-funding.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/_shared/tools/agent_protocol.py validate research/venue2027/proof/POPETS-funding.json --repo . --task POPETS-funding",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-funding.protocol.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/popets/submission/funding_and_author_check.md": "5dbac59fc22489586f73291817fb62e5491b0c840ea832c7c198ee6d2b482a84",
+    "research/venue2027/popets/tests/test_funding_check.py": "d9995129b682c16b7f9f51c6809f9c5643a20a01d1aab368ecd781eacd961922",
+    "research/venue2027/proof/logs/POPETS-funding.livefetch.log": "d1ed3663ee13b14bd4cb12ed4f1790d387bc89b8c692b2ece26785ea5fe551fb",
+    "research/venue2027/proof/logs/POPETS-funding.validator.log": "c20a08d6161c5b3f02266f66206ccc5a29843e1dc0d731b32d61dc23c360104f",
+    "research/venue2027/proof/logs/POPETS-funding.pytest.log": "43bdc2f4d6f1151cd12628b4ac4c18f2aa21f8ed3e0f7a2de01268e608d7a04a",
+    "research/venue2027/proof/logs/POPETS-funding.ruff.log": "ce04ce92b16073000b77c97a42c00b98b96305692d9d5ed4dcfa5a9ca9ea62d6"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P09 funding/author check for Revocation-Complete Future Disclosure for Cached Longitudinal AI Contexts: official PoPETs/PETS pages fetched live 2026-11-15 (authors-2027.php, homepage, cfp27.php); CFP URL, mandatory PoPETs 2027 acmart+popets template (arXiv draft NOT submission format), 12-page main-body limit, max-4-submissions-per-issue, simultaneous/double-submission prohibition (desk reject), AI-cannot-be-author policy, COI definition, in-person-attendance-not-required, and no-APC/no-submission-charge policy statements all CONFIRMED with URL+ISO date on the same line; exact numeric APC amount marked UNVERIFIED/NOT APPLICABLE (official pages state a no-APC policy, no figure exists to verify \u2014 task-brief assumption of an APC corrected against cited official sources); registration/stipend amounts UNVERIFIED; no guaranteed waiver claim; arXiv-preprint vs PoPETs-template separation stated; decision: HOLD; no submission, account, fee or waiver action taken, human authorization required. Shared validator validate_submission_check()=ok:true (submission_contract v1.0.0); pytest 14 passed incl. adversarial mutations (MISSING_FIELD, CONFIRMED_WITHOUT_CITATION, UNVERIFIED_WAIVER_GUARANTEE, MISSING_SIMULTANEOUS_POLICY); ruff check+format clean. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

@@ -1,0 +1,11 @@
+claim_overlap.py executable check — task IFIP_SEC-overlap
+tool version: 1.0.0
+claims loaded: ['compsac', 'popets', 'aime', 'ifip_sec', 'acns', 'dsn', 'dimva', 'pst', 'sacmat']
+ifip_sec research_question: Does replay-closed authorization across purpose, delegation and AI proposal lineage prevent authorized-looking replay attacks?
+ifip_sec primary_endpoint:  replay acceptance rate across purpose/delegation lineage
+ifip_sec reuses_archive:    []
+findings involving ifip_sec: []
+audit ok: True
+endpoint shared with:       ['ifip_sec']
+question shared with:       ['ifip_sec']
+RESULT: ifip_sec shares no question+endpoint pair with any other venue; no archive reuse. PASS

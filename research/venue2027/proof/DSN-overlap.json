@@ -1,0 +1,39 @@
+{
+  "task_id": "DSN-overlap",
+  "status": "PASS",
+  "source_sha_before": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "source_sha_after": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "changed_paths": [
+    "research/venue2027/dsn/overlap_audit.md",
+    "research/venue2027/dsn/tests/test_overlap_audit.py",
+    "research/venue2027/proof/DSN-overlap.json",
+    "research/venue2027/proof/logs/DSN-overlap.validator.log",
+    "research/venue2027/proof/logs/DSN-overlap.pytest.log",
+    "research/venue2027/proof/logs/DSN-overlap.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/overlap_contract.py research/venue2027/dsn/overlap_audit.md --venue dsn",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-overlap.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dsn/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-overlap.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/dsn/tests/test_overlap_audit.py && ruff format --check research/venue2027/dsn/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-overlap.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/dsn/overlap_audit.md": "40fe5d6f8c48f155b70a5e2957ec17528eb16b758344b92b16444d79d1656232",
+    "research/venue2027/dsn/tests/test_overlap_audit.py": "0dedea2c76cb32ae5cab09d20e128d4e91fdfee5a15b34d2ddad40af8e75e662"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 overlap gate for venue dsn: comparison vs all eight sibling 2027 venues (popets, aime, ifip_sec, sacmat, acns, compsac, dimva, pst) and historical GLHS R4 / GovRed / GovMut / CareGuard / HEALTHINF; artifact reuse table with no reused raw case IDs, labels, figures, or endpoints; frozen E15-E22 outcomes explicitly NOT reused as new independent evidence; DSN-COMPSAC contrast (crash consistency vs concurrent-write admission under benign contention). Shared validator overlap_contract.py ok:true; 14/14 tests pass including three adversarial mutants (missing sibling / missing frozen refusal / missing decision) each failing with stable reason codes. Decision: PASS. source_sha_after is the worktree HEAD at emit time; the deliverable commit SHA is reported in the task handoff (a commit cannot embed its own SHA)."
+}

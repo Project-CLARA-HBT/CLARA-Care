@@ -1,0 +1,11 @@
+claim_overlap.py executable check - task POPETS-overlap
+tool version: 1.0.0
+claims loaded: ['acns', 'aime', 'compsac', 'dimva', 'dsn', 'ifip_sec', 'popets', 'pst', 'sacmat']
+popets research_question: Does revocation-complete future-disclosure control prevent re-disclosure of revoked longitudinal context to AI models with caching?
+popets primary_endpoint:  revoked-context re-disclosure rate
+popets reuses_archive:    []
+endpoint shared with:      ['popets']
+question shared with:      ['popets']
+findings involving popets: []
+audit ok: True
+RESULT: popets shares no question+endpoint pair with any other venue; no archive reuse. PASS

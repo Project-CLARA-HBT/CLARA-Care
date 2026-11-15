@@ -1,0 +1,16 @@
+# POPETS-funding live fetch transcript
+# Fetch date: 2026-11-15 (ISO)
+
+== URL 1: https://petsymposium.org/authors-2027.php (fetched 2026-11-15) ==
+HTTP 200 (title: Information for Authors; PoPETs 2027 submission policies, template, page limit, AI policy, simultaneous submission, originality, pre-print guidelines, camera-ready)
+
+== URL 2: https://petsymposium.org/ (fetched 2026-11-15) ==
+HTTP 200 (PETS 2027 Delft July 19-24 2027; 'As of April, 2022, PoPETs is self-published. PoPETs does not have article processing charges (APCs) or article submission charges.'; issue deadlines I1 2026-05-31, I2 2026-08-31, I3 2026-11-30, I4 2027-02-28 AoE)
+
+== URL 3: https://petsymposium.org/cfp27.php (fetched 2026-11-15) ==
+HTTP 200 (Call for Papers PETS 2027; 'PoPETs is self-published and does not have article processing charges or article submission charges.'; submission server https://submit.petsymposium.org/; in-person attendance not strictly required for publication; stipend chairs TBD)
+
+== 404 probes (do not use as evidence) ==
+https://petsymposium.org/authors2027.php -> 404
+https://petsymposium.org/cfp2027.php -> 404
+https://petsymposium.org/2027/cfp.php -> 404

@@ -1,0 +1,11 @@
+claim_overlap.py executable check — task ACNS-overlap
+tool version: 1.0.0
+claims loaded: ['compsac', 'popets', 'aime', 'ifip_sec', 'acns', 'dsn', 'dimva', 'pst', 'sacmat']
+acns research_question: What are the evidence boundaries of attestation in tool-using AI systems (SoK)?
+acns primary_endpoint:  evidence-boundary coverage matrix
+acns reuses_archive:    []
+endpoint shared with:       ['acns']
+question shared with:       ['acns']
+findings involving acns: []
+audit ok: True
+RESULT: acns shares no question+endpoint pair with any other venue; no archive reuse. PASS

@@ -1,0 +1,53 @@
+{
+  "task_id": "SH-r4_ci_gate",
+  "status": "PASS",
+  "source_sha_before": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "source_sha_after": "152c89116069072bcb82678702c7b0d70a0fccfb",
+  "changed_paths": [
+    "research/venue2027/_shared/green_gate.json",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.secret_scan.log",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.chronology.log",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.r4_pytest.log",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.claim_lint.log",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.e22_offline.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 (inline GH Actions secret scan: forbidden patterns aura_prod_x7k9m2 / sk-[A-Za-z0-9]{32,} over .py/.json/.md/.csv/.yml/.yaml excluding .git/.venv/node_modules)",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-r4_ci_gate.secret_scan.log"
+    },
+    {
+      "argv": "PYTHONPATH=services/api/src:services/ml/src:. python3 research/glhs_journal/q4_r4/chronology_validator_r4.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-r4_ci_gate.chronology.log"
+    },
+    {
+      "argv": "cd services/api && DATABASE_URL=sqlite+pysqlite:////tmp/clara_gate.db AUTH_AUTO_PROVISION_USERS=true AUTH_BOOTSTRAP_ADMIN_ENABLED=true GLHS_RESEARCH_COMPARATORS_ENABLED=true PYTHONPATH=src:../ml/src:. uv run pytest -q tests/test_glhs_immutable_projection_contract.py tests/test_glhs_r4_admission.py tests/test_glhs_r4_comparators.py tests/test_glhs_comparator_policies.py tests/test_glhs_current_state_insufficiency.py tests/test_glhs_inference_envelope.py tests/test_glhs_reason_codes.py tests/test_glhs_attestation_receipts.py tests/test_inference_attestation.py tests/test_glhs_grwc_lineage.py tests/test_glhs_mandatory_thss_binding.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-r4_ci_gate.r4_pytest.log"
+    },
+    {
+      "argv": "python3 scripts/ci/r4_claim_lint.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-r4_ci_gate.claim_lint.log"
+    },
+    {
+      "argv": "python3 reproduce_q4_r4.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-r4_ci_gate.e22_offline.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/green_gate.json": "a56275167f7ace712a600f604b1b37196d5260f0f4b03f924a0d6ddde3f9a2d7",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.secret_scan.log": "557d723101ef14beca9428e562ab37c1646dc7a9f299675323bfa32b839bd7cf",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.chronology.log": "b5efe87f422282a0d34d8a818bf5023f0dcfeb05a4020329d0f9a7ee67314908",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.r4_pytest.log": "bcdcfb5a048f26d212a49f0b2af7610acafccaaddca2b763525b62b2792500c5",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.claim_lint.log": "78317e63697652bc660d9cf37877079ed7d9022aa544adad2aff8d5d0c987eb2",
+    "research/venue2027/proof/logs/SH-r4_ci_gate.e22_offline.log": "dece91e4a40d2fc53524b5cd34ecdfdae9f665e84e0532e9d3e631d5ee9ec6f4"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P00 shared gate task: all five jobs of .github/workflows/glhs-r4-novelty-gate.yml executed for real; every job exit_code=0 with full logs. r4_pytest: 64 passed (matches known-correct count; suite includes tests/test_glhs_immutable_projection_contract.py added by the SH-repair_immutable lineage, plus the workflow's 10 files). chronology: 8/8 protocols E15-E22 frozen 2026-10-02T02:05:00Z, 0 anomalies. claim_lint: 143 files scanned, 0 prohibited phrases. e22_offline: hermetic sweep (sockets/DNS blocked), E15-E21 re-executed and sealed, E22 PASS, 'ALL GATES UNCONDITIONALLY PASSED'. green_gate.json overall_status=PASS (gate-level green distinct from task-level PASS). first_green_commit_sha=152c89116069072bcb82678702c7b0d70a0fccfb: verification ran against exactly that tracked tree (repair commit 2c282710 is an ancestor); only untracked logs were added, so first green content state == base SHA; the evidence commit is created immediately after this report. Side-effect note: reproduce_q4_r4.py regenerates evidence bundles under research/glhs_journal/q4_r4/ (timestamps/env fingerprints); regenerated tracked files were git-restored to committed frozen bundles before commit, so no evidence content is altered by this task. pytest backend is SQLite file DB; no PostgreSQL condition is claimed. Honest limitation: verification is local execution of the workflow jobs, not a GitHub Actions run."
+}
