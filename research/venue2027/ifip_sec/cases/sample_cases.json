@@ -1,0 +1,138 @@
+{
+  "schema_kind": "ifip_sec.sample_cases",
+  "schema_version": "1",
+  "description": "IFIP_SEC P02 IFIP_SEC-schema sample authorized_request_chain records. Positive controls (fresh accept, cross-purpose replay, INDETERMINATE) must validate against study.schema.json; the invalid_cases record must be rejected (it claims a real-PostgreSQL RQ2 condition while observed on the sqlite backend, and drops the evidence binding). Synthetic research data only.",
+  "unit_kind": "case",
+  "valid_cases": [
+    {
+      "schema_version": "1",
+      "case_id": "IFIP-SC-001-fresh-accept",
+      "case_family": "replay",
+      "independent_unit_id": "chain.ifip-2027.unit0001",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270001,
+      "branch": "research/venue2027/tasks/w6-ifip-sec-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "fixture_path",
+          "uri": "research/venue2027/ifip_sec/protocols/study.schema.json",
+          "sha256": "6cd570d06a218b9c8b479409f4b1d54b558a2685ff0a3c779021e0cc46d24839",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Fresh single-use receipt consumed once under a stable policy epoch; replay_observer expects ADMIT.",
+      "venue": "ifip_sec",
+      "venue_unit_kind": "authorized_request_chain",
+      "observer": "replay_observer",
+      "expected_decision": "ADMIT",
+      "observed_decision": "ADMIT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-ifip-sec-2027",
+        "generator_version": "1.0.0",
+        "seed": 20270001
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "IFIP-SC-002-cross-purpose-replay",
+      "case_family": "purpose_scope",
+      "independent_unit_id": "chain.ifip-2027.unit0002",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270002,
+      "branch": "research/venue2027/tasks/w6-ifip-sec-schema",
+      "arm_id": "B1",
+      "evidence": [
+        {
+          "pointer_kind": "consent_receipt",
+          "uri": "research/venue2027/ifip_sec/protocols/study.schema.json",
+          "sha256": "6cd570d06a218b9c8b479409f4b1d54b558a2685ff0a3c779021e0cc46d24839",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Delegated receipt replayed against a different purpose binding under the same consent epoch; replay_observer expects REJECT.",
+      "venue": "ifip_sec",
+      "venue_unit_kind": "authorized_request_chain",
+      "observer": "replay_observer",
+      "expected_decision": "REJECT",
+      "observed_decision": "REJECT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-ifip-sec-2027",
+        "generator_version": "1.0.0",
+        "seed": 20270002
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "IFIP-SC-003-epoch-race-indeterminate",
+      "case_family": "revocation_timing",
+      "independent_unit_id": "chain.ifip-2027.unit0003",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270003,
+      "branch": "research/venue2027/tasks/w6-ifip-sec-schema",
+      "arm_id": "B3",
+      "evidence": [
+        {
+          "pointer_kind": "policy_epoch",
+          "uri": "research/venue2027/ifip_sec/protocols/study.schema.json",
+          "sha256": "6cd570d06a218b9c8b479409f4b1d54b558a2685ff0a3c779021e0cc46d24839",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Concurrent consume raced a policy-epoch change; outcome is genuinely INDETERMINATE and is never counted as a safe rejection.",
+      "venue": "ifip_sec",
+      "venue_unit_kind": "authorized_request_chain",
+      "observer": "replay_observer",
+      "expected_decision": "INDETERMINATE",
+      "observed_decision": "INDETERMINATE",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-ifip-sec-2027",
+        "generator_version": "1.0.0",
+        "seed": 20270003
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    }
+  ],
+  "invalid_cases": [
+    {
+      "schema_version": "1",
+      "case_id": "IFIP-IV-001-sqlite-posing-as-pg",
+      "case_family": "replay",
+      "independent_unit_id": "chain.ifip-2027.unit0004",
+      "unit_kind": "case",
+      "backend": "sqlite",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270004,
+      "branch": "research/venue2027/tasks/w6-ifip-sec-schema",
+      "arm_id": "B4",
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "FORGED RECORD, MUST STAY INVALID: RQ2 linearizability is claimed on real PostgreSQL but the run only used sqlite, and the evidence array binding the case to frozen inputs is missing.",
+      "venue": "ifip_sec",
+      "venue_unit_kind": "authorized_request_chain",
+      "observer": "replay_observer",
+      "expected_decision": "ADMIT",
+      "observed_decision": "ADMIT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-ifip-sec-2027",
+        "generator_version": "1.0.0",
+        "seed": 20270004
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    }
+  ]
+}

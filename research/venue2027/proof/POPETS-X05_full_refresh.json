@@ -1,0 +1,38 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/popets/baselines.py": "9e650f00594910c1fca96c6c271eab74b758999ff6c93989088b2411cc252758",
+    "research/venue2027/popets/tasks/full_refresh_impl.md": "57e65176e92ad7af612eec300ee25c794d6fe4b3331872df5d4ce3b5e71e2fd9",
+    "research/venue2027/popets/tests/test_x05_full_refresh.py": "cbaf837c2247251b245fdf94b742181cc765341cc41ad678c58a180130292abc",
+    "research/venue2027/proof/logs/POPETS-X05_full_refresh.pytest.log": "6cb996ef76fe99049dd692e5cd4ad5b89a1109573ab915339b3beabb0ca5dbe2",
+    "research/venue2027/proof/logs/POPETS-X05_full_refresh.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "baseline_parity": "PASS",
+  "changed_paths": [
+    "evaluation/venue2027/popets/baselines.py",
+    "research/venue2027/popets/tasks/full_refresh_impl.md",
+    "research/venue2027/popets/tests/test_x05_full_refresh.py",
+    "research/venue2027/proof/logs/POPETS-X05_full_refresh.pytest.log",
+    "research/venue2027/proof/logs/POPETS-X05_full_refresh.ruff.log",
+    "research/venue2027/proof/logs/POPETS-X05_full_refresh.validator.log",
+    "research/venue2027/proof/POPETS-X05_full_refresh.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/popets/tests/test_x05_full_refresh.py evaluation/venue2027/popets/test_baselines.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-X05_full_refresh.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/popets/tests/test_x05_full_refresh.py evaluation/venue2027/popets/baselines.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-X05_full_refresh.ruff.log"
+    }
+  ],
+  "notes": "X05 strong full-refresh comparator formalized and executed through the REAL baseline adapter run_baseline('coarse-cache-purge-on-revocation', case, ctx) (evaluation/venue2027/popets/baselines.py, FAITHFUL_PORT, no forked implementation): research/venue2027/popets/tasks/full_refresh_impl.md formalizes the arm (purge ALL cached projections of the subject on any revocation; serve every dispatch by recompute-or-hit from the live source snapshot), its transition relation, the revocation-complete future-disclosure guarantee (post-revocation dispatches touching revoked coverage are REJECT/REVOKED_CONTEXT with zero exposed bytes, cache state can never resurrect revoked context) and the RQ3 cost model. Backwards-compatible cost accounting added to baselines.py _run_coarse_purge: recompute_count (admitted misses actually rebuilt from live source; REJECT fails closed before rebuild and pays no rebuild), cache_entries_at_purge, and cost {cache_hits, cache_misses, purge_events, entries_destroyed_by_purges, recomputes, peak_cache_size}; admission decisions, outcome labels and invalidation_events unchanged; parity fixture coarse_purge_parity.json still reproduces exactly. test_x05_full_refresh.py (12 tests) imports the real baseline, runs a revocation workload (direct + transitive retry + cached-unaffected-grant lineages), asserts all cached projections purged (invalidation_events==1, cache_entries_at_purge==2), no revoked-context leakage (post-revocation REJECT/REVOKED_CONTEXT, exposed_bytes==0, cache_hit False), false-invalidation rebuild of an unaffected grant, records the real recompute_count (==3 on the revocation workload, ==4 under two purge windows), plus fail-closed adversarial controls (LINEAGE_SOURCE_MISSING, WORKLOAD_MALFORMED, determinism, parity vector). evaluation/venue2027/popets/test_baselines.py stays green (33 tests). 45 passed total; uvx ruff@0.7.1 check clean.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "f4e3495e602789f74133955c07389298542770b1",
+  "source_sha_before": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "status": "PASS",
+  "task_id": "POPETS-X05_full_refresh",
+  "unresolved": []
+}

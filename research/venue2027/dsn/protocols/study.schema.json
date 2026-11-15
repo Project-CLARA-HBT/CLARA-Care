@@ -1,0 +1,213 @@
+{
+  "$defs": {
+    "evidence_pointer": {
+      "additionalProperties": false,
+      "properties": {
+        "frozen_at": {
+          "description": "Freeze timestamp; forensic only.",
+          "format": "date-time",
+          "type": "string"
+        },
+        "pointer_kind": {
+          "description": "What kind of frozen evidence this pointer addresses.",
+          "enum": [
+            "fixture_path",
+            "dataset_snapshot",
+            "consent_receipt",
+            "policy_epoch",
+            "oracle_label",
+            "provider_trace"
+          ]
+        },
+        "sha256": {
+          "description": "SHA256 of the pointed-to artifact; mismatch fails closed.",
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "uri": {
+          "description": "Resolvable pointer (relative repo path or URI) to the frozen evidence artifact.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "pointer_kind",
+        "uri",
+        "sha256"
+      ],
+      "title": "Evidence pointer (v1)",
+      "type": "object"
+    }
+  },
+  "$id": "https://clara.care/venue2027/dsn/study.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Venue-specific study record extending the shared case contract. Venue fields are required and typed; silent nulls are not permitted.",
+  "properties": {
+    "arm_id": {
+      "description": "Arm label (e.g. 'B0'..'B4', or candidate/baseline id) from the predeclared baseline table.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "backend": {
+      "description": "Required. Execution backend. PostgreSQL concurrency claims must use 'postgresql'; never substitute 'sqlite' for PG claims.",
+      "enum": [
+        "postgresql",
+        "sqlite",
+        "synthetic"
+      ]
+    },
+    "branch": {
+      "description": "Exact git branch of the run; checked by exact-string equality in analyses, never prefix matching.",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$",
+      "type": "string"
+    },
+    "case_family": {
+      "description": "Attack/benefit family this record belongs to.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "case_id": {
+      "description": "Stable identifier of the case within its case family; uniqueness across families is not required by schema.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "created_at": {
+      "description": "Forensic timestamp (UTC RFC 3339). NOT a basis for unit independence: two attempts sharing independent_unit_id remain one clustered unit regardless of timestamps.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "decision_agreement": {
+      "description": "Whether observed matches expected; computed, not asserted.",
+      "type": "boolean"
+    },
+    "evidence": {
+      "description": "At least one evidence pointer binding the case to frozen, hash-addressed inputs (evidence_pointer.v1).",
+      "items": {
+        "$ref": "#/$defs/evidence_pointer"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "expected_decision": {
+      "enum": [
+        "ADMIT",
+        "REJECT",
+        "INDETERMINATE",
+        "NOT_APPLICABLE"
+      ],
+      "type": "string"
+    },
+    "independent_unit_id": {
+      "description": "Required. Identifies the independent experimental unit (e.g. one independently sampled history/vignette/run). Repeated attempts against the same unit are clustered, not independent. Never derived from timestamps alone.",
+      "pattern": "^[A-Za-z0-9._:.-]{1,128}$",
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "observed_decision": {
+      "enum": [
+        "ADMIT",
+        "REJECT",
+        "INDETERMINATE",
+        "NOT_RUN_EXTERNAL",
+        "EXECUTION_ERROR",
+        "TIMEOUT"
+      ],
+      "type": "string"
+    },
+    "observer": {
+      "description": "The independent observer/adjudicator for this venue.",
+      "enum": [
+        "crash_injector"
+      ],
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1",
+      "description": "Contract version. Only '1' (additive-only evolution within v1)."
+    },
+    "seed": {
+      "description": "Required integer RNG seed; untracked randomness is forbidden.",
+      "maximum": 18446744073709551615,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "source_authority": {
+      "description": "Only synthetic research authority is permitted.",
+      "enum": [
+        "SYNTHETIC_RESEARCH_ONLY"
+      ],
+      "type": "string"
+    },
+    "source_sha": {
+      "description": "Required. Frozen full git commit SHA of the candidate code under test (40 lowercase hex).",
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "synthetic_provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "generator_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "generator_version": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "seed": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "generator_id",
+        "generator_version",
+        "seed"
+      ],
+      "type": "object"
+    },
+    "unit_kind": {
+      "description": "Declared kind of independent unit so analysis can cluster appropriately (INDEPENDENT_EVIDENCE_PROTOCOL.md section 3).",
+      "enum": [
+        "case",
+        "history",
+        "run",
+        "session",
+        "subject",
+        "benchmark_run"
+      ]
+    },
+    "venue": {
+      "const": "dsn"
+    },
+    "venue_unit_kind": {
+      "const": "crash_recovery_episode",
+      "description": "Venue-specific unit description. The shared 'unit_kind' enum stays authoritative for clustering; this field records the venue's own label."
+    }
+  },
+  "required": [
+    "schema_version",
+    "case_id",
+    "case_family",
+    "independent_unit_id",
+    "unit_kind",
+    "backend",
+    "source_sha",
+    "seed",
+    "branch",
+    "arm_id",
+    "evidence",
+    "venue",
+    "venue_unit_kind",
+    "observer",
+    "expected_decision",
+    "observed_decision",
+    "decision_agreement",
+    "synthetic_provenance",
+    "source_authority"
+  ],
+  "title": "CLARA-Care 2027 dsn study record (v1.0.0)",
+  "type": "object"
+}

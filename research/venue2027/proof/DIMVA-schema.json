@@ -1,0 +1,53 @@
+{
+  "task_id": "DIMVA-schema",
+  "status": "PASS",
+  "source_sha_before": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "source_sha_after": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "changed_paths": [
+    "research/venue2027/dimva/protocols/study.schema.json",
+    "research/venue2027/dimva/cases/sample_cases.json",
+    "research/venue2027/dimva/cases/fixture_synthetic_campaign.txt",
+    "research/venue2027/dimva/cases/fixture_synthetic_trace_lowslow.txt",
+    "research/venue2027/dimva/tests/test_study_schema.py",
+    "research/venue2027/proof/DIMVA-schema.json",
+    "research/venue2027/proof/emit_dimva_schema_report.py",
+    "research/venue2027/proof/logs/DIMVA-schema.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-schema.suite.log",
+    "research/venue2027/proof/logs/DIMVA-schema.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-schema.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dimva/tests/test_study_schema.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-schema.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/ research/venue2027/dimva/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-schema.suite.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/dimva/tests/test_study_schema.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-schema.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_dimva_schema_report.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-schema.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/dimva/protocols/study.schema.json": "711ee5b1979a6489ec5e0b797079204441056026605a65101c7e9f477c465416",
+    "research/venue2027/dimva/cases/sample_cases.json": "9b32d4227275882242eeb6b032530960fd243f7775a155750e9827ea137b36a3",
+    "research/venue2027/dimva/tests/test_study_schema.py": "21cfe53ad51ceaf6298cd35aa739a05f91eaafd3ee1bcfd7a66aa0e11c747f3b",
+    "research/venue2027/proof/logs/DIMVA-schema.pytest.log": "d80d6751d4590b105a131b3a9648db163eb4158739c74c22221ae3b9ed63aab1",
+    "research/venue2027/proof/logs/DIMVA-schema.suite.log": "5399095fb2119f8755076c34a66e8a4dd9fb8343e7b76911d2e8eaf10b1ca790",
+    "research/venue2027/proof/logs/DIMVA-schema.ruff.log": "a6f0dbc8994bde1c14490ce37df741b06dc0b7012b391cfc3d1044eea877577f"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P02 DIMVA-schema (Case/run/output JSON schemas): research/venue2027/dimva/protocols/study.schema.json generated deterministically via _shared/tools/venue_schema.write_venue_schema('dimva', root) from the shared case.v1 contract; venue fields (venue=dimva, venue_unit_kind=probing_campaign, observer=telemetry_observer, case_family, expected/observed decision, decision_agreement, synthetic_provenance, source_authority=SYNTHETIC_RESEARCH_ONLY) are required and typed, additionalProperties=false, silent nulls rejected fail-closed. research/venue2027/dimva/cases/sample_cases.json holds 3 valid probing-campaign records (benign retry burst expecting no detection; adaptive_probing.low_and_slow sequence-arm campaign; INDETERMINATE record with observed_decision=NOT_RUN_EXTERNAL for a pinned external arm absent from the worktree, transparent status per the DIMVA blueprint) plus 1 invalid_cases record violating the contract (missing backend, silent-null seed). unit_kind='case'; every evidence pointer carries pointer_kind/uri/sha256 over frozen synthetic research-only artifacts (no real PHI/PII, no network, no live provider). research/venue2027/dimva/tests/test_study_schema.py: 19 tests assert the byte-identical deterministic rebuild, positive records validate via _shared/tools/schema_validator.validate_instance (empty reason-code tuple), the violating record is rejected (REQUIRED_MISSING/TYPE_MISMATCH) alongside silent-null/unknown-decision/extra-property/removed-field probes, evidence pointers resolve to frozen repo files with matching sha256, and observed_decision keeps allowing NOT_RUN_EXTERNAL/EXECUTION_ERROR/TIMEOUT/INDETERMINATE (detection baseline honesty) while expected_decision excludes NOT_RUN_EXTERNAL. Verified: task pytest 19 passed (exit 0), shared+dimva suite 319 passed (exit 0), uvx ruff@0.7.1 check clean (exit 0); agent_protocol.validate_report ok:true with real on-disk logs. source_sha_before=source_sha_after=base SHA per SH-agent_protocol precedent (the proof report is committed together with the work it attests)."
+}

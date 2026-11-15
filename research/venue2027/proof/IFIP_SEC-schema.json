@@ -1,0 +1,38 @@
+{
+  "artifacts_sha256": {
+    "research/venue2027/ifip_sec/cases/sample_cases.json": "f0b1bcace42a2b86f196d9e9b6522ab93a5a01bdb2b00daa4e3ad7360e3a2ac5",
+    "research/venue2027/ifip_sec/protocols/study.schema.json": "6cd570d06a218b9c8b479409f4b1d54b558a2685ff0a3c779021e0cc46d24839",
+    "research/venue2027/ifip_sec/tests/test_study_schema.py": "105d0054c80ce8eceab55754be3d3a5e10940e73fa93eaf2b44ad2cd780bc12c",
+    "research/venue2027/proof/logs/IFIP_SEC-schema.validator.log": "246675c1545ded373a1773a729c50273ef654b1ed4a1ab0b8077c814ea0fcde9"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "research/venue2027/ifip_sec/protocols/study.schema.json",
+    "research/venue2027/ifip_sec/cases/sample_cases.json",
+    "research/venue2027/ifip_sec/tests/test_study_schema.py",
+    "research/venue2027/proof/IFIP_SEC-schema.json",
+    "research/venue2027/proof/logs/IFIP_SEC-schema.pytest.log",
+    "research/venue2027/proof/logs/IFIP_SEC-schema.ruff.log",
+    "research/venue2027/proof/logs/IFIP_SEC-schema.shared_regression.log",
+    "research/venue2027/proof/logs/IFIP_SEC-schema.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/ifip_sec/tests/test_study_schema.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-schema.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/ifip_sec/ research/venue2027/_shared/tools/venue_schema.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-schema.ruff.log"
+    }
+  ],
+  "notes": "IFIP_SEC P02 study schema: research/venue2027/ifip_sec/protocols/study.schema.json generated deterministically via venue_schema.write_venue_schema('ifip_sec', repo) from the shared case.v1 contract; byte-identical rebuild proven in tests. Three positive authorized_request_chain records (fresh same-purpose accept ADMIT, cross-purpose replay REJECT, policy-epoch race INDETERMINATE) in research/venue2027/ifip_sec/cases/sample_cases.json validate with zero errors; their evidence pointers hash-address the generated schema artifact (sha256 verified at test time). One adversarial record (real-PostgreSQL RQ2 claim observed on sqlite with the evidence binding dropped) is rejected with REQUIRED_MISSING; backend enum stays restricted to {postgresql, sqlite, synthetic} and out-of-enum backends (duckdb/mysql/mongodb/in_memory/postgres) fail closed with ENUM_MISMATCH, so PostgreSQL-only concurrency claims can never be recorded on another backend. Mutations refused: missing shared/venue fields (REQUIRED_MISSING), wrong venue/unit-kind (CONST_MISMATCH), wrong observer/source_authority (ENUM_MISMATCH), silent null observed_decision (TYPE_MISMATCH), unknown extra property (ADDITIONAL_PROPERTY), tampered evidence sha256 (PATTERN_MISMATCH), empty evidence (MIN_ITEMS), unknown schema keyword (UNKNOWN_KEYWORD fail-closed). 35 schema tests pass; shared regression suite 196 tests pass; uvx ruff@0.7.1 check clean. SHA convention follows repo precedent (SH-claim_overlap/IFIP_SEC-threat): before==after==parent source state because the single required commit contains this self-referential report; the final deliverable commit SHA is reported in the handoff.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "source_sha_before": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "status": "PASS",
+  "task_id": "IFIP_SEC-schema",
+  "unresolved": []
+}

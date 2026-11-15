@@ -1,0 +1,42 @@
+{
+  "amendments": [],
+  "detail": "",
+  "entries": [
+    {
+      "path": "protocol/protocol.md",
+      "sha256": "ecc788f124696d8c8f4957438d2ac61b23516319c50d776cc06140f8166b5fcc",
+      "size_bytes": 65,
+      "timestamp_utc": "2026-11-15T00:00:00Z"
+    },
+    {
+      "path": "cohorts/cohort_manifest.json",
+      "sha256": "d467f2eea3f7ceb6949d6fd4c1d590e08a192e62b00ded886048e35f0b4fe8bb",
+      "size_bytes": 37,
+      "timestamp_utc": "2026-11-15T00:00:00Z"
+    },
+    {
+      "path": "oracle/oracle_source.py",
+      "sha256": "907733e0d3f54e537d00f023a20daa3dc397107a646eaba34b47415b21a8fa3f",
+      "size_bytes": 32,
+      "timestamp_utc": "2026-11-15T00:00:00Z"
+    },
+    {
+      "path": "baselines/registry.yaml",
+      "sha256": "5a3bab6f43e5e7fbcf1c0bb2942d586412a72d30cb7943589b02a4dab3f98117",
+      "size_bytes": 35,
+      "timestamp_utc": "2026-11-15T00:00:00Z"
+    },
+    {
+      "path": "analysis/analysis_policy.py",
+      "sha256": "945b271bb6787d0fd76d820406295a97721b46fea929eb2744af9f66cb57a773",
+      "size_bytes": 34,
+      "timestamp_utc": "2026-11-15T00:00:00Z"
+    }
+  ],
+  "freeze_id": "25005adfed27d1db7221a8979742cae7780b3157d75662ff605a1ecaf4751c22",
+  "ok": true,
+  "reason_code": "OK",
+  "schema_version": "1.0.0",
+  "stage": "pre-holdout",
+  "study_id": "demo-study-01"
+}

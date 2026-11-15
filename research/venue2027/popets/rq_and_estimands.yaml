@@ -1,0 +1,547 @@
+# =====================================================================
+# POPETS-rq_registry — RQ, estimand, hypotheses and metrics (P01)
+# =====================================================================
+# Task: POPETS-rq_registry (venue popets, phase P01, priority P0).
+# Contract: research/venue2027/popets/novelty_contract.md (signed GO),
+#           research/venue2027/VENUES/popets/RESEARCH_BLUEPRINT.md,
+#           research/venue2027/GATES/SCIENTIFIC_METRICS_CONTRACT.md,
+#           research/venue2027/GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md,
+#           evaluation/venue2027/_shared/analysis_policy.py (FrozenPlan /
+#           assert_frozen_analysis; ANALYSIS_DRIFT on post-hoc change).
+#
+# Purpose: preregistered registry of exactly three research questions with
+# frozen estimands, paired contrasts, primary/secondary metrics, hypotheses,
+# minimum useful differences, confounders, power/analysis method,
+# falsification conditions and primary endpoints — all frozen BEFORE any
+# holdout unsealing. This file asserts NO empirical result; every number that
+# later appears in POPETS artifacts must derive mechanically from
+# artifacts/venue2027/popets/<run_id>/manifest.json.
+#
+# Failure semantics: violations are ordinary assertion failures in
+# research/venue2027/popets/tests/test_rq_registry.py with stable test names;
+# nothing is silently skipped. Any post-hoc edit of an endpoint, test,
+# margin, unit, alpha or seed against the frozen analysis policy is
+# ANALYSIS_DRIFT.
+#
+# Endpoint class invariant: POPETS is a PRE-DISPATCH FUTURE-DISCLOSURE
+# CONTROL study (re-disclosure of revoked longitudinal context to cached AI
+# models). No RQ may adopt a post-hoc forensic reconstructability endpoint
+# (that is the PST sibling study's territory) or any claim of retroactive
+# erasure of content already delivered to external providers (blueprint
+# falsification rule; novelty_contract.md §5.4).
+#
+# Version: 1.0.0. Additive-only within 1.x.
+schema_version: "clara.venue2027.rq_registry.v1"
+venue: popets
+phase: P01
+task_id: POPETS-rq_registry
+study_title: >-
+  Revocation-Complete Future Disclosure for Cached Longitudinal AI Contexts
+registry_version: "1.0.0"
+preregistration_status: frozen_before_holdout
+endpoint_class: future_dispatch_noninterference
+# Sibling boundary: PST owns post-hoc forensic reconstructability of
+# minimized audit receipts; POPETS owns pre-dispatch, future-facing control
+# of revoked longitudinal context re-reaching model dispatches through
+# derived state (the anti-salami matrix's closest pair, separated by the
+# future-dispatch vs forensic-metadata distinction).
+forensic_endpoint_refusal: >-
+  No RQ uses forensic reconstructability score, audit-metadata inference, or
+  any post-hoc audit-reconstruction quantity as an endpoint; such metrics
+  belong to the pst sibling study. No RQ asserts erasure of information
+  already delivered to any external provider; audits explicitly exclude
+  already-delivered content.
+
+# ---------------------------------------------------------------------------
+# Shared frozen design elements (apply to all RQs)
+# ---------------------------------------------------------------------------
+shared_design:
+  # Independent unit of analysis: one unique synthetic subject history.
+  # Never a per-dispatch pseudo-replication; repeated dispatches inside one
+  # subject history are clustered, never independent draws. Label N by
+  # subject, not by number of dispatches (blueprint).
+  independent_unit: unique_subject_history
+  unit_definition: >-
+    One independently sampled synthetic subject with an independent
+    longitudinal history (3-6 longitudinal contexts) in the frozen
+    synthetic-popets-2027 contract; the subject identifier, not the dispatch
+    sequence position, defines the unit.
+  cluster_definition: >-
+    Subject histories sharing one scenario_family x synthetic tenant origin
+    form a cluster; cluster bootstrap resamples whole clusters so
+    family/tenant correlated structure never inflates the effective sample
+    size.
+  population: >-
+    1200 unique synthetic subjects with 3-6 longitudinal contexts each,
+    under factorial lineage fanout, delayed cache writes, retries, and
+    policy changes, with a source-disjoint confirmatory holdout. Synthetic
+    only; no real patient records.
+  # Independent oracle: source-snapshot permission recomputation plus a
+  # byte-level dispatch interceptor, disjoint from candidate code.
+  oracle:
+    source: independent_source_snapshot_recomputation
+    labels: [AUTHORIZED, FORBIDDEN, INDETERMINATE]
+    adjudication: >-
+      The forbidden set for grant g and purpose p is recomputed independently
+      from source snapshots (all live-purpose permission clauses), never from
+      candidate reason codes and never from the candidate invalidation
+      module; the oracle implementation must not import any candidate or
+      baseline invalidation code (enforced by module isolation and reviewed
+      in POPETS-threat). Plausible two-way readings stay INDETERMINATE and
+      are excluded from the primary denominator (reported, never silently
+      dropped). Dispatch content is observed by a byte-level interceptor with
+      a sealed cancellation log, not by candidate self-report.
+    leak_safety: >-
+      The candidate's leakage-audit report is never an input to the oracle;
+      the disclosure trace is reconstructed from interceptor bytes and the
+      sealed cancellation log under the declared observation model.
+  # Declared observation model, frozen before holdout.
+  observation_model:
+    dispatch_capture: byte_level_interceptor
+    cancellation_log: sealed
+    already_delivered_content: excluded_from_all_leakage_audits
+    replay_path_coverage: reconciled against independently replayed dispatch schedules
+  # Frozen revocation-time semantics.
+  revocation_semantics:
+    rule: >-
+      For grant g, purpose p, and dispatch d after revocation time t_r,
+      require forbidden_label(g,p) intersect lineage(d) = empty set; derived
+      artifacts are labeled at creation and reverse dependency edges are
+      invalidated on revocation; reauthorization happens at every dispatch.
+    no_retroactive_erasure: >-
+      Information already delivered to any external provider is explicitly
+      excluded from every leakage audit; no claim of cryptographic
+      retroactive erasure is made anywhere in this registry.
+  # Frozen split discipline.
+  splits:
+    development: design changes permitted on development split only
+    holdout: >-
+      source-disjoint confirmatory holdout, inaccessible until protocol and
+      analysis freeze; holdout sources share no origin records with
+      development
+    per_family_reporting: degradation reported per held-out lineage family
+  # Frozen error accounting (SCIENTIFIC_METRICS_CONTRACT rule 6).
+  outcome_accounting:
+    per_arm_counts: [eligible, attempted, completed, rejected, indeterminate, timeout, not_run_external, missing]
+    denominator_policy: >-
+      predeclared primary denominator at subject-history level;
+      INDETERMINATE excluded from primary analysis and reported
+  # Shared power / analysis method (also instantiated per RQ below).
+  power_and_analysis:
+    pilot: >-
+      Pilot variance estimation on the development split only; prospective
+      sample size frozen from the pilot upper variance bound, never chosen
+      from target p-values (SCIENTIFIC_METRICS_CONTRACT rule 9).
+    familywise_error: >-
+      Planned comparison count fixed at three primary contrasts (one per RQ);
+      Holm correction across the three primary contrasts; secondary metrics
+      are descriptive with cluster CIs, no confirmatory claim.
+    alpha: 0.05
+    bootstrap:
+      resamples: 2000
+      seed: 2027
+      scheme: cluster bootstrap resampling whole subject histories (units are subjects, clusters are family x tenant)
+    software: evaluation/venue2027/_shared/analysis_policy.py (FrozenPlan, assert_frozen_analysis; ANALYSIS_DRIFT on post-hoc change)
+  confounders_shared:
+    - retry queues and fallback transports re-delivering pre-revocation payloads symmetrically across arms
+    - cache warmth / TTL timing asymmetry across arms (equal dispatch schedules and compute budget enforced)
+    - lineage-family overlap across splits (frozen source-disjoint holdout rule)
+    - interceptor blind spots (replay-path coverage reconciled against independent dispatch schedules)
+    - candidate self-reported audit status (byte-level interceptor observation enforced instead)
+
+# ---------------------------------------------------------------------------
+# Strong baseline arms (blueprint table; per-RQ contrasts below)
+# ---------------------------------------------------------------------------
+baseline_arms:
+  B0:
+    name: TTL-only cache
+    role: weak lower bound
+  B1:
+    name: coarse cache purge on consent change
+    role: strong simple safety baseline; RQ3 availability-cost comparator
+  B2:
+    name: always-recompute authorized projection per dispatch
+    role: >-
+      privacy reference upper bound and cost comparator; the strongest
+      competing explanation for RQ1 and the disclosure reference for RQ2
+  B3:
+    name: Zanzibar-like consistency-token authorization + derived-cache tagging
+    role: >-
+      strong architecture baseline for RQ2, conditional on the adapter
+      genuinely supporting derivations; if the adapter cannot represent
+      derived-artifact lineage, that fact is recorded and B3 is reported
+      NOT_RUN_EXTERNAL rather than replaced by a custom toy under the same
+      name
+  B4:
+    name: proposed transitive provenance-label invalidation
+    role: candidate
+  candidate:
+    name: B4 dependency-closure invalidation with origin- and purpose-labeled lineage
+    role: >-
+      label derived artifacts at creation; invalidate reverse dependency
+      edges on revocation; reauthorize at every dispatch
+  parity: >-
+    All baseline implementations use pinned real upstream sources if
+    available, with fidelity vectors and equal budget; NOT_RUN_EXTERNAL is a
+    permitted transparent status but blocks any comparative claim against
+    that arm.
+
+# ---------------------------------------------------------------------------
+# Research questions — exactly three, preregistered (verbatim from the
+# blueprint and novelty contract §3)
+# ---------------------------------------------------------------------------
+research_questions:
+
+  - rq_id: RQ1
+    title: Post-revocation transitive leakage
+    research_question: >-
+      Can any post-revocation model dispatch contain disallowed attributes
+      through transitive caches or retries, even when direct record access is
+      denied?
+    independent_unit: unique subject history, per shared_design.independent_unit
+    population: >-
+      All eligible unique synthetic subject histories in the frozen
+      synthetic-popets-2027 corpus (development + holdout splits) that
+      revoke consent at a defined t_r and continue to issue post-revocation
+      dispatches across prompt segments, cached summaries, embedding
+      pointers, retry payloads and fallback transports; INDETERMINATE oracle
+      labels excluded from the primary denominator and reported.
+    estimand: >-
+      Future unauthorized disclosure rate per independent subject history —
+      the rate and attribute-exposure byte count of forbidden attributes
+      reaching outbound model dispatches after t_r through transitive derived
+      state (caches, retries, fallback transports) under the declared
+      observation model, with direct record reads denied at the source
+      boundary. A pre-dispatch future-disclosure quantity, never a forensic
+      reconstruction and never an erasure claim.
+    paired_contrast: >-
+      Candidate (B4) vs B2 (always-recompute authorized projection per
+      dispatch) on the same subject histories, same dispatch schedules, same
+      data access and same compute budget; per-subject disclosure indicators
+      after t_r form paired Bernoulli units for exact McNemar's test, plus a
+      95% cluster bootstrap CI for the subject-level disclosure-rate
+      difference resampling independent subject histories (no per-dispatch
+      pseudo-replication). B1 and B3 are cross-checked per the blueprint
+      baseline table.
+    primary_metric: >-
+      future unauthorized disclosure rate per independent subject history
+      (rate and attribute-exposure byte count of forbidden attributes in
+      outbound dispatches after t_r), measured by the byte-level interceptor
+      and independent source-snapshot oracle
+    primary_metric_family: [future_unauthorized_disclosure_rate, attribute_exposure_byte_count]
+    secondary_metrics:
+      - attribute-exposure byte count per leaking subject history (descriptive companion)
+      - derivation-path attribution of leaks (prompt segment / cached summary / embedding pointer / retry payload / fallback transport)
+      - count of post-revocation dispatches blocked by the sealed cancellation log
+      - replay-path coverage of the interceptor against independently replayed dispatch schedules
+      - per-arm outcome counts (eligible/attempted/completed/rejected/indeterminate/timeout/not_run_external/missing)
+    null_hypothesis: >-
+      H0_1: the subject-level future unauthorized disclosure rate for the
+      candidate (B4) equals B2's (paired difference = 0), and no transitive,
+      retry or fallback leak class exists that the candidate removes relative
+      to B2.
+    alternative_hypothesis: >-
+      H1_1: post-revocation dispatches contain disallowed attributes through
+      transitive caches or retries even when direct record access is denied
+      (at least one arm, including weak B0, exhibits leakage witnesses), and
+      the candidate's subject-level disclosure rate is at least delta_1 below
+      B2's on discordant subject histories.
+    minimum_useful_difference:
+      symbol: delta_1
+      value: 0.05
+      scale: absolute subject-history disclosure-rate difference (B2 minus candidate) on the source-disjoint confirmatory holdout
+      rationale: >-
+        A 5-point absolute reduction in per-subject post-revocation
+        disclosure is the smallest difference that would justify replacing
+        per-dispatch recomputation with lineage tracking in consent-lifecycle
+        infrastructure; frozen before holdout unsealing together with the
+        pilot-based power calc.
+    confounders:
+      - retry and fallback transports re-delivering pre-revocation payloads (symmetric schedule enforced)
+      - pre-existing non-revoked grants whose labels coincide with revoked attributes (label-set disjointness enforced)
+      - cache warmth and TTL timing asymmetry across arms (equal dispatch schedules enforced)
+      - interceptor blind spots on fallback transports (replay-path coverage reconciliation enforced)
+      - candidate self-reported audit status (independent oracle observation enforced)
+    power_and_analysis_method: >-
+      Exact McNemar's test on paired subject-level disclosure indicators (B4
+      vs B2) for the equivalence/screening comparison with alpha=0.05,
+      Holm-corrected across the three primary contrasts; 95% two-sided
+      subject-clustered bootstrap CI (2000 resamples, seed 2027; clusters are
+      subject histories) for the disclosure-rate contrast; two-gate decision
+      via analysis_policy: gate 1 requires at least one reproducible
+      transitive/retry/fallback leak witness under a non-candidate arm so the
+      phenomenon exists, gate 2 requires the candidate's disclosure-rate
+      reduction vs B2 to meet delta_1 with CI low > 0; pilot-based
+      prospective sample size from the development split; zero-event
+      outcomes reported with their Clopper-Pearson upper bound, never as
+      logical proof; per-arm outcome counts reported with a predeclared
+      denominator.
+    falsification_condition: >-
+      F1: if zero post-revocation leakage witnesses exist under any arm
+      (including weak B0 TTL-only), RQ1 has no distinct effect and C1
+      collapses to prior access-control capability. F2: if B2's disclosure
+      trace already equals the candidate's with no transitive/retry/fallback
+      leak class the candidate removes (paired difference within delta_1 of
+      zero on the frozen confirmatory holdout), the paper narrows to an
+      engineering performance trade-off per the blueprint falsification rule;
+      erasure of prior external disclosures is never asserted in either
+      branch.
+    primary_endpoint: >-
+      future unauthorized disclosure rate per independent subject history
+      (rate and attribute-exposure byte count of forbidden attributes reaching
+      outbound dispatches after t_r) on the source-disjoint confirmatory
+      holdout — a pre-dispatch future-disclosure endpoint, never a forensic
+      reconstructability score and never a retroactive-erasure claim
+
+  - rq_id: RQ2
+    title: Semantic completeness of dependency-closure invalidation
+    research_question: >-
+      Does origin- and purpose-labeled dependency closure match a full
+      always-recompute authorized view on disclosure traces?
+    independent_unit: unique subject history, per shared_design.independent_unit
+    population: >-
+      All eligible unique synthetic subject histories in the frozen corpus,
+      stratified by frozen lineage-family holdout groups; holdout families
+      and synthetic tenants frozen before any holdout access; no shared
+      origin sources across train/test (source-disjoint holdout).
+    estimand: >-
+      Disclosure-trace equivalence to the always-recompute reference (B2) at
+      the level of independent subject histories — equivalence of the paired
+      disclosure-indicator difference within a pre-registered TOST margin —
+      jointly with the false invalidation rate (authorized context wrongly
+      invalidated) versus B3. Equivalence is claimed only via the two-gate
+      certificate: the predeclared equivalence margin AND the
+      false-invalidation comparison each meet their frozen criterion; a
+      non-significant difference is never a certificate.
+    paired_contrast: >-
+      Candidate (B4) vs B2 (always-recompute reference) on the same subject
+      histories for disclosure-trace equivalence, and candidate (B4) vs B3
+      (Zanzibar-like consistency-token authorization + derived-cache tagging)
+      for false invalidation, on the same schedules and budget; paired
+      subject-level TOST with a pre-registered equivalence margin on the
+      disclosure-indicator difference, plus a sign test / Wilcoxon
+      signed-rank on paired per-subject false-invalidation counts versus B3,
+      with subject-clustered bootstrap CIs. B3 is reported NOT_RUN_EXTERNAL
+      if its adapter cannot represent derived-artifact lineage, and no
+      comparative claim is then made against it.
+    primary_metric: >-
+      disclosure-trace equivalence to B2 at subject-history level within the
+      pre-registered TOST margin, jointly with the false invalidation rate of
+      authorized context versus B3
+    primary_metric_family: [disclosure_trace_equivalence, false_invalidation_rate]
+    secondary_metrics:
+      - per-subject false-invalidation count distribution (median, IQR) versus B3
+      - over-disclosure vs under-disclosure decomposition of any trace divergence
+      - equivalence margin sensitivity on the development split (descriptive only)
+      - reverse-edge invalidation completeness (fraction of revoked lineage removed within one dispatch cycle)
+      - per-arm outcome counts including B3 NOT_RUN_EXTERNAL status if the adapter cannot represent derivations
+    null_hypothesis: >-
+      H0_2: the candidate's disclosure trace diverges from B2 beyond the
+      pre-registered equivalence margin (the candidate is NOT equivalent to
+      always-recompute), or the candidate's false-invalidation rate exceeds
+      B3's beyond the margin.
+    alternative_hypothesis: >-
+      H1_2: the candidate's disclosure trace is equivalent to B2 within the
+      pre-registered equivalence margin delta_2 (TOST two one-sided tests
+      both reject at alpha=0.05), and the candidate's false-invalidation rate
+      does not exceed B3's beyond the margin.
+    minimum_useful_difference:
+      symbol: delta_2
+      value: 0.05
+      scale: absolute equivalence margin on the paired subject-level disclosure-indicator difference (B4 minus B2); false invalidation is assessed against the same margin scale
+      rationale: >-
+        A 5-point absolute equivalence margin is the largest subject-level
+        discrepancy from always-recompute that consent-lifecycle engineers
+        would accept before falling back to full recomputation; frozen before
+        holdout unsealing.
+    confounders:
+      - B3 adapter fidelity to Zanzibar-like semantics (pinned upstream source and fidelity vector enforced)
+      - policy-change timing relative to dispatch scheduling (factorial policy-change timing held fixed across arms)
+      - authorized-context completeness drift from unequal cache states across arms (equal schedules enforced)
+      - lineage-family difficulty imbalance (one dominant family driving the pooled equivalence estimate)
+      - holdout unsealing before freeze (process violation, fail closed)
+    power_and_analysis_method: >-
+      Paired subject-level equivalence analysis — two one-sided tests (TOST)
+      at alpha=0.05 with the pre-registered margin delta_2 on the
+      disclosure-indicator difference (B4 vs B2) — and a sign test /
+      Wilcoxon signed-rank on paired per-subject false-invalidation counts
+      versus B3, with 95% subject-clustered bootstrap CIs (2000 resamples,
+      seed 2027; clusters are subject histories); Holm correction across the
+      three primary contrasts; two-gate decision: gate 1 requires TOST
+      equivalence within delta_2 on the frozen confirmatory holdout, gate 2
+      requires the false-invalidation comparison versus B3 to meet its frozen
+      criterion; B3 NOT_RUN_EXTERNAL is reported transparently and blocks any
+      B3-comparative claim; pilot-based prospective sample size from the
+      development split.
+    falsification_condition: >-
+      F3: if the candidate's disclosure trace diverges from the
+      always-recompute reference on the frozen confirmatory holdout beyond
+      the pre-registered equivalence margin (any non-equivalence in either
+      direction — over- or under-disclosure), dependency closure is
+      incomplete and C3 is falsified. F4: if the false-invalidation rate
+      exceeds B3's beyond the margin, the availability claim of dependency
+      closure fails; both negative outcomes are reported, never suppressed.
+    primary_endpoint: >-
+      disclosure-trace equivalence to the always-recompute reference (B2) at
+      the level of independent subject histories within the pre-registered
+      equivalence margin, jointly with the false invalidation rate versus B3,
+      on the source-disjoint confirmatory holdout — a pre-dispatch
+      future-disclosure equivalence endpoint, never a forensic
+      reconstructability score and never a retroactive-erasure claim
+
+  - rq_id: RQ3
+    title: Privacy-availability cost under lineage density
+    research_question: >-
+      What are cache hit, bytes transferred, re-computation, false
+      invalidation and authorized utility costs at increasing lineage
+      density?
+    independent_unit: unique subject history, per shared_design.independent_unit
+    population: >-
+      All eligible unique synthetic subject histories in the frozen corpus
+      evaluated across the full factorial lineage-fanout density grid
+      (delayed cache writes, retries, and policy changes included), with
+      density levels assigned before holdout access and identical dispatch
+      schedules across arms at each density level.
+    estimand: >-
+      Conditional cache hit rate (hits conditional on authorization) and p95
+      latency as a function of factorial lineage fanout, jointly reported
+      with bytes transferred, re-computation (rebuild) cost, false
+      invalidation rate, and authorized-context completeness (authorized
+      utility), per independent subject history. Availability/cost
+      quantities under matched safety constraints, never standalone safety
+      claims and never forensic quantities.
+    paired_contrast: >-
+      Candidate (B4) vs B1 (coarse cache purge on consent change) on the same
+      subject histories at each density level, with B2 as the pure cost
+      comparator; two-way repeated-measures ANOVA (arm x lineage density) on
+      conditional cache hit rate and p95 latency over subject histories, plus
+      95% subject-clustered bootstrap CIs on arm contrasts at each density
+      level.
+    primary_metric: >-
+      conditional cache hit rate (hits conditional on authorization) and p95
+      latency as a function of factorial lineage fanout, per independent
+      subject history
+    primary_metric_family: [conditional_cache_hit_rate, p95_latency, bytes_transferred, rebuild_cost, false_invalidation_rate, authorized_utility]
+    secondary_metrics:
+      - bytes transferred per subject history across the dispatch schedule
+      - re-computation (rebuild) cost per revocation event
+      - false invalidation rate at each density level (authorized context wrongly invalidated)
+      - authorized-context completeness (authorized utility) at each density level
+      - replay-path coverage and sealed-cancellation counts under increasing density
+    null_hypothesis: >-
+      H0_3: the candidate's conditional cache hit rate and p95 latency equal
+      B1's at every lineage density level (no arm effect and no arm x density
+      interaction), and bytes transferred, rebuild cost and authorized
+      utility do not differ beyond their cluster CIs.
+    alternative_hypothesis: >-
+      H1_3: the candidate's conditional cache hit rate exceeds B1's by at
+      least delta_3 and/or its p95 latency is at least delta_3 better, with a
+      significant arm x density interaction, while authorized utility and the
+      false invalidation rate remain within their frozen bounds.
+    minimum_useful_difference:
+      symbol: delta_3
+      value: 0.05
+      scale: absolute conditional-cache-hit-rate difference (candidate minus B1) at the highest lineage density level, with p95 latency as the co-assessed scale
+      rationale: >-
+        A 5-point absolute conditional-cache-hit advantage at high lineage
+        density is the smallest availability gain that would justify
+        operating lineage tracking instead of coarse purges; frozen before
+        holdout unsealing.
+    confounders:
+      - cache warmth and warmup/queue effects across arms (fixed workload, fixed throughput, warmup recorded per SCIENTIFIC_METRICS_CONTRACT rule 10)
+      - workload imbalance across density levels (identical dispatch schedules across arms enforced)
+      - bounded retries and external I/O asymmetry (bounded-retry policy identical across arms)
+      - density-level difficulty heterogeneity (one dominant fanout level driving the pooled estimate)
+      - hardware and computation-budget asymmetry (budget and hardware reported; equal budget enforced)
+    power_and_analysis_method: >-
+      Two-way repeated-measures ANOVA (arm x lineage density) on conditional
+      cache hit rate and p95 latency over subject histories, with 95%
+      subject-clustered bootstrap CIs (2000 resamples, seed 2027; clusters
+      are subject histories) on arm contrasts at each density level; Holm
+      correction across the three primary contrasts; two-gate decision: gate
+      1 requires the safety constraint to hold at matched disclosure
+      behavior, gate 2 requires the availability advantage over B1 to meet
+      delta_3 with CI low > 0 and a significant arm x density interaction;
+      computation budget and hardware reported; if B4 shows no measurable
+      cost advantage over B1/B2 across the full factorial grid, the negative
+      result is reported in release artifacts, never suppressed.
+    falsification_condition: >-
+      F5: if B4 shows no measurable cost advantage over B1/B2 across the full
+      factorial density grid (overlapping subject-clustered CIs on both
+      conditional cache hit and p95 latency with no interaction effect), the
+      trade-off claim dies and the contribution narrows to an engineering
+      trade-off per the blueprint falsification rule. F6: if any measured
+      availability gain requires relaxing the disclosure constraint beyond
+      the frozen RQ1/RQ2 safety gates, the privacy-availability trade-off is
+      refused and reported as a negative outcome.
+    primary_endpoint: >-
+      conditional cache hit rate (hits conditional on authorization) and p95
+      latency as a function of factorial lineage fanout on the
+      source-disjoint confirmatory holdout, jointly with bytes transferred,
+      rebuild cost, false invalidation and authorized utility — a
+      pre-dispatch availability/cost endpoint under matched disclosure
+      constraints, never a forensic reconstructability score and never a
+      retroactive-erasure claim
+
+# ---------------------------------------------------------------------------
+# Global falsification register (mechanically testable summary)
+# ---------------------------------------------------------------------------
+falsification_register:
+  - id: F1
+    rq: RQ1
+    statement: zero post-revocation leakage witnesses under any arm, including weak B0 TTL-only
+    consequence: no distinct effect; C1 collapses to prior access-control capability
+  - id: F2
+    rq: RQ1
+    statement: B2 disclosure trace equals candidate's within delta_1 with no transitive/retry/fallback leak class the candidate removes
+    consequence: novelty narrows to an engineering performance trade-off per the blueprint falsification rule
+  - id: F3
+    rq: RQ2
+    statement: candidate disclosure trace diverges from B2 beyond the pre-registered TOST margin delta_2 on the frozen holdout
+    consequence: dependency closure incomplete; C3 falsified
+  - id: F4
+    rq: RQ2
+    statement: false-invalidation rate exceeds B3's beyond the margin
+    consequence: availability claim of dependency closure fails; negative outcome reported
+  - id: F5
+    rq: RQ3
+    statement: no measurable cost advantage of B4 over B1/B2 across the full factorial density grid (overlapping cluster CIs, no interaction)
+    consequence: trade-off claim dies; contribution narrows to an engineering trade-off
+  - id: F6
+    rq: RQ3
+    statement: measured availability gain requires relaxing the disclosure constraint beyond the frozen RQ1/RQ2 safety gates
+    consequence: privacy-availability trade-off refused; negative outcome reported
+
+# ---------------------------------------------------------------------------
+# Evidence provenance constraints (INDEPENDENT_EVIDENCE_PROTOCOL)
+# ---------------------------------------------------------------------------
+evidence_provenance:
+  no_invented_results: >-
+    This registry freezes questions, endpoints and decision rules only. No
+    observed metric, p-value, CI, win rate or accuracy appears in this file;
+    all later numbers must derive mechanically from
+    artifacts/venue2027/popets/<run_id>/manifest.json.
+  oracle_independence: >-
+    The oracle (independent source-snapshot recomputation of live-purpose
+    permission clauses plus byte-level dispatch interceptor with sealed
+    cancellation log) must not import any candidate or baseline invalidation
+    code; disclosure truth derives from interceptor bytes and policy/source
+    ground truth, never from candidate reason codes or candidate audit
+    self-report.
+  archive_refusal: >-
+    Frozen GLHS E15-E22 (study glhs-journal), the accepted HEALTHINF paper,
+    GovRed (govred-rivf-2026) and GovMut (assurance-soict-2026) are
+    background and are refused as new POPETS evidence in both directions;
+    per novelty_contract.md §5.1 any citation of those numbers as new
+    experimental results is an anti-salami violation that POPETS-overlap must
+    fail.
+  dataset: synthetic-popets-2027
+  holdout_discipline: >-
+    source-disjoint confirmatory holdout inaccessible until protocol and
+    analysis freeze; early unsealing converts the study GO to NO-GO pending
+    re-scoping.
+  no_retroactive_erasure: >-
+    Information already delivered to any external provider is explicitly
+    excluded from every leakage audit; the paper claims post-revocation
+    future leakage prevention only and prominently states that
+    already-delivered content cannot be retracted.

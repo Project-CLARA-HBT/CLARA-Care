@@ -1,0 +1,169 @@
+{
+  "schema_version": "sacmat.sample_cases.v1",
+  "venue": "sacmat",
+  "venue_unit_kind": "delegated_consent_case",
+  "observer": "policy_engine_differential",
+  "description": "Preregistered delegated-consent sample cases for the SACMAT 2027 study schema (task SACMAT-schema, P02). Three positive records exercising distinct delegated-consent fault families (static-diff miss, expiry divergence, INDETERMINATE) plus one negative control record that violates the venue study schema. All identities, timestamps and hashes are synthetic; source_authority is SYNTHETIC_RESEARCH_ONLY. Expected/observed decisions are designed fixtures, never executed research findings (VENUES/sacmat/RESEARCH_BLUEPRINT.md, VENUES/sacmat/CASE_MATRIX.md).",
+  "positive_cases": [
+    {
+      "schema_version": "1",
+      "case_id": "SACMAT-CASE-03",
+      "case_family": "delegated_consent_revocation",
+      "independent_unit_id": "sacmat.delegconsent.chain-01",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270601,
+      "branch": "research/venue2027/tasks/w6-sacmat-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "consent_receipt",
+          "uri": "research/venue2027/sacmat/cases/sample_cases.json#SACMAT-CASE-03/consent_receipt",
+          "sha256": "1f4ab2e0b6a3c9d8e7f605142738596a0bdcfe1a2b3c4d5e6f708192a3b4c5d6",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "policy_epoch",
+          "uri": "research/venue2027/sacmat/cases/sample_cases.json#SACMAT-CASE-03/policy_epoch_e0",
+          "sha256": "2a5bc3f1c7b4d0e9f8a7162538496a7b1cedfa2b3c4d5e6f708192a3b4c5d6e0",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Static-diff miss fixture for VENUES/sacmat/CASE_MATRIX.md SACMAT-CASE-03 (consent mutation: grant withdrawn before access). Delegation granted to synthetic principal p:delegate at t0; revocation committed at t1; replayed access request at t2 must DENY. A per-request static policy diff at t2 sees only the revocation line and can wrongly keep the stale grant cached, so only trace-level temporal testing exposes the fault.",
+      "venue": "sacmat",
+      "venue_unit_kind": "delegated_consent_case",
+      "observer": "policy_engine_differential",
+      "expected_decision": "REJECT",
+      "observed_decision": "REJECT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "policytrace.fixturegen",
+        "generator_version": "1.0.0",
+        "seed": 20270601
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "SACMAT-CASE-11",
+      "case_family": "delegation_expiry_divergence",
+      "independent_unit_id": "sacmat.delegconsent.chain-02",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270602,
+      "branch": "research/venue2027/tasks/w6-sacmat-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "consent_receipt",
+          "uri": "research/venue2027/sacmat/cases/sample_cases.json#SACMAT-CASE-11/consent_receipt",
+          "sha256": "3b6cd402d8c5e1fa0b982736495a78c2dfea3b4c5d6e0f708192a3b4c5d6e0f1",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "policy_epoch",
+          "uri": "research/venue2027/sacmat/cases/sample_cases.json#SACMAT-CASE-11/policy_epoch_e1",
+          "sha256": "4c7de513e9d6f2ab1ca938475a6b89d3eafbc4d5e6f708192a3b4c5d6e0f1a2b",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Expiry divergence fixture: delegation carries logical expiry t_exp; Cedar, OpenFGA and OPA adapters disagree on boundary semantics at t_exp (strict less-than vs less-equal vs token-ttl grace). policy_engine_differential records the cross-engine divergence as the measured endpoint; observed_decision keeps the divergent ADMIT and decision_agreement=false is computed, not asserted.",
+      "venue": "sacmat",
+      "venue_unit_kind": "delegated_consent_case",
+      "observer": "policy_engine_differential",
+      "expected_decision": "REJECT",
+      "observed_decision": "ADMIT",
+      "decision_agreement": false,
+      "synthetic_provenance": {
+        "generator_id": "policytrace.fixturegen",
+        "generator_version": "1.0.0",
+        "seed": 20270602
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "SACMAT-CASE-04",
+      "case_family": "missing_consent_epoch",
+      "independent_unit_id": "sacmat.delegconsent.chain-03",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270603,
+      "branch": "research/venue2027/tasks/w6-sacmat-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "consent_receipt",
+          "uri": "research/venue2027/sacmat/cases/sample_cases.json#SACMAT-CASE-04/consent_receipt_absent",
+          "sha256": "5d8ef624fae7a3bc2dba49586b7c9ae4fbacd5e6f708192a3b4c5d6e0f1a2b3c",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "oracle_label",
+          "uri": "research/venue2027/sacmat/cases/sample_cases.json#SACMAT-CASE-04/oracle_label",
+          "sha256": "6e9fa735abf8b4cd3ecb5a697c8dabf5acbd6e6f708192a3b4c5d6e0f1a2b3c4",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Fixture for VENUES/sacmat/CASE_MATRIX.md SACMAT-CASE-04 (indeterminate policy: missing authoritative consent epoch). The delegation chain references a consent epoch that is absent from the frozen policy store; the three-valued oracle returns INDETERMINATE and it MUST NOT be coerced to PERMIT or DENY. The candidate adapter silently maps the missing epoch to ADMIT, so observed_decision records the disagreement and decision_agreement=false is computed, not asserted.",
+      "venue": "sacmat",
+      "venue_unit_kind": "delegated_consent_case",
+      "observer": "policy_engine_differential",
+      "expected_decision": "INDETERMINATE",
+      "observed_decision": "ADMIT",
+      "decision_agreement": false,
+      "synthetic_provenance": {
+        "generator_id": "policytrace.fixturegen",
+        "generator_version": "1.0.0",
+        "seed": 20270603
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    }
+  ],
+  "invalid_cases": [
+    {
+      "name": "static_diff_miss_silent_permit",
+      "reason_violation": "Fabricated non-authoritative source_authority and forged decision_agreement: a record claiming source_authority='RUNTIME_CLINICAL_LOG' and decision_agreement asserted true while expected REJECT was observed as ADMIT would launder a live clinical provenance into the synthetic-only corpus and mask a real policy-engine divergence. The source_authority const plus additionalProperties=false in the venue study schema reject it.",
+      "case": {
+        "schema_version": "1",
+        "case_id": "SACMAT-CASE-03-FORGED",
+        "case_family": "delegated_consent_revocation",
+        "independent_unit_id": "sacmat.delegconsent.chain-01",
+        "unit_kind": "case",
+        "backend": "postgresql",
+        "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+        "seed": 20270601,
+        "branch": "research/venue2027/tasks/w6-sacmat-schema",
+        "arm_id": "B4",
+        "evidence": [
+          {
+            "pointer_kind": "consent_receipt",
+            "uri": "research/venue2027/sacmat/cases/sample_cases.json#SACMAT-CASE-03-FORGED/consent_receipt",
+            "sha256": "7fafb846bca9c5de4fdc6b7a8d9ebca6bdce7f708192a3b4c5d6e0f1a2b3c4d5",
+            "frozen_at": "2026-11-15T00:00:00Z"
+          }
+        ],
+        "created_at": "2026-11-15T00:00:00Z",
+        "notes": "Negative control: expected REJECT but observed ADMIT (stale grant cached past revocation); the generator asserts decision_agreement=true instead of computing it and claims a runtime clinical provenance. Rejected by the venue study schema.",
+        "venue": "sacmat",
+        "venue_unit_kind": "delegated_consent_case",
+        "observer": "policy_engine_differential",
+        "expected_decision": "REJECT",
+        "observed_decision": "ADMIT",
+        "decision_agreement": true,
+        "synthetic_provenance": {
+          "generator_id": "policytrace.fixturegen",
+          "generator_version": "1.0.0",
+          "seed": 20270601
+        },
+        "source_authority": "RUNTIME_CLINICAL_LOG"
+      }
+    }
+  ]
+}

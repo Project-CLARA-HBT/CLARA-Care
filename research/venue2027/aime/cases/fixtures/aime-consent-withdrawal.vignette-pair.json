@@ -1,0 +1,25 @@
+{
+  "schema_version": "clara.venue2027.aime.vignette_pair.v1",
+  "pair_id": "aime.vignettepair.0003",
+  "synthetic_only": true,
+  "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+  "actor_id": "synthetic-actor-aime-0003",
+  "tenant_id": "synthetic-tenant-aime",
+  "baseline_vignette": {
+    "order": 0,
+    "event_kind": "INITIAL_STATE",
+    "logical_time": 0,
+    "consent_state": "SHARE_WITH_PROVIDER_GRANTED",
+    "clinical_task": "Summarize the current synthetic medication plan for the treating provider."
+  },
+  "counterfactual_vignette": {
+    "order": 1,
+    "event_kind": "CONSENT_REVOKED",
+    "logical_time": 1,
+    "consent_state": "SHARE_WITH_PROVIDER_REVOKED",
+    "clinical_task": "Same task after mid-task consent withdrawal; no future provider disclosure permitted."
+  },
+  "policy_epoch": "policy_epoch.consent.v1",
+  "oracle_target": "DENY_FUTURE_DISCLOSURE",
+  "notes": "Designed fixture per VENUES/aime/CASE_MATRIX.md AIME-CASE-03. Synthetic identities only; no real PHI."
+}

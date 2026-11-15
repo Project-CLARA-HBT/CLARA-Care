@@ -1,0 +1,47 @@
+{
+  "artifacts_sha256": {
+    "research/venue2027/dsn/cases/sample_cases.json": "226e64ef724ed4e50dcb9f4b702a446febc333c5e838a44b36b2a5320169fde0",
+    "research/venue2027/dsn/protocols/study.schema.json": "21bc3a3f4e3163b151f4ecf59f173934a5c9103de2b9374ca4f3add57d3e21ea",
+    "research/venue2027/dsn/tests/test_study_schema.py": "bd54ff4f1a50c3a02f213970a7c8f59f0ff8f59027a172729a4ce02fd33f89d8"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "research/venue2027/dsn/protocols/study.schema.json",
+    "research/venue2027/dsn/cases/sample_cases.json",
+    "research/venue2027/dsn/tests/test_study_schema.py",
+    "research/venue2027/proof/DSN-schema.json",
+    "research/venue2027/proof/logs/DSN-schema.pytest.log",
+    "research/venue2027/proof/logs/DSN-schema.ruff.log",
+    "research/venue2027/proof/logs/DSN-schema.suite.log",
+    "research/venue2027/proof/logs/DSN-schema.shared_regression.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dsn/tests/test_study_schema.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-schema.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/dsn/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-schema.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dsn/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-schema.suite.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-schema.shared_regression.log"
+    }
+  ],
+  "notes": "P02 task DSN-schema for DSN 2027: study.schema.json regenerated deterministically via venue_schema.write_venue_schema('dsn', root) (byte-identical rebuild verified in tests); sample_cases.json carries 3 valid records (clean recovery ADMIT; torn-write crash REJECT; INDETERMINATE) plus 1 invalid record (missing venue observer) that the fail-closed schema rejects with REQUIRED_MISSING; evidence pointers carry pointer_kind/uri/sha256 with real repo-file hashes. New tests: 9 passed (deterministic rebuild, positives validate, invalid rejected, adversarial rejected incl. enum smuggling/additional property/negative seed, missing observer rejected, wrong venue rejected incl. forged observer/unit-kind combo, builder refuses unknown venue, validator fails closed on unresolvable $ref, silent unit_kind extension forbidden with enum byte-identical to shared contract). DSN suite 115 passed; shared foundations regression 196 passed; uvx ruff@0.7.1 check clean.",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "source_sha_before": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "status": "PASS",
+  "task_id": "DSN-schema",
+  "unresolved": []
+}

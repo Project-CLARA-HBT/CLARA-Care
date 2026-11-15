@@ -1,0 +1,39 @@
+{
+  "artifacts_sha256": {
+    "research/venue2027/proof/artifacts/freeze_sample.json": "b2bcc8085fe9d8790ab49fa9e5dcde753569457bb93aa953e2679f8d8c88fd93",
+    "research/venue2027/proof/logs/SH-freeze_tool.pytest.log": "ae476c44df701617872cb7fc32388fa38a452053c346e4ac7abef0ccad6abb66",
+    "research/venue2027/proof/logs/SH-freeze_tool.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "scripts/research/venue2027/__init__.py": "ceaa6443becef169c7855ccda4df7a4365973b1d110fc51aa383372529106a39",
+    "scripts/research/venue2027/freeze_protocol.py": "434475c1e6ddd2d69c801c881f57553e09775d16bb1699e8c8c8535ecda7383e",
+    "scripts/research/venue2027/test_freeze_protocol.py": "97e00bb46d7d911988018b368a7709559d8202b556f775d50014402fa298695f"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "scripts/research/venue2027/__init__.py",
+    "scripts/research/venue2027/freeze_protocol.py",
+    "scripts/research/venue2027/test_freeze_protocol.py",
+    "research/venue2027/proof/artifacts/freeze_sample.json",
+    "research/venue2027/proof/SH-freeze_tool.json",
+    "research/venue2027/proof/logs/SH-freeze_tool.pytest.log",
+    "research/venue2027/proof/logs/SH-freeze_tool.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q scripts/research/venue2027/test_freeze_protocol.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-freeze_tool.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check scripts/research/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-freeze_tool.ruff.log"
+    }
+  ],
+  "notes": "freeze_protocol.py v1.0.0 (stdlib-only): freeze() bundles SHA256 + injected-clock timestamps of protocol, cohort manifest, oracle source, baseline registry and analysis code; freeze_id = sha256 over sorted (path, hash) pairs. verify_freeze() re-hashes and fails closed with FREEZE_DRIFT (missing file, changed content, or freeze_id mismatch). amend() appends to an APPEND-ONLY amendment_log.json; any truncation/reordering divergence between manifest history and on-disk log, or a corrupt log, is refused with AMENDMENT_REWRITE and the log is left untouched. assert_holdout_allowed() gates holdout access on a verified freeze and returns HOLDOUT_UNFROZEN otherwise. Path confinement mirrors agent_protocol._confined_path (absolute paths, .. traversal and symlink escapes refused). 9 tests pass: 3 positive (freeze+verify; order-independent, content-sensitive freeze_id; append-only amendment) and 6 adversarial (tamper -> FREEZE_DRIFT + holdout blocked; history rewrite refused; corrupt log; holdout without freeze / fabricated manifest; missing artifact -> FREEZE_INPUT_MISSING; path escape). Real sample manifest written to research/venue2027/proof/artifacts/freeze_sample.json (freeze_id 25005adfed27d1db...). The report file itself is excluded from artifacts_sha256 (self-referential hash, same rule as SH-repo_fingerprint).",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "source_sha_before": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "status": "PASS",
+  "task_id": "SH-freeze_tool",
+  "unresolved": []
+}

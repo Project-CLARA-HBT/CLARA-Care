@@ -1,0 +1,146 @@
+{
+  "schema_version": "1",
+  "description": "DIMVA P02 sample probing-campaign records for study.schema.json (v1). Three valid records plus one deliberately invalid record under 'invalid_cases'. All data is SYNTHETIC_RESEARCH_ONLY: no real PHI/PII, no network, no live provider. unit_kind='case' per task constraint; venue_unit_kind='probing_campaign' per venue builder; evidence pointers are frozen, hash-addressed artifacts (pointer_kind/uri/sha256).",
+  "cases": [
+    {
+      "schema_version": "1",
+      "case_id": "DIMVA-SCHEMA-BENIGN-01",
+      "case_family": "benign_retry_burst",
+      "independent_unit_id": "dimva.campaign.benign.0001",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20271101,
+      "branch": "research/venue2027/tasks/w6-dimva-schema",
+      "arm_id": "B0",
+      "evidence": [
+        {
+          "pointer_kind": "fixture_path",
+          "uri": "research/venue2027/dimva/cases/fixture_synthetic_campaign.txt",
+          "sha256": "e5eb423a755f1ba9f3b3f0e2827cd37d8296008a602c8c166dfde460fa1eb626",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "dataset_snapshot",
+          "uri": "research/venue2027/_shared/schemas/case.v1.schema.json",
+          "sha256": "6e2a83f082234f175c714df3d0f11a57f914155e01033d231b512d7185635f6a",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "venue": "dimva",
+      "venue_unit_kind": "probing_campaign",
+      "observer": "telemetry_observer",
+      "expected_decision": "REJECT",
+      "observed_decision": "REJECT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "clara-dimva-campaign-generator",
+        "generator_version": "1.0.0",
+        "seed": 20271101
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+      "notes": "Benign session: bounded retry burst from one principal within a single authorized scope; detector must not alarm. Expected REJECT means 'not an attack campaign' (no detection); used for false-alarms-per-1000-benign-sessions."
+    },
+    {
+      "schema_version": "1",
+      "case_id": "DIMVA-SCHEMA-LOWSLOW-01",
+      "case_family": "adaptive_probing.low_and_slow",
+      "independent_unit_id": "dimva.campaign.lowslow.0001",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20271102,
+      "branch": "research/venue2027/tasks/w6-dimva-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "provider_trace",
+          "uri": "research/venue2027/dimva/cases/fixture_synthetic_trace_lowslow.txt",
+          "sha256": "6c0f2079014a4945e03e8fc43ee5a4c22cdae902032b5d2f2a70a4eae5210bf7",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "venue": "dimva",
+      "venue_unit_kind": "probing_campaign",
+      "observer": "telemetry_observer",
+      "expected_decision": "ADMIT",
+      "observed_decision": "ADMIT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "clara-dimva-campaign-generator",
+        "generator_version": "1.0.0",
+        "seed": 20271102
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+      "notes": "Low-and-slow campaign: denial evasions spread across distinct tools/scopes over a long logical span, under the B0 per-window threshold; sequence arm B4 is the candidate detector. Expected ADMIT means 'campaign detected'."
+    },
+    {
+      "schema_version": "1",
+      "case_id": "DIMVA-SCHEMA-INDETERMINATE-01",
+      "case_family": "adaptive_probing.tooling_change",
+      "independent_unit_id": "dimva.campaign.indeterminate.0001",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20271103,
+      "branch": "research/venue2027/tasks/w6-dimva-schema",
+      "arm_id": "B2",
+      "evidence": [
+        {
+          "pointer_kind": "provider_trace",
+          "uri": "research/venue2027/dimva/cases/fixture_synthetic_trace_lowslow.txt",
+          "sha256": "6c0f2079014a4945e03e8fc43ee5a4c22cdae902032b5d2f2a70a4eae5210bf7",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "venue": "dimva",
+      "venue_unit_kind": "probing_campaign",
+      "observer": "telemetry_observer",
+      "expected_decision": "ADMIT",
+      "observed_decision": "NOT_RUN_EXTERNAL",
+      "decision_agreement": false,
+      "synthetic_provenance": {
+        "generator_id": "clara-dimva-campaign-generator",
+        "generator_version": "1.0.0",
+        "seed": 20271103
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+      "notes": "INDETERMINATE outcome: pinned external arm unavailable in this worktree, so the campaign was not executed (observed_decision=NOT_RUN_EXTERNAL, transparent status per blueprint; no comparative claim). Independent oracle adjudication of campaign intent remains simulator-based, never from detector score or gateway reason code."
+    }
+  ],
+  "invalid_cases": [
+    {
+      "violation": "missing required 'backend' and silent-null 'seed' on a venue record (fail closed)",
+      "case": {
+        "schema_version": "1",
+        "case_id": "DIMVA-SCHEMA-INVALID-01",
+        "case_family": "adaptive_probing.low_and_slow",
+        "independent_unit_id": "dimva.campaign.invalid.0001",
+        "unit_kind": "case",
+        "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+        "seed": null,
+        "branch": "research/venue2027/tasks/w6-dimva-schema",
+        "arm_id": "B0",
+        "evidence": [
+          {
+            "pointer_kind": "fixture_path",
+            "uri": "research/venue2027/dimva/cases/fixture_synthetic_campaign.txt",
+            "sha256": "e5eb423a755f1ba9f3b3f0e2827cd37d8296008a602c8c166dfde460fa1eb626"
+          }
+        ],
+        "venue": "dimva",
+        "venue_unit_kind": "probing_campaign",
+        "observer": "telemetry_observer",
+        "expected_decision": "ADMIT",
+        "observed_decision": "ADMIT",
+        "decision_agreement": true,
+        "synthetic_provenance": {
+          "generator_id": "clara-dimva-campaign-generator",
+          "generator_version": "1.0.0",
+          "seed": 1
+        },
+        "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+      }
+    }
+  ]
+}

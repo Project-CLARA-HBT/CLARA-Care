@@ -1,0 +1,48 @@
+{
+  "task_id": "SACMAT-baselines",
+  "status": "PASS",
+  "source_sha_before": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "source_sha_after": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "changed_paths": [
+    "evaluation/venue2027/sacmat/__init__.py",
+    "evaluation/venue2027/sacmat/baselines.py",
+    "evaluation/venue2027/sacmat/test_baselines.py",
+    "research/venue2027/proof/SACMAT-baselines.json",
+    "research/venue2027/proof/emit_sacmat_baselines_report.py",
+    "research/venue2027/proof/logs/SACMAT-baselines.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-baselines.ruff.log",
+    "research/venue2027/proof/logs/SACMAT-baselines.suite.log",
+    "research/venue2027/proof/logs/SACMAT-baselines.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/sacmat/test_baselines.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-baselines.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/sacmat/__init__.py evaluation/venue2027/sacmat/baselines.py evaluation/venue2027/sacmat/test_baselines.py && uvx ruff@0.7.1 format --check evaluation/venue2027/sacmat/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-baselines.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-baselines.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_sacmat_baselines_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/SACMAT-baselines.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-baselines.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/sacmat/__init__.py": "654df049f6012160aa0d32247a1ce83ce623a4ee5815643d7acaad1be8d689b9",
+    "evaluation/venue2027/sacmat/baselines.py": "03888e5b06c7141bb91d3f9d1102421e2236573544f11b71d3ae158be90d884f",
+    "evaluation/venue2027/sacmat/test_baselines.py": "0affd43cde331a734c228b9226ff276721e2e11a7057987e0b1a2c97705f5937"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P03 baseline fidelity adapters for SACMAT 2027 (PolicyTrace: Temporal Conformance Testing of Delegated Consent across Heterogeneous Policy Engines). evaluation/venue2027/sacmat/baselines.py implements run_baseline(baseline_id, case, ctx) -> Outcome, BASELINE_REGISTRY (B0-B3 with provenance) and refuse_constant_stub, over SYNTHETIC (policy history, request) units (versioned delegated-consent events GRANT/REVOKE/REGRANT/EXPIRE/POLICY_VERSION_BUMP in monotonic logical time + one access request at a logical decision time; no real PHI/PII, no network, no live provider, no hidden clock or randomness). Three real in-process engine models implement the pinned upstreams' documented semantics: XacmlPolicyEngine (deny-overrides rule combining over the compiled final policy state, the static structure MC/DC testing targets), CedarPolicyEngine (permit/forbid policy set with forbid precedence, Cedar v4.14.1 semantics; expiry caller-encoded) and ZanzibarPolicyEngine (relation-tuple walk at read time, Zanzibar ATC 2019 / OpenFGA v1.22.1 semantics: revoked tuples are deleted). Arms: B0 static policy diff (overlap-registry B5): structural comparison of compiled engine encodings, never replays a request; B1 single-engine testing (overlap-registry B6): each engine's own pointwise test discipline against compiled-policy expectations; B2 multi-engine differential: identical requests into all three engine models at decision time (pointwise); B3 candidate temporal conformance: history-sensitive replay of the ordered history through every engine model + independent four-valued oracle adjudication (PERMIT/DENY/NOT_APPLICABLE/INDETERMINATE), detecting delegation expiry (B3_DELEGATION_EXPIRY_DIVERGENCE) and policy-version skew (B3_POLICY_VERSION_SKEW_DIVERGENCE). Core P03 separation asserted explicitly in tests: a history-healed version-skew unit (grant->revoke->regrant in force, POLICY_VERSION_BUMP after decision time) where all three engines agree pointwise is ADMITted by B0, B1 AND B2 but REJECTed by B3; an expiry race is missed by B0/B1 (compiled final-state engines both PERMIT pointwise) and caught by B3 via the oracle's temporal DENY; a clean regrant-in-force history ADMITs under every arm. Malformed inputs (missing/empty/non-list history, unknown event kinds, bad types, non-monotonic logical times, missing request fields) yield first-class INDETERMINATE outcomes with stable reason codes, never silently counted as safe rejections. simulate_unavailable_upstream on the injected context models unreachable pinned engine binaries: B1/B2/B3 return NOT_RUN_EXTERNAL / BASELINE_UNAVAILABLE (never counted, retriable) while B0 (pure in-process structural diff) still runs \u2014 no toy substitution under a pinned name (EXECUTION_CONTRACT rule 8). refuse_constant_stub replays paired conformance/clean probe cases and refuses detect-all (STUB_DETECT_ALL_REFUSED), detect-none (STUB_DETECT_NONE_REFUSED) and constant-output (CONSTANT_STUB_REFUSED) candidates while admitting the real separating B3 adapter (STUB_SEPARATION_OK). Oracle independence: the four-valued oracle is the in-module declarative reference semantics and derives its verdict from ordered-history state, never from a single engine model; the module imports no external oracle/candidate code (asserted via AST hygiene test). Machine-checked: 38 new tests pass (positive: registry provenance, per-engine evaluation of real delegated-consent requests, XACML deny-overrides, Cedar forbid precedence, Zanzibar read-time tuple walk, four-valued oracle history-sensitivity, B3 expiry+skew detection, clean-history admission under every arm, determinism; adversarial: B0/B1/B2 miss the B3-only temporal divergence, NOT_RUN_EXTERNAL arms, stub refusal quartet, malformed-input INDETERMINATE battery, wiring-error fail-closed); full evaluation/venue2027 suite 470 passed; ruff check + format clean on touched files. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

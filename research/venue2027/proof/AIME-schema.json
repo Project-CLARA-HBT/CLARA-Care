@@ -1,0 +1,60 @@
+{
+  "task_id": "AIME-schema",
+  "status": "PASS",
+  "source_sha_before": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "source_sha_after": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "changed_paths": [
+    "research/venue2027/aime/protocols/study.schema.json",
+    "research/venue2027/aime/cases/sample_cases.json",
+    "research/venue2027/aime/cases/fixtures/aime-consent-withdrawal.vignette-pair.json",
+    "research/venue2027/aime/cases/fixtures/aime-medication-withdrawal.vignette-pair.json",
+    "research/venue2027/aime/cases/fixtures/aime-indeterminate-adjudication.vignette-pair.json",
+    "research/venue2027/aime/tests/test_study_schema.py",
+    "research/venue2027/proof/AIME-schema.json",
+    "research/venue2027/proof/logs/AIME-schema.pytest.log",
+    "research/venue2027/proof/logs/AIME-schema.suite.log",
+    "research/venue2027/proof/logs/AIME-schema.shared_regression.log",
+    "research/venue2027/proof/logs/AIME-schema.ruff.log",
+    "research/venue2027/proof/logs/AIME-schema.validator.log",
+    "research/venue2027/proof/emit_AIME-schema_report.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/aime/tests/test_study_schema.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-schema.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/aime/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-schema.suite.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-schema.shared_regression.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/aime/ && uvx ruff@0.7.1 format --check research/venue2027/aime/tests/test_study_schema.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-schema.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/_shared/tools/agent_protocol.py validate research/venue2027/proof/AIME-schema.json --task AIME-schema --repo .",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-schema.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/aime/protocols/study.schema.json": "045b4365a59205d47c1f98246860e695197cb9564afb520a360141566a46fc40",
+    "research/venue2027/aime/cases/sample_cases.json": "b0cace5256d648aadc1d23ca12616a18a4764d3e453722a4f144b191f4e35bb3",
+    "research/venue2027/aime/cases/fixtures/aime-consent-withdrawal.vignette-pair.json": "9b368f117853029e4a3e7967c2a590685644b95bbf2b3cca42ddf83974c0bc78",
+    "research/venue2027/aime/cases/fixtures/aime-medication-withdrawal.vignette-pair.json": "3f17020862485d9515a9ca03785ecf3d5d26b1ee60dbff092bc96cd778520631",
+    "research/venue2027/aime/cases/fixtures/aime-indeterminate-adjudication.vignette-pair.json": "f11fc198a9d6702419c8c108b8cf51a38542161d0d86963ed07171b1fe4b1c6f",
+    "research/venue2027/aime/tests/test_study_schema.py": "92b7426e781a973cc0e00e2a077039ec73d676c0396cd992b43c781e2765fccb"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P02 AIME-schema deliverable: research/venue2027/aime/protocols/study.schema.json is generated deterministically from the shared case contract via venue_schema.write_venue_schema('aime', root) (VENUE_SCHEMA_VERSION 1.0.0): venue=aime, venue_unit_kind=vignette_pair, observer=blinded_clinician, expected/observed decision enums, computed decision_agreement, synthetic_provenance, source_authority=SYNTHETIC_RESEARCH_ONLY; every venue field is required and typed (no silent nulls); additionalProperties=false. research/venue2027/aime/cases/sample_cases.json carries 3 positive SYNTHETIC vignette-pair records (consent withdrawal mid-task -> REJECT, medication withdrawal -> ADMIT, clinician-disagreement INDETERMINATE requiring blinded adjudication) plus 1 invalid record (missing backend/seed/source_sha/independent_unit_id/observed_decision + untracked field) that fails closed with REQUIRED_MISSING and ADDITIONAL_PROPERTY. All records and hash-addressed fixture inputs declare source_authority=SYNTHETIC_RESEARCH_ONLY / synthetic_only=true (synthetic-aime-2027); no real PHI/PII path exists. Tests enforce deterministic rebuild byte-equality, positive validation, adversarial rejection, per-field fail-closed removal of every required field, frozen schema_version/unit kinds, and the SYNTHETIC_RESEARCH_ONLY assertion. Machine-checked: target tests 7 passed; AIME suite 88 passed; shared foundations regression 196 passed; ruff check+format clean (uvx ruff@0.7.1); agent_protocol validate ok:true. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

@@ -1,0 +1,146 @@
+{
+  "description": "CLARA-Care 2027 AIME-schema (P02) sample study records. Three valid synthetic vignette-pair records (consent change AIME-CASE-03; medication withdrawal AIME-CASE-02; INDETERMINATE AIME-CASE-07) plus one deliberately invalid record for the negative control. Every record is SYNTHETIC_RESEARCH_ONLY: vignettes, identities, timestamps and hashes address only the frozen synthetic fixtures under cases/fixtures/ from the designed-fixture matrix VENUES/aime/CASE_MATRIX.md (generator synthetic-aime-2027); no real PHI is used (research/venue2027/_shared/data_ethics_and_irb.md). The independent unit is the counterfactual vignette pair (unit_kind=case, venue_unit_kind=vignette_pair) with blinded_clinician adjudication per the AIME preregistered design (rq_and_estimands.yaml). Evidence pointers are sha256-addressed to the frozen fixture files and fail closed on mismatch.",
+  "schema_version": "1",
+  "positive_cases": [
+    {
+      "schema_version": "1",
+      "case_id": "AIME-CASE-03",
+      "case_family": "consent_change_revocation",
+      "independent_unit_id": "aime-vignette-pair-0003",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270203,
+      "branch": "research/venue2027/tasks/w6-aime-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "consent_receipt",
+          "uri": "research/venue2027/aime/cases/fixtures/aime-consent-withdrawal.vignette-pair.json",
+          "sha256": "9b368f117853029e4a3e7967c2a590685644b95bbf2b3cca42ddf83974c0bc78",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Synthetic counterfactual vignette pair (fixture aime.vignettepair.0003, CASE_MATRIX AIME-CASE-03): baseline SHARE_WITH_PROVIDER_GRANTED vs mid-task consent revocation; oracle DENY_FUTURE_DISCLOSURE -> expected REJECT of any further provider disclosure. Label frozen before release.",
+      "venue": "aime",
+      "venue_unit_kind": "vignette_pair",
+      "observer": "blinded_clinician",
+      "expected_decision": "REJECT",
+      "observed_decision": "REJECT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-aime-2027",
+        "generator_version": "1.0.0",
+        "seed": 20270203
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "AIME-CASE-02",
+      "case_family": "medication_withdrawal",
+      "independent_unit_id": "aime-vignette-pair-0002",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270202,
+      "branch": "research/venue2027/tasks/w6-aime-schema",
+      "arm_id": "B1",
+      "evidence": [
+        {
+          "pointer_kind": "dataset_snapshot",
+          "uri": "research/venue2027/aime/cases/fixtures/aime-medication-withdrawal.vignette-pair.json",
+          "sha256": "3f17020862485d9515a9ca03785ecf3d5d26b1ee60dbff092bc96cd778520631",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:05:00Z",
+      "notes": "Synthetic counterfactual vignette pair (fixture aime.vignettepair.0002, CASE_MATRIX medication axis): synthetic-med-alpha discontinued mid-task; oracle CONTINUE_IF_SAFE -> expected ADMIT of safe continuation while stale references to the withdrawn medication count as clinical-fact omissions, not authorization errors.",
+      "venue": "aime",
+      "venue_unit_kind": "vignette_pair",
+      "observer": "blinded_clinician",
+      "expected_decision": "ADMIT",
+      "observed_decision": "ADMIT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-aime-2027",
+        "generator_version": "1.0.0",
+        "seed": 20270202
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "AIME-CASE-07",
+      "case_family": "clinician_disagreement_indeterminate",
+      "independent_unit_id": "aime-vignette-pair-0007",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270207,
+      "branch": "research/venue2027/tasks/w6-aime-schema",
+      "arm_id": "B0",
+      "evidence": [
+        {
+          "pointer_kind": "oracle_label",
+          "uri": "research/venue2027/aime/cases/fixtures/aime-indeterminate-adjudication.vignette-pair.json",
+          "sha256": "f11fc198a9d6702419c8c108b8cf51a38542161d0d86963ed07171b1fe4b1c6f",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:10:00Z",
+      "notes": "Synthetic counterfactual vignette pair (fixture aime.vignettepair.0007, CASE_MATRIX AIME-CASE-07): reviewer disagreement on medication-timing interpretation; two plausible oracle interpretations exist so the label stays INDETERMINATE until independent blinded adjudication (third-reviewer path) and is never coerced to ADMIT/REJECT.",
+      "venue": "aime",
+      "venue_unit_kind": "vignette_pair",
+      "observer": "blinded_clinician",
+      "expected_decision": "INDETERMINATE",
+      "observed_decision": "INDETERMINATE",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-aime-2027",
+        "generator_version": "1.0.0",
+        "seed": 20270207
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    }
+  ],
+  "invalid_cases": [
+    {
+      "violation": "REQUIRED_MISSING (backend, seed dropped) + ADDITIONAL_PROPERTY (real-patient MRN-like identifier in an unexpected property) + PATTERN_MISMATCH (malformed source_sha); also violates data_ethics_and_irb.md by attempting to smuggle non-synthetic provenance into the study record.",
+      "expected_reject_reason": "Schema must fail closed on missing required fields, unknown fields and pattern violations (required list; additionalProperties=false; source_sha ^[0-9a-f]{40}$).",
+      "record": {
+        "schema_version": "1",
+        "case_id": "AIME-CASE-BAD-01",
+        "case_family": "consent_change_revocation",
+        "independent_unit_id": "aime-vignette-pair-0003",
+        "unit_kind": "case",
+        "source_sha": "NOT-A-SHA",
+        "branch": "research/venue2027/tasks/w6-aime-schema",
+        "arm_id": "B4",
+        "evidence": [
+          {
+            "pointer_kind": "consent_receipt",
+            "uri": "research/venue2027/aime/cases/fixtures/aime-consent-withdrawal.vignette-pair.json",
+            "sha256": "9b368f117853029e4a3e7967c2a590685644b95bbf2b3cca42ddf83974c0bc78"
+          }
+        ],
+        "created_at": "2026-11-15T00:00:00Z",
+        "notes": "Adversarial negative control; MUST NOT validate.",
+        "venue": "aime",
+        "venue_unit_kind": "vignette_pair",
+        "observer": "blinded_clinician",
+        "expected_decision": "REJECT",
+        "observed_decision": "REJECT",
+        "decision_agreement": true,
+        "synthetic_provenance": {
+          "generator_id": "synthetic-aime-2027",
+          "generator_version": "1.0.0",
+          "seed": 20270203
+        },
+        "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+        "mrn": "MRN-88-4417"
+      }
+    }
+  ]
+}

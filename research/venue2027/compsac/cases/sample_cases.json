@@ -1,0 +1,161 @@
+{
+  "description": "COMPSAC 2027 sample study records for study.schema.json (v1.0.0). All records are synthetic research fixtures: synthetic identities, synthetic timestamps, real frozen repo files as hash-addressed evidence. Positive 'cases' conform to the venue schema; 'invalid_cases' are adversarial controls that MUST be rejected (silent nulls are forbidden). Decision semantics follow VENUES/compsac/CASE_MATRIX.md: MEASURE/DENY_OR_* expectations are never coerced to PASS, and plausible two-way outcomes stay INDETERMINATE until independently adjudicated by the transaction_history_checker.",
+  "schema_version": "1",
+  "venue": "compsac",
+  "venue_unit_kind": "independent_logical_schedule",
+  "observer": "transaction_history_checker",
+  "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+  "cases": [
+    {
+      "schema_version": "1",
+      "case_id": "COMPSAC-CASE-01",
+      "case_family": "false_stale_unrelated_partition",
+      "independent_unit_id": "compsac:case01:schedule-001",
+      "unit_kind": "history",
+      "backend": "postgresql",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270101,
+      "branch": "research/venue2027/tasks/w6-compsac-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "fixture_path",
+          "uri": "research/venue2027/VENUES/compsac/CASE_MATRIX.md",
+          "sha256": "c125a5d0d7bd6bbe395c0df4c381f4437391c12688b9ceba60714917584d3672",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "oracle_label",
+          "uri": "research/venue2027/compsac/protocols/study.schema.json",
+          "sha256": "8c4c0c44ad9b392a974dbd18185d6a70f122e7709ef1bbcdae6900bbb7d111cf"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Clean schedule: a new observation is mutated in an independent partition, unrelated to the target dependency graph. Dependency-complete scope-local OCC (arm B4) must not false-stale it; the transaction_history_checker exported the serialized history and found no forbidden commit.",
+      "venue": "compsac",
+      "venue_unit_kind": "independent_logical_schedule",
+      "observer": "transaction_history_checker",
+      "expected_decision": "ADMIT",
+      "observed_decision": "ADMIT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-compsac-schedule-gen",
+        "generator_version": "1.0.0",
+        "seed": 20270101
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "COMPSAC-CASE-04",
+      "case_family": "omitted_dependency_write_skew",
+      "independent_unit_id": "compsac:case04:schedule-001",
+      "unit_kind": "case",
+      "backend": "postgresql",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270104,
+      "branch": "research/venue2027/tasks/w6-compsac-schema",
+      "arm_id": "B3",
+      "evidence": [
+        {
+          "pointer_kind": "fixture_path",
+          "uri": "research/venue2027/VENUES/compsac/CASE_MATRIX.md",
+          "sha256": "c125a5d0d7bd6bbe395c0df4c381f4437391c12688b9ceba60714917584d3672"
+        },
+        {
+          "pointer_kind": "policy_epoch",
+          "uri": "research/venue2027/VENUES/compsac/RESEARCH_BLUEPRINT.md",
+          "sha256": "62af9ee2a03a5e66f3ae89ae448fe1013adf1fcabd79287df60ac30d6fdc3728"
+        }
+      ],
+      "created_at": "2026-11-15T00:05:00Z",
+      "notes": "Omitted-dependency write-skew: the generated closure omits the required allergy resource edge, so the dependent write commits on a stale read set. Arm B3 (entity-OCC without semantic dependency closure) admits the forbidden commit; the independent schema oracle flags closure incompleteness and the transaction_history_checker records REJECT. This is a designed fixture outcome, not a measured research result.",
+      "venue": "compsac",
+      "venue_unit_kind": "independent_logical_schedule",
+      "observer": "transaction_history_checker",
+      "expected_decision": "REJECT",
+      "observed_decision": "REJECT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-compsac-schedule-gen",
+        "generator_version": "1.0.0",
+        "seed": 20270104
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "COMPSAC-CASE-05",
+      "case_family": "phantom_insert_write_skew",
+      "independent_unit_id": "compsac:case05:run-001",
+      "unit_kind": "run",
+      "backend": "postgresql",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270105,
+      "branch": "research/venue2027/tasks/w6-compsac-schema",
+      "arm_id": "B1",
+      "evidence": [
+        {
+          "pointer_kind": "fixture_path",
+          "uri": "research/venue2027/VENUES/compsac/CASE_MATRIX.md",
+          "sha256": "c125a5d0d7bd6bbe395c0df4c381f4437391c12688b9ceba60714917584d3672"
+        },
+        {
+          "pointer_kind": "provider_trace",
+          "uri": "research/venue2027/compsac/protocols/study.schema.json",
+          "sha256": "8c4c0c44ad9b392a974dbd18185d6a70f122e7709ef1bbcdae6900bbb7d111cf"
+        }
+      ],
+      "created_at": "2026-11-15T00:10:00Z",
+      "notes": "Phantom insert: a negative predicate read races a new matching row insert. Oracle target DENY_OR_SERIALIZE admits two defensible readings (predicate lock denial vs. successful serialization); per the fixture rules the label stays INDETERMINATE until independently adjudicated, and is never coerced to PASS.",
+      "venue": "compsac",
+      "venue_unit_kind": "independent_logical_schedule",
+      "observer": "transaction_history_checker",
+      "expected_decision": "INDETERMINATE",
+      "observed_decision": "INDETERMINATE",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-compsac-schedule-gen",
+        "generator_version": "1.0.0",
+        "seed": 20270105
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    }
+  ],
+  "invalid_cases": [
+    {
+      "description": "Adversarial control: silent null for observed_decision (unexecuted arm smuggled in as a null). MUST be rejected by study.schema.json with ENUM/TYPE errors; transparency statuses like NOT_RUN_EXTERNAL must be recorded as explicit strings, never as nulls.",
+      "schema_version": "1",
+      "case_id": "COMPSAC-CASE-02",
+      "case_family": "stale_dependent_write",
+      "independent_unit_id": "compsac:case02:schedule-001",
+      "unit_kind": "history",
+      "backend": "postgresql",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 20270102,
+      "branch": "research/venue2027/tasks/w6-compsac-schema",
+      "arm_id": "B2",
+      "evidence": [
+        {
+          "pointer_kind": "fixture_path",
+          "uri": "research/venue2027/VENUES/compsac/CASE_MATRIX.md",
+          "sha256": "c125a5d0d7bd6bbe395c0df4c381f4437391c12688b9ceba60714917584d3672"
+        }
+      ],
+      "created_at": "2026-11-15T00:20:00Z",
+      "notes": "Invalid by construction: observed_decision is null instead of an explicit outcome string.",
+      "venue": "compsac",
+      "venue_unit_kind": "independent_logical_schedule",
+      "observer": "transaction_history_checker",
+      "expected_decision": "REJECT",
+      "observed_decision": null,
+      "decision_agreement": false,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-compsac-schedule-gen",
+        "generator_version": "1.0.0",
+        "seed": 20270102
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "schema_version": "clara.venue2027.acns.study-samples.v1",
+  "venue": "acns",
+  "description": "Sample evidence-boundary study records for the ACNS SoK (Evidence Boundaries of Attestation in Tool-Using AI Systems), conforming to research/venue2027/acns/protocols/study.schema.json. Positives validate; the single invalid_cases entry is an adversarial record the schema must reject. Every record expresses an evidence-boundary verdict (which claim the frozen evidence supports and where the claimed implication breaks), not a mechanism outcome: expected/observed_decision use only the evidence-handling vocabulary (ADMIT/REJECT/INDETERMINATE), case_family names a SoK attack family from the threat-model register, and notes carry the machine-parseable verdict fields granted_level / refused_claim / boundary_condition / gap_code (gap codes G1-G9 per clara.venue2027.acns.threat-model.v1). All identities, URIs and digests are synthetic research fixtures (source_authority SYNTHETIC_RESEARCH_ONLY).",
+  "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+  "synthetic_provenance": {
+    "generator_id": "synthetic-acns-2027",
+    "generator_version": "1.0.0",
+    "seed": 2027
+  },
+  "cases": [
+    {
+      "schema_version": "1",
+      "case_id": "ACNS-CASE-03",
+      "case_family": "bound_evidence_acceptance",
+      "independent_unit_id": "acns:evidence-record:bound-receipt:001",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 2027,
+      "branch": "research/venue2027/tasks/w6-acns-schema",
+      "arm_id": "B3",
+      "evidence": [
+        {
+          "pointer_kind": "provider_trace",
+          "uri": "research/venue2027/VENUES/acns/cases/schema_example.json",
+          "sha256": "4ee012e917a11edf6a386c79656a94b0a52642b61003d24c32b0b507f6a2a7aa",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "oracle_label",
+          "uri": "research/venue2027/VENUES/acns/CASE_MATRIX.md",
+          "sha256": "2ab8e526affc2e1920ac84e19838ec92a0db90dc2d0fb4128ca3651803cd7fae",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Clean control: provider-attested receipt anchored in pinned roots, verified at verification time. granted_level=L2_ACKNOWLEDGED; refused_claim=the model executed the tool; boundary_condition=TC2 full check chain (pinned-root signature, digest binding, nonce/context, scope, schedule state) passes at verification time; gap_code=none.",
+      "venue": "acns",
+      "venue_unit_kind": "evidence_record",
+      "observer": "evidence_boundary_auditor",
+      "expected_decision": "ADMIT",
+      "observed_decision": "ADMIT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-acns-2027",
+        "generator_version": "1.0.0",
+        "seed": 2027
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "ACNS-CASE-02",
+      "case_family": "model_agency",
+      "independent_unit_id": "acns:evidence-record:downgrade-gap:001",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 2027,
+      "branch": "research/venue2027/tasks/w6-acns-schema",
+      "arm_id": "B3",
+      "evidence": [
+        {
+          "pointer_kind": "fixture_path",
+          "uri": "research/venue2027/VENUES/acns/cases/schema_example.json",
+          "sha256": "4ee012e917a11edf6a386c79656a94b0a52642b61003d24c32b0b507f6a2a7aa",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "oracle_label",
+          "uri": "research/venue2027/acns/threat_model.md",
+          "sha256": "1a316726630b6fb3b82f70259acee83a6b0d2f28851f9f62fb7fb71b64bf2e32",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Adversarial witness for gap G2 (receipt quoted as execution proof): the claim is downgraded, not the evidence silently accepted. granted_level=L2_ACKNOWLEDGED; refused_claim=the model executed the tool; boundary_condition=absent TC3 TEE attestation of exact binary and measured input, every execution claim is capped at L2; gap_code=G2.",
+      "venue": "acns",
+      "venue_unit_kind": "evidence_record",
+      "observer": "evidence_boundary_auditor",
+      "expected_decision": "REJECT",
+      "observed_decision": "REJECT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-acns-2027",
+        "generator_version": "1.0.0",
+        "seed": 2027
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "ACNS-CASE-05",
+      "case_family": "insider_or_observer",
+      "independent_unit_id": "acns:evidence-record:ambiguous-method:001",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 2027,
+      "branch": "research/venue2027/tasks/w6-acns-schema",
+      "arm_id": "B3",
+      "evidence": [
+        {
+          "pointer_kind": "dataset_snapshot",
+          "uri": "research/venue2027/VENUES/acns/CASE_MATRIX.md",
+          "sha256": "2ab8e526affc2e1920ac84e19838ec92a0db90dc2d0fb4128ca3651803cd7fae",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Conservative coding: published prose gives incomplete technical detail, so two plausible evidence levels (L1 vs L2) remain; the record stays INDETERMINATE instead of coercing a pass and routes to independent adjudication (CASE_MATRIX ACNS-CASE-05). granted_level=INDETERMINATE_PENDING_ADJUDICATION; refused_claim=any specific lattice level without independent adjudication; boundary_condition=disclosure incomplete, two interpretations of the oracle label are plausible; gap_code=none.",
+      "venue": "acns",
+      "venue_unit_kind": "evidence_record",
+      "observer": "evidence_boundary_auditor",
+      "expected_decision": "INDETERMINATE",
+      "observed_decision": "INDETERMINATE",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-acns-2027",
+        "generator_version": "1.0.0",
+        "seed": 2027
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    }
+  ],
+  "invalid_cases": [
+    {
+      "reason_invalid": "Mechanism-outcome masquerade plus fail-closed violations: observed_decision asserts a mechanism result (TOOL_RAN) outside the evidence-handling enum (ENUM_MISMATCH), and backend=null falls outside the backend enum (ENUM_MISMATCH); the schema must reject the record because it may only carry evidence-boundary verdicts. Additional independent violations each suffice on their own: silent nulls in the required unit_kind/seed/branch/arm_id fields (TYPE_MISMATCH, disallowing silent nulls) and an evidence array with zero pointers (MIN_ITEMS), so an unvalidated record can never be miscounted as a safe rejection.",
+      "record": {
+        "schema_version": "1",
+        "case_id": "ACNS-CASE-02-mechanism",
+        "case_family": "model_agency",
+        "independent_unit_id": "acns:evidence-record:downgrade-gap:001",
+        "unit_kind": null,
+        "backend": null,
+        "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+        "seed": null,
+        "branch": null,
+        "arm_id": null,
+        "evidence": [],
+        "venue": "acns",
+        "venue_unit_kind": "evidence_record",
+        "observer": "evidence_boundary_auditor",
+        "expected_decision": "REJECT",
+        "observed_decision": "TOOL_RAN",
+        "decision_agreement": false,
+        "synthetic_provenance": {
+          "generator_id": "synthetic-acns-2027",
+          "generator_version": "1.0.0",
+          "seed": 2027
+        },
+        "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+      }
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "fixture_id": "purpose_aware_cache_x06_parity",
+  "baseline_id": "purpose-aware-cache-x06",
+  "registry_entry": "purpose-aware-cache-x06 (task POPETS-X06 directly callable arm)",
+  "declared_semantics": "Purpose-bound cache with explicit fetch(key, epoch, purpose) -> Context: entries keyed by (subject, grant, purpose, consent_epoch); a revocation rotates the consent epoch for its scope exactly once, so post-revocation dispatches for that scope miss and recompute; same-purpose same-epoch repeats HIT; cross-purpose reuse is structurally refused (PURPOSE_MISMATCH) with entries per purpose and per epoch distinct. Per-entry accounting: cache_entries_created, live_entries_current_epoch, cache_hits, cache_misses, recomputations; purpose_isolation_violations must remain 0.",
+  "vector_version": "1.0.0",
+  "steps": [
+    {
+      "name": "same_context_two_purposes_creates_separate_entries_no_cross_reuse",
+      "case": {
+        "case_id": "parity-x06-1",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72",
+            "med_list_2026_02": "metformin 1000mg"
+          },
+          "revocations": [],
+          "dispatches": [
+            {
+              "dispatch_id": "d-clinical",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "lineage": [
+                "vitals_2026_01"
+              ],
+              "at_seconds": 10
+            },
+            {
+              "dispatch_id": "d-analytics",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "analytics",
+              "lineage": [
+                "vitals_2026_01"
+              ],
+              "at_seconds": 20
+            },
+            {
+              "dispatch_id": "d-clinical-repeat",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "lineage": [
+                "vitals_2026_01"
+              ],
+              "at_seconds": 30
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "ADMIT",
+      "expected_detail_contains": "\"cache_entries_created\": 2"
+    },
+    {
+      "name": "revocation_rotates_epoch_once_post_revoke_recompute_then_hit",
+      "case": {
+        "case_id": "parity-x06-2",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72"
+          },
+          "revocations": [
+            {
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "at_seconds": 100
+            }
+          ],
+          "dispatches": [
+            {
+              "dispatch_id": "d-pre",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "lineage": [
+                "vitals_2026_01"
+              ],
+              "at_seconds": 50
+            },
+            {
+              "dispatch_id": "d-post-1",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "lineage": [
+                "vitals_2026_01"
+              ],
+              "at_seconds": 150
+            },
+            {
+              "dispatch_id": "d-post-2",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "lineage": [
+                "vitals_2026_01"
+              ],
+              "at_seconds": 160
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "ADMIT",
+      "expected_detail_contains": "\"invalidation_events\": 1"
+    },
+    {
+      "name": "purpose_isolation_invariant_zero_violations",
+      "case": {
+        "case_id": "parity-x06-3",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72",
+            "admin_note_2026_01": "billing tier B"
+          },
+          "revocations": [],
+          "dispatches": [
+            {
+              "dispatch_id": "d-clinical",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "lineage": [
+                "vitals_2026_01"
+              ],
+              "at_seconds": 10
+            },
+            {
+              "dispatch_id": "d-admin",
+              "subject": "subj-1",
+              "grant": "g-admin",
+              "purpose": "billing",
+              "lineage": [
+                "admin_note_2026_01"
+              ],
+              "at_seconds": 20
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "ADMIT",
+      "expected_detail_contains": "\"purpose_isolation_violations\": 0"
+    }
+  ]
+}

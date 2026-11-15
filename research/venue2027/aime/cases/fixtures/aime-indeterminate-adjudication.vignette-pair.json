@@ -1,0 +1,26 @@
+{
+  "schema_version": "clara.venue2027.aime.vignette_pair.v1",
+  "pair_id": "aime.vignettepair.0007",
+  "synthetic_only": true,
+  "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+  "actor_id": "synthetic-actor-aime-0007",
+  "tenant_id": "synthetic-tenant-aime",
+  "baseline_vignette": {
+    "order": 0,
+    "event_kind": "INITIAL_STATE",
+    "logical_time": 0,
+    "reviewer_a_rating": "vignette_clinically_plausible",
+    "reviewer_b_rating": "vignette_ambiguous_medication_timing",
+    "clinical_task": "Rate medical appropriateness of the synthetic workflow output, blinded to method."
+  },
+  "counterfactual_vignette": {
+    "order": 1,
+    "event_kind": "REVIEWER_DISAGREEMENT",
+    "logical_time": 1,
+    "disagreement_axis": "medication_timing_interpretation",
+    "clinical_task": "Escalate to the predefined rubric and third-reviewer path."
+  },
+  "policy_epoch": "policy_epoch.adjudication.v1",
+  "oracle_target": "ADJUDICATE",
+  "notes": "Designed fixture per VENUES/aime/CASE_MATRIX.md AIME-CASE-07. Two plausible oracle interpretations exist, so the label stays INDETERMINATE until independent blinded adjudication; it must not be coerced to PASS/ADMIT."
+}

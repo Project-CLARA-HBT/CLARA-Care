@@ -1,0 +1,155 @@
+{
+  "description": "DSN 2027 P02 sample study records for study.schema.json (task DSN-schema). 'records' holds three schema-valid study cases (clean recovery; torn-write crash recovery; INDETERMINATE). 'invalid_cases' holds one record that must be rejected (missing the venue observer field, violating the fail-closed required-field contract).",
+  "schema_version": "1",
+  "records": [
+    {
+      "schema_version": "1",
+      "case_id": "dsn-clean-recovery-001",
+      "case_family": "crash_window_consistency",
+      "independent_unit_id": "unit:w6-crashwin-0001-seed11",
+      "unit_kind": "case",
+      "venue": "dsn",
+      "venue_unit_kind": "crash_recovery_episode",
+      "observer": "crash_injector",
+      "backend": "postgresql",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 11,
+      "branch": "research/venue2027/tasks/w6-dsn-schema",
+      "arm_id": "B1",
+      "evidence": [
+        {
+          "pointer_kind": "fixture_path",
+          "uri": "research/venue2027/dsn/protocols/study.schema.json",
+          "sha256": "21bc3a3f4e3163b151f4ecf59f173934a5c9103de2b9374ca4f3add57d3e21ea",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "oracle_label",
+          "uri": "research/venue2027/VENUES/dsn/RESEARCH_BLUEPRINT.md",
+          "sha256": "c426f8db680863b80a2d2eb043c74369e1f40c83d7141ef7f63051396d1624f0",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "expected_decision": "ADMIT",
+      "observed_decision": "ADMIT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "clara.venue2027.dsn.sample_cases",
+        "generator_version": "1.0.0",
+        "seed": 11
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Clean recovery: kill after commit, bounded reconciliation re-derives the committed outcome (ADMIT) from decision receipt + outbox receipt + consent epoch."
+    },
+    {
+      "schema_version": "1",
+      "case_id": "dsn-torn-write-crash-002",
+      "case_family": "crash_window_consistency",
+      "independent_unit_id": "unit:w6-crashwin-0002-seed22",
+      "unit_kind": "case",
+      "venue": "dsn",
+      "venue_unit_kind": "crash_recovery_episode",
+      "observer": "crash_injector",
+      "backend": "postgresql",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 22,
+      "branch": "research/venue2027/tasks/w6-dsn-schema",
+      "arm_id": "B3",
+      "evidence": [
+        {
+          "pointer_kind": "fixture_path",
+          "uri": "research/venue2027/dsn/protocols/study.schema.json",
+          "sha256": "21bc3a3f4e3163b151f4ecf59f173934a5c9103de2b9374ca4f3add57d3e21ea",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "provider_trace",
+          "uri": "research/venue2027/_shared/tools/schema_validator.py",
+          "sha256": "b1db12f80b15f1c580d716b20f9d2873da6525d4c37a39280629bcdcddccf44d",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "expected_decision": "REJECT",
+      "observed_decision": "REJECT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "clara.venue2027.dsn.sample_cases",
+        "generator_version": "1.0.0",
+        "seed": 22
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Torn write during crash window: reconciler detects disagreement between committed row and outbox receipt and resolves to REJECT under the recoverable outcome function."
+    },
+    {
+      "schema_version": "1",
+      "case_id": "dsn-indeterminate-003",
+      "case_family": "replay_consent_epoch",
+      "independent_unit_id": "unit:w6-crashwin-0003-seed33",
+      "unit_kind": "case",
+      "venue": "dsn",
+      "venue_unit_kind": "crash_recovery_episode",
+      "observer": "crash_injector",
+      "backend": "postgresql",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 33,
+      "branch": "research/venue2027/tasks/w6-dsn-schema",
+      "arm_id": "B2",
+      "evidence": [
+        {
+          "pointer_kind": "policy_epoch",
+          "uri": "research/venue2027/_shared/schemas/case.v1.schema.json",
+          "sha256": "6e2a83f082234f175c714df3d0f11a57f914155e01033d231b512d7185635f6a",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "expected_decision": "INDETERMINATE",
+      "observed_decision": "INDETERMINATE",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "clara.venue2027.dsn.sample_cases",
+        "generator_version": "1.0.0",
+        "seed": 33
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Duplicate delivery across consent revocation: no reconcilable ground truth exists, so the recoverable outcome function stays INDETERMINATE instead of asserting a positive outcome."
+    }
+  ],
+  "invalid_cases": [
+    {
+      "schema_version": "1",
+      "case_id": "dsn-missing-observer-900",
+      "case_family": "crash_window_consistency",
+      "independent_unit_id": "unit:w6-crashwin-0900-seed99",
+      "unit_kind": "case",
+      "venue": "dsn",
+      "venue_unit_kind": "crash_recovery_episode",
+      "backend": "postgresql",
+      "source_sha": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+      "seed": 99,
+      "branch": "research/venue2027/tasks/w6-dsn-schema",
+      "arm_id": "B0",
+      "evidence": [
+        {
+          "pointer_kind": "fixture_path",
+          "uri": "research/venue2027/dsn/protocols/study.schema.json",
+          "sha256": "21bc3a3f4e3163b151f4ecf59f173934a5c9103de2b9374ca4f3add57d3e21ea",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "expected_decision": "ADMIT",
+      "observed_decision": "ADMIT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "clara.venue2027.dsn.sample_cases",
+        "generator_version": "1.0.0",
+        "seed": 99
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "INVALID on purpose: the venue 'observer' field (crash_injector) is absent; the fail-closed contract must reject this record."
+    }
+  ]
+}

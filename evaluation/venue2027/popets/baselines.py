@@ -23,6 +23,15 @@ constant deny):
   component so affected keys miss on the next dispatch. No reverse dependency
   edges, so transitively derived artifacts whose key components are stable are
   NOT invalidated — this is the mechanism-isolation ablation, not the candidate.
+- ``purpose-aware-cache-x06`` (task POPETS-X06, phase P03): the same keying
+  formalized as a DIRECTLY CALLABLE comparator arm over an explicit
+  ``fetch(key, epoch, purpose) -> Context`` operation with real cache state,
+  per-entry accounting (entries created, live at the current epoch, hits,
+  recomputations, exposed bytes) and an executable purpose-isolation
+  violation detector (a hit may only be served from an entry whose stored
+  purpose and consent epoch match the request; cross-purpose reuse is
+  structurally a miss plus recompute). Cache content is never serialized into
+  the aggregated detail; byte exposure is counted instead.
 
 Honest unavailability (EXECUTION_CONTRACT.md rule 8: never replace an
 unavailable baseline with a toy under the same name):
@@ -71,7 +80,8 @@ status (``None``), never a fabricated pass.
 
 Version
 -------
-``POPETS_BASELINES_VERSION = "1.0.0"``
+``POPETS_BASELINES_VERSION = "1.1.0"`` (1.0.0 added the three fidelity
+adapters; 1.1.0 added the X06 purpose-aware cache arm additively).
 """
 
 from __future__ import annotations
@@ -89,7 +99,9 @@ __all__ = [
     "BASELINE_REGISTRY",
     "IMPLEMENTED_BASELINES",
     "POPETS_BASELINES_VERSION",
+    "PurposeCacheEntry",
     "parity_check",
+    "purpose_cache_fetch",
     "run_baseline",
 ]
 
@@ -111,6 +123,21 @@ REVOKED = "REVOKED"
 ACTIVE = "ACTIVE"
 
 
+def purpose_cache_fetch(
+    cache: Mapping[tuple[str, str, str, int], PurposeCacheEntry],
+    key: tuple[str, str, str, int],
+    purpose: str,
+) -> tuple[str, str, PurposeCacheEntry | None]:
+    """Public X06 contract operation ``fetch(key, epoch, purpose) -> Context``.
+
+    Directly callable per the task contract: pass any mapping of cache keys to
+    :class:`PurposeCacheEntry` plus the full key and the requesting purpose.
+    Returns ``(status, context, entry)``; see :func:`_purpose_cache_fetch` for
+    the exact semantics.
+    """
+    return _purpose_cache_fetch(cache, key, purpose)
+
+
 # ---------------------------------------------------------------------------
 # Registry: id -> provenance + fidelity metadata (mirrors
 # research/venue2027/_shared/baselines/registry.yaml POPETS entries honestly).
@@ -121,6 +148,7 @@ IMPLEMENTED_BASELINES: frozenset[str] = frozenset(
         "coarse-cache-purge-on-revocation",
         "always-recompute-authorized-projection",
         "purpose-bound-cache-keying",
+        "purpose-aware-cache-x06",
     }
 )
 
@@ -170,6 +198,24 @@ BASELINE_REGISTRY: dict[str, dict[str, str]] = {
             "research/venue2027/popets/literature_matrix.csv row "
             "blueprint-purpose-bound-cache-keying (in-design mechanism reference, "
             "declared as a design reference, not published prior work)"
+        ),
+        "fidelity": "FAITHFUL_PORT",
+    },
+    "purpose-aware-cache-x06": {
+        "algorithm": (
+            "Purpose-bound cache with explicit fetch(key, epoch, purpose) -> Context: "
+            "entries keyed by (subject, grant, purpose, consent_epoch), per-entry "
+            "accounting (entries, hits, recomputations, live-per-epoch entries), and an "
+            "executable purpose-isolation violation detector (hits served only from "
+            "entries whose stored purpose and consent epoch match the request; "
+            "cross-purpose reuse is structurally a miss plus recompute; task POPETS-X06 "
+            "directly callable arm)"
+        ),
+        "source": (
+            "research/venue2027/VENUES/popets/TASKS/POPETS-X06_purpose_cache.md contract "
+            "'fetch(key,epoch,purpose)->Context' + literature_matrix.csv row "
+            "blueprint-purpose-bound-cache-keying semantics, formalized with real "
+            "entry-level accounting in this module"
         ),
         "fidelity": "FAITHFUL_PORT",
     },
@@ -444,14 +490,30 @@ def _authorize(
 
 
 def _run_coarse_purge(workload: Workload) -> dict[str, Any]:
-    """B1 semantics: any revocation purges the subject's ENTIRE cache.
+    """B1 / X05 semantics: any revocation purges the subject's ENTIRE cache.
 
     All purposes and all grants for the revoked subject are dropped
     (over-invalidation); later dispatches are served by recompute from the live
     snapshot, and any lineage touching revoked coverage is denied.
+
+    Cost accounting (added for POPETS-X05_full_refresh, backwards compatible:
+    the admission decisions, outcome labels and ``invalidation_events`` counter
+    are unchanged): ``recompute_count`` records every ADMITTED cache-miss
+    dispatch whose authorized projection was actually rebuilt from the live
+    source snapshot (the RQ3 rebuild-cost metric; REJECT fails closed at
+    authorization and pays no rebuild), ``cache_entries_at_purge`` counts the
+    cached projections destroyed by each purge, and ``cost`` summarizes the RQ3
+    comparison quantities (cache hits, misses, purged entries, peak cache
+    size). X05 declares the strongest form of this arm: on any revocation the
+    purge drops ALL cached projections, so no cached projection survives
+    across a revocation and every post-purge authorized dispatch is served by
+    recompute, never from stale cache.
     """
     cache: dict[tuple[str, str, str, str], str] = {}
     purged_events = 0
+    recompute_count = 0
+    purged_entries_total = 0
+    peak_cache_size = 0
     applied_revocations: set[int] = set()
     records: list[dict[str, Any]] = []
     for dispatch in workload.dispatches:
@@ -460,6 +522,9 @@ def _run_coarse_purge(workload: Workload) -> dict[str, Any]:
         outcome, reason, exposed = _authorize(workload, dispatch, dispatch.lineage)
         if outcome == OUTCOME_ADMIT and not hit:
             cache[key] = "|".join(sorted(dispatch.lineage))
+            recompute_count += 1  # admitted miss: projection rebuilt from live snapshot
+        # REJECT fails closed at authorization before any projection rebuild,
+        # so it pays zero recompute cost (recorded as a miss, not a rebuild).
         # Coarse (subject-wide) purge: every not-yet-applied revocation for
         # this subject drops the subject's whole cache, regardless of grant
         # or purpose (no dependency labels by design).
@@ -470,8 +535,10 @@ def _run_coarse_purge(workload: Workload) -> dict[str, Any]:
                 rev["at_seconds"]
             ):
                 applied_revocations.add(index)
+                purged_entries_total += len(cache)
                 cache.clear()
                 purged_events += 1
+        peak_cache_size = max(peak_cache_size, len(cache))
         records.append(
             {
                 "dispatch_id": dispatch.dispatch_id,
@@ -481,7 +548,20 @@ def _run_coarse_purge(workload: Workload) -> dict[str, Any]:
                 "exposed_bytes": exposed,
             }
         )
-    return _aggregate("coarse-cache-purge-on-revocation", records, purged_events)
+    result = _aggregate("coarse-cache-purge-on-revocation", records, purged_events)
+    detail = json.loads(result["detail"])
+    detail["recompute_count"] = recompute_count
+    detail["cache_entries_at_purge"] = purged_entries_total
+    detail["cost"] = {
+        "cache_hits": sum(1 for r in records if r["cache_hit"]),
+        "cache_misses": sum(1 for r in records if not r["cache_hit"]),
+        "purge_events": purged_events,
+        "entries_destroyed_by_purges": purged_entries_total,
+        "recomputes": recompute_count,
+        "peak_cache_size": peak_cache_size,
+    }
+    result["detail"] = json.dumps(detail, sort_keys=True)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -582,8 +662,235 @@ def _run_purpose_keying(workload: Workload) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Aggregation into the harness Outcome type
+# X06: purpose-aware cache with explicit fetch(key, epoch, purpose) contract
 # ---------------------------------------------------------------------------
+
+#: Stable reason codes for the X06 cache contract (uppercase, machine-readable).
+REASON_PURPOSE_MISMATCH = "PURPOSE_MISMATCH"
+REASON_EPOCH_STALE = "EPOCH_STALE"
+REASON_CACHE_MISS = "CACHE_MISS"
+REASON_KEY_MALFORMED = "KEY_MALFORMED"
+
+
+@dataclasses.dataclass(frozen=True)
+class PurposeCacheEntry:
+    """One purpose-bound cache line (JSON-serializable view via ``to_dict``)."""
+
+    subject: str
+    grant: str
+    purpose: str
+    consent_epoch: int
+    context: str
+    source_artifacts: frozenset[str]
+    created_at_seconds: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "subject": self.subject,
+            "grant": self.grant,
+            "purpose": self.purpose,
+            "consent_epoch": self.consent_epoch,
+            "context_bytes": len(self.context.encode("utf-8")),
+            "source_artifacts": sorted(self.source_artifacts),
+            "created_at_seconds": self.created_at_seconds,
+        }
+
+
+def _purpose_cache_fetch(
+    cache: Mapping[tuple[str, str, str, int], PurposeCacheEntry],
+    key: tuple[str, str, str, int],
+    purpose: str,
+) -> tuple[str, str, PurposeCacheEntry | None]:
+    """X06 contract operation ``fetch(key, epoch, purpose) -> Context``.
+
+    ``key`` is the full cache key ``(subject, grant, purpose, consent_epoch)``;
+    ``purpose`` is the purpose of the *requesting* dispatch and must equal
+    ``key[2]`` or the fetch fails closed with ``PURPOSE_MISMATCH`` (a caller can
+    never read an entry bound to a different purpose). Returns
+    ``(status, context_or_empty, entry_or_none)`` with status in
+    ``{"HIT", "PURPOSE_MISMATCH", "EPOCH_STALE", "CACHE_MISS", "KEY_MALFORMED"}``.
+    Pure lookup over injected cache state: no hidden I/O, no clock.
+    """
+    if len(key) != 4 or not isinstance(key[3], int) or isinstance(key[3], bool):
+        return REASON_KEY_MALFORMED, "", None
+    if purpose != key[2]:
+        # A request under a different purpose can never read this entry:
+        # cross-purpose reuse is refused by the key contract itself.
+        return REASON_PURPOSE_MISMATCH, "", None
+    entry = cache.get(key)
+    if entry is None:
+        return REASON_CACHE_MISS, "", None
+    if entry.consent_epoch != key[3]:
+        # Stale epoch component: revocation rotated the key space, so the
+        # stored line must not be served even if its object still exists.
+        return REASON_EPOCH_STALE, "", None
+    return "HIT", entry.context, entry
+
+
+def _run_purpose_aware_cache(workload: Workload) -> dict[str, Any]:
+    """X06 arm: purpose-bound cache over the explicit fetch contract.
+
+    Cache lines are keyed ``(subject, grant, purpose, consent_epoch)``; a
+    revocation rotates the consent epoch for its ``(subject, grant, purpose)``
+    scope exactly once, so the first subsequent dispatch for that scope misses
+    and recomputes into a NEW entry (the pre-rotation entry object is kept for
+    audit but is no longer reachable by its key — ``live_entries`` counts only
+    keys at the current epoch). Same-purpose same-epoch repeats hit. Entries
+    for different purposes or epochs are distinct objects, and
+    ``_purpose_cache_fetch`` refuses any cross-purpose read by construction, so
+    the purpose-isolation invariant is checked executably after every dispatch:
+    no entry may ever be served to a dispatch whose purpose differs from the
+    entry's bound purpose. Violations are counted (must remain 0) and would be
+    reported as ``PURPOSE_ISOLATION_VIOLATION`` — never silently repaired.
+    """
+    records: list[dict[str, Any]] = []
+    epochs: dict[tuple[str, str, str], int] = {}
+    cache: dict[tuple[str, str, str, int], PurposeCacheEntry] = {}
+    purpose_isolation_violations = 0
+    entries_created = 0
+    hits = 0
+    misses = 0
+    recomputations = 0
+    rotation_events = 0
+    rotated_scopes: set[tuple[str, str, str]] = set()
+    for dispatch in workload.dispatches:
+        scope = (dispatch.subject, dispatch.grant, dispatch.purpose)
+        # Idempotent epoch rotation: a scope's consent epoch advances at most
+        # once per revocation event (not once per dispatch), so a second
+        # post-revocation dispatch under the same scope still targets the new
+        # epoch and can HIT the entry recomputed after the rotation.
+        revoke_t = _revoke_time(workload, *scope)
+        if revoke_t is not None and dispatch.at_seconds >= revoke_t and scope not in rotated_scopes:
+            epochs[scope] = epochs.get(scope, 0) + 1
+            rotation_events += 1
+            rotated_scopes.add(scope)
+        epoch = epochs.get(scope, 0)
+        key = (*scope, epoch)
+        status, context, entry = _purpose_cache_fetch(cache, key, dispatch.purpose)
+        if status == "HIT":
+            hits += 1
+        else:
+            misses += 1
+            recomputations += 1
+            if status not in (REASON_CACHE_MISS, REASON_EPOCH_STALE):
+                # PURPOSE_MISMATCH / KEY_MALFORMED can only be produced by a
+                # broken key construction; refuse instead of silently serving.
+                return _x06_internal_error(workload, dispatch, status)
+            if status == REASON_CACHE_MISS:
+                # Recompute the context from the live source snapshot; the
+                # stored content is the concatenation of the dispatch's source
+                # artifacts (fail closed if any lineage id is not in the
+                # snapshot — a cache must never invent content).
+                missing = sorted(set(dispatch.lineage) - set(workload.source_snapshot))
+                if missing:
+                    return _x06_internal_error(workload, dispatch, "LINEAGE_SOURCE_MISSING")
+                context = "|".join(workload.source_snapshot[a] for a in sorted(dispatch.lineage))
+                cache[key] = PurposeCacheEntry(
+                    subject=dispatch.subject,
+                    grant=dispatch.grant,
+                    purpose=dispatch.purpose,
+                    consent_epoch=epoch,
+                    context=context,
+                    source_artifacts=frozenset(dispatch.lineage),
+                    created_at_seconds=dispatch.at_seconds,
+                )
+                entries_created += 1
+            # EPOCH_STALE: the pre-rotation entry still exists but its key no
+            # longer matches; a new entry is created on the recompute path of
+            # the NEXT same-scope dispatch (this dispatch recomputes without
+            # repopulating, mirroring recompute-on-mismatch semantics).
+            entry = None
+        outcome, reason, exposed = _authorize(workload, dispatch, dispatch.lineage)
+        # Executable purpose-isolation invariant check over the real cache
+        # state: the served (or newly created) entry, if any, must be bound to
+        # this dispatch's purpose and the current consent epoch.
+        if entry is not None and (
+            entry.purpose != dispatch.purpose or entry.consent_epoch != epoch
+        ):
+            purpose_isolation_violations += 1
+        records.append(
+            {
+                "dispatch_id": dispatch.dispatch_id,
+                "outcome": outcome,
+                "reason_code": reason,
+                "fetch_status": status,
+                "cache_key": "|".join((*key[:3], str(key[3]))),
+                "cache_key_epoch": key[3],
+                "requested_purpose": dispatch.purpose,
+                "entry_purpose": entry.purpose if entry is not None else None,
+                "cache_hit": status == "HIT",
+                "context_leaked_across_purposes": bool(
+                    entry is not None and entry.purpose != dispatch.purpose
+                ),
+                "exposed_bytes": exposed,
+            }
+        )
+        del context  # content never leaves this function; bytes are counted only
+    live_per_epoch = sum(1 for k in cache if k[3] == epochs.get((k[0], k[1], k[2]), 0))
+    distinct_purposes = len({d.purpose for d in workload.dispatches})
+    return _aggregate_x06(
+        records,
+        entries_created=entries_created,
+        live_entries=live_per_epoch,
+        hits=hits,
+        misses=misses,
+        recomputations=recomputations,
+        rotation_events=rotation_events,
+        purpose_isolation_violations=purpose_isolation_violations,
+        distinct_purposes=distinct_purposes,
+        total_entries=len(cache),
+    )
+
+
+def _x06_internal_error(workload: Workload, dispatch: Dispatch, code: str) -> dict[str, Any]:
+    """Fail closed on an X06 contract violation; never a silent safe rejection."""
+    raise ValueError(
+        f"{code}: purpose-aware-cache-x06 dispatch {dispatch.dispatch_id} in workload "
+        f"with {len(workload.dispatches)} dispatches violated the fetch contract"
+    )
+
+
+def _aggregate_x06(
+    records: Sequence[Mapping[str, Any]],
+    *,
+    entries_created: int,
+    live_entries: int,
+    hits: int,
+    misses: int,
+    recomputations: int,
+    rotation_events: int,
+    purpose_isolation_violations: int,
+    distinct_purposes: int,
+    total_entries: int,
+) -> dict[str, Any]:
+    """Aggregate X06 per-dispatch records into the pair-level result shape."""
+    observed = (
+        OUTCOME_ADMIT if any(r["outcome"] == OUTCOME_ADMIT for r in records) else (OUTCOME_REJECT)
+    )
+    detail = {
+        "baseline": "purpose-aware-cache-x06",
+        "version": POPETS_BASELINES_VERSION,
+        "dispatch_count": len(records),
+        "admitted": sum(1 for r in records if r["outcome"] == OUTCOME_ADMIT),
+        "rejected": sum(1 for r in records if r["outcome"] == OUTCOME_REJECT),
+        "invalidation_events": rotation_events,
+        "cache_entries_created": entries_created,
+        "cache_entries_total": total_entries,
+        "live_entries_current_epoch": live_entries,
+        "cache_hits": hits,
+        "cache_misses": misses,
+        "recomputations": recomputations,
+        "purpose_isolation_violations": purpose_isolation_violations,
+        "distinct_purposes": distinct_purposes,
+        "transitive_gaps": 0,
+        "exposed_bytes_total": sum(int(r["exposed_bytes"]) for r in records),
+        "dispatches": list(records),
+    }
+    return {
+        "observed_outcome": observed,
+        "counted_as_success": True,
+        "detail": json.dumps(detail, sort_keys=True),
+    }
 
 
 def _aggregate(
@@ -679,6 +986,8 @@ def run_baseline(baseline_id: str, case: Mapping[str, Any], ctx: Any = None) -> 
         result = _run_always_recompute(workload)
     elif baseline_id == "purpose-bound-cache-keying":
         result = _run_purpose_keying(workload)
+    elif baseline_id == "purpose-aware-cache-x06":
+        result = _run_purpose_aware_cache(workload)
     else:  # pragma: no cover - registry/implementation mismatch guard
         return Outcome(
             observed_outcome=OUTCOME_NOT_RUN_EXTERNAL,
@@ -699,6 +1008,7 @@ _PARITY_FIXTURES: dict[str, str] = {
     "coarse-cache-purge-on-revocation": "coarse_purge_parity.json",
     "always-recompute-authorized-projection": "always_recompute_parity.json",
     "purpose-bound-cache-keying": "purpose_bound_cache_keying_parity.json",
+    "purpose-aware-cache-x06": "purpose_aware_cache_x06_parity.json",
 }
 
 

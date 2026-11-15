@@ -1,0 +1,42 @@
+{
+  "task_id": "POPETS-rq_registry",
+  "status": "PASS",
+  "source_sha_before": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "source_sha_after": "293bde7bce7b0a361306e40e04fba931cfc0623d",
+  "changed_paths": [
+    "research/venue2027/popets/rq_and_estimands.yaml",
+    "research/venue2027/popets/tests/test_rq_registry.py",
+    "research/venue2027/proof/logs/POPETS-rq_registry.pytest.log",
+    "research/venue2027/proof/logs/POPETS-rq_registry.ruff.log",
+    "research/venue2027/proof/logs/POPETS-rq_registry.suite.log",
+    "research/venue2027/proof/POPETS-rq_registry.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/popets/tests/test_rq_registry.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-rq_registry.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/popets/tests/test_rq_registry.py --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-rq_registry.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/popets/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-rq_registry.suite.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/popets/rq_and_estimands.yaml": "ceb8cc612cc7155c89c9b8db9eb8dad2e9163f095fa95a70a22d7e2fce71a5e5",
+    "research/venue2027/popets/tests/test_rq_registry.py": "e340448c62e5f10ad77d7aeea6ddb4f8452ee5a4691ee4e3ebd6d454502e9bdb",
+    "research/venue2027/proof/logs/POPETS-rq_registry.pytest.log": "02fefd51666fb50475f546676e652a782df633ba5db9348e2f8c3dcddaa2826d",
+    "research/venue2027/proof/logs/POPETS-rq_registry.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/POPETS-rq_registry.suite.log": "35ed45907a72b6b45911eb7e707e222bf99b53f7da80d5a0e3d5d82ea6c2799f"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 RQ/estimand registry for popets frozen before holdout unsealing. Exactly three preregistered RQs (RQ1-RQ3), each with research question (verbatim from the blueprint), independent unit (unique synthetic subject history \u2014 never per-dispatch), population (1200 subjects, 3-6 longitudinal contexts, source-disjoint holdout), estimand, paired contrast, primary metric (RQ1 future unauthorized disclosure rate + attribute-exposure bytes; RQ2 disclosure-trace equivalence to B2 within TOST margin + false invalidation vs B3; RQ3 conditional cache hit rate + p95 latency across factorial lineage density), secondary metrics, H0/H1, frozen minimum useful differences (delta_1/delta_2/delta_3 = 0.05 absolute), confounders, power/analysis method (exact McNemar / TOST + Wilcoxon / repeated-measures ANOVA; subject-clustered bootstrap 2000 resamples seed 2027, Holm across 3 primary contrasts), falsification_condition and primary_endpoint. Endpoint class future_dispatch_noninterference: forensic reconstructability (PST) and retroactive erasure of already-delivered content refused. Mechanical falsification register F1-F6. No empirical results asserted; archive E15-E22 refused as evidence. stdlib-only YAML-subset parser verified identical to PyYAML on this file; structural tests 23/23 pass; ruff 0.7.1 clean; venue suite 76/76 pass. source_sha_after is the worktree HEAD at emit time; the deliverable commit SHA is reported in the task handoff."
+}

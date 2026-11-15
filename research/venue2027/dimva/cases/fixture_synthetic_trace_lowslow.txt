@@ -1,0 +1,1 @@
+synthetic dimva low-and-slow provider trace (logical timestamps), research only, no PHI/PII
