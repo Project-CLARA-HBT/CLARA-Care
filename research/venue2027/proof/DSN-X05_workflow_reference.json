@@ -6,7 +6,7 @@
     "research/venue2027/proof/logs/DSN-X05_workflow_reference.selfcheck.log": "c6623e0081eaa477b94cd99a9bff33f33b2b238d22b9f0e60f34dcabcb1e1052",
     "research/venue2027/proof/logs/DSN-X05_workflow_reference.suite.log": "daf3ca15b828f97f3f61c0c86a46b8e7746ccd8a55e8c3a6ad330fa22bcdcfa4",
     "research/venue2027/proof/logs/DSN-X05_workflow_reference.testsdir.log": "749fb9a613d9114bb2edfebb8ffb08efa6219bfa3f8c8cb206de8ee0e5453f3c",
-    "research/venue2027/proof/logs/DSN-X05_workflow_reference.validator.log": "4624c41039834dddcaa60cd26fc62c62ce244bf8310a0c033432dd980486d959",
+    "research/venue2027/proof/logs/DSN-X05_workflow_reference.validator.log": "f98606784665a7b2e1f6bbc049827f27589e68df691a8574f2d1d27d1785d2be",
     "tests/venue2027/dsn/test_workflow_reference.py": "5d50e60c43921aa5408fdb0db40d868a9d74ffafb8d12af6a16a7f1f7f464b92"
   },
   "baseline_parity": "NOT_RUN_EXTERNAL",

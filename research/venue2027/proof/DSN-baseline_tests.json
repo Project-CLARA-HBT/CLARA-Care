@@ -2,7 +2,7 @@
   "artifacts_sha256": {
     "research/venue2027/proof/logs/DSN-baseline_tests.pytest.log": "1e85e6eddbd8be3495606b59ea0afe7c9e87f519b1007e99977fbf4e16056bfa",
     "research/venue2027/proof/logs/DSN-baseline_tests.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
-    "tests/venue2027/dsn/__init__.py": "a8946d03ef1abedeacff716492d24770654940728bde8023efd8d9946ddfb395",
+    "tests/venue2027/dsn/__init__.py": "ea6073ccc3994cc5027bf43389adb7d0adde2778f6be6561407d62db53a4e640",
     "tests/venue2027/dsn/test_baseline_fidelity.py": "454f5bcfebfd623e902eeabf17d1caf93976e838bd3b3c044a364b882da7ddb1"
   },
   "baseline_parity": "PASS",

@@ -1,6 +1,5 @@
 {
   "artifacts_sha256": {
-    "artifacts/venue2027/sacmat/x04-openfga-runner-run1/openfga_runner.json": "47475117656d641080e1a7acc812650645ec847646f3d4be22e56634a9a2e279",
     "evaluation/venue2027/sacmat/openfga_adapter.py": "dfd9f300c830b41c44314edaad4a078a6507b16b280af92165c7bd9247b9dddf",
     "research/venue2027/proof/logs/SACMAT-X04_openfga_runner.live.log": "d3f4cb7812528c6cad2332c997a86f43f5ba1403963fc3dabadf509a7c0a78df",
     "research/venue2027/proof/logs/SACMAT-X04_openfga_runner.pytest.log": "64670b3f031118cada81400ba819f49c1e57e4dcc2ee4999a8837533b83a2648",

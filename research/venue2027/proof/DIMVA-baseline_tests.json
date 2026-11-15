@@ -1,0 +1,49 @@
+{
+  "artifacts_sha256": {
+    "research/venue2027/proof/logs/DIMVA-baseline_tests.pytest.log": "cb50ddb202788dce243b50a5c88de0c1a6ac8c6ea3871e75a5a8c7cdc9c349e5",
+    "research/venue2027/proof/logs/DIMVA-baseline_tests.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a",
+    "research/venue2027/proof/logs/DIMVA-baseline_tests.suite.log": "ab9ca91ac9afe81e465474f0a152cca1c2335c9f5e3bea55cda1e00945be882c",
+    "tests/venue2027/dimva/__init__.py": "5f2a0b0489fa3ff5ffa3ce92e982ed1a92149cf18dc1eb9e0639ba19e2690d04",
+    "tests/venue2027/dimva/test_baseline_fidelity.py": "6703234487d34ef12e81fbab7033a10d53feca79e82b1418b8c596dd4d21f499"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "tests/venue2027/dimva/__init__.py",
+    "tests/venue2027/dimva/test_baseline_fidelity.py",
+    "research/venue2027/proof/DIMVA-baseline_tests.json",
+    "research/venue2027/proof/emit_DIMVA-baseline_tests_report.py",
+    "research/venue2027/proof/logs/DIMVA-baseline_tests.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-baseline_tests.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-baseline_tests.suite.log",
+    "research/venue2027/proof/logs/DIMVA-baseline_tests.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q tests/venue2027/dimva/test_baseline_fidelity.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-baseline_tests.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check tests/venue2027/dimva/ && uvx ruff@0.7.1 format --check tests/venue2027/dimva/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-baseline_tests.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dimva/ tests/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-baseline_tests.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_DIMVA-baseline_tests_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/DIMVA-baseline_tests.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-baseline_tests.validator.log"
+    }
+  ],
+  "notes": "P03 DIMVA-baseline_tests deliverable: baseline conformance/fidelity suite over the REAL module evaluation/venue2027/dimva/baselines.py (imported directly, no reimplementation, no stub, no toy). For EACH implemented in-process DIMVA arm the suite asserts one upstream-style POSITIVE vector (paired benign control + harness mapping DETECT->REJECT / NO_DETECT->ADMIT, both counted_as_success=True) and one ADVERSARIAL NEGATIVE vector, all over synthetic minimal leak-safe events ((actor_id, tool, scope, allowed, ts); no PHI/PII, no network, no clock, no provider): B0 detects the same-window denied burst at DENIED_COUNT_THRESHOLD_EXCEEDED and admits the quiet session; B1 detects cross-scope purpose hopping at CROSS_SCOPE_DENIAL_RULE; B2 detects the rate-feature anomaly at EVENT_RATE_ZSCORE_ANOMALY against the frozen injected benign reference; B3 links the low-and-slow cross-tool campaign with all five structural criteria met (CAMPAIGN_LINKAGE_PROBING). The central RQ1 falsification witness is asserted on ONE shared adversarial session (9 denials, 9 distinct tools, single scope, 1080s pacing, span 7200s, max 4 denials per 1h window): B0 misses it (max_window_denials=4 < threshold 5 \u2014 order/pacing blind), B1 misses it (cross_scope_followups=0 \u2014 same-scope campaign never trips the cross-scope rule), B2 misses it against a frozen high-activity tenant RateReference injected via DetectorContext (worst z below threshold \u2014 session-level aggregate rates only, never pacing/linkage), while B3 DETECTs the same session \u2014 the weak arms' misses are the fidelity evidence, not hidden failures. Honest NOT_RUN_EXTERNAL: B2_ISOLATION_FOREST and B3_GBT (pinned scikit-learn 1.8.0, upstream_revision 63acddb6de687f685b7323ad68fb2cf76cc3bd1a) return NOT_RUN_EXTERNAL/BASELINE_UNAVAILABLE from run_baseline (counted_as_success=False, retriable=True) on benign AND attack cases, raise BASELINE_EXTERNAL_UNIMPLEMENTED from run_baseline_detection, and are pinned runnable_in_process=False in BASELINE_REGISTRY \u2014 no toy is substituted under the pinned name (EXECUTION_CONTRACT rule 8), so baseline_parity is NOT_APPLICABLE (no registry arm executed here; no comparative claim made). Fail-closed controls: a reason_code-like event field is refused as RQ1 leakage (INDETERMINATE/EVENT_REASON_CODE_FIELD_FORBIDDEN, never counted, never ADMIT); unknown arm id raises BASELINE_UNKNOWN_ID; malformed ctx raises CONTEXT_MALFORMED. All 15 tests pass; DIMVA evaluation + venue2027 tests regression: 379 passed. uvx ruff@0.7.1 check + format --check clean on touched paths (exit 0). source_sha_after = base SHA 5f97bc36 per established repo convention (proof report committed together with the work in the task's single commit).",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "5f97bc366a18a2d3722884cfc44a25fb2d6bee59",
+  "source_sha_before": "5f97bc366a18a2d3722884cfc44a25fb2d6bee59",
+  "status": "PASS",
+  "task_id": "DIMVA-baseline_tests",
+  "unresolved": []
+}
