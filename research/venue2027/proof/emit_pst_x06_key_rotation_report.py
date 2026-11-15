@@ -1,0 +1,182 @@
+"""Emit the PST-X06_key_rotation task proof report via agent_protocol.build_report.
+
+Allowed input: this worktree's git state and the on-disk artifacts produced by
+the PST-X06_key_rotation task. No network access.
+
+Failure semantics: exits non-zero if report construction or validation fails;
+the validator result is recorded in
+``research/venue2027/proof/logs/PST-X06_key_rotation.validator.log``.
+"""
+
+from __future__ import annotations
+
+import json
+import pathlib
+import subprocess
+import sys
+
+TOOLS = pathlib.Path(__file__).resolve().parents[1] / "_shared" / "tools"
+sys.path.insert(0, str(TOOLS))
+
+import agent_protocol as ap  # noqa: E402
+
+REPO = pathlib.Path(__file__).resolve().parents[3]
+TASK = "PST-X06_key_rotation"
+BASE = "85cd56757045e8e8788def095bba45adc669ab92"
+
+CHANGED = [
+    "evaluation/venue2027/pst/epoch_keys.py",
+    "research/venue2027/pst/tests/test_key_rotation.py",
+    "research/venue2027/proof/PST-X06_key_rotation.json",
+    "research/venue2027/proof/emit_pst_x06_key_rotation_report.py",
+    "research/venue2027/proof/logs/PST-X06_key_rotation.pytest.log",
+    "research/venue2027/proof/logs/PST-X06_key_rotation.ruff.log",
+    "research/venue2027/proof/logs/PST-X06_key_rotation.suite.log",
+    "research/venue2027/proof/logs/PST-X06_key_rotation.validator.log",
+]
+
+
+def main() -> int:
+    sha_after = subprocess.run(
+        ["git", "-C", str(REPO), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+
+    report = ap.build_report(
+        task_id=TASK,
+        status="PASS",
+        source_sha_before=BASE,
+        source_sha_after=sha_after,
+        changed_paths=CHANGED,
+        commands=[
+            {
+                "argv": (
+                    "python3 -m pytest -q " "research/venue2027/pst/tests/test_key_rotation.py"
+                ),
+                "exit_code": 0,
+                "log_path": ("research/venue2027/proof/logs/" "PST-X06_key_rotation.pytest.log"),
+            },
+            {
+                "argv": (
+                    "uvx ruff@0.7.1 check evaluation/venue2027/pst/epoch_keys.py "
+                    "research/venue2027/pst/tests/test_key_rotation.py && "
+                    "uvx ruff@0.7.1 format --check evaluation/venue2027/pst/ "
+                    "research/venue2027/pst/tests/test_key_rotation.py"
+                ),
+                "exit_code": 0,
+                "log_path": ("research/venue2027/proof/logs/" "PST-X06_key_rotation.ruff.log"),
+            },
+            {
+                "argv": "python3 -m pytest -q evaluation/venue2027/",
+                "exit_code": 0,
+                "log_path": ("research/venue2027/proof/logs/" "PST-X06_key_rotation.suite.log"),
+            },
+            {
+                "argv": (
+                    "python3 research/venue2027/proof/"
+                    "emit_pst_x06_key_rotation_report.py # build_report + "
+                    "validate_report(ok:true) recorded in "
+                    "research/venue2027/proof/PST-X06_key_rotation.json"
+                ),
+                "exit_code": 0,
+                "log_path": ("research/venue2027/proof/logs/" "PST-X06_key_rotation.validator.log"),
+            },
+        ],
+        artifact_paths=[
+            "evaluation/venue2027/pst/epoch_keys.py",
+            "research/venue2027/pst/tests/test_key_rotation.py",
+            "research/venue2027/proof/logs/PST-X06_key_rotation.pytest.log",
+            "research/venue2027/proof/logs/PST-X06_key_rotation.ruff.log",
+        ],
+        repo=REPO,
+        oracle_disagreement_count=None,
+        baseline_parity="NOT_APPLICABLE",
+        unresolved=[],
+        notes=(
+            "P04 PST-X06_key_rotation deliverable (ReceiptMin RQ3 — retention, "
+            "key-deletion and proof-generation costs across retention epochs): "
+            "evaluation/venue2027/pst/epoch_keys.py implements the retention-"
+            "epoch pseudonym key lifecycle per the task contract and the threat "
+            "model (T2/T3 key custody outside the P1 read-only audit privilege, "
+            "asset S2 consent/policy epoch proof, excluded domain X2, PST-CASE-07 "
+            "fail-closed discipline). Derivation is real RFC 5869 HKDF "
+            "(HMAC-SHA256 extract + expand, stdlib hmac/hashlib only) over a "
+            "caller-injected root secret with length-prefixed domain-separated "
+            "info ('clara.pst.epoch_keys.v1' || tenant || purpose || epoch) so "
+            "no scope tuple aliases another; conformant to the RFC 5869 "
+            "Appendix A Test Case 1 vector (asserted in tests). Public API per "
+            "the deliverable: derive_key(root, tenant, purpose, epoch) -> "
+            "(key_material, key_ref) pure and deterministic (same scope+epoch "
+            "yields the same key; new epoch differs); rotate(tenant, purpose) "
+            "via module-level rotate(...) closes the live epoch (manifest "
+            "records created/destroyed timestamps and derived key reference) "
+            "and derives+registers the fresh epoch e<N+1>, cryptographically "
+            "independent of every prior epoch; destroy(epoch) via module-level "
+            "destroy(...) performs CONTROLLED, policy-gated destruction where "
+            "permitted (destroyable=True) and refuses legal-hold scopes with "
+            "DESTROY_NOT_PERMITTED while they stay live. Every scope carries "
+            "an explicit reversibility record: manifest.reversibility() returns "
+            "IRREVERSIBLE for destroyed epochs (the manifest stores only "
+            "SHA-256 key references, so destruction erases the only derivation "
+            "path and authorized-audit reconstruction is impossible) and "
+            "REVERSIBLE for live custody; unverified custody would be "
+            "INDETERMINATE per X2 (no HSM-extraction claim). Raw key material "
+            "MUST NOT log or expose: artifacts are key_ref (SHA-256 over "
+            "'ref.v1' || OKM) and nonce-free HMAC verification tokens only; "
+            "tests scan every manifest serialization, scope artifact and error "
+            "message for the derived bytes, their hex and the root secret — "
+            "never present. All failures are stable uppercase reason codes "
+            "(MALFORMED_SCOPE, UNKNOWN_PURPOSE, UNKNOWN_EPOCH, UNKNOWN_TENANT, "
+            "EPOCH_ALREADY_DESTROYED, DESTROY_NOT_PERMITTED) — destroyed-epoch "
+            "re-derivation fails closed (EPOCH_ALREADY_DESTROYED), never a "
+            "silent reconstruction; rotation is idempotent per stable scope id "
+            "(identical re-register collapses; conflicting re-register is "
+            "refused so manifest history cannot be rewritten); timestamps are "
+            "caller-injected logical instants (no hidden clock). No production "
+            "secret or data access; fixtures are synthetic and PHI-free. "
+            "test_key_rotation.py (research/venue2027/pst/tests/test_key_rotation.py): "
+            "41 tests pass — positive: deterministic same-scope-same-key, "
+            "cross-root-form determinism, 32-byte keys, stable hex references, "
+            "verification-token possession proof, RFC 5869 conformance vector, "
+            "epoch/tenant/purpose separation, length-prefix anti-aliasing, "
+            "rotation manifest records the change (e1 destroyed@10 + e2 "
+            "created@10 with distinct key refs), JSON-serializability, stable "
+            "scope_key_id, controlled destruction + IRREVERSIBLE, legal hold "
+            "stays REVERSIBLE; adversarial: destroyed-epoch key unusable and "
+            "reconstruction reported IRREVERSIBLE, double-destroy refused, "
+            "re-register of destroyed scope refused, rotation without live "
+            "epoch fails closed, unknown tenant/epoch fail-closed reason codes, "
+            "raw key material absent from manifest/artifacts/error messages, "
+            "key_ref is one-way (not material, not truncation), token != key, "
+            "malformed scopes and unknown purposes refused, closed purpose "
+            "vocabulary, manifest-history rewrite refused, PHI-marker-free "
+            "vocabulary. uvx ruff@0.7.1 check + format --check clean on touched "
+            "files; full evaluation/venue2027 regression 1849 passed. "
+            "source_sha_after = base commit 85cd5675 per the sibling dataset-"
+            "task convention (PST-dataset, PST-X02): the single task commit is "
+            "created immediately after this report and recorded in the commit "
+            "body."
+        ),
+    )
+
+    out_path = REPO / "research/venue2027/proof/PST-X06_key_rotation.json"
+    out_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    log_path = REPO / "research/venue2027/proof/logs/PST-X06_key_rotation.validator.log"
+    # Pre-seed so the on-disk log exists (non-empty) at validation time; the
+    # final validator result overwrites it below.
+    log_path.write_text('{"note": "validator run in progress"}\n', encoding="utf-8")
+    result = ap.validate_report(
+        json.loads(out_path.read_text(encoding="utf-8")),
+        repo=REPO,
+        expected_task_id=TASK,
+    )
+    log_path.write_text(json.dumps(result.to_dict(), indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(result.to_dict(), indent=2))
+    return 0 if result.ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

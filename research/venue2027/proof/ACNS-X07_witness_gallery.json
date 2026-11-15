@@ -1,0 +1,57 @@
+{
+  "artifacts_sha256": {
+    "artifacts/venue2027/acns/acns-x07-witness-gallery-1.0.0/witness_gallery.json": "1a078c4e4d780bc2a5f501b3f4884ca945fddc18d3df0597d0226ca8f193ad87",
+    "evaluation/venue2027/acns/executable_counterexamples.py": "5c1f4fe683bdc672f3ac7d64ad283cb1577416c531e4d1b6da7ab71e8b5316c3",
+    "research/venue2027/acns/tests/test_witness_gallery.py": "96c3182dc821456e9b0c285a5d78919085b61a313f4afff79846cabc9a310b37",
+    "research/venue2027/proof/logs/ACNS-X07_witness_gallery.emit.log": "6a086507cbee85077e1f1de17fc8eb6b84dad06ae4077109df1655f3ebb33d17",
+    "research/venue2027/proof/logs/ACNS-X07_witness_gallery.pytest.log": "e291f0720a59f3a3884ec5809556afc3aa400249dbe49ae8efb6d4226c40318a",
+    "research/venue2027/proof/logs/ACNS-X07_witness_gallery.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/ACNS-X07_witness_gallery.suite.log": "6248374dcddaf3514cd4c566a134a2dfaac3d8123a9db12344def22a1671fe14"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/acns/executable_counterexamples.py",
+    "research/venue2027/acns/tests/test_witness_gallery.py",
+    "research/venue2027/proof/ACNS-X07_witness_gallery.json",
+    "research/venue2027/proof/emit_ACNS-X07_witness_gallery_report.py",
+    "research/venue2027/proof/logs/ACNS-X07_witness_gallery.pytest.log",
+    "research/venue2027/proof/logs/ACNS-X07_witness_gallery.ruff.log",
+    "research/venue2027/proof/logs/ACNS-X07_witness_gallery.suite.log",
+    "research/venue2027/proof/logs/ACNS-X07_witness_gallery.emit.log",
+    "research/venue2027/proof/logs/ACNS-X07_witness_gallery.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/acns/tests/test_witness_gallery.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X07_witness_gallery.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/acns/executable_counterexamples.py research/venue2027/acns/tests/test_witness_gallery.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X07_witness_gallery.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/ research/venue2027/acns/tests/ research/venue2027/_shared/tests/ evaluation/venue2027/_shared/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X07_witness_gallery.suite.log"
+    },
+    {
+      "argv": "python3 -c \"from evaluation.venue2027.acns.executable_counterexamples import emit_witness_gallery; emit_witness_gallery('acns-x07-witness-gallery-1.0.0')\" # writes artifacts/venue2027/acns/acns-x07-witness-gallery-1.0.0/witness_gallery.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X07_witness_gallery.emit.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_ACNS-X07_witness_gallery_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/ACNS-X07_witness_gallery.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X07_witness_gallery.validator.log"
+    }
+  ],
+  "notes": "P04 ACNS-X07_witness_gallery deliverable (SoK, RQ2): evaluation/venue2027/acns/executable_counterexamples.py implements the task contract run_counterexample(level_transition) -> ProofArtifact as a witness gallery of five runnable minimal counterexample tests, one per evidence-boundary gap on the tool-dispatch path: assembled-not-sent (G7: payload assembled at L1 but never dispatched \u2014 the dispatch claim floats with no transport event under A4+A2 evidence theater/egress suppression), dispatched-not-acknowledged (G1: bare transport ACK is sender-side, context-free and not RFC 9334 Evidence, so the provider-received/processed claim is unsupported under A1), acknowledged-not-executed (G2: a verified provider receipt alone caps execution claims at L2 forever absent the TC3 TEE anchor under A4+A3), executed-not-committed (G3: attested execution implies nothing downstream of the trusted boundary \u2014 the commit claim needs the persisting service's own durable record with W3C PROV lineage under A4), and signed-receipt-wrong-context (G4: a signature-valid receipt bound to another request is capped below its claim \u2014 signature validity is not context validity; the nonce/digest/purpose/tenant anti-replay binding must fail closed at verification time, threat model \u00a72 replay row, A5). Each witness is a small executable case (typed AttestationClaim + EvidenceItem list classified by the five taxonomy node classes of evidence_taxonomy.yaml) run by a pure-function evidence-boundary verifier: each item supports exactly its node-class level, degraded fail-closed by boundary checks (unverifiable artifact -> L0 proves nothing; receipt without digest binding -> L0; execution without attested_execution -> capped L2; side effect without persisted+lineage -> capped L3; context mismatch -> capped L1.5 with G4), the demonstrated level is the strongest surviving support, and the claim is ADMITted only at or below it \u2014 never above (lattice cap). ProofArtifact carries: verdict (REJECT/ADMIT), gap code from the pre-registered register, the CONCRETE missing proof naming the exact trust component (TC1/TC2/TC3/TC4, RFC 9334/9162, PROV lineage), explicit trust assumptions, the declared capability axis (A1-A7), failure family, edge ref, per-item observed evidence with binding notes; JSON-serializable, deterministic (no clock, no randomness, no network, no DB, no live provider, no LLM; synthetic acns-2027 fixtures only, no PHI/PII). WITNESS_GALLERY registry maps the five witness ids to frozen fixtures + design-time frozen expected labels (REJECT + G7/G1/G2/G3/G4 + demonstrated level); run_witness(name) resolves against the registry and enforces label reproduction via GALLERY_DRIFT (labels never repaired post hoc). run_counterexample CERTIFIES counterexamples: a case whose evidence demonstrates the asserted level is refused with NOT_A_COUNTEREXAMPLE (a witness that omits nothing is not a counterexample); evaluate_claim_case is the open honest evaluation (ADMIT exactly at the demonstrated level when the missing proof is supplied). Adversarial fail-closed semantics with stable reason codes: UNKNOWN_TRANSITION/UNKNOWN_WITNESS (unregistered names refused), TRANSITION_MISMATCH, MALFORMED_CASE/MALFORMED_EVIDENCE, PRIVILEGED_ATTACKER (capability axes outside the registered A1-A7 \u2014 hardware-root/primitive-break attackers per ED1/ED2 \u2014 are refused, not scored; a witness relying on a privileged unrealistic attacker is rejected per the task's negative control), MALFORMED_RUN_ID, GALLERY_DRIFT, OUTCOME_BUCKET_DRIFT; observed_outcome is always in the shared harness bucket vocabulary and incomplete/unknown outcomes are never counted as safe rejections or completions. emit_witness_gallery(run_id) writes artifacts/venue2027/acns/<run_id>/witness_gallery.json with all five witness artifacts, frozen expected labels, label-reproduction report and input/output SHA256 digests (emitted at run_id acns-x07-witness-gallery-1.0.0; deterministic bytes). test_witness_gallery.py: 20 tests pass \u2014 positive: registry = exactly the five mandated witnesses with frozen REJECT labels and correct gap codes; every witness runs and yields its expected evidence-boundary verdict with demonstrated level strictly below the asserted claim; per-gap concrete behavior (L1 cap for assembled-not-sent, L1.5 cap for the transport ACK, L2 cap for receipt-as-execution, L3 cap for execution-as-consumption, G4 for the transplanted receipt); every REJECT names a concrete missing proof (>=40 chars naming TC1/TC2/TC3/TC4/PROV/RFC/edge) plus explicit trust assumptions and capability axes; run_counterexample contract works with registry ids and level-pair aliases (e.g. DISPATCHED->ACKNOWLEDGED), deterministic across runs, JSON round-trip with schema/contract versions stamped; emit_witness_gallery writes the deterministic manifest with all five witnesses, empty failed_witnesses and 64-hex digests, and refuses malformed run ids. adversarial: for EVERY witness, supplying the exact missing proof flips the honest evaluation to ADMIT at the asserted level (gap none) and run_counterexample refuses to certify the supported claim as a counterexample (NOT_A_COUNTEREXAMPLE); removing only the TEE anchor from the repaired case flips it back to REJECT/G2, proving the upgrade came from the attested-execution anchor; privileged unrealistic attackers (A8, hardware-root) and empty capabilities are refused with PRIVILEGED_ATTACKER/MALFORMED_CASE while composed registered axes stay legal; unknown transitions/witnesses, transition mismatch, malformed claim/level/node-class/case all fail closed with stable reason codes; no false safe completions (verdict always ADMIT/REJECT, bucket vocabulary respected, every REJECT names its register gap); an unverifiable receipt supports L0 (proves nothing) rather than silently rejecting the operation; drifting fixtures are refused (NOT_A_COUNTEREXAMPLE on the supported-claim shape; frozen registry labels still reproduce). ACNS + shared regression: 740 passed (evaluation/venue2027/acns/, research/venue2027/acns/tests/, research/venue2027/_shared/tests/, evaluation/venue2027/_shared/). uvx ruff@0.7.1 check clean on touched files (ruff format applied). source_sha_after = base SHA per established repo convention (proof report committed together with the work; the single task commit SHA is created immediately after this report). Baseline parity NOT_APPLICABLE: the witness gallery is the SoK's falsification instrument, not a comparator arm; oracle disagreement count not applicable at design freeze (expected labels are the frozen design-time control labels, reproduced 5/5).",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "85cd56757045e8e8788def095bba45adc669ab92",
+  "source_sha_before": "85cd56757045e8e8788def095bba45adc669ab92",
+  "status": "PASS",
+  "task_id": "ACNS-X07_witness_gallery",
+  "unresolved": []
+}

@@ -1,0 +1,56 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/aime/selective_refresh.py": "99c5fbdd2c15f8242379742c54cda53b2a0efe19740b60ca4ae6e1a9fa5d345d",
+    "evaluation/venue2027/aime/test_selective_refresh.py": "08ff40eb3b2281853b7565d6c9d33209189872d99f446ccc67b7a7579467a6e6",
+    "research/venue2027/proof/logs/AIME-X06_selective_refresh.full_suite.log": "46e870b0ca425370593ded19ffd3857b8f3dccccfb477af5c3f96c1a0a7c5823",
+    "research/venue2027/proof/logs/AIME-X06_selective_refresh.pytest.log": "8c48c23e147db9241d7cc9c41c4f7edbb53396b9d16d7723440dc6cf6b39d960",
+    "research/venue2027/proof/logs/AIME-X06_selective_refresh.ruff.log": "3bc53bf3e981a98a34a852e175bf9b77af841edea74fca595d9aedcbaf9a4938",
+    "research/venue2027/proof/logs/AIME-X06_selective_refresh.suite.log": "bd91914e56ee2514611952ed7adc62515c4e64b8318159a4c65c1791b11450ec"
+  },
+  "baseline_parity": "PASS",
+  "changed_paths": [
+    "evaluation/venue2027/aime/selective_refresh.py",
+    "evaluation/venue2027/aime/test_selective_refresh.py",
+    "research/venue2027/proof/AIME-X06_selective_refresh.json",
+    "research/venue2027/proof/emit_aime_x06_selective_refresh_report.py",
+    "research/venue2027/proof/logs/AIME-X06_selective_refresh.pytest.log",
+    "research/venue2027/proof/logs/AIME-X06_selective_refresh.ruff.log",
+    "research/venue2027/proof/logs/AIME-X06_selective_refresh.suite.log",
+    "research/venue2027/proof/logs/AIME-X06_selective_refresh.full_suite.log",
+    "research/venue2027/proof/logs/AIME-X06_selective_refresh.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/aime/test_selective_refresh.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-X06_selective_refresh.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/aime/selective_refresh.py evaluation/venue2027/aime/test_selective_refresh.py && uvx ruff@0.7.1 format --check evaluation/venue2027/aime/selective_refresh.py evaluation/venue2027/aime/test_selective_refresh.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-X06_selective_refresh.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/aime/test_selective_refresh.py evaluation/venue2027/aime/test_baselines.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-X06_selective_refresh.suite.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-X06_selective_refresh.full_suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_aime_x06_selective_refresh_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/AIME-X06_selective_refresh.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-X06_selective_refresh.validator.log"
+    }
+  ],
+  "notes": "P04 AIME-X06_selective_refresh deliverable: the purpose-aware SELECTIVE consent-aware context regeneration candidate (blueprint arm B4, RQ2) as a pure deterministic reference in evaluation/venue2027/aime/selective_refresh.py (SELECTIVE_REFRESH_VERSION 1.0.0, stdlib-only, no clock/randomness/I/O, synthetic states only, PHI-like fields refused fail-closed). Core decision relation refresh(state, changed_field) -> RefreshPlan with modes PARTIAL|FULL|CLINICIAN_REVIEW: an UNRELATED note change yields PARTIAL rebuilding ONLY its affected dependency (evidence_note_summary) with every other dependency carried over unchanged (partition complete+disjoint, nothing silently dropped); a consent/purpose change forces FULL (the authorization epoch co-determines every dependency); an unknown/undeclared changed field, a non-string field, a malformed/PHI/incomplete state or a non-held declared dependency ALL fail closed to FULL with stable reason codes (REFRESH_UNKNOWN_CHANGED_FIELD_FULL_REFRESH, REFRESH_STATE_MALFORMED, REFRESH_STATE_PHI_FIELDS, REFRESH_MISSING_FIELD, REFRESH_UNKNOWN_DEPENDENCY_FULL_REFRESH, REFRESH_MISSING_DEPENDENCIES_FULL_REFRESH) \u2014 never a silent partial refresh and never an unhandled exception. SAFETY GATE (task contract): medication/allergy clinical ENTANGLEMENT detected by is_entangled()/pair_entangled() over the declarative DEPENDENCY_GRAPH (the pair shares purpose_ddi_screen, the drug\u2013allergy interaction screen): when BOTH clinical sides are populated \u2014 or one side is absent/malformed/unverifiable, fail-closed \u2014 a change to either side routes to CLINICIAN_REVIEW (REFRESH_MEDICATION_ALLERGY_ENTANGLED), never an automatic PARTIAL that could miss an interaction; conflicting observations route to CLINICIAN_REVIEW too (oracle reconciliation analogue). Task-spec contract update_context(current, dependencies) -> RefreshPlan adds the soundness rule that a PARTIAL plan is only returned when EVERY dependency the partial path rebuilds is actually held by the caller, else escalates to FULL. Test driver evaluation/venue2027/aime/test_selective_refresh.py (27 tests): positive \u2014 unrelated field change -> PARTIAL with only affected deps (partition completeness asserted) and consent change -> FULL; adversarial \u2014 entangled medication change (and its allergy mirror) -> CLINICIAN_REVIEW never PARTIAL, unknown changed field -> FULL, malformed/PHI/conflicting/unknown-dependency fail-closed set, determinism (identical inputs -> identical plans, byte-equal to_dict), PLAN_* self-validation, constant-partial-stub refusal analogue (a toy answering PARTIAL regardless of field cannot match the real gate). INDEPENDENCE + PARITY: imports the REAL strict comparator run_baseline('B1-full-per-step-refresh-current-policy-filter', case, ctx) (evaluation/venue2027/aime/baselines.py, BASELINES_VERSION 1.0.0, unmodified) and asserts the parity anchor that no step B1 refuses/invalidates (UNSAFE/INDETERMINATE) is ever answered by X06 with an automatic PARTIAL, and the INDEPENDENT oracle direction (evaluation/venue2027/aime/independent_oracle.py, unmodified): oracle REJECT families (consent_change, medication_withdrawal, allergy_update) co-vary with FULL/CLINICIAN_REVIEW while stable_history ADMITs allow the cost-saving PARTIAL; oracle AST independence self-scan re-run with this candidate's basename added (no candidate import). No clinical validity claim: synthetic vignettes only, no clinician reviewer, no live provider (blueprint falsification rule honored). Gates: target pytest 27 passed (exit 0); combined with the real-baseline test_baselines.py 72 passed (exit 0); full evaluation/venue2027/ suite 1876 passed (exit 0); uvx ruff@0.7.1 check + format --check clean on touched files (exit 0). source_sha_after = commit SHA of this task's single commit (proof report committed together with the work per established repo convention).",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "85cd56757045e8e8788def095bba45adc669ab92",
+  "source_sha_before": "85cd56757045e8e8788def095bba45adc669ab92",
+  "status": "PASS",
+  "task_id": "AIME-X06_selective_refresh",
+  "unresolved": []
+}

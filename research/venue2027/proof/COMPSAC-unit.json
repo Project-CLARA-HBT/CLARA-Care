@@ -1,0 +1,37 @@
+{
+ "artifacts_sha256": {
+  "tests/venue2027/compsac/test_algorithm_properties.py": "d7693fe1f9f023a8a2c318a56d5ae59cc6c9532a272988029bca4c77a58957ee"
+ },
+ "baseline_parity": "NOT_APPLICABLE",
+ "changed_paths": [
+  "tests/venue2027/compsac/test_algorithm_properties.py",
+  "research/venue2027/proof/COMPSAC-unit.json",
+  "research/venue2027/proof/logs/COMPSAC-unit.pytest.log",
+  "research/venue2027/proof/logs/COMPSAC-unit.ruff.log",
+  "research/venue2027/proof/logs/COMPSAC-unit.suite.log"
+ ],
+ "commands": [
+  {
+   "argv": "python3 -m pytest -q tests/venue2027/compsac/test_algorithm_properties.py",
+   "exit_code": 0,
+   "log_path": "research/venue2027/proof/logs/COMPSAC-unit.pytest.log"
+  },
+  {
+   "argv": "uvx ruff@0.7.1 check tests/venue2027/compsac/test_algorithm_properties.py",
+   "exit_code": 0,
+   "log_path": "research/venue2027/proof/logs/COMPSAC-unit.ruff.log"
+  },
+  {
+   "argv": "python3 -m pytest -q evaluation/venue2027/compsac/ tests/venue2027/compsac/",
+   "exit_code": 0,
+   "log_path": "research/venue2027/proof/logs/COMPSAC-unit.suite.log"
+  }
+ ],
+ "notes": "Task COMPSAC-unit (P05, venue compsac): deterministic property, metamorphic and mutation tests over the REAL COMPSAC OCC arms and dependency DSL (evaluation/venue2027/compsac/baselines.py arms B0/B1/B3/B4 via public run_baseline, dependency_dsl.py, independent_oracle.py, independent_closure_oracle.py \u2014 all imported live, never stubbed or reimplemented). Positive boundaries: clean single-tx admits on every implemented arm; B4 liveness under correctly-declared concurrent dependency chains; COMPSAC-CASE-01 false-stale witness (B4 admits an unrelated concurrent write that coarse B0 aborts on GLOBAL_PROFILE_STALE); DSL compiles complete/stable closures; oracle self-checks + live source-independence guards pass. Negative boundaries: unknown baseline ids, non-mapping cases and malformed schedules fail closed with stable reason codes (BASELINE_UNAVAILABLE, CASE_MALFORMED, SCHEDULE_MALFORMED) identical across arms, never counted as safe rejections; unknown-entity reads abort per-tx with ENTITY_UNKNOWN. Unknown boundaries: INDETERMINATE retention (UNMODELLED_FAMILY/NO_FAMILY_DECLARED never coerced), MISSING_CASE_ID kernel error, UNRULED_RESOURCE/AMBIGUOUS_RULE_REVIEW/STATE_MISMATCH, DSL UNKNOWN_MUTATION_TARGET/UNKNOWN_PREDICATE/SCHEMA_VERSION_MISMATCH/EMPTY_OPERATION. Write-skew and policy-epoch races (RQ2): canonical omitted-dependency skew in both schedule orders (B4 rejects commit 2 on WRITE_EDGE_SUPERSEDED/REQUIRED_READ_EDGE_STALE while B1/B3 admit both), consent- and policy-epoch races on the omitted governance binding (B4 CONSENT_EPOCH_STALE/POLICY_EPOCH_STALE while declared-fence arms commit), liveness at the current epoch, justified stale-readset aborts on every arm with arm-specific codes. Two-step metamorphic relations: (MR1) adding a required dependency edge to the frozen closure schema can only shrink B4's commit set and never increases forbidden commits \u2014 asserted on the canonical pair and monotone across seeded orders/ versions; (MR2) declaring the omitted edge strictly reduces B1's forbidden commits to zero while B4 stays at zero; (MR3) DSL closures are supersets under added required reads and coverage-stable under added declared edges; (MR4) adding an epoch binding only reduces B4 commits with liveness at the new epoch. Mutation checks kill five canonical mutants: closure-drop and epoch-check-drop on B4 (each caught by the safety invariant), all-deny B4 (caught by the liveness positive control), oracle rule-table flip (caught by the frozen self-checks), oracle candidate-import and dynamic import (caught by verify_independence/assert_oracle_independence CANDIDATE_IMPORT). SAFETY INVARIANT over the seeded family-balanced sweep (48 cases, random.Random(20271116), replay-identical): B4 never commits a transaction the independent oracle labels forbidden; by-construction forbidden sets coincide exactly with oracle REJECT labels; clean families stay live. Tests: 56 passed. COMPSAC regression: 357 passed (evaluation/venue2027/compsac/ + tests/venue2027/compsac/). uvx ruff@0.7.1 check clean. source_sha_after = base SHA per established repo convention (proof report committed together with the work).",
+ "oracle_disagreement_count": 0,
+ "source_sha_after": "85cd56757045e8e8788def095bba45adc669ab92",
+ "source_sha_before": "85cd56757045e8e8788def095bba45adc669ab92",
+ "status": "PASS",
+ "task_id": "COMPSAC-unit",
+ "unresolved": []
+}

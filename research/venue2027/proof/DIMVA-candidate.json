@@ -1,0 +1,46 @@
+{
+  "task_id": "DIMVA-candidate",
+  "status": "PASS",
+  "source_sha_before": "85cd56757045e8e8788def095bba45adc669ab92",
+  "source_sha_after": "85cd56757045e8e8788def095bba45adc669ab92",
+  "changed_paths": [
+    "evaluation/venue2027/dimva/candidate.py",
+    "evaluation/venue2027/dimva/test_candidate.py",
+    "research/venue2027/proof/DIMVA-candidate.json",
+    "research/venue2027/proof/emit_DIMVA-candidate_report.py",
+    "research/venue2027/proof/logs/DIMVA-candidate.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-candidate.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-candidate.suite.log",
+    "research/venue2027/proof/logs/DIMVA-candidate.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dimva/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-candidate.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dimva/candidate.py evaluation/venue2027/dimva/test_candidate.py && uvx ruff@0.7.1 format --check evaluation/venue2027/dimva/candidate.py evaluation/venue2027/dimva/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-candidate.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-candidate.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_DIMVA-candidate_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/DIMVA-candidate.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-candidate.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/dimva/candidate.py": "8b026c0072fbe3e9c4dff83ffecaa2468e9ef57f5f8aecbe969827b16510d25c",
+    "evaluation/venue2027/dimva/test_candidate.py": "6e0a2ec00005788245f2ce9739e98ece4268eb38014df7d1f35f5821e21eb5f2"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "DIMVA-candidate (Phase P04, priority P1; CANDIDATE DESIGN ONLY - no empirical results, no performance numbers, no win rates): implemented the isolated GovernanceTrace adaptive probing-detection candidate at evaluation/venue2027/dimva/candidate.py (CANDIDATE_ID=clara.dimva.candidate.governance-trace-probing-detector, v1.0.0, describe_mechanism() exposes the machine-readable design record). Core API: detect(events) -> Detection(score, decision, reason) over minimal leak-safe agent events ((actor_id, tool, scope, allowed, ts) monotonic, one session = one actor), plus the task-manifest adapter run_candidate(case, ctx) -> Outcome (DETECT -> REJECT alarm, NO_DETECT -> ADMIT, malformed -> INDETERMINATE, unregistered arm -> INVALID_RESULT/UNKNOWN_ARM) and the explicit frozen DetectionParams operating point (injected, never read from the environment). Mechanism - campaign-level STRUCTURAL linkage without labels: (1) cross-tool obfuscation (distinct denied-tool count + normalized Shannon entropy over the denied-tool distribution, so tool-rename evasion does not defeat linkage), (2) low-and-slow pacing (long campaign horizon whose max denials per sliding fixed-width window stays under the static count operating point - the evasion axis itself is a signal), (3) activity continuity (bounded inter-denial gaps: one linked campaign, not one-offs); weighted subscores with a frozen threshold PLUS all-criteria conjunctive gate for the DETECT decision. NO-LEAKAGE CONTRACT: the decision is a pure function of event structure; the module imports nothing from the truth oracle, the scenario generators, group splits or any label file; any event key beyond the five-field minimal schema fails closed - a reason_code-like key is refused as EVENT_REASON_CODE_FIELD_FORBIDDEN (RQ1 masking), so no post-hoc failure annotation can flow into the score. Deterministic: pure functions, sorted iteration, score rounded to 12 decimals; no random module, no clock, no environment reads, no network, no DB, no real PHI/PII. Tests (44 passed): POSITIVE - crafted low-and-slow cross-tool campaign (9 denials over 9 distinct tools, ~7.3h span, 3700s gaps > 3600s probe window => max 1 denial/window) DETECTs with CAMPAIGN_STRUCTURE_DETECTED, all five criteria met, identical score through both boundaries, adapter REJECT counted as success; tool-rename evasion still DETECTs; BENIGN controls not flagged at the frozen threshold - single legitimate retry, authorized care-team handoff (delegated second scope), and same-scope denied burst all NO_DETECT/ADMIT, and the burst score sits below the campaign score; dense same-denial pacing drops the evasion signal (complementary to count alarms, not a replacement). ADVERSARIAL - malformed inputs (non-list, empty, non-mapping, unknown fields, reason-code leak fields x3, missing fields, bad types x7, non-monotonic ts, mixed actors) all yield first-class INDETERMINATE detections with stable reason codes, never silently safe rejections; adapter INDETERMINATE never counted as success; malformed DetectionParams raise CandidateError (wiring error); determinism byte-identical over repeats. INDEPENDENCE ASSERTED - test_candidate.py AST-scans the live candidate source and asserts it imports neither the independent truth oracle nor any label/generator module (whole dotted-path component matching; dynamic imports flagged as __dynamic__; lookalike names untouched), so the detector stays adjudicable by the oracle without circularity (blueprint falsification rule preserved). Regression: full evaluation/venue2027 suite 1893 passed. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

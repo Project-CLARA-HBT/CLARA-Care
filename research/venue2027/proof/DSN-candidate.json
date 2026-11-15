@@ -1,0 +1,43 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/dsn/candidate.py": "94348316da92d8763a5c0e7f5a2cc3e3b577d09fecda7578c9fae66712817b81",
+    "evaluation/venue2027/dsn/test_candidate.py": "35aade5f667c0336eb5550fed9ef5b9d912decf2a8979b509f8e90349abe7622",
+    "research/venue2027/proof/logs/DSN-candidate.pytest.log": "51d55241f9b696a4f0c475175b9ac9c6fdaad5cfeaa17168638662e105524da8",
+    "research/venue2027/proof/logs/DSN-candidate.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/DSN-candidate.suite.log": "aca9cf0b40938434c9e4f271e4a65224f00527782cada602ddc34a10c48845ab"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/dsn/candidate.py",
+    "evaluation/venue2027/dsn/test_candidate.py",
+    "research/venue2027/proof/DSN-candidate.json",
+    "research/venue2027/proof/logs/DSN-candidate.pytest.log",
+    "research/venue2027/proof/logs/DSN-candidate.ruff.log",
+    "research/venue2027/proof/logs/DSN-candidate.suite.log",
+    "research/venue2027/proof/logs/DSN-candidate.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dsn/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-candidate.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dsn/candidate.py evaluation/venue2027/dsn/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-candidate.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-candidate.suite.log"
+    }
+  ],
+  "notes": "P04 task DSN-candidate (DSN 2027, 'Recoverable Safety Journals for Crash-Consistent AI-Mediated Health-State Mutations', blueprint arm B3). evaluation/venue2027/dsn/candidate.py implements the isolated proposed mechanism: a per-operation hash-chained recoverable safety journal that is the durable authority for the decision lineage (INTENT / COMMIT / OUTBOX_RECORD / EFFECT_APPLIED / ABORT entries; prev-digest chaining with genesis 0*64; seq contiguity + digest recomputation in verify_journal). Typed JSON-serializable inputs/outputs (WriteIntent, JournalEntry, SafetyJournal, DurableStores, ExecutionReport, RecoveryOutcome); docstring carries the EXECUTE/RESUME/RECOVERABLE_OUTCOME pseudocode mapping 1:1 to the blueprint's method architecture (reconciler over clinical row + immutable decision receipt + asynchronous side-effect record, retries keyed to the immutable operation ID). Executor: append INTENT; consent recheck at commit (post-revocation epoch -> durable ABORT, DSN-CASE-05); COMMIT then idempotent row materialization; OUTBOX_RECORD; at-least-once delivery loop with WRITE-AHEAD effect records -- the effect is journaled before it is applied, duplicate deliveries dedupe against the journal (DSN-CASE-04), and a mid_effect crash is healed on resume by WAL-style replay of the journaled record into the durable store, so every crash window (pre_commit / post_commit_pre_response / pre_outbox_delivery / mid_effect) converges to COMMITTED with exactly one durable row write and one durable effect application. recoverable_outcome() is pure and never raises: corrupt chain (payload flip / forged digest / dropped interior entry / unknown kind), foreign shard entry, intent-binding mismatch, abort+commit contradiction, duplicate commits, effect-without-commit, divergent effect digests and unexpected internal errors all yield INDETERMINATE with a stable reason code -- never a positive outcome, never a coerced safe rejection; only durable proof of non-commit yields REJECTED (retriable empty picture, revocation aborts). Tail truncation is a legal crash prefix (COMMITTED_PENDING_DELIVERY), interior tampering is corruption (DSN-CASE-06). Mechanism-isolation ablation ablation_no_journal_execute() removes the journal (arm-B0 failure mode): no adjudication possible (recoverable_outcome_available=False) and the fire-and-forget consumer applies one effect per delivery (3 deliveries -> 3 effects), proving the journal is the load-bearing component. run_candidate(case, ctx) -> shared harness Outcome maps COMMITTED->ADMIT / REJECTED->REJECT (counted) and INDETERMINATE->INDETERMINATE (never counted, including corruption-refused recovery); malformed cases fail closed with EXECUTION_ERROR + stable reason codes. Independence: the candidate imports neither the oracle module, the reference state machine, the reconciler, the baseline references nor any held-out label file -- asserted by AST scan in test_candidate.py and by a fresh-interpreter import; no wall clock, randomness, network, DB or provider access; synthetic digests only. 34 tests passed (exactly-once across 4 crash windows, broker-replay dedupe, revocation stability, 4 corruption modes -> INDETERMINATE, semantic contradictions, ablation leak, determinism, fail-closed wiring); full evaluation/venue2027/ suite 1883 passed; uvx ruff@0.7.1 check clean. source_sha_after records the worktree base 85cd5675 per sibling convention (DSN-X06); the single task commit SHA is created immediately after this report and reported in the handoff. Baseline parity NOT_APPLICABLE (B1/B2 comparator execution lives in DSN-X03/X04/X05). Dependencies DSN-oracle and SH-psc_interface PASS verified in research/venue2027/STATE/completion.json before start. Candidate design only: no empirical claims, no measured rates.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "85cd56757045e8e8788def095bba45adc669ab92",
+  "source_sha_before": "85cd56757045e8e8788def095bba45adc669ab92",
+  "status": "PASS",
+  "task_id": "DSN-candidate",
+  "unresolved": []
+}
