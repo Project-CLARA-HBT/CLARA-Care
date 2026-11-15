@@ -1,0 +1,40 @@
+{
+  "task_id": "ACNS-baseline_tests",
+  "status": "PASS",
+  "source_sha_before": "e373f6e46465917ad4fbd7d6656e77e51c4805db",
+  "source_sha_after": "e373f6e46465917ad4fbd7d6656e77e51c4805db",
+  "changed_paths": [
+    "tests/venue2027/acns/test_baseline_fidelity.py",
+    "tests/venue2027/acns/__init__.py",
+    "tests/venue2027/__init__.py",
+    "research/venue2027/proof/ACNS-baseline_tests.json",
+    "research/venue2027/proof/logs/ACNS-baseline_tests.pytest.log",
+    "research/venue2027/proof/logs/ACNS-baseline_tests.ruff.log",
+    "research/venue2027/proof/logs/ACNS-baseline_tests.suite.log",
+    "research/venue2027/proof/logs/ACNS-baseline_tests.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q tests/venue2027/acns/test_baseline_fidelity.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-baseline_tests.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check tests/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-baseline_tests.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/ tests/venue2027/acns/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-baseline_tests.suite.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "tests/venue2027/acns/test_baseline_fidelity.py": "6718e72361a2294852cdb5b2247bc232d1eb5b7b0ad37cdbee37d114c36bfb17"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Task ACNS-baseline_tests (P03, venue acns, SoK): baseline fidelity vectors over the REAL module evaluation/venue2027/acns/baselines.py (imported directly, no stub). For EACH evidence-boundary reference class (B0-attestation-only, B1-receipt-without-binding, B2-timestamp-only, B3-evidence-boundary-aware): one POSITIVE vector where the class correctly assesses the evidence boundary on the pinned synthetic records (synthetic-acns-2027), and one ADVERSARIAL NEGATIVE vector (downgrade / replayed / unbound claim) that B3 refuses while the weaker class misses it - the weak class's miss is asserted as the fidelity evidence (G2 downgrade for B0, G4 replay transplant for B1, G7 unbound claim for B2). Fail-closed controls: unknown class / forged ctx.arm_id -> UNKNOWN_BASELINE; unknown record -> NOT_RUN_EXTERNAL (retriable, never counted as acceptance); malformed case -> MALFORMED_CASE. All vectors deterministic, synthetic fixtures only, no network/db/clock/provider. Tests: 12 passed. ACNS suite regression: 93 passed (evaluation/venue2027/acns/ + tests/venue2027/acns/). ruff@0.7.1 check clean on touched paths. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

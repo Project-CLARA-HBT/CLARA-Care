@@ -1,0 +1,29 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: /dev/shm/cw/wb_ifip-sec-baseline-tests
+plugins: anyio-4.14.2, asyncio-1.4.0, hypothesis-6.167.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 18 items
+
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB0BearerSignedReceipt::test_positive_valid_signed_receipt_is_admitted PASSED [  5%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB0BearerSignedReceipt::test_negative_expired_bearer_receipt_is_rejected PASSED [ 11%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB0BearerSignedReceipt::test_honest_weakness_bearer_replay_is_admitted PASSED [ 16%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB1StatelessPurposeBinding::test_positive_matching_purpose_binding_is_admitted PASSED [ 22%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB1StatelessPurposeBinding::test_negative_purpose_mismatch_is_rejected PASSED [ 27%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB1StatelessPurposeBinding::test_honest_weakness_stateless_replay_within_expiry_is_admitted PASSED [ 33%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB2MacaroonCaveatChain::test_positive_valid_caveat_chain_is_admitted PASSED [ 38%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB2MacaroonCaveatChain::test_negative_tampered_caveat_byte_fails_chain PASSED [ 44%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB2MacaroonCaveatChain::test_honest_weakness_replay_within_expiry_is_admitted PASSED [ 50%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB3NonceStoreReplayRejection::test_positive_first_presentation_consumes_nonce_and_admits PASSED [ 55%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB3NonceStoreReplayRejection::test_negative_replayed_nonce_is_rejected PASSED [ 61%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB2InprocessZanzibar::test_positive_fresh_token_sees_granted_relation PASSED [ 66%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB2InprocessZanzibar::test_negative_replayed_request_rejected_under_fresh_token PASSED [ 72%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestB2InprocessZanzibar::test_honest_weakness_stale_token_admits_replay_inside_window PASSED [ 77%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestModuleConformance::test_real_module_version_and_registry_rows PASSED [ 83%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestModuleConformance::test_outcomes_are_first_class_never_raised PASSED [ 88%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestModuleConformance::test_external_pinned_arms_declared_in_registry PASSED [ 94%]
+tests/venue2027/ifip_sec/test_baseline_fidelity.py::TestModuleConformance::test_suite_version_recorded PASSED [100%]
+
+============================== 18 passed in 0.23s ==============================

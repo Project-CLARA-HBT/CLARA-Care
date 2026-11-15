@@ -1,0 +1,37 @@
+{
+    "artifacts_sha256": {
+        "research/venue2027/proof/logs/IFIP_SEC-baseline_tests.pytest.log": "545fda2a924ec39ff173f914f024898dd27ee2264792ba4d7f378229f5e2d0e1",
+        "research/venue2027/proof/logs/IFIP_SEC-baseline_tests.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+        "tests/venue2027/__init__.py": "4846b89bbd79d34d64585e46c4a3f9b29474c987dc5db268e793c42d7df60b95",
+        "tests/venue2027/ifip_sec/__init__.py": "1ff22abf08f722c9610b9fa6622cf3326c006665d8a8b5b4a3e0ebd88645fc05",
+        "tests/venue2027/ifip_sec/test_baseline_fidelity.py": "34756c5baf72baa273e88018c80601a0fcd1921c23a175439e529af9b8551029"
+    },
+    "baseline_parity": "PASS",
+    "changed_paths": [
+        "tests/venue2027/__init__.py",
+        "tests/venue2027/ifip_sec/__init__.py",
+        "tests/venue2027/ifip_sec/test_baseline_fidelity.py",
+        "research/venue2027/proof/logs/IFIP_SEC-baseline_tests.pytest.log",
+        "research/venue2027/proof/logs/IFIP_SEC-baseline_tests.ruff.log",
+        "research/venue2027/proof/IFIP_SEC-baseline_tests.json"
+    ],
+    "commands": [
+        {
+            "argv": "python3 -m pytest -q tests/venue2027/ifip_sec/test_baseline_fidelity.py",
+            "exit_code": 0,
+            "log_path": "research/venue2027/proof/logs/IFIP_SEC-baseline_tests.pytest.log"
+        },
+        {
+            "argv": "uvx ruff@0.7.1 check tests/venue2027/ --config ruff.toml",
+            "exit_code": 0,
+            "log_path": "research/venue2027/proof/logs/IFIP_SEC-baseline_tests.ruff.log"
+        }
+    ],
+    "notes": "P03 baseline conformance suite (task IFIP_SEC-baseline_tests, depends IFIP_SEC-baselines + IFIP_SEC-oracle, both PASS in-repo): tests/venue2027/ifip_sec/test_baseline_fidelity.py imports the REAL evaluation.venue2027.ifip_sec.baselines module (BASELINES_VERSION 1.1.0, asserted) and the real consistency_token_adapter reason codes, and drives every implemented arm through the public dispatcher run_baseline(id, case, ctx) -> Outcome with injected BaselineContext (fixed HMAC key, frozen clock, explicit nonce store / ZanzibarStore; no network, no DB, no hidden clock or randomness). Per implemented arm, one UPSTREAM POSITIVE vector asserting the documented guarantee and one ADVERSARIAL NEGATIVE vector on the blueprint replay attack, plus the asserted honest weaknesses where the published semantics admit the replay: B0 bearer-signed-receipt (positive: valid signed unexpired receipt ADMITted BEARER_SIGNATURE_VALID; negative: expired receipt REJECTed TOKEN_EXPIRED; honest weakness: identical receipt replays ADMITted - RQ1 lower bound). B1 stateless purpose binding (positive: matching purpose/tenant/actor/epoch claims ADMITted PURPOSE_BOUND_STATELESS; negative: purpose mismatch REJECTed PURPOSE_MISMATCH + forged claim mutation caught by HMAC TOKEN_SIGNATURE_INVALID; honest weakness: nonce checked for form only, never consumed - replay within expiry ADMITted while an injected store stays untouched). B2 macaroon-style HMAC caveat chain over CAVEAT_KEYS (positive: real attenuation chain verifies end to end, ADMIT CAVEAT_CHAIN_VALID; negative: single flipped purpose caveat byte vs the honest signature REJECTed CAVEAT_VERIFICATION_FAILED; honest weakness: pointwise satisfaction consumes no nonce, replay within expiry ADMITted). B3 nonce-store replay rejection (positive: first presentation consumes the nonce and ADMITs NONCE_CONSUMED_ONCE with the injected set really mutated; negative: second presentation REJECTed NONCE_REPLAYED, paired B0-vs-B3 divergence asserted on the identical replay). B2_INPROCESS_ZANZIBAR (X06 additive row, published Zanzibar Sec. 2.3-2.4 snapshot semantics via check_with_revision contract): positive: FRESH zookie sees the just-granted relation, ADMIT RELATION_PRESENT; negative: replayed pre-revocation request under a FRESH token REJECTed RELATION_REVOKED; honest weakness asserted: the identical replay with the PRE-REVOCATION zookie is ADMITted inside the bounded-staleness window (never silently converted into a rejection). Cross-arm conformance: real-module version pin 1.1.0, external pinned rows B2_OPENFGA / B3_CEDAR stay runnable_in_process=False with pinned provenance and return NOT_RUN_EXTERNAL / BASELINE_UNAVAILABLE (execution contract rule 8 - never a toy under the same name), arm faults are first-class REJECT Outcomes with stable reason codes for every arm (never unhandled exceptions miscounted as safe rejections) and B3 wiring without a store raises BaselineError CONTEXT_STORE_MISSING. 18 tests (5 positives x arm + 5 replay/expiry/tamper negatives + 3 asserted honest-weakness vectors + 4 conformance/fail-closed hygiene + 1 registry external-row check) pass; uvx ruff@0.7.1 clean on tests/venue2027/. Fidelity honest-weakness vectors intentionally block any future 'repair' of B0/B1/B2/Zanzibar-stale into fake safe rejections: that would falsify the baselines the study compares against. No real PostgreSQL / external OpenFGA/Cedar/OPA claims: in-process reference only (PG consume-once race belongs to IFIP_SEC-X03). source_sha_after records the base commit e373f6e4 per the established sibling convention (IFIP_SEC-baselines, X06); the single task commit SHA is created immediately after this report and recorded in the commit body.",
+    "oracle_disagreement_count": 0,
+    "source_sha_after": "e373f6e46465917ad4fbd7d6656e77e51c4805db",
+    "source_sha_before": "e373f6e46465917ad4fbd7d6656e77e51c4805db",
+    "status": "PASS",
+    "task_id": "IFIP_SEC-baseline_tests",
+    "unresolved": []
+}

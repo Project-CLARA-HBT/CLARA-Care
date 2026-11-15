@@ -1,0 +1,37 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/dimva/campaign_generator.py": "34f2647f212e818223bc8fe58ae8f031d6b9a654fb9836e651bb794671ad202d",
+    "evaluation/venue2027/dimva/test_campaign_generator.py": "ecac47a5a48c86b8263c8852fa6eb1fb25515ea64c008d98e7ed4f72d657a339",
+    "research/venue2027/proof/logs/DIMVA-X02_campaign_gen.pytest.log": "8ef804cdf70b3b1e0d362428af9dd7435425ab2ceac9e20bc99115bc750d9de2",
+    "research/venue2027/proof/logs/DIMVA-X02_campaign_gen.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/dimva/campaign_generator.py",
+    "evaluation/venue2027/dimva/test_campaign_generator.py",
+    "research/venue2027/proof/DIMVA-X02_campaign_gen.json",
+    "research/venue2027/proof/emit_dimva_x02_campaign_gen_report.py",
+    "research/venue2027/proof/logs/DIMVA-X02_campaign_gen.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-X02_campaign_gen.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-X02_campaign_gen.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dimva/test_campaign_generator.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X02_campaign_gen.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dimva/campaign_generator.py evaluation/venue2027/dimva/test_campaign_generator.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X02_campaign_gen.ruff.log"
+    }
+  ],
+  "notes": "P02 DIMVA-X02_campaign_gen deliverable for venue dimva: evaluation/venue2027/dimva/campaign_generator.py implements the exact generate(seed, family, tenant) -> Campaign contract, producing deterministic PHI-free multi-stage campaigns over the five registered families purpose_probe, cross_principal_retry, expired_token_replay, cadence_shift and harmless_control (FamilySpec registry maps each family to its campaign_label ATTACK/BENIGN and violated_invariant, with NONE for the control). Every event is exactly the seven-field minimal surface of research/venue2027/dimva/protocols/event.schema.json (actor/scope opaque SHA-256 hex digests, coarse snake_case tool token, boolean allowed, closed purpose enum, 60 s bucket ts, opaque camp-<16 hex> campaign_id), asserted in tests by validating every generated event against the frozen schema through the shared stdlib validator schema_validator.validate_instance. LABELS EXIST ONLY AT CAMPAIGN LEVEL: campaign_label and violated_invariant live on the Campaign object; the event builder structurally refuses any label-like field (label, campaign_label, violated_invariant, attacker_label, is_attack) with EVENT_LABEL_FIELD_FORBIDDEN and the seven-field gate fails closed with EVENT_FIELD_MISMATCH, so no event ever carries ground truth and campaign ids/tenants/families/invariant strings never appear inside event payloads (template-leak-safe across splits). Determinism: all entropy derives from SHA-256 digests over stable coordinate strings (version, seed, tenant, family, stage index) \u2014 no random module, no clock, no environment reads; same (seed, family, tenant) yields byte-identical to_dict output. Fail-closed error surface: stable reason codes INVALID_SEED, INVALID_TENANT, UNKNOWN_FAMILY, PHI_FIELD_PRESENT (tenant and serialized-output PHI scan over the shared kernel markers plus patient/diagnosis/ssn/symptom/prescription), EVENT_LABEL_FIELD_FORBIDDEN, EVENT_FIELD_MISMATCH; no clear-text principals, no reason codes on the event surface, no live provider. test_campaign_generator.py (43 tests): positive vectors cover per-family generation for all five families, determinism/idempotence across call order, seed/tenant sensitivity, required top-level campaign fields, campaign-level-only labeling, schema-shape conformance of every event, opaque leak-free campaign_id, per-family stage semantics (single principal rotating purposes; >=3 principals denied retries; replay resuming beyond TOKEN_EXPIRY_HORIZON_BUCKETS=10; cadence gaps all > PACE_WINDOW_BUCKETS=5; control with steady pacing, one transient denial and single actor) and JSON serializability; adversarial vectors prove per-event label fields are refused (all five label-like names), off-schema fields refused, tampered events fail the schema-shape gate, unknown family refused with UNKNOWN_FAMILY, invalid seeds/tenants refused, PHI-like tenant refused, all generated campaigns PHI-free and reason-code-free on the event surface. Commands: python3 -m pytest -q evaluation/venue2027/dimva/test_campaign_generator.py exit 0 (43 passed); uvx ruff@0.7.1 check on both touched files exit 0 (All checks passed). Proof emitted via agent_protocol.build_report(task_id='DIMVA-X02_campaign_gen') with real log_paths and validated ok:true; report + logs committed together with the work per established repo convention.",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "e373f6e46465917ad4fbd7d6656e77e51c4805db",
+  "source_sha_before": "e373f6e46465917ad4fbd7d6656e77e51c4805db",
+  "status": "PASS",
+  "task_id": "DIMVA-X02_campaign_gen",
+  "unresolved": []
+}

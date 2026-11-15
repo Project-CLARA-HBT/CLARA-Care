@@ -1,0 +1,131 @@
+"""Emit the SACMAT-baseline_tests proof report via agent_protocol.build_report.
+
+Allowed input: this worktree's git state and the on-disk artifacts produced
+by the SACMAT-baseline_tests task. No network access.
+
+Failure semantics: exits non-zero if report construction or validation fails.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "_shared" / "tools"))
+
+import agent_protocol as ap  # noqa: E402
+
+REPO = Path(__file__).resolve().parents[3]
+TASK = "SACMAT-baseline_tests"
+
+BASE_SHA = "e373f6e46465917ad4fbd7d6656e77e51c4805db"
+
+CHANGED = [
+    "tests/venue2027/__init__.py",
+    "tests/venue2027/sacmat/__init__.py",
+    "tests/venue2027/sacmat/test_baseline_fidelity.py",
+    "research/venue2027/proof/SACMAT-baseline_tests.json",
+    "research/venue2027/proof/emit_SACMAT-baseline_tests_report.py",
+    "research/venue2027/proof/logs/SACMAT-baseline_tests.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-baseline_tests.ruff.log",
+    "research/venue2027/proof/logs/SACMAT-baseline_tests.suite.log",
+    "research/venue2027/proof/logs/SACMAT-baseline_tests.validator.log",
+]
+
+COMMANDS = [
+    {
+        "argv": "python3 -m pytest -q tests/venue2027/sacmat/test_baseline_fidelity.py",
+        "exit_code": 0,
+        "log_path": "research/venue2027/proof/logs/SACMAT-baseline_tests.pytest.log",
+    },
+    {
+        "argv": "uvx ruff@0.7.1 check tests/venue2027/__init__.py "
+        "tests/venue2027/sacmat/__init__.py "
+        "tests/venue2027/sacmat/test_baseline_fidelity.py && uvx ruff@0.7.1 format "
+        "--check tests/venue2027/",
+        "exit_code": 0,
+        "log_path": "research/venue2027/proof/logs/SACMAT-baseline_tests.ruff.log",
+    },
+    {
+        "argv": "python3 -m pytest -q evaluation/venue2027/",
+        "exit_code": 0,
+        "log_path": "research/venue2027/proof/logs/SACMAT-baseline_tests.suite.log",
+    },
+    {
+        "argv": "python3 research/venue2027/proof/emit_SACMAT-baseline_tests_report.py "
+        "# build_report + validate_report(ok:true) recorded in "
+        "research/venue2027/proof/SACMAT-baseline_tests.json",
+        "exit_code": 0,
+        "log_path": "research/venue2027/proof/logs/SACMAT-baseline_tests.validator.log",
+    },
+]
+
+
+def main() -> int:
+    report = ap.build_report(
+        task_id=TASK,
+        status="PASS",
+        source_sha_before=BASE_SHA,
+        source_sha_after=BASE_SHA,
+        changed_paths=CHANGED,
+        commands=COMMANDS,
+        artifact_paths=[
+            "tests/venue2027/__init__.py",
+            "tests/venue2027/sacmat/__init__.py",
+            "tests/venue2027/sacmat/test_baseline_fidelity.py",
+        ],
+        repo=REPO,
+        baseline_parity="NOT_APPLICABLE",
+        unresolved=[],
+        notes=(
+            "P03 baseline conformance test suite for SACMAT 2027 (PolicyTrace: Temporal "
+            "Conformance Testing of Delegated Consent across Heterogeneous Policy Engines). "
+            "tests/venue2027/sacmat/test_baseline_fidelity.py imports the REAL baseline module "
+            "evaluation.venue2027.sacmat.baselines (no re-implementation, no stubs) and drives "
+            "run_baseline through its public dispatch for EACH task-contract arm (B0 static "
+            "policy diff, B1 single-engine testing, B2 multi-engine differential, B3 candidate "
+            "temporal conformance) over SYNTHETIC (policy history, request) units in monotonic "
+            "logical time (no PHI/PII, no network, no live provider, no hidden clock or "
+            "randomness). Per arm: ONE POSITIVE vector (conformant delegated-consent case — a "
+            "grant in force at the request's decision time — where every arm returns the "
+            "correct conformance decision ADMIT/NO_DIVERGENCE) and ONE ADVERSARIAL NEGATIVE "
+            "vector (expiry/skew divergence). The fidelity evidence is the CONTRAST on the "
+            "adversarial case: the history-healed version-skew divergence (grant -> revoke -> "
+            "regrant in force, POLICY_VERSION_BUMP after the request's decision time) where all "
+            "three in-process engine models agree pointwise on PERMIT is REJECTed by B3 "
+            "(B3_TEMPORAL_CONFORMANCE_DIVERGENCE / B3_POLICY_VERSION_SKEW_DIVERGENCE) and "
+            "ADMItted — missed — by B0, B1 AND B2, asserted per-arm against the same case; the "
+            "pure expiry race (grant lapsed at decision time, bump after it, oracle DENY) is "
+            "additionally missed by B0/B1 and detected by B3. Expectations are adjudicated by "
+            "the module's independent four-valued oracle oracle_decision (ordered-history "
+            "state, never an engine model), asserted in tests so the expected conformance "
+            "decisions are anchored outside the code under test; each weaker arm's miss is a "
+            "recorded scientific result carrying its own reason-code path, not an error and "
+            "not a stub. Unavailable upstream binaries (pinned Cedar v4.14.1, OpenFGA v1.22.1, "
+            "OPA v1.22.4 belong to downstream SACMAT-X03/X04/X05): with the injected "
+            "SacmatContext(simulate_unavailable_upstream=True) flag the engine-replay arms "
+            "B1/B2/B3 return the transparent first-class outcome NOT_RUN_EXTERNAL / "
+            "BASELINE_UNAVAILABLE (counted_as_success=False, retriable — never a toy "
+            "substitution, never silently dropped), while B0 (pure in-process structural "
+            "diff) still runs. Determinism: identical inputs give identical outcomes for "
+            "every arm on both vector classes. Machine-checked: 23 new tests pass (positive "
+            "vectors x4 arms, oracle-independence anchors, adversarial misses x3 weaker arms "
+            "on the skew divergence + x2 on the expiry race, complete four-arm contrast, "
+            "NOT_RUN_EXTERNAL battery, B0-runs-without-upstreams, determinism x4 arms); "
+            "python3 -m pytest -q tests/venue2027/sacmat/test_baseline_fidelity.py exit 0; "
+            "uvx ruff@0.7.1 check + format --check on the three new files exit 0; full "
+            "evaluation/venue2027 regression suite 1261 passed, exit 0. source_sha_after = "
+            "base SHA per established repo convention (proof report committed together with "
+            "the work)."
+        ),
+    )
+    out = REPO / "research" / "venue2027" / "proof" / "SACMAT-baseline_tests.json"
+    out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    result = ap.validate_report(report, repo=REPO, expected_task_id=TASK)
+    print(json.dumps(result.to_dict(), indent=2))
+    return 0 if result.ok else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

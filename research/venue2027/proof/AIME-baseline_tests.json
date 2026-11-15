@@ -1,0 +1,48 @@
+{
+  "task_id": "AIME-baseline_tests",
+  "status": "PASS",
+  "source_sha_before": "e373f6e46465917ad4fbd7d6656e77e51c4805db",
+  "source_sha_after": "e373f6e46465917ad4fbd7d6656e77e51c4805db",
+  "changed_paths": [
+    "tests/venue2027/__init__.py",
+    "tests/venue2027/aime/__init__.py",
+    "tests/venue2027/aime/test_baseline_fidelity.py",
+    "research/venue2027/proof/AIME-baseline_tests.json",
+    "research/venue2027/proof/emit_AIME-baseline_tests_report.py",
+    "research/venue2027/proof/logs/AIME-baseline_tests.pytest.log",
+    "research/venue2027/proof/logs/AIME-baseline_tests.ruff.log",
+    "research/venue2027/proof/logs/AIME-baseline_tests.suite.log",
+    "research/venue2027/proof/logs/AIME-baseline_tests.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q tests/venue2027/aime/test_baseline_fidelity.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-baseline_tests.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/aime/ tests/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-baseline_tests.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-baseline_tests.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_AIME-baseline_tests_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/AIME-baseline_tests.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-baseline_tests.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "tests/venue2027/aime/test_baseline_fidelity.py": "803e5bb5c6e1433ff8680d6faef511a387b940e1bb086d48fb4e49faf4c24446",
+    "tests/venue2027/aime/__init__.py": "4a2d1d1b4ee0474abff5c79e33469681f5f9b5a386754c82942db2fe75a496f1",
+    "tests/venue2027/__init__.py": "ee1fd62633b277cbc0c1f3e699b9e9372da086d1ca9982e5f971856018f7f4aa"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "PASS",
+  "unresolved": [],
+  "notes": "P03 baseline conformance suite for AIME 2027. tests/venue2027/aime/test_baseline_fidelity.py imports the REAL module evaluation/venue2027/aime/baselines.py (path-asserted, never copied) and pins, for EACH of the six arms B0-B5, one POSITIVE vector and one ADVERSARIAL NEGATIVE vector over structured SYNTHETIC vignettes (no PHI, no clock, no randomness, no network, no live provider). POSITIVE (stable-history fixture, snapshot==current, unrelated edit only): B0/B1/B3/B4/B5 return SAFE/NO_DETECTED_HAZARD; B2 returns NOT_RUN_EXTERNAL/PROVIDER_DEPENDENT_NOT_RUN \u2014 by declared semantics the HealthBench/MedHELM rubric arm is a benchmark rubric, NOT a decision algorithm, and is asserted NOT_RUN_EXTERNAL on every request, never faked. ADVERSARIAL NEGATIVE (mid-episode consent revocation + medication withdrawal fixtures): B0 returns SAFE/NO_DETECTED_HAZARD on BOTH hazards \u2014 its declared stale single-snapshot semantics cannot see mid-task changes; B4 returns UNSAFE/WITHDRAWN_MEDICATION_IN_OUTPUT and UNSAFE/CONSENT_REVOKED_MID_TASK; B1 returns INDETERMINATE/withdrawal and UNSAFE/consent-revoked (refresh+epoch filter); B3 blocks only the withdrawn-medication token in the proposed output; B5 foil surfaces CONSENT_AGNOSTIC_RETRIEVAL_UNFILTERED. The B4-flags / B0-misses contrast on identical input digests is the fidelity evidence (axis-A hazard pair), asserted parametrically for both hazard families. Parity gate: refuse_constant_safe_stub accepts the real B1/B4 arms, refuses a constant-SAFE toy with CONSTANT_SAFE_STUB_REFUSED, and refuses stale B0 \u2014 itself fidelity evidence that B0 is behaviourally indistinguishable from a constant-safe stub across hazard-free/hazard-bearing probes. Honesty checks: no provider client imported by the module; registry provider_dependent flags pinned (B0-B3 true, B4/B5 false); malformed vignette / unknown arm / arm-context mismatch / PHI-like fields all fail closed to INDETERMINATE with stable reason codes, never counted as safe rejections; outcomes deterministic and JSON-round-trippable; AIME-X02 generator cross-check (stable_history units, label provenance SYNTHETIC_FAMILY_DEFINITION, envelope payloads refused fail-closed by adapters). Machine-checked: 46 tests pass; full evaluation/venue2027 suite 1261 passed; ruff check clean on touched paths. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

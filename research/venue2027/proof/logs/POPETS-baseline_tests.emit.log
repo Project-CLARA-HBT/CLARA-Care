@@ -1,0 +1,8 @@
+wrote /dev/shm/cw/wb_popets-baseline-tests/research/venue2027/proof/POPETS-baseline_tests.json
+{
+ "ok": true,
+ "reason_code": "OK",
+ "errors": [],
+ "task_id": "POPETS-baseline_tests",
+ "protocol_version": "1.0.0"
+}
