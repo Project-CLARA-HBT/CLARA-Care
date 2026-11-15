@@ -281,6 +281,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-X08_splitter.json",
       "status": "PASS"
     },
+    "DIMVA-baseline_tests": {
+      "marked_at": "2026-11-15T16:52:11.641823+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-baseline_tests.json",
+      "status": "PASS"
+    },
     "DIMVA-baselines": {
       "marked_at": "2026-11-15T04:33:14.690297+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-baselines.json",
