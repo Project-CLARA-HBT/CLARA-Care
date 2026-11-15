@@ -1,0 +1,47 @@
+{
+  "artifacts_sha256": {
+    "research/venue2027/proof/logs/DSN-unit.pytest.log": "f2bb31a2f6b13cdfd5d9d36152151de96912683b47aeca10a6ad5fbed88dd8e0",
+    "research/venue2027/proof/logs/DSN-unit.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/DSN-unit.suite.log": "391d4d45e19ac02dad9adc1cca8fe8ea7e6182ce2d2b6c161a2a9410e957067c",
+    "tests/venue2027/dsn/test_algorithm_properties.py": "1ea5c0a6f670c5c77b4e1536c66e78f05104a8d90a17e6278e447a82e8030cd9"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "tests/venue2027/dsn/test_algorithm_properties.py",
+    "research/venue2027/proof/DSN-unit.json",
+    "research/venue2027/proof/logs/DSN-unit.pytest.log",
+    "research/venue2027/proof/logs/DSN-unit.ruff.log",
+    "research/venue2027/proof/logs/DSN-unit.suite.log",
+    "research/venue2027/proof/logs/DSN-unit.validator.log",
+    "research/venue2027/proof/emit_DSN-unit_report.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q tests/venue2027/dsn/test_algorithm_properties.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-unit.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check tests/venue2027/dsn/test_algorithm_properties.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-unit.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dsn/ tests/venue2027/dsn/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-unit.suite.log"
+    },
+    {
+      "argv": "PYTHONPATH=. python3 research/venue2027/proof/emit_DSN-unit_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/DSN-unit.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-unit.validator.log"
+    }
+  ],
+  "notes": "P05 DSN-unit deliverable: tests/venue2027/dsn/test_algorithm_properties.py \u2014 deterministic property/metamorphic/mutation tests over the REAL DSN components, imported live and never reimplemented or stubbed: candidate.py (execute_operation, recoverable_outcome, verify_journal, corrupt_journal, run_candidate, ablation_no_journal_execute), state_machine.py (evaluate_durability, reconcile, recover), baselines.py (run_baseline, refuse_constant_stub), and independent_oracle.py (adjudicate, verify_independence). Seeded randomness with fixed seed FIXED_SEED=20271116 (no clock, no network, no database, no PII \u2014 synthetic identifiers only). 56 tests across 7 families: (1) POSITIVE boundaries \u2014 nominal clean execution (DSN-CASE-01) with 1 row write, 1 effect apply, verifiable hash chain; pending delivery (DSN-CASE-07); pre-revocation commit surviving later epoch bump; state machine reconciler helper; candidate harness adapter ADMIT; mechanism description invariants; independent oracle positive families. (2) NEGATIVE boundaries \u2014 crash before commit (DSN-CASE-02) returning retriable REJECTED with zero store mutations; consent revocation before commit (DSN-CASE-05) appending durable ABORT and stably rejected; state machine forbidden write post revocation; outbox fsync failure; non-accept receipt; malformed write intents, unknown crash windows, and bad delivery schedules failing closed. (3) UNKNOWN boundaries \u2014 torn clinical row, tampered decision receipt (DSN-CASE-06), receipt transition digest mismatch, timestamp anomalies, cross-channel operation mismatch, orphan receipt / outbox, 4 candidate journal corruption modes (flip_payload, flip_digest, drop_interior_entry, unknown_kind), semantic contradictions (abort+commit, duplicate commit, effect without commit), event history malformations, and oracle unknown family. (4) Crash-window and duplicate-delivery scenarios \u2014 sweep of all 4 crash points (pre_commit, post_commit_pre_response, pre_outbox_delivery, mid_effect) converging to COMMITTED with exactly-once store mutations; broker replay (DSN-CASE-04) deduping 4 of 5 deliveries via write-ahead effect records; state machine idempotent duplicate receipts; ablation arm B0 demonstrating multiple effect applications without the journal. (5) Two-step metamorphic relations \u2014 MR1 (replaying an acked operation is idempotent: zero additional row writes, zero additional effect applies); MR2 (adding recovery step after a crash cannot lose a committed effect); MR3 (truncation prefix vs interior tampering); MR4 (delivery schedule expansion monotonicity). (6) Mutation checks \u2014 killing 5 canonical mutants (skip journal verification, skip consent check, skip write-ahead effect journaling, ignore duplicate effect divergence, refuse constant / all-deny stubs, and verify oracle source independence). (7) Seeded safety invariant sweep & replay determinism \u2014 48 randomized episodes with zero forbidden commits, zero double row writes, zero double effect applications, and byte-identical transcripts.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "28ff55110f980f42002524cef126290e91258cd6",
+  "source_sha_before": "28ff55110f980f42002524cef126290e91258cd6",
+  "status": "PASS",
+  "task_id": "DSN-unit",
+  "unresolved": []
+}

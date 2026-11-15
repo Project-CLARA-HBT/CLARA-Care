@@ -1,0 +1,47 @@
+{
+  "task_id": "DIMVA-unit",
+  "status": "PASS",
+  "source_sha_before": "28ff55110f980f42002524cef126290e91258cd6",
+  "source_sha_after": "28ff55110f980f42002524cef126290e91258cd6",
+  "changed_paths": [
+    "tests/venue2027/dimva/test_algorithm_properties.py",
+    "research/venue2027/proof/DIMVA-unit.json",
+    "research/venue2027/proof/emit_DIMVA-unit_report.py",
+    "research/venue2027/proof/logs/DIMVA-unit.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-unit.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-unit.suite.log",
+    "research/venue2027/proof/logs/DIMVA-unit.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q tests/venue2027/dimva/test_algorithm_properties.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-unit.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check tests/venue2027/dimva/test_algorithm_properties.py && uvx ruff@0.7.1 format --check tests/venue2027/dimva/test_algorithm_properties.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-unit.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dimva/ tests/venue2027/dimva/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-unit.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_DIMVA-unit_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/DIMVA-unit.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-unit.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "tests/venue2027/dimva/test_algorithm_properties.py": "331f45e74e32fd353a35a69473a660b597ddc51917b3af676468459e07a87905",
+    "research/venue2027/proof/logs/DIMVA-unit.pytest.log": "0d0e986de4ca05dfba82d7366b99f03cdb629616bb7854b9ab432e1f6c41db77",
+    "research/venue2027/proof/logs/DIMVA-unit.ruff.log": "ce04ce92b16073000b77c97a42c00b98b96305692d9d5ed4dcfa5a9ca9ea62d6",
+    "research/venue2027/proof/logs/DIMVA-unit.suite.log": "c503d586a5d3a268846f43ce35ef6dd62dc22163e407c9ed7b67bba78be1f52b"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P05 DIMVA-unit deliverable: tests/venue2027/dimva/test_algorithm_properties.py \u2014 deterministic property, metamorphic, and mutation tests over the REAL DIMVA candidate (candidate.py) and feature encoder (feature_encoding.py), plus strong baselines (baselines.py). All stochastic generation is explicitly seeded (FIXED_SEED = 20271115; no unseeded randomness, no clock, no network, no live provider). 77 tests in 5 families, all passing: (1) Positive boundaries: low-and-slow cross-tool campaign meets all 5 structural criteria (enough_denials, cross_tool_obfuscation, long_horizon_span, evades_fixed_window, activity_continuity) with score >= 0.6 and DETECT / CAMPAIGN_STRUCTURE_DETECTED; harness adapter emits Outcome REJECT (counted_as_success=True); clean benign sessions emit NO_DETECT / ADMIT; FeatureEncoder fit-then-transform yields exactly 44 features with finite floats and complete lineage; one-shot encode() validated. (2) Negative boundaries: malformed event lists, empty sequences, non-mappings, unknown fields, reason-code leak fields (reason_code, reject_reason, etc.), missing fields, bad types, non-monotonic timestamps, mixed actors fail closed to INDETERMINATE with stable uppercase reason codes; DetectionParams raises CandidateError on invalid bounds; FeatureEncoder fails closed on transform before fit (NOT_FITTED), holdout fit (HOLDOUT_LEAK), refit (HOLDOUT_LEAK), label fields (EVENT_LABEL_FIELD_FORBIDDEN), reason codes, invalid windows. (3) Unknown boundaries: first-class INDETERMINATE retention on malformed cases in run_candidate; unknown arm IDs yield INVALID_RESULT / UNKNOWN_ARM. (4) Low-and-slow vs Benign-burst: low-and-slow campaign paced under probe window is detected by candidate while B0 count alarm (threshold 5) and B1 cross-scope signature miss it; benign retry burst (6 denials on 1 tool in 60s) trips B0 false alarm but candidate correctly suppresses alarm (NO_DETECT) due to lack of tool spread and fixed-window breach; 20-burst seeded sweep confirms zero false alarms. (5) Two-step metamorphic relations: MR1 adding benign sessions to training or evaluation stream never increases detection score for a fixed campaign (score_perturbed <= score_base, raw structural features invariant); MR2 splitting a campaign across more tools cannot reduce cross-tool linkage (distinct tools, tool spread subscore, tool entropy bits, and cross_tool_obfuscation criterion are monotonically non-decreasing). (6) Mutation checks: all-accept and all-deny mutants killed by control cases; criteria removal mutants killed; single-dimension perturbations (tool collapse, temporal compression, denial erasure, gap dilation) flip verdicts deterministically. (7) Scoring never reads labels: AST check confirms candidate has no references to label identifiers; event label fields fail closed; outer case labels/verdict annotations leave candidate scoring invariant."
+}

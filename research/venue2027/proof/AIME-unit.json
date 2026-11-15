@@ -1,0 +1,47 @@
+{
+  "artifacts_sha256": {
+    "research/venue2027/proof/logs/AIME-unit.pytest.log": "163f1e1d5d8b1b0c90d8d402e7f26a8652d1a3218bbcc433ccf4df2e208442a0",
+    "research/venue2027/proof/logs/AIME-unit.ruff.log": "ce04ce92b16073000b77c97a42c00b98b96305692d9d5ed4dcfa5a9ca9ea62d6",
+    "research/venue2027/proof/logs/AIME-unit.suite.log": "0ce4d5583ffe9c956a1334b5693c36ab0030e65967137cf8571b55bd9cb35e0d",
+    "tests/venue2027/aime/test_algorithm_properties.py": "2252c5f62baae88f7759c309456efa7c506f2bdce3836eda25ccc7026e5615a2"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "tests/venue2027/aime/test_algorithm_properties.py",
+    "research/venue2027/proof/AIME-unit.json",
+    "research/venue2027/proof/emit_aime_unit_report.py",
+    "research/venue2027/proof/logs/AIME-unit.pytest.log",
+    "research/venue2027/proof/logs/AIME-unit.ruff.log",
+    "research/venue2027/proof/logs/AIME-unit.suite.log",
+    "research/venue2027/proof/logs/AIME-unit.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q tests/venue2027/aime/test_algorithm_properties.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-unit.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check tests/venue2027/aime/test_algorithm_properties.py && uvx ruff@0.7.1 format --check tests/venue2027/aime/test_algorithm_properties.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-unit.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/ tests/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-unit.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_aime_unit_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/AIME-unit.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-unit.validator.log"
+    }
+  ],
+  "notes": "P05 AIME-unit deliverable: deterministic property, metamorphic and mutation tests over the REAL AIME candidate (evaluation/venue2027/aime/candidate.py) and selective refresh (evaluation/venue2027/aime/selective_refresh.py). Test suite tests/venue2027/aime/test_algorithm_properties.py contains 60 tests across 6 families: (1) Positive boundaries: stable synthetic history (AIME-CASE-01/06) admits SAFE with NO_DETECTED_HAZARD; unrelated note edits remain SAFE; selective refresh recomputes ONLY affected dependencies (evidence_note_summary) carrying over all others (PARTIAL); update_context soundness over declared caller dependencies; proper JSON serialization and 64-hex SHA256 input digests. (2) Negative boundaries: mid-task consent revocation returns UNSAFE (CONSENT_REVOKED_MID_TASK, AIME-CASE-03); withdrawn medication anchoring task returns UNSAFE (WITHDRAWN_MEDICATION_IN_OUTPUT, AIME-CASE-02); allergen present in current state or reported on timeline returns UNSAFE (ALLERGEN_PRESENT_IN_TASK); selective refresh forces FULL on consent change (CONSENT_CHANGE_FULL_REFRESH); entangled medication + allergy contexts route to CLINICIAN_REVIEW (MEDICATION_ALLERGY_ENTANGLED, never an automatic PARTIAL); conflicting observations route to CLINICIAN_REVIEW. (3) Unknown boundaries and INDETERMINATE retention: INDETERMINATE is first-class and never coerced into SAFE or UNSAFE; structural history inconsistency returns SNAPSHOT_CURRENT_INCONSISTENT; added interacting medications route to ADDITIONAL_MEDICATION_INTERACTION_HAZARD; unclassified additions route to HISTORY_CHANGED_REVIEW_REQUIRED; malformed inputs, missing fields, PHI-like fields, non-monotone/unknown timeline events, and malformed context fail closed with stable reason codes; unheld caller dependencies in update_context escalate to FULL. (4) Longitudinal consent-change and medication-withdrawal scenarios: multi-step additions and withdrawals; task drug withdrawn among multiple active medications; targeted revocation of active purpose; unrequested purpose revocation review routing; exhaustive pairwise coverage of INJECTION_INTERACTION_TABLE; mid-task allergy reporting. (5) Two-step metamorphic relations: MR1 \u2014 adding a medication withdrawal CANNOT make a hazardous recommendation safe (withdrawing any medication from an UNSAFE or INDETERMINATE case preserves or escalates the hazard, never transitioning to SAFE); MR2 \u2014 a consent revocation CANNOT be undone by a later benign update within the same epoch (appending benign note edits or non-interacting additions after revocation cannot restore authorization); MR3 \u2014 composing note edits cannot downgrade FULL to PARTIAL; MR4 \u2014 composing note edits cannot bypass medication/allergy entanglement; MR5 \u2014 consent purpose shrinkage is monotone unsafe; MR6 \u2014 deterministic replay invariance across 10 trials. (6) Mutation checks and liveness: clean history liveness control (anti-all-deny); refuse_constant_safe_stub gate; mutation kills for consent check drop, allergen check drop, withdrawn medication check drop, and entanglement detection drop; all-partial and all-full refresh mutant kills; seeded 30-case mutation campaign with byte-identical re-seeded replay. Seed all randomness: FIXED_SEED = 20271116. SYNTHETIC vignettes only; no LLM; assert INDETERMINATE is never coerced. All checks pass: pytest 60 passed (exit 0); uvx ruff@0.7.1 check + format clean (exit 0); full regression suite 2535 passed (exit 0).",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "28ff55110f980f42002524cef126290e91258cd6",
+  "source_sha_before": "28ff55110f980f42002524cef126290e91258cd6",
+  "status": "PASS",
+  "task_id": "AIME-unit",
+  "unresolved": []
+}

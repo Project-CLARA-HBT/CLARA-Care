@@ -1,0 +1,44 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/dsn/ablations.py": "ef106aabe01c9eee835ded2403b9429cef490814546cc32c0a9bb988f3f15dc3",
+    "evaluation/venue2027/dsn/test_ablations.py": "bc1b89a4fbfcd8f00cc6812f9f32546051627b7d5d1445291054349cff7f321c",
+    "research/venue2027/proof/logs/DSN-ablation.pytest.log": "60729b5b3c9cc644fa4eba971ff1860d948cea64a6e4f7849ff1c8caba43fbf8",
+    "research/venue2027/proof/logs/DSN-ablation.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/DSN-ablation.suite.log": "1ed32db3929cae6c1b6c214f748ac500e33215331cd5486f05c4b4a52a3f5981"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/dsn/ablations.py",
+    "evaluation/venue2027/dsn/test_ablations.py",
+    "research/venue2027/proof/DSN-ablation.json",
+    "research/venue2027/proof/emit_dsn_ablation_report.py",
+    "research/venue2027/proof/logs/DSN-ablation.pytest.log",
+    "research/venue2027/proof/logs/DSN-ablation.ruff.log",
+    "research/venue2027/proof/logs/DSN-ablation.suite.log",
+    "research/venue2027/proof/logs/DSN-ablation.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dsn/test_ablations.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-ablation.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dsn/ablations.py evaluation/venue2027/dsn/test_ablations.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-ablation.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dsn/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-ablation.suite.log"
+    }
+  ],
+  "notes": "P04 task DSN-ablation for DSN 2027 study 'Recoverable Safety Journals for Crash-Consistent AI-Mediated Health-State Mutations' (blueprint RQ1-RQ3, task contract VENUES/dsn/TASKS/DSN-ablation.md). evaluation/venue2027/dsn/ablations.py registers five preregistered variants in ABLATION_REGISTRY behind the task-manifest signature run_ablation(name, case) -> Outcome, each declaring exactly ONE mechanism removed: without_journal (removes durable safety journal; post-commit crash cannot adjudicate recovery outcome and broker replay duplicates effects), without_idempotency_key (removes idempotency key deduplication; broker replay and recovery retries demonstrably apply duplicate side effects), without_wal_pre_write (removes write-ahead effect journaling; mid_effect crash uniquely causes duplicate effect on recovery retry), common_safety_gate (replaces recoverable journal pipeline with statutory consent check; catches revocation but fails crash recovery), and full_fat_baseline (strong practical baseline B1 transactional outbox + idempotent consumer; survives normal crash recovery but fails mid_effect crash and fails to detect corrupted journals/tampered lineage). Reference row full_candidate and nothing-removing identities are refused by refuse_unregistered_variant fail-closed with VARIANT_REMOVES_NOTHING; unregistered variants refused with UNKNOWN_ABLATION_VARIANT; VariantSpec refuses empty ablated_mechanism. Mechanistic inference matrix (mechanistic_inference_matrix, verify_mechanistic_inference_matrix) pins 48 cells (6 variants x 8 crash windows) against preregistered predictions; all 48 cells match (all_cells_match=True). 25 unit/property tests passed in test_ablations.py; full evaluation/venue2027/dsn/ suite passed (233 passed); uvx ruff@0.7.1 check clean; validator validated ok:true.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "28ff55110f980f42002524cef126290e91258cd6",
+  "source_sha_before": "28ff55110f980f42002524cef126290e91258cd6",
+  "status": "PASS",
+  "task_id": "DSN-ablation",
+  "unresolved": []
+}

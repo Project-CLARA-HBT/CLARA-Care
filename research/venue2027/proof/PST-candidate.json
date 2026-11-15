@@ -1,0 +1,42 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/pst/candidate.py": "0ec7b60b6b23d238c3c90c0074aeda728b3a44ab0fe3bc99c68ea47aef45ef87",
+    "evaluation/venue2027/pst/test_candidate.py": "64ca15512047b70cb5d92287bf5294a65347fd2531236612fa51ac914592d072",
+    "research/venue2027/proof/logs/PST-candidate.pytest.log": "8bd5d922ccb5897c6f2def8cc4af1333ef4e9d545d278c2d3b2ed97cdec2a9df",
+    "research/venue2027/proof/logs/PST-candidate.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/pst/candidate.py",
+    "evaluation/venue2027/pst/test_candidate.py",
+    "research/venue2027/proof/PST-candidate.json",
+    "research/venue2027/proof/emit_PST-candidate_report.py",
+    "research/venue2027/proof/logs/PST-candidate.pytest.log",
+    "research/venue2027/proof/logs/PST-candidate.ruff.log",
+    "research/venue2027/proof/logs/PST-candidate.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/pst/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-candidate.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/pst/candidate.py evaluation/venue2027/pst/test_candidate.py --config ruff.toml && uvx ruff@0.7.1 format --check evaluation/venue2027/pst/candidate.py evaluation/venue2027/pst/test_candidate.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-candidate.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_PST-candidate_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/PST-candidate.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-candidate.validator.log"
+    }
+  ],
+  "notes": "P04 candidate algorithm boundary for venue pst (ReceiptMin: Measuring Forensic Reconstructability under Purpose-Bound Audit Minimization). Implemented the isolated ReceiptMin mechanism at evaluation/venue2027/pst/candidate.py (CANDIDATE_ID='clara.pst.candidate.receiptmin', CANDIDATE_ARM_ID='B4', version 1.0.0; describe_mechanism() exposes the machine-readable design record). API: minimize(event, purpose) -> Receipt strips raw sensitive payload per declared purpose and policy epoch, cryptographically binding omitted fields via canonical SHA-256 digest (omitted_field_digest); reconstruct(receipts, query) -> Reconstruction(score, answerable) evaluates ex-ante forensic query answerability (FQ-AUTH-*, FQ-PROV-*, FQ-ELIG-*), failing closed to INDETERMINATE on unknown query, missing key custody, or receipt tampering; run_candidate(case, ctx) -> Outcome maps cases to ADMIT / REJECT / INDETERMINATE for the task harness. Independence: AST scan in test_candidate.py verifies candidate.py imports neither the independent oracle nor label datasets. Unit tests prove positive reconstruction of primary forensic queries, significant byte reduction (>30%) relative to full logs, and fail-closed behavior on adversarial/tampered/unknown queries.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "28ff55110f980f42002524cef126290e91258cd6",
+  "source_sha_before": "28ff55110f980f42002524cef126290e91258cd6",
+  "status": "PASS",
+  "task_id": "PST-candidate",
+  "unresolved": []
+}

@@ -1,0 +1,44 @@
+{
+  "task_id": "SACMAT-runner",
+  "status": "PASS",
+  "source_sha_before": "28ff55110f980f42002524cef126290e91258cd6",
+  "source_sha_after": "28ff55110f980f42002524cef126290e91258cd6",
+  "changed_paths": [
+    "evaluation/venue2027/sacmat/runner.py",
+    "evaluation/venue2027/sacmat/test_runner.py",
+    "research/venue2027/proof/SACMAT-runner.json",
+    "research/venue2027/proof/artifacts/sacmat_run_bundle.jsonl",
+    "research/venue2027/proof/emit_SACMAT-runner_report.py",
+    "research/venue2027/proof/logs/SACMAT-runner.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-runner.ruff.log",
+    "research/venue2027/proof/logs/SACMAT-runner.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/sacmat/test_runner.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-runner.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/sacmat/runner.py evaluation/venue2027/sacmat/test_runner.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-runner.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_SACMAT-runner_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/SACMAT-runner.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-runner.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/sacmat/runner.py": "51385908c0a1bee1788a1cb4e8f497008e74456c83203ebbeb0b44523820e2cf",
+    "evaluation/venue2027/sacmat/test_runner.py": "3c90f0494c9a05c5b768d2f6dc899a538fad1812528093b1d422bb92a8c0bc0f",
+    "research/venue2027/proof/artifacts/sacmat_run_bundle.jsonl": "464540b785b9f5c2d355fb294f8bcd06397dae02de03c42959852cf7e638927c",
+    "research/venue2027/proof/logs/SACMAT-runner.pytest.log": "8478e6b437f3d9b065e15424a141410ceb40ad20fedf65c2732406d7c7f846c5",
+    "research/venue2027/proof/logs/SACMAT-runner.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P05 task SACMAT-runner (PolicyTrace RQ1-RQ3): uniform multi-arm execution runner. evaluation/venue2027/sacmat/runner.py implements run_campaign(config) -> RunBundle, executing all candidate, single-engine, and ablation policy arms over the temporal trace corpus under balanced paired case/seed plan and equal timeout. Reuses the audited shared deterministic harness (_shared.harness). Every (arm, case) cell is accounted for; non-completions and adapter crashes record as EXECUTION_ERROR rather than being silently dropped; timeouts record as TIMEOUT; mutually exclusive outcomes per GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md rule 4. Unequal configurations (seed drift, per-arm timeouts) and missing arms fail closed with stable reason codes. Real sample run bundle artifact emitted under research/venue2027/proof/artifacts/sacmat_run_bundle.jsonl recording all 36 planned engine x trace pairs."
+}

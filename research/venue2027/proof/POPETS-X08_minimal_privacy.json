@@ -1,0 +1,37 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/popets/minimal_disclosure.py": "ad1c164c8d74a467fbfa1bee05440a9d74bb96bf364d7064cb6ccf98da0c35aa",
+    "evaluation/venue2027/popets/test_minimal_privacy.py": "b8a551472b8a3e184e23a8851e6d34753cb9d8284bc64f36994db6454c9f43c0",
+    "research/venue2027/proof/logs/POPETS-X08_minimal_privacy.pytest.log": "6cfb81cd439929e4e749485a362722144a59599ffda343ffee29b7b0f55e2467",
+    "research/venue2027/proof/logs/POPETS-X08_minimal_privacy.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/popets/minimal_disclosure.py",
+    "evaluation/venue2027/popets/test_minimal_privacy.py",
+    "research/venue2027/proof/POPETS-X08_minimal_privacy.json",
+    "research/venue2027/proof/emit_popets_x08_minimal_privacy_report.py",
+    "research/venue2027/proof/logs/POPETS-X08_minimal_privacy.pytest.log",
+    "research/venue2027/proof/logs/POPETS-X08_minimal_privacy.ruff.log",
+    "research/venue2027/proof/logs/POPETS-X08_minimal_privacy.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/popets/test_minimal_privacy.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-X08_minimal_privacy.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/popets/minimal_disclosure.py evaluation/venue2027/popets/test_minimal_privacy.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-X08_minimal_privacy.ruff.log"
+    }
+  ],
+  "notes": "POPETS-X08_minimal_privacy (Phase P04, RQ3): implemented minimal outbound disclosure control in evaluation/venue2027/popets/minimal_disclosure.py adhering to task dependency + active purpose rather than original full EHR summary. Restricts disclosed context to the minimal field set demanded by the task and authorized by purpose; reports withheld fields and payload. Fails closed on any unresolved or unknown graph edge (missing ancestor, unlinked derivation, cross-purpose edge) by falling back to RECOMPUTATION (recomputation_required=True, reason_code=REASON_RECOMPUTATION_REQUIRED). Actively refuses full EHR summary disclosure when a strictly minimal context set exists (reason_code=REASON_FULL_SUMMARY_DISCLOSURE_REFUSED). Implements exact target contract select_fields(context, task) -> FieldSet and minimal_disclosure(task_dependency, current_purpose, graph) -> Disclosure. 9 unit tests in evaluation/venue2027/popets/test_minimal_privacy.py pass cleanly (positive controls for narrow task disclosure reduction, purpose change narrowing, lineage-backed resolution, select_fields contract; adversarial controls for unknown graph edge recomputation fallback, cross-purpose edge fallback, full summary refusal, malformed inputs).",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "28ff55110f980f42002524cef126290e91258cd6",
+  "source_sha_before": "28ff55110f980f42002524cef126290e91258cd6",
+  "status": "PASS",
+  "task_id": "POPETS-X08_minimal_privacy",
+  "unresolved": []
+}

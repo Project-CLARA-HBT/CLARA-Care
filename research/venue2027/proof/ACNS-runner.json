@@ -1,0 +1,43 @@
+{
+  "task_id": "ACNS-runner",
+  "status": "PASS",
+  "source_sha_before": "28ff55110f980f42002524cef126290e91258cd6",
+  "source_sha_after": "28ff55110f980f42002524cef126290e91258cd6",
+  "changed_paths": [
+    "evaluation/venue2027/acns/runner.py",
+    "evaluation/venue2027/acns/test_runner.py",
+    "research/venue2027/proof/artifacts/acns_run_bundle.jsonl",
+    "research/venue2027/proof/ACNS-runner.json",
+    "research/venue2027/proof/logs/ACNS-runner.pytest.log",
+    "research/venue2027/proof/logs/ACNS-runner.ruff.log",
+    "research/venue2027/proof/logs/ACNS-runner.suite.log",
+    "research/venue2027/proof/logs/ACNS-runner.validator.log",
+    "research/venue2027/proof/emit_acns_runner_report.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/test_runner.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-runner.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/acns/runner.py evaluation/venue2027/acns/test_runner.py && uvx ruff@0.7.1 format --check evaluation/venue2027/acns/runner.py evaluation/venue2027/acns/test_runner.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-runner.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-runner.suite.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/acns/runner.py": "22655f8490d43f7516b751041c21054113ef4f99b55e6d3bb6200e18a9a8535b",
+    "evaluation/venue2027/acns/test_runner.py": "240db1ea68f8e0ee934d454f0c2e01178a205e5e469861e64182d82880435c3d",
+    "research/venue2027/proof/artifacts/acns_run_bundle.jsonl": "f1f9b8a81c37bff749de78bee3a39496462b1b9bfd636279859541109786289c"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "ACNS-runner (Phase P05, venue acns; SoK: Evidence Boundaries of Attestation in Tool-Using AI Systems): delivered evaluation/venue2027/acns/runner.py implementing run_campaign(config) -> RunBundle, executing all SoK reference classes (B0-attestation-only, B1-receipt-without-binding, B2-timestamp-only, B3-evidence-boundary-aware) over the corpus/evidence records (synthetic-acns-2027) with equal config, recording evidence-boundary verdicts per record, mutually exclusive outcomes, source commit SHA, and seeds. Reuses evaluation/venue2027/_shared/harness.py. Deterministic: identical configs yield identical pair digests and outcome distributions. Equal config enforcement: differing seeds across arms, differing arm_configs, unequal timeouts or retry budgets are strictly refused fail-closed with UNEQUAL_CONFIG. Denominator completeness: crashing arms are captured as EXECUTION_ERROR (counted_as_success=False) and never dropped; denominator_total is fully partitioned across mutually exclusive buckets. Evidence-boundary verdicts: every record carries baseline detail and independent oracle adjudication (B3 achieves 100% agreement with oracle; B0/B1/B2 exhibit expected blind spots). Real sample run bundle generated at research/venue2027/proof/artifacts/acns_run_bundle.jsonl recording 16 pairs (4 arms x 4 records: admit=12, reject=4, complete=True). Tests: 19 passed in evaluation/venue2027/acns/test_runner.py (positive and adversarial controls); full ACNS suite regression: 162 passed in evaluation/venue2027/acns/. ruff@0.7.1 check and format clean on touched paths. source_sha_after = base SHA per repo convention."
+}

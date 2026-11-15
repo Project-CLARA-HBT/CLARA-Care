@@ -1,0 +1,44 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/popets/runner.py": "4d885f675ab3e3d3345d3e72ff5117a6b1374a245d96db5cffcd063b01f3581b",
+    "evaluation/venue2027/popets/test_runner.py": "601adbad64214938648df8f452c6884188d3a0f9bce5f1439803261691e36d66",
+    "research/venue2027/proof/artifacts/popets_run_bundle.jsonl": "0491d62efe21436bf37344441ec7e4e91c179bc7f04ecd4d66a10e81cec1d856",
+    "research/venue2027/proof/logs/POPETS-runner.pytest.log": "4d292a94f0165c02c50520f33a20b1eece312b4a14b6da4114725cbfd9f832c5",
+    "research/venue2027/proof/logs/POPETS-runner.ruff.log": "f7dda2fd24b50ea3a1cbaf1fd43ea7a5a532c974f584a1b5abd3cf85ef023e29"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/popets/runner.py",
+    "evaluation/venue2027/popets/test_runner.py",
+    "research/venue2027/proof/artifacts/popets_run_bundle.jsonl",
+    "research/venue2027/proof/emit_POPETS-runner_report.py",
+    "research/venue2027/proof/POPETS-runner.json",
+    "research/venue2027/proof/logs/POPETS-runner.pytest.log",
+    "research/venue2027/proof/logs/POPETS-runner.ruff.log",
+    "research/venue2027/proof/logs/POPETS-runner.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/popets/test_runner.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-runner.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/popets/runner.py evaluation/venue2027/popets/test_runner.py && uvx ruff@0.7.1 format --check evaluation/venue2027/popets/runner.py evaluation/venue2027/popets/test_runner.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-runner.ruff.log"
+    },
+    {
+      "argv": "PYTHONPATH=. python3 research/venue2027/proof/emit_POPETS-runner_report.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-runner.validator.log"
+    }
+  ],
+  "notes": "POPETS-runner (Phase P05, venue popets): delivered evaluation/venue2027/popets/runner.py (POPETS_RUNNER_VERSION 1.0.0) with run_campaign(config)->RunBundle executing a balanced paired case/order/seed plan across all arms (B0-B4 + comparator arms) with identical timeout, retry budget, execution backend, randomness (frozen seed), and compiler/model versions. Reuses _shared.harness.execute directly. Strict parity validation refuses seed drift, timeout variance, retry budget variance, backend variance, and compiler/model variance with stable reason code UNEQUAL_ARM_CONFIG. Crashing arms are caught by the harness and recorded as EXECUTION_ERROR in the denominator rather than escaping as uncounted crashes (complete: True). Real sample run bundle emitted to research/venue2027/proof/artifacts/popets_run_bundle.jsonl with 45 planned/attempted pairs (14 ADMIT, 13 REJECT, 18 NOT_RUN_EXTERNAL, 0 EXECUTION_ERROR, 0 TIMEOUT). test_runner.py has 16 positive and adversarial tests covering paired counts, balanced pairing, determinism, journal idempotence, crashing arm accounting, and all 5 unequal-config refusals. pytest exit 0, ruff 0.7.1 check+format exit 0.",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "28ff55110f980f42002524cef126290e91258cd6",
+  "source_sha_before": "28ff55110f980f42002524cef126290e91258cd6",
+  "status": "PASS",
+  "task_id": "POPETS-runner",
+  "unresolved": []
+}

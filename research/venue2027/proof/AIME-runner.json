@@ -1,0 +1,48 @@
+{
+  "task_id": "AIME-runner",
+  "status": "PASS",
+  "source_sha_before": "28ff55110f980f42002524cef126290e91258cd6",
+  "source_sha_after": "28ff55110f980f42002524cef126290e91258cd6",
+  "changed_paths": [
+    "evaluation/venue2027/aime/runner.py",
+    "evaluation/venue2027/aime/test_runner.py",
+    "research/venue2027/proof/AIME-runner.json",
+    "research/venue2027/proof/artifacts/aime_run_bundle.jsonl",
+    "research/venue2027/proof/emit_aime_runner_report.py",
+    "research/venue2027/proof/logs/AIME-runner.pytest.log",
+    "research/venue2027/proof/logs/AIME-runner.ruff.log",
+    "research/venue2027/proof/logs/AIME-runner.suite.log",
+    "research/venue2027/proof/logs/AIME-runner.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/aime/test_runner.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-runner.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/aime/runner.py evaluation/venue2027/aime/test_runner.py && uvx ruff@0.7.1 format --check evaluation/venue2027/aime/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-runner.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-runner.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_aime_runner_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/AIME-runner.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-runner.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/aime/runner.py": "06a46ceebc68e74860958b1b63f839fc5822dcc59e5e87611b35fc9262b04821",
+    "evaluation/venue2027/aime/test_runner.py": "236d36726508a96359c0ff2a934b808bfbf1ddaaff4feb9312aa15b70c256ac6",
+    "research/venue2027/proof/artifacts/aime_run_bundle.jsonl": "99ca09108a22a83446badd673fa663b152956500576bde822954d52c1536fdd4"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P05 uniform arm executor for AIME 2027 ('Counterfactual Clinical Workflow Safety under Changing Consent and Medication Histories'). evaluation/venue2027/aime/runner.py delivers the target contract run_campaign(config) -> RunBundle executing all registered arms (B0-B5, C0) over balanced synthetic clinical vignettes with strictly equal configuration: reuses evaluation.venue2027._shared.harness for deterministic, journal-backed, resumable multi-arm execution. Adjudication is wired to evaluation.venue2027.aime.independent_oracle. NO LLM calls: pure deterministic offline execution over synthetic vignettes only (no PHI, refused fail-closed per data_ethics_and_irb.md). Unequal config refused: seed drift across arms or differing arm configs (timeout, model, prompt settings) raise RunnerError(UNEQUAL_CONFIG_REFUSED). Honest provider boundary: provider-dependent arm B2 and declared provider-dependent arms without an active provider yield NOT_RUN_EXTERNAL with PROVIDER_DEPENDENT_NOT_RUN (never a fake pass, safe rejection or completion). Denominator completeness: an arm that crashes is caught and recorded as EXECUTION_ERROR with its exception class and never dropped from the denominator. Real sample run bundle emitted at research/venue2027/proof/artifacts/aime_run_bundle.jsonl recording all 30 planned pairs across 6 arms and 5 synthetic update families (admit: 13, reject: 8, indeterminate: 4, not_run_external: 5, execution_error: 0, timeout: 0, invalid_result: 0; denominator consistency verified via shared measurement). 15 tests pass in test_runner.py (positive: denominator completeness, deterministic replay, C0 candidate execution, measurement standard assertion, resumable journal idempotency, balanced synthetic generation; adversarial: crashing arm recorded EXECUTION_ERROR not dropped, unequal config / seed drift refused, differing arm configs refused, missing arm config refused, provider-dependent arm yields NOT_RUN_EXTERNAL not a fake result, empty scope / duplicate id / invalid source sha / invalid timeout / invalid workers / unknown arm refused). Full evaluation/venue2027 suite (2081 passed) and ruff clean. source_sha_after = base SHA per established repo convention."
+}

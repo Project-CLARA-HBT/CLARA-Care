@@ -1,0 +1,42 @@
+{
+  "task_id": "POPETS-ablation",
+  "status": "PASS",
+  "source_sha_before": "28ff55110f980f42002524cef126290e91258cd6",
+  "source_sha_after": "28ff55110f980f42002524cef126290e91258cd6",
+  "changed_paths": [
+    "evaluation/venue2027/popets/ablations.py",
+    "evaluation/venue2027/popets/test_ablations.py",
+    "research/venue2027/proof/POPETS-ablation.json",
+    "research/venue2027/proof/emit_POPETS-ablation_report.py",
+    "research/venue2027/proof/logs/POPETS-ablation.pytest.log",
+    "research/venue2027/proof/logs/POPETS-ablation.ruff.log",
+    "research/venue2027/proof/logs/POPETS-ablation.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/popets/test_ablations.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-ablation.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/popets/ablations.py evaluation/venue2027/popets/test_ablations.py && uvx ruff@0.7.1 format --check evaluation/venue2027/popets/ablations.py evaluation/venue2027/popets/test_ablations.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-ablation.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_POPETS-ablation_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/POPETS-ablation.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-ablation.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/popets/ablations.py": "3c8562672b902d7b3438929f31c781a2ea70cd61511405095e143f760f17f4c8",
+    "evaluation/venue2027/popets/test_ablations.py": "14e9fae66d78174f0f2157e55e185aabc243103f04c757b404e9bd4985912fc5",
+    "research/venue2027/proof/logs/POPETS-ablation.pytest.log": "f35de03aea049da28c5678858b458f8866afa66364aaccfdbe78f88a10c1b39d",
+    "research/venue2027/proof/logs/POPETS-ablation.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P04 task POPETS-ablation (dependency POPETS-candidate PASS): preregistered causal mechanism ablation variants at evaluation/venue2027/popets/ablations.py (POPETS_ABLATIONS_VERSION=clara.popets.ablations-v1) behind the task-manifest signature run_ablation(name, case) -> Outcome. The P04 candidate (evaluation/venue2027/popets/candidate.py) is evaluated against ITSELF with EXACTLY ONE mechanism removed per variant, each variant a real callable reusing existing components and DECLARING its ablated mechanism via typed VariantSpec rows in ABLATION_REGISTRY. VARIANTS (one mechanism axis each): candidate_no_key_module (candidate hook candidate.ablation_no_reverse_edges - reverse-edge closure disabled, direct dependency invalidation stays enforced; ablated_mechanism=reverse_edge_closure); baseline_common_safety_gate (full provenance boundary replaced by point-in-time check of direct consent and purpose scope without lineage tracking or reverse edges, reusing revocation_model.allowed; ablated_mechanism=lineage_provenance_tracking); full_refresh (coarse full-cache purge on consent change, reusing blueprint arm B1 coarse-cache-purge-on-revocation in baselines.py / cache_control; ablated_mechanism=selective_exact_invalidation); zero_proof_receipt (provenance proof / receipt verification omitted, unverified dependency labels admitted without consent epoch or lineage verification; ablated_mechanism=provenance_proof_verification); no_context_history_branch (longitudinal context and derived parent edges stripped, unlinking derived entries from historical parent context; ablated_mechanism=longitudinal_context_history_branch). The unmodified full candidate is the reference ceiling and is deliberately NOT registered: a variant removing nothing is not an ablation. GUARDS: refuse_unregistered_variant refuses unknown ids with UNKNOWN_ABLATION_VARIANT and nothing-removing identities (full_candidate / candidate id) with VARIANT_REMOVES_NOTHING - fail closed, never guessed, never silently run as a degraded or full arm; VariantSpec refuses specs declaring no ablated mechanism at construction; run_ablation maps refusals to EXECUTION_ERROR Outcomes and malformed cases (non-mapping, missing/empty case id, malformed cache_ops) to INDETERMINATE/EXECUTION_ERROR carrying stable reason codes. CAUSAL MECHANISM CONTRASTS (development-scale, frozen synthetic families): over the six frozen families (fresh_dispatch clean control, transitive_revocation, unaffected_scope, unproven_lineage, historical_taint, cross_purpose), the full candidate ADMITs clean traffic and unaffected scopes while REJECTing all four attacks; candidate_no_key_module ADMITs the transitive leak and historical taint; baseline_common_safety_gate ADMITs transitive leaks and unproven lineage; full_refresh REJECTs the unaffected scope (false invalidation cost); zero_proof_receipt ADMITs unproven lineage; no_context_history_branch ADMITs historical taint. SINGLE-FACTOR ISOLATION asserted: all variants preserve cross_purpose rejection and fresh_dispatch admission. MECHANISTIC INFERENCE MATRIX (pass gate): frozen PREDICTED_VERDICTS constant pins all 36 reference+variant x family cells BEFORE execution; verify_mechanistic_inference_matrix() executes every cell fresh and compares - all 36 cells match, all_cells_match=true; observed_degradation == predicted_degradation and every ablation measurably degrades vs the reference ceiling. Machine-checked: 52 tests pass (python3 -m pytest -q evaluation/venue2027/popets/test_ablations.py, exit 0); full evaluation/venue2027/popets suite 243 passed; uvx ruff@0.7.1 check + format --check clean on touched paths (exit 0). source_sha_after = commit HEAD at proof-emission time."
+}
