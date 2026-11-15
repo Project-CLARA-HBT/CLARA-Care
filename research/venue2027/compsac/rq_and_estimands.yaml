@@ -1,0 +1,131 @@
+# COMPSAC-rq_registry -- preregistered research questions, estimands, hypotheses and metrics.
+#
+# Purpose
+# -------
+# Frozen RQ plan for the COMPSAC 2027 study "Dependency-Complete Optimistic
+# Admission for Concurrent Clinical AI Writes". For each of RQ1-RQ3 this file
+# preregisters: the research question, the independent unit, the population,
+# the estimand, the paired contrast, the primary metric (two-gate for RQ1),
+# secondary metrics, null and alternative hypotheses, the minimum useful
+# difference, confounders, the power/analysis method, the falsification
+# condition and the primary endpoint. Downstream tasks consume this registry
+# via read_rqs()->RQPlan (JSON-serializable).
+#
+# Allowed input
+# -------------
+# RESEARCH_BLUEPRINT.md, novelty_contract.md, CASE_MATRIX.md, the shared
+# GATES contracts, the shared schedule engine and the shared analysis policy.
+# This file records design decisions ONLY. It is preregistered before any
+# confirmatory holdout is opened; measured outcomes belong in
+# artifacts/venue2027/compsac/<run_id>/, never here.
+#
+# Failure semantics
+# -----------------
+# Any post-hoc change of endpoint, test, margin, unit, alpha, seed or planned
+# denominator after the freeze is analysis drift (reason code ANALYSIS_DRIFT
+# in the shared analysis policy) and reopens the registry instead of being
+# silently reworded. A missing or empty required field blocks dependent tasks.
+#
+# Version
+# -------
+# registry_version: compsac-rq-registry-v1 (additive-only within v1.x)
+
+schema_version: "clara.venue2027.rq_plan.v1"
+task_id: "COMPSAC-rq_registry"
+venue: "compsac"
+phase: "P01"
+status: "preregistered_only"
+registry_version: "compsac-rq-registry-v1"
+paper_title: "Dependency-Complete Optimistic Admission for Concurrent Clinical AI Writes"
+downstream_signature: "read_rqs()->RQPlan; JSON-serializable; consumed by COMPSAC-oracle, COMPSAC-baseline_tests and COMPSAC-stats"
+
+sources:
+  blueprint: "research/venue2027/VENUES/compsac/RESEARCH_BLUEPRINT.md"
+  novelty_contract: "research/venue2027/compsac/novelty_contract.md"
+  case_matrix: "research/venue2027/VENUES/compsac/CASE_MATRIX.md"
+  metrics_contract: "research/venue2027/GATES/SCIENTIFIC_METRICS_CONTRACT.md"
+  evidence_protocol: "research/venue2027/GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md"
+  schedule_engine: "evaluation/venue2027/_shared/schedules.py (SCHEDULE_ENGINE_VERSION 1.0.0)"
+  analysis_module: "evaluation/venue2027/_shared/analysis_policy.py (ANALYSIS_POLICY_VERSION 1.0.0)"
+
+baseline_arms:
+  B0: "global-profile version OCC (common coarse implementation; the comparator named in RQ1)"
+  B1: "Silo-style entity readset OCC with commit-time validation (strong algorithmic comparator; disclosed as not being Silo source code)"
+  B2: "PostgreSQL SERIALIZABLE (SSI) with schema-check predicates (strong DB-native comparator; Ports and Grittner 2012)"
+  B3: "entity-OCC without semantic dependency closure (ablation exposing write skew)"
+  B4: "proposed dependency-complete scope-local OCC (candidate)"
+
+independent_oracle: "separate dependency-closure oracle plus transaction-history consistency checker implemented apart from the candidate (no candidate import); truth labels fixed before arms run per CASE_MATRIX.md; Elle-style black-box adjudication of exported histories"
+independent_unit: "one independent logical schedule per the shared schedule engine (evaluation/venue2027/_shared/schedules.py): a canonical, de-duplicated logical ordering of operations crossing declared barriers, generated deterministically from (seed, ScheduleScope); never per-event pseudo-replication"
+cluster_definition: "all operations and worker events inside one independent logical schedule form one cluster; repeated events within a schedule are never treated as independent draws (INDEPENDENT_EVIDENCE_PROTOCOL rule 3)"
+population_frame: "case x arm x seed: registered COMPSAC fixture families x relevant arms x at least 5 independent seeds per setting, clustered by independent logical schedule; both arms of every contrast run on the same schedule, case and computational budget (metrics contract rule 2)"
+falsification_global: "any forbidden commit under a complete, independently labeled dependency schedule falsifies the safety claim; if fully serializable PostgreSQL is as fast, the null performance benefit is candidly reported (blueprint falsification rule)"
+
+preregistration:
+  frozen_before_holdout: "this plan is signed and frozen before any confirmatory holdout is opened; development-split design changes are permitted only until freeze (blueprint evidence contract)"
+  primary_decision_set: "RQ1 two-gate decision (safety gate + utility gate) and RQ3 benefit criterion are the preregistered primary decisions; RQ2 detection completeness is adjudicated by the any-miss falsifier with per-family Clopper-Pearson intervals rather than an alpha-tested superiority gate"
+  no_results_recorded: "this registry records design decisions only; no measured rates, p-values, latency or throughput values may appear here or in the registry tests"
+
+analysis_contract:
+  shared_module: "evaluation/venue2027/_shared/analysis_policy.py (ANALYSIS_POLICY_VERSION 1.0.0, stdlib-only)"
+  paired_tests: "exact two-sided McNemar on discordant paired schedules; seeded deterministic cluster bootstrap CIs resampling whole schedules (cluster = independent logical schedule; bootstrap seed 2027; 2000 resamples)"
+  safety_gate_estimator: "one-sided Clopper-Pearson zero-event upper bound 1 - 0.05**(1/N) at alpha 0.05 (metrics contract rule 3); any nonzero forbidden-commit event count fails the gate outright"
+  two_gate_rule: "safety gate AND utility gate must each pass on their own preregistered decision rule (INDEPENDENT_EVIDENCE_PROTOCOL rule 5); the gates are evaluated independently of statistical significance labels and a safety difference with a large p-value is never a certificate"
+  alpha_budget: "one-sided alpha 0.05 per preregistered primary gate; secondary metrics are reported as confidence intervals without gate decisions"
+  power_method: "pilot variance estimated on the development split only; at least 5 independent seeds per setting before power decisions; prospective sample size frozen before holdout and never chosen from target p-values"
+  denominator_policy: "per arm always report eligible, attempted, completed, rejected, indeterminate, timeout, not_run_external and missing; indeterminate never coerced to PASS; no silent denominator shrinkage (metrics contract rule 6)"
+  evidence_provenance: "every claim derives mechanically from artifacts/venue2027/compsac/<run_id>/manifest.json; PostgreSQL release/version and isolation setting plus kernel SHA recorded per run; SQLite observations never substitute for PostgreSQL claims; histories exported to the independent checker"
+
+rqs:
+  RQ1:
+    research_question: "Compared with globally versioned OCC (B0), does a dependency-complete read set (B4) reduce unnecessary aborts (oracle-defined false-stale rejections) without increasing forbidden commits, and does it remain at least as safe as the strongest scoped competitor B1?"
+    independent_unit: "one independent logical schedule per the shared schedule engine (canonical de-duplicated ordering of operations crossing declared barriers, generated deterministically from seed and ScheduleScope); all events within one schedule are one cluster"
+    population: "case x arm x seed: fixture families COMPSAC-CASE-01, COMPSAC-CASE-02 and COMPSAC-CASE-08 plus holdout variants x arms B0, B1, B4 x at least 5 independent seeds per setting across the contention/density/Zipf grid; safety denominator planned at 299 or more independent schedules per arm-pair setting so the zero-event bound meets the frozen margin"
+    estimand: "paired difference in oracle-defined false-stale rejection rate (candidate B4 minus comparator) on matched independent logical schedules, conditional on the forbidden commit rate of B4 remaining zero under complete, independently labeled schedules"
+    paired_contrast: "each independent logical schedule runs on both arms with the same case and budget; per-schedule binary outcome (legitimate oracle-ALLOW write falsely rejected as stale, yes/no) paired by schedule_id; exact McNemar on discordant schedules; seeded cluster bootstrap CI on the paired mean difference"
+    primary_metric:
+      safety_gate: "forbidden commit rate under complete, independently labeled dependency schedules; must remain zero; one-sided Clopper-Pearson zero-event bound 1 - 0.05**(1/N) at alpha 0.05 must meet frozen margin 0.01; any nonzero event count fails outright"
+      utility: "oracle-defined false-stale rejection rate on oracle-ALLOW writes; preregistered minimum useful difference of 0.10 absolute reduction with cluster-bootstrap 95 percent CI low > 0"
+      two_gate_rule: "safety gate AND utility gate must each pass independently (INDEPENDENT_EVIDENCE_PROTOCOL rule 5); the gates are evaluated regardless of statistical significance labels"
+    secondary_metrics: ["throughput committed ops/sec", "latency percentiles p50/p95/p99", "retry amplification (retries per committed operation)", "dependency graph completeness (oracle-verified edge coverage)"]
+    null_hypothesis: "the dependency-complete read set does not reduce the oracle-defined false-stale rejection rate relative to B0 or B1 (paired difference <= 0)"
+    alternative_hypothesis: "B4 reduces the oracle-defined false-stale rejection rate by at least 0.10 absolute with CI low > 0 while the safety gate holds (zero forbidden commits with the Clopper-Pearson zero-event bound within margin)"
+    minimum_useful_difference: "0.10 absolute reduction in oracle-defined false-stale rejection rate versus the comparator arm with cluster-bootstrap 95 percent CI low > 0"
+    confounders: ["contention level (workers 1/2/4/8/16)", "dependency density (share of schema-required cross-resource edges present)", "Zipf skew of case access", "warmup and DB queue effects at matched budget", "pinned PostgreSQL version and isolation setting plus kernel SHA"]
+    power_analysis_method: "exact McNemar on paired binary commit outcomes plus seeded cluster bootstrap CIs (cluster = independent logical schedule; seed 2027; 2000 resamples; analysis_policy.py 1.0.0); one-sided Clopper-Pearson zero-event bound for the safety gate; at least 5 independent seeds per setting before power decisions; pilot variance on the development split only; prospective N frozen before holdout; indeterminate and timeout outcomes counted in denominators and never coerced"
+    falsification_condition: "any forbidden commit by the candidate arm B4 under a complete, independently labeled dependency schedule falsifies the safety claim outright; absence of a false-stale reduction relative to B0/B1 is a null result reported candidly and the RQ1 benefit claim is withdrawn rather than re-framed"
+    primary_endpoint: "two-gate primary endpoint: safety gate = forbidden commit rate (must remain zero; Clopper-Pearson zero-event bound versus frozen margin 0.01); utility gate = oracle-defined false-stale rejection rate (paired reduction versus B0/B1)"
+  RQ2:
+    research_question: "How does omitted-dependency failure propagate under explicit write-skew and policy-epoch races, and can a separate oracle detect each injected flaw without importing candidate code?"
+    independent_unit: "one independent logical schedule per the shared schedule engine carrying exactly one registered injected omitted-dependency mutant or one clean valid control; all events within one schedule are one cluster"
+    population: "case x arm x seed: injected mutants in the two registered fault families (write-skew family anchored on COMPSAC-CASE-04 and COMPSAC-CASE-05; policy-epoch race family anchored on COMPSAC-CASE-03) plus clean valid controls x arms B2, B3, B4 x at least 5 independent seeds per setting"
+    estimand: "per-fault-family detection proportion by the separate oracle among injected mutants per arm, with propagation depth counted as admitted dependent writes downstream of the omission per independent history; indeterminate adjudications counted in the denominator, never coerced to PASS"
+    paired_contrast: "the same injected mutant schedule is adjudicated across arms; per-mutant detection (yes/no) paired by schedule id; arm-level detection contrasts tested with Fisher exact; per-family detection proportions reported with exact Clopper-Pearson confidence intervals; clean controls must be accepted and never count as detections"
+    primary_metric:
+      detection_rate: "per-fault-family detection rate by the separate oracle for injected omitted-dependency mutants (write-skew family; policy-epoch race family)"
+      safety_side: "zero undetected mutants within a registered fault family blocks the closure-completeness claim (falsifier below); clean valid controls accepted; propagation depth reported per family as admitted dependent writes per independent history"
+    secondary_metrics: ["propagation depth (admitted dependent writes downstream of the omission per independent history)", "arm-level detection contrasts (B2 PostgreSQL SERIALIZABLE vs B3 ablation vs B4 candidate)", "indeterminate adjudication fraction per family", "independence audit (oracle imports no candidate code)"]
+    null_hypothesis: "the separate oracle's per-family detection proportion does not distinguish candidate-complete closure from the B3 ablation (arm-level detection contrast null)"
+    alternative_hypothesis: "the separate oracle detects every injected omitted-dependency mutant in both registered fault families on B4 while the B3 ablation exhibits the anomalies, and B2 adjudicates whether SSI alone already detects the same races"
+    minimum_useful_difference: "detection completeness, not superiority: any injected omitted-dependency flaw within a registered fault family that the separate oracle fails to detect blocks the closure-completeness claim; a family-level detection contrast versus B3 is considered informative only with Fisher exact p and a Clopper-Pearson interval excluding equality"
+    confounders: ["contention level (workers 1/2/4/8/16)", "dependency density (number of schema-required edges the mutant omits)", "Zipf skew of case access", "fault-family mix and mutant injection order", "oracle and candidate code separation (independence verified, never repaired post hoc)"]
+    power_analysis_method: "exact binomial (Clopper-Pearson) confidence intervals on detection proportion per fault family; Fisher exact test for arm-level detection contrasts; indeterminate outcomes counted in the denominator; at least 5 independent seeds per setting; any-miss falsifier adjudicated on all schedules, not on a subsample"
+    falsification_condition: "any injected omitted-dependency flaw within a registered fault family that the separate oracle fails to detect blocks the closure-completeness claim; if the oracle cannot adjudicate without candidate internals, oracle independence is broken and the study stops and rebuilds the oracle (never repairs the oracle to match the candidate post hoc)"
+    primary_endpoint: "per-fault-family detection rate by the separate oracle for injected omitted-dependency mutants (write-skew family; policy-epoch race family), with propagation depth counted as admitted dependent writes downstream of the omission per independent history"
+  RQ3:
+    research_question: "At what dependency-graph fanout and worker contention does dependency-scope overhead erase the committed-throughput gains of B4 relative to PostgreSQL SERIALIZABLE (B2)?"
+    independent_unit: "one independent logical schedule per the shared schedule engine executed at a preregistered (fanout, contention, Zipf, density) grid setting on real PostgreSQL; all events within one schedule are one cluster"
+    population: "case x arm x seed: the scaling fixture families (COMPSAC-CASE-07, COMPSAC-CASE-09) plus holdout variants x arms B2, B4 x at least 5 independent seeds per grid setting across fanout x workers (1/2/4/8/16) x Zipf skew x dependency density; equal budget and warmup policy per arm"
+    estimand: "paired per-setting ratio of committed throughput (ops/sec) of B4 versus B2 as a function of dependency-graph fanout and worker contention; the crossover is the smallest tested fanout/contention level whose ratio confidence interval includes 1"
+    paired_contrast: "each grid setting runs matched independent logical schedules on both arms with identical workload, warmup, retries and budget; per-schedule throughput paired by schedule id; paired bootstrap on per-setting throughput ratios (cluster = independent schedule/seed) with 95 percent confidence intervals; supporting paired latency percentiles and retry amplification"
+    primary_metric:
+      throughput_ratio: "committed throughput (ops/sec) ratio of B4 candidate vs B2 PostgreSQL SERIALIZABLE as a function of dependency-graph fanout and worker contention (1/2/4/8/16 workers, Zipf skew, varying dependency density); crossover = smallest tested fanout/contention level whose ratio confidence interval includes 1"
+      utility_criterion: "a throughput-benefit claim requires the ratio CI low > 1 at the claimed setting; if fully serializable PostgreSQL is as fast across all tested fanout and contention levels, the null performance benefit is candidly reported and the performance claim withdrawn"
+    secondary_metrics: ["p50/p95/p99 latency per operation", "retry amplification (retries per committed operation)", "dependency-scope validation overhead per commit", "abort composition (false-stale vs legitimate conflicts)", "recorded PostgreSQL release/version, isolation setting and kernel SHA per run"]
+    null_hypothesis: "B4 committed throughput does not exceed B2 at any tested fanout/contention setting (paired ratio <= 1 with CI including 1 everywhere)"
+    alternative_hypothesis: "B4 committed throughput exceeds B2 by more than the preregistered benefit margin at low-to-moderate fanout/contention, with a measured crossover interval inside the tested grid beyond which the gain is erased"
+    minimum_useful_difference: "throughput ratio point estimate > 1 with cluster-bootstrap 95 percent CI low > 1 at the claimed setting; crossover reported as an interval over tested fanout levels, never extrapolated beyond the grid"
+    confounders: ["contention level (workers 1/2/4/8/16)", "dependency-graph fanout and density", "Zipf skew of case access", "warmup and DB queue effects, bounded retries, external I/O", "PostgreSQL release/version and isolation setting plus kernel SHA; SQLite never substitutes for a PostgreSQL claim"]
+    power_analysis_method: "paired bootstrap on per-setting throughput ratios (cluster = independent schedule/seed) with 95 percent confidence intervals; latency percentiles and retry amplification reported as paired bootstrap CIs; at least 5 independent seeds per grid setting before power decisions; pilot variance on the development split only; prospective grid and N frozen before holdout"
+    falsification_condition: "if fully serializable PostgreSQL is as fast as the candidate across all tested fanout and contention levels, the performance-benefit claim is falsified and the null performance benefit is candidly reported (blueprint falsification rule); any PostgreSQL performance claim derived from SQLite observations is an automatic stop-and-revise violation"
+    primary_endpoint: "committed throughput (ops/sec) ratio of B4 vs B2 as a function of dependency-graph fanout and worker contention, with the crossover defined as the smallest tested fanout/contention level whose ratio confidence interval includes 1; supporting p50/p95/p99 latency and retry amplification"

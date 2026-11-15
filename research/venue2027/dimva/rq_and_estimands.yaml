@@ -1,0 +1,444 @@
+# =====================================================================
+# DIMVA-rq_registry — RQ, estimand, hypotheses and metrics (P01)
+# =====================================================================
+# Task: DIMVA-rq_registry (venue dimva, phase P01, priority P0).
+# Contract: research/venue2027/dimva/novelty_contract.md (signed GO),
+#           research/venue2027/VENUES/dimva/RESEARCH_BLUEPRINT.md,
+#           research/venue2027/GATES/SCIENTIFIC_METRICS_CONTRACT.md,
+#           research/venue2027/GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md.
+#
+# Purpose: preregistered registry of exactly three research questions with
+# frozen estimands, paired contrasts, primary/secondary metrics, hypotheses,
+# minimum useful differences, confounders, power/analysis method,
+# falsification conditions and primary endpoints — all frozen BEFORE any
+# holdout unsealing. This file asserts NO empirical result; every number that
+# later appears in DIMVA artifacts must derive mechanically from
+# artifacts/venue2027/dimva/<run_id>/manifest.json.
+#
+# Failure semantics: violations are ordinary assertion failures in
+# research/venue2027/dimva/tests/test_rq_registry.py with stable test names;
+# nothing is silently skipped. Any post-hoc edit of an endpoint, test,
+# margin, unit, alpha or seed against evaluation/venue2027/_shared/
+# analysis_policy.py (FrozenPlan / assert_frozen_analysis) is ANALYSIS_DRIFT.
+#
+# Endpoint class invariant: DIMVA is a DETECTION study. No RQ may adopt a
+# prevention / admission / replay-acceptance endpoint (that is the IFIP SEC
+# sibling study's territory). Detection = temporal classification of event
+# streams into attack campaigns vs benign sessions; prevention = deciding a
+# single request's admission.
+#
+# Version: 1.0.0. Additive-only within 1.x.
+schema_version: "clara.venue2027.rq_registry.v1"
+venue: dimva
+phase: P01
+task_id: DIMVA-rq_registry
+study_title: >-
+  GovernanceTrace: Detecting Adaptive Authorization-Boundary Probing from
+  Minimal Agent Events
+registry_version: "1.0.0"
+preregistration_status: frozen_before_holdout
+endpoint_class: detection
+# Sibling boundary: IFIP SEC owns prevention (replay acceptance rate across
+# purpose/delegation lineage); DIMVA owns detection (campaign-level PR-AUC at
+# a fixed false-positive budget over event streams).
+prevention_endpoint_refusal: >-
+  No RQ uses replay acceptance rate, admission rate, unauthorized-commit
+  prevention rate, or any single-request admission decision as an endpoint;
+  such metrics belong to the ifip_sec sibling study and the frozen GLHS
+  archive (E15-E22), both refused here as new evidence.
+
+# ---------------------------------------------------------------------------
+# Shared frozen design elements (apply to all RQs)
+# ---------------------------------------------------------------------------
+shared_design:
+  # Independent unit of analysis: one multi-event campaign (attack) or one
+  # benign session. Never a per-event pseudo-replication; repeated events
+  # inside one campaign/session are clustered, never independent draws.
+  independent_unit: campaign_or_benign_session
+  unit_definition: >-
+    One independently sampled multi-stage attack campaign or one independently
+    sampled benign session trace, identified by group_id in the frozen
+    scenario JSONL contract (schema clara.venue2027.scenario.v1).
+  cluster_definition: >-
+    Campaigns sharing one scenario_family x synthetic tenant origin form a
+    cluster; cluster bootstrap resamples whole clusters so family/tenant
+    correlated structure never inflates the effective sample size.
+  population: >-
+    Independently generated synthetic multi-stage authorization-boundary
+    probing campaigns (purpose hopping, receipt/lineage reuse, delegation
+    abuse, permission-discovery sequences) plus benign traffic (legitimate
+    retries, outage backlogs, latency spikes) from a synthetic multi-tenant
+    health-AI gateway. Synthetic only; no real patient records.
+  # Independent oracle: simulator ground truth, sealed against detector access.
+  oracle:
+    source: simulator_ground_truth
+    labels: [BENIGN, ATTACK, ATTACK_OR_EXPOSE_LIMIT, MEASURE, INDETERMINATE]
+    adjudication: >-
+      Campaign intent and authorized-action labels are adjudicated from
+      scenario construction (truth.json per CASE_MATRIX.md), never from a
+      detector score and never from the gateway's final rejection reason code.
+      The oracle implementation must not import any candidate or baseline
+      detector; plausible two-way readings stay INDETERMINATE and are excluded
+      from the primary denominator (reported, never silently dropped).
+    leak_safety: >-
+      Rejection reason codes are masked in the primary leak-safe test; the
+      masked-vs-unmasked contrast is disclosed only in the RQ1 ablation.
+  # Frozen false-alarm budget (operational constraint), fixed before holdout.
+  false_positive_budget:
+    metric: false_alarms_per_1000_benign_sessions
+    # Budget frozen here, before holdout unsealing. Operational deployment
+    # reality for a clinical-AI gateway: at most 10 operator alerts per 1,000
+    # benign sessions (1% session-level alert budget). Detection quality is
+    # reported AT this budget (recall / precision / PR-AUC summary), so a
+    # detector that is only competitive at a looser budget gains no credit.
+    budget_value: 10.0
+    budget_unit: false_alarms_per_1000_benign_sessions
+  # Frozen leakage control.
+  leakage_control:
+    mask_rejection_reason_codes_in_primary: true
+    raw_clinical_content_logged: false
+    minimal_event_fields: [event_kind, scoped_actor, tenant, purpose, logical_time, payload_digest_ref]
+    retained_sensitive_metadata_cap_bytes: 0
+  # Frozen split discipline.
+  splits:
+    development: design changes permitted on development split only
+    holdout: inaccessible until protocol and analysis freeze; family-holdout
+      groups share no templates across train/test
+    per_family_reporting: in-distribution-to-holdout degradation reported per held-out family
+  # Frozen error accounting (SCIENTIFIC_METRICS_CONTRACT rule 6).
+  outcome_accounting:
+    per_arm_counts: [eligible, attempted, completed, rejected, indeterminate, timeout, not_run_external, missing]
+    denominator_policy: predeclared primary denominator; INDETERMINATE excluded from primary analysis and reported
+  # Shared power / analysis method (also instantiated per RQ below).
+  power_and_analysis:
+    pilot: >-
+      Pilot variance estimation on the development split only; prospective
+      sample size frozen from the pilot upper variance bound, never chosen
+      from target p-values (SCIENTIFIC_METRICS_CONTRACT rule 9).
+    familywise_error: >-
+      Planned comparison count fixed at three primary contrasts (one per RQ);
+      Holm correction across the three primary contrasts; secondary metrics
+      are descriptive with cluster CIs, no confirmatory claim.
+    alpha: 0.05
+    bootstrap:
+      resamples: 2000
+      seed: 2027
+      scheme: cluster bootstrap resampling whole campaigns/sessions (units are campaigns, clusters are family x tenant)
+    software: evaluation/venue2027/_shared/analysis_policy.py (FrozenPlan, assert_frozen_analysis; ANALYSIS_DRIFT on post-hoc change)
+  confounders_shared:
+    - benign retry bursts and outage backlogs mimicking low-level attack event patterns
+    - traffic volume / tenant workload imbalance across arms (equal data access and equal compute budget enforced)
+    - template overlap between attack families across splits (frozen no-shared-template rule)
+    - reason-code leakage via unmasked rejection codes (masked in primary test)
+    - detector tuning on holdout-like distributions (development-split-only design changes)
+
+# ---------------------------------------------------------------------------
+# Strong baseline arms (shared registry; per-RQ contrasts below)
+# ---------------------------------------------------------------------------
+baseline_arms:
+  B0:
+    name: static threshold on denied-request counts per sliding window
+    role: strong operational baseline; strongest competing explanation for RQ1
+  B1:
+    name: temporal rule sequence / finite-state signature
+    role: strong interpretable baseline; pacing-robustness reference for RQ3
+  B2:
+    name: Isolation Forest on privacy-minimized counts
+    role: unsupervised anomaly-detection comparator
+  B3:
+    name: gradient-boosted trees with controlled leak-safe features
+    role: strongest supervised comparator for RQ2
+  B4:
+    name: sequence model with time-aware features
+    role: candidate family; admitted only if it shows holdout gain over B0-B3
+  candidate:
+    name: C0 GovernanceTrace privacy-constrained sequence detector
+    role: >-
+      minimal-event detector over (event_kind, scoped actor/tenant/purpose,
+      logical time, payload digest references) with no raw clinical content
+      and no rejection reason codes in the primary test
+  parity: >-
+    All arms use pinned real upstream implementations where available, with
+    fidelity vectors, equal data access and equal compute budget;
+    NOT_RUN_EXTERNAL is a permitted transparent status but blocks any
+    comparative claim against that arm.
+
+# ---------------------------------------------------------------------------
+# Research questions — exactly three, preregistered
+# ---------------------------------------------------------------------------
+research_questions:
+
+  - rq_id: RQ1
+    title: Detection under data minimization
+    research_question: >-
+      Can a detector identify attack campaigns from PHI-minimized events at a
+      bounded benign false-alarm rate, without using attack-specific
+      rejection-reason-code leakage?
+    independent_unit: campaign (attack) or benign session, per shared_design.independent_unit
+    population: >-
+      All eligible attack campaigns and benign sessions in the frozen
+      synthetic-dimva-2027 corpus (development + holdout splits), with
+      INDETERMINATE oracle labels excluded from the primary denominator and
+      reported.
+    estimand: >-
+      Campaign-level probing detection PR-AUC (AUCPR) of the candidate over
+      independent attack campaigns vs benign sessions, computed on
+      PHI-minimized minimal events with rejection reason codes masked,
+      summarized by recall at the frozen false-positive budget of at most 10
+      false alarms per 1,000 benign sessions. A detection property of the
+      event stream, not a per-request admission or prevention quantity.
+    paired_contrast: >-
+      Candidate (C0) vs B0 (static threshold on denied-request counts per
+      sliding window) on the same campaigns/sessions, same data access, same
+      compute budget; per-campaign detection indicators at the fixed budget
+      form paired Bernoulli units for exact McNemar's test, plus a 95%
+      cluster bootstrap CI for the AUCPR difference resampling independent
+      campaigns as clusters.
+    primary_metric: probing detection PR-AUC (campaign-level AUCPR) at the fixed false-positive budget, with recall at the budget as co-primary summary — detection, not prevention
+    primary_metric_family: [campaign_pr_auc, recall_at_fixed_fp_budget, false_alarms_per_1000_benign_sessions]
+    secondary_metrics:
+      - campaign-level ROC-AUC (descriptive companion to PR-AUC)
+      - precision at the fixed false-positive budget
+      - time-to-detect per detected campaign (descriptive in RQ1)
+      - bytes of retained sensitive metadata vs frozen minimal-schema cap
+      - masked-vs-unmasked rejection-reason-code ablation delta (label-leak disclosure only)
+    null_hypothesis: >-
+      H0_1: candidate campaign-level PR-AUC at the fixed false-positive budget
+      equals B0's PR-AUC at the same budget (paired difference = 0), and the
+      paired per-campaign detection-indicator difference at the budget is 0.
+    alternative_hypothesis: >-
+      H1_1: candidate PR-AUC at the fixed budget exceeds B0's by at least the
+      minimum useful difference delta_1, with a per-campaign detection
+      advantage on discordant pairs.
+    minimum_useful_difference:
+      symbol: delta_1
+      value: 0.05
+      scale: absolute PR-AUC difference (candidate minus B0) on the family-held-out leak-safe split
+      rationale: >-
+        A 5-point absolute PR-AUC gain is the smallest difference that would
+        justify abandoning count-based alerting in gateway operations; frozen
+        before holdout unsealing together with the pilot-based power calc.
+    confounders:
+      - benign retry bursts and outage backlogs that reproduce attack event counts (the B0 explanation itself)
+      - latency spikes inflating denial counts symmetrically in both arms
+      - attack-template overlap across splits (frozen no-shared-template rule)
+      - rejection reason-code leakage (masked in primary; ablation-only otherwise)
+      - per-tenant traffic volume imbalance (equal data access enforced)
+    power_and_analysis_method: >-
+      Exact McNemar's test on paired per-campaign detection indicators at the
+      fixed budget (candidate vs B0) with alpha=0.05, Holm-corrected across
+      the three primary contrasts; 95% two-sided cluster bootstrap CI (2000
+      resamples, seed 2027, clusters = campaign/sessions) for the PR-AUC
+      difference; two-gate decision via analysis_policy: gate 1 keeps false
+      alarms at or under the frozen budget, gate 2 requires the PR-AUC
+      difference to meet delta_1 with CI low > 0; pilot-based prospective
+      sample size from the development split; per-arm outcome counts
+      (eligible/attempted/completed/rejected/indeterminate/timeout/
+      not_run_external/missing) reported with a predeclared denominator.
+    falsification_condition: >-
+      F1: if B0 matches the candidate's campaign PR-AUC within delta_1 at the
+      fixed false-positive budget on the leak-safe split, no detection
+      necessity for sequence modeling is claimed. F2: if the candidate's
+      performance depends on attack-specific rejection reason codes — masking
+      collapses it toward the label-shuffled control while unmasking alone
+      restores it — the primary experiment is invalidated.
+    primary_endpoint: campaign-level probing detection PR-AUC (AUCPR) at the fixed false-positive budget on the family-held-out, leak-safe split — a detection endpoint over event streams, never a prevention or admission rate
+
+  - rq_id: RQ2
+    title: Robustness to novel campaigns
+    research_question: >-
+      How does cross-family/cross-tenant holdout change precision-recall and
+      time-to-detect relative to rule-based, IsolationForest, boosted-tree and
+      sequence models?
+    independent_unit: campaign (attack) or benign session, per shared_design.independent_unit
+    population: >-
+      All eligible campaigns and benign sessions in the frozen corpus,
+      stratified by frozen family-holdout groups; holdout families and
+      synthetic tenants frozen before any holdout access; no shared templates
+      across train/test.
+    estimand: >-
+      Unseen-family campaign recall and campaign-level PR-AUC under
+      cross-family/cross-tenant holdout for the candidate vs B3, summarized
+      with per-held-out-family in-distribution-to-holdout degradation and
+      supporting time-to-detect; computed from minimal leak-safe events. A
+      detection generalization quantity over event streams, not a prevention
+      quantity.
+    paired_contrast: >-
+      Candidate (C0) vs B3 (gradient-boosted trees on controlled leak-safe
+      features) on the same held-out campaigns within each held-out family;
+      stratified cluster bootstrap (clusters = independent campaigns within
+      held-out families) for recall and PR-AUC differences, plus a paired
+      family-level comparison of time-to-detect. B1 is retained as the
+      interpretable reference for the ML-necessity rule.
+    primary_metric: unseen-family campaign recall and campaign-level PR-AUC under cross-family/cross-tenant holdout at the fixed false-positive budget, with time-to-detect as the supporting measurement — detection generalization, not prevention
+    primary_metric_family: [unseen_family_recall, campaign_pr_auc_holdout, time_to_detect]
+    secondary_metrics:
+      - in-distribution-to-holdout PR-AUC degradation per held-out family
+      - unseen-family recall vs label-shuffled control (environmental-memorization probe)
+      - time-to-detect distribution summary (median, IQR) per held-out family
+      - false alarms per 1,000 benign sessions on holdout tenants
+      - open-set / unknown-class behavior on attack-family holdout (DIMVA-CASE-07 semantics)
+    null_hypothesis: >-
+      H0_2: candidate unseen-family recall and PR-AUC equal B3's on held-out
+      families (paired difference = 0), and unseen-family recall is
+      statistically indistinguishable from a label-shuffled control.
+    alternative_hypothesis: >-
+      H1_2: candidate unseen-family recall and PR-AUC exceed B3's by at least
+      the minimum useful difference delta_2 on held-out families, and exceed
+      the label-shuffled control.
+    minimum_useful_difference:
+      symbol: delta_2
+      value: 0.05
+      scale: absolute unseen-family recall difference (candidate minus B3) on family-held-out traces
+      rationale: >-
+        A 5-point absolute unseen-family recall gain is the smallest
+        operationally meaningful generalization edge a sequence model must
+        show over boosted trees to justify deployment complexity; frozen
+        before holdout unsealing.
+    confounders:
+      - environmental memorization of training tenants/families (sommer10 concern; addressed by no-shared-template holdout)
+      - family difficulty imbalance (one dominant held-out family driving the pooled estimate)
+      - training-label provenance differences across arms (equal leak-safe feature access enforced)
+      - budget mismatch between arms at operating-point selection (matched budget enforced)
+      - holdout unsealing before freeze (process violation, fail closed)
+    power_and_analysis_method: >-
+      Stratified cluster bootstrap (2000 resamples, seed 2027; clusters are
+      independent campaigns within held-out families) for recall and PR-AUC
+      differences vs B3, with paired family-level comparison of time-to-detect
+      and Holm correction across the three primary contrasts; degradation
+      reported per held-out family; two-gate decision: gate 1 keeps holdout
+      false alarms at or under the frozen budget, gate 2 requires the
+      unseen-family recall difference to meet delta_2 with CI low > 0;
+      unseen-family recall indistinguishable from a label-shuffled control is
+      reported as a negative outcome, never suppressed.
+    falsification_condition: >-
+      F3: if rule-based arms (B0/B1) perform as well as sequence models on
+      family-held-out traces within delta_2, no ML necessity is claimed. F4:
+      if unseen-family recall is statistically indistinguishable from a
+      label-shuffled control, the generalization claim fails and the result
+      is reported as a negative outcome.
+    primary_endpoint: unseen-family campaign recall and campaign-level PR-AUC under cross-family/cross-tenant holdout at the fixed false-positive budget — a detection generalization endpoint, never a prevention or admission rate
+
+  - rq_id: RQ3
+    title: Adaptation and privacy cost
+    research_question: >-
+      How do adaptive attacker retries and privacy budgets affect detection
+      and diagnostic reconstruction?
+    independent_unit: campaign (attack) or benign session, per shared_design.independent_unit
+    population: >-
+      All eligible adaptive-pacing campaigns (adversarial fixtures in the
+      spirit of DIMVA-CASE-05 / DIMVA-CASE-07: pacing beyond fixed windows,
+      family-mutation mechanisms) and matched benign sessions, evaluated
+      across escalating minimization budgets.
+    estimand: >-
+      Adaptive evasion success — the fraction of adaptive campaigns undetected
+      at the fixed false-positive budget — for the candidate vs B1, together
+      with bytes of retained sensitive metadata under escalating minimization
+      budgets measured against the frozen minimal-schema cap, and diagnostic
+      reconstruction quality of detected campaigns; all at equivalent budgets
+      across arms. Detection-side quantities over event streams, never
+      prevention-side.
+    paired_contrast: >-
+      Candidate (C0) vs B1 (temporal rule sequence / finite-state signature)
+      on the same adaptive campaigns at matched false-positive budget; paired
+      bootstrap at the matched budget for the evasion-success difference, plus
+      a paired comparison of retained-metadata bytes across minimization
+      budgets with family-clustered CIs.
+    primary_metric: adaptive evasion success (fraction of adaptive campaigns undetected at the fixed false-positive budget) and bytes of retained sensitive metadata under escalating minimization budgets — detection robustness, not prevention
+    primary_metric_family: [adaptive_evasion_success, retained_sensitive_metadata_bytes, detection_recall_under_adaptation]
+    secondary_metrics:
+      - candidate detection recall on adaptive vs non-adaptive campaign subsets
+      - diagnostic reconstruction quality (campaign linkage / attribution of detected multi-step campaigns)
+      - detection latency under adaptive pacing (time-to-detect shift)
+      - minimization-level ablation: recall vs retained-metadata-bytes Pareto frontier at matched budgets
+      - benign false alarms per 1,000 sessions under escalated minimization
+    null_hypothesis: >-
+      H0_3: adaptive pacing does not change the candidate's evasion success
+      relative to B1 at the matched budget (paired difference = 0), and
+      retained-sensitive-metadata bytes do not differ across minimization
+      budgets at equal detection.
+    alternative_hypothesis: >-
+      H1_3: the candidate's adaptive evasion success is at least delta_3 lower
+      than B1's at the matched budget (better detection under adaptation), and
+      detection-compatible minimization retains no more than the frozen
+      metadata cap.
+    minimum_useful_difference:
+      symbol: delta_3
+      value: 0.05
+      scale: absolute adaptive evasion-success reduction (B1 minus candidate) at the matched false-positive budget
+      rationale: >-
+        A 5-point absolute reduction in evasion success is the smallest
+        robustness edge over interpretable rules worth a learned detector's
+        opacity; frozen before holdout unsealing.
+    confounders:
+      - benign outage backlogs coinciding with adaptive pacing windows
+      - operating-point mismatch across arms (matched false-positive budget enforced)
+      - metadata-cap measurement self-reported by the detector (independent measurement against the frozen cap instead)
+      - family-mutation difficulty heterogeneity across adaptive fixtures
+      - reconstructability inflated by oracle side-information not available to the detector
+    power_and_analysis_method: >-
+      Paired bootstrap (2000 resamples, seed 2027) at the matched
+      false-positive budget for the evasion-success difference (candidate vs
+      B1), plus a paired comparison of retained-metadata bytes across
+      minimization budgets with family-clustered CIs; Holm correction across
+      the three primary contrasts; two-gate decision: gate 1 requires
+      detection to hold at minimization budgets retaining no more than the
+      frozen metadata cap, gate 2 requires the evasion-success reduction to
+      meet delta_3 with CI low > 0; adversarial fixtures use simulator-known
+      pacing ground truth, never detector self-report.
+    falsification_condition: >-
+      F5: if adaptive pacing reduces candidate detection to or below the
+      strongest baseline (B1) at the matched budget, the adaptive-robustness
+      claim is refused. F6: if detection holds only at minimization budgets
+      that retain sensitive metadata beyond the frozen cap, the
+      privacy-compatible detection claim fails.
+    primary_endpoint: adaptive evasion success at the fixed false-positive budget with retained-sensitive-metadata bytes against the frozen minimal-schema cap — a detection robustness endpoint, never a prevention or admission rate
+
+# ---------------------------------------------------------------------------
+# Global falsification register (mechanically testable summary)
+# ---------------------------------------------------------------------------
+falsification_register:
+  - id: F1
+    rq: RQ1
+    statement: B0 matches candidate campaign PR-AUC within delta_1 at the fixed budget on the leak-safe split
+    consequence: no detection-necessity claim for sequence modeling; report negative result
+  - id: F2
+    rq: RQ1
+    statement: candidate depends on rejection reason codes (masking collapses toward label-shuffled control; unmasking restores)
+    consequence: primary experiment invalidated
+  - id: F3
+    rq: RQ2
+    statement: rule-based arms (B0/B1) match sequence models within delta_2 on family-held-out traces
+    consequence: no ML-necessity claim
+  - id: F4
+    rq: RQ2
+    statement: unseen-family recall indistinguishable from label-shuffled control
+    consequence: generalization claim fails; negative outcome reported
+  - id: F5
+    rq: RQ3
+    statement: adaptive pacing reduces candidate detection to or below B1 at matched budget
+    consequence: adaptive-robustness claim refused
+  - id: F6
+    rq: RQ3
+    statement: detection holds only at minimization budgets retaining sensitive metadata beyond the frozen cap
+    consequence: privacy-compatible detection claim fails
+
+# ---------------------------------------------------------------------------
+# Evidence provenance constraints (INDEPENDENT_EVIDENCE_PROTOCOL)
+# ---------------------------------------------------------------------------
+evidence_provenance:
+  no_invented_results: >-
+    This registry freezes questions, endpoints and decision rules only. No
+    observed metric, p-value, CI, win rate or accuracy appears in this file;
+    all later numbers must derive mechanically from
+    artifacts/venue2027/dimva/<run_id>/manifest.json.
+  oracle_independence: >-
+    The oracle (truth.json adjudication) must not import any candidate or
+    baseline detector; labels derive from scenario construction, never from
+    detector scores or gateway final reason codes.
+  archive_refusal: >-
+    Frozen GLHS E15-E22 (study glhs-journal) are prevention/admission-era
+    background and are refused as new DIMVA evidence in both directions; the
+    accepted HEALTHINF work is cited background, never silently reused.
+  dataset: synthetic-dimva-2027
+  holdout_discipline: confirmatory holdout inaccessible until protocol and analysis freeze; early unsealing converts the study GO to NO-GO pending re-scoping.

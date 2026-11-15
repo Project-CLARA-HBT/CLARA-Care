@@ -1,0 +1,42 @@
+{
+    "artifacts_sha256": {
+        "research/venue2027/ifip_sec/rq_and_estimands.yaml": "0e2146eab4d9b2665296e832a56e4e34f13f00fa8a80808c3d66a5636a15b921",
+        "research/venue2027/ifip_sec/tests/test_rq_registry.py": "30b09b4faa14f4a603b8d5bd43798b7698ae7b42a4f6c92871cd4fc9d619604d",
+        "research/venue2027/proof/logs/IFIP_SEC-rq_registry.pytest.log": "bcbc8187e0ef324d98968b7a1a6e5d86ed27f97ff687e2b02c1db3014c1d7881",
+        "research/venue2027/proof/logs/IFIP_SEC-rq_registry.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+        "research/venue2027/proof/logs/IFIP_SEC-rq_registry.suite.log": "65b97a427601b867af3aed36abdc6a3d9654f778bfe1e7aed07258b9b1cbac96"
+    },
+    "baseline_parity": "NOT_APPLICABLE",
+    "changed_paths": [
+        "research/venue2027/ifip_sec/rq_and_estimands.yaml",
+        "research/venue2027/ifip_sec/tests/test_rq_registry.py",
+        "research/venue2027/proof/IFIP_SEC-rq_registry.json",
+        "research/venue2027/proof/logs/IFIP_SEC-rq_registry.pytest.log",
+        "research/venue2027/proof/logs/IFIP_SEC-rq_registry.suite.log",
+        "research/venue2027/proof/logs/IFIP_SEC-rq_registry.ruff.log"
+    ],
+    "commands": [
+        {
+            "argv": "python3 -m pytest -q research/venue2027/ifip_sec/tests/test_rq_registry.py",
+            "exit_code": 0,
+            "log_path": "research/venue2027/proof/logs/IFIP_SEC-rq_registry.pytest.log"
+        },
+        {
+            "argv": "python3 -m pytest -q research/venue2027/ifip_sec/tests/",
+            "exit_code": 0,
+            "log_path": "research/venue2027/proof/logs/IFIP_SEC-rq_registry.suite.log"
+        },
+        {
+            "argv": "uvx ruff@0.7.1 check research/venue2027/ifip_sec/ --config ruff.toml",
+            "exit_code": 0,
+            "log_path": "research/venue2027/proof/logs/IFIP_SEC-rq_registry.ruff.log"
+        }
+    ],
+    "notes": "P01 frozen RQ/estimand/hypothesis/metrics registry (preregistration, not evidence). read_rqs()->RQPlan returns exactly RQ1-RQ3, each with all 14 mandated fields (question verbatim from blueprint, independent_unit, population, estimand, paired_contrast, primary_metric, secondary_metrics, null H0, alternative H1, minimum_useful_difference, confounders, power_analysis_method, analysis_method, falsification_condition, primary_endpoint). Units are unique interleaving histories / benchmark schedules with within-unit clustering declared; pooling repeated events as independent draws is refused (the task's registered negative control). Zero-event handling is one-sided Clopper-Pearson 1-0.05**(1/N), never a safety proof; RQ3 uses the frozen two-gate non-inferiority certificate with predeclared margins (token bytes <= +4096, p95 latency <= +10 ms, DB round trips <= +4). RQ2 requires real PostgreSQL 16 and declares SQLite stand-ins inadmissible. Denominator categories (eligible/attempted/completed/rejected/indeterminate/timeout/not_run_external/missing) predeclared in population_common. Paired contrasts: RQ1 B4-vs-B1 with B2 co-comparator, RQ2 B4-vs-B3, RQ3 B4-vs-B1/B2. Inferential machinery frozen to evaluation/venue2027/_shared/analysis_policy.py (exact McNemar, cluster bootstrap, Clopper-Pearson, ANALYSIS_DRIFT). No invented empirical results: regex gates refuse p-values/CIs/observed rates in the preregistration. 21 stdlib tests (positive + adversarial mutations refused: missing field, 4th RQ, per-event unit, SQLite-backed RQ2) pass; full ifip_sec suite 103 passed; ruff 0.7.1 clean. SHA convention follows repo precedent (IFIP_SEC-scope / IFIP_SEC-threat): before==after==parent source state because the single required commit contains this self-referential report; the final deliverable commit SHA is reported in the handoff.",
+    "oracle_disagreement_count": null,
+    "source_sha_after": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+    "source_sha_before": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+    "status": "PASS",
+    "task_id": "IFIP_SEC-rq_registry",
+    "unresolved": []
+}

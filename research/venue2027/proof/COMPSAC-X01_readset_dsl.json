@@ -1,0 +1,41 @@
+{
+  "task_id": "COMPSAC-X01_readset_dsl",
+  "status": "PASS",
+  "source_sha_before": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+  "source_sha_after": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+  "changed_paths": [
+    "evaluation/venue2027/compsac/__init__.py",
+    "evaluation/venue2027/compsac/dependency_dsl.py",
+    "evaluation/venue2027/compsac/test_dependency_dsl.py",
+    "research/venue2027/proof/logs/COMPSAC-X01_readset_dsl.pytest.log",
+    "research/venue2027/proof/logs/COMPSAC-X01_readset_dsl.ruff.log",
+    "research/venue2027/proof/COMPSAC-X01_readset_dsl.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/compsac/test_dependency_dsl.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-X01_readset_dsl.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/compsac/dependency_dsl.py evaluation/venue2027/compsac/test_dependency_dsl.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-X01_readset_dsl.ruff.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 format --check evaluation/venue2027/compsac/dependency_dsl.py evaluation/venue2027/compsac/test_dependency_dsl.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-X01_readset_dsl.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/compsac/dependency_dsl.py": "e331bfac9347d434fb8e4f6f8acff4a4852ccda6d05cdddd09d45fe279d73c8a",
+    "evaluation/venue2027/compsac/test_dependency_dsl.py": "00ac75c6a2300db3846d16f71587dbe862a9740449538448817883dff35b1715",
+    "research/venue2027/proof/logs/COMPSAC-X01_readset_dsl.pytest.log": "8129dd23e8a4aee2ef03bf08c1daf996c247570f4f318d0b336f6bf636e55b9f",
+    "research/venue2027/proof/logs/COMPSAC-X01_readset_dsl.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P02 typed transaction dependency language (dependency-closure oracle input language, RQ1). dependency_dsl.py: DependencyKind StrEnum (GOVERNANCE/ENTITY/EVIDENCE/LEASE); frozen dataclasses Dependency, Operation (op_id/writes/reads/declared_edges, to_dict/from_dict), Schema (version-pinned, MappingProxyType-backed); compile_dependencies(op, schema) -> frozenset[Dependency] derives the REQUIRED closure \u2014 exactly one dependency per distinct touched resource (writes \u222a reads), kind from the schema resource table, schema-pinned default version/epoch (GOVERNANCE epoch floor 0, others 'current'), declared-edge predicate overrides the kind default \u2014 with NO implicit wildcard omission: unknown write/read/edge target fails closed UNKNOWN_MUTATION_TARGET, unregistered predicate fails closed UNKNOWN_PREDICATE, schema version != clara.compsac.dependency-dsl-v1 refused SCHEMA_VERSION_MISMATCH, empty touch set refused EMPTY_OPERATION (governance still applies, COMPSAC-CASE-08), malformed operation/schema refused MALFORMED_OPERATION/MALFORMED_SCHEMA. assert_no_wildcard_omission(closure, op) independently proves every declared write/read has a same-resource dependency and names any omitted resource (COMPSAC-CASE-04 detection). ClosureReport/compile_with_report/compile_all produce JSON-serializable fail-closed records with stable reason codes and a canonical closure_sha256; failures are first-class reports, never coerced to safe acceptances (metrics contract item 6). test_dependency_dsl.py imports only the DSL (independent-oracle rule): 64-seed property test (seeded, deterministic random operations) proves (a) completeness \u2014 every read/write present with the schema kind, (b) no wildcard \u2014 closure resources == touched resources plus explicit prover, (c) stability \u2014 identical recompilation and identical closure_sha256; plus batch-totality, 3 positive controls (governed medication write, schema-pinned versions, read==write dedup) and 10 adversarial controls (unknown write target, unknown read target, unknown predicate, schema-version mismatch, edge-references-undeclared-read, empty operation, malformed operation x2, malformed schema x2), an injected-gap wildcard-omission catch, and JSON-serializability checks. 80 passed in 0.32s; uvx ruff@0.7.1 check + format --check clean; mypy 1.13.0 --ignore-missing-imports clean. source_sha_after records the base commit e2836f0a per sibling convention (COMPSAC-prior/ACNS-X01); the single task commit SHA is created immediately after this report and reported in the handoff. Baseline parity NOT_APPLICABLE (DSL layer; arms B0-B4 execute in P03 COMPSAC-X04..X07). Next ready tasks: COMPSAC-X02_closure_oracle, COMPSAC-X03_pg_schema."
+}

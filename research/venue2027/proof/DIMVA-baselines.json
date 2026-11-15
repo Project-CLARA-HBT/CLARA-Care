@@ -1,0 +1,47 @@
+{
+  "task_id": "DIMVA-baselines",
+  "status": "PASS",
+  "source_sha_before": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+  "source_sha_after": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+  "changed_paths": [
+    "evaluation/venue2027/dimva/__init__.py",
+    "evaluation/venue2027/dimva/baselines.py",
+    "evaluation/venue2027/dimva/test_baselines.py",
+    "research/venue2027/proof/DIMVA-baselines.json",
+    "research/venue2027/proof/emit_dimva_baselines_report.py",
+    "research/venue2027/proof/logs/DIMVA-baselines.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-baselines.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-baselines.suite.log",
+    "research/venue2027/proof/logs/DIMVA-baselines.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dimva/test_baselines.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-baselines.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dimva/baselines.py evaluation/venue2027/dimva/test_baselines.py && uvx ruff@0.7.1 format --check evaluation/venue2027/dimva/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-baselines.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-baselines.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_dimva_baselines_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/DIMVA-baselines.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-baselines.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/dimva/baselines.py": "cfe45974153b6472d53db21d2e65fa5ca502296d033888b6a978af7e8408e913",
+    "evaluation/venue2027/dimva/test_baselines.py": "cfb3fbb816d3374569cdb5f4b0961ff3c241344e01829d3039909d141701f1b5"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P03 baseline fidelity adapters for DIMVA 2027 (GovernanceTrace). evaluation/venue2027/dimva/baselines.py implements run_baseline(baseline_id, case, ctx) -> Outcome plus run_baseline_detection -> typed DetectionDecision and BASELINE_REGISTRY, over SYNTHETIC minimal leak-safe event sequences ((actor_id, tool, scope, allowed, ts) in monotonic logical time; one case = one session/campaign for one principal; no real PHI/PII, no network, no live provider, no hidden clock or randomness). Arms: B0 static threshold on denied-request counts per sliding window (operational baseline, RQ1 falsification arm); B1 static rule detection via cross-scope denial signature (no learned parameters); B2 statistical anomaly detector (z-score over leak-safe event-rate features against a frozen injected RateReference); B3 candidate campaign-level adaptive probing detection (cross-tool obfuscation + low-and-slow span + fixed-window evasion + activity-continuity criteria over the whole session). Core P03 separation demonstrated on the synthetic low-and-slow campaign (9 denials across 8 distinct tools, ~3h logical span, max 1 denial per B0 window): B3 DETECTs while B0 and B1 both return NO_DETECT \u2014 asserted explicitly in tests. Leak-safe contract: any rejection reason_code-like event field is refused fail-closed as INDETERMINATE (RQ1 masking). Malformed inputs (missing/empty/non-list events, unknown fields, bad types, non-monotonic ts, mixed actors) yield first-class INDETERMINATE outcomes with stable reason codes, never silently counted as safe rejections. Pinned external arms B2_ISOLATION_FOREST / B3_GBT (scikit-learn 1.8.0, registry ORIGINAL_UPSTREAM) are NOT_RUN_EXTERNAL with BASELINE_UNAVAILABLE: their registered parity fixtures (evaluation/venue2027/dimva/fixtures/*.json) and pinned configs are absent from this worktree, so no toy substitution under the pinned names (EXECUTION_CONTRACT rule 8); the in-process B2 z-score arm is a separate task-contract comparator, never presented as IsolationForest. precision_recall_auc computes a real average-precision AUCPR (hand-computed value matched in tests) and REFUSES tiny samples (< 30 cases) with AUC_SAMPLE_TOO_SMALL, plus degenerate labels, length mismatch, non-finite and non-numeric scores with stable codes. refuse_constant_stub replays paired benign/attack probe sessions and refuses detect-all (STUB_DETECT_ALL_REFUSED), detect-none (STUB_DETECT_NONE_REFUSED) and constant-output (CONSTANT_STUB_REFUSED) stubs while admitting a real separating detector (STUB_SEPARATION_OK). Machine-checked: 57 new tests pass (positive: registry coverage, per-arm detection/admission, B3-vs-B0/B1 low-and-slow separation, campaign-level AUCPR sufficiency/determinism/ranking, determinism; adversarial: detect-all/detect-none/constant stub refusal, tiny-sample AUC refusal, NOT_RUN_EXTERNAL arms, leak-safe reason-code refusal, malformed event/context fail-closed); full evaluation/venue2027 suite 327 passed; ruff check + format clean on touched files. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

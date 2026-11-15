@@ -1,0 +1,372 @@
+# SACMAT 2027 · Preregistered research-question, estimand and hypothesis registry
+# Task: SACMAT-rq_registry (Phase P01, venue sacmat, agent: statistician)
+# Contract signature: read_rqs() -> RQPlan
+# This file is a preregistration document. It contains NO experimental results.
+
+paper: "PolicyTrace: Temporal Conformance Testing of Delegated Consent across Heterogeneous Policy Engines"
+task_id: "SACMAT-rq_registry"
+venue: "sacmat"
+phase: "P01"
+agent_role: "statistician"
+contract_signature: "read_rqs() -> RQPlan"
+evidence_status: "PROSPECTIVE / NOT RUN"
+
+preregistration: >-
+  Signed before any data collection, per research/venue2027/GATES/INDEPENDENT_EVIDENCE_PROTOCOL
+  rule 1 and research/venue2027/GATES/SCIENTIFIC_METRICS_CONTRACT items 3, 4 and 9. Null and
+  alternative hypotheses, primary outcome, margins, variance assumptions, independent unit,
+  clustering, missingness handling, planned comparison count and confidence budget are frozen
+  by this file, upstream of any run. No prospective sample size is chosen from target p-values.
+  Development-split design changes are permitted only before the analysis freeze, and every
+  prospective amendment is disclosed in the release manifest.
+
+upstream_dependencies: >-
+  SACMAT-scope (signed scope register, research/venue2027/sacmat/novelty_contract.md) and
+  SH-analysis_policy (frozen shared statistics layer in
+  evaluation/venue2027/_shared/analysis_policy.py providing exact McNemar, cluster bootstrap,
+  Clopper-Pearson bounds and two-gate non-inferiority). Both dependencies are recorded PASS in
+  the task state before this registry was signed.
+
+study_primary_metric: delegation conformance divergence detection rate
+study_primary_metric_definition: >-
+  Cross-engine decision non-parity on identical ordered (policy history, request) units,
+  detected by temporal metamorphic tests at equal oracle-call budget, per novelty_contract.md
+  section 3.1. No prior CLARA study measures this endpoint.
+
+independent_unit_definition: >-
+  One delegated-consent policy case: a unique, independently sampled ordered policy history
+  (grant, revoke, regrant, delegation expiry, purpose narrowing, replay orderings) paired with
+  exactly one authorization request evaluated against that history, encoded per policy engine
+  (Cedar, OpenFGA, OPA). Repeated requests or retries inside one history are clustered on that
+  history and are never treated as independent units; per-event pseudo-replication is excluded
+  by design, so pooled repeated events are never treated as independent.
+
+clustering_rule: >-
+  Inferential confidence intervals resample whole independent clusters (independent histories
+  or mutant families, as declared per RQ); per-request repeated outcomes inside one history
+  enter the analysis only as members of their cluster, never as independent units.
+
+outcome_accounting:
+  - eligible
+  - attempted
+  - completed
+  - rejected
+  - indeterminate
+  - timeout
+  - not_run_external
+  - missing
+
+denominator_rule: >-
+  All runs report mutually exclusive per-arm counts (eligible, attempted, completed, rejected,
+  indeterminate, timeout, not_run_external, missing); denominators never shrink silently;
+  NOT_RUN_EXTERNAL is a transparent status that precludes comparative claims for that arm.
+
+multiplicity: >-
+  Planned comparison count is exactly three (RQ1 through RQ3), with the pairwise engine
+  contrasts inside RQ3 declared as secondary contrasts of the RQ3 hypothesis. Family-wise error
+  control across the three RQs follows novelty_contract.md section 2: the RQ2 endpoint
+  (mutation score at fixed oracle-call budget) is the multiplicity primary; RQ1 and RQ3 are
+  Holm-corrected secondary hypotheses at two-sided alpha 0.05.
+
+freezing_and_holdout: >-
+  Source and seed freeze precede scoring. The development split permits design changes only
+  before the analysis freeze; the confirmatory holdout (fresh reserved mutant families and
+  held-out histories) stays inaccessible until the protocol and analysis plan are frozen.
+  Opening the holdout before freeze is a stop-and-revise violation per novelty_contract.md
+  section 5.
+
+zero_event_policy: >-
+  A zero-event outcome yields a finite confidence bound, never a proof of safety: for
+  independent Bernoulli units the one-sided Clopper-Pearson upper bound after zero errors at
+  alpha 0.05 is 1 - 0.05**(1/N); correlated histories require a design-effect adjustment that
+  must be justified in the analysis report rather than assumed away.
+
+budget_and_hardware: >-
+  Every arm runs on the same fixed workload with recorded hardware, pinned engine versions,
+  warmup effects and external I/O; generation runtime is a reported secondary metric, never a
+  selection criterion.
+
+artifact_lineage: >-
+  Results filenames and claims must derive mechanically from
+  artifacts/venue2027/sacmat/<run_id>/manifest.json; no number may be cited in a manuscript,
+  corpus or artifact that does not trace to a manifest in that directory.
+
+no_results_declaration: >-
+  This registry contains no empirical outcome, no p-value, no mutation-score value, no
+  divergence-rate value and no other empirical number. Every quantitative token in this file is
+  either a frozen design constant (budgets, thresholds, alpha, confidence levels) or a corpus
+  size fixed by the blueprint (50 independently designed mutants with reserved fresh holdout
+  families).
+
+falsification_summary: >-
+  If the trace generator does not outperform the stateful baseline B3 and the MC/DC-guided
+  baseline B1 at equal oracle-call budget, no novel fault-detection claim is made and
+  portability limits are published transparently; if residual cross-engine disagreement
+  vanishes under best-practice encodings, the conformance corpus is positioned as a
+  Dataset/Tool-track contribution only.
+
+research_questions:
+  RQ1:
+    research_question: Which distinct trace-level policy errors are undetected by static rule/decision coverage but exposed by temporal metamorphic tests?
+    independent_unit: >-
+      One delegated-consent policy case as defined in independent_unit_definition: an ordered
+      policy history paired with exactly one authorization request, scored through its mutant
+      family membership; retries inside the history are clustered, never independent.
+    population: >-
+      Versioned synthetic policy and principal graphs generated under the frozen protocol; the
+      50 independently designed mutants spanning the F01-F05 temporal fault families (expired
+      delegate role, inheritance conflict, revoke-then-regrant ordering, nested-purpose
+      mismatch, emergency override without approval obligation) plus reserved fresh holdout
+      families; a corpus of independently sampled (policy history, request) cases split into a
+      development split (design only) and a confirmatory holdout (scoring only); source and
+      seed freeze precede scoring.
+    estimand: >-
+      Paired per-fault-family detection risk difference at equal oracle-call budget: the
+      probability of detection by the PolicyTrace temporal generator B4 minus the probability
+      of detection by MC/DC-inspired coverage generation B1, where detection means the
+      generator exposes an adjudicated minimal failing (policy history, request) witness for a
+      fault family on the shared mutant corpus; the risk difference is averaged over fault
+      families with mutant-family clustered uncertainty.
+    paired_contrast: >-
+      Same mutant corpus, same independent units, same oracle, same fixed oracle-call budget:
+      arm B4 (PolicyTrace temporal generator plus oracle) versus arm B1 (MC/DC-inspired XACML
+      policy testing, Xu et al. SACMAT 2018, pinned upstream source with fidelity vector), with
+      arm B0 (uniform random authorization requests) as the weak reference; arms B2 (XACBench
+      profile-driven synthetic tests) and B3 (property-based history generator without temporal
+      metamorphs) run at the same budget as additional arms; pairing is on the mutant family
+      and history corpus, never on retries.
+    primary_metric: delegation conformance divergence detection rate
+    primary_metric_operationalization: >-
+      RQ1 instantiation: trace witness detection coverage, meaning the count of distinct
+      trace-level fault families (F01-F05) detected by temporal metamorphic generation beyond
+      matched static decision coverage, per independently designed mutant family, at equal
+      oracle-call budget; this is the detection-mechanism realization of the study primary
+      metric.
+    secondary_metrics:
+      - minimal failure trace length
+      - invalid and indeterminate decision parity
+      - generation runtime at the fixed budget
+      - count of distinct fault classes with adjudicated witnesses
+    null_hypothesis: >-
+      The paired detection risk difference (B4 minus B1) is zero or negative at equal
+      oracle-call budget: temporal metamorphic tests detect no fault family that matched
+      MC/DC-inspired coverage generation also detects at the same budget.
+    alternative_hypothesis: >-
+      The paired detection risk difference is positive: at least one distinct trace-level fault
+      family is detected by temporal metamorphic generation and undetected by matched static
+      rule and decision coverage at the same budget.
+    minimum_useful_difference: >-
+      A paired per-family detection risk difference of at least 0.10 (ten percentage points
+      more fault families detected by B4 than by B1 at equal budget), frozen prospectively in
+      the absence of pilot data; smaller positive differences are reported transparently as
+      negative or inconclusive results, never as a novel coverage claim.
+    confounders:
+      - oracle-call budget parity across arms
+      - engine version pinning and adapter fidelity for each PDP encoding
+      - history length and ordering distribution of the generated corpus
+      - mutant family difficulty and designer blinding to candidate outputs
+      - generator seed selection and deterministic replay
+      - reviewer blinding during independent human adjudication
+      - handling of INDETERMINATE and untranslatable constructs, never counted as detections
+    power_analysis_method: >-
+      Exact McNemar test on discordant mutant-family pairs for the binary
+      detected-not-detected outcome, with mutant-family clustered bootstrap confidence
+      intervals for the paired risk difference; power is planned from the exact binomial
+      distribution of discordant counts under conservative variance assumptions fixed at
+      protocol freeze, never from target p-values; two-sided alpha 0.05 inside the Holm
+      correction as a declared secondary family (the RQ2 endpoint is the multiplicity primary);
+      a zero-detection family is summarized with the Clopper-Pearson zero-event bound.
+    falsification_condition: >-
+      If MC/DC-guided generation at equal oracle budget detects the same fault families, RQ1
+      yields a negative result: no novel coverage claim is made and the result is published
+      transparently as such.
+    primary_endpoint: >-
+      Count of distinct trace-level fault families (F01-F05 classes: expired delegate role,
+      inheritance conflict, revoke-then-regrant ordering, nested-purpose mismatch, emergency
+      override without approval obligation) detected by temporal metamorphic generation beyond
+      matched static decision coverage, per independently designed mutant family.
+    strongest_competing_baseline: >-
+      B1, MC/DC-inspired XACML policy testing (Xu et al., SACMAT 2018, registry id xacml18), at
+      equal oracle-call budget; it is the strongest published coverage-based generator, while
+      B0 (uniform random authorization requests) is the weak reference only.
+    independent_oracle: >-
+      Executable declarative reference semantics maintained separately from all candidate code
+      (the oracle never imports the generator), producing four-valued decisions (PERMIT, DENY,
+      NOT_APPLICABLE, INDETERMINATE), plus independent human review of semantically
+      non-equivalent mutants with reviewers blinded to candidate outputs; undecided cases are
+      labeled INDETERMINATE, never silently resolved.
+    statistical_test: >-
+      Paired comparison of per-family detection indicators across generation methods on the
+      same mutant corpus; McNemar exact test on discordant mutant pairs with family-clustered
+      bootstrap confidence intervals for the risk difference; multiplicity controlled across
+      the three RQs as declared in the multiplicity field.
+  RQ2:
+    research_question: How many executable mutants representing revocation, delegation, purpose and temporal precedence are killed by comparable budgets for random, MC/DC-inspired and PolicyTrace generation?
+    independent_unit: >-
+      One delegated-consent policy case as defined in independent_unit_definition, scored as
+      one mutant-family member: an ordered policy history paired with exactly one authorization
+      request; retries inside the history are clustered, never independent.
+    population: >-
+      The shared non-equivalent mutant set (50 independently designed synthetic mutants plus
+      reserved fresh holdout families, designed against the F01-F05 temporal fault families,
+      with equivalent, non-equivalent and indeterminate ground truth authored by blinded
+      reviewers) replayed on independently sampled synthetic (policy history, request) cases
+      under the frozen protocol; the GovMut sealed W8 45-mutant corpus and the GLHS R4 E15-E22
+      artifacts are excluded by design and are never inputs, baselines or comparanda.
+    estimand: >-
+      Paired mutation-score difference at a fixed, pre-registered oracle-call budget: mutation
+      score of B4 minus mutation score of B3, where the mutation score is killed divided by
+      total non-equivalent mutants on the shared mutant set; the co-primary witness measure is
+      the minimal failure trace length.
+    paired_contrast: >-
+      Same shared mutant set, same independent units, same oracle, identical fixed oracle-call
+      budget, equal permissions and compute: arm B4 (PolicyTrace temporal generator) versus arm
+      B3 (property-based history generator without temporal metamorphs, the strongest stateful
+      alternative), with arm B1 (MC/DC-inspired coverage testing) as the strongest
+      coverage-based alternative, arm B2 (XACBench profile-driven synthetic tests) as the
+      benchmark baseline and arm B0 (uniform random requests) as the weak reference; all
+      baselines use pinned real upstream sources with fidelity vectors; NOT_RUN_EXTERNAL is the
+      transparent status if a baseline cannot be executed and precludes comparative claims for
+      that arm.
+    primary_metric: delegation conformance divergence detection rate
+    primary_metric_operationalization: >-
+      RQ2 instantiation: mutation score at the fixed pre-registered oracle-call budget over the
+      shared non-equivalent mutant set, with minimal failure trace length as the co-primary
+      witness measure; this is the fault-detection-efficiency realization of the study primary
+      metric.
+    secondary_metrics:
+      - minimal failure trace length (co-primary witness measure)
+      - trace witness detection coverage per fault family
+      - invalid and indeterminate decision parity
+      - generation runtime at the fixed budget
+    null_hypothesis: >-
+      The paired mutation-score difference (B4 minus B3) is zero or negative at the identical
+      oracle-call budget, and B4 does not outperform B1 either.
+    alternative_hypothesis: >-
+      The paired mutation-score difference (B4 minus B3) is positive at the identical
+      oracle-call budget, with B4 also ahead of B1 and B2 and a minimal-failure-trace-length
+      advantage for the fault classes it detects.
+    minimum_useful_difference: >-
+      A paired mutation-score difference of at least 0.10 at the fixed budget with no
+      minimal-failure-trace-length disadvantage, frozen prospectively without pilot data;
+      differences below this threshold are reported as null results and the novel
+      fault-detection claim is withdrawn.
+    confounders:
+      - oracle-call budget, permissions and compute parity across arms
+      - fidelity of pinned upstream baseline implementations to their declared semantics
+      - mutant design leakage, controlled by blinding designers to candidate generator outputs
+      - fresh holdout families kept sealed until protocol and analysis freeze
+      - generator seed selection and deterministic replay
+      - equivalent and indeterminate mutant classification performed by blinded reviewers
+    power_analysis_method: >-
+      Wilcoxon signed-rank test over per-family paired mutation scores with cluster bootstrap
+      over mutant families for confidence intervals; the RQ2 endpoint is the multiplicity
+      primary of the three-RQ Holm procedure at two-sided alpha 0.05; prospective power is
+      planned from conservative per-family score variance bounds fixed at freeze, never from
+      target p-values.
+    falsification_condition: >-
+      If PolicyTrace does not outperform B3 and B1 at equal oracle-call budget, the novel
+      fault-detection claim is withdrawn in full; the paper reports the null result and
+      portability limits transparently, and the frozen holdout is not opened before protocol
+      freeze.
+    primary_endpoint: >-
+      Mutation score (killed divided by total non-equivalent mutants, 50 independently designed
+      mutants plus reserved fresh holdout mutant families) at a fixed, pre-registered
+      oracle-call budget, with minimal failure trace length as the co-primary witness measure.
+    strongest_competing_baseline: >-
+      B3, the property-based history generator without temporal metamorphs, at the identical
+      oracle-call budget as the strongest stateful alternative; B1 is the strongest
+      coverage-based alternative, B2 (XACBench policy profile-driven synthetic tests) is the
+      benchmark baseline and B0 is the weak reference.
+    independent_oracle: >-
+      The same executable declarative reference semantics as RQ1 (four-valued decisions, never
+      importing candidate code); mutant ground truth classification (equivalent,
+      non-equivalent, indeterminate) is authored by reviewers without access to candidate
+      implementation outputs.
+    statistical_test: >-
+      Paired mutation-score comparison across arms on the shared mutant set; Wilcoxon
+      signed-rank over per-family paired scores with cluster bootstrap over mutant families;
+      the primary estimand is the paired score difference B4 minus B3 at equal budget.
+  RQ3:
+    research_question: Across Cedar, OpenFGA and OPA, which semantics are faithfully expressible, and where do adapters necessarily diverge?
+    independent_unit: >-
+      One delegated-consent policy case as defined in independent_unit_definition: an ordered
+      policy history paired with exactly one authorization request, encoded once per engine
+      under that engine's documented best practice; retries inside the history are clustered,
+      never independent.
+    population: >-
+      All semantic construct classes represented in the frozen synthetic corpus of
+      independently sampled (policy history, request) cases (delegated consent, purpose
+      binding, revocation, redelegation, temporal precedence, explicit deny precedence), each
+      encoded under each engine's documented best practice across pinned Cedar, OpenFGA and
+      OPA versions; untranslatable constructs are pre-labeled INDETERMINATE by the oracle and
+      are never scored as engine bugs.
+    estimand: >-
+      Policy-engine disagreement rate on identical (policy history, request) units: the
+      probability that at least two encoded engines return non-parity four-valued decisions on
+      the same unit, reported by semantic construct class; the per-pair estimand is the paired
+      engine-versus-engine discordance relative to the four-valued reference oracle.
+    paired_contrast: >-
+      The same unit is replayed into each engine encoding under documented best practice;
+      paired parity indicators are compared per engine pair (Cedar versus OpenFGA, Cedar
+      versus OPA, OpenFGA versus OPA) on discordant units via exact McNemar; the
+      competing-explanation arm (static policy structure comparison plus per-engine
+      single-request tests) predicts that every divergence is explained without replaying
+      shared histories.
+    primary_metric: delegation conformance divergence detection rate
+    primary_metric_operationalization: >-
+      RQ3 instantiation: the policy-engine disagreement rate itself, meaning the fraction of
+      identical (policy history, request) units where encoded engines return non-parity
+      decisions, including INDETERMINATE and untranslatable labeling, reported by semantic
+      construct class.
+    secondary_metrics:
+      - invalid and indeterminate decision parity across engines
+      - per-construct expressibility classification (faithfully expressible, divergent, untranslatable)
+      - minimal failure trace length for adjudicated divergences
+      - generation and replay runtime at the fixed budget
+    null_hypothesis: >-
+      Residual cross-engine disagreement is zero under best-practice encodings, or every
+      divergence is fully explained by static policy structure comparison plus per-engine
+      single-request tests.
+    alternative_hypothesis: >-
+      At least one semantic construct class shows residual disagreement whose clustered
+      confidence bound excludes zero and which static policy diff does not explain, with root
+      causes attributable to semantic mismatch rather than encoding error.
+    minimum_useful_difference: >-
+      A class-level residual disagreement rate of at least 0.05 with a history-clustered
+      one-sided 95% lower bound above zero under documented best-practice encodings, frozen
+      prospectively without pilot data; divergences below this bound are reported transparently
+      as portability limits without a fault-detection claim.
+    confounders:
+      - encoding quality under each engine's documented best practice
+      - engine version pinning and configuration drift
+      - adapter translation fidelity for partial mappings of the four-valued oracle
+      - pre-labeling of untranslatable constructs as INDETERMINATE
+      - linearizability of histories, since trivially linearizable histories explain disagreement away
+      - clustering of requests inside one independent history
+    power_analysis_method: >-
+      Wilson score intervals for the disagreement rate per construct class; exact McNemar tests
+      on discordant units for paired engine parity; confidence intervals clustered on
+      independent histories; Holm correction as a declared secondary family at two-sided alpha
+      0.05 (the RQ2 endpoint is the multiplicity primary).
+    falsification_condition: >-
+      If residual cross-engine disagreement is zero under best-practice encodings, or if
+      disagreement is fully explained by static policy diff, RQ3 reports zero-divergence and
+      the conformance corpus is positioned as a tool-only contribution (Dataset/Tool track),
+      never as a fault-detection claim.
+    primary_endpoint: >-
+      Policy-engine disagreement rate on identical (policy history, request) units: fraction of
+      units where encoded engines return non-parity decisions (including INDETERMINATE and
+      untranslatable labeling), reported by semantic construct class.
+    strongest_competing_baseline: >-
+      Static policy structure comparison plus single-engine testing, the competing explanation
+      from novelty_contract.md section 1: it predicts that static-structure comparison plus
+      per-engine tests explain every divergence without replaying shared histories.
+    independent_oracle: >-
+      The portable four-valued reference oracle (PERMIT, DENY, NOT_APPLICABLE, INDETERMINATE)
+      defined from the declarative semantics document, not from any engine's behavior;
+      untranslatable constructs are pre-labeled and never scored as engine bugs.
+    statistical_test: >-
+      Disagreement rate per construct class with Wilson score intervals; paired engine parity
+      compared via exact McNemar on discordant units; confidence intervals clustered on
+      independent histories.

@@ -1,0 +1,42 @@
+{
+  "task_id": "DIMVA-rq_registry",
+  "status": "PASS",
+  "source_sha_before": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+  "source_sha_after": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+  "changed_paths": [
+    "research/venue2027/dimva/rq_and_estimands.yaml",
+    "research/venue2027/dimva/tests/test_rq_registry.py",
+    "research/venue2027/proof/logs/DIMVA-rq_registry.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-rq_registry.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-rq_registry.suite.log",
+    "research/venue2027/proof/DIMVA-rq_registry.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dimva/tests/test_rq_registry.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-rq_registry.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/dimva/tests/test_rq_registry.py --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-rq_registry.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dimva/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-rq_registry.suite.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/dimva/rq_and_estimands.yaml": "61d3c2f47fbf810c054bb5f19b5ff0e061125d86d829b40f16c12091b54e7807",
+    "research/venue2027/dimva/tests/test_rq_registry.py": "fc5bb6f79c94a55c8363dfda5a752552ac465482c7d84865582d5b019a22da77",
+    "research/venue2027/proof/logs/DIMVA-rq_registry.pytest.log": "12a21327e2b0e96a2614ea890e592f924d38bd7d8aab28ad0d4a39782acae3d6",
+    "research/venue2027/proof/logs/DIMVA-rq_registry.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/DIMVA-rq_registry.suite.log": "a357f7f6d6859fd8bfc646e2ee0097e8341ea10ca325a76fcc7af72f66dfa9be"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 RQ/estimand registry for dimva frozen before holdout unsealing. Exactly three preregistered RQs (RQ1-RQ3), each with research question, independent unit (campaign/benign session \u2014 never per-event), population, estimand, paired contrast, primary metric (probing detection PR-AUC at the frozen false-positive budget of 10 false alarms per 1,000 benign sessions \u2014 detection, not prevention), secondary metrics, H0/H1, frozen minimum useful differences (delta_1/delta_2/delta_3 = 0.05 absolute), confounders, power/analysis method (exact McNemar + cluster bootstrap 2000 resamples seed 2027, Holm across 3 primary contrasts), falsification_condition and primary_endpoint. Mechanical falsification register F1-F6. No empirical results asserted; archive E15-E22 refused as evidence; endpoint_class detection. stdlib structural tests 20/20 pass; ruff 0.7.1 clean; venue suite 104/104 pass. source_sha_after is the worktree HEAD at emit time; the deliverable commit SHA is reported in the task handoff."
+}

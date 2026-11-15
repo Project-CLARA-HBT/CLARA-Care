@@ -1,0 +1,9 @@
+emit_aime_rq_registry_report: building report via agent_protocol.build_report
+{
+  "ok": true,
+  "reason_code": "OK",
+  "errors": [],
+  "task_id": "AIME-rq_registry",
+  "protocol_version": "1.0.0"
+}
+validator exit_code: 0

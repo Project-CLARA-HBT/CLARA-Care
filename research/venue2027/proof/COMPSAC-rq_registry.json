@@ -1,0 +1,42 @@
+{
+  "task_id": "COMPSAC-rq_registry",
+  "status": "PASS",
+  "source_sha_before": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+  "source_sha_after": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+  "changed_paths": [
+    "research/venue2027/compsac/rq_and_estimands.yaml",
+    "research/venue2027/compsac/tests/test_rq_registry.py",
+    "research/venue2027/proof/COMPSAC-rq_registry.json",
+    "research/venue2027/proof/logs/COMPSAC-rq_registry.pytest.log",
+    "research/venue2027/proof/logs/COMPSAC-rq_registry.ruff.check.log",
+    "research/venue2027/proof/logs/COMPSAC-rq_registry.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/compsac/tests/test_rq_registry.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-rq_registry.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/compsac/tests/test_rq_registry.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-rq_registry.ruff.check.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 format --check research/venue2027/compsac/tests/test_rq_registry.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-rq_registry.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/compsac/rq_and_estimands.yaml": "7afe068ac7adeac9a53b691c3d79aee333d7d5df798bcf821b0b0f7182d773ae",
+    "research/venue2027/compsac/tests/test_rq_registry.py": "3ad985c77a9836bb1d4fae5353d5b2b09964c9703e309d919736e4a37600b281",
+    "research/venue2027/proof/logs/COMPSAC-rq_registry.pytest.log": "084a25fd7fc57b69d76f16eaf5bf6197aefadfde1d0102d9db63b3ed8dd33a12",
+    "research/venue2027/proof/logs/COMPSAC-rq_registry.ruff.check.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/COMPSAC-rq_registry.ruff.log": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 RQ registry frozen as preregistered_only design decisions (compsac-rq-registry-v1, JSON-serializable via read_rqs()->RQPlan; no measured results recorded). Exactly 3 RQs, each with all 14 required fields: RQ1 dependency-complete read set vs global OCC with the two-gate primary endpoint (safety gate = forbidden commit rate, zero required, one-sided Clopper-Pearson 1-0.05**(1/N) bound vs frozen margin 0.01; utility gate = oracle-defined false-stale rate, min useful difference 0.10 absolute with cluster-bootstrap CI low > 0); RQ2 omitted-dependency propagation + separate-oracle per-fault-family detection with Clopper-Pearson intervals and Fisher exact arm contrasts, indeterminate in denominator; RQ3 B4-vs-B2 committed throughput ratio over the fanout x workers (1/2/4/8/16) x Zipf x density grid with crossover = smallest tested level whose ratio CI includes 1. Independent unit = one independent logical schedule per the shared schedule engine (evaluation/venue2027/_shared/schedules.py 1.0.0), cluster = schedule (never per-event pseudo-replication); population = case x arm x seed with >= 5 independent seeds per setting; statistical analysis frozen to the shared analysis_policy.py 1.0.0 (exact McNemar + seeded cluster bootstrap, seed 2027, 2000 resamples); all five blueprint arms B0-B4 and the import-disjoint oracle declared; SQLite-never-as-PostgreSQL and E15-E22 archive refusals carried in the analysis contract. Tests: 17 passed including adversarial fail-closed loader probes (comment-only, unterminated-flow, no-colon inputs refused) and an invented-results regex scan; ruff check + format clean on the touched test file. Pre-existing repo-wide ruff errors (273) verified identical at base SHA with and without the new files; zero in research/venue2027/compsac. Deliverable commit SHA reported in task handoff (a commit cannot embed its own SHA)."
+}

@@ -1,0 +1,388 @@
+# IFIP_SEC 2027 · RQ, estimand, hypothesis and metrics registry (IFIP_SEC-rq_registry)
+#
+# Task: IFIP_SEC-rq_registry · Phase: P01 · Venue: ifip_sec · Priority: P0
+# Paper: "Replay-Closed Authorization Across Purpose, Delegation, and AI Proposal Lineage"
+# Contract version: clara.venue2027.ifip_sec.rq_registry.v1
+#
+# STATUS: FROZEN PREREGISTRATION — a design commitment frozen BEFORE any
+# confirmatory data collection. This file is preregistration, not evidence:
+# no number in it is a research result.
+# Every empirical value must later derive mechanically from
+# artifacts/venue2027/ifip_sec/<run_id>/manifest.json, and the holdout opens
+# only after IFIP_SEC-freeze. No observed value, p-value, CI, or result rate
+# is recorded here.
+#
+# Upstream contracts consumed (read-only):
+# - research/venue2027/VENUES/ifip_sec/RESEARCH_BLUEPRINT.md (RQs, arms B0-B4,
+#   required metrics, 900-interleaving population, falsification criterion)
+# - research/venue2027/ifip_sec/novelty_contract.md (endpoint contracts per RQ,
+#   strongest competing baselines, falsification conditions, Decision: GO)
+# - research/venue2027/ifip_sec/threat_model.md (families, A1-A5 actors, oracle
+#   authority, logical schedule time)
+# - research/venue2027/VENUES/ifip_sec/CASE_MATRIX.md (CASE-01..09 fixtures)
+# - research/venue2027/GATES/SCIENTIFIC_METRICS_CONTRACT.md (rules 1-10)
+# - research/venue2027/GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md (rules 1-10)
+# - evaluation/venue2027/_shared/analysis_policy.py (exact McNemar, cluster
+#   bootstrap, Clopper-Pearson, two-gate non-inferiority, ANALYSIS_DRIFT guard)
+#
+# Honesty rules encoded below (from the two GATES contracts):
+# - The independent unit is a unique case / independent interleaving history /
+#   independent benchmark schedule — NEVER a per-event pseudo-replication.
+# - Zero-event outcomes get a one-sided Clopper-Pearson 95% upper bound
+#   1 - 0.05**(1/N), never "zero failures proves safety".
+# - Denominators are predeclared and mutually exclusive: eligible, attempted,
+#   completed, rejected, indeterminate, timeout, not_run_external, missing.
+# - Inferential machinery must match the frozen shared analysis policy
+#   (evaluation/venue2027/_shared/analysis_policy.py, ANALYSIS_POLICY_VERSION
+#   1.0.0); changing endpoint/test/margin/unit/alpha/seed after freeze is
+#   analysis drift (reason code ANALYSIS_DRIFT) and is refused.
+# - If B1 + live epoch check (B2 consistency) is decision-equivalent on all
+#   attack families, equivalence is stated and no stronger security is claimed.
+
+schema_version: clara.venue2027.ifip_sec.rq_registry.v1
+task_id: IFIP_SEC-rq_registry
+venue: ifip_sec
+phase: P01
+paper: Replay-Closed Authorization Across Purpose, Delegation, and AI Proposal Lineage
+status: FROZEN_PREREGISTRATION_NOT_EVIDENCE
+
+# ---------------------------------------------------------------- registry
+# The five frozen arms (identical to the blueprint and novelty-contract table).
+arms:
+  B0: bearer signed receipt (weak control)
+  B1: Macaroon HMAC caveats — actor, purpose, task, expiry, nonce (strong token baseline, correct semantics)
+  B2: Zanzibar/OpenFGA with consistency token and fresh policy evaluation (strong relationship consistency baseline)
+  B3: Cedar/OPA policy decision with replay nonce registry (strong security-engineering comparator)
+  B4: proposed delegated lineage transition verifier (candidate)
+candidate_arm: B4
+
+# Shared population and denominators (predeclared; never silently shrunk).
+population_common:
+  dataset_id: synthetic-ifip_sec-2027
+  data_policy: synthetic only; no real patient records, no PHI fields (dataset
+    declared in research/venue2027/_shared/dataset_declarations.json)
+  interleavings_total: 900  # distinct adversarial interleavings from the blueprint
+  structure: >-
+    isolated synthetic accounts across delegation / revocation / retry / tenant
+    switches; clean controls matched per threat family (threat_model.md §6:
+    replay, purpose_scope, revocation_timing, model_agency, insider_or_observer)
+  schedule_time: logical (dispatch -> revoke-commit -> consume ordering); no wall-clock assumptions
+  split_discipline: development split for design changes; confirmatory holdout
+    opens only after IFIP_SEC-freeze; no threshold or denominator change afterwards
+  denominator_categories: [eligible, attempted, completed, rejected, indeterminate, timeout, not_run_external, missing]
+  denominator_rule: >-
+    mutually exclusive per-arm counts; NOT_RUN_EXTERNAL (pinned external
+    upstreams unavailable) is a transparent status that forbids comparative
+    claims for that arm; INDETERMINATE oracle labels are never coerced to
+    ALLOW/DENY and never counted as safe rejections
+  backend_requirements: >-
+    RQ2 claims require real PostgreSQL 16 with attested backend
+    (docker-compose isolated research cluster per pg_guard); SQLite
+    observations are inadmissible for any concurrency conclusion
+  baseline_parity: same synthetic account fixtures, equal compute budget, pinned
+    upstream sources, fidelity vectors; unequal budget or infidelity stops the task
+
+# ---------------------------------------------------------------- RQ registry
+research_questions:
+  # ==========================================================================
+  RQ1:
+    id: RQ1
+    question: >-
+      Under which delegation and epoch interleavings do signed context-bound
+      capability baselines admit an invalid replay or reject valid operations?
+    independent_unit: >-
+      one unique adversarial interleaving history — a distinct delegation/
+      revocation/retry/tenant schedule over an isolated synthetic account,
+      labeled once by the independent oracle; repeated token presentations
+      inside one history are clustered within that history and are never
+      treated as independent draws
+    population: >-
+      the predeclared primary family set of the 900 distinct adversarial
+      interleavings (threat families replay, purpose_scope, revocation_timing,
+      model_agency, insider_or_observer) plus one matched clean control per
+      family (CASE-01 / control halves of CASE-02/04/06); INDETERMINATE oracle
+      labels are reported but excluded from the primary denominator, which is
+      frozen before holdout
+    estimand: >-
+      the replay acceptance rate across purpose/delegation lineage: among
+      oracle-DENY attack histories, the proportion admitted (ALLOW) by an arm;
+      paired with the valid-control acceptance rate among oracle-ALLOW clean
+      histories. Both proportions use the frozen predeclared denominator of
+      completed, adjudicated histories per arm (timeout/unknown/NOT_RUN
+      counted per arm in their own categories, never dropped and never
+      counted as safe rejections).
+    paired_contrast: >-
+      candidate B4 vs strongest competing baseline B1 (Macaroon HMAC caveats
+      with live epoch check), paired on the identical interleaving history
+      (same case, same schedule, same budget); B2 (Zanzibar/OpenFGA
+      consistency token + fresh policy evaluation) runs as co-comparator on
+      the same pairs so a token-only win cannot be blamed on missing
+      consistency. Discordant paired decisions feed exact McNemar; the
+      arm-level risk difference uses case-family-clustered bootstrap.
+    primary_metric: invalid replay admissions (replay acceptance rate across purpose/delegation lineage) per unique oracle-DENY attack history
+    secondary_metrics:
+      - valid control acceptance (oracle-ALLOW clean histories admitted) — the utility/false-denial side of the same paired schedule
+      - per attack-family admission profiles (replay, purpose_scope, revocation_timing, model_agency, insider_or_observer) for localizing which interleavings defeat which arm
+      - arm status counts (eligible/attempted/completed/rejected/indeterminate/timeout/not_run_external/missing) for denominator transparency
+    null_hypothesis: >-
+      H0(RQ1): the paired admission-decision distribution of B4 and B1 (with
+      B2 co-comparator) on the identical oracle-adjudicated interleaving
+      histories is identical — equivalently, the probability that B4 admits
+      an oracle-DENY history while B1 denies it equals the reverse discordant
+      probability (marginal homogeneity of the paired decisions).
+    alternative_hypothesis: >-
+      H1(RQ1): the decisions are not marginally homogeneous — B4 admits
+      strictly fewer oracle-DENY histories than B1 (one-sided), while staying
+      within the frozen false-denial margin on oracle-ALLOW controls.
+    minimum_useful_difference: >-
+      a reduction in invalid-replay admission of at least 5 percentage points
+      of histories (absolute risk difference on the predeclared attack-history
+      denominator) is the minimum useful difference declared in advance;
+      smaller advantages are reported as equivalence-grade and are not claimed
+      as security superiority. Zero-event arms are interpreted only through
+      one-sided Clopper-Pearson 95% upper bounds, never as proven safety.
+    confounders:
+      - baseline infidelity (a weak or misconfigured B1/B2 manufacturing a fake win) — controlled by pinned upstream sources, fidelity vectors and parity_check round-trips
+      - unequal compute budget or fixture drift across arms — controlled by same-schedule same-case same-budget pairing
+      - oracle contamination (labels derived from candidate output or reason codes) — controlled by the frozen-oracle boundary: labels derive from the frozen principal graph and commit-time consent epoch, oracle imports no candidate code
+      - case-family imbalance (families unevenly sampled, inflating one family's weight) — controlled by the frozen per-family design and family-clustered inference
+      - selection on completability (dropping timeout/unknown arms) — controlled by the predeclared mutually exclusive denominator categories
+      - epoch-interleaving difficulty confounded with tenant/actor structure — controlled by the frozen factorial design across delegation/revocation/retry/tenant switches
+    power_analysis_method: >-
+      prospective exact-McNemar power computed on the anticipated discordant-
+      pair count from the development split (pilot variance never reused as
+      confirmatory N); the confirmatory attack-history denominator is frozen
+      before holdout and is not chosen from target p-values; with the frozen
+      design, the minimum useful difference (5 points) must be detectable at
+      one-sided alpha 0.05 with power >= 0.80 under the development-split
+      discordance estimate; the frozen alpha budget and the planned comparison
+      count (one primary contrast per RQ, family-level secondaries descriptive)
+      are recorded here before any holdout data is touched.
+    analysis_method: >-
+      exact McNemar on paired discordant decisions (exact binomial on
+      discordant pairs, two-sided, alpha 0.05); risk-difference CI via
+      case-family-clustered bootstrap (whole history clusters resampled,
+      seeded, deterministic — analysis_policy.PairedResult); zero-event arms
+      reported with one-sided Clopper-Pearson 95% upper bounds
+      (1 - 0.05**(1/N)); raw per-history decisions retained for recalculation;
+      every endpoint/test/unit/alpha/seed change after freeze is refused as
+      ANALYSIS_DRIFT.
+    falsification_condition: >-
+      (a) if a properly scoped Macaroon plus consistent authorization check
+      (B1 + live epoch check, B2 consistency) is decision-equivalent on all
+      attack families, equivalence is stated and no stronger security is
+      claimed (blueprint falsification criterion); (b) any B4 invalid replay
+      admission on a history the oracle labels DENY falsifies the mechanism
+      claim outright and is reported as a negative result, never repaired or
+      dropped.
+    primary_endpoint: invalid replay admissions per unique attack history (replay acceptance rate across purpose/delegation lineage), paired with valid control acceptance
+
+  # ==========================================================================
+  RQ2:
+    id: RQ2
+    question: >-
+      Is the proposed consume-once transition linearizable under two or more
+      real PostgreSQL sessions and revoked scope?
+    independent_unit: >-
+      one independent concurrent interleaving history — a complete exported
+      execution history of a consume race (2+ real PostgreSQL sessions racing
+      the same nonce, with revocation committed between dispatch and consume)
+      persisted on PostgreSQL 16; individual operations or sessions inside
+      one history are clustered within that history
+    population: >-
+      distinct concurrent consume-race histories over the isolated synthetic
+      accounts: concurrent same-nonce consumption across >= 2 real PostgreSQL
+      16 sessions, crossed with revoked scope (consent/chain revocation
+      committed between dispatch and consume) and epoch-boundary crossings;
+      SQLite stand-ins are inadmissible and any SQLite-only observation is
+      recorded NOT_RUN/BLOCKED for this RQ, never as a pass
+    estimand: >-
+      the duplicate-consumption rate: among independent interleaving
+      histories, the proportion in which the consume-once transition admits
+      the same nonce more than once (duplicate consumption, lost revocation,
+      or revocation bypass) or admits an invalid concurrent admission —
+      measured against the black-box linearizability checker's adjudication
+      of the exported persisted histories (Elle-style), on the frozen
+      predeclared denominator of completed histories per arm
+    paired_contrast: >-
+      candidate B4 vs strongest competing baseline B3 (Cedar/OPA policy
+      decision with replay nonce registry under serializable transactions),
+      paired on the identical interleaving history and session topology; B2
+      (consistency token) runs as co-comparator for stale-read tolerance;
+      discordant linearizability verdicts feed exact McNemar
+    primary_metric: duplicate consumption races (and invalid concurrent admissions) per independent interleaving history on persisted PostgreSQL 16 executions
+    secondary_metrics:
+      - valid control acceptance under concurrency (legitimate first-consume admits at <= frozen false-denial margin)
+      - revocation-timing sub-profiles (consume between dispatch and revoke-commit vs after partial chain revocation) for localizing failure modes
+      - arm status counts (eligible/attempted/completed/rejected/indeterminate/timeout/not_run_external/missing) including backend attestation category
+    null_hypothesis: >-
+      H0(RQ2): B4's duplicate-consumption rate equals B3's on the paired
+      interleaving histories (marginal homogeneity of paired
+      linearizability-violation verdicts); equivalently B4 grants no
+      atomicity advantage over a serializable nonce registry at equal budget.
+    alternative_hypothesis: >-
+      H1(RQ2): B4's duplicate-consumption rate is lower than B3's on the
+      paired histories (one-sided), with B4 itself achieving zero duplicate
+      consumptions whose one-sided Clopper-Pearson 95% upper bound is within
+      the frozen safety margin.
+    minimum_useful_difference: >-
+      any nonzero candidate duplicate consumption on a valid history fails the
+      claim outright (the consume-once invariant is binary, so the candidate
+      safety requirement is an exact zero with its finite confidence bound);
+      a useful advantage over B3 is at least 2 percentage points of histories
+      fewer duplicate consumptions, declared in advance; smaller differences
+      are reported as equivalence-grade.
+    confounders:
+      - backend substitution (SQLite or in-memory stores standing in for PostgreSQL 16) — controlled by the attested-backend requirement; SQLite observations are inadmissible and recorded NOT_RUN/BLOCKED
+      - baseline infidelity (a nonce registry weaker than its declared serializable semantics manufacturing a fake atomicity gap) — controlled by pinned per-arm isolation levels and fidelity vectors at equal budget
+      - transaction-isolation mismatch across arms (B3 run at weaker isolation than serializable) — controlled by frozen per-arm isolation levels in the run manifest
+      - session/worker topology asymmetry (different session counts or scheduling luck) — controlled by paired identical topology and seeded schedule generation
+      - revocation-commit visibility (stale reads misread as bypass or vice versa) — controlled by the frozen revocation timeline keyed to the black-box checker
+      - oracle contamination (checker importing candidate code) — controlled by the black-box checker that imports no candidate code and adjudicates from persisted state
+      - timeout censoring (races dropped when slow) — controlled by predeclared timeout category counted per arm, never silently excluded
+    power_analysis_method: >-
+      prospective power for the one-sided paired comparison computed from the
+      development-split discordance estimate on interleaving histories; the
+      confirmatory history denominator and per-cell session counts are frozen
+      before holdout, not chosen from target p-values; the zero-event safety
+      requirement is evaluated via the Clopper-Pearson upper bound at the
+      frozen alpha, so the frozen history count N must satisfy
+      1 - 0.05**(1/N) <= safety margin (e.g. N >= 598 gives bound ~0.0050);
+      this N is fixed here before any holdout data exists.
+    analysis_method: >-
+      one-sided Clopper-Pearson 95% upper bound on the duplicate-consumption
+      rate over independent interleaving histories (zero-event rule); exact
+      McNemar vs B3 on paired histories (exact binomial on discordant pairs);
+      clustered uncertainty at the independent-history unit (history-clustered
+      bootstrap for the risk difference), never per-event pseudo-replication;
+      raw exported histories retained for recalculation; all machinery frozen
+      to analysis_policy.py semantics; post-freeze changes are ANALYSIS_DRIFT.
+    falsification_condition: >-
+      (a) any B4 duplicate consumption, lost revocation, or revocation bypass
+      on a valid history fails the claim and is reported as a negative result;
+      (b) if B3's nonce registry under serializable transactions is also
+      linearizable on all tested interleavings at equal budget, no unique
+      atomicity advantage is claimed (equivalence stated); (c) any
+      PostgreSQL-specific concurrency conclusion drawn from SQLite
+      observations voids the claim entirely.
+    primary_endpoint: duplicate consumption races and invalid concurrent admissions per independent interleaving history on persisted PostgreSQL 16 executions, including revocation committed between dispatch and consume
+
+  # ==========================================================================
+  RQ3:
+    id: RQ3
+    question: >-
+      What are token size, verification latency and legitimate operation
+      rejection costs relative to well-configured Macaroons and Zanzibar-like
+      policies?
+    independent_unit: >-
+      one independent benchmark schedule — a frozen matched measurement
+      schedule (fixed workload, fixed concurrency, same fixture set) executed
+      as one isolated benchmark run per arm; individual operations, requests
+      or workers inside one schedule are clustered within that schedule
+    population: >-
+      matched measurement schedules spanning the legitimate-operation
+      fixture set (CASE-01-style valid executions plus legitimate role
+      changes) and replay fixtures, at matched concurrency and permission
+      semantics across arms B4, B1 and B2, with hardware, settings, warmup
+      and DB-queue effects recorded in the run manifest; NOT_RUN_EXTERNAL
+      arms are excluded from comparative claims, transparently
+    estimand: >-
+      the paired cost differences (candidate minus baseline) per matched
+      schedule for each of token bytes, p95 verification latency, and
+      authorization DB round trips, at matched decision safety (equal RQ1
+      admission behavior), plus the paired legitimate-operation rejection
+      increase; all point estimates reported with schedule-clustered interval
+      estimates — point estimates without intervals are not reported
+    paired_contrast: >-
+      candidate B4 vs B1 (well-configured Macaroons — the size/latency floor
+      among semantically correct tokens) and vs B2 (Zanzibar/OpenFGA — the
+      DB round-trip comparator), paired on the identical benchmark schedule;
+      paired per-schedule differences feed the cluster bootstrap; the
+      legitimate-rejection increase is evaluated as a two-gate
+      non-inferiority certificate, not a significance label
+    primary_metric: >-
+      token bytes, p95 verification latency, and authorization DB round trips
+      (paired differences candidate - baseline per matched schedule)
+    secondary_metrics:
+      - legitimate-operation rejection (valid control acceptance) at matched concurrency and permission semantics — the utility gate
+      - p99 verification latency (descriptive robustness companion to the p95 primary)
+      - arm status counts (eligible/attempted/completed/rejected/indeterminate/timeout/not_run_external/missing) with hardware/settings disclosure
+    null_hypothesis: >-
+      H0(RQ3): the paired cost differences (B4 - B1 and B4 - B2) are zero for
+      each of token bytes, p95 verify latency, and authorization DB round
+      trips; and the legitimate-rejection increase does not exceed the frozen
+      non-inferiority margin.
+    alternative_hypothesis: >-
+      H1(RQ3): at equal decision safety, the paired cost differences are
+      bounded by the frozen non-inferiority margins on all three cost
+      metrics (B4 is not dominated), and the legitimate-rejection increase
+      stays within the frozen margin (two-gate certificate passes).
+    minimum_useful_difference: >-
+      frozen non-inferiority margins declared before holdout: token bytes
+      <= +4096 bytes per receipt, p95 verify latency <= +10 ms per
+      verification, authorization DB round trips <= +4 round trips per
+      verification (all one-sided, candidate vs B1/B2); a B4 false-denial
+      increase on legitimate role changes beyond the frozen margin is a
+      failed utility gate, not a footnote. Cost differences inside these
+      margins are equivalence-grade and are never narrated as wins.
+    confounders:
+      - measurement oracle contamination (candidate self-reported timings or byte counts) — controlled by the frozen cost-measurement oracle: external instrumentation with DB-layer round-trip counters, harness wall-clock timestamps and wire-format byte counts, never candidate self-reports
+      - hardware or load asymmetry across arms — controlled by identical host, pinned concurrency, warmup and DB-queue effects recorded in the run manifest
+      - self-reported timing (candidate measuring itself) — controlled by the frozen cost-measurement protocol with external instrumentation: DB-layer round-trip counters, harness wall-clock timestamps, wire-format byte counts
+      - unequal permission semantics (candidate checking more than baselines) — controlled by matched permission semantics declared per schedule
+      - cache warming order effects — controlled by frozen warmup and randomized-with-seed arm order, disclosed in the manifest
+      - baseline infidelity (an undersized toy B1 winning on bytes) — controlled by pinned upstream sources, fidelity vectors and parity checks
+      - timeout censoring and retry storms — controlled by predeclared bounded-retry policy and per-arm timeout category
+    power_analysis_method: >-
+      prospective paired-difference power computed from development-split
+      schedule-level variance (conservative upper bound if pilot schedules
+      are few); the confirmatory schedule count and per-schedule workload are
+      frozen before holdout, not chosen from target p-values; the two-gate
+      non-inferiority certificate (analysis_policy.two_gate_non_inferiority)
+      requires BOTH the one-sided safety bound to meet the frozen margin AND
+      the utility improvement to meet its criterion; the margin set above is
+      frozen here before any holdout data exists.
+    analysis_method: >-
+      paired differences (candidate - baseline) per matched schedule with
+      schedule-clustered bootstrap CIs (whole schedule clusters resampled,
+      seeded, deterministic); the legitimate-rejection increase is evaluated
+      by the frozen two-gate non-inferiority certificate (safety gate AND
+      utility gate both required — a non-significant safety difference is
+      never a certificate); raw per-schedule measurements retained for
+      recalculation; point estimates without intervals are not reported;
+      post-freeze changes to endpoint/test/margin/unit/alpha/seed are refused
+      as ANALYSIS_DRIFT.
+    falsification_condition: >-
+      (a) if B1 achieves equal decision safety (RQ1) at statistically
+      indistinguishable or lower cost on all three cost metrics, no
+      cost-justified superiority is claimed and only the Pareto frontier is
+      reported (equivalence stated); (b) a B4 false-denial increase beyond
+      the frozen margin on legitimate role changes is a failed utility gate
+      and blocks the cost claim; (c) comparative claims involving an arm
+      recorded NOT_RUN_EXTERNAL are void for that arm.
+    primary_endpoint: token bytes, p95 verification latency, authorization DB round trips, and legitimate-operation rejection (valid control acceptance) at matched concurrency and permission semantics
+
+# ------------------------------------------------------- registry integrity
+registry_rules:
+  preregistration_only: true
+  invented_results_forbidden: >-
+    no observed value, p-value, CI, rate, or "pass" appears in this file; all
+    empirical claims must derive mechanically from
+    artifacts/venue2027/ifip_sec/<run_id>/manifest.json after IFIP_SEC-freeze
+  unit_independence_rule: >-
+    repeated events inside one history/schedule are clustered at the
+    independent unit; pooling repeated events as independent draws is the
+    registered failure mode of this task
+  zero_event_rule: >-
+    zero observed forbidden events yield a one-sided Clopper-Pearson 95%
+    upper bound 1 - 0.05**(1/N), never logical proof of safety
+  two_gate_rule: >-
+    non-inferiority requires the safety gate AND the utility gate to pass
+    separately; a non-significant safety difference (p above the frozen
+    alpha) is never a certificate
+  equivalence_rule: >-
+    if B1 + consistent authorization is decision-equivalent on all attack
+    families, equivalence is stated and no stronger security is claimed
+  analysis_drift_rule: >-
+    endpoint, test, margin, unit, alpha and seed are frozen; any change after
+    freeze is refused with stable reason code ANALYSIS_DRIFT

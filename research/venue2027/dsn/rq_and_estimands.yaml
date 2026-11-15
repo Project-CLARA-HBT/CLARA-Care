@@ -1,0 +1,166 @@
+# CLARA-Care 2027 · DSN-rq_registry (Phase P01, venue dsn)
+#
+# Frozen RQ / estimand / hypothesis registry for the DSN 2027 study
+# "Recoverable Safety Journals for Crash-Consistent AI-Mediated Health-State
+# Mutations".
+#
+# Purpose
+# -------
+# This file is the preregistered analysis plan required by
+# research/venue2027/GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md rule 1
+# (null, alternative, primary outcome, margin, variance assumptions, unit,
+# randomization, missingness, planned comparison count, framework, confidence
+# budget frozen before any confirmatory data collection) and by
+# research/venue2027/GATES/SCIENTIFIC_METRICS_CONTRACT.md rules 3-4 and 9
+# (cluster correction, frozen margin/power, no p-value-driven sample size).
+#
+# Status
+# ------
+# Design artifact: PLAANNED/preregistered values only. It contains NO observed
+# numbers, NO measured results, and NO claims about outcomes that have not yet
+# been produced. All numeric quantities below are design parameters (design
+# cell counts, alpha levels, frozen margins, pre-registered power method),
+# not empirical results.
+#
+# Allowed input
+# -------------
+# Consumed by research/venue2027/dsn/tests/test_rq_registry.py (stdlib
+# parser) and downstream P02+ protocol/schema tasks. The file is written as
+# a JSON-compatible subset of YAML so it parses with a tiny targeted parser
+# or any standard YAML/JSON toolchain without new dependencies.
+#
+# Failure semantics
+# -----------------
+# A missing, empty or drifted field is a protocol violation detected by the
+# structure test, never silently coerced. Post-hoc edits to estimands,
+# margins or alpha after protocol freeze constitute analysis drift and must
+# be disclosed as a prospective amendment per the evidence protocol rule 7.
+#
+# Version
+# -------
+# rq_and_estimands v1.0.0 (additive-only within 1.x; frozen at protocol
+# freeze for task DSN-rq_registry, base SHA e2836f0a01f0fe4739d70774f3aeac1eca02baac).
+
+schema_version: "1.0"
+task_id: "DSN-rq_registry"
+phase: "P01"
+venue: "dsn"
+paper_title: "Recoverable Safety Journals for Crash-Consistent AI-Mediated Health-State Mutations"
+status: "PREREGISTERED_DESIGN_NO_RESULTS"
+confidence_budget:
+  familywise_alpha: 0.05
+  allocation: "Primary endpoint of each RQ family tested at alpha=0.05; secondary metrics reported with simultaneous cluster-bootstrap CIs and Holm step-down control across the three RQ families."
+  planned_comparison_count: 3
+superiority_framework: "Superiority for RQ1/RQ2 safety events; RQ3 assessed as cost with a pre-registered indifference margin (equivalence testing), never as an unbounded claim."
+arms:
+  - id: "B0"
+    name: "DB transaction only + fire-and-forget side effect"
+    role: "weak control; measures lost side effects"
+  - id: "B1"
+    name: "PostgreSQL atomic write + transactional outbox + idempotent consumer"
+    role: "strong practical baseline; must be implemented fully under equal budget with pinned versions"
+  - id: "B2"
+    name: "Durable workflow/saga with compensation and stable operation IDs"
+    role: "strong operational baseline; engine and version pinned and recorded"
+  - id: "B3"
+    name: "Proposed reconciliation safety journal (recoverable outcome function returning COMMITTED, REJECTED, or INDETERMINATE)"
+    role: "candidate arm; no pre-existing performance assumed"
+
+research_questions:
+  - id: "RQ1"
+    question_text: "Across crash cut points, are there executions where the clinical state, decision receipt, and outbox state disagree after bounded recovery?"
+    independent_unit: "One deduplicated crash-injection execution history: a unique (crash_window, commit_revocation_ordering, delivery_schedule, seed) combination from the 48 x 4 x 3 x 5 factorial design, after schedule deduplication; final N confirmed post-deduplication before freeze of confirmatory analysis."
+    population: "All deduplicated crash-window executions of the synthetic-dsn-2027 fault-injection campaign on a real PostgreSQL backend, covering the full 48 crash windows, 4 commit/revocation orderings, 3 delivery schedules and 5 independent seeds; no patient records, synthetic histories only."
+    estimand: "Arm-level joint-inconsistency event rate after bounded recovery: the probability that a randomly drawn deduplicated crash history from the target factorial population ends with a joint disagreement (orphan clinical write, phantom user-visible success, or unresolved INDETERMINATE outcome that never reconciles) between the committed clinical row, the immutable decision receipt, and the outbox state."
+    paired_contrast: "Paired per-history risk difference B3 (reconciliation safety journal) minus B1 (PostgreSQL atomic write + transactional outbox + idempotent consumer), matched on identical crash windows, orderings, schedules and seeds; B0 retained as weak control, B2 as secondary comparator."
+    primary_metric: "orphan clinical writes per independent history"
+    secondary_metrics:
+      - "phantom user-visible success per independent history"
+      - "unresolved (never-reconciled) outcomes per independent history"
+      - "eventual safe reconciliation fraction"
+      - "joint-inconsistency event indicator per history (any-of composite)"
+    null_hypothesis: "H0_RQ1: The paired per-history joint-inconsistency event rate is identical for B3 and B1 across the deduplicated factorial population; equivalently, the probability that a matched history pair is discordant in either direction is symmetric with zero paired risk difference."
+    alternative: "HA_RQ1 (two-sided): The paired per-history joint-inconsistency event rate differs between B3 and B1. Directional interest is fewer joint-inconsistency events under B3, but the test is exact two-sided."
+    minimum_useful_difference: "A paired absolute risk difference in joint-inconsistency events of at least 0.01 per deduplicated crash history (1 percentage point of histories) is declared the pre-registered minimum useful difference; smaller differences are treated as practically equivalent. The margin is frozen before any confirmatory run and re-expressed after pilot variance estimation only via a prospective, disclosed amendment."
+    confounders:
+      - "Crash-window position relative to write/fsync/ack phases (handled by full factorial crossing, not post-hoc selection)"
+      - "Commit vs consent-revocation ordering (crossed factor)"
+      - "Duplicate-delivery schedule (crossed factor)"
+      - "Random seed / machine-serial-id entropy (5 independent seeds; seeded determinism for replay)"
+      - "PostgreSQL minor version, fsync settings and container CPU/memory budget (pinned and recorded per run manifest)"
+      - "Worker concurrency setting 1/2/4/8 (held at the RQ1 default 1; varied only in RQ3)"
+    power_analysis_method: "Prospective simulation-based power on the paired binary endpoints using pilot variance from the development split only; the exact two-sided McNemar test's asymptotic normal approximation is cross-checked by exact binomial computation on discordant pairs. Sample size is not chosen from target p-values; the final deduplicated N is reported with the achieved power curve at the minimum useful difference. For zero-event outcomes the one-sided Clopper-Pearson upper bound 1 - 0.05**(1/N) is reported; N=598 deduplicated histories gives an upper bound of about 0.0050."
+    analysis_method: "Exact two-sided McNemar test on discordant matched history pairs (exact binomial on the discordant count), with case-clustered bootstrap CIs (whole history-level clusters resampled; repeated events within one history never treated as independent) and risk-difference bounds reported for rare events; multiplicity controlled across the three RQ families per the confidence budget."
+    primary_endpoint: "Joint-inconsistency event per independent crash history (orphan clinical write / phantom user-visible success / unresolved outcome), scored by the independent oracle"
+    oracle: "Jepsen/Elle-compatible history export plus deterministic SQL-state audit of the real PostgreSQL backend; anomaly witnesses manually reviewed by a reviewer who cannot reuse candidate code; the oracle never imports candidate implementation."
+    missingness_policy: "All runs are reported in mutually exclusive per-arm buckets (eligible, attempted, completed, rejected, indeterminate, timeout, environment_failure, not_run_external, missing); crashed executions that yield unparseable histories are counted as indeterminate, never silently dropped, and never scored as safe rejections."
+    randomization: "Deterministic seeded enumeration of the full factorial grid; run order randomized via a frozen seed to decouple execution order from thermal/queue effects."
+    baseline_parity_requirement: "B1 must be a complete, faithful PostgreSQL transactional-outbox implementation with pinned upstream sources, fidelity review and equal compute budget; NOT_RUN_EXTERNAL status for any arm forbids comparative claims for that arm."
+    falsification_condition: "If B1 exhibits zero RQ1 joint-inconsistency events across the entire deduplicated 48x4x3x5 design with a one-sided 95% Clopper-Pearson upper bound below the pre-registered minimum useful difference of 0.01 per history, the C1/C2 mechanism-superiority claim is discarded and the study is downgraded to an application paper."
+    plan_status: "PLANNED_PREREGISTERED"
+
+  - id: "RQ2"
+    question_text: "Under at-least-once replay and concurrent consent revocation, does recovery preserve idempotence, causal order, and correct INDETERMINATE labels?"
+    independent_unit: "One deduplicated replay/revocation execution history: a unique (crash_window, commit_revocation_ordering, delivery_schedule, seed) combination from the same factorial design in which at-least-once duplicate delivery and a concurrent consent-revocation interleaving are active; final N confirmed post-deduplication."
+    population: "All deduplicated at-least-once replay executions with concurrent consent revocation from the synthetic-dsn-2027 campaign on a real PostgreSQL backend; histories where revocation never interleaves with replay are excluded from this RQ's denominator by a pre-declared inclusion rule, with exclusion counts reported."
+    estimand: "Arm-level expected count of externally visible replay-safety failures per independent history: duplicate externally visible side effects plus causal-order violations plus incorrect INDETERMINATE labels (labels that resolve to a definite COMMITTED/REJECTED truth but were labeled INDETERMINATE, or INDETERMINATE labels promoted to a positive outcome while evidence was ambiguous)."
+    paired_contrast: "Paired per-history count difference B3 minus B2 (durable workflow/saga with compensation and stable operation IDs), matched on identical crash windows, revocation interleavings, delivery schedules and seeds; B1 retained as secondary comparator for the idempotence/casality sub-invariants."
+    primary_metric: "duplicate externally visible side effects and causal-order violations per independent crash/revocation history (pre-declared composite: sum of the two counts per history)"
+    secondary_metrics:
+      - "incorrect-INDETERMINATE-label rate per history"
+      - "phantom user-visible success under replay per history"
+      - "idempotence dedup-ledger audit failures per history"
+      - "eventual safe reconciliation fraction under revocation"
+    null_hypothesis: "H0_RQ2: The paired per-history distribution of replay-safety failure counts (duplicate side effects + causal-order violations) is identical for B3 and B2 under matched at-least-once replay with concurrent revocation; the median paired count difference is zero."
+    alternative: "HA_RQ2 (two-sided): The paired per-history replay-safety failure count distribution differs between B3 and B2. Directional interest is fewer failures under B3, but the signed-rank test is two-sided."
+    minimum_useful_difference: "A paired median reduction of at least 1 replay-safety failure event per history attributable to B3, or an absolute paired mean reduction of at least 0.01 events per history when events are rarer than one per history; frozen before confirmatory runs."
+    confounders:
+      - "Revocation timing relative to replay attempt (crossed ordering factor)"
+      - "Number and spacing of duplicate deliveries (crossed delivery-schedule factor)"
+      - "Operation-ID stability and dedup-ledger implementation quality in each arm (controlled by pinned reference implementations and fidelity review)"
+      - "Random seed and execution environment (5 seeds; pinned PostgreSQL and workflow-engine versions)"
+      - "Reviewers adjudicating anomaly witnesses must be blind to arm identity"
+    power_analysis_method: "Prospective simulation-based power for the exact Wilcoxon signed-rank test on paired per-history counts using pilot variance from the development split; zero-event outcomes reported with the one-sided Clopper-Pearson upper bound at alpha=0.05; power curve at the minimum useful difference reported with the final deduplicated N. No sample size is chosen from target p-values."
+    analysis_method: "Exact two-sided Wilcoxon signed-rank test on paired per-history failure counts under matched schedules, with cluster-bootstrap CIs treating each independent history as one cluster and multiplicity control across the three RQ families; the three sub-invariants (idempotence, causal order, INDETERMINATE correctness) are additionally reported individually as pre-declared secondary endpoints."
+    primary_endpoint: "Replay-safety failure count per independent history (duplicate externally visible side effects + causal-order violations), scored by the independent oracle"
+    oracle: "Same Elle-compatible history export plus replay-specific invariant checkers (idempotence dedup-ledger audit, causal-order reconstruction from the exported history, INDETERMINATE label audit against reconciled ground truth) run independently of the candidate implementation; oracle imports no candidate code."
+    missingness_policy: "Identical mutually exclusive per-arm outcome buckets as RQ1; replay attempts that cannot be adjudicated due to environment failure are reported as environment_failure and excluded from the paired denominator with cause reported, never rescored as successes."
+    randomization: "Deterministic seeded enumeration of the factorial grid restricted to histories with an active revocation interleaving; run order randomized via a frozen seed."
+    baseline_parity_requirement: "B2 must run a real durable workflow/saga engine with pinned version, compensation semantics and stable operation IDs under equal budget; NOT_RUN_EXTERNAL for B2 forbids RQ2 comparative claims."
+    falsification_condition: "If B2 achieves zero duplicate side effects, zero causal-order violations and correct INDETERMINATE handling (no mislabels) at equal revocation-interleaving coverage and its Clopper-Pearson upper bound is below the minimum useful difference, the C3 necessity claim for the explicit INDETERMINATE label is discarded."
+    plan_status: "PLANNED_PREREGISTERED"
+
+  - id: "RQ3"
+    question_text: "What is the added durable-write, p99 latency and recovery-time cost compared with transactional outbox and durable workflow baselines?"
+    independent_unit: "One benchmark measurement repetition: a full fixed-workload benchmark pass at one worker setting for one arm, yielding paired (latency, RTO, fsync) aggregates; matched repetitions across arms form the pairing; repetition count fixed after pilot and frozen."
+    population: "All benchmark repetitions of the frozen fixed-workload and fixed-throughput protocols across arms B1/B2/B3 and worker settings 1/2/4/8 on the pinned hardware/software configuration, with warmup discarded by pre-declared rule and DB queue effects recorded."
+    estimand: "Arm-level mean paired cost difference per operation for each cost family: (a) extra durable-write fsyncs per operation, (b) operation p99 latency, and (c) recovery-time objective RTO p50/p95/p99, each measured B3 minus the relevant baseline (B1 for fsync and latency; B2 for recovery time) at matched throughput and worker settings."
+    paired_contrast: "Paired per-repetition cost difference B3 minus B1 (durable-write and latency families) and B3 minus B2 (recovery-time family), matched on identical workload, throughput target, worker setting, warmup discipline and hardware; equivalence assessed against a pre-registered indifference margin rather than an unbounded superiority test."
+    primary_metric: "extra fsyncs per operation (durable-write cost), operation p99 latency at matched throughput, and RTO p99 (recovery-time cost); the primary endpoint is the paired p99/RTO cost contrast at worker setting 4, with settings 1/2/8 pre-declared secondary"
+    secondary_metrics:
+      - "RTO p50 and p95"
+      - "operation p50/p95 latency"
+      - "throughput achieved at fixed worker settings"
+      - "benchmark repetitions lost to environment failure (reported, never dropped silently)"
+    null_hypothesis: "H0_RQ3: The paired cost differences B3 minus baseline (B1 for durable-write and latency; B2 for recovery time) lie within the pre-registered indifference margin for every cost family and worker setting; equivalently, B3's added durable-write, p99 latency and recovery-time cost is practically indistinguishable from baseline cost variability at matched throughput."
+    alternative: "HA_RQ3 (two-sided equivalence formulation): At least one paired cost difference lies outside the pre-registered indifference margin (in either direction), i.e. B3's cost is not equivalent to the baseline's."
+    minimum_useful_difference: "The pre-registered indifference margin per cost family: extra fsyncs per operation within 0.5 fsync; operation p99 latency within 15% relative to baseline at matched throughput; RTO p99 within 15% relative to baseline. Margins are derived from pilot variance estimation during development and frozen before confirmatory runs; power is computed post-pilot, never asserted from N."
+    confounders:
+      - "Hardware, container CPU/memory limits, storage device and filesystem (pinned and recorded per run manifest)"
+      - "PostgreSQL fsync/synchronous_commit settings and workflow-engine version (pinned)"
+      - "Worker concurrency setting (crossed factor 1/2/4/8, pre-declared)"
+      - "Warmup length, DB queue depth and external I/O jitter (pre-declared warmup discard rule; queue effects recorded)"
+      - "Background load from co-scheduled benchmark arms (arms executed sequentially on an idle machine)"
+    power_analysis_method: "Post-pilot power computation: pilot repetitions from the development split estimate per-repetition variance for each cost family; the number of paired repetitions is chosen to achieve 80% power to detect the indifference margin (equivalence power), computed prospectively and frozen. No sample size is chosen from target p-values; cluster bootstrap over repetitions provides the CIs."
+    analysis_method: "Cluster bootstrap over matched workload repetitions for the p99/RTO/fsync contrasts (whole repetition units resampled as clusters, never individual operations from the same worker), reporting two-sided 95% CIs relative to the pre-registered indifference margins (equivalence declared only when the entire CI lies inside the margin); multiplicity controlled across the three RQ families."
+    primary_endpoint: "Paired per-repetition cost contrast (extra fsyncs per operation; operation p99 latency; RTO p99) at matched throughput and worker setting 4"
+    oracle: "Independent timing harness reading monotonic clocks and database fsync/replay counters; harness code excludes all candidate modules and is frozen before confirmatory runs."
+    missingness_policy: "All benchmark repetitions reported in mutually exclusive buckets (completed, timeout, environment_failure, not_run_external, missing); a repetition lost to environment failure is reported and excluded from the paired denominator with cause, never imputed as a good run."
+    randomization: "Arm execution order and repetition order randomized via a frozen seed within each worker setting; workloads and throughput targets identical across arms by construction."
+    baseline_parity_requirement: "B1 and B2 both run under equal budget with pinned versions; NOT_RUN_EXTERNAL status on either arm forbids the corresponding comparative cost claims."
+    falsification_condition: "If a B1 (or B2) configuration attains the same RQ1/RQ2 invariants with equal or better recovery cost (paired CIs inside or below the indifference margins), the pre-registered rule requires the new-mechanism-superiority claim to be discarded and negative equivalence reported."
+    plan_status: "PLANNED_PREREGISTERED"
+
+global_falsification_rule: "If a correctly engineered PostgreSQL transaction + transactional outbox + idempotent consumer (B1), or a faithfully implemented durable workflow/saga (B2), achieves the same invariants (RQ1/RQ2) and equal or better recovery cost (RQ3), the new mechanism superiority claim is discarded; negative results are kept in release artifacts and the mechanism claim is narrowed rather than cherry-picking workloads."
+primary_endpoint_uniqueness_note: "The three primary endpoints are deliberately distinct (RQ1: joint-inconsistency event per history; RQ2: replay-safety failure count per history; RQ3: paired cost contrast per repetition), so no two RQ families share a primary endpoint."
+evidence_nonreuse_declaration: "No frozen E15-E22 numbers, GovRed results, or GovMut results are used as evidence for any RQ in this registry; all confirmatory data must derive mechanically from artifacts/venue2027/dsn/<run_id>/manifest.json produced by this study's own runs."

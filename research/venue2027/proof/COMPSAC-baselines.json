@@ -1,0 +1,35 @@
+{
+  "task_id": "COMPSAC-baselines",
+  "status": "PASS",
+  "source_sha_before": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+  "source_sha_after": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+  "changed_paths": [
+    "evaluation/venue2027/compsac/__init__.py",
+    "evaluation/venue2027/compsac/baselines.py",
+    "evaluation/venue2027/compsac/test_baselines.py",
+    "research/venue2027/proof/COMPSAC-baselines.json",
+    "research/venue2027/proof/logs/COMPSAC-baselines.pytest.log",
+    "research/venue2027/proof/logs/COMPSAC-baselines.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/compsac/test_baselines.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-baselines.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/compsac/ && uvx ruff@0.7.1 format --check evaluation/venue2027/compsac/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-baselines.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/compsac/__init__.py": "5237d9adb3377f34cd3a14a0269bc39d85aab1064be19036c4a8d75aa2b6e31a",
+    "evaluation/venue2027/compsac/baselines.py": "8cfc5379975e6f7d5405c3d7086091dcb1f5c6d21d9722cddf74ab6eafbe7458",
+    "evaluation/venue2027/compsac/test_baselines.py": "253190516eb0c2943365c7f79dac1923630f2240be29d5ca1635bfc536844e6b"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "COMPSAC-baselines (Phase P03, priority): implemented the four in-process OCC arms as real deterministic protocols over a shared in-memory versioned entity store behind run_baseline(baseline_id, case, ctx) -> Outcome with BASELINE_REGISTRY: B0 global-profile-version-occ (single coarse global profile version; any concurrent committed profile write aborts every subsequent in-flight transaction with GLOBAL_PROFILE_STALE - upper-bounds false-stale rejections), B1 silo-style-entity-readset-occ (faithful in-process port of the published SOSP 2013 algorithm per registry DOI 10.1145/2517349.2522713, NOT Silo source code; per-entity commit-time read-set version fence READSET_VERSION_STALE over exactly the DECLARED read set), B3 entity-occ-no-closure-ablation (identical commit machinery to B1 with the semantic dependency-closure derivation disabled - the RQ2 write-skew instrument) and B4 dependency-complete-scope-local-occ (candidate: derives the frozen per-operation REQUIRED cross-resource dependency closure REQUIRED_DEPENDENCIES medication_prescribe->allergy_list / allergy_update->medication_order, validates closure read/write edge versions REQUIRED_READ_EDGE_STALE / WRITE_EDGE_SUPERSEDED plus consent/policy epochs CONSENT_EPOCH_STALE / POLICY_EPOCH_STALE under canonical sorted-entity ordering). SCIENTIFIC DEMONSTRATION (test_write_skew_differential_b4_rejects_what_b1_accepts): on the canonical omitted-dependency write-skew schedule (declared read sets disjoint from the other transaction's writes; omitted semantic dependencies create the conflict) B1 and B3 admit BOTH transactions (committed=2, aborted=0) while B4 rejects the second commit (REQUIRED_READ_EDGE_STALE on the omitted medication_order edge) on the same case, same seed, same config. B2 postgresql-ssi is a REAL adapter, never simulated: it requires ctx.pg_connection, gates on connection.server_version identifying a genuine PostgreSQL >=12 server, executes each transaction as BEGIN ISOLATION LEVEL SERIALIZABLE with schema-check predicates and SIREAD reads, and maps SQLSTATE 40001/40P01 to SERIALIZATION_FAILURE aborts; absent connection -> Outcome(NOT_RUN_EXTERNAL, BASELINE_UNAVAILABLE) per registry ORIGINAL_UPSTREAM postgres REL_16_9 pin; a SQLite connection wired in is refused before execution (EXECUTION_ERROR / PG_CONNECTION_REQUIRED) - never simulated, never substituted (EXECUTION_CONTRACT rule 8). Adversarial tests: constant ADMIT/REJECT stubs are structurally incapable of the arm-specific differential and per-transaction validation records; unknown baseline ids -> NOT_RUN_EXTERNAL/BASELINE_UNAVAILABLE; malformed schedule -> EXECUTION_ERROR/SCHEDULE_MALFORMED fail-closed; equal-config discipline across all five arms (identical case+seed; same two-transaction schedule for implemented arms); registry honesty (B2 fidelity NOT_RUN_EXTERNAL, B1 disclosure names it a port not Silo source code). baseline_parity=NOT_APPLICABLE: no pinned external upstream binary exists in this in-process environment and no comparative throughput claim is made (B2 requires the isolated PostgreSQL container, task COMPSAC-X04). Tests: 25 passed (positive: all 4 implemented arms end-to-end determined outcomes, determinism, schedule-shape, B0 stricter-than-B4 RQ1 ordering witness, B1 version fence, B4 edge+epoch rejections; adversarial: B2 without PG -> NOT_RUN_EXTERNAL, SQLite refused, stubs refused, unknown ids, malformed schedules). Shared foundations regression: 126 passed. ruff@0.7.1 check + format clean on touched paths. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

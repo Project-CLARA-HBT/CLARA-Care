@@ -1,0 +1,52 @@
+{
+  "task_id": "SACMAT-rq_registry",
+  "status": "PASS",
+  "source_sha_before": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+  "source_sha_after": "e2836f0a01f0fe4739d70774f3aeac1eca02baac",
+  "changed_paths": [
+    "research/venue2027/sacmat/rq_and_estimands.yaml",
+    "research/venue2027/sacmat/tests/test_rq_registry.py",
+    "research/venue2027/proof/SACMAT-rq_registry.json",
+    "research/venue2027/proof/emit_sacmat_rq_registry_report.py",
+    "research/venue2027/proof/logs/SACMAT-rq_registry.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-rq_registry.ruff.log",
+    "research/venue2027/proof/logs/SACMAT-rq_registry.suite.log",
+    "research/venue2027/proof/logs/SACMAT-rq_registry.shared_regression.log",
+    "research/venue2027/proof/logs/SACMAT-rq_registry.analysis_policy.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/sacmat/tests/test_rq_registry.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-rq_registry.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/sacmat/tests/test_rq_registry.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-rq_registry.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/sacmat/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-rq_registry.suite.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-rq_registry.shared_regression.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/test_analysis_policy.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-rq_registry.analysis_policy.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/sacmat/rq_and_estimands.yaml": "2f7fe76d672c3399a68f43e786bc22f3895618bf0ca358e09342b603472e803d",
+    "research/venue2027/sacmat/tests/test_rq_registry.py": "195c80d2ca101ea5db9f33cc667abe7a04709e3608fd49a80d1f0582a778e29a"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 preregistered RQ/estimand registry for SACMAT 2027 (PolicyTrace). research/venue2027/sacmat/rq_and_estimands.yaml freezes, for each of RQ1-RQ3: research question, independent unit (delegated-consent policy case = ordered (policy history, request) pair, retries clustered, per-event pseudo-replication excluded), population (synthetic versioned policy/principal graphs, 50 independently designed mutants + reserved fresh holdout families; GovMut W8 and E15-E22 excluded), estimand, paired contrast (B4 vs B1 for RQ1; B4 vs B3 with B1/B2/B0 additional arms for RQ2; per-engine-pair parity vs static-diff competing explanation for RQ3; equal oracle-call budget everywhere), primary metric (delegation conformance divergence detection rate with per-RQ operationalization), secondary metrics, null, alternative, minimum useful difference (frozen prospectively without pilot data: 0.10/0.10/0.05 with direction), confounders, power/analysis method (exact McNemar + family-clustered bootstrap; Wilcoxon signed-rank + cluster bootstrap; Wilson intervals + exact McNemar, all at two-sided alpha 0.05 with RQ2 as Holm multiplicity primary), falsification_condition and primary_endpoint - all preregistered, zero empirical results invented (evidence_status PROSPECTIVE / NOT RUN). Upstream dependencies SACMAT-scope and SH-analysis_policy recorded PASS before signing; statistics vocabulary aligned with the frozen shared layer (evaluation/venue2027/_shared/analysis_policy.py). Machine-checked: 17 new structural tests pass (exact RQ count, all 18 mandatory fields per RQ, null-direction checks, frozen margins, >=4 confounders per RQ, B0-B4 arm coverage, multiplicity/Holdout freeze, no-results declaration); full SACMAT suite 82 passed; shared foundations regression 189 passed; frozen analysis-policy suite 25 passed; ruff clean on changed paths. Repo-wide ruff has 1017 pre-existing findings at the base SHA unrelated to this task; the scoped check used by all prior SACMAT tasks is clean. Single-commit delivery on top of base e2836f0a; no worktree created or removed."
+}

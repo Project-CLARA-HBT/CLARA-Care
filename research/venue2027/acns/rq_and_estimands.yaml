@@ -1,0 +1,412 @@
+# ACNS-rq_registry · Frozen RQ, estimand, hypothesis and metrics registry
+#
+# Task: ACNS-rq_registry · Phase: P01 · Venue: acns · Status: registered plan, no data collected
+# Paper: SoK: Evidence Boundaries of Attestation in Tool-Using AI Systems
+# Contract: clara.venue2027.acns.rq-registry.v1
+# Depends honored: ACNS-scope (signed novelty contract, Decision GO, SoK
+#   declaration §1, reuses_archive: []) and SH-analysis_policy
+#   (evaluation/venue2027/_shared/analysis_policy.py v1.0.0: exact McNemar,
+#   Clopper-Pearson zero-event bound, two-gate logic, assert_frozen_analysis).
+# Feeds: ACNS-schema (case/run JSON schemas), ACNS-X05_rater_manual,
+#   ACNS-X06_adjudication, ACNS-X07_witness_gallery, ACNS-freeze.
+#
+# SoK estimator framing (binding). Per the novelty contract §1 and threat
+# model §8, the estimator of every RQ below concerns evidence-boundary
+# COVERAGE of the published literature, not mechanism superiority. Nothing
+# here tests, compares, or ranks any enforcement/detection mechanism;
+# witnesses are instruments of falsification for claim-evidence
+# implications. No empirical value (kappa, coverage, reproduction rate,
+# corpus size) is asserted by this document: every observed value enters
+# only via artifacts/venue2027/acns/<run_id>/manifest.json after the
+# ACNS-freeze gate. This is a PREREGISTRATION ONLY — all thresholds below
+# are design-time constants fixed before any coding, witness execution or
+# analysis, and are falsifiable commitments reported as negative results if
+# not met.
+
+schema_version: 1
+contract: clara.venue2027.acns.rq-registry.v1
+paper: "SoK: Evidence Boundaries of Attestation in Tool-Using AI Systems"
+contribution_class: SoK
+estimator_frame: evidence_boundary_coverage_not_mechanism_superiority
+preregistration_status: thresholds_fixed_before_any_data_collection
+corpus_window: 2019-01-01..2026-12-31
+corpus_freeze_task: ACNS-freeze
+analysis_policy: evaluation/venue2027/_shared/analysis_policy.py@1.0.0
+confidence_budget: two-sided familywise alpha 0.05 across the three RQ-level
+  primary tests, controlled by Bonferroni-Holm across exactly three primary
+  comparisons; per-RQ planning alpha 0.05 as registered per arm; all CIs exact
+  (Clopper-Pearson binomial or bootstrap, no normal approximations); zero-event
+  one-sided upper bounds per SCIENTIFIC_METRICS_CONTRACT rule 3 as 1-0.05^(1/N).
+denominator_discipline: per SCIENTIFIC_METRICS_CONTRACT rule 6, report
+  eligible/attempted/completed/rejected/indeterminate/timeout/not_run_external/
+  missing counts separately for every RQ; the predeclared primary denominator is
+  stated per RQ; no denominator is ever silently shrunk; INDETERMINATE coding
+  outcomes are retained and counted, never coerced (BND_INDETERMINATE / AMB).
+sok_no_mechanism_clause: per novelty_contract §1, this registry contains no
+  detection, prevention, or defense endpoint, no mechanism-superiority contrast,
+  and no runtime violation rate; any such metric appearing downstream is a
+  scope violation of the SoK class.
+
+research_questions:
+
+  - id: RQ1
+    name: evidence-strength mapping coverage
+    research_question: >-
+      Which attestation claims are actually supported by which observable
+      evidence and trusted parties in published agent systems?
+    independent_unit: >-
+      One extracted claim from the frozen corpus: a verbatim claim sentence
+      (≤2 lines, with page/section reference per review protocol field C1),
+      clustered within its source publication. Pooled repeated sentences from
+      one publication are never treated as independent units (negative control
+      of the task manifest); clustering is handled by publication-level
+      bootstrap for corpus-level coverage uncertainty.
+    population: >-
+      The frozen S6 corpus from `ACNS-X01_review_protocol` — peer-reviewed
+      publications and recognized-SDO normative standards dated 2019-01-01 through
+      2026-12-31 that make, analyze, or define claims about what observable
+      evidence proves about the behavior of tool-using AI systems. No frozen
+      E15-E22 archive rows, no IFIP SEC mechanism inputs, no DIMVA telemetry.
+    estimand: >-
+      The distribution of corpus claims over the evidence-strength lattice
+      (evidence class × observer axis × trust axis × demonstrated lattice level
+      L0-L4), summarized as the population proportion of claims that require an
+      extended-lattice classification — i.e. claims whose coder-assigned
+      (C2-C4) classification is NOT fully expressible in the B0 (RFC 9334) or
+      B1 (W3C PROV) category vocabularies — in the population of extracted
+      claims in the frozen corpus. This is a descriptive coverage estimand over
+      the literature; it is not a treatment effect.
+    paired_contrast: >-
+      Paired per-claim classification under two vocabularies applied to the
+      same frozen claim set by the same blinded coders: study extended lattice
+      (six evidence classes, L0-L4, observation/trust axes) vs B0+B1
+      vocabulary alone (RFC 9334 evidence concepts; W3C PROV lineage events).
+      Each claim carries both labels; the contrast is the paired difference in
+      "fully classifiable" indicators, so each claim is its own control.
+      Coding is performed under the C1-C8 fields of the frozen extraction
+      manual; coders are blinded to which arm a label will feed.
+    primary_metric: coverage of the evidence-strength lattice, operationalized
+      as the proportion of extracted claims requiring the extended lattice
+      (residual-over-B0/B1 fraction) with exact Clopper-Pearson 95% CI,
+      publication-clustered bootstrap sensitivity.
+    secondary_metrics:
+      - ambiguous-claim fraction (share of claims retained AMB /
+        BND_INDETERMINATE after adjudication, with binomial CI; coerced codes
+        are a falsifying defect per review protocol §7)
+      - pre-adjudication raw agreement on C2-C4 (supporting RQ3 comparability)
+      - per-evidence-class claim counts (descriptive; never a per-event rate)
+      - boundary-code distribution (BND_VALID / BND_OVERREAD / BND_UNDERREAD /
+        BND_INDETERMINATE) over the corpus
+    null_hypothesis: >-
+      H01: the proportion of corpus claims requiring the extended lattice
+      (not fully classifiable under B0 RFC 9334 / B1 W3C PROV categories alone)
+      is at most 0.05 (pi <= 0.05) — i.e. the existing normative vocabularies
+      already cover the corpus and the extended lattice is redundant.
+    alternative_hypothesis: >-
+      H11: the proportion exceeds 0.05 (pi > 0.05) — a nontrivial residual of
+      corpus claims requires the extended axes, evidencing new cases beyond
+      RFC 9334/PROV categories.
+    minimum_useful_difference: >-
+      The extended lattice is scientifically useful only if the residual
+      fraction exceeds the null bound by at least 10 percentage points
+      (pi >= 0.15); below that, residual cases exist but are too sparse to
+      support a taxonomy contribution, and the honest conclusion is "RFC 9334
+      suffices for the corpus".
+    confounders: >-
+      Corpus selection bias (search-string and database coverage; mitigated by
+      the registered five-database search, snowballing and EXCL_NOT_TRACEABLE
+      rule); own-paper dominance (CLARA cap, review protocol §9.1); coder
+      drift over time (mitigated by frozen C1-C8 manual and coding-order
+      randomization at publication level with a fixed seed); extraction
+      context loss (verbatim quotation with page/section anchor required);
+      duplicate publication versions (dedup rule §4.4); risk-of-bias skew
+      (RB1-RB5 recorded, HIGH-bias sensitivity analysis); adjudication
+      feedback leakage between RQ1 coding and RQ3 reliability scoring
+      (mitigated by computing RQ3 on the pre-adjudication first-pass stream).
+    power_analysis: >-
+      Exact binomial one-sided test of H0: pi=0.05 vs H1: pi=0.15 at planning
+      alpha 0.05 (covered by the Bonferroni-Holm budget above): the minimal
+      number of independent extracted claims giving power >= 0.80 is N=52
+      (critical region k>=6 residual claims; exact size 0.0445; exact power
+      0.8119 at pi=0.15; N=51 gives power 0.7967 and is insufficient).
+      Planning floor: at least 52 independent claims across at least 20
+      distinct publications (publication-level clustering must be reported;
+      if the frozen corpus yields fewer, the shortfall is disclosed and the
+      RQ1 conclusion is downgraded to "insufficient corpus", never silently
+      repaired). Sample size is fixed from this variance assumption before
+      any coding, never from target p-values (SCIENTIFIC_METRICS_CONTRACT
+      rule 9).
+    analysis_method: >-
+      Exact one-sided binomial test against pi0=0.05 on the predeclared
+      denominator (all eligible extracted claims; exclusions counted
+      separately); exact Clopper-Pearson 95% CI on the residual fraction;
+      publication-level cluster bootstrap (10,000 resamples, seed 20271115,
+      whole publications resampled) as sensitivity for the clustered structure;
+      zero-event handling per the shared Clopper-Pearson bound; INDETERMINATE
+      claims counted in the denominator and reported, never dropped. All
+      downstream recomputation from raw coded events per INDEPENDENT_EVIDENCE
+      PROTOCOL rule 8, drift-checked by `assert_frozen_analysis`.
+    falsification_condition: >-
+      RQ1's contribution collapses (and the SoK claim is withdrawn for this
+      arm, reported as a negative result) if EITHER: (a) the residual fraction
+      is not significantly above 0.05 at the registered one-sided test, or the
+      point estimate falls below the 0.15 minimum useful difference — i.e. the
+      corpus's claims map entirely onto B0/B1 categories with no residual new
+      cases and insights, so RFC 9334 suffices for the corpus and the extended
+      lattice is redundant; OR (b) coder agreement on
+      the extended lattice fails the RQ3 reliability gate, so the residual
+      classification is not reproducible. Both conditions are pre-registered
+      here and mirror novelty_contract §3-RQ1.
+    primary_endpoint: coverage of the evidence-strength lattice (residual
+      over B0/B1 fraction), with ambiguous-claim fraction as the required
+      supporting measure; both enter artifacts only after ACNS-freeze.
+
+  - id: RQ2
+    name: invalid implication pairs and counterexample witnesses
+    research_question: >-
+      Which claimed implication pairs are invalid under explicit adversarial
+      and provider models, and can small executable witnesses demonstrate
+      this?
+    independent_unit: >-
+      One implication pair from the pre-registered gap register G1-G9
+      (threat model §6): a claimed implication together with its boundary
+      condition. Each unit is enumerated mechanically from the register
+      before any witness is executed; per-event pseudo-replication is
+      prohibited — repeated executions of one witness on one case count once.
+    population: >-
+      The nine pre-registered implication pairs G1-G9 of
+      `clara.venue2027.acns.threat-model.v1`, each instantiated as a paired
+      clean/adversarial case in the §2 attack-family matrix
+      (revocation_timing, replay, model_agency, purpose_scope,
+      insider_or_observer) with `truth.json` expected verdicts fixed by the
+      TC5 human coder/adjudication path before any witness execution.
+    estimand: >-
+      The counterexample reproduction proportion: the population proportion of
+      classified-invalid implication pairs for which the executable witness
+      deterministically reproduces the registered failure (expected REJECT
+      verdict actually observed under the stated adversarial/provider model
+      and pinned synthetic fixture) in the population of pre-registered
+      invalid implication pairs. This is a coverage/fidelity estimand of the
+      boundary map — how completely the witness gallery demonstrates the
+      registered invalidities — not a defense-efficacy estimand; witnesses are
+      never evaluated as detection or prevention mechanisms (novelty contract
+      F4, threat model §8).
+    paired_contrast: >-
+      Paired within-witness comparison of adversarial vs clean control cells
+      from the §2 matrix: each implication pair contributes one clean control
+      case (the implication the evidence does support under stated trust
+      assumptions) and one adversarial case (the witness demonstrating where
+      it fails), executed under the identical fixture, capability set and
+      budget. The pair-level contrast is the within-pair verdict difference
+      (clean ACCEPT preserved while adversarial REJECT reproduces); a witness
+      that flips both cells or neither contributes a zero discordant
+      difference. Against the strongest competing baseline B2 (AgentDojo /
+      ToolEmu evidence and attack observability categories), the
+      taxonomy-vs-B2 comparison is exact McNemar on the discordant
+      verdict pairs over cases where both the witness gallery and the
+      B2-derived expected classifications assign a verdict; B0 (RFC 9334) is
+      consulted in parallel for whether the boundary is already normative.
+    primary_metric: counterexample reproduction rate — the fraction of
+      classified-invalid implication pairs whose witness executes
+      deterministically and reproduces the registered failure — with exact
+      Clopper-Pearson 95% CI against the pre-registered threshold.
+    secondary_metrics:
+      - clean-control preservation rate (fraction of clean cells still
+        ACCEPTing at the registered lattice level; a clean-cell flip is a
+        witness defect, reported, never repaired post hoc)
+      - witness determinism rate (identical verdict across 5 pinned-seed
+        re-executions; nondeterminism is reported as environment failure,
+        not as reproduction)
+      - per-gap-family reproduction counts (descriptive coverage of the
+        G1-G9 register; no family may be silently dropped)
+      - McNemar discordant-pair counts vs B2-derived expected classifications
+    null_hypothesis: >-
+      H02: the reproduction proportion is at most 0.50 (rho <= 0.50) —
+      consistent with the witnesses carrying no information beyond chance
+      reproduction of the registered failures (the weakest competing
+      explanation: the witness gallery is theater).
+    alternative_hypothesis: >-
+      H12: the reproduction proportion exceeds 0.50 (rho > 0.50) — the
+      gallery deterministically demonstrates the registered invalidities.
+    minimum_useful_difference: >-
+      The witness gallery is scientifically useful only if reproduction meets
+      or exceeds 0.80 of the classified-invalid pairs; below that the
+      boundary map is not demonstrated, and per novelty_contract §3-RQ2 the
+      negative result is reported and RQ2's added value is falsified.
+    confounders: >-
+      Witness-code/oracle contamination (forbidden: the oracle `truth.json`
+      is fixed before execution and never imports witness code; per
+      INDEPENDENT_EVIDENCE_PROTOCOL rule 2 and TC5/TC6); fixture
+      nondeterminism (pinned generator version and seed, TC6); adversarial-
+      model mis-specification (capability sets A1-A7 declared per case);
+      post-hoc repair of either label or witness to force reproduction
+      (forbidden: a failed reproduction is reported, threat model §8);
+      denominator manipulation via silent exclusion of failed or
+      not_run_external witnesses (forbidden: all statuses counted);
+      cherry-picking B2 comparison cases (forbidden: the comparison set is
+      fixed as all cases where both sides assign a verdict, before outcomes
+      are known).
+    power_analysis: >-
+      Exact one-sided binomial test of H0: rho=0.50 vs H1: rho=0.80 at
+      planning alpha 0.05: the minimal number of independent implication-pair
+      units giving power >= 0.80 is N=18 (critical region k>=13 reproductions;
+      exact size 0.0481; exact power 0.8671 at rho=0.80; N=17 gives power
+      0.7582 and is insufficient). The registered register supplies 9 gap
+      families; to reach N=18 independent units the register is instantiated
+      two ways per family (adversarial cell plus B2-comparison cell) or the
+      shortfall is disclosed and the test downgraded to estimation with an
+      exact CI — never by adding post-hoc implications. Planning variance
+      assumption (rho1=0.80) is fixed before any witness runs.
+    analysis_method: >-
+      Exact one-sided binomial test against rho0=0.50 on the predeclared
+      denominator of classified-invalid pairs; exact Clopper-Pearson 95% CI;
+      per-family exact McNemar (via the shared `mcnemar_exact` of
+      analysis_policy.py) against B2-derived expected classifications on the
+      fixed common-verdict set; zero-event / all-event bounds per
+      SCIENTIFIC_METRICS_CONTRACT rule 3; statuses eligible/attempted/
+      completed/rejected/indeterminate/timeout/not_run_external/missing all
+      reported. Determinism verified by 5 pinned-seed re-executions before
+      the reproduction verdict is recorded.
+    falsification_condition: >-
+      RQ2's added value is falsified (negative result reported, SoK claim
+      withdrawn for this arm) if EITHER: (a) the reproduction rate is below
+      the registered 0.80 threshold (witnesses fail to reproduce their
+      designated counterexamples); OR (b) every enumerated invalid implication
+      is already implied invalid by B0/B2 category semantics alone (taxonomy
+      restatement — no boundary the witnesses add beyond existing
+      vocabularies). A failed reproduction is reported, and neither the
+      `truth.json` label nor the witness is repaired to match (threat model
+      §8).
+    primary_endpoint: counterexample reproduction rate over the pre-registered
+      implication-pair register; reported only from executed witness runs
+      recorded under artifacts/venue2027/acns/<run_id>/manifest.json after
+      ACNS-freeze; never asserted at design time.
+
+  - id: RQ3
+    name: taxonomic reliability of independent coding
+    research_question: >-
+      How consistently can independent reviewers classify claims and
+      reproduce counterexamples across a pre-registered corpus?
+    independent_unit: >-
+      One (claim, rater-pair) classification event: coder C1's and coder C2's
+      first-pass (pre-adjudication) field assignments for one extracted claim
+      on the reliability-relevant fields (C2 evidence class, C3 lattice level
+      claimed, C4 lattice level demonstrated, plus boundary code). Repeated
+      fields within one claim are clustered; one claim contributes exactly one
+      agreement event per field.
+    population: >-
+      The frozen S6 corpus claims double-coded by two independent human coders
+      under the frozen `ACNS-X05` extraction manual, with third-party
+      adjudication per `ACNS-X06` (TC5). The counterexample-reproduction side
+      of this RQ is measured over the same G1-G9 witness population as RQ2,
+      scored by the coders' expected-verdict agreement before execution.
+    estimand: >-
+      The population inter-rater Cohen's kappa for nominal claim
+      classification between the two independent human coders on the
+      pre-adjudication first-pass stream, computed over the frozen corpus
+      claim set; jointly with the population disagreement resolution rate
+      (proportion of adjudicated conflicts resolved to a final post-adjudication
+      label). This quantifies the reliability of the taxonomy as a measurement
+      instrument — coverage of the evidence-boundary map that independent
+      humans can reproduce — not any mechanism property.
+    paired_contrast: >-
+      Same claims, two vocabularies, same two blinded raters (paired by claim):
+      Cohen's kappa under the study taxonomy (extended lattice) vs Cohen's
+      kappa under a B3-style generic coding of the identical claims (generic
+      careful human coding without this study's lattice, extraction rules or
+      witness gallery, using the B1 PROV audit-event vocabulary as the
+      structured comparator where a structured scheme is needed). The
+      comparison statistic is the paired kappa difference on the shared claim
+      set via paired bootstrap over claims (whole claims resampled, 10,000
+      resamples, seed 20271115); each claim is its own control, so rater-pair
+      and claim difficulty are differenced out.
+    primary_metric: inter-rater Cohen's kappa on claim classification across
+      the frozen corpus (pre-adjudication first-pass stream), with bootstrap
+      95% CI; computed from raw coder records, never from adjudicated labels
+      for the agreement estimate (adjudicated labels are reported separately).
+    secondary_metrics:
+      - disagreement resolution rate (adjudicated conflicts resolved to a
+        final label / all flagged conflicts), exact binomial CI
+      - retained-ambiguous fraction after adjudication (AMB /
+        BND_INDETERMINATE; coercion to raise kappa is a falsifying defect)
+      - per-field kappa (C2, C3, C4, boundary code) with the multiplicity
+        note that these are descriptive, not gated
+      - expected-verdict agreement between coders on the G1-G9 witness
+        population (reproduction side of the RQ)
+    null_hypothesis: >-
+      H03: the study taxonomy's inter-rater kappa does not exceed the B3-style
+      generic coding's kappa by more than 0.10 (delta_kappa <= 0.10) —
+      any reasonable two-rater coding of the same corpus reaches comparable
+      agreement, so the specific taxonomy contributes nothing beyond generic
+      careful human coding.
+    alternative_hypothesis: >-
+      H13: the study taxonomy's kappa exceeds the B3-style generic coding's
+      kappa by more than 0.10 (delta_kappa > 0.10) — the lattice and extraction
+      rules measurably improve classification reliability over generic coding.
+    minimum_useful_difference: >-
+      The taxonomy must beat generic B3-style coding by more than 0.10 kappa
+      AND the study taxonomy's absolute kappa must meet the RQ1-referenced
+      reliability gate (kappa above the pre-registered absolute floor fixed at
+      ACNS-freeze as 0.60, "substantial" agreement); failing either, the
+      systematic-taxonomy contribution fails its own reliability test and no
+      SoK claim is made (novelty_contract §3-RQ3).
+    confounders: >-
+      Rater training asymmetry (both coders receive identical frozen manual
+      and calibration set; training materials fixed before coding); order and
+      fatigue effects (coding order randomized at publication level, fixed
+      seed 20271115); adjudication feedback contaminating first-pass
+      agreement (kappa computed on the pre-adjudication stream, sealed before
+      adjudication); ambiguous-item coercion inflating kappa (prohibited,
+      INDETERMINATE retained); corpus composition skew toward easy claims
+      (sensitivity: kappa recomputed with and without CLARA-affiliated and
+      HIGH-RB records per review protocol §9.1); chance agreement inflation
+      under skewed category prevalence (kappa prevalence note reported;
+      category marginals published with the ledger).
+    power_analysis: >-
+      Reliability-estimation design, not a powered superiority trial: with the
+      chance-corrected variance upper bound p0=0.775 (conservative: expected
+      raw agreement ~0.85 with expected chance agreement pe=0.25), N=120
+      independent claims give a two-sided 95% CI half-width of 0.100 on kappa
+      (0.0996 at N=120; 0.1000 at N=119), sufficient to detect the registered
+      0.10 margin against the B3 comparator via paired bootstrap. Planning
+      floor: at least 120 double-coded claims; if the frozen corpus yields
+      fewer, the shortfall is disclosed and the comparison is downgraded to
+      estimation with the achieved half-width reported. No prospective sample
+      size is chosen from target p-values (SCIENTIFIC_METRICS_CONTRACT rule 9).
+    analysis_method: >-
+      Cohen's kappa (nominal, two raters) on the pre-adjudication stream with
+      nonparametric cluster bootstrap over claims (10,000 resamples, seed
+      20271115); paired bootstrap on the shared claim set for the taxonomy-vs-
+      B3 kappa difference with two-sided 95% CI and the Bonferroni-Holm budget
+      across the three RQ primaries; disagreement resolution rate with exact
+      binomial CI; all values recomputed from raw coder event records per
+      INDEPENDENT_EVIDENCE_PROTOCOL rule 8; frozen-plan drift checked via
+      `assert_frozen_analysis` (endpoint, test, margin, unit, alpha, seed).
+    falsification_condition: >-
+      RQ3 fails its reliability test (negative result reported; the SoK
+      contribution is not claimed, per novelty_contract §3-RQ3 and §7) if the
+      study taxonomy's kappa does not exceed the generic B3-style coding's
+      kappa by more than the registered 0.10 margin on the paired shared claim
+      set, OR the absolute kappa floor (0.60) is not met, OR the disagreement
+      resolution rate is not superior to the no-adjudication counterfactual.
+      Additionally, any evidence of coerced INDETERMINATE labels or adjudication
+      feedback leaking into first-pass kappa is itself a falsifying defect.
+    primary_endpoint: inter-rater Cohen's kappa on claim classification across
+      the frozen corpus (SoK-appropriate reliability endpoint); observed values
+      enter only via artifacts/venue2027/acns/<run_id>/manifest.json after
+      ACNS-freeze.
+
+sook_consistency:
+  estimator_statement: >-
+    The estimator across all three RQs quantifies evidence-boundary coverage:
+    how completely the published literature's attestation claims are mapped,
+    how completely the registered invalid implications are demonstrated, and
+    how reproducibly independent humans can perform that mapping. No RQ
+    computes, implies, or reports mechanism superiority, detection power,
+    any prevention endpoint, or any runtime defense property.
+  registry_note: >-
+    No kappa, coverage, reproduction or corpus-size value is invented here.
+    All constants in this file are design-time planning quantities (null
+    bounds, margins, alpha, seeds, N floors) fixed before data collection;
+    observed values are recorded exclusively under
+    artifacts/venue2027/acns/<run_id>/manifest.json after ACNS-freeze.
