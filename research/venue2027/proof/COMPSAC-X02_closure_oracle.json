@@ -2,7 +2,7 @@
   "artifacts_sha256": {
     "evaluation/venue2027/compsac/independent_closure_oracle.py": "ce1847ea280eac0bea2e3e2cc0b536022c060b4da582de503fd0cbd4d61cb212",
     "evaluation/venue2027/compsac/test_independent_closure_oracle.py": "44c753fc6482c10e14146416c2f9fbbd5344cf11323a190c8fc526a1fb1755a4",
-    "research/venue2027/proof/logs/COMPSAC-X02_closure_oracle.pytest.log": "ec3622cd28ed58d936296959047810aafa476cb0738b1aa83ec2cccffc39214a",
+    "research/venue2027/proof/logs/COMPSAC-X02_closure_oracle.pytest.log": "4b42040d6733378eeed381dd5af96d2045449611878f752fc4f53ab1a17cc971",
     "research/venue2027/proof/logs/COMPSAC-X02_closure_oracle.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
   },
   "baseline_parity": "NOT_APPLICABLE",

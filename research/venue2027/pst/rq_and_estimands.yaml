@@ -1,0 +1,582 @@
+# =====================================================================
+# PST-rq_registry — RQ, estimand, hypotheses and metrics (P01)
+# =====================================================================
+# Task: PST-rq_registry (venue pst, phase P01, priority P0).
+# Contract: research/venue2027/pst/novelty_contract.md (signed GO,
+#           Condition 1: this file freezes estimands, margins and
+#           denominators BEFORE any arm runs),
+#           research/venue2027/VENUES/pst/RESEARCH_BLUEPRINT.md,
+#           research/venue2027/GATES/SCIENTIFIC_METRICS_CONTRACT.md,
+#           research/venue2027/GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md,
+#           evaluation/venue2027/_shared/analysis_policy.py v1.0.0
+#           (SH-analysis_policy PASS; FrozenPlan / assert_frozen_analysis;
+#           post-hoc drift of endpoint, test, margin, unit, alpha or seed
+#           is ANALYSIS_DRIFT).
+#
+# Purpose: preregistered registry of exactly three research questions with
+# frozen estimands, paired contrasts, primary/secondary metrics, directional
+# hypotheses, minimum useful differences, confounders, power/analysis
+# methods, falsification conditions and primary endpoints — all fixed
+# BEFORE any arm runs and before any holdout unsealing. This file asserts
+# NO empirical result; every observed number that later appears in PST
+# artifacts must derive mechanically from
+# artifacts/venue2027/pst/<run_id>/manifest.json.
+#
+# Failure semantics: violations are ordinary assertion failures in
+# research/venue2027/pst/tests/test_rq_registry.py with stable test names;
+# nothing is silently skipped.
+#
+# Endpoint class invariant: PST is a MEASUREMENT study of the
+# reconstruction-versus-linkability frontier. It is explicitly NOT a new
+# access-control mechanism: B4 (purpose-bound minimized receipt plus
+# retention map) is an evaluation instrument, not an authorization
+# primitive (novelty_contract access-control boundary; threat_model X5).
+# No RQ uses a disclosure rate (PoPETs), crash-consistency violation rate
+# (DSN/COMPSAC), replay acceptance rate (IFIP SEC), evidence-coverage
+# matrix (ACNS), conformance-divergence rate (SACMAT), detection AUC
+# (DIMVA) or unsafe-clinical-action rate (AIME) as an endpoint; the frozen
+# GLHS E15–E22 archive and the accepted HEALTHINF paper are background and
+# are refused as new evidence (reuses_archive: []).
+#
+# Version: 1.0.0. Additive-only within 1.x.
+schema_version: "clara.venue2027.rq_registry.v1"
+venue: pst
+phase: P01
+task_id: PST-rq_registry
+study_title: >-
+  ReceiptMin: Measuring Forensic Reconstructability under Purpose-Bound
+  Audit Minimization
+registry_version: "1.0.0"
+preregistration_status: frozen_before_any_arm_runs
+endpoint_class: forensic_reconstructability_measurement
+contribution_class: measurement_not_access_control_mechanism
+access_control_boundary: >-
+  This study does not propose a new access-control mechanism. The
+  purpose-bound minimized receipt and retention map (B4) are experimental
+  instruments for measuring the reconstruction-versus-linkability frontier;
+  authorization, consent and enforcement semantics remain the existing
+  CLARA systems (RBAC role gating, versioned consent, purpose binding).
+  Production integration of B4 is out of scope; any downstream manuscript
+  phrasing that presents the receipt format as an enforcement mechanism is
+  a scope violation to be corrected in review.
+dataset: synthetic-pst-2027
+reuses_archive: []
+
+# ---------------------------------------------------------------------------
+# Shared frozen design elements (apply to all RQs)
+# ---------------------------------------------------------------------------
+shared_design:
+  # Independent unit of analysis: one independent synthetic case history.
+  # Never a per-event pseudo-replication; repeated events inside one
+  # history are clustered and resampled only as whole histories.
+  independent_unit: one independent synthetic case history
+  unit_definition: >-
+    One independently sampled synthetic case history in the frozen
+    synthetic-pst-2027 corpus — a longitudinal AI-health-action workflow
+    with its own synthetic subject, correlation surfaces, audit volume,
+    retention windows and backup schedule — identified by group_id in the
+    frozen scenario JSONL contract (schema clara.venue2027.scenario.v1,
+    case anchors PST-CASE-01..09). Receipts, queries, epochs and
+    reconstruction attempts belonging to one history are clustered within
+    it and never treated as independent draws.
+  cluster_definition: >-
+    Histories sharing one scenario_family x synthetic tenant origin form a
+    case family; case-family-level bootstrap resamples whole histories so
+    correlated generation structure never inflates the effective sample
+    size.
+  population: >-
+    All eligible independent synthetic case histories in the frozen
+    synthetic-pst-2027 corpus (development + confirmatory splits) with
+    explicit correlation surfaces, varying log sizes, user identifiers,
+    retention windows and backups. Synthetic only; no real patient records;
+    no frozen GLHS E15–E22 rows.
+  # Independent oracle: trusted offline complete ledger (threat model T4).
+  oracle:
+    source: trusted_offline_complete_ledger
+    labels: [RECONSTRUCT, NO_UNNECESSARY_LINK, MEASURE_LEAK, DETECT_TAMPER,
+             EVALUATE_DISCLOSURE, MEASURE, INDETERMINATE]
+    adjudication: >-
+      The trusted offline complete ledger (full plaintext event store) is
+      held by the evaluation role only and is the sole ground truth for
+      reconstruction, exposure and recovery questions. Its labels are
+      frozen before any arm runs; the candidate never imports oracle code
+      (INDEPENDENT_EVIDENCE_PROTOCOL rule 2); oracle disagreement counts
+      are reported, never repaired post hoc. Two plausible readings of an
+      oracle label keep the case INDETERMINATE until independent
+      adjudication (CASE_MATRIX rule).
+    blinding: >-
+      Authorized forensic queries are blinded to arm; the attacker
+      evaluation harness for RQ2 is operated by the evaluation role with
+      ground-truth subject and attribute labels taken from the ledger, and
+      never imports candidate code.
+  # Frozen ex-ante forensic query set (blueprint method architecture).
+  forensic_query_set:
+    frozen_before_any_arm_runs: true
+    query_classes: [authorization, provenance, commit_eligibility]
+    mandatory_field_rule: >-
+      The mandatory evidence field set per query class is frozen ex ante
+      from the query set (threat model, model_agency family): a committer
+      can neither withhold a mandatory field (missing field yields
+      INDETERMINATE, PST-CASE-05) nor add unrestricted content (the
+      purpose string is a redaction surface, PST-CASE-06).
+  # Frozen attacker model (threat model P1 + P2).
+  attacker_model:
+    privilege: compromised read-only audit reader (P1), no key custody
+    auxiliary_joins: >-
+      P2 extends P1 with external linkage tables (public records, employer
+      schedules, marketing data) joined on quasi-identifiers such as
+      pseudonyms, timestamps and purpose strings; joins are measured, not
+      assumed away.
+    frozen_ex_ante: >-
+      Privilege, auxiliary tables and join strategy are frozen before any
+      arm runs (threat model insider_or_observer clean case).
+  # Frozen split discipline.
+  splits:
+    development: design changes permitted on the development split only
+    holdout: >-
+      confirmatory holdout inaccessible until protocol and analysis freeze;
+      family-holdout histories share no scenario templates across splits
+  # Frozen error accounting (SCIENTIFIC_METRICS_CONTRACT rule 6).
+  outcome_accounting:
+    per_arm_counts: [eligible, attempted, completed, rejected, indeterminate, timeout, not_run_external, missing]
+    denominator_policy: >-
+      predeclared primary denominator per RQ (stated below); INDETERMINATE
+      outcomes are retained and counted, never coerced into a pass or a
+      safe rejection; no denominator is ever silently shrunk.
+  # Shared power / analysis frame (instantiated per RQ below).
+  power_and_analysis:
+    pilot: >-
+      Pilot variance estimation on the development split only; prospective
+      sample size frozen from the pilot upper variance bound, never chosen
+      from target p-values (SCIENTIFIC_METRICS_CONTRACT rule 9).
+    familywise_error: >-
+      Planned comparison count fixed at three primary tests (one per RQ);
+      Holm correction across the three RQ families at two-sided familywise
+      alpha 0.05; secondary metrics are descriptive with case-family
+      clustered CIs, no confirmatory claim.
+    alpha: 0.05
+    bootstrap:
+      resamples: 10000
+      seed: 20271115
+      scheme: >-
+        case-family clustered bootstrap resampling whole independent
+        histories (units are histories, clusters are scenario_family x
+        tenant)
+    software: >-
+      evaluation/venue2027/_shared/analysis_policy.py (FrozenPlan,
+      assert_frozen_analysis; ANALYSIS_DRIFT on post-hoc change)
+    zero_event_bound: >-
+      zero-event outcomes carry the shared Clopper-Pearson one-sided upper
+      bound 1 - 0.05**(1/N) (N=598 gives about 0.0050) with case-family
+      dependency adjusted per SCIENTIFIC_METRICS_CONTRACT rule 3.
+  confounders_shared:
+    - correlation-surface intensity imbalance across arms (equal data access and equal compute budget enforced)
+    - retention-epoch boundary effects shared by all arms (epochs declared per receipt; composition measured, PST-CASE-03)
+    - scenario-template overlap across splits (frozen no-shared-template rule)
+    - oracle-label adjudication drift over time (labels frozen before arms run; blinded query execution)
+    - attacker join-strategy tuning on held-out distributions (development-split-only design changes)
+
+# ---------------------------------------------------------------------------
+# Strong baseline arms (blueprint table; roles from the novelty contract)
+# ---------------------------------------------------------------------------
+baseline_arms:
+  B0:
+    name: full plaintext append-only log
+    role: utility upper bound / privacy lower bound
+  B1:
+    name: hash-only log or content digests
+    role: minimal prior-art minimization; weak audit utility; strongest competing explanation for RQ2
+  B2:
+    name: encrypted log with role-gated decryption and deletion
+    role: strongest confidentiality comparator; dominant competing explanation (CL-9)
+  B3:
+    name: RFC 9162-like Merkle append-only integrity + authorized material retrieval
+    role: strongest integrity baseline (CL-1); strongest competing explanation for RQ3
+  B4:
+    name: purpose-bound minimized receipt and retention map
+    role: candidate (evaluation instrument only — not an access-control mechanism)
+  parity: >-
+    All arms run at equal data, permission and compute budget with pinned
+    real upstream sources where available and fidelity vectors; a baseline
+    implemented as NOT_RUN_EXTERNAL is a transparent status that blocks
+    comparative claims against that arm and is never replaced by an unnamed
+    custom surrogate.
+  not_run_external_status: >-
+    A baseline implemented as NOT_RUN_EXTERNAL is a transparent status that
+    blocks comparative claims against that arm; it is never replaced by an
+    unnamed custom surrogate.
+  parity: >-
+    All arms run at equal data, permission and compute budget with pinned
+    real upstream sources where available and fidelity vectors; a baseline
+    implemented as NOT_RUN_EXTERNAL is a transparent status that blocks
+    comparative claims against that arm and is never replaced by an unnamed
+    custom surrogate.
+
+# ---------------------------------------------------------------------------
+# Research questions — exactly three, preregistered
+# ---------------------------------------------------------------------------
+research_questions:
+
+  - rq_id: RQ1
+    title: Forensic sufficiency under purpose-bound minimized receipts
+    research_question: >-
+      What fraction of legitimate forensic questions remain answerable under
+      hash-only, encrypted, and selective retention receipts?
+    independent_unit: one independent synthetic case history, per shared_design.independent_unit
+    population: >-
+      All eligible independent synthetic case histories in the frozen
+      synthetic-pst-2027 corpus across all retention stages, scored against
+      the trusted offline complete ledger over the ex-ante frozen forensic
+      query set (authorization, provenance, commit-eligibility); INDETERMINATE
+      outcomes are retained and counted, never coerced.
+    estimand: >-
+      Forensic query answerability — the population mean, over independent
+      synthetic case histories, of the per-history fraction of the ex-ante
+      frozen legitimate forensic query set answered exactly, by arm (B0-B4)
+      and retention stage, scored against the independent oracle ledger.
+      The arm-level joint summary with the RQ2 exposure bounds is the
+      forensic reconstructability score — one coordinate of the formally
+      defined reconstruction-versus-linkability frontier. This is a
+      measurement estimand about what survives minimization; it is not a
+      disclosure rate (PoPETs), not a detection or prevention quantity, and
+      not an access-control property.
+    paired_contrast: >-
+      Paired per-history answerability of B4 versus each baseline arm on the
+      same histories, same frozen query set, same oracle, same data access
+      and equal compute budget: each history contributes its B4-minus-arm
+      answerability difference, so each history is its own control. The
+      confirmatory contrast is B4 versus B2 (the strongest competing
+      explanation: encrypted full log with role-gated decryption and managed
+      retention trivially maximizes authorized answerability); B0 anchors
+      the utility upper bound and B1/B3 are co-contrasts. The test is a
+      two-sided paired permutation test on per-history answerability,
+      case-family clustered, alpha 0.05 with Holm correction across the
+      three RQ families.
+    primary_metric: forensic query answerability per independent synthetic case history (fraction of the frozen query set answered exactly, per arm and retention stage, scored against the oracle ledger)
+    primary_metric_family: [forensic_query_answerability, forensic_reconstructability_score]
+    secondary_metrics:
+      - oracle disagreement counts (candidate-vs-oracle label disagreements, reported, never repaired post hoc)
+      - per-query-class answerability (authorization, provenance, commit-eligibility; descriptive, never a per-event rate)
+      - FORENSIC_OMISSION / INDETERMINATE incompleteness rate per arm and retention stage (PST-CASE-05; utility bound, never a pass)
+      - answerability degradation across retention stages per arm (descriptive frontier coordinate)
+    null_hypothesis: >-
+      H0_1: B4 answerability is worse than B2 by more than the frozen
+      non-inferiority margin (mean paired per-history difference
+      B2-minus-B4 > margin m1 = 0.05), i.e. purpose-bound minimization
+      sacrifices legitimate forensic reconstruction beyond the acceptable
+      utility cost.
+    alternative_hypothesis: >-
+      H1_1: B4 answerability is non-inferior to B2 (mean paired per-history
+      difference B2-minus-B4 <= 0.05) AND B4 strictly reduces retained
+      sensitive content and RQ2 exposure relative to B2 — the two-gate
+      certificate of the frontier separation.
+    minimum_useful_difference:
+      symbol: m1
+      value: 0.05
+      scale: >-
+        absolute per-history answerability difference (B2 minus B4) on the
+        frozen confirmatory split; the frozen non-inferiority margin for the
+        B4-vs-B2 contrast
+      rationale: >-
+        A 5-point absolute answerability sacrifice per history is the
+        largest forensic-utility cost an audit program can accept for
+        minimization before the receipt design is dominated by encrypted
+        retention; frozen before any arm runs together with the
+        pilot-based power calculation.
+    confounders:
+      - answerability inflated by oracle side-information not available to the reading arm (blinded query execution; oracle ledger held by evaluation role only)
+      - query-set difficulty imbalance across query classes (frozen ex-ante query set; per-class reporting)
+      - retention-stage boundary effects differing by arm implementation rather than by design (frozen epoch schedule, PST-CASE-03)
+      - committer agency abuse shifting mandatory-field completeness asymmetrically across arms (frozen mandatory field set, PST-CASE-05)
+      - selection of favorable histories into the confirmatory split (frozen family-holdout; no shared templates)
+    power_and_analysis_method: >-
+      Two-sided paired permutation test on per-history answerability
+      (B4 vs B2), case-family clustered, alpha 0.05 with Holm correction
+      across the three RQ families; effect sizes with case-bootstrap 95%
+      confidence intervals (10,000 resamples, seed 20271115, whole
+      histories resampled); two-gate decision per analysis_policy:
+      gate 1 — the one-sided 95% upper bound of the B2-minus-B4 paired
+      difference meets the frozen margin m1 = 0.05; gate 2 — B4's RQ2
+      exposure bounds beat B2 under the same reader privilege (RQ2 gate).
+      Denominators are independent histories, never per-event
+      pseudo-replication; per-arm outcome counts
+      (eligible/attempted/completed/rejected/indeterminate/timeout/
+      not_run_external/missing) reported with the predeclared primary
+      denominator (all eligible histories in the frozen corpus); the
+      frozen plan is drift-checked by assert_frozen_analysis.
+    falsification_condition: >-
+      F1: B4 answerability is distinguishably below B2 beyond the frozen
+      non-inferiority margin m1 — minimization buys only forensic risk and
+      the frontier-separation claim is rejected. F2: B1 hash-only receipts
+      are statistically indistinguishable from B4 on both answerability and
+      every RQ2 exposure bound — purpose-bound receipt structure adds no
+      measurable value over HMAC identifiers (CL-2) and the claim is
+      rejected. F3 (study-level rule): B2 dominates B4 simultaneously on
+      privacy (RQ2 bounds) and reconstruction (RQ1 answerability) at
+      comparable cost (RQ3) — the novelty-superiority claim of the study is
+      rejected and the outcome is reported as a meaningful negative result,
+      never silently re-labeled (anti-salami rule).
+    primary_endpoint: forensic query answerability per independent synthetic case history, scored against the independent oracle ledger over the ex-ante frozen query set — the reconstructability coordinate of the reconstruction-versus-linkability frontier, reported jointly with the RQ2 exposure bounds as the forensic reconstructability score
+
+  - rq_id: RQ2
+    title: Metadata exposure under compromised read-only audit access
+    research_question: >-
+      Can linkage and attribute exposure be bounded under compromised
+      read-only audit access, including auxiliary-data joins?
+    independent_unit: one independent synthetic subject (its case history), per shared_design.independent_unit
+    population: >-
+      All eligible synthetic subjects with histories in the frozen
+      synthetic-pst-2027 corpus, attacked under the frozen P1+P2 model (a
+      compromised read-only audit reader combining retained receipts,
+      retention maps and chain heads with external auxiliary linkage
+      tables on quasi-identifiers — pseudonyms, timestamps, purpose
+      strings); INDETERMINATE re-identification adjudications are retained
+      and counted.
+    estimand: >-
+      Attacker advantage over a declared prior — the population mean
+      re-identification and attribute-inference advantage (posterior
+      certainty minus declared prior) plus linkability precision, measured
+      per independent synthetic subject under the frozen compromised
+      read-only audit-reader privilege with auxiliary-data joins, by arm
+      (B0-B4). A measurement of what retained artifacts let an attacker
+      infer; not a disclosure rate and not an enforcement property.
+    paired_contrast: >-
+      Paired per-subject attacker advantage of B4 versus each baseline arm
+      under the identical frozen attacker privilege, auxiliary tables and
+      join strategy: each subject contributes its B4-minus-arm advantage
+      difference, so each subject is its own control. The confirmatory
+      contrasts are B4 versus B1 (the minimal prior-art minimization: if
+      hash-only digests already achieve the same attacker-advantage bound
+      including auxiliary joins, receipt structure is not measurably
+      better — CL-2) and B4 versus B2 under the same reader privilege
+      without decryption keys. The test is a one-sided exact permutation
+      test of attacker advantage against the declared prior,
+      subject-level clustered, alpha 0.05 with Holm correction.
+    primary_metric: attacker advantage over the declared prior (re-identification and attribute-inference advantage, plus linkability precision) per independent synthetic subject, measured per arm under the frozen P1+P2 privilege with auxiliary-data joins
+    primary_metric_family: [record_level_linkability_risk, attribute_inference_risk]
+    secondary_metrics:
+      - linkability precision with case-bootstrap 95% confidence intervals (descriptive)
+      - timestamp-inference advantage from coarsened commit timestamps joined with auxiliary schedules (PST-CASE-03/06 surfaces; the timestamp coarsening trade-off is recorded, never assumed away)
+      - cross-tenant join success rate (PST-CASE-02; NO_UNNECESSARY_LINK evaluation, reported not hidden)
+      - exposure bound per retention stage (post-decay exposure at epoch E+1 under P6, descriptive)
+    null_hypothesis: >-
+      H0_2: the auxiliary-join attacker's advantage against B4 exceeds the
+      pre-registered exposure bound b2 = 0.10 above the declared prior
+      (mean advantage > declared prior + 0.10) — purpose-bound minimization
+      fails to bound metadata exposure at the registered level.
+    alternative_hypothesis: >-
+      H1_2: the auxiliary-join attacker's advantage against B4 stays at or
+      below declared prior + 0.10, AND is strictly smaller than the
+      advantage achievable against B1/B2 under the same privilege — the
+      exposure gate of the two-gate certificate.
+    minimum_useful_difference:
+      symbol: b2
+      value: 0.10
+      scale: >-
+        absolute attacker advantage above the declared prior, per
+        independent synthetic subject, under the frozen P1+P2 privilege
+        with auxiliary joins; the pre-registered exposure bound B4 must
+        not exceed
+      rationale: >-
+        A 10-point attacker advantage over chance is the largest residual
+        re-identification/attribute risk a minimized audit program can
+        leave while still claiming a bounded exposure surface; frozen
+        before any arm runs together with the pilot-based power
+        calculation.
+    confounders:
+      - auxiliary-table richness differing from declared frozen tables (join strategy and tables frozen ex ante)
+      - correlation-surface intensity differing across synthetic tenants (equal generation parameters enforced)
+      - purpose-string redaction quality differing by arm implementation rather than by design (purpose string is a declared redaction surface, PST-CASE-06)
+      - attacker tuning on held-out subjects (development-split-only attacker design changes)
+      - timestamp coarsening interacting with retention epochs (coarsening declared per epoch, composition measured)
+    power_and_analysis_method: >-
+      One-sided exact permutation test of attacker advantage against the
+      declared prior, subject-level clustered, alpha 0.05 with Holm
+      correction across the three RQ families; linkability precision
+      reported with case-bootstrap 95% confidence intervals (10,000
+      resamples, seed 20271115); two-gate decision per analysis_policy:
+      gate 1 — B4 advantage does not exceed declared prior + 0.10
+      (exposure bound met); gate 2 — B4 advantage is strictly smaller than
+      B1/B2 advantage under the same privilege (separation gate, RQ1
+      co-gate). Blinded attacker harness operated by the evaluation role
+      with ground-truth labels from the trusted offline complete ledger;
+      the harness never imports candidate code; per-subject outcome counts
+      (eligible/attempted/completed/rejected/indeterminate/timeout/
+      not_run_external/missing) reported with the predeclared primary
+      denominator (all eligible subjects in the frozen corpus);
+      assert_frozen_analysis drift guard applies.
+    falsification_condition: >-
+      F4: the auxiliary-join attacker's advantage against B4 exceeds the
+      pre-registered exposure bound (declared prior + 0.10) — the claim
+      that purpose-bound minimization bounds metadata exposure is rejected.
+      F5: B4's attacker advantage is statistically indistinguishable from
+      the advantage achievable against B1/B2 under the same privilege —
+      purpose-bound receipt structure adds no measurable exposure
+      reduction over minimal prior art (CL-2) and the claim is rejected.
+      Both conditions report the negative result with the exposure
+      measurements intact, never hidden (LINKABILITY_BOUND_EXCEEDED is a
+      reported exposure result, not a suppressed one).
+    primary_endpoint: attacker advantage over the declared prior per independent synthetic subject under the frozen compromised read-only audit-reader privilege with auxiliary-data joins — the linkability coordinate of the reconstruction-versus-linkability frontier, reported jointly with RQ1 answerability as the forensic reconstructability score
+
+  - rq_id: RQ3
+    title: Operating costs across audit volumes and retention epochs
+    research_question: >-
+      What retention, key deletion and proof-generation costs emerge across
+      audit volumes and retention epochs?
+    independent_unit: one independent synthetic case history under one (audit-volume, retention-epoch) condition, case-clustered per shared_design.independent_unit
+    population: >-
+      All eligible (case history x audit-volume x retention-epoch)
+      conditions in the frozen synthetic-pst-2027 corpus, spanning varying
+      log sizes, retention windows and backup schedules; timing
+      distributions reported in full, not only aggregates.
+    estimand: >-
+      The population mean per-condition cost triple of B4 relative to each
+      baseline — retained bytes, proof-generation latency, and authorized
+      investigation recovery time — across audit volumes and retention
+      epochs, case-clustered, with reference timings validated against
+      fixed workloads frozen before any run by the trusted offline
+      complete ledger. An operating-cost measurement of the frontier's
+      third coordinate; not a performance-optimization claim and not an
+      enforcement property.
+    paired_contrast: >-
+      Paired per-condition cost ratios of B4 versus each baseline arm on
+      the same (history, volume, epoch) conditions with equal data,
+      permission and compute budget: each condition contributes its
+      B4-over-arm cost ratio, so each condition is its own control. The
+      confirmatory contrast is B4 versus B3 (the simplest semantics
+      achieving integrity plus authorized recovery — the strongest
+      competing cost explanation), cross-checked against B2 storage and
+      deletion costs. The analysis is a paired case-clustered bootstrap
+      (10,000 resamples, pre-registered) on per-condition cost ratios,
+      reporting median ratios and 95% confidence intervals.
+    primary_metric: retained bytes, proof-generation latency, and authorized investigation recovery time per independent (case history x audit-volume x retention-epoch) condition, as B4-over-baseline cost ratios with median and 95% case-clustered bootstrap CI
+    primary_metric_family: [retained_bytes, proof_generation_latency, authorized_investigation_recovery_time]
+    secondary_metrics:
+      - retained-bytes ratio per retention epoch (decay profile of the retention map, descriptive)
+      - key-deletion operability per arm (availability limitations reported as INDETERMINATE, PST-CASE-07; no unverifiable backup-deletion claim, X4)
+      - proof-generation latency distribution (p50/p95/p99) per arm at fixed reference workloads, not only aggregates
+      - authorized recovery time vs oracle reference timing deviation (instrumentation validation, descriptive)
+    null_hypothesis: >-
+      H0_3: B3 and B2 jointly dominate B4 on all three cost axes (retained
+      bytes, proof-generation latency, authorized investigation recovery
+      time) while matching RQ1 answerability and RQ2 bounds — the
+      operating-cost motivation for purpose-bound minimization does not
+      exist; the null is rejected only if B4's cost ratio on the axis that
+      breaks joint dominance is at least 0.15 below the dominating baseline
+      (relative ratio difference >= 0.15, frozen).
+    alternative_hypothesis: >-
+      H1_3: B4 is not jointly dominated on all three cost axes by B3 and
+      B2 at matched RQ1 answerability and RQ2 bounds — on at least one cost
+      axis B4's median cost ratio beats the dominating baseline by more
+      than the frozen equivalence margin 0.15 with its 95% CI excluding
+      the margin — i.e. the cost coordinate of the frontier separates the
+      candidate from the integrity- and encryption-based retention
+      baselines.
+    minimum_useful_difference:
+      symbol: e3
+      value: 0.15
+      scale: >-
+        relative cost-ratio difference on any single cost axis (B4 over
+        B3 or B2, per condition); a B4 cost at least 15% below the
+        dominating baseline on the axis that breaks joint dominance,
+        with any equivalence claim requiring the 95% CI to lie inside
+        the frozen equivalence margin
+      rationale: >-
+        A 15% single-axis cost separation is the smallest operating-cost
+        advantage worth the added receipt/retention-map machinery in an
+        audit program; frozen before any arm runs together with the
+        pilot-based power calculation.
+    confounders:
+      - hardware and queueing noise across arms (fixed workloads, warmup and bounded retries recorded per SCIENTIFIC_METRICS_CONTRACT rule 10)
+      - instrumentation self-report by the candidate (reference workloads frozen before any run; oracle reference timings validate instrumentation)
+      - audit-volume/epoch condition imbalance across arms (equal condition grid enforced)
+      - backup-side costs outside the retained store (X4: no deletion claim over unverified backups; externality declared, not counted as a win)
+      - implementation-language or serialization asymmetries between arms (pinned upstream sources and fidelity vectors; NOT_RUN_EXTERNAL blocks comparison)
+    power_and_analysis_method: >-
+      Paired case-clustered bootstrap (10,000 resamples, pre-registered,
+      seed 20271115) on per-condition cost ratios of B4 versus each
+      baseline, reporting median ratios and 95% confidence intervals; any
+      equivalence claim requires the interval to lie inside the frozen
+      equivalence margin; Holm correction across the three RQ families;
+      timing distributions reported in full (p50/p95/p99), not only
+      aggregates; all timing validated against fixed reference workloads
+      frozen before any run; per-condition outcome counts
+      (eligible/attempted/completed/rejected/indeterminate/timeout/
+      not_run_external/missing) reported with the predeclared primary
+      denominator (all eligible conditions in the frozen corpus);
+      assert_frozen_analysis drift guard applies.
+    falsification_condition: >-
+      F6: B3 and B2 jointly dominate B4 on all three cost axes (retained
+      bytes, proof-generation latency, authorized investigation recovery
+      time) while matching RQ1 answerability and RQ2 bounds — the
+      operating-cost motivation for purpose-bound minimization is rejected
+      and reported as a negative result. F7: B4's cost advantage, where
+      claimed, does not survive the frozen equivalence-margin check (the
+      95% CI is not inside the equivalence margin) — the equivalence claim
+      is refused. Either condition feeds the study-level falsification
+      rule (F3) evaluation; no output is selectively dropped.
+    primary_endpoint: retained bytes, proof-generation latency, and authorized investigation recovery time per (case history x audit-volume x retention-epoch) condition as B4-over-baseline ratios with case-clustered bootstrap CIs — the cost coordinate of the reconstruction-versus-linkability frontier
+
+# ---------------------------------------------------------------------------
+# Global falsification register (mechanically testable summary)
+# ---------------------------------------------------------------------------
+falsification_register:
+  - id: F1
+    rq: RQ1
+    statement: B4 answerability is distinguishably below B2 beyond the frozen margin m1
+    consequence: minimization buys only forensic risk; frontier-separation claim rejected; negative result reported
+  - id: F2
+    rq: RQ1
+    statement: B1 hash-only receipts are statistically indistinguishable from B4 on answerability and every RQ2 exposure bound
+    consequence: purpose-bound receipt structure adds no measurable value over HMAC identifiers (CL-2); claim rejected
+  - id: F3
+    rq: study_level
+    statement: B2 dominates B4 simultaneously on privacy (RQ2 bounds) and reconstruction (RQ1 answerability) at comparable cost (RQ3)
+    consequence: study-level falsification rule fires; novelty-superiority claim rejected; outcome reported as a meaningful negative result and the decision re-evaluated, never silently re-labeled
+  - id: F4
+    rq: RQ2
+    statement: auxiliary-join attacker advantage against B4 exceeds declared prior + b2
+    consequence: metadata-exposure bounding claim rejected; exposure result reported, never hidden
+  - id: F5
+    rq: RQ2
+    statement: B4 attacker advantage is statistically indistinguishable from B1/B2 advantage under the same privilege
+    consequence: no measurable exposure reduction over minimal prior art; claim rejected
+  - id: F6
+    rq: RQ3
+    statement: B3 and B2 jointly dominate B4 on all three cost axes while matching RQ1 answerability and RQ2 bounds
+    consequence: operating-cost motivation rejected; negative result reported
+  - id: F7
+    rq: RQ3
+    statement: a claimed B4 cost advantage does not survive the frozen equivalence-margin check
+    consequence: equivalence claim refused
+
+# ---------------------------------------------------------------------------
+# Evidence provenance constraints (INDEPENDENT_EVIDENCE_PROTOCOL)
+# ---------------------------------------------------------------------------
+evidence_provenance:
+  no_invented_results: >-
+    This registry freezes questions, endpoints and decision rules only. No
+    observed metric, p-value, CI, advantage, ratio or answerability value
+    appears in this file; all later numbers must derive mechanically from
+    artifacts/venue2027/pst/<run_id>/manifest.json.
+  oracle_independence: >-
+    The trusted offline complete ledger is held by the evaluation role
+    only; labels frozen before any arm runs; the candidate never imports
+    oracle code; blinded authorized forensic queries and a blinded
+    attacker harness; disagreements counted and reported, never repaired
+    post hoc.
+  archive_refusal: >-
+    Frozen GLHS E15–E22 (study glhs-journal) and the accepted HEALTHINF
+    paper are background, refused as new PST evidence in both directions
+    (reuses_archive: []); no RQ, endpoint, denominator, figure or
+    comparative claim derives from them.
+  popets_separation: >-
+    The PoPETs 2027 study (revoked-context re-disclosure rate, cached
+    contexts, future-facing dispatch control) is endpoint-disjoint: PST
+    measures post hoc audit-event reconstruction under a compromised
+    read-only audit reader; the PoPETs cache-invalidator is never a PST
+    baseline; no measurement, figure or outcome row is shared.
+  dataset: synthetic-pst-2027
+  holdout_discipline: >-
+    confirmatory holdout inaccessible until protocol and analysis freeze;
+    early unsealing converts the study GO to NO-GO pending re-scoping.
