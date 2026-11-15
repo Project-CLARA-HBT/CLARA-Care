@@ -1,0 +1,61 @@
+{
+  "task_id": "SACMAT-dataset",
+  "status": "PASS",
+  "source_sha_before": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+  "source_sha_after": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+  "changed_paths": [
+    "evaluation/venue2027/sacmat/generate_dataset.py",
+    "evaluation/venue2027/sacmat/test_generate_dataset.py",
+    "research/venue2027/proof/artifacts/sacmat_dataset/manifest.json",
+    "research/venue2027/proof/artifacts/sacmat_dataset/dataset.jsonl",
+    "research/venue2027/proof/SACMAT-dataset.json",
+    "research/venue2027/proof/emit_SACMAT_dataset_report.py",
+    "research/venue2027/proof/logs/SACMAT-dataset.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-dataset.suite.log",
+    "research/venue2027/proof/logs/SACMAT-dataset.shared_regression.log",
+    "research/venue2027/proof/logs/SACMAT-dataset.ruff.log",
+    "research/venue2027/proof/logs/SACMAT-dataset.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/sacmat/test_generate_dataset.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-dataset.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/sacmat/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-dataset.suite.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-dataset.shared_regression.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/sacmat/generate_dataset.py evaluation/venue2027/sacmat/test_generate_dataset.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-dataset.ruff.log"
+    },
+    {
+      "argv": "PYTHONPATH=. python3 evaluation/venue2027/sacmat/generate_dataset.py --outdir research/venue2027/proof/artifacts/sacmat_dataset --seed 2027 --n 120 # deterministic write_dataset + verify_dataset_dir; result echoed to research/venue2027/proof/logs/SACMAT-dataset.generate.log",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-dataset.generate.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_SACMAT_dataset_report.py # agent_protocol.build_report + validate_report(ok:true); result appended to research/venue2027/proof/logs/SACMAT-dataset.validator.log",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-dataset.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/sacmat/generate_dataset.py": "6e50e4b1a16e2c14190bf872b686a7406bb68d8c5c47769b981a7847af0bfb68",
+    "evaluation/venue2027/sacmat/test_generate_dataset.py": "7b2614f6fb93e228b422674d2fb6df25a226d7268a59b81ed48fcd400ccc3e3a",
+    "research/venue2027/proof/artifacts/sacmat_dataset/manifest.json": "703ebc1d29be292d72989db19dbb86a870ab368409ff219d2c90778645489ec1",
+    "research/venue2027/proof/artifacts/sacmat_dataset/dataset.jsonl": "fa82f59b27397140af3334340e490f350ab856e1914546f2e951652a967dc1e7"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P02 venue dataset task SACMAT-dataset. evaluation/venue2027/sacmat/generate_dataset.py is a thin deterministic adapter over the audited shared kernel evaluation/venue2027/_shared/dataset_kernel.py (MANDATORY delegation: dk.generate('sacmat', seed=seed, n=n, split=split)) \u2014 split assignment, balanced family round-robin, unit-id prefix 'dlg-', leakage detection and PHI screening are all inherited from the kernel, never reimplemented. generate(seed, split, n) returns the kernel Dataset with every record payload enriched with the three SACMAT-controlled variables, each a pure deterministic function of (seed, family, idx) using the kernel determinant (seed*7919 + idx*104729) % 100003: delegation_depth (0..3 redelegation depth), policy_version_skew (0..4 grant-epoch vs decision-time policy-version offset), expiry_offset_ticks (signed logical ticks of decision time vs grant expiry; negative = lapsed). Enrichment is family-conditioned so every SACMAT family has a learnable witness: conformant -> skew==0 and non-lapsed offset; expiry_divergence -> strictly negative offset; policy_skew -> strictly positive skew; obligation_mismatch keeps the raw draws. The kernel ground-truth fields (family, synthetic, determinant, sequence) survive enrichment and a unit's payload is identical whether drawn from the full dataset or a split slice (content_sha256 is split-independent by kernel construction). write_dataset(outdir, seed, n) persists dataset.jsonl (120 units at seed 2027, sort_keys, newline-terminated) plus manifest.json (schema_version clara.venue2027.sacmat.dataset_manifest.v1, kernel + generator versions, families, content_sha256, dataset_jsonl_sha256, split/family inventory); verify_dataset_dir(outdir) regenerates and fails closed with DatasetError('MANIFEST_HASH_MISMATCH') on any byte divergence or digest mismatch \u2014 no silent partial writes. Real dataset artifact written to research/venue2027/proof/artifacts/sacmat_dataset/ (seed 2027, n=120, split 72/24/24, families 30/30/30/30): content_sha256 8b057b0fcd68037d9d3e538748f9201731ab09582162ab66a27c6f972b9ffd62, dataset_jsonl_sha256 fa82f59b27397140af3334340e490f350ab856e1914546f2e951652a967dc1e7. evaluation/venue2027/sacmat/test_generate_dataset.py (stdlib+pytest, 15 tests): determinism (byte-identical for same seed/split/n; different seeds differ), kernel delegation provenance (venue/prefix/generator_version/families), disjoint split slices with split-independent hash and slice==full.split(s) equality, assert_no_leakage and assert_valid_frequencies pass, family-conditioned enrichment invariants over 200 units plus kernel field survival and determinant recomputation, split-independent enrichment, no-PHI sweep, write_dataset byte-identity across output dirs + sorted unit ids + digest agreement + verify_dataset_dir acceptance, persisted split slice == direct generate(seed, s, n) record-for-record, adversarial: INVALID_N (n=0), UNKNOWN_SPLIT ('holdout'), tampered dataset.jsonl (foreign-seed bytes swapped in) and tampered manifest digest both rejected fail-closed with MANIFEST_HASH_MISMATCH, and CLI main() round-trip. Verification: test_generate_dataset.py 15 passed (exit 0); full evaluation/venue2027/sacmat/ suite 53 passed (exit 0); shared regression evaluation/venue2027/_shared/ 137 passed (exit 0); uvx ruff@0.7.1 check clean (exit 0). All identities, timestamps and hashes are synthetic; designed fixtures only, no executed findings, no real PHI/PII, no network, no live policy-engine binaries. agent_protocol.validate_report ok:true with real on-disk logs. source_sha_before = source_sha_after = base SHA 604642528f95e9f10052bd4bc0334bdb1c84358a per established repo convention (proof report committed together with the work)."
+}

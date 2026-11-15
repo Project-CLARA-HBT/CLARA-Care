@@ -1,0 +1,7 @@
+{
+  "outdir": "research/venue2027/proof/artifacts/sacmat_dataset",
+  "seed": 2027,
+  "n": 120,
+  "content_sha256": "8b057b0fcd68037d9d3e538748f9201731ab09582162ab66a27c6f972b9ffd62",
+  "dataset_jsonl_sha256": "fa82f59b27397140af3334340e490f350ab856e1914546f2e951652a967dc1e7"
+}

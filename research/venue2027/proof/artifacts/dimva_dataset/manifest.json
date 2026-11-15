@@ -1,0 +1,23 @@
+{
+  "content_sha256": "65651ac0242329789caa9dded6a751151aece0c85eb6ec3dff3995eefe1f1d54",
+  "dataset_jsonl_sha256": "14fe61ff142e93eceea32619620982c61eb2ea7366a48b50f86dd0c23f6c1c6f",
+  "dataset_kernel_version": "1.0.0",
+  "families": {
+    "benign_session": 30,
+    "burst_probe": 30,
+    "cross_tool_obfuscation": 30,
+    "low_and_slow": 30
+  },
+  "generator_version": "1.0.0",
+  "n": 120,
+  "schema_version": "clara.venue2027.dimva_dataset.v1",
+  "seed": 2027,
+  "splits": {
+    "dev": 24,
+    "test": 24,
+    "train": 72
+  },
+  "total_records": 120,
+  "unit_id_prefix": "camp",
+  "venue": "dimva"
+}

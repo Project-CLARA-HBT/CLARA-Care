@@ -1,0 +1,163 @@
+{
+  "schema_version": "clara.venue2027.popets.study-samples.v1",
+  "venue": "popets",
+  "description": "Sample revocation-episode study records for PoPETs (Revocation-Complete Future Disclosure for Cached Longitudinal AI Contexts), conforming to research/venue2027/popets/protocols/study.schema.json. Positives validate; the single invalid_cases entry is an adversarial record the schema must reject fail-closed. Each record adjudicates one independent revocation episode under the future-dispatch noninterference predicate forbidden_label(g,p) ∩ lineage(d) = ∅ (threat_model.md §1): POPETS-CASE-02 is a fresh post-revocation dispatch whose lineage is clean (ADMIT), POPETS-CASE-03 is the revoked-then-dispatch re-disclosure witness where a cached summary derived from a revoked grant would leave the process boundary after t_r (REJECT of the dispatch, i.e. cancellation, never a leak), and POPETS-CASE-08 keeps INDETERMINATE for a dispatch whose assembly overlapped t_r so the event order is unknown and the outcome fails closed (never counted as a safe rejection). Decision vocabulary is evidence-handling only (ADMIT/REJECT/INDETERMINATE); measured outcomes such as the byte-level interceptor's future unauthorized disclosure rate belong to later phase artifacts, not to the schema record. All identities, timestamps and digests are synthetic research fixtures (source_authority SYNTHETIC_RESEARCH_ONLY).",
+  "source_authority": "SYNTHETIC_RESEARCH_ONLY",
+  "synthetic_provenance": {
+    "generator_id": "synthetic-popets-2027",
+    "generator_version": "1.0.0",
+    "seed": 2027
+  },
+  "cases": [
+    {
+      "schema_version": "1",
+      "case_id": "POPETS-CASE-02",
+      "case_family": "retry_after_revocation",
+      "independent_unit_id": "popets:revocation-episode:fresh-dispatch:001",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+      "seed": 2027,
+      "branch": "research/venue2027/tasks/w7-popets-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "oracle_label",
+          "uri": "research/venue2027/VENUES/popets/CASE_MATRIX.md",
+          "sha256": "0433e0288405c2c7951166ba26470576b9ef82704f7be358a7ef4dd49f240b7d",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "fixture_path",
+          "uri": "research/venue2027/VENUES/popets/cases/schema_example.json",
+          "sha256": "706dfdde750f327f3c438ead70d8ad5512ef78ee0308b1a3e20d595d59510b99",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Fresh post-revocation dispatch control (CASE_MATRIX POPETS-CASE-02, no retry reuse): consent for grant g purpose p was revoked at t_r recorded in the synthetic consent ledger, propagation completed within the declared Δ_max so t_e < t_d, and the candidate assembles the dispatch only from live source records under live-purpose permission clauses. The byte-level dispatch interceptor observes zero revoked labels in lineage(d), so forbidden_label(g,p) ∩ lineage(d) = ∅ holds and the episode ADMITs the dispatch. This is the authorized-utility companion that a correct invalidation must preserve; it is not a leak witness and asserts no erasure of anything delivered before t_r. episode_class=fresh_dispatch_after_revocation; lineage_verdict=disjoint; failure_mode=none; erasure_claim=none.",
+      "venue": "popets",
+      "venue_unit_kind": "revocation_episode",
+      "observer": "re_disclosure_observer",
+      "expected_decision": "ADMIT",
+      "observed_decision": "ADMIT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-popets-2027",
+        "generator_version": "1.0.0",
+        "seed": 2027
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "POPETS-CASE-03",
+      "case_family": "transitive_cache_lineage",
+      "independent_unit_id": "popets:revocation-episode:revoked-then-dispatch:001",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+      "seed": 2027,
+      "branch": "research/venue2027/tasks/w7-popets-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "oracle_label",
+          "uri": "research/venue2027/popets/threat_model.md",
+          "sha256": "6988c15f8ab4ba94616c0364db073fc8622fa14046800c8929209ff18846eb7b",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "provider_trace",
+          "uri": "research/venue2027/VENUES/popets/CASE_MATRIX.md",
+          "sha256": "0433e0288405c2c7951166ba26470576b9ef82704f7be358a7ef4dd49f240b7d",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Revoked-then-dispatch re-disclosure witness (CASE_MATRIX POPETS-CASE-03 derived-summary chain, race R2 of threat_model.md §2): a field-derived cached summary of a summary whose origin- and purpose-labels are forbidden_label(g,p) was written by a pre-revocation read that landed in the derived cache after t_e, and a post-t_r dispatch consults it. The reverse-edge invalidation closure reaches the artifact, lineage(d) intersects forbidden_label(g,p), so the episode REJECTs the dispatch: the byte-level interceptor cancels it before the process boundary and no revoked synthetic canary byte leaves the process. This is a future-dispatch cancellation, not a leak, and carries no claim of retroactive erasure of bytes already delivered to the external provider before t_r (novelty_contract.md §5.4). episode_class=revoked_then_dispatch; lineage_verdict=intersects; failure_mode=interceptor_cancellation; erasure_claim=none.",
+      "venue": "popets",
+      "venue_unit_kind": "revocation_episode",
+      "observer": "re_disclosure_observer",
+      "expected_decision": "REJECT",
+      "observed_decision": "REJECT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-popets-2027",
+        "generator_version": "1.0.0",
+        "seed": 2027
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "POPETS-CASE-08",
+      "case_family": "schedule_time_race",
+      "independent_unit_id": "popets:revocation-episode:assembly-overlap:001",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+      "seed": 2027,
+      "branch": "research/venue2027/tasks/w7-popets-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "oracle_label",
+          "uri": "research/venue2027/popets/rq_and_estimands.yaml",
+          "sha256": "ceb8cc612cc7155c89c9b8db9eb8dad2e9163f095fa95a70a22d7e2fce71a5e5",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "dataset_snapshot",
+          "uri": "research/venue2027/VENUES/popets/cases/schema_example.json",
+          "sha256": "706dfdde750f327f3c438ead70d8ad5512ef78ee0308b1a3e20d595d59510b99",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Schedule-time race R1 (dispatch in flight at t_r, threat_model.md §2): the dispatch assembly overlapped the revocation instant, so the (logical_time, event_id) order of the cache-write and the ledger entry is unknown or contradictory and the state is INDETERMINATE per the timing model. The episode fails closed — the dispatch is blocked or freshly reconstructed from the live authorized view — and is counted in the per-arm indeterminate bucket, never as a safe rejection or successful completion. No coercion to ADMIT or REJECT is permitted until an independent adjudication resolves the ordering. episode_class=assembly_overlap_race; lineage_verdict=unknown; failure_mode=fail_closed; erasure_claim=none.",
+      "venue": "popets",
+      "venue_unit_kind": "revocation_episode",
+      "observer": "re_disclosure_observer",
+      "expected_decision": "INDETERMINATE",
+      "observed_decision": "INDETERMINATE",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "synthetic-popets-2027",
+        "generator_version": "1.0.0",
+        "seed": 2027
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    }
+  ],
+  "invalid_cases": [
+    {
+      "reason_invalid": "Fail-closed violations the venue schema must reject: observer is the wrong venue's adjudicator (leakage_auditor instead of re_disclosure_observer, ENUM_MISMATCH) and venue is another venue's const (acns instead of popets, CONST_MISMATCH), so a cross-venue record can never be silently accepted as a popets revocation episode. Additional independent violations each suffice on their own: silent nulls in the required unit_kind/backend/seed/branch/arm_id fields (TYPE_MISMATCH, disallowing silent nulls), a mechanism-outcome masquerade in observed_decision (LEAK_BLOCKED outside the enum, ENUM_MISMATCH), and an evidence array with zero pointers (MIN_ITEMS), so an unvalidated record can never be miscounted as a safe rejection.",
+      "record": {
+        "schema_version": "1",
+        "case_id": "POPETS-CASE-03-foreign",
+        "case_family": "transitive_cache_lineage",
+        "independent_unit_id": "popets:revocation-episode:revoked-then-dispatch:001",
+        "unit_kind": null,
+        "backend": null,
+        "source_sha": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+        "seed": null,
+        "branch": null,
+        "arm_id": null,
+        "evidence": [],
+        "venue": "acns",
+        "venue_unit_kind": "evidence_record",
+        "observer": "leakage_auditor",
+        "expected_decision": "REJECT",
+        "observed_decision": "LEAK_BLOCKED",
+        "decision_agreement": false,
+        "synthetic_provenance": {
+          "generator_id": "synthetic-popets-2027",
+          "generator_version": "1.0.0",
+          "seed": 2027
+        },
+        "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+      }
+    }
+  ]
+}

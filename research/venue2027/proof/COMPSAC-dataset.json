@@ -1,0 +1,38 @@
+{
+  "task_id": "COMPSAC-dataset",
+  "status": "PASS",
+  "source_sha_before": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+  "source_sha_after": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+  "changed_paths": [
+    "evaluation/venue2027/compsac/generate_dataset.py",
+    "evaluation/venue2027/compsac/test_generate_dataset.py",
+    "research/venue2027/proof/artifacts/compsac_dataset/dataset.jsonl",
+    "research/venue2027/proof/artifacts/compsac_dataset/inventory.json",
+    "research/venue2027/proof/logs/COMPSAC-dataset.pytest.log",
+    "research/venue2027/proof/logs/COMPSAC-dataset.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/compsac/test_generate_dataset.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-dataset.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/compsac/generate_dataset.py evaluation/venue2027/compsac/test_generate_dataset.py && uvx ruff@0.7.1 format --check evaluation/venue2027/compsac/generate_dataset.py evaluation/venue2027/compsac/test_generate_dataset.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-dataset.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/compsac/generate_dataset.py": "a79601529d2d449f3e74a7edbf62aa6ae858290b19a1249eaecfa8bb79a5483b",
+    "evaluation/venue2027/compsac/test_generate_dataset.py": "04e7a8ad2a31e9e15f423892ee1159be13f56e513a78ab579e28e9c0163a86bb",
+    "research/venue2027/proof/artifacts/compsac_dataset/dataset.jsonl": "8c1209543f83a91841b1ce4a937547219c9aa82a03f505be92b4b594fa4493e5",
+    "research/venue2027/proof/artifacts/compsac_dataset/inventory.json": "3cff061bd7fa732a0bd359bf92d7cb3684988135643a953c5996f7abee66188f",
+    "research/venue2027/proof/logs/COMPSAC-dataset.pytest.log": "565ade205a987af445e884d655d9c669f93f009dce77f5ad13b9baafe7bec268",
+    "research/venue2027/proof/logs/COMPSAC-dataset.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "COMPSAC-dataset (P02): deterministic synthetic dataset and split builder delegating entirely to the audited shared kernel evaluation/venue2027/_shared/dataset_kernel.py (generate / detect_split_leakage / assert_no_leakage / assert_valid_frequencies); no split, family-assignment, hash or validation logic re-implemented locally. generate(seed, split=None, n=120) -> kernel Dataset for venue 'compsac' (unit prefix sched-, families clean/omitted_dependency/epoch_race/stale_readset, 60/20/20 split by independent unit, split-independent buffered content hash), augmented with the COMPSAC-specific per-family schedule payload clara.compsac.schedule-payload-v1 (dependency_density family base + seed/idx jitter in [0,1], contention_level sweeping the blueprint worker tiers 1/2/4/8/16, zipf_skew in [0.5,1.5], graph_fanout 1-8 derived from density) computed by pure integer arithmetic from (seed, family, idx) - no RNG object, no clock, no dict iteration order. write_dataset(outdir, seed, n) emits dataset.jsonl (sorted, stable JSON) + inventory.json with per-split/per-family cardinalities, kernel content_sha256, jsonl_sha256 and versions; real artifact generated at research/venue2027/proof/artifacts/compsac_dataset/ (seed=42, n=240, content sha256 bcf74be49842c15345d35e4e2d2a400d0c57f556ae3ac53c2d5cfc156989e889, by_family 60/60/60/60, by_split 144/48/48, guards re-verified on the artifact: assert_no_leakage over train/dev/test views + assert_valid_frequencies both OK). Fail-closed semantics: kernel reason codes UNKNOWN_VENUE/INVALID_N/UNKNOWN_SPLIT/SPLIT_LEAKAGE/INVALID_FAMILY_FREQUENCY/PHI_FIELD_PRESENT plus local UNKNOWN_FAMILY for unregistered schedule families. Tests 12 passed: positive (same seed identical content hash and byte-identical JSONL incl. write_dataset reruns; split filter returns exactly that split with hash/inventory split-independence; inventory totals==n across records, splits, families and written artifacts; no leakage across the three split views; balanced family frequencies within kernel tolerance 0.35; schedule payload present, bounded, deterministic and contention tiers actually sweep {1,2,4,8,16}) and adversarial (same unit_id in two splits detected as SPLIT_LEAKAGE by the kernel; zero-record and dominant families refused INVALID_FAMILY_FREQUENCY; unknown split 'holdout' refused UNKNOWN_SPLIT; unknown family refused UNKNOWN_FAMILY; n<=0 refused INVALID_N; no PHI-named field in any payload or written artifact). baseline_parity=NOT_APPLICABLE: dataset builder, no baseline arms involved. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

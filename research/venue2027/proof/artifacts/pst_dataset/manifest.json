@@ -1,0 +1,60 @@
+{
+  "content_sha256": "2e1fd1a6843be8a9bb7f025156d2c5c626c6cd2f59c67f080f6431f02292512d",
+  "dataset_kernel_version": "1.0.0",
+  "families": [
+    "full_evidence",
+    "minimized_omission",
+    "receipt_anchored",
+    "linkability_leak"
+  ],
+  "generator_version": "1.0.0",
+  "inventory": {
+    "by_family": {
+      "full_evidence": 30,
+      "linkability_leak": 30,
+      "minimized_omission": 30,
+      "receipt_anchored": 30
+    },
+    "by_split": {
+      "dev": 24,
+      "test": 24,
+      "train": 72
+    },
+    "generator_version": "1.0.0",
+    "seed": 2027,
+    "total": 120,
+    "venue": "pst"
+  },
+  "n": 120,
+  "phi_fields": [],
+  "query_sets": [
+    "QS-forensic-bounded",
+    "QS-retention-decay",
+    "QS-linkage-bound"
+  ],
+  "receipt_fields": [
+    "commitment_digest",
+    "purpose_tag",
+    "consent_epoch",
+    "policy_epoch",
+    "witness_id",
+    "retention_mode"
+  ],
+  "records": 120,
+  "records_sha256": "e3e620678faa87df9e4549efc7ecfa76be7fe8425a6271d95dd78ac244997b71",
+  "retention_modes": [
+    "full",
+    "selective",
+    "hash_only"
+  ],
+  "schema_version": "clara.venue2027.pst.dataset.v1",
+  "seed": 2027,
+  "splits": [
+    "train",
+    "dev",
+    "test"
+  ],
+  "synthetic_only": true,
+  "unit_prefix": "aud",
+  "venue": "pst"
+}

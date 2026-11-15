@@ -1,0 +1,55 @@
+{
+  "content_sha256": "c42e53a5b8040bbeb0b58a69e67e89eb86d19605dcd0984b4efcd6aa965e855b",
+  "venue": "acns",
+  "seed": 2027,
+  "total": 200,
+  "by_split": {
+    "train": 120,
+    "dev": 40,
+    "test": 40
+  },
+  "by_family": {
+    "bound_evidence": 50,
+    "attestation_downgrade": 50,
+    "unbound_claim": 50,
+    "replayed_receipt": 50
+  },
+  "generator_version": "1.0.0",
+  "dataset_label": "synthetic-acns-2027",
+  "dataset_kernel_version": "1.0.0",
+  "lattice_levels": [
+    "L0-ASSUMED",
+    "L1-ASSEMBLED",
+    "L2-ACKNOWLEDGED",
+    "L3-EXECUTED",
+    "L4-COMMITTED"
+  ],
+  "gap_codes": [
+    "G1_TRANSPORT_ACK_AS_PROCESSING",
+    "G2_RECEIPT_AS_EXECUTION",
+    "G3_EXECUTION_AS_CONSUMPTION",
+    "G4_SIGNATURE_AS_CONTEXT",
+    "G5_MINT_TIME_AS_RELY_TIME",
+    "G6_TIMESTAMP_AS_ORDERING",
+    "G7_LEVEL_IMPLICIT_UPGRADE",
+    "G8_AUTHORITY_SCOPE_CROSSING",
+    "G9_CLAIM_WITHOUT_DISCLOSED_EVIDENCE"
+  ],
+  "by_claimed_attestation_level": {
+    "L1-ASSEMBLED": 50,
+    "L2-ACKNOWLEDGED": 50,
+    "L3-EXECUTED": 100
+  },
+  "by_evidence_gap_code": {
+    "G2_RECEIPT_AS_EXECUTION": 50,
+    "G4_SIGNATURE_AS_CONTEXT": 50,
+    "G9_CLAIM_WITHOUT_DISCLOSED_EVIDENCE": 50,
+    "NONE": 50
+  },
+  "by_source_type": {
+    "attested_execution": 50,
+    "provider_receipt": 50,
+    "transport_ack": 50,
+    "undisclosed": 50
+  }
+}

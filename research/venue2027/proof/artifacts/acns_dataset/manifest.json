@@ -1,0 +1,14 @@
+{
+  "dataset_label": "synthetic-acns-2027",
+  "venue": "acns",
+  "seed": 2027,
+  "n": 200,
+  "generator_version": "1.0.0",
+  "dataset_kernel_version": "1.0.0",
+  "content_sha256": "c42e53a5b8040bbeb0b58a69e67e89eb86d19605dcd0984b4efcd6aa965e855b",
+  "files": {
+    "records.jsonl": "c863295d3769b45a664075e19f9d3f1bbd2511dfb4db4bf6cfb576427af7dbb7",
+    "records.csv": "c0ef4b0f04148a264868268809251f47d43609b28fe24956c31a7eaceba262e7",
+    "inventory.json": "0cd7580e73ae3a30b0f55dee4832094fceb9de6f3b5a4a0ad76f0d54ce3791ec"
+  }
+}

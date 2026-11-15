@@ -1,0 +1,41 @@
+{
+  "task_id": "POPETS-schema",
+  "status": "PASS",
+  "source_sha_before": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+  "source_sha_after": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+  "changed_paths": [
+    "research/venue2027/popets/protocols/study.schema.json",
+    "research/venue2027/popets/cases/sample_cases.json",
+    "research/venue2027/popets/tests/test_study_schema.py",
+    "research/venue2027/proof/POPETS-schema.json",
+    "research/venue2027/proof/logs/POPETS-schema.pytest.log",
+    "research/venue2027/proof/logs/POPETS-schema.ruff.log",
+    "research/venue2027/proof/logs/POPETS-schema.suite.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/popets/tests/test_study_schema.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-schema.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/popets/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-schema.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/ research/venue2027/popets/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-schema.suite.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/popets/protocols/study.schema.json": "cf4daeba8b16e8602e1d4d55a42301de11efe2c09095ca770dc6995606b240bd",
+    "research/venue2027/popets/cases/sample_cases.json": "1ca91f4b0e150310f6cb8c497cead25e9daca86574427f9bf279d794c16ef8c5",
+    "research/venue2027/popets/tests/test_study_schema.py": "d03f0529e646b5676e69b2d881c18932fd763cdcbe69cc9bb518959ea8a2644d"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P02 study schema for PoPETs (Revocation-Complete Future Disclosure for Cached Longitudinal AI Contexts). research/venue2027/popets/protocols/study.schema.json generated via venue_schema.write_venue_schema('popets', repo_root): shared case.v1 contract (schema_version=\"1\", unit_kind enum, backend, frozen source_sha, seed, exact branch, arm_id, sha256 evidence pointers, INDETERMINATE/NOT_RUN_EXTERNAL statuses) extended with the required venue fields venue=\"popets\", venue_unit_kind=\"revocation_episode\", observer=\"re_disclosure_observer\", case_family, expected/observed_decision, decision_agreement, synthetic_provenance, source_authority=\"SYNTHETIC_RESEARCH_ONLY\"; additionalProperties=false and non-empty required list disallow silent nulls; rebuild is deterministic (test asserts on-disk file == fresh build). sample_cases.json: 3 valid revocation-episode records whose decision fields express evidence-handling verdicts under the future-dispatch noninterference predicate forbidden_label(g,p) ∩ lineage(d)=∅ - POPETS-CASE-02 fresh post-revocation dispatch with clean lineage ADMITs, POPETS-CASE-03 is the revoked-then-dispatch re-disclosure witness (derived cached summary after t_e; lineage intersects forbidden labels; interceptor cancellation before the process boundary; no claim of retroactive erasure of already-delivered bytes, novelty_contract.md §5.4) that REJECTs the dispatch, POPETS-CASE-08 keeps INDETERMINATE for the schedule-time race R1 (assembly overlapped t_r, event order unknown) failing closed instead of counting a safe rejection; plus 1 invalid_cases entry (foreign venue/observer: venue=\"acns\", observer=\"leakage_auditor\", plus mechanism masquerade LEAK_BLOCKED, silent nulls in unit_kind/backend/seed/branch/arm_id, empty evidence array) that the schema rejects fail-closed. All evidence pointers carry pointer_kind/uri/sha256 and each sha256 binds to the real on-disk frozen artifact (verified by test_evidence_pointers_bind_to_on_disk_artifacts). Tests: 9 passed (deterministic rebuild, positives validate, invalid rejected with stable reason codes ENUM_MISMATCH/CONST_MISMATCH/TYPE_MISMATCH/MIN_ITEMS, missing observer rejected, wrong venue rejected, verdict-content assertions). Shared foundations + popets suite regression: 311 passed. uvx ruff@0.7.1 check clean on research/venue2027/popets/. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

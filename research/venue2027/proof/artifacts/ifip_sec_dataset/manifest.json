@@ -1,0 +1,42 @@
+{
+  "content_sha256": "2d0ee6208972bee35b2a0953e1f7520eed49af94bb711ce0fb57395e3fa8ad14",
+  "dataset_kernel_version": "1.0.0",
+  "families": [
+    "fresh_accept",
+    "cross_purpose_replay",
+    "delegation_replay",
+    "lineage_splice"
+  ],
+  "generator_version": "1.0.0",
+  "inventory": {
+    "by_family": {
+      "cross_purpose_replay": 30,
+      "delegation_replay": 30,
+      "fresh_accept": 30,
+      "lineage_splice": 30
+    },
+    "by_split": {
+      "dev": 24,
+      "test": 24,
+      "train": 72
+    },
+    "generator_version": "1.0.0",
+    "seed": 2027,
+    "total": 120,
+    "venue": "ifip_sec"
+  },
+  "n": 120,
+  "phi_fields": [],
+  "records": 120,
+  "records_sha256": "438894047162669bcbff3c15b0648ed28f6cfbc8bea306962e5637171f45843f",
+  "schema_version": "clara.venue2027.ifip_sec.dataset.v1",
+  "seed": 2027,
+  "splits": [
+    "train",
+    "dev",
+    "test"
+  ],
+  "synthetic_only": true,
+  "unit_prefix": "req",
+  "venue": "ifip_sec"
+}

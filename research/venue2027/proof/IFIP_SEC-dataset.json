@@ -1,0 +1,48 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/ifip_sec/generate_dataset.py": "ad83c312eb81522173a0330951566bc512f73c8d8ce847e06e8efae7fe560def",
+    "evaluation/venue2027/ifip_sec/test_generate_dataset.py": "035543d93bcfb7f82633a7c0b54556eeadf04f283f7022cf31af8c6587f18e4c",
+    "research/venue2027/proof/artifacts/ifip_sec_dataset/inventory.json": "40a152feaf8a3710a436f5e259180f62fa06605405712e95eb6b170456f77567",
+    "research/venue2027/proof/artifacts/ifip_sec_dataset/manifest.json": "537ef023993defc5693a6640dfd502c514f3d0f4cab5fbd07fbc3f45d091c529",
+    "research/venue2027/proof/artifacts/ifip_sec_dataset/records.jsonl": "438894047162669bcbff3c15b0648ed28f6cfbc8bea306962e5637171f45843f",
+    "research/venue2027/proof/logs/IFIP_SEC-dataset.artifact.log": "537ef023993defc5693a6640dfd502c514f3d0f4cab5fbd07fbc3f45d091c529",
+    "research/venue2027/proof/logs/IFIP_SEC-dataset.pytest.log": "033fb2c250179ef897c71b5e827c29cc42a4963d2e60fca95af2a591d57b8fd8",
+    "research/venue2027/proof/logs/IFIP_SEC-dataset.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/ifip_sec/generate_dataset.py",
+    "evaluation/venue2027/ifip_sec/test_generate_dataset.py",
+    "research/venue2027/proof/artifacts/ifip_sec_dataset/manifest.json",
+    "research/venue2027/proof/artifacts/ifip_sec_dataset/inventory.json",
+    "research/venue2027/proof/artifacts/ifip_sec_dataset/records.jsonl",
+    "research/venue2027/proof/logs/IFIP_SEC-dataset.pytest.log",
+    "research/venue2027/proof/logs/IFIP_SEC-dataset.ruff.log",
+    "research/venue2027/proof/logs/IFIP_SEC-dataset.artifact.log",
+    "research/venue2027/proof/IFIP_SEC-dataset.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/ifip_sec/test_generate_dataset.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-dataset.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/ifip_sec/ --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-dataset.ruff.log"
+    },
+    {
+      "argv": "python3 -m evaluation.venue2027.ifip_sec.generate_dataset --outdir research/venue2027/proof/artifacts/ifip_sec_dataset --seed 2027 --n 120",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-dataset.artifact.log"
+    }
+  ],
+  "notes": "P02 synthetic dataset and split builder: generate(seed, split, n) -> Dataset delegates all record construction to the audited shared kernel evaluation/venue2027/_shared/dataset_kernel.generate('ifip_sec', ...) (kernel version 1.0.0 pinned; venue families fresh_accept / cross_purpose_replay / delegation_replay / lineage_splice; unit prefix req) and layers the IFIP-specific authorization payload deterministically: purpose vs granted_purpose (cross-purpose replay signal), delegation_depth, consent_epoch vs parent_consent_epoch (lineage-splice signal), replay_flag, and nonce_state in {fresh, consumed, consumed_by_delegate} (consume-once state). Content hash is split-independent and byte-identical for repeated (seed, n): dataset content_sha256 2d0ee6208972bee35b2a0953e1f7520eed49af94bb711ce0fb57395e3fa8ad14, records_sha256 438894047162669bcbff3c15b0648ed28f6cfbc8bea306962e5637171f45843f (seed 2027, n=120; train 72 / dev 24 / test 24; 30 records per family; synthetic_only=true, phi_fields=[]). write_dataset(outdir, seed, n) runs the fail-closed validators (assert_valid_frequencies, assert_no_leakage via per-split regeneration) BEFORE any file is written, then persists records.jsonl / inventory.json / manifest.json; a validation failure leaves the output directory absent (crash-clean). Real dataset artifact committed at research/venue2027/proof/artifacts/ifip_sec_dataset/. 20 tests (9 positive incl. determinism, split-independence, family ground-truth encoding, write determinism; 11 adversarial incl. UNKNOWN_SPLIT, INVALID_N, UNKNOWN_FAMILY, PHI_FIELD_PRESENT, INVALID_FAMILY_FREQUENCY, SPLIT_LEAKAGE, no-leakage between named splits, fail-clean write) pass; uvx ruff@0.7.1 clean. source_sha_after = base commit 60464252 per sibling convention (ACNS-X01/ACNS-scope); the single task commit is created immediately after this report and recorded in the commit body.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+  "source_sha_before": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+  "status": "PASS",
+  "task_id": "IFIP_SEC-dataset",
+  "unresolved": []
+}

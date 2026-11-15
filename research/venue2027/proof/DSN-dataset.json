@@ -1,0 +1,52 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/dsn/generate_dataset.py": "de9188a08b688d879fda3c36dae27e483739251563f7adbd2cb8f08ce6a3d825",
+    "evaluation/venue2027/dsn/test_generate_dataset.py": "33d12f75e5e90511c8ef73f08a5f435b89944cb8ea2172ea9447aa06e14e0743",
+    "research/venue2027/proof/artifacts/dsn_dataset/dataset.jsonl": "f711956561666ca1e3b211d62e867aefe049a835e81bc8fa9dc71faf9ad3b900",
+    "research/venue2027/proof/artifacts/dsn_dataset/inventory.json": "cd1b4e7d92edbc7cfd69afe119670d850e8040edfdf4c83da2cdfd02151b25bf",
+    "research/venue2027/proof/artifacts/dsn_dataset/manifest.json": "0655839ec38ec9510d0560ed19c7a04fab3de2960e289700c115d987666b7650"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/dsn/__init__.py",
+    "evaluation/venue2027/dsn/generate_dataset.py",
+    "evaluation/venue2027/dsn/test_generate_dataset.py",
+    "research/venue2027/proof/DSN-dataset.json",
+    "research/venue2027/proof/logs/DSN-dataset.pytest.log",
+    "research/venue2027/proof/logs/DSN-dataset.ruff.log",
+    "research/venue2027/proof/logs/DSN-dataset.suite.log",
+    "research/venue2027/proof/logs/DSN-dataset.artifact.log",
+    "research/venue2027/proof/artifacts/dsn_dataset/dataset.jsonl",
+    "research/venue2027/proof/artifacts/dsn_dataset/inventory.json",
+    "research/venue2027/proof/artifacts/dsn_dataset/manifest.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dsn/test_generate_dataset.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-dataset.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dsn/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-dataset.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-dataset.suite.log"
+    },
+    {
+      "argv": "python3 -m evaluation.venue2027.dsn.generate_dataset --outdir research/venue2027/proof/artifacts/dsn_dataset --seed 2027 --n 48",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-dataset.artifact.log"
+    }
+  ],
+  "notes": "P02 dataset builder for DSN (Recoverable Safety Journals for Crash-Consistent AI-Mediated Health-State Mutations). generate_dataset.generate(seed, split, n) delegates entirely to dataset_kernel.generate('dsn', ...) (unit ids rcv-<seed>-<idx>, kernel content hash unchanged by the payload extension, split by independent unit, 60/20/20 train/dev/test) and layers the DSN-specific deterministic payload: crash_point in {none, pre_commit, post_commit_pre_response, pre_outbox_delivery} mirroring CASE_MATRIX DSN-CASE-02..07 windows, ops_count 1..4 governed operations per window, fsync_mode in {group, per_op, async} for the RQ3 durable-write cost analysis, plus expected_oracle_decision (COMMITTED/REJECTED/INDETERMINATE) as ground truth for the independent oracle task. write_dataset(outdir, seed, n) emits dataset.jsonl + inventory.json + manifest.json after fail-closed kernel validators (assert_no_leakage per split view, assert_valid_frequencies) pass; same (seed, n) rebuilds are byte-identical. Real artifact written to research/venue2027/proof/artifacts/dsn_dataset/ (seed 2027, n=48: 12 per family x {clean_recovery, torn_write, duplicate_retry, fsync_failure}; split 29/10/9). Tests: 15 passed (7 positive incl. delegation identity + byte-identical write_dataset, 8 adversarial: SPLIT_LEAKAGE, UNKNOWN_SPLIT, UNKNOWN_VENUE, INVALID_N, INVALID_FAMILY_FREQUENCY fail-closed in write_dataset, tampered payload breaks JSONL binding, PHI-free payload). Shared evaluation suite regression: 500 passed. uvx ruff@0.7.1 clean. source_sha_after = base SHA per established repo convention (proof report committed together with the work).",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+  "source_sha_before": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+  "status": "PASS",
+  "task_id": "DSN-dataset",
+  "unresolved": []
+}

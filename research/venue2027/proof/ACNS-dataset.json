@@ -1,0 +1,48 @@
+{
+  "task_id": "ACNS-dataset",
+  "status": "PASS",
+  "source_sha_before": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+  "source_sha_after": "604642528f95e9f10052bd4bc0334bdb1c84358a",
+  "changed_paths": [
+    "evaluation/venue2027/acns/generate_dataset.py",
+    "evaluation/venue2027/acns/test_generate_dataset.py",
+    "research/venue2027/proof/artifacts/acns_dataset/records.jsonl",
+    "research/venue2027/proof/artifacts/acns_dataset/records.csv",
+    "research/venue2027/proof/artifacts/acns_dataset/inventory.json",
+    "research/venue2027/proof/artifacts/acns_dataset/manifest.json",
+    "research/venue2027/proof/ACNS-dataset.json",
+    "research/venue2027/proof/logs/ACNS-dataset.pytest.log",
+    "research/venue2027/proof/logs/ACNS-dataset.ruff.log",
+    "research/venue2027/proof/logs/ACNS-dataset.suite.log",
+    "research/venue2027/proof/logs/ACNS-dataset.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/test_generate_dataset.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-dataset.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/acns/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-dataset.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/ evaluation/venue2027/acns/ research/venue2027/_shared/tests/ research/venue2027/acns/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-dataset.suite.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/acns/generate_dataset.py": "d5e18debf572d3c1788423d55d82cbdf80e83e3f4790172af0f699a39e537ccc",
+    "evaluation/venue2027/acns/test_generate_dataset.py": "3fd7449fc14d30a8d6d25cc8b5f171c88d2841138dd01414cc11b01bb40dcb6b",
+    "research/venue2027/proof/artifacts/acns_dataset/records.jsonl": "c863295d3769b45a664075e19f9d3f1bbd2511dfb4db4bf6cfb576427af7dbb7",
+    "research/venue2027/proof/artifacts/acns_dataset/records.csv": "c0ef4b0f04148a264868268809251f47d43609b28fe24956c31a7eaceba262e7",
+    "research/venue2027/proof/artifacts/acns_dataset/inventory.json": "0cd7580e73ae3a30b0f55dee4832094fceb9de6f3b5a4a0ad76f0d54ce3791ec",
+    "research/venue2027/proof/artifacts/acns_dataset/manifest.json": "8cf63a9a9e7c8146f4a1085c814da9232257c798a854e5be94c5b8a84866f345"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P02 synthetic dataset and split builder for ACNS (SoK: Evidence Boundaries of Attestation in Tool-Using AI Systems). evaluation/venue2027/acns/generate_dataset.py implements the manifest signature generate(seed:int, split:str, n:int) -> Dataset plus write_dataset(outdir, seed, n) by delegating record construction, family assignment, split-by-independent-unit and PHI-field rejection to the audited shared kernel evaluation.venue2027._shared.dataset_kernel (v1.0.0, commit 60464252); this module adds only the ACNS evidence-claim payload and the artifact writer. ACNS payload (deterministic pure arithmetic on (seed, idx), no clock/randomness/network/provider, re-checked against the kernel PHI-field rule): claimed_attestation_level on the evidence-to-claim lattice L0-ASSUMED..L4-COMMITTED (threat model \u00a71.2; dispatch-dimension claims are capped at L1-ASSEMBLED), receipt_binding_present (True only for bound_evidence/attestation_downgrade), evidence_gap_code from the pre-registered register G1-G9 (threat model \u00a76: NONE, G2_RECEIPT_AS_EXECUTION for attestation_downgrade, G9_CLAIM_WITHOUT_DISCLOSED_EVIDENCE for unbound_claim, G4_SIGNATURE_AS_CONTEXT for replayed_receipt) and source_type in {provider_receipt, transport_ack, attested_execution, timestamp_only, undisclosed} \u2014 gap semantics pinned to the ACNS-baselines fixture register (_smoke_fixtures.py) so oracle and baselines agree on labels. Split filter accepts train|dev|test|all; inventory and content_sha256 are computed on the full buffered record set so they are split-independent. Real dataset artifact written: research/venue2027/proof/artifacts/acns_dataset/ (seed=2027, n=200, content_sha256=c42e53a5b8040bbeb0b58a69e67e89eb86d19605dcd0984b4efcd6aa965e855b; records.jsonl/records.csv/inventory.json/manifest.json with per-file SHA256 bindings; unit ids evd-2027-NNNNN). Tests: 15 passed (positive: same-seed hash identity, seed sensitivity, split-filter hash independence, unit-disjoint splits, all 4 kernel families represented with the exact expected payload binding, inventory counts, PHI-free keys, fixture-register alignment, write_dataset bundle reproducibility byte-identical across runs; adversarial: unknown split UNKNOWN_SPLIT fail-closed, n=0 INVALID_N, same-unit split leakage SPLIT_LEAKAGE, degenerate family frequency INVALID_FAMILY_FREQUENCY, manifest overwrite OVERWRITE_REFUSED, manifest SHA tampering detection). Shared foundations + venue2027 suites regression: 518 passed. uvx ruff@0.7.1 check clean on evaluation/venue2027/acns/. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

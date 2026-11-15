@@ -1,0 +1,34 @@
+{
+  "content_sha256": "8b057b0fcd68037d9d3e538748f9201731ab09582162ab66a27c6f972b9ffd62",
+  "dataset_jsonl_sha256": "fa82f59b27397140af3334340e490f350ab856e1914546f2e951652a967dc1e7",
+  "dataset_kernel_version": "1.0.0",
+  "families": [
+    "conformant",
+    "expiry_divergence",
+    "policy_skew",
+    "obligation_mismatch"
+  ],
+  "generator_version": "1.0.0",
+  "inventory": {
+    "by_family": {
+      "conformant": 30,
+      "expiry_divergence": 30,
+      "obligation_mismatch": 30,
+      "policy_skew": 30
+    },
+    "by_split": {
+      "dev": 24,
+      "test": 24,
+      "train": 72
+    },
+    "generator_version": "1.0.0",
+    "seed": 2027,
+    "total": 120,
+    "venue": "sacmat"
+  },
+  "n": 120,
+  "schema_version": "clara.venue2027.sacmat.dataset_manifest.v1",
+  "seed": 2027,
+  "unit_id_prefix": "dlg",
+  "venue": "sacmat"
+}

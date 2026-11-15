@@ -1,0 +1,15 @@
+{
+  "content_sha256": "c526fc2621c619656608e497fe07d43b75a25d4ada3e7de00b2ce3ca9eaff911",
+  "files": [
+    "dataset.jsonl",
+    "inventory.json"
+  ],
+  "generator_version": "1.0.0",
+  "inventory_sha256": "cd1b4e7d92edbc7cfd69afe119670d850e8040edfdf4c83da2cdfd02151b25bf",
+  "kernel_version": "1.0.0",
+  "n": 48,
+  "records_sha256": "f711956561666ca1e3b211d62e867aefe049a835e81bc8fa9dc71faf9ad3b900",
+  "seed": 2027,
+  "synthetic_only": true,
+  "venue": "dsn"
+}

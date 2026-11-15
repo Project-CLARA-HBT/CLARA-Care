@@ -1,0 +1,22 @@
+{
+  "by_family": {
+    "clean": 60,
+    "epoch_race": 60,
+    "omitted_dependency": 60,
+    "stale_readset": 60
+  },
+  "by_split": {
+    "dev": 48,
+    "test": 48,
+    "train": 144
+  },
+  "content_sha256": "bcf74be49842c15345d35e4e2d2a400d0c57f556ae3ac53c2d5cfc156989e889",
+  "generate_dataset_version": "clara.compsac.generate-dataset-v1",
+  "generator_version": "clara.compsac.generate-dataset-v1",
+  "jsonl_sha256": "8c1209543f83a91841b1ce4a937547219c9aa82a03f505be92b4b594fa4493e5",
+  "records": 240,
+  "schedule_payload_version": "clara.compsac.schedule-payload-v1",
+  "seed": 42,
+  "total": 240,
+  "venue": "compsac"
+}
