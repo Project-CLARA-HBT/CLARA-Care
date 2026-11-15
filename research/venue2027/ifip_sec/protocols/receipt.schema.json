@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://clara-care.dev/research/venue2027/ifip_sec/schemas/receipt.v1.schema.json",
+  "title": "CLARA 2027 IFIP_SEC context-bound authorization receipt, version 1",
+  "description": "Canonical typed commitment for one governed operation under the Replay-Closed Authorization study (paper: Replay-Closed Authorization Across Purpose, Delegation, and AI Proposal Lineage; blueprint arms B0-B4). The receipt binds tenant, authorizing principal, delegated actor, purpose, operation, AI proposal lineage hash, policy and consent epochs, a consume-once nonce, validity window and an HMAC signature profile. Purpose: the single structural contract for IFIP_SEC-X01 (Phase P02, RQ1); downstream tasks (X02 lineage digest, X03 nonce store, X04 context verify) consume these exact field names. Allowed input: one JSON object describing one receipt. Failure semantics: fail closed - any missing required field, unknown extra field, malformed hash/timestamp/identifier or unknown version rejects with a stable uppercase reason code from the shared stdlib validator (schema_validator.py). The stdlib 2020-12 subset has no cross-field comparison, so the temporal rule 'expiry strictly after issued_at' is encoded as strict UTC RFC 3339 timestamps here and ENFORCED by the composed validator in tests/test_receipt_schema.py (reason code TEMPORAL_ORDER); unparseable timestamps fail closed (TIMESTAMP_UNPARSEABLE). Replay protection (atomically consuming the nonce) and signature verification are downstream runtime duties, not schema duties. Versioning: additive-only within v1; the version field is a const so unknown versions are rejected. Security gate: the schema carries no credential material and no health value (no diagnosis, symptom, record or free-text clinical content); additionalProperties:false makes any such injected field a hard rejection.",
+  "type": "object",
+  "properties": {
+    "version": {
+      "description": "Receipt contract version. Only '1' exists (additive-only evolution within v1); unknown versions fail closed with CONST_MISMATCH.",
+      "const": "1"
+    },
+    "tenant": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "description": "Tenant identifier scoping the receipt; cross-tenant replay is out of scope by construction. No whitespace or control characters."
+    },
+    "principal": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,127}$",
+      "description": "Authorizing principal (the consent/policy subject) whose epochs and purpose bound this receipt. Opaque identifier or e-mail-shaped label; never a credential."
+    },
+    "purpose": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,63}$",
+      "description": "Purpose-of-use label (snake_case, e.g. 'medication_management'). Purpose binding is part of the signed commitment; cross-purpose replay must be rejected downstream."
+    },
+    "delegated_actor": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,127}$",
+      "description": "Actor actually performing the operation under this receipt. For non-delegated use this equals 'principal'; multi-hop delegation chains are verified via the proposal lineage hash and ancestry checks (X02/X04), never by this field alone."
+    },
+    "operation": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.]{2,63}$",
+      "description": "Governed operation label in dotted lowercase form (e.g. 'medication.ddi_check'). The canonical operation registry is downstream; the schema fixes only the syntax."
+    },
+    "proposal_lineage_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 hex digest binding this receipt to the AI proposal lineage (dispatch digest over the proposal chain incl. parent reference; computed by task X02). Lowercase 64-hex only."
+    },
+    "policy_epoch": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+      "description": "Policy epoch identifier in force at issuance (versioned GovernancePolicyEpoch label). Epoch interleavings are the RQ1 study variable."
+    },
+    "consent_epoch": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+      "description": "Versioned medical consent epoch identifier in force at issuance for (tenant, principal, purpose)."
+    },
+    "nonce": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{16,128}$",
+      "description": "Consume-once replay nonce (URL-safe token, >=16 chars). Schema fixes syntax only; atomic single consumption is the X03 nonce store's linearizable duty."
+    },
+    "issued_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+      "format": "date-time",
+      "description": "Issuance instant, strict UTC RFC 3339 ('Z' suffix, <=6 fractional digits) so the expiry ordering check is deterministic."
+    },
+    "expiry": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
+      "format": "date-time",
+      "description": "Expiry instant; MUST be strictly after issued_at. Enforced by the composed validator (TEMPORAL_ORDER) because the stdlib subset cannot compare two fields."
+    },
+    "signature": {
+      "type": "object",
+      "properties": {
+        "algorithm": {
+          "enum": [
+            "HMAC-SHA256"
+          ],
+          "description": "Signature algorithm over the canonical serialization of every other field (blueprint: HMAC over actor, patient, tenant, purpose, task, consent/policy epoch, dispatch digest, nonce and parent reference)."
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "HMAC-SHA256 output as lowercase 64-hex. Signature EQUALITY is checked downstream; this schema guarantees only well-formedness (fail closed on tamper-shaped values)."
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "version",
+    "tenant",
+    "principal",
+    "purpose",
+    "delegated_actor",
+    "operation",
+    "proposal_lineage_hash",
+    "policy_epoch",
+    "consent_epoch",
+    "nonce",
+    "issued_at",
+    "expiry",
+    "signature"
+  ],
+  "additionalProperties": false
+}
