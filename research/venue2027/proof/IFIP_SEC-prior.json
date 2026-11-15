@@ -36,7 +36,7 @@
     "research/venue2027/ifip_sec/literature_matrix.csv": "eae44984d18c4a3a7774157f6ce4ba3e642184a6851b441900ab1dabb6e8bb54",
     "research/venue2027/ifip_sec/tests/test_literature_matrix.py": "61d157046ef5e61f5b8cdfd1c242720ddf3d5a89d2e93ae0dbcf8f3efbd02577",
     "research/venue2027/proof/logs/IFIP_SEC-prior.pytest.log": "43e8a207772d15eaf1c6d862548540f0c5c8786cc7be8b5e7667080534034ead",
-    "research/venue2027/proof/logs/IFIP_SEC-prior.ruff.log": "ce04ce92b16073000b77c97a42c00b98b96305692d9d5ed4dcfa5a9ca9ea62d6",
+    "research/venue2027/proof/logs/IFIP_SEC-prior.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
     "research/venue2027/proof/logs/IFIP_SEC-prior.validator.log": "45d4bbe6aade4d8e7ba9ca57a2a9d12a445984df0a300d35272da38f6eea4518"
   },
   "oracle_disagreement_count": 0,

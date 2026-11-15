@@ -96,6 +96,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-overlap.json",
       "status": "PASS"
     },
+    "IFIP_SEC-prior": {
+      "marked_at": "2026-11-15T02:34:42.492509+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-prior.json",
+      "status": "PASS"
+    },
     "IFIP_SEC-scope": {
       "marked_at": "2026-11-14T18:51:15.386924+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-scope.json",
