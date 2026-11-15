@@ -1,9 +1,9 @@
 {
   "artifacts_sha256": {
-    "evaluation/venue2027/popets/baselines.py": "9e650f00594910c1fca96c6c271eab74b758999ff6c93989088b2411cc252758",
+    "evaluation/venue2027/popets/baselines.py": "2e0783cd95b729d9a5d321fa15b9e2f914d1e8186840d032c234fdb2c2daab1a",
     "research/venue2027/popets/tasks/full_refresh_impl.md": "57e65176e92ad7af612eec300ee25c794d6fe4b3331872df5d4ce3b5e71e2fd9",
     "research/venue2027/popets/tests/test_x05_full_refresh.py": "cbaf837c2247251b245fdf94b742181cc765341cc41ad678c58a180130292abc",
-    "research/venue2027/proof/logs/POPETS-X05_full_refresh.pytest.log": "6cb996ef76fe99049dd692e5cd4ad5b89a1109573ab915339b3beabb0ca5dbe2",
+    "research/venue2027/proof/logs/POPETS-X05_full_refresh.pytest.log": "8eee36c7fce78b9563f6056c3f376cdb8b48cbd6cca416ec24cc4b45087682cb",
     "research/venue2027/proof/logs/POPETS-X05_full_refresh.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
   },
   "baseline_parity": "PASS",

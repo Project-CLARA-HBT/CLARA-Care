@@ -30,7 +30,7 @@
     }
   ],
   "artifacts_sha256": {
-    "evaluation/venue2027/popets/baselines.py": "6840409f97e1df904f940d5291c4daf19e0a5b44765d749c6ab60703e960ca96",
+    "evaluation/venue2027/popets/baselines.py": "2e0783cd95b729d9a5d321fa15b9e2f914d1e8186840d032c234fdb2c2daab1a",
     "evaluation/venue2027/popets/fixtures/purpose_aware_cache_x06_parity.json": "c70a3f82e66d8705594be2340178a8bb26702d4cbd6c8496cdc01c8be976fed7",
     "research/venue2027/popets/tasks/purpose_cache_impl.md": "f7b78a6399ebc6920d6b12de084aeaa194f2a4357c08f519634fb6947fae3a6c",
     "research/venue2027/popets/tests/test_x06_purpose_cache.py": "2d01597ecfe39baa10f023223a799848094f354324ef0d63c5524e6011ba67de"
