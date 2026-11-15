@@ -1,0 +1,8 @@
+wrote /dev/shm/cw/w9_dsn-oracle/research/venue2027/proof/DSN-oracle.json
+{
+ "ok": true,
+ "reason_code": "OK",
+ "errors": [],
+ "task_id": "DSN-oracle",
+ "protocol_version": "1.0.0"
+}

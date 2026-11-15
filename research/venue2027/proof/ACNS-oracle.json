@@ -1,0 +1,39 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/acns/independent_oracle.py": "32548f986ad3ba9dd5a8150008319ef9aeccde83849e67f0dc85ffe938067154",
+    "evaluation/venue2027/acns/test_independent_oracle.py": "3859e411b9178598db657a8c07376cd98ec3f0296afdb9ce42730989076b13cc"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/acns/independent_oracle.py",
+    "evaluation/venue2027/acns/test_independent_oracle.py",
+    "research/venue2027/proof/ACNS-oracle.json",
+    "research/venue2027/proof/logs/ACNS-oracle.pytest.log",
+    "research/venue2027/proof/logs/ACNS-oracle.ruff.log",
+    "research/venue2027/proof/logs/ACNS-oracle.suite.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/test_independent_oracle.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-oracle.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/acns/independent_oracle.py evaluation/venue2027/acns/test_independent_oracle.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-oracle.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/ evaluation/venue2027/acns/ research/venue2027/acns/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-oracle.suite.log"
+    }
+  ],
+  "notes": "P02 independent per-case truth oracle for ACNS (SoK: Evidence Boundaries of Attestation in Tool-Using AI Systems). evaluation/venue2027/acns/independent_oracle.py implements the exact task contract adjudicate(case)->OracleResult by MANDATORY delegation to the audited shared kernel oracle_kernel.adjudicate with the module-local pre-registered ACNS evidence-boundary rule table ACNS_EVIDENCE_BOUNDARY_RULES: bound_evidence->ADMIT (clean control, TC2 full check chain), attestation_downgrade->REJECT (G2 receipt-as-execution, TC3 absent caps execution at L2), unbound_claim->REJECT (G7/G9 no binding on the claim dimension), replayed_receipt->REJECT (G4 signature-valid context-invalid), anything else ->INDETERMINATE (NO_FAMILY_DECLARED/UNMODELLED_FAMILY, gap_code=PENDING_ADJUDICATION, never coerced to a safe verdict). ORACLE_ID='acns-evidence-boundary-reference'; verdicts carry kernel_version, evidence_refs and (via adjudicate_boundary) the SoK boundary content granted_level/refused_claim/gap_code/boundary_condition from BOUNDARY_TABLE - an evidence-boundary verdict (which claim the frozen evidence supports and where the claimed implication breaks), NOT a mechanism outcome: the SoK-shape tests assert the verdict vocabulary contains no mechanism-outcome tokens and that adversarial witnesses are labeled by pre-registered gap codes. Independence (GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md rule 2): no candidate import anywhere (the module imports only the shared kernel); verify_independence() scans THIS file with ast for any import target or dotted component equal to 'acns.baselines' or 'baselines' (exact component match; similar names like my_baselines_tests do not trip it) and flags unresolvable dynamic imports as __dynamic__; for the live file the kernel's own assert_oracle_independence runs as well. No circular label generation: candidate-supplied decision fields inside a case cannot flip the verdict (tests prove poisoned cases still get the frozen family outcome). Failure semantics are stable reason codes (MALFORMED_CASE, MISSING_CASE_ID, NO_FAMILY_DECLARED, UNMODELLED_FAMILY, ORACLE_RULE_DRIFT, CANDIDATE_IMPORT); run_self_checks() enforces the pre-registered matrix (ADMIT,REJECT,REJECT,REJECT,INDETERMINATE) and fails closed on drift. Tests: 33 passed (positive matrix, SoK verdict shape, sentinel parity vs manual canonical history, adversarial candidate-import refusal incl. tamper + dynamic forms, indeterminate retention). Shared foundations + acns + research acns suite regression: 959 passed. uvx ruff@0.7.1 check clean on both files (ruff format applied; pre-existing UP038 findings in evaluation/venue2027/_shared/measurement.py are outside this task's ownership and were touched by no one in this worktree). source_sha_after = base SHA per established repo convention (proof report committed together with the work).",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "e5f7ee3b32c6463f8bdf7c30a1e3bf987ca15bb2",
+  "source_sha_before": "e5f7ee3b32c6463f8bdf7c30a1e3bf987ca15bb2",
+  "status": "PASS",
+  "task_id": "ACNS-oracle",
+  "unresolved": []
+}

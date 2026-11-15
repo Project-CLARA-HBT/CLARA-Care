@@ -1,0 +1,8 @@
+wrote /dev/shm/cw/w9_ifip-sec-oracle/research/venue2027/proof/IFIP_SEC-oracle.json
+{
+ "ok": true,
+ "reason_code": "OK",
+ "errors": [],
+ "task_id": "IFIP_SEC-oracle",
+ "protocol_version": "1.0.0"
+}

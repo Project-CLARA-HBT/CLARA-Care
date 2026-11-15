@@ -1,0 +1,8 @@
+wrote /dev/shm/cw/w9_compsac-x01-readset-dsl/research/venue2027/proof/COMPSAC-X01_readset_dsl.json
+{
+ "ok": true,
+ "reason_code": "OK",
+ "errors": [],
+ "task_id": "COMPSAC-X01_readset_dsl",
+ "protocol_version": "1.0.0"
+}

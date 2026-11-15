@@ -1,0 +1,150 @@
+{
+  "schema": "clara.venue2027.acns.citation-corpus.v1",
+  "task_id": "ACNS-X02_citation_corpus",
+  "venue": "acns",
+  "phase": "P02",
+  "created_utc": "2026-11-15T00:00:00Z",
+  "protocol": "research/venue2027/acns/design/sok_review_protocol.md",
+  "protocol_contract": "clara.venue2027.acns.review-protocol.v1",
+  "registry": "research/venue2027/MANIFESTS/literature_registry.json",
+  "execution_status": "PLANNED_NOT_EXECUTED",
+  "search_executed": false,
+  "retrieval_ledger_executed": false,
+  "execution_statement": "No live search was executed as of 2026-11-15 (protocol registration date). This file is the pre-registered corpus ledger: it carries only the protocol's registered seed set (sok_review_protocol.md section 1) resolved against the real literature registry, labeled role and planned screening status. It asserts no corpus size, no observed screening counts, and no retrieval date; per-stage counts in the protocol remain zero and labeled planned. The executed retrieval ledger must be produced by the registered search (five databases x five strings S1-S5) plus snowballing before any entry moves beyond screening_status PLANNED.",
+  "screening_status_vocabulary": {
+    "INCLUDED": "record passed full-text screening S4 (dual-coded) and retained in the frozen corpus",
+    "EXCLUDED": "record failed a screening stage with a logged reason code (protocol section 3)",
+    "PLANNED": "record registered for screening but not yet screened; no live search has been executed"
+  },
+  "role_vocabulary": {
+    "transparency": "verifiable-log evidence class (presence-in-log vs processing/execution boundary)",
+    "attestation": "remote-attestation / TEE evidence taxonomy (normative anchor or claim source)",
+    "capability": "context-bound authority and authorization-time evidence (purpose/replay families)",
+    "agent-tool-use": "tool-using agent benchmark observability categories (baseline B2)",
+    "evidence-boundary": "record fixing an explicit claim-evidence boundary the lattice separates"
+  },
+  "seed_note": "The protocol registers W3C PROV-DM (baseline B1 source) as a seed, but the shared literature registry contains no PROV-DM record; only the matrix's in-project B1 port row cites it. Per the no-invented-ids rule, no PROV-DM entry is created here. The registry gap is recorded as an unresolved dependency for the executed retrieval ledger, which must add the record through a logged search channel, not by hand.",
+  "dedup_rule": "Exact DOI match first; otherwise normalized title plus first-author surname plus year (protocol section 4.4). All eight seeds below are mutually distinct under this rule: no duplicates detected, no merge logged.",
+  "entries": [
+    {
+      "id": "rats9334",
+      "title": "Remote ATtestation procedureS (RATS) Architecture",
+      "venue": "IETF RFC 9334",
+      "year": 2023,
+      "doi_or_url": "https://www.rfc-editor.org/rfc/rfc9334.html",
+      "role": "attestation",
+      "sok_role_detail": "Baseline B0 source (blueprint): normative attester/evidence/verifier evidence taxonomy; the claim-boundary anchor the SoK lattice must exceed with new cases, never rebrand. Registry class: standard, not A* paper.",
+      "screening_status": "PLANNED",
+      "screening_provenance": "registered seed (protocol section 1)",
+      "retrieval_date": null,
+      "full_text_checked": false
+    },
+    {
+      "id": "ct9162",
+      "title": "Certificate Transparency Version 2.0",
+      "venue": "IETF RFC 9162",
+      "year": 2021,
+      "doi_or_url": "https://www.rfc-editor.org/rfc/rfc9162.html",
+      "role": "transparency",
+      "sok_role_detail": "Transparency evidence-class anchor (gap G1/G6): verifiable-log inclusion supports presence-in-log, never processing or execution proof. Registry class: standard, not A* paper.",
+      "screening_status": "PLANNED",
+      "screening_provenance": "registered seed (protocol section 1)",
+      "retrieval_date": null,
+      "full_text_checked": false
+    },
+    {
+      "id": "macaroons14",
+      "title": "Macaroons: Cookies with Contextual Caveats for Decentralized Authorization in the Cloud",
+      "venue": "NDSS 2014",
+      "year": 2014,
+      "doi_or_url": "https://research.google/pubs/macaroons-cookies-with-contextual-caveats-for-decentralized-authorization-in-the-cloud/",
+      "role": "capability",
+      "sok_role_detail": "Authority-scoping comparator (gap G4/G8, purpose_scope/replay families): caveat-bound authorization evidence says nothing about execution or semantic consumption. Registry class: peer-reviewed NDSS 2014 paper (out-of-window canonical version kept under protocol section 3 duplicate semantics; in-window status to be re-verified at screening).",
+      "screening_status": "PLANNED",
+      "screening_provenance": "registered seed (protocol section 1)",
+      "retrieval_date": null,
+      "full_text_checked": false
+    },
+    {
+      "id": "zanzibar19",
+      "title": "Zanzibar: Google’s Consistent, Global Authorization System",
+      "venue": "USENIX ATC 2019",
+      "year": 2019,
+      "doi_or_url": "https://www.usenix.org/conference/atc19/presentation/pang",
+      "role": "capability",
+      "sok_role_detail": "Verification-time consistency boundary comparator (gap G5, revocation_timing family): a permission valid at evaluation time is a different evidence class from a provider-attested receipt or execution trace. Registry class: peer-reviewed USENIX ATC 2019 paper.",
+      "screening_status": "PLANNED",
+      "screening_provenance": "registered seed (protocol section 1)",
+      "retrieval_date": null,
+      "full_text_checked": false
+    },
+    {
+      "id": "agentdojo24",
+      "title": "AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents",
+      "venue": "NeurIPS 2024 Datasets & Benchmarks",
+      "year": 2024,
+      "doi_or_url": "https://proceedings.nips.cc/paper_files/paper/2024/hash/97091a5177d8dc64b1da8bf3e1f6fb54-Abstract-Datasets_and_Benchmarks_Track.html",
+      "role": "agent-tool-use",
+      "sok_role_detail": "Baseline B2 source (blueprint): attack-robustness benchmark whose observability categories (in-loop observer, instruction-compliance oracle) the coverage matrix codes as published claims; the SoK runs no attacks. Registry class: peer-reviewed NeurIPS 2024 D&B track.",
+      "screening_status": "PLANNED",
+      "screening_provenance": "registered seed (protocol section 1)",
+      "retrieval_date": null,
+      "full_text_checked": false
+    },
+    {
+      "id": "toolemu24",
+      "title": "ToolEmu: Identifying the Risks of LM Agents with an LM-Emulated Sandbox",
+      "venue": "ICLR 2024",
+      "year": 2024,
+      "doi_or_url": "https://proceedings.iclr.cc/paper_files/paper/2024/file/7274ed909a312d4d869cc328ad1c5f04-Paper-Conference.pdf",
+      "role": "agent-tool-use",
+      "sok_role_detail": "Baseline B2 source (blueprint): LM-emulated sandbox evidence living entirely below lattice level L2 (simulation evidence, judge-assigned labels), separating emulated outcomes from attested execution. Registry class: peer-reviewed ICLR 2024 paper.",
+      "screening_status": "PLANNED",
+      "screening_provenance": "registered seed (protocol section 1)",
+      "retrieval_date": null,
+      "full_text_checked": false
+    },
+    {
+      "id": "tauben25",
+      "title": "tau-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains",
+      "venue": "ICLR 2025",
+      "year": 2025,
+      "doi_or_url": "https://proceedings.iclr.cc/paper_files/paper/2025/hash/1b126cc38b8638e07bef37e7b2bb72bf-Abstract-Conference.html",
+      "role": "agent-tool-use",
+      "sok_role_detail": "Harness-outcome evidence comparator (gap G3, L4 boundary): final database-state checks by an in-loop evaluator bound harness-internal evidence but justify no claim above L1. Registry class: A* ML (peer-reviewed ICLR 2025).",
+      "screening_status": "PLANNED",
+      "screening_provenance": "registered seed (protocol section 1)",
+      "retrieval_date": null,
+      "full_text_checked": false
+    },
+    {
+      "id": "fhir5",
+      "title": "FHIR R5 Consent, AuditEvent, Provenance resources",
+      "venue": "HL7 FHIR specification",
+      "year": 2023,
+      "doi_or_url": "https://hl7.org/fhir/R5/",
+      "role": "evidence-boundary",
+      "sok_role_detail": "Baseline B1 companion: retrospective consent/audit/provenance lineage vocabulary; records who-what-when attribution without verifying it (lineage-vs-attestation boundary, novelty contract F2). Registry class: standard.",
+      "screening_status": "PLANNED",
+      "screening_provenance": "registered seed (protocol section 1)",
+      "retrieval_date": null,
+      "full_text_checked": false
+    }
+  ],
+  "counts": {
+    "total": 8,
+    "by_status": {
+      "INCLUDED": 0,
+      "EXCLUDED": 0,
+      "PLANNED": 8
+    },
+    "by_role": {
+      "transparency": 1,
+      "attestation": 1,
+      "capability": 2,
+      "agent-tool-use": 3,
+      "evidence-boundary": 1
+    }
+  },
+  "corpus_sha256": "29874565202ae31eb91325041cc42dfae9a21560fe8e5b985a74a37a88034f9f"
+}

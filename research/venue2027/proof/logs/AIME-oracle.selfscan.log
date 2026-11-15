@@ -1,0 +1,19 @@
+{
+  "independence": {
+    "ok": true,
+    "reason_code": "INDEPENDENCE_SCAN_CLEAN",
+    "scanned_path": "/dev/shm/cw/w9_aime-oracle/evaluation/venue2027/aime/independent_oracle.py"
+  },
+  "kernel_version": "1.0.0",
+  "llm_calls": 0,
+  "model_imports": 0,
+  "oracle_id": "aime-clinical-reference",
+  "oracle_version": "clara.aime.independent-oracle-v1",
+  "rule_table": {
+    "allergy_update": "REJECT",
+    "consent_change": "REJECT",
+    "medication_withdrawal": "REJECT",
+    "reconciliation": "INDETERMINATE",
+    "stable_history": "ADMIT"
+  }
+}

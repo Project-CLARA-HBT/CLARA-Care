@@ -1,0 +1,39 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/dsn/independent_oracle.py": "72ff3b487288795d1fe9a00861bf5b39b5ca345bc9bc586fdc98902e53a27965",
+    "evaluation/venue2027/dsn/test_independent_oracle.py": "cbae3b502ebbd5eaffda0c8310d7f8724616fc35af1260f902fdfe5bb23847d7",
+    "research/venue2027/proof/logs/DSN-oracle.pytest.log": "8daee30494d67efb19b3ea2fdd4aec3420031d27d78dfc3f40cb7bacbac225b2",
+    "research/venue2027/proof/logs/DSN-oracle.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/dsn/independent_oracle.py",
+    "evaluation/venue2027/dsn/test_independent_oracle.py",
+    "research/venue2027/proof/logs/DSN-oracle.pytest.log",
+    "research/venue2027/proof/logs/DSN-oracle.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dsn/test_independent_oracle.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-oracle.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dsn/independent_oracle.py evaluation/venue2027/dsn/test_independent_oracle.py && uvx ruff@0.7.1 format --check evaluation/venue2027/dsn/independent_oracle.py evaluation/venue2027/dsn/test_independent_oracle.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-oracle.ruff.log"
+    },
+    {
+      "argv": "PYTHONPATH=. python3 research/venue2027/proof/emit_DSN-oracle_report.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-oracle.emit.log"
+    }
+  ],
+  "notes": "P02 independent per-case truth oracle for RQ1-RQ3 (Recoverable Safety Journals for Crash-Consistent AI-Mediated Health-State Mutations). independent_oracle.py: adjudicate(case) -> OracleResult DELEGATES entirely to the audited shared kernel evaluation/venue2027/_shared/oracle_kernel.adjudicate with the frozen DSN reference rule table DSN_RULES: clean_recovery->ADMIT (joint row+receipt+outbox agree, DSN-CASE-01), torn_write->REJECT (no phantom user-visible success, DSN-CASE-02), duplicate_retry->ADMIT idempotent (retry keyed by immutable operation ID, DSN-CASE-04/08), fsync_failure->INDETERMINATE (durable failure record alone is not reconcilable ground truth), and every unknown family -> INDETERMINATE UNMODELLED_FAMILY (missing family -> NO_FAMILY_DECLARED; missing case_id -> MISSING_CASE_ID OracleError) \u2014 ambiguous outcomes are never coerced to a safe verdict. ORACLE_ID='dsn-reference'; DSN_ORACLE_VERSION clara.dsn.independent-oracle-v1; evidence uri refs carried into evidence_refs; deterministic (no clock/randomness/DB/model). INDEPENDENCE (GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md item 2): the module does NOT import the candidate evaluation/venue2027/dsn/state_machine.py; verify_independence() calls oracle_kernel.assert_oracle_independence on THIS file for candidate modules ('dsn.state_machine', 'state_machine') \u2014 stable reason codes CANDIDATE_IMPORT (static) and DYNAMIC_IMPORT_UNRESOLVABLE (dynamic). test_independent_oracle.py imports only the oracle and the shared kernel: 9 positive controls (all four family outcomes + oracle_id/reason codes, evidence refs, duplicate_retry idempotent re-adjudication equality, unknown family INDETERMINATE, missing family, MISSING_CASE_ID refusal, payload.family fallback, 5x determinism + JSON round-trip with kernel version) and 10 adversarial controls (live module passes verify_independence, 4 candidate-import variants refused via temp oracle files, tampered live source + appended import refused, importlib.import_module dynamic refused, exact matching so my_state_machine_tests/independent_oracle imports do not trip the scan). 19 passed in 0.25s; uvx ruff@0.7.1 check + format --check clean. source_sha_after records the base commit e5f7ee3b per sibling convention (COMPSAC-X02_closure_oracle); the single task commit SHA is created immediately after this report and reported in the handoff. oracle_disagreement_count null (no candidate-vs-oracle comparison run in this task; the runner consumes this oracle). Baseline parity NOT_APPLICABLE (oracle layer; arms B0-B3 execute in P03).",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "e5f7ee3b32c6463f8bdf7c30a1e3bf987ca15bb2",
+  "source_sha_before": "e5f7ee3b32c6463f8bdf7c30a1e3bf987ca15bb2",
+  "status": "PASS",
+  "task_id": "DSN-oracle",
+  "unresolved": []
+}

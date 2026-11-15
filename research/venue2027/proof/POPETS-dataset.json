@@ -1,0 +1,57 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/popets/generate_dataset.py": "058ca938533bb329b9a2a07a12c613eb1a2cb70219a92c2e4e41f9b0ece10f67",
+    "evaluation/venue2027/popets/test_generate_dataset.py": "75bc16e8a6d9d0bdfc066847ca86f19a3b03a28e1b3e87c737ce1a3ef46c487c",
+    "research/venue2027/proof/artifacts/popets_dataset/dataset.jsonl": "49dcb5b9eb354f6182f5a4af287cf0a163982806e71bcb5d81daf9e0454b81e3",
+    "research/venue2027/proof/artifacts/popets_dataset/inventory.json": "7c1ed998d599a2dcde5802aed7ec4c1c39897b4e6ea6e221739a644fae72c727",
+    "research/venue2027/proof/artifacts/popets_dataset/manifest.json": "20e4099811beb40d446c9a6bc97d04be3f27392e220ce3c800aca16cfa58d878",
+    "research/venue2027/proof/logs/POPETS-dataset.artifact.log": "20e4099811beb40d446c9a6bc97d04be3f27392e220ce3c800aca16cfa58d878",
+    "research/venue2027/proof/logs/POPETS-dataset.pytest.log": "ac7e5f0921d22cc4d9b62802d700b3fb1e8d9909b7b898cbdfcdd274becadd58",
+    "research/venue2027/proof/logs/POPETS-dataset.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/POPETS-dataset.suite.log": "605a70da0d635a8bb256311917ee9e3a66b92647da43c194b302ca4d7c3d7a93"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/popets/generate_dataset.py",
+    "evaluation/venue2027/popets/test_generate_dataset.py",
+    "research/venue2027/proof/artifacts/popets_dataset/manifest.json",
+    "research/venue2027/proof/artifacts/popets_dataset/inventory.json",
+    "research/venue2027/proof/artifacts/popets_dataset/dataset.jsonl",
+    "research/venue2027/proof/logs/POPETS-dataset.pytest.log",
+    "research/venue2027/proof/logs/POPETS-dataset.ruff.log",
+    "research/venue2027/proof/logs/POPETS-dataset.suite.log",
+    "research/venue2027/proof/logs/POPETS-dataset.artifact.log",
+    "research/venue2027/proof/logs/POPETS-dataset.validator.log",
+    "research/venue2027/proof/emit_POPETS_dataset_report.py",
+    "research/venue2027/proof/POPETS-dataset.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/popets/test_generate_dataset.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-dataset.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/popets/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-dataset.ruff.log"
+    },
+    {
+      "argv": "python3 -m evaluation.venue2027.popets.generate_dataset --outdir research/venue2027/proof/artifacts/popets_dataset --seed 2027 --n 200",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-dataset.artifact.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-dataset.suite.log"
+    }
+  ],
+  "notes": "POPETS-dataset (P02, venue popets): deterministic synthetic dataset and split builder for 'Revocation-Complete Future Disclosure for Cached Longitudinal AI Contexts'. evaluation/venue2027/popets/generate_dataset.py implements the manifest signature generate(seed, split, n) -> Dataset plus write_dataset(outdir, seed, n) by delegating record construction, family assignment, split-by-independent-unit, content hashing and the fail-closed validators (detect_split_leakage / assert_no_leakage / assert_valid_frequencies / PHI-field rejection) entirely to the audited shared kernel evaluation.venue2027._shared.dataset_kernel (v1.0.0 pinned; kernel venue families fresh / revoked_then_dispatch / cross_purpose / transitive_gap; unit prefix rev; 60/20/20 split; split-independent buffered content hash); nothing is re-implemented locally. This module adds only the POPETS-specific revocation-and-dispatch payload clara.popets.revocation-payload-v1 (revocation instant revocation_at=100 with dispatch_at in [101,400] so every record encodes a post-revocation dispatch decision; purpose over the CASE_MATRIX vocabulary self_care/care_summary/medication_review with cross_purpose records forced onto a genuinely different requested_purpose (POPETS-CASE-05 confusion); cache_mode over none/prompt_only/summary_pointer/retry_payload with 'none' reserved for fresh dispatches (RQ3 cache-hit accounting); lineage_paths over the blueprint derivation paths prompt_segment/cached_summary/embedding_pointer/retry_payload/fallback_transport with lineage_gap=True marking the transitive_gap family (POPETS-CASE-03/07 missing ancestry); subject_history_length in [3,6] per the blueprint's 3-6 longitudinal contexts per synthetic subject), derived by pure integer arithmetic from (seed, family, idx) - no RNG object, no clock, no dict iteration order, no live provider. Fail-closed semantics: kernel reason codes UNKNOWN_VENUE/INVALID_N/UNKNOWN_SPLIT/SPLIT_LEAKAGE/INVALID_FAMILY_FREQUENCY/EMPTY_DATASET/PHI_FIELD_PRESENT plus local UNKNOWN_POPETS_FAMILY for unregistered payload families; write_dataset runs validate_dataset (assert_valid_frequencies + assert_no_leakage via per-split regeneration) BEFORE any file is written. Real dataset artifact committed at research/venue2027/proof/artifacts/popets_dataset/ (seed=2027, n=200; content_sha256 9af9aaaae33cf71caa88fa4cea9c36659015743f13ec0da4fbb4925d6ede5b67; jsonl_sha256 49dcb5b9eb354f6182f5a4af287cf0a163982806e71bcb5d81daf9e0454b81e3; by_split 120/40/40, by_family 4x50; dataset.jsonl + inventory.json + manifest.json; synthetic_only=true, phi_fields=[]). Tests 14 passed: positive (same-seed identical content hash and byte-identical JSONL incl. write_dataset reruns, seed sensitivity, split filter returns exactly that split with hash/inventory split-independence, inventory totals==n across records/splits/families/written artifacts, no leakage across the three split views, balanced family frequencies within kernel tolerance 0.35, kernel rev- unit-id prefix and uniqueness, revocation payload present/deterministic/family-shaped with cache modes and history lengths sweeping their declared spaces, bundled validate_dataset accepts healthy output) and adversarial (same unit_id in two splits detected SPLIT_LEAKAGE by the kernel; zero-record and dominant families refused INVALID_FAMILY_FREQUENCY; unknown split 'holdout' refused UNKNOWN_SPLIT; unknown family refused UNKNOWN_POPETS_FAMILY; n<=0 refused INVALID_N; no PHI-named field in any payload or written artifact plus structural placeholder value checks). baseline_parity=NOT_APPLICABLE: dataset builder, no baseline arms involved. Regression: full evaluation/venue2027/ = 803 passed. uvx ruff@0.7.1 clean on evaluation/venue2027/popets/. source_sha_after = base SHA e5f7ee3b per sibling dataset-task convention: the single task commit is created immediately after this report and recorded in the commit body.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "e5f7ee3b32c6463f8bdf7c30a1e3bf987ca15bb2",
+  "source_sha_before": "e5f7ee3b32c6463f8bdf7c30a1e3bf987ca15bb2",
+  "status": "PASS",
+  "task_id": "POPETS-dataset",
+  "unresolved": []
+}

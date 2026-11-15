@@ -1,0 +1,41 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/ifip_sec/independent_oracle.py": "e3588e7c521234e23efd1b959a96e3e6ee43e78e22d98cc8a50bc58334460357",
+    "evaluation/venue2027/ifip_sec/test_independent_oracle.py": "e32fb1ad915f29c925a83e77c0c9e203f41e2b1f119428ea48a3b019b43fb2cf",
+    "research/venue2027/proof/logs/IFIP_SEC-oracle.pytest.log": "4ed21e3d31fd8e58973cdc2402913bd0e1cedf572ee37f4e04f476433644de71",
+    "research/venue2027/proof/logs/IFIP_SEC-oracle.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/ifip_sec/independent_oracle.py",
+    "evaluation/venue2027/ifip_sec/test_independent_oracle.py",
+    "research/venue2027/proof/IFIP_SEC-oracle.json",
+    "research/venue2027/proof/logs/IFIP_SEC-oracle.pytest.log",
+    "research/venue2027/proof/logs/IFIP_SEC-oracle.ruff.log",
+    "research/venue2027/proof/emit_IFIP_SEC-oracle_report.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/ifip_sec/test_independent_oracle.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-oracle.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/ifip_sec/independent_oracle.py evaluation/venue2027/ifip_sec/test_independent_oracle.py && uvx ruff@0.7.1 format --check evaluation/venue2027/ifip_sec/independent_oracle.py evaluation/venue2027/ifip_sec/test_independent_oracle.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-oracle.ruff.log"
+    },
+    {
+      "argv": "PYTHONPATH=. python3 research/venue2027/proof/emit_IFIP_SEC-oracle_report.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-oracle.emit.log"
+    }
+  ],
+  "notes": "P02 independent per-case truth oracle for RQ1-RQ3 (Replay-Closed Authorization Across Purpose, Delegation, and AI Proposal Lineage). independent_oracle.py DELEGATES all decision logic to the shared audited kernel evaluation.venue2027._shared.oracle_kernel.adjudicate (ORACLE_KERNEL_VERSION 1.0.0) with a module-local DECLARATIVE IFIP reference rule table IFIP_REFERENCE_RULES frozen against CASE_MATRIX.md: fresh_accept->ADMIT (CASE-01), cross_purpose_replay->REJECT (CASE-02), delegation_replay->REJECT (consumed-once invariant), lineage_splice->REJECT (provenance binding). Any family outside the table returns INDETERMINATE via kernel UNMODELLED_FAMILY (e.g. CASE-08 key rotation, DECIDE_BY_SPEC), and an undeclared family returns INDETERMINATE via NO_FAMILY_DECLARED - never a silent safe verdict. ORACLE_ID='ifip-sec-reference'; entry point adjudicate(case)->OracleResult (kernel OracleResult, JSON-serializable via to_dict, evidence uris captured verbatim); missing case_id raises OracleError MISSING_CASE_ID (wiring error, not an outcome). INDEPENDENCE (GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md item 2): the module does NOT import the IFIP baselines/candidate - no import of evaluation.venue2027.ifip_sec.baselines, consistency_token_adapter or any candidate mechanism; verify_independence() scans this module's own source with ast and refuses any import of the candidate modules listed in CANDIDATE_MODULE_NAMES ('ifip_sec.baselines', 'ifip_sec.consistency_token_adapter', 'baselines', 'consistency_token_adapter') with stable reason code CANDIDATE_IMPORT - covering plain/aliased/from-imports and dotted paths (matched per dotted component on the candidate basenames, so the oracle's own package path and look-alike modules like my_baseline_labels do not trip it), and dynamic imports (__import__/importlib.import_module) flagged as the __dynamic__ sentinel for review rather than guessed safe. test_independent_oracle.py imports only the oracle (plus the shared kernel): 5 positive controls (fresh-accept admit with evidence capture, 3 reject families, unknown/undeclared/payload-family INDETERMINATE, MISSING_CASE_ID refusal, determinism + JSON round-trip + rule-table freeze + built-in self-checks) and 17 adversarial controls (clean live source passes, 10 candidate-import variants refused, unrelated-import acceptance, __import__/importlib dynamic flags, temp on-disk rogue oracle importing the candidate refused by the kernel AST guard assert_oracle_independence, tampered live-source control). 22 passed in 0.28s (full ifip_sec evaluation suite 75 passed); uvx ruff@0.7.1 check + format --check clean; source_sha_after records the base commit e5f7ee3b per sibling convention (COMPSAC-X02_closure_oracle); the single task commit SHA is created immediately after this report and reported in the handoff. oracle_disagreement_count null (no candidate-vs-oracle comparison run in this task; the candidate does not exist yet - IFIP_SEC-candidate depends on this oracle). Baseline parity NOT_APPLICABLE (oracle layer; arms B0-B4 execute in P03 IFIP_SEC-baseline_tests).",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "e5f7ee3b32c6463f8bdf7c30a1e3bf987ca15bb2",
+  "source_sha_before": "e5f7ee3b32c6463f8bdf7c30a1e3bf987ca15bb2",
+  "status": "PASS",
+  "task_id": "IFIP_SEC-oracle",
+  "unresolved": []
+}

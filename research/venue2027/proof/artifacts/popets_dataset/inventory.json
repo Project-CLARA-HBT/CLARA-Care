@@ -1,0 +1,19 @@
+{
+  "by_family": {
+    "cross_purpose": 50,
+    "fresh": 50,
+    "revoked_then_dispatch": 50,
+    "transitive_gap": 50
+  },
+  "by_split": {
+    "dev": 40,
+    "test": 40,
+    "train": 120
+  },
+  "generate_dataset_version": "clara.popets.generate-dataset-v1",
+  "generator_version": "1.0.0",
+  "revocation_payload_version": "clara.popets.revocation-payload-v1",
+  "seed": 2027,
+  "total": 200,
+  "venue": "popets"
+}

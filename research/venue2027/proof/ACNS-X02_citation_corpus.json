@@ -1,0 +1,39 @@
+{
+  "task_id": "ACNS-X02_citation_corpus",
+  "status": "PASS",
+  "source_sha_before": "e5f7ee3b32c6463f8bdf7c30a1e3bf987ca15bb2",
+  "source_sha_after": "e5f7ee3b32c6463f8bdf7c30a1e3bf987ca15bb2",
+  "changed_paths": [
+    "research/venue2027/acns/corpus/citation_corpus.json",
+    "research/venue2027/acns/tests/test_citation_corpus.py",
+    "research/venue2027/proof/ACNS-X02_citation_corpus.json",
+    "research/venue2027/proof/logs/ACNS-X02_citation_corpus.pytest.log",
+    "research/venue2027/proof/logs/ACNS-X02_citation_corpus.suite.log",
+    "research/venue2027/proof/logs/ACNS-X02_citation_corpus.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/acns/tests/test_citation_corpus.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X02_citation_corpus.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/ research/venue2027/acns/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X02_citation_corpus.suite.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/acns/tests/test_citation_corpus.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X02_citation_corpus.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/acns/corpus/citation_corpus.json": "414a43a178755ff13433a626c484e4c1d0e512a186a7302e2f335b6759833986",
+    "research/venue2027/acns/tests/test_citation_corpus.py": "3cac789598fb87737f989f59462bfb326515c4bad7737174694b901a631bae44"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P02 ACNS SoK citation corpus (no live search executed): corpus/citation_corpus.json is a machine-readable pre-registered corpus ledger built ONLY from the real shared literature registry (24 ids); entries = the 8 registry-resolvable registered seeds of sok_review_protocol.md section 1 (rats9334 B0 attestation anchor, ct9162 transparency, macaroons14+zanzibar19 capability, agentdojo24+toolemu24+tauben25 agent-tool-use B2, fhir5 evidence-boundary B1 companion), each with role, screening_status=PLANNED, registered-seed provenance, retrieval_date=null, full_text_checked=false, and a corpus_sha256 over the canonical file bytes (placeholder-reset recompute verified by test). W3C PROV-DM is disclosed in seed_note as a registry gap (no record exists; no id invented). Honesty gates enforced by 18 stdlib tests: every id exists in the registry (no invented ids), metadata matches the registry verbatim, every doi_or_url is a real https/DOI identifier, screening statuses and roles are within declared vocabularies, counts block consistent with zero INCLUDED/EXCLUDED, no past-tense search/retrieval language anywhere, entries trace only to the registered seed channel (EXCL_NOT_TRACEABLE prevention), dedup rule checked with adversarial duplicate + invented-id + bad-URL controls, and the corpus is cross-checked against the protocol's 'NO LIVE SEARCH WAS EXECUTED' statement. The corpus asserts no corpus size and no observed per-stage count (all protocol ledger counts remain planned zeros); the executed retrieval ledger must come from the registered 5-database x 5-string search plus snowballing. Focused: 18 passed. Shared+acns suite: 351 passed. uvx ruff@0.7.1 check clean. source_sha_after records the base commit e5f7ee3b per sibling convention (ACNS-X01_review_protocol); the single task commit SHA is created immediately after this report and recorded in the commit body."
+}

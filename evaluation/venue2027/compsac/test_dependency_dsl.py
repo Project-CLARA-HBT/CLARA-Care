@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+from typing import cast
 
 import pytest
 
@@ -257,7 +258,8 @@ def test_adversarial_malformed_operation_refused() -> None:
 
 def test_adversarial_malformed_schema_refused() -> None:
     with pytest.raises(DependencyCompileError) as excinfo:
-        make_schema(resources={"medication": "ENTITY"})  # str, not DependencyKind
+        # str, not DependencyKind — cast only types the adversarial literal.
+        make_schema(resources=cast("dict[str, DependencyKind]", {"medication": "ENTITY"}))
     assert excinfo.value.reason_code == REASON_MALFORMED_SCHEMA
     with pytest.raises(DependencyCompileError) as excinfo:
         make_schema(
