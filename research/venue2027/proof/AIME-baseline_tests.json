@@ -39,7 +39,7 @@
   "artifacts_sha256": {
     "tests/venue2027/aime/test_baseline_fidelity.py": "803e5bb5c6e1433ff8680d6faef511a387b940e1bb086d48fb4e49faf4c24446",
     "tests/venue2027/aime/__init__.py": "4a2d1d1b4ee0474abff5c79e33469681f5f9b5a386754c82942db2fe75a496f1",
-    "tests/venue2027/__init__.py": "ee1fd62633b277cbc0c1f3e699b9e9372da086d1ca9982e5f971856018f7f4aa"
+    "tests/venue2027/__init__.py": "13f99bbf97888edf17241b0153ac5e9adf8037cc4d0e0283027a39341295427f"
   },
   "oracle_disagreement_count": null,
   "baseline_parity": "PASS",

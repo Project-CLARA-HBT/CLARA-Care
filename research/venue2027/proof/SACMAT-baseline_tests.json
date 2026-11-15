@@ -37,7 +37,7 @@
     }
   ],
   "artifacts_sha256": {
-    "tests/venue2027/__init__.py": "eff9ef779814befff84aa8724f079237be862460b981aa311ed8e97a7ce81bd3",
+    "tests/venue2027/__init__.py": "13f99bbf97888edf17241b0153ac5e9adf8037cc4d0e0283027a39341295427f",
     "tests/venue2027/sacmat/__init__.py": "697ce88ddb44e3d731f46fb896d89f6a9052cf0744a2664ae8998442dbee4db5",
     "tests/venue2027/sacmat/test_baseline_fidelity.py": "d640fc07658f9d3121560917bf59d17ff42c6d400205f01bea532ea535b3d6c0"
   },
