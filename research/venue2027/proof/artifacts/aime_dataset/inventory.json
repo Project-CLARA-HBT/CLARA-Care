@@ -1,0 +1,20 @@
+{
+  "by_family": {
+    "allergy_update": 40,
+    "consent_change": 40,
+    "medication_withdrawal": 40,
+    "reconciliation": 40,
+    "stable_history": 40
+  },
+  "by_split": {
+    "dev": 40,
+    "test": 40,
+    "train": 120
+  },
+  "generate_dataset_version": "clara.aime.generate-dataset-v1",
+  "generator_version": "1.0.0",
+  "seed": 2027,
+  "total": 200,
+  "venue": "aime",
+  "workflow_payload_version": "clara.aime.workflow-payload-v1"
+}

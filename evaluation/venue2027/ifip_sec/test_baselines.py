@@ -429,7 +429,11 @@ class TestAdversarialControls:
         assert KEY.hex().encode("utf-8") not in token.encode("utf-8")
 
     def test_version_pin(self) -> None:
-        assert BASELINES_VERSION == "1.0.0"
+        # 1.0.0 = baseline fidelity adapters; 1.1.0 additively wired the
+        # IFIP_SEC-X06 in-process Zanzibar-style consistency arm without
+        # changing any pre-existing arm, registry row or reason code.
+        assert BASELINES_VERSION in ("1.0.0", "1.1.0")
+        assert BASELINES_VERSION.startswith("1.")
 
 
 # ---------------------------------------------------------------------------

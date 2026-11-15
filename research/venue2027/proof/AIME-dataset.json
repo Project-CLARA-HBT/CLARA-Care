@@ -1,0 +1,57 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/aime/generate_dataset.py": "07a51dbcf49880bd2a20e5d0ad386e292e0c43e85221188e018783edf257dc46",
+    "evaluation/venue2027/aime/test_generate_dataset.py": "37a4bda2b434f5f28c89cfb0c34fdaed6b2eb1594c25f4a1fe6a4abf7fbec20f",
+    "research/venue2027/proof/artifacts/aime_dataset/dataset.jsonl": "f8cf234c72597a78611ae387d987fb3594fcbaf659b1cd8915d4b58dab39c823",
+    "research/venue2027/proof/artifacts/aime_dataset/inventory.json": "30c934a32ab7668ee5e5b0eb0af15740e62ba63412e5a08c1769641055116365",
+    "research/venue2027/proof/artifacts/aime_dataset/manifest.json": "51bcec36be58a9293e186c7389adea2c5789cdd1e6647a77d7b2507626e3ca64",
+    "research/venue2027/proof/logs/AIME-dataset.artifact.log": "51bcec36be58a9293e186c7389adea2c5789cdd1e6647a77d7b2507626e3ca64",
+    "research/venue2027/proof/logs/AIME-dataset.pytest.log": "89d64236f370778f85da8ac5e2019285579dc9ff7668fce2a2720b375393168e",
+    "research/venue2027/proof/logs/AIME-dataset.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/AIME-dataset.suite.log": "cde72842e8b99be2a350710035e670e97401fae3602d25f21cc810349617ca7b"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/aime/generate_dataset.py",
+    "evaluation/venue2027/aime/test_generate_dataset.py",
+    "research/venue2027/proof/artifacts/aime_dataset/dataset.jsonl",
+    "research/venue2027/proof/artifacts/aime_dataset/inventory.json",
+    "research/venue2027/proof/artifacts/aime_dataset/manifest.json",
+    "research/venue2027/proof/logs/AIME-dataset.pytest.log",
+    "research/venue2027/proof/logs/AIME-dataset.ruff.log",
+    "research/venue2027/proof/logs/AIME-dataset.suite.log",
+    "research/venue2027/proof/logs/AIME-dataset.artifact.log",
+    "research/venue2027/proof/logs/AIME-dataset.validator.log",
+    "research/venue2027/proof/emit_AIME_dataset_report.py",
+    "research/venue2027/proof/AIME-dataset.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/aime/test_generate_dataset.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-dataset.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/aime/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-dataset.ruff.log"
+    },
+    {
+      "argv": "python3 -m evaluation.venue2027.aime.generate_dataset --outdir research/venue2027/proof/artifacts/aime_dataset --seed 2027 --n 200",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-dataset.artifact.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/ research/venue2027/_shared/tests/ research/venue2027/aime/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-dataset.suite.log"
+    }
+  ],
+  "notes": "AIME-dataset (P02, venue aime): deterministic synthetic dataset and split builder for 'Counterfactual Clinical Workflow Safety under Changing Consent and Medication Histories'. evaluation/venue2027/aime/generate_dataset.py implements the manifest signature generate(seed, split, n) -> Dataset plus write_dataset(outdir, seed, n) by delegating record construction, family assignment, split-by-independent-unit, content hashing and the fail-closed validators (detect_split_leakage / assert_no_leakage / assert_valid_frequencies / PHI-field rejection) entirely to the audited shared kernel evaluation.venue2027._shared.dataset_kernel (v1.0.0, kernel venue families stable_history / consent_change / medication_withdrawal / allergy_update / reconciliation; unit prefix vig; 60/20/20 split; split-independent buffered content hash); nothing is re-implemented locally. This module adds only the AIME-specific longitudinal workflow payload clara.aime.workflow-payload-v1 (synthetic medication state incl. withdrawn medication, allergy state, consent revision 1-3 with revoked purpose for consent_change, conflicting observation sources for reconciliation, logical_time, update_family + CASE_MATRIX event_kind), derived by pure integer arithmetic from (seed, family, idx) - no RNG object, no clock, no dict iteration order, no live provider. Fail-closed semantics: kernel reason codes UNKNOWN_VENUE/INVALID_N/UNKNOWN_SPLIT/SPLIT_LEAKAGE/INVALID_FAMILY_FREQUENCY/EMPTY_DATASET/PHI_FIELD_PRESENT plus local UNKNOWN_AIME_FAMILY for unregistered workflow families; write_dataset runs validate_dataset (assert_valid_frequencies + assert_no_leakage via per-split regeneration) BEFORE any file is written. Real dataset artifact committed at research/venue2027/proof/artifacts/aime_dataset/ (seed=2027, n=200; content_sha256 2ff1c736947dfa90c77593b18e2ae321401dc437ce23430a87621ef4585b1fcb; jsonl_sha256 f8cf234c72597a78611ae387d987fb3594fcbaf659b1cd8915d4b58dab39c823; by_split 120/40/40, by_family 5x40; dataset.jsonl + inventory.json + manifest.json; guards re-verified on the artifact). Tests 14 passed: positive (same-seed identical content hash and byte-identical JSONL incl. write_dataset reruns, seed sensitivity, split filter returns exactly that split with hash/inventory split-independence, inventory totals==n across records/splits/families/written artifacts, no leakage across the three split views, balanced family frequencies within kernel tolerance 0.35, kernel vig- unit-id prefix and uniqueness, workflow payload present/deterministic/family-shaped with consent revisions sweeping {1,2,3}, bundled validate_dataset accepts healthy output) and adversarial (same unit_id in two splits detected SPLIT_LEAKAGE by the kernel; zero-record and dominant families refused INVALID_FAMILY_FREQUENCY; unknown split 'holdout' refused UNKNOWN_SPLIT; unknown family refused UNKNOWN_AIME_FAMILY; n<=0 refused INVALID_N; no PHI-named field in any payload or written artifact plus structural placeholder value checks). baseline_parity=NOT_APPLICABLE: dataset builder, no baseline arms involved. Regression: full evaluation/venue2027/ + research/venue2027/_shared/tests/ + research/venue2027/aime/tests/ = 933 passed. uvx ruff@0.7.1 check clean on evaluation/venue2027/aime/. source_sha_after = base SHA 06125d52 per sibling dataset-task convention: the single task commit is created immediately after this report and recorded in the commit body.",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+  "source_sha_before": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+  "status": "PASS",
+  "task_id": "AIME-dataset",
+  "unresolved": []
+}

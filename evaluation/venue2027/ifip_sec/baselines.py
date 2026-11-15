@@ -31,6 +31,17 @@ study blueprint (``research/venue2027/VENUES/ifip_sec/RESEARCH_BLUEPRINT.md``):
   Application-side replay registry in the spirit of the registered
   ``cedar-opa-policy-decision-nonce-registry`` arm (in-process, injected
   store; the PostgreSQL-backed variant belongs to task IFIP_SEC-X03).
+- ``B2_INPROCESS_ZANZIBAR`` (task IFIP_SEC-X06, additive in 1.1.0) — real
+  in-process Zanzibar-style consistency-aware authorization reference
+  (``consistency_token_adapter.py``): relation-tuple changelog with
+  zookie-style consistency tokens and a relation-walk evaluator behind the
+  task contract ``check_with_revision(principal, resource, token) ->
+  Verdict``. A FRESH token sees a just-granted relation and rejects a
+  pre-revocation replay (``RELATION_REVOKED``); a token captured before the
+  revocation evaluates the earlier snapshot and faithfully admits the replay
+  inside the bounded-staleness window (the published Zanzibar boundary this
+  arm measures). This row does NOT replace the pinned external OpenFGA
+  v1.22.1 arm ``B2_OPENFGA``, which stays NOT_RUN_EXTERNAL (rule 8).
 
 Pinned external upstreams (OpenFGA v1.22.1 server, Cedar v4.14.1, OPA
 v1.22.4 binaries) are NOT bundled in this in-process module; their adapter
@@ -60,7 +71,9 @@ id raises :class:`BaselineError` (a wiring error, not an arm outcome).
 
 Version
 -------
-``BASELINES_VERSION = "1.0.0"`` (additive-only within 1.x).
+``BASELINES_VERSION = "1.1.0"`` (1.0.0 = baseline fidelity adapters; 1.1.0
+additively wires the IFIP_SEC-X06 in-process Zanzibar-style consistency
+adapter — no pre-existing arm, registry row or reason code changed).
 """
 
 from __future__ import annotations
@@ -74,14 +87,24 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from evaluation.venue2027._shared.harness import Outcome
+from evaluation.venue2027.ifip_sec.consistency_token_adapter import (
+    ConsistencyError,
+    ConsistencyVerdict,
+    ZanzibarStore,
+    bind_consistency_checker,
+    check_with_revision,
+)
 
-BASELINES_VERSION = "1.0.0"
+BASELINES_VERSION = "1.1.0"
 
 #: Blueprint arm ids and the registry baseline names they serve.
 BASELINE_B0 = "B0"
 BASELINE_B1 = "B1"
 BASELINE_B2 = "B2"
 BASELINE_B3 = "B3"
+
+#: IFIP_SEC-X06 additive arm: in-process Zanzibar-style consistency reference.
+BASELINE_B2_INPROCESS_ZANZIBAR = "B2_INPROCESS_ZANZIBAR"
 
 #: Registry name -> blueprint arm (from _shared/baselines/registry.yaml).
 REGISTRY_BASELINE_NAMES: Mapping[str, str] = {
@@ -156,7 +179,8 @@ class BaselineContext:
     upstream_available: bool = False
 
     def __post_init__(self) -> None:
-        if not isinstance(self.hmac_key, bytes | bytearray) or len(self.hmac_key) < (            _HMAC_KEY_MIN_BYTES
+        if not isinstance(self.hmac_key, bytes | bytearray) or len(self.hmac_key) < (
+            _HMAC_KEY_MIN_BYTES
         ):
             raise BaselineError(
                 "CONTEXT_KEY_TOO_SHORT",
@@ -166,12 +190,8 @@ class BaselineContext:
             self.nonce_store = set(self.nonce_store)
         if self.nonce_store is not None and not isinstance(self.nonce_store, set):
             raise BaselineError("CONTEXT_STORE_BAD_TYPE", "nonce_store must be a set or None")
-        if isinstance(self.now_epoch_seconds, bool) or not isinstance(
-            self.now_epoch_seconds, int
-        ):
-            raise BaselineError(
-                "CONTEXT_CLOCK_BAD_TYPE", "now_epoch_seconds must be an integer"
-            )
+        if isinstance(self.now_epoch_seconds, bool) or not isinstance(self.now_epoch_seconds, int):
+            raise BaselineError("CONTEXT_CLOCK_BAD_TYPE", "now_epoch_seconds must be an integer")
 
 
 def _require_mapping(case: Mapping[str, Any], field: str) -> Any:
@@ -509,6 +529,31 @@ BASELINE_REGISTRY: Mapping[str, BaselineSpec] = {
             notes="Pinned OpenFGA v1.22.1 server not bundled; honest NOT_RUN_EXTERNAL.",
         ),
         BaselineSpec(
+            baseline_id=BASELINE_B2_INPROCESS_ZANZIBAR,
+            registry_name="zanzibar-openfga",
+            title=(
+                "In-process Zanzibar-style consistency-aware authorization reference "
+                "(task IFIP_SEC-X06)"
+            ),
+            algorithm_class=(
+                "relation-tuple changelog + zookie consistency tokens + relation-walk "
+                "evaluator behind check_with_revision(principal, resource, token) -> Verdict"
+            ),
+            runnable_in_process=True,
+            upstream_url="https://www.usenix.org/conference/atc19/presentation/pang",
+            upstream_revision=(
+                "paper design reference (USENIX ATC 2019, Sec. 2.3-2.4); executable "
+                "upstream path remains the pinned OpenFGA v1.22.1 server (B2_OPENFGA row)"
+            ),
+            notes=(
+                "Additive 1.1.0 arm over consistency_token_adapter.py: implements the "
+                "PUBLISHED Zanzibar snapshot/consistency semantics in-process (fresh "
+                "token sees the just-granted relation; pre-revocation replay rejected "
+                "only with a fresh token). Does NOT replace the pinned external OpenFGA "
+                "arm B2_OPENFGA, which stays NOT_RUN_EXTERNAL (execution contract rule 8)."
+            ),
+        ),
+        BaselineSpec(
             baseline_id="B3_CEDAR",
             registry_name="cedar-opa-policy-decision-nonce-registry",
             title="Cedar PDP + PostgreSQL nonce registry (external pinned binary)",
@@ -521,12 +566,55 @@ BASELINE_REGISTRY: Mapping[str, BaselineSpec] = {
     )
 }
 
+#: IFIP_SEC-X06 arm: the in-process Zanzibar-style reference is dispatched by
+#: ``run_baseline`` through the dedicated adapter contract (``ZanzibarStore`` +
+#: ``check_with_revision``), not the case/ctx ``_RUNNERS`` table above.
+_ARM_VIA_ADAPTER = frozenset({BASELINE_B2_INPROCESS_ZANZIBAR})
+
 _RUNNERS: Mapping[str, Any] = {
     BASELINE_B0: _run_b0,
     BASELINE_B1: _run_b1,
     BASELINE_B2: _run_b2,
     BASELINE_B3: _run_b3,
 }
+
+
+def run_zanzibar_case(case: Mapping[str, Any], ctx: BaselineContext) -> Outcome:
+    """Execute the IFIP_SEC-X06 in-process Zanzibar arm on one synthetic case.
+
+    The case must carry an injected ``zanzibar_store`` (:class:`ZanzibarStore`
+    sharing ``ctx.hmac_key``), a ``zookie`` token, and the request identity
+    (``actor_id``/``principal``, ``resource``, optional ``relation``). This is
+    a thin adapter from the baselines case/ctx convention onto the X06 target
+    contract ``check_with_revision(principal, resource, token) -> Verdict``;
+    the verdict becomes a first-class Outcome (REJECT for every token fault,
+    never an exception miscounted as a safe rejection).
+    """
+    store = case.get("zanzibar_store")
+    if not isinstance(store, ZanzibarStore):
+        raise BaselineError(
+            "CONTEXT_STORE_MISSING",
+            "case must carry an injected ZanzibarStore under 'zanzibar_store'",
+        )
+    principal = case.get("principal", case.get("actor_id"))
+    resource = case.get("resource")
+    if not isinstance(principal, str) or not isinstance(resource, str):
+        raise BaselineError(
+            "CASE_FIELD_MISSING", "case must carry string 'principal'/'actor_id' and 'resource'"
+        )
+    token = case.get("zookie")
+    if not isinstance(token, str):
+        return _outcome_reject(RC_TOKEN_MISSING)
+    relation = case.get("relation", "viewer")
+    if not isinstance(relation, str):
+        raise BaselineError("CASE_FIELD_MISSING", "case 'relation' must be a string")
+    verdict = check_with_revision(principal, resource, token, store=store, relation=relation)
+    return Outcome(
+        observed_outcome="ADMIT" if verdict.allowed else "REJECT",
+        counted_as_success=True,
+        retriable=False,
+        detail=verdict.reason_code,
+    )
 
 
 def run_baseline(baseline_id: str, case: Mapping[str, Any], ctx: BaselineContext) -> Outcome:
@@ -559,6 +647,8 @@ def run_baseline(baseline_id: str, case: Mapping[str, Any], ctx: BaselineContext
             "BASELINE_EXTERNAL_UNIMPLEMENTED",
             f"{baseline_id} external pinned run requires its adapter task (X05/X03)",
         )
+    if baseline_id in _ARM_VIA_ADAPTER:
+        return run_zanzibar_case(case, ctx)
     try:
         return _RUNNERS[baseline_id](case, ctx)
     except BaselineError as exc:
@@ -617,6 +707,38 @@ def token_bytes(token: str) -> int:
 def default_clock(now_epoch_seconds: int | None = None) -> int:
     """Explicit clock for callers that need wall time; tests inject fixed values."""
     return int(time.time()) if now_epoch_seconds is None else now_epoch_seconds
+
+
+__all__ = [
+    "BASELINE_B0",
+    "BASELINE_B1",
+    "BASELINE_B2",
+    "BASELINE_B2_INPROCESS_ZANZIBAR",
+    "BASELINE_B3",
+    "BASELINE_REGISTRY",
+    "BASELINES_VERSION",
+    "CAVEAT_KEYS",
+    "EXTERNAL_PINNED_BASELINES",
+    "REGISTRY_BASELINE_NAMES",
+    "BaselineContext",
+    "BaselineError",
+    "BaselineSpec",
+    "ConsistencyError",
+    "ConsistencyVerdict",
+    "ZanzibarStore",
+    "bind_consistency_checker",
+    "build_caveat_chain",
+    "check_with_revision",
+    "claims_from_case",
+    "default_clock",
+    "issue_token",
+    "parity_check",
+    "run_baseline",
+    "run_zanzibar_case",
+    "synthetic_case",
+    "token_bytes",
+    "verify_caveat_chain",
+]
 
 
 def synthetic_case(**overrides: Any) -> dict[str, Any]:

@@ -452,10 +452,10 @@ def _run_global_profile_occ(schedule: Mapping[str, Any]) -> dict[str, Any]:
 
     # Global profile version observed by every transaction at start: all
     # transactions begin at the initial snapshot, so the coarse profile epoch
-    # is the max initial entity version.
-    initial_global = max(
-        VersionedStore(schedule["store"]).current_version_map().values(), default=0
-    )
+    # is the version vector of the WHOLE profile. A genuine single-counter
+    # implementation would carry exactly this vector's state; validating it
+    # wholesale is equivalent to checking that NO entity version moved.
+    initial_versions = VersionedStore(schedule["store"]).current_version_map()
     committed_writes: set[str] = set()
     records: list[dict[str, Any]] = []
     aborted = 0
@@ -465,12 +465,13 @@ def _run_global_profile_occ(schedule: Mapping[str, Any]) -> dict[str, Any]:
         # must still equal the value observed at transaction start. ANY
         # concurrent committed write anywhere in the profile bumps the global
         # version and aborts every subsequent in-flight transaction.
+        # Equivalence with the single coarse counter: a counter moves iff at
+        # least one entity version moved, so the profile-wide check is
+        # "any entity version changed since start" — checked over the FULL
+        # entity space, never a max-version proxy (an unrelated edit to a
+        # lower-versioned entity moves the counter too).
         reason = "OK"
-        if (
-            committed_writes
-            and store.current_version_map()
-            and initial_global < max(store.current_version_map().values(), default=0)
-        ):
+        if committed_writes and store.current_version_map() != initial_versions:
             reason = "GLOBAL_PROFILE_STALE"
         if reason == "OK":
             for entity in writes:

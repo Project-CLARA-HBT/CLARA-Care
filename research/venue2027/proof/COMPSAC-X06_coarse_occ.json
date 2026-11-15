@@ -1,0 +1,38 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/compsac/baselines.py": "9d6a536eec35c75c7afbde7c3d8b57d6e3cafd127e58172283d067d5b739f10c",
+    "research/venue2027/compsac/tasks/coarse_occ_impl.md": "2424a15621ec63114e4ad5363695c005e9ad03f684236d29ea9a3fe245373039",
+    "research/venue2027/compsac/tests/test_x06_coarse_occ.py": "41d92712e454f6e9c176538f9e7d196ca12645b770f7e39acb714da61aa60932",
+    "research/venue2027/proof/logs/COMPSAC-X06_coarse_occ.pytest.log": "6647d02f29babd6887f93fdf6783d334b7bcee15339111939f86ee50d9296987",
+    "research/venue2027/proof/logs/COMPSAC-X06_coarse_occ.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "baseline_parity": "PASS",
+  "changed_paths": [
+    "evaluation/venue2027/compsac/baselines.py",
+    "research/venue2027/compsac/tasks/coarse_occ_impl.md",
+    "research/venue2027/compsac/tests/test_x06_coarse_occ.py",
+    "research/venue2027/proof/COMPSAC-X06_coarse_occ.json",
+    "research/venue2027/proof/logs/COMPSAC-X06_coarse_occ.pytest.log",
+    "research/venue2027/proof/logs/COMPSAC-X06_coarse_occ.ruff.log",
+    "research/venue2027/proof/logs/COMPSAC-X06_coarse_occ.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/compsac/tests/test_x06_coarse_occ.py evaluation/venue2027/compsac/test_baselines.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-X06_coarse_occ.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/compsac/baselines.py research/venue2027/compsac/tests/test_x06_coarse_occ.py && uvx ruff@0.7.1 format --check evaluation/venue2027/compsac/baselines.py research/venue2027/compsac/tests/test_x06_coarse_occ.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-X06_coarse_occ.ruff.log"
+    }
+  ],
+  "notes": "COMPSAC-X06_coarse_occ (P03, RQ1 B0-side evidence): formalized and executed the GLOBAL PROFILE-VERSION OCC comparator through the REAL baseline adapter run_baseline('global-profile-version-occ', case, ctx) (evaluation/venue2027/compsac/baselines.py arm B0, FAITHFUL_PORT, no forked implementation): research/venue2027/compsac/tasks/coarse_occ_impl.md formalizes the arm (one coarse epoch for the whole clinical profile; commit aborts GLOBAL_PROFILE_STALE iff any entity version moved since the transaction's start snapshot \u2014 checked over the FULL entity space, never a max-version proxy), its transition relation, the no-lost-update guarantee (two same-entity writers cannot both commit; committed histories are equivalent to fully serial execution) and the FALSE-STALE COST \u2014 the oracle-classified set FS(W) of GLOBAL_PROFILE_STALE aborts whose write target is disjoint from every previously committed write. Backwards-compatible fidelity fix in _run_global_profile_occ: commit validation used a max-version proxy (initial_global < max(versions)) that missed concurrent commits to lower-versioned entities (an empty care_plan register at v0 moving under medication_order at v1 left the max unchanged and wrongly ADMITTED a stale transaction); replaced with exact single-coarse-counter semantics (current version map != start snapshot over ALL entities). No signature/outcome-label/reason-code change; the 25 pre-existing evaluation/venue2027/compsac/test_baselines.py tests stay green. test_x06_coarse_occ.py (10 tests) imports the REAL adapter and runs n=6 concurrent writes to DIFFERENT entities of the SAME profile (disjoint targets, private per-transaction journals as declared reads): (1) B0 commits only the first transaction and aborts all 5 later ones with GLOBAL_PROFILE_STALE; (2) the REAL false-stale count is computed by an independent classifier inside the test (declared schedule + per-tx outcome records only, never B0 internals) and equals n-1 = 5 exactly \u2014 the recorded avoidable-rejection mass; (3) the SAME schedule/seed under B1 (silo-style entity readset OCC) and B4 (dependency-complete scope-local OCC) commits all 6 with ZERO aborts \u2014 the RQ1 false-stale differential, equal config across arms, store states diverge by >= n-1 installs; (4) X06-CASE-07 counter-fidelity regression pin: an unrelated edit to a LOWER-versioned entity (care_plan v0->v1 under medication_order v1) moves the profile epoch and aborts an in-flight transaction (the max() proxy would have admitted it); (5) X06-CASE-06 honest accounting: a same-entity write-write collision aborts genuinely and the independent classifier counts ZERO false-stale for that schedule; (6) single-writer control (no aborts); adversarial fail-closed controls (malformed schedule -> EXECUTION_ERROR/SCHEDULE_MALFORMED; byte-identical determinism; equal-config discipline; X06_COARSE_OCC_SPEC_VERSION 1.0.0 pins COMPSAC_BASELINES_VERSION 1.0.0). 35 passed total (10 new + 25 baseline suite); uvx ruff@0.7.1 check + format --check clean; uvx mypy@1.13.0 --ignore-missing-imports: 0 errors in the new test file, the 4 remaining errors in baselines.py are pre-existing at the base commit (verified by git stash). source_sha_after records the base commit 06125d52 per sibling convention (COMPSAC-baselines/POPETS-X05); the single task commit SHA is created immediately after this report and reported in the handoff. Baseline parity PASS: B0 vs B1/B4 differential measured on the identical schedule (5 false-stale aborts vs 0); forbidden_commits = 0 everywhere. Next ready tasks: COMPSAC-X04_pg_ssi, COMPSAC-X05_silo_occ.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+  "source_sha_before": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+  "status": "PASS",
+  "task_id": "COMPSAC-X06_coarse_occ",
+  "unresolved": []
+}

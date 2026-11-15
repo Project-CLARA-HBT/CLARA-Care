@@ -1,0 +1,169 @@
+{
+  "schema_version": "pst.sample_cases.v1",
+  "venue": "pst",
+  "venue_unit_kind": "audit_case",
+  "observer": "forensic_reconstructor",
+  "description": "Preregistered minimized-audit sample cases for the PST 2027 study schema (task PST-schema, P02). Three positive records exercising distinct ReceiptMin fault families (forensic query answerability gap, auxiliary linkage inference, INDETERMINATE retention-epoch proof) plus one negative control record that violates the venue study schema. All identities, timestamps and hashes are synthetic; source_authority is SYNTHETIC_RESEARCH_ONLY. Expected/observed decisions are designed fixtures, never executed research findings (VENUES/pst/RESEARCH_BLUEPRINT.md).",
+  "positive_cases": [
+    {
+      "schema_version": "1",
+      "case_id": "PST-CASE-01",
+      "case_family": "forensic_query_answerability",
+      "independent_unit_id": "pst.auditcase.ledger-01",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+      "seed": 20270801,
+      "branch": "research/venue2027/tasks/w8-pst-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "fixture_path",
+          "uri": "research/venue2027/pst/cases/sample_cases.json#PST-CASE-01/receipt_commitment",
+          "sha256": "1a4bd2e0b6a3c9d8e7f605142738596a0bdcfe1a2b3c4d5e6f708192a3b4c5d6",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "oracle_label",
+          "uri": "research/venue2027/pst/cases/sample_cases.json#PST-CASE-01/oracle_label",
+          "sha256": "2b5ce3f1c7b4d0e9f8a7162538496a7b1cedfa2b3c4d5e6f708192a3b4c5d6e0",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Answerability-gap fixture for the ReceiptMin blueprint RQ1: a purpose-bound minimized receipt proves the event commitment (HMAC tag present) but the retention map excludes the medication-detail field a predeclared forensic query needs, so the trusted offline complete ledger answers the query while the receipt arm cannot. forensic_reconstructor marks the query unanswerable under B4, matching the expected REJECT; the B0 plaintext-log oracle label confirms the question was legitimate ex ante.",
+      "venue": "pst",
+      "venue_unit_kind": "audit_case",
+      "observer": "forensic_reconstructor",
+      "expected_decision": "REJECT",
+      "observed_decision": "REJECT",
+      "decision_agreement": true,
+      "synthetic_provenance": {
+        "generator_id": "receiptmin.fixturegen",
+        "generator_version": "1.0.0",
+        "seed": 20270801
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "PST-CASE-07",
+      "case_family": "auxiliary_linkage_inference",
+      "independent_unit_id": "pst.auditcase.ledger-02",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+      "seed": 20270802,
+      "branch": "research/venue2027/tasks/w8-pst-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "provider_trace",
+          "uri": "research/venue2027/pst/cases/sample_cases.json#PST-CASE-07/attacker_aux_join",
+          "sha256": "3c6df402d8c5e1fa0b982736495a78c2dfea3b4c5d6e0f708192a3b4c5d6e0f1",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "policy_epoch",
+          "uri": "research/venue2027/pst/cases/sample_cases.json#PST-CASE-07/retention_epoch_r2",
+          "sha256": "4d7ea513e9d6f2ab1ca938475a6b89d3eafbc4d5e6f708192a3b4c5d6e0f1a2b",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Linkability fixture for blueprint RQ2: under a compromised read-only audit reader the minimized receipt retains stable per-event HMAC identifiers whose cross-epoch repetition joins with auxiliary appointment metadata, re-identifying the synthetic longitudinal subject. The design bound requires record-level linkability risk to stay below the declared frontier, so expected_decision is REJECT; the reconstructed join succeeds (attribute exposure observed), the observed ADMIT records the failure, and decision_agreement=false is computed, not asserted.",
+      "venue": "pst",
+      "venue_unit_kind": "audit_case",
+      "observer": "forensic_reconstructor",
+      "expected_decision": "REJECT",
+      "observed_decision": "ADMIT",
+      "decision_agreement": false,
+      "synthetic_provenance": {
+        "generator_id": "receiptmin.fixturegen",
+        "generator_version": "1.0.0",
+        "seed": 20270802
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    },
+    {
+      "schema_version": "1",
+      "case_id": "PST-CASE-12",
+      "case_family": "missing_retention_epoch_proof",
+      "independent_unit_id": "pst.auditcase.ledger-03",
+      "unit_kind": "case",
+      "backend": "synthetic",
+      "source_sha": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+      "seed": 20270803,
+      "branch": "research/venue2027/tasks/w8-pst-schema",
+      "arm_id": "B4",
+      "evidence": [
+        {
+          "pointer_kind": "dataset_snapshot",
+          "uri": "research/venue2027/pst/cases/sample_cases.json#PST-CASE-12/retention_map_absent",
+          "sha256": "5e8fb624fae7a3bc2dba49586b7c9ae4fbacd5e6f708192a3b4c5d6e0f1a2b3c",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        },
+        {
+          "pointer_kind": "oracle_label",
+          "uri": "research/venue2027/pst/cases/sample_cases.json#PST-CASE-12/oracle_label",
+          "sha256": "6f9ac735abf8b4cd3ecb5a697c8dabf5acbd6e6f708192a3b4c5d6e0f1a2b3c4",
+          "frozen_at": "2026-11-15T00:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-15T00:00:00Z",
+      "notes": "Fixture for the blueprint falsification discipline: the receipt's retention map references a retention epoch whose key-deletion attestation is absent from the frozen store, so neither reconstruction success nor content deletion can be established and the three-valued oracle returns INDETERMINATE which MUST NOT be coerced to ADMIT or REJECT. The candidate receipt generator silently maps the missing attestation to answerable (ADMIT), so observed_decision records the disagreement and decision_agreement=false is computed, not asserted.",
+      "venue": "pst",
+      "venue_unit_kind": "audit_case",
+      "observer": "forensic_reconstructor",
+      "expected_decision": "INDETERMINATE",
+      "observed_decision": "ADMIT",
+      "decision_agreement": false,
+      "synthetic_provenance": {
+        "generator_id": "receiptmin.fixturegen",
+        "generator_version": "1.0.0",
+        "seed": 20270803
+      },
+      "source_authority": "SYNTHETIC_RESEARCH_ONLY"
+    }
+  ],
+  "invalid_cases": [
+    {
+      "name": "plaintext_leak_laundered_authority",
+      "reason_violation": "Fabricated non-authoritative source_authority and forged decision_agreement: a record claiming source_authority='RUNTIME_CLINICAL_LOG' and decision_agreement asserted true while expected REJECT was observed as ADMIT would launder a live clinical audit provenance into the synthetic-only corpus and mask a real linkage failure of the minimized receipt. The source_authority const plus additionalProperties=false in the venue study schema reject it.",
+      "case": {
+        "schema_version": "1",
+        "case_id": "PST-CASE-07-FORGED",
+        "case_family": "auxiliary_linkage_inference",
+        "independent_unit_id": "pst.auditcase.ledger-02",
+        "unit_kind": "case",
+        "backend": "postgresql",
+        "source_sha": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+        "seed": 20270802,
+        "branch": "research/venue2027/tasks/w8-pst-schema",
+        "arm_id": "B4",
+        "evidence": [
+          {
+            "pointer_kind": "provider_trace",
+            "uri": "research/venue2027/pst/cases/sample_cases.json#PST-CASE-07-FORGED/attacker_aux_join",
+            "sha256": "7a0bd846bca9c5de4fdc6b7a8d9ebca6bdce7f708192a3b4c5d6e0f1a2b3c4d5",
+            "frozen_at": "2026-11-15T00:00:00Z"
+          }
+        ],
+        "created_at": "2026-11-15T00:00:00Z",
+        "notes": "Negative control: expected REJECT but observed ADMIT (auxiliary join re-identifies the subject despite minimization); the generator asserts decision_agreement=true instead of computing it and claims a runtime clinical provenance. Rejected by the venue study schema.",
+        "venue": "pst",
+        "venue_unit_kind": "audit_case",
+        "observer": "forensic_reconstructor",
+        "expected_decision": "REJECT",
+        "observed_decision": "ADMIT",
+        "decision_agreement": true,
+        "synthetic_provenance": {
+          "generator_id": "receiptmin.fixturegen",
+          "generator_version": "1.0.0",
+          "seed": 20270802
+        },
+        "source_authority": "RUNTIME_CLINICAL_LOG"
+      }
+    }
+  ]
+}

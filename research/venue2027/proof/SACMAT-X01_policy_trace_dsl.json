@@ -1,0 +1,40 @@
+{
+  "task_id": "SACMAT-X01_policy_trace_dsl",
+  "status": "PASS",
+  "source_sha_before": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+  "source_sha_after": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+  "changed_paths": [
+    "evaluation/venue2027/sacmat/policy_trace_dsl.py",
+    "evaluation/venue2027/sacmat/test_policy_trace_dsl.py",
+    "research/venue2027/proof/logs/SACMAT-X01_policy_trace_dsl.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-X01_policy_trace_dsl.ruff.log",
+    "research/venue2027/proof/SACMAT-X01_policy_trace_dsl.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/sacmat/test_policy_trace_dsl.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X01_policy_trace_dsl.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/sacmat/policy_trace_dsl.py evaluation/venue2027/sacmat/test_policy_trace_dsl.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X01_policy_trace_dsl.ruff.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 format --check evaluation/venue2027/sacmat/policy_trace_dsl.py evaluation/venue2027/sacmat/test_policy_trace_dsl.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X01_policy_trace_dsl.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/sacmat/policy_trace_dsl.py": "cf6e22655296ef985d4fc3d07b9b73f09db4529ee50a6b90c32ea3398d603a7a",
+    "evaluation/venue2027/sacmat/test_policy_trace_dsl.py": "28c44ee804f4af65238d63caaf1c6a2e3a96f4e646196ba907173d71b58a572d",
+    "research/venue2027/proof/logs/SACMAT-X01_policy_trace_dsl.pytest.log": "dee3ae31426e0e62c7b3050b6352187cb16e73fd03c79c5b85e2501a9bf31554",
+    "research/venue2027/proof/logs/SACMAT-X01_policy_trace_dsl.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P02 temporal policy-trace DSL (RQ1 oracle input language). policy_trace_dsl.py: Event(principal, tenant, resource, purpose, policy_state, logical_time, kind) with strict ordering enforced at parse (parse_policy_trace refuses MISSING_LOGICAL_TIME — ambiguous no-time policies, incl. None/absent logical_time; UNORDERED_TIMESTAMPS and DUPLICATE_TIMESTAMP are refused, never silently reordered; MALFORMED_EVENT for non-string ids/empty strings/non-int times/unknown kinds; SCHEMA_VERSION_MISMATCH; EMPTY_TRACE). PolicyTrace validator + evaluate_trace(trace)->TraceVerdict replays GRANT/REVOKE/DELEGATE/ACCESS in logical-time order per (tenant, resource, purpose) scope and detects the trace-level errors static coverage misses: REVOKE_BEFORE_GRANT (revoke or delegate-source with no active grant), DELEGATION_CYCLE (delegate edge closes a cycle in the delegation graph), REVOKED_ACTOR_TRANSITIVITY (revoked actor's delegatee still exercises delegated authority — stale authority stripped fail-closed, access DENY; revocation is deliberately NOT silently cascaded so the witness remains observable), UNESTABLISHED_AUTHORITY (access referencing never-established authority -> INDETERMINATE, never coerced to PERMIT, SACMAT-CASE-04). Findings carry witness event indices, sort deterministically; outcomes PERMIT/DENY/INDETERMINATE; all outputs JSON-serializable with canonical trace_sha256; deterministic — no clock, no randomness, no I/O. test_policy_trace_dsl.py imports only the DSL (independent-oracle rule): 4 positive controls (grant->access PERMIT, delegation chain PERMIT, revoke-stops-access DENY, JSON round-trip/hash determinism), 9 adversarial controls (missing logical time x2, unordered, duplicate, malformed x4, version mismatch, empty trace, revoke-before-grant, delegation cycle, revoked-actor transitivity, indeterminate-not-permit, first-class findings never safe acceptances) and a 48-seed deterministic property test proving replay stability, JSON round-trip, sorted findings and outcome/findings consistency. 64 passed in 0.32s; uvx ruff@0.7.1 check + format --check clean. source_sha_after records base commit 06125d52 per sibling convention (COMPSAC-X01); the single task commit SHA is created immediately after this report and reported in the handoff. Baseline parity NOT_APPLICABLE (DSL+oracle layer; arms B0-B4 execute in P03). Next ready tasks: SACMAT-X02.. per taskctl ready."
+}

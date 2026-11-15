@@ -1,0 +1,48 @@
+{
+  "task_id": "PST-schema",
+  "status": "PASS",
+  "source_sha_before": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+  "source_sha_after": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+  "changed_paths": [
+    "research/venue2027/pst/protocols/study.schema.json",
+    "research/venue2027/pst/cases/sample_cases.json",
+    "research/venue2027/pst/tests/test_study_schema.py",
+    "research/venue2027/proof/PST-schema.json",
+    "research/venue2027/proof/emit_PST_schema_report.py",
+    "research/venue2027/proof/logs/PST-schema.pytest.log",
+    "research/venue2027/proof/logs/PST-schema.suite.log",
+    "research/venue2027/proof/logs/PST-schema.ruff.log",
+    "research/venue2027/proof/logs/PST-schema.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/pst/tests/test_study_schema.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-schema.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/pst/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-schema.suite.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/pst/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-schema.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_PST_schema_report.py # agent_protocol.build_report + validate_report(ok:true); result appended to research/venue2027/proof/logs/PST-schema.validator.log",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-schema.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/pst/protocols/study.schema.json": "cf09de5bb56b8f792a16d70350d19dfeb52a5dbb36b09c776c2577fc3003f3e2",
+    "research/venue2027/pst/cases/sample_cases.json": "56c381949d686aba96c6be2939432c51fa44c986d3c29e9988e9863f3d64cb7c",
+    "research/venue2027/pst/tests/test_study_schema.py": "5ec179c61b9c56fe6de02be930d2d4b88c7bedfd648ff96b7b2dd32d27ed92bf"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P02 venue study-schema task PST-schema. research/venue2027/pst/protocols/study.schema.json was generated via the shared builder venue_schema.write_venue_schema('pst', root) (VENUE_SCHEMA_VERSION 1.0.0), extending the audited shared case.v1 contract with the PST venue unit audit_case, observer forensic_reconstructor, expected/observed four-valued decision fields (ADMIT/REJECT/INDETERMINATE/NOT_APPLICABLE vs ADMIT/REJECT/INDETERMINATE/NOT_RUN_EXTERNAL/EXECUTION_ERROR/TIMEOUT), computed decision_agreement, synthetic_provenance, and source_authority enum SYNTHETIC_RESEARCH_ONLY; every venue field required and typed, additionalProperties false, silent nulls disallowed by construction. research/venue2027/pst/cases/sample_cases.json preregisters 3 positive minimized-audit records with unit_kind='case' and schema_version='1' \u2014 PST-CASE-01 (forensic query answerability gap under the B4 purpose-bound receipt, expected REJECT, observed REJECT, agreement true), PST-CASE-07 (auxiliary linkage inference from stable HMAC identifiers under a compromised read-only audit reader, expected REJECT, observed ADMIT, agreement false), PST-CASE-12 (missing key-deletion attestation for the referenced retention epoch, expected INDETERMINATE, never coerced to a binary verdict, observed ADMIT, agreement false) \u2014 every evidence pointer carries pointer_kind/uri/sha256 (plus frozen_at), plus exactly 1 invalid control (plaintext_leak_laundered_authority) that forges source_authority RUNTIME_CLINICAL_LOG and asserts decision_agreement=true over a masked REJECT-vs-ADMIT linkage divergence; rejected via ENUM_MISMATCH on source_authority. All identities/timestamps/hashes synthetic; designed fixtures only, no executed findings (VENUES/pst/RESEARCH_BLUEPRINT.md rule: expected INDETERMINATE never coerced to PASS). research/venue2027/pst/tests/test_study_schema.py (stdlib-only, 10 tests): deterministic rebuild (dict-equality vs build_venue_schema plus byte-identical write_venue_schema regeneration), builder UNKNOWN_VENUE refusal, 3 positives validate against the on-disk schema via schema_validator.validate_instance, computed-agreement invariant, negative control rejected (ENUM_MISMATCH on source_authority), missing observer REQUIRED_MISSING, wrong venue CONST_MISMATCH, missing backend, silent null and evidence pointer without sha256 rejected, validate_study_json(record)->bool task-contract signature. Verification: test_study_schema.py 10 passed; full pst suite 102 passed; uvx ruff@0.7.1 clean on research/venue2027/pst/; agent_protocol.validate_report ok:true. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

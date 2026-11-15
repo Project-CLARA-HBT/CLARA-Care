@@ -1,0 +1,39 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/compsac/independent_closure_oracle.py": "ce1847ea280eac0bea2e3e2cc0b536022c060b4da582de503fd0cbd4d61cb212",
+    "evaluation/venue2027/compsac/test_independent_closure_oracle.py": "44c753fc6482c10e14146416c2f9fbbd5344cf11323a190c8fc526a1fb1755a4",
+    "research/venue2027/proof/logs/COMPSAC-X02_closure_oracle.pytest.log": "ec3622cd28ed58d936296959047810aafa476cb0738b1aa83ec2cccffc39214a",
+    "research/venue2027/proof/logs/COMPSAC-X02_closure_oracle.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/compsac/independent_closure_oracle.py",
+    "evaluation/venue2027/compsac/test_independent_closure_oracle.py",
+    "research/venue2027/proof/logs/COMPSAC-X02_closure_oracle.pytest.log",
+    "research/venue2027/proof/logs/COMPSAC-X02_closure_oracle.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/compsac/test_independent_closure_oracle.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-X02_closure_oracle.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/compsac/independent_closure_oracle.py evaluation/venue2027/compsac/test_independent_closure_oracle.py && uvx ruff@0.7.1 format --check evaluation/venue2027/compsac/independent_closure_oracle.py evaluation/venue2027/compsac/test_independent_closure_oracle.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-X02_closure_oracle.ruff.log"
+    },
+    {
+      "argv": "PYTHONPATH=. python3 research/venue2027/proof/emit_COMPSAC-X02_closure_oracle_report.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/COMPSAC-X02_closure_oracle.emit.log"
+    }
+  ],
+  "notes": "P02 independent dependency-closure oracle for RQ1/RQ2 (Dependency-Complete Optimistic Admission for Concurrent Clinical AI Writes). independent_closure_oracle.py: DECLARATIVE module-local rule table RESOURCE_RULES (resource -> kind/version-or-epoch/predicate/review_required; the ambiguous 'medication_note' row is deliberately review-flagged) and expected_dependencies(op, state) -> frozenset[Dependency] deriving exactly one dependency per distinct touched resource \u2014 GOVERNANCE rows anchor to the live OracleState consent/policy epochs (COMPSAC-CASE-08: governance anchors never omitted), ENTITY/EVIDENCE/LEASE rows follow the rule table. Fail-closed stable reason codes: UNRULED_RESOURCE (unknown touched resource), AMBIGUOUS_RULE_REVIEW (review-flagged rule escalated, never guessed), EMPTY_OPERATION, MALFORMED_OPERATION, STATE_MISMATCH; no wildcard omission (assert_no_wildcard_omission names any dropped resource). Local Dependency/OracleOperation/OracleState/ClosureResult dataclasses, JSON-serializable, canonical closure_sha256, deterministic (no clock/randomness/DB/model). INDEPENDENCE (GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md item 2): the module does NOT import evaluation/venue2027/compsac/dependency_dsl.py (the candidate compiler); assert_oracle_independence() scans this module's own source with ast and refuses any import of the candidate DSL module with stable reason code CANDIDATE_IMPORT \u2014 covering plain/aliased/from-imports, 'from pkg import dependency_dsl' alias binds, bare-module paths, and dynamic imports (__import__/importlib.import_module) reported as the __dynamic__ sentinel for review rather than guessed safe; exact ast parsing (never substring, never sys.modules) so unrelated modules like my_dependency_dsl_tests do not trip it. test_independent_closure_oracle.py imports only the oracle: 6 positive controls (governed medication write with kind/predicate/epoch assertions, governance anchors to state epochs, read==write dedup, determinism + JSON round-trip, success ClosureResult, built-in self-checks + rule-table shape) and 16 adversarial controls (clean source passes, 7 candidate-import variants refused, live-source tamper control, exact-match acceptance of unrelated imports, __import__/importlib dynamic flags, unknown write/read resource, ambiguous escalation + no clean-op poisoning, empty/malformed ops x5, wrong state type, wildcard-omission catch). 22 passed in 0.24s (full compsac suite 139 passed); uvx ruff@0.7.1 check + format --check clean; mypy 1.13.0 --ignore-missing-imports clean. source_sha_after records the base commit 06125d52 per sibling convention (COMPSAC-X01_readset_dsl); the single task commit SHA is created immediately after this report and reported in the handoff. oracle_disagreement_count null (no candidate-vs-oracle comparison run in this task; X04/X05 harnesses consume this oracle). Baseline parity NOT_APPLICABLE (oracle layer; arms B0-B4 execute in P03 COMPSAC-X04..X07).",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+  "source_sha_before": "06125d5291c6aa4b1d65df6df1d0d7e56de58463",
+  "status": "PASS",
+  "task_id": "COMPSAC-X02_closure_oracle",
+  "unresolved": []
+}

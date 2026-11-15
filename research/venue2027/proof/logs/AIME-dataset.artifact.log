@@ -1,0 +1,47 @@
+{
+  "content_sha256": "2ff1c736947dfa90c77593b18e2ae321401dc437ce23430a87621ef4585b1fcb",
+  "dataset_kernel_version": "1.0.0",
+  "families": [
+    "stable_history",
+    "consent_change",
+    "medication_withdrawal",
+    "allergy_update",
+    "reconciliation"
+  ],
+  "generator_version": "clara.aime.generate-dataset-v1",
+  "inventory": {
+    "by_family": {
+      "allergy_update": 40,
+      "consent_change": 40,
+      "medication_withdrawal": 40,
+      "reconciliation": 40,
+      "stable_history": 40
+    },
+    "by_split": {
+      "dev": 40,
+      "test": 40,
+      "train": 120
+    },
+    "generate_dataset_version": "clara.aime.generate-dataset-v1",
+    "generator_version": "1.0.0",
+    "seed": 2027,
+    "total": 200,
+    "venue": "aime",
+    "workflow_payload_version": "clara.aime.workflow-payload-v1"
+  },
+  "jsonl_sha256": "f8cf234c72597a78611ae387d987fb3594fcbaf659b1cd8915d4b58dab39c823",
+  "n": 200,
+  "phi_fields": [],
+  "records": 200,
+  "schema_version": "clara.venue2027.aime.dataset.v1",
+  "seed": 2027,
+  "splits": [
+    "train",
+    "dev",
+    "test"
+  ],
+  "synthetic_only": true,
+  "unit_prefix": "vig",
+  "venue": "aime",
+  "workflow_payload_version": "clara.aime.workflow-payload-v1"
+}
