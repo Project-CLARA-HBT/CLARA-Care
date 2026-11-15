@@ -306,6 +306,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DSN-threat.json",
       "status": "PASS"
     },
+    "IFIP_SEC-X01_receipt_schema": {
+      "marked_at": "2026-11-15T12:53:24.145513+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-X01_receipt_schema.json",
+      "status": "PASS"
+    },
     "IFIP_SEC-X06_zanzibar_style": {
       "marked_at": "2026-11-15T11:48:12.391636+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-X06_zanzibar_style.json",

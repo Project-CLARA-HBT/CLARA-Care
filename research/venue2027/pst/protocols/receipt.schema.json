@@ -1,0 +1,84 @@
+{
+  "$id": "https://clara.care/venue2027/pst/receipt.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Purpose-bound minimal audit receipt grammar (PST-X01, ReceiptMin RQ1). A receipt is a signature-bound commitment to one governed audit event: it proves the event occurred under a declared purpose and policy epoch and lets a forensic reconstructor verify any omitted field by digest recomputation, while the receipt itself stores no clinical payload, no free text and no raw identifiers. additionalProperties false plus a closed token/pattern vocabulary means every raw-PHI or hidden-ID smuggling attempt is rejected fail-closed (ADDITIONAL_PROPERTY / PATTERN_MISMATCH). Digest and signature verification semantics live in the receipt.v1 disclosure protocol; cross-epoch admissibility is adjudicated by the independent forensic oracle, not by this grammar.",
+  "properties": {
+    "issued_at": {
+      "description": "Receipt issuance timestamp, RFC 3339 UTC with 'Z' suffix only. Local-time offsets are rejected so receipt ordering is deterministic across tenants.",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "type": "string"
+    },
+    "omitted_field_digest": {
+      "description": "SHA-256 (lowercase 64-hex) of the canonical JSON serialization (UTF-8, sorted keys, separators ',' and ':') of the complete omitted-fields object declared for this operation's audit query class. Forensic reconstruction verifies an omitted field by recomputing this digest over the candidate value and comparing equality; the receipt never stores the omitted value itself.",
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "operation": {
+      "description": "Audit query class performed. Closed enum; free-form operation names are rejected.",
+      "enum": [
+        "record_read",
+        "record_write",
+        "record_export",
+        "receipt_verify",
+        "retention_rotate"
+      ],
+      "type": "string"
+    },
+    "policy_epoch": {
+      "description": "Monotonically increasing combined consent/policy/retention epoch under which the event was authorized, bound at issuance. Consumers must refuse receipts whose epoch is not registry-live for (tenant, purpose); cross-epoch replay is rejected at the disclosure-protocol layer on top of this token grammar.",
+      "pattern": "^epoch-[0-9]{1,8}$",
+      "type": "string"
+    },
+    "principal": {
+      "description": "Pseudonymous principal token of the acting account. Raw user names, emails or medical-record numbers are not representable.",
+      "pattern": "^prn_[0-9a-f]{8,32}$",
+      "type": "string"
+    },
+    "purpose": {
+      "description": "Declared processing purpose. Closed enum; a purpose value that encodes a patient attribute is rejected as unknown.",
+      "enum": [
+        "self_care",
+        "clinical_care",
+        "forensic_review",
+        "security_audit",
+        "research_analytics"
+      ],
+      "type": "string"
+    },
+    "receipt_id": {
+      "description": "Globally unique, tenant-scoped receipt identifier; also the stable logical operation id that makes persisted receipt effects idempotent under retry.",
+      "pattern": "^rcpt_[0-9a-f]{16,64}$",
+      "type": "string"
+    },
+    "signature": {
+      "description": "HMAC-SHA256 (lowercase 64-hex) over the canonical JSON of the receipt body (every field except signature), keyed by the verification key bound to (tenant, policy_epoch) in the external key registry. Key material and key ids are externalized; tampering with any body field invalidates the receipt (fail closed, DETECT_TAMPER).",
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "tenant": {
+      "description": "Pseudonymous tenant token scoping the receipt. Free-text tenant names are rejected.",
+      "pattern": "^tnt_[0-9a-f]{8,32}$",
+      "type": "string"
+    },
+    "version": {
+      "const": "1",
+      "description": "Receipt grammar version. Only '1' (additive-only evolution within receipt.v1); consumers must refuse unknown versions instead of best-effort parsing.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "receipt_id",
+    "tenant",
+    "principal",
+    "purpose",
+    "operation",
+    "omitted_field_digest",
+    "policy_epoch",
+    "issued_at",
+    "signature"
+  ],
+  "title": "CLARA-Care 2027 pst purpose-bound minimal audit receipt (receipt.v1)",
+  "type": "object"
+}

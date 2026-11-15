@@ -1,0 +1,31 @@
+{
+  "campaign_truth_labels": {
+    "ADMIT": "ATTACK",
+    "INDETERMINATE": "PENDING_ADJUDICATION",
+    "REJECT": "BENIGN"
+  },
+  "candidate_basenames": [
+    "dimva.baselines",
+    "baselines"
+  ],
+  "independence": "CLEAN",
+  "kernel_version": "1.0.0",
+  "llm_calls": 0,
+  "model_imports": 0,
+  "oracle_id": "dimva-campaign-truth-reference",
+  "oracle_version": "clara.dimva.campaign-truth-oracle-v1",
+  "rule_table": {
+    "benign_session": "REJECT",
+    "burst_probe": "ADMIT",
+    "cross_tool_obfuscation": "ADMIT",
+    "low_and_slow": "ADMIT"
+  },
+  "self_check_outcomes": [
+    "REJECT",
+    "ADMIT",
+    "ADMIT",
+    "ADMIT",
+    "INDETERMINATE"
+  ]
+}
+exit=0

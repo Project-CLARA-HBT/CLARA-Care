@@ -1,0 +1,8 @@
+wrote /dev/shm/cw/wa_popets-oracle/research/venue2027/proof/POPETS-oracle.json
+{
+ "ok": true,
+ "reason_code": "OK",
+ "errors": [],
+ "task_id": "POPETS-oracle",
+ "protocol_version": "1.0.0"
+}

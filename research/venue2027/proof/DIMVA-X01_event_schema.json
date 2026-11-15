@@ -1,0 +1,37 @@
+{
+  "artifacts_sha256": {
+    "research/venue2027/dimva/protocols/event.schema.json": "531f990c4f255f517092721424a5e114f4424bee3853042df9d66ba54138adea",
+    "research/venue2027/dimva/tests/test_event_schema.py": "14196e9e53bf5737d4703316a45b4d33795db0b0537a026bedc7f98e71c8360c",
+    "research/venue2027/proof/logs/DIMVA-X01_event_schema.pytest.log": "83975f7abb679f50002c0d6c3164b85e3e6d8ad1d91f6bae28e7042b39673295",
+    "research/venue2027/proof/logs/DIMVA-X01_event_schema.ruff.log": "ce04ce92b16073000b77c97a42c00b98b96305692d9d5ed4dcfa5a9ca9ea62d6"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "research/venue2027/dimva/protocols/event.schema.json",
+    "research/venue2027/dimva/tests/test_event_schema.py",
+    "research/venue2027/proof/DIMVA-X01_event_schema.json",
+    "research/venue2027/proof/emit_dimva_x01_event_schema_report.py",
+    "research/venue2027/proof/logs/DIMVA-X01_event_schema.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-X01_event_schema.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-X01_event_schema.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dimva/tests/test_event_schema.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X01_event_schema.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/dimva/tests/test_event_schema.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X01_event_schema.ruff.log"
+    }
+  ],
+  "notes": "P02 DIMVA-X01_event_schema deliverable for venue dimva: research/venue2027/dimva/protocols/event.schema.json defines the MINIMAL agent-event telemetry schema ($id clara.venue2027.dimva.minimal_agent_event.v1, draft 2020-12) with exactly seven fields (actor, tool, scope, allowed, purpose, ts, campaign_id), required for all seven, additionalProperties=false and an explicit MINIMALITY NOTE in the description; no PHI/health-text/reason-code/attacker-label surface (actor and scope are opaque SHA-256 hex digests, purpose is a closed coarse enum, ts is a 60 s bucket index). research/venue2027/dimva/tests/test_event_schema.py (20 tests) validates positive events (>=3 distinct valid events incl. a reproducible batch) and adversarial rejections through the shared stdlib validator research/venue2027/_shared/tools/schema_validator.py::validate_instance: missing tool and missing scope -> REQUIRED_MISSING; PHI-like field (patient_name), free-text reason and reason_code -> ADDITIONAL_PROPERTY; non-bool allowed ('false', 0, 1, None) -> TYPE_MISMATCH; extra field (attacker_label) -> ADDITIONAL_PROPERTY; plus clear-text principal PATTERN_MISMATCH, unknown purpose ENUM_MISMATCH, bad ts and missing actor/campaign_id fail-closed controls, and schema-shape assertions (7-field contract, minimality note, no PHI-like property names, no attacker label, only validator-supported keywords). Commands: pytest exit 0 (20 passed); uvx ruff@0.7.1 check exit 0 (format --check clean). Proof emitted via agent_protocol.build_report(task_id='DIMVA-X01_event_schema') with real log_paths and validated ok:true; report + logs committed together with the work per established repo convention.",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "11a9219ce0a1d3d523400350abb959c0f56699f2",
+  "source_sha_before": "11a9219ce0a1d3d523400350abb959c0f56699f2",
+  "status": "PASS",
+  "task_id": "DIMVA-X01_event_schema",
+  "unresolved": []
+}

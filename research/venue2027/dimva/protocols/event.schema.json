@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "clara.venue2027.dimva.minimal_agent_event.v1",
+  "title": "Minimal agent event (v1)",
+  "description": "DIMVA-X01 minimized authorized telemetry contract for GovernanceTrace: Detecting Adaptive Authorization-Boundary Probing from Minimal Agent Events (venue dimva, phase P02, RQ1). MINIMALITY NOTE: this schema intentionally retains exactly seven fields (actor, tool, scope, allowed, purpose, ts, campaign_id) - the smallest metadata surface that still supports authorization-boundary-probing detection at bounded benign false alarms. It excludes health text, raw user prompts, free-text reasons, PHI (patient identifiers, diagnoses, notes, contact data), clear-text principal IDs, rejection reason codes (leak-safe primary test) and any explicit attacker label; additionalProperties=false turns every extra field into a hard fail-closed validation error. Hashed scope/actor and bucketed timestamps bound the retained sensitive metadata (bytes) by construction.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "actor",
+    "tool",
+    "scope",
+    "allowed",
+    "purpose",
+    "ts",
+    "campaign_id"
+  ],
+  "properties": {
+    "actor": {
+      "description": "Opaque principal: SHA-256 hex digest of the synthetic actor identifier. Clear-text principal IDs are rejected (fail closed); no role, name or account field is retained.",
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "tool": {
+      "description": "Coarse action class of the invoked tool (snake_case token, e.g. record_read); no argument payload, operation name or hashed-op free text beyond the class token.",
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+      "type": "string"
+    },
+    "scope": {
+      "description": "Hashed authorization scope: SHA-256 hex over the (tenant, principal, purpose, policy/consent epoch) scope tuple. Raw tenant or principal identifiers are never retained.",
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "allowed": {
+      "description": "Authorization outcome of the event: true when the gateway admitted the operation, false when denied. No rejection reason code or reason family is retained (leak-safe RQ1 primary test).",
+      "type": "boolean"
+    },
+    "purpose": {
+      "description": "Registered coarse purpose class under which the operation was attempted; free-text reasons are rejected by the closed enum.",
+      "enum": [
+        "self_care",
+        "care_delivery",
+        "care_team_handoff",
+        "administration",
+        "audit"
+      ],
+      "type": "string"
+    },
+    "ts": {
+      "description": "Timestamp bucket: epoch seconds divided into fixed 60 s buckets (epoch_seconds // 60). Coarse timing supports pacing features without high-resolution metadata; no wall-clock string is retained.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "campaign_id": {
+      "description": "Opaque session/campaign grouping identifier assigned by the synthetic trace generator; carries no personal or health semantics.",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+      "type": "string"
+    }
+  }
+}

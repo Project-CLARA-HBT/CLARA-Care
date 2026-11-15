@@ -1,0 +1,405 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://clara.care/venue2027/aime/vignette.schema.json",
+  "title": "CLARA-Care 2027 aime synthetic clinical vignette (v1.0.0)",
+  "description": "Task AIME-X01_vignette_schema (P02, venue aime). One typed, source-disjoint synthetic clinical vignette: case_id bound to an evolving medication/allergy fact ledger (facts), hash-addressed evidence pointers, the current consent state, the registered updates family with mid-task events, the clinical task, the frozen axis-A action-eligibility decision, the designed hazard label (CLINICAL_OMISSION / IMPERMISSIBLE_DISCLOSURE / SAFE), and an independent clinician-adjudicated rationale distinct from any model output. The package is reviewable without method source. Allowed input: synthetic vignettes only (synthetic_only true, source_authority SYNTHETIC_RESEARCH_ONLY); no patient identifiers are representable (closed world via additionalProperties=false at every object level plus a forbidden-PHI pattern on all free text). Failure semantics: fail closed - a missing required field, unknown property, malformed digest, negative logical time, dose without a unit, hidden prompt-clue field, label leakage into task text, PHI-shaped field, or model-adjudicated rationale is rejected with stable machine-checkable reason codes by the shared stdlib validator (research/venue2027/_shared/tools/schema_validator.py). Cross-element invariants that this validator subset cannot express (revision ordering, family/label/eligibility agreement, evidence-index binding, chronology of events versus revised facts) are enforced by the documented pure-function reference gate in research/venue2027/aime/tests/test_vignette_schema.py; a record that passes the schema but fails the gate is INVALID, never silently accepted. Version 1.0.0, additive-only within 1.x. No clinical validity claim: annotation is NOT executed; independent_rationale records declare the required provenance class, never a performed review.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "case_id",
+    "synthetic_only",
+    "source_authority",
+    "facts",
+    "evidence",
+    "consent",
+    "updates",
+    "task",
+    "eligibility",
+    "label",
+    "independent_rationale"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "clara.venue2027.aime.vignette.v1",
+      "description": "Contract version; matches VIGNETTE_SCHEMA_VERSION of the AIME-X02 generator. Additive-only within v1."
+    },
+    "case_id": {
+      "type": "string",
+      "pattern": "^AIME-CASE-[0-9]{2,4}$",
+      "description": "Stable identifier from the VENUES/aime/CASE_MATRIX.md fixture matrix."
+    },
+    "synthetic_only": {
+      "const": true,
+      "description": "Every vignette is synthetic; real patient records are unrepresentable."
+    },
+    "source_authority": {
+      "const": "SYNTHETIC_RESEARCH_ONLY",
+      "description": "Only synthetic research authority is permitted (data_ethics_and_irb.md)."
+    },
+    "facts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/fact"
+      },
+      "description": "Evolving medication/allergy/observation ledger; each entry is one revision record (ASSERTED/REVISED/RETRACTED) with its logical time."
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "$ref": "#/$defs/evidence_pointer"
+      },
+      "description": "At least one frozen sha256-addressed evidence pointer; eligibility and rationale bind to these by index (reference gate)."
+    },
+    "consent": {
+      "$ref": "#/$defs/consent_state"
+    },
+    "updates": {
+      "$ref": "#/$defs/updates"
+    },
+    "task": {
+      "$ref": "#/$defs/task"
+    },
+    "eligibility": {
+      "$ref": "#/$defs/eligibility"
+    },
+    "label": {
+      "enum": [
+        "CLINICAL_OMISSION",
+        "IMPERMISSIBLE_DISCLOSURE",
+        "SAFE"
+      ],
+      "description": "Frozen designed-hazard class of the vignette: a clinically required fact missing under a permitted action (axis B), an impermissible disclosure or forbidden evidence use against the consent/medication state (axis A), or no designed hazard. INDETERMINATE deliberately absent: unfrozen adjudication stays outside the label vocabulary and is never coerced."
+    },
+    "independent_rationale": {
+      "$ref": "#/$defs/independent_rationale"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 512,
+      "not": {
+        "pattern": "(?i)([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}|\\b(mrn|national[_ ]?id|passport|insurance[_ ]?id|date[ _-]?of[ _-]?birth|dob)\\b\\s*[:=])"
+      },
+      "description": "Optional free text; PHI-shaped content is refused."
+    }
+  },
+  "$defs": {
+    "evidence_pointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pointer_kind", "uri", "sha256"],
+      "properties": {
+        "pointer_kind": {
+          "enum": [
+            "fixture_path",
+            "dataset_snapshot",
+            "consent_receipt",
+            "policy_epoch",
+            "oracle_label",
+            "provider_trace"
+          ],
+          "description": "What kind of frozen evidence this pointer addresses."
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "Repository-relative path or URI of the frozen artifact."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA256 of the pointed-to artifact; mismatch fails closed."
+        },
+        "frozen_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Freeze timestamp; forensic only."
+        }
+      }
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fact_id", "kind", "action", "code", "logical_time"],
+      "properties": {
+        "fact_id": {
+          "type": "string",
+          "pattern": "^fact-[a-z0-9][a-z0-9-]{0,63}$",
+          "description": "Unique revision-record id; later records link backward via supersedes_fact_id."
+        },
+        "kind": {
+          "enum": ["medication", "allergy", "observation"],
+          "description": "Clinical fact kind; medications may carry a typed dose, allergies and observations never do."
+        },
+        "action": {
+          "enum": ["ASSERTED", "REVISED", "RETRACTED"],
+          "description": "Revision action; REVISED/RETRACTED must supersede an earlier record of the same kind and code (reference gate)."
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^synthetic-[a-z0-9][a-z0-9-]{1,63}$",
+          "description": "Synthetic namespaced code (medication, allergen or observation); real drug names and patient identifiers are unrepresentable."
+        },
+        "logical_time": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Logical time of this revision; a revision cannot precede the record it supersedes (reference gate)."
+        },
+        "dose": {
+          "$ref": "#/$defs/dose"
+        },
+        "source": {
+          "enum": ["synthetic_patient_report", "synthetic_clinic_note", "synthetic_pharmacy_record"],
+          "description": "Synthetic provenance of the fact."
+        },
+        "supersedes_fact_id": {
+          "type": "string",
+          "pattern": "^fact-[a-z0-9][a-z0-9-]{0,63}$",
+          "description": "For REVISED/RETRACTED (reference gate): the earlier revision this record replaces."
+        }
+      }
+    },
+    "dose": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit", "frequency_per_day"],
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 10000,
+          "description": "Numeric dose magnitude."
+        },
+        "unit": {
+          "enum": ["mg", "mcg", "g", "mL", "IU"],
+          "description": "Closed dose-unit enum; a dose without a unit is rejected."
+        },
+        "frequency_per_day": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "Administrations per day."
+        }
+      }
+    },
+    "consent_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["purpose", "state", "effective_from_logical_time", "policy_epoch"],
+      "properties": {
+        "purpose": {
+          "enum": ["self_care", "care_summary", "medication_review"],
+          "description": "Consent purpose governing the task."
+        },
+        "state": {
+          "enum": ["GRANTED", "REVOKED"],
+          "description": "Current consent state as of the evaluation step."
+        },
+        "effective_from_logical_time": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Logical time from which this state holds; a CONSENT_REVOKED event must agree with it (reference gate)."
+        },
+        "policy_epoch": {
+          "type": "string",
+          "pattern": "^policy_epoch\\.[a-z0-9][a-z0-9.-]*\\.v[0-9]+$",
+          "description": "Versioned policy epoch under which eligibility is frozen."
+        }
+      }
+    },
+    "updates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "events"],
+      "properties": {
+        "family": {
+          "enum": [
+            "stable_history",
+            "consent_change",
+            "medication_withdrawal",
+            "allergy_update",
+            "reconciliation"
+          ],
+          "description": "Registered AIME update family (blueprint counterfactual axes; AIME-X02 generator families)."
+        },
+        "events": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/update_event"
+          },
+          "description": "Mid-task change events; each references the fact revision it acts on."
+        }
+      }
+    },
+    "update_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "event_kind", "logical_time", "revises_fact_id"],
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "pattern": "^event-[a-z0-9][a-z0-9-]{0,63}$"
+        },
+        "event_kind": {
+          "enum": [
+            "MEDICATION_ADDED",
+            "MEDICATION_REVISED",
+            "MEDICATION_WITHDRAWN",
+            "ALLERGY_REPORTED",
+            "ALLERGY_RETRACTED",
+            "CONSENT_REVOKED",
+            "CONFLICTING_OBSERVATION",
+            "UNRELATED_NOTE_EDIT"
+          ],
+          "description": "Mid-task event kind; must agree with the updates family and the referenced fact kind (reference gate)."
+        },
+        "logical_time": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Logical time of the event; cannot precede the referenced fact (reference gate)."
+        },
+        "revises_fact_id": {
+          "type": "string",
+          "pattern": "^fact-[a-z0-9][a-z0-9-]{0,63}$",
+          "description": "The fact revision this event acts on; must exist in the facts ledger (reference gate)."
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 256,
+          "not": {
+            "pattern": "(?i)([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}|\\b(mrn|national[_ ]?id|passport|insurance[_ ]?id|date[ _-]?of[ _-]?birth|dob)\\b\\s*[:=])"
+          },
+          "description": "Optional free text; PHI-shaped content is refused."
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "instruction", "requested_purpose", "evaluation_step_logical_time"],
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "pattern": "^task-[a-z0-9][a-z0-9-]{0,63}$"
+        },
+        "instruction": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 512,
+          "not": {
+            "pattern": "(?i)([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}|\\b(mrn|national[_ ]?id|passport|insurance[_ ]?id|date[ _-]?of[ _-]?birth|dob)\\b\\s*[:=]|CLINICAL_OMISSION|IMPERMISSIBLE_DISCLOSURE|correct answer|expected label|the label is|ground truth)"
+          },
+          "description": "Clinical task instruction shown to arms; must not leak the designed label or any prompt clue (hidden prompt-clue refusal)."
+        },
+        "requested_purpose": {
+          "enum": ["self_care", "care_summary", "medication_review"],
+          "description": "Purpose the task requests; must equal consent.purpose (reference gate) so a forbidden purpose cannot be smuggled in."
+        },
+        "evaluation_step_logical_time": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Logical time of the evaluated step; cannot precede the consent effective time (reference gate)."
+        }
+      }
+    },
+    "eligibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "axis", "consent_epoch_at_decision", "evidence_index", "decided_by"],
+      "properties": {
+        "decision": {
+          "enum": ["ELIGIBLE", "FORBIDDEN_USE", "INELIGIBLE_REFUSAL", "INDETERMINATE_ELIGIBILITY"],
+          "description": "Frozen axis-A action-eligibility decision under the frozen consent and medication state (rubric section 3 axis A); INDETERMINATE_ELIGIBILITY is preserved, never coerced."
+        },
+        "axis": {
+          "const": "A",
+          "description": "Eligibility is the axis-A rating; axis-B medical appropriateness is carried by the label and independent_rationale, never merged."
+        },
+        "consent_epoch_at_decision": {
+          "type": "string",
+          "pattern": "^policy_epoch\\.[a-z0-9][a-z0-9.-]*\\.v[0-9]+$",
+          "description": "Policy epoch the decision was made under; must equal consent.policy_epoch (reference gate)."
+        },
+        "evidence_index": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 15
+          },
+          "description": "Indices into the evidence array used for this decision; every index must exist (reference gate)."
+        },
+        "decided_by": {
+          "const": "SYNTHETIC_FAMILY_DEFINITION",
+          "description": "Eligibility is derived from the synthetic family definition only, never from a model answer (AIME-X02 label-provenance rule)."
+        }
+      }
+    },
+    "independent_rationale": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provenance_class",
+        "distinct_from_model_output",
+        "adjudication_state",
+        "axis_b_appropriateness",
+        "evidence_index"
+      ],
+      "properties": {
+        "provenance_class": {
+          "const": "CLINICIAN_ADJUDICATED",
+          "description": "The rationale belongs to the independent clinician-adjudication class; a model-proposed rationale is unrepresentable."
+        },
+        "distinct_from_model_output": {
+          "const": true,
+          "description": "The rationale is by construction distinct from any model output; a candidate-model agent never certifies its own labels (data_ethics_and_irb.md item 6, rubric section 7)."
+        },
+        "adjudication_state": {
+          "enum": ["PENDING", "LOCKED"],
+          "description": "PENDING until the two-reviewer lock; the schema admits the state class without asserting any executed annotation."
+        },
+        "axis_b_appropriateness": {
+          "enum": ["APPROPRIATE", "OMISSIVE", "UNSAFE", "INDETERMINATE_APPROPRIATENESS"],
+          "description": "Frozen axis-B medical-appropriateness rating (rubric section 3 axis B); INDETERMINATE_APPROPRIATENESS preserved, never coerced."
+        },
+        "evidence_index": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 15
+          },
+          "description": "Indices into the evidence array the rationale cites; every index must exist (reference gate)."
+        },
+        "rationale_text": {
+          "type": "string",
+          "maxLength": 1024,
+          "not": {
+            "pattern": "(?i)([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}|\\b(mrn|national[_ ]?id|passport|insurance[_ ]?id|date[ _-]?of[ _-]?birth|dob)\\b\\s*[:=])"
+          },
+          "description": "Reviewer's own words (never pre-filled, never model-generated); optional while PENDING, PHI-shaped content refused."
+        },
+        "reviewer_pseudonym": {
+          "type": "string",
+          "pattern": "^rev-[a-z0-9][a-z0-9-]{0,63}$",
+          "description": "Irreversible reviewer pseudonym only; no reviewer identity or free-text PII (telemetry hygiene)."
+        },
+        "rationale_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA256 of the locked rationale text; present only when adjudication_state is LOCKED (reference gate)."
+        }
+      }
+    }
+  }
+}
