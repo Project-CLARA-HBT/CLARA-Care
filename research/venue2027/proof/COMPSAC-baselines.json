@@ -24,7 +24,7 @@
     }
   ],
   "artifacts_sha256": {
-    "evaluation/venue2027/compsac/__init__.py": "5237d9adb3377f34cd3a14a0269bc39d85aab1064be19036c4a8d75aa2b6e31a",
+    "evaluation/venue2027/compsac/__init__.py": "19ff1d07f597e6be951071a9311736389a3c67e450a10dfea9b53c4f567276b1",
     "evaluation/venue2027/compsac/baselines.py": "8cfc5379975e6f7d5405c3d7086091dcb1f5c6d21d9722cddf74ab6eafbe7458",
     "evaluation/venue2027/compsac/test_baselines.py": "253190516eb0c2943365c7f79dac1923630f2240be29d5ca1635bfc536844e6b"
   },

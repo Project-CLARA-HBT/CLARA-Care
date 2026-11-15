@@ -26,6 +26,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-prior.json",
       "status": "PASS"
     },
+    "ACNS-rq_registry": {
+      "marked_at": "2026-11-15T04:33:15.005639+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-rq_registry.json",
+      "status": "PASS"
+    },
     "ACNS-scope": {
       "marked_at": "2026-11-14T18:51:15.478789+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-scope.json",
@@ -56,6 +61,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/AIME-prior.json",
       "status": "PASS"
     },
+    "AIME-rq_registry": {
+      "marked_at": "2026-11-15T04:33:15.198785+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/AIME-rq_registry.json",
+      "status": "PASS"
+    },
     "AIME-scope": {
       "marked_at": "2026-11-14T18:51:15.668933+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/AIME-scope.json",
@@ -64,6 +74,11 @@
     "AIME-threat": {
       "marked_at": "2026-11-14T19:48:31.232245+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/AIME-threat.json",
+      "status": "PASS"
+    },
+    "COMPSAC-baselines": {
+      "marked_at": "2026-11-15T04:33:24.056838+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/COMPSAC-baselines.json",
       "status": "PASS"
     },
     "COMPSAC-funding": {
@@ -81,6 +96,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/COMPSAC-prior.json",
       "status": "PASS"
     },
+    "COMPSAC-rq_registry": {
+      "marked_at": "2026-11-15T04:33:15.102342+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/COMPSAC-rq_registry.json",
+      "status": "PASS"
+    },
     "COMPSAC-scope": {
       "marked_at": "2026-11-14T18:51:15.573652+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/COMPSAC-scope.json",
@@ -89,6 +109,11 @@
     "COMPSAC-threat": {
       "marked_at": "2026-11-14T19:48:30.729488+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/COMPSAC-threat.json",
+      "status": "PASS"
+    },
+    "DIMVA-baselines": {
+      "marked_at": "2026-11-15T04:33:14.690297+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-baselines.json",
       "status": "PASS"
     },
     "DIMVA-funding": {
@@ -104,6 +129,11 @@
     "DIMVA-prior": {
       "marked_at": "2026-11-15T03:01:33.986706+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-prior.json",
+      "status": "PASS"
+    },
+    "DIMVA-rq_registry": {
+      "marked_at": "2026-11-15T04:33:15.384358+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-rq_registry.json",
       "status": "PASS"
     },
     "DIMVA-scope": {
@@ -129,6 +159,11 @@
     "DSN-prior": {
       "marked_at": "2026-11-15T04:03:21.018643+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DSN-prior.json",
+      "status": "PASS"
+    },
+    "DSN-rq_registry": {
+      "marked_at": "2026-11-15T04:33:14.797182+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DSN-rq_registry.json",
       "status": "PASS"
     },
     "DSN-scope": {
@@ -159,6 +194,11 @@
     "IFIP_SEC-prior": {
       "marked_at": "2026-11-15T02:34:42.492509+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-prior.json",
+      "status": "PASS"
+    },
+    "IFIP_SEC-rq_registry": {
+      "marked_at": "2026-11-15T04:33:14.903139+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-rq_registry.json",
       "status": "PASS"
     },
     "IFIP_SEC-scope": {
@@ -239,6 +279,11 @@
     "SACMAT-prior": {
       "marked_at": "2026-11-15T03:01:33.655047+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SACMAT-prior.json",
+      "status": "PASS"
+    },
+    "SACMAT-rq_registry": {
+      "marked_at": "2026-11-15T04:33:15.290417+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SACMAT-rq_registry.json",
       "status": "PASS"
     },
     "SACMAT-scope": {
