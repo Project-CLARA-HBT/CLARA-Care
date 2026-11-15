@@ -1,0 +1,48 @@
+{
+  "task_id": "SACMAT-prior",
+  "status": "PASS",
+  "source_sha_before": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "source_sha_after": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "changed_paths": [
+    "research/venue2027/sacmat/literature_matrix.csv",
+    "research/venue2027/sacmat/tests/test_literature_matrix.py",
+    "research/venue2027/proof/logs/SACMAT-prior.validator.log",
+    "research/venue2027/proof/logs/SACMAT-prior.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-prior.suite.log",
+    "research/venue2027/proof/logs/SACMAT-prior.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/comparator_matrix.py research/venue2027/sacmat/literature_matrix.csv",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-prior.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/sacmat/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-prior.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/ research/venue2027/sacmat/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-prior.suite.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/sacmat/ && ruff format --check research/venue2027/sacmat/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-prior.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/sacmat/literature_matrix.csv": "3cbafc2049399936362534e3c6049b2f6a9d8445e648b9ad78cb291eb82a32d5",
+    "research/venue2027/sacmat/tests/test_literature_matrix.py": "44348f1694a77bd233ce27291bf184b87fff30eb9eaa6519f5777a8f9fafec3e",
+    "research/venue2027/proof/logs/SACMAT-prior.validator.log": "56aac1900f15d629054630c9f76f239ef1c380d4a8b12d71cd7ee61733047dea",
+    "research/venue2027/proof/logs/SACMAT-prior.pytest.log": "99f8f8234f268758fab0b86c8b1f53d094f44e367653c6c8a5c2ec56d48e7b80",
+    "research/venue2027/proof/logs/SACMAT-prior.suite.log": "d33ffd87b1888abec7e10ea20d3304439aba7f5870235c5b699c8ee60179a287",
+    "research/venue2027/proof/logs/SACMAT-prior.ruff.log": "ce04ce92b16073000b77c97a42c00b98b96305692d9d5ed4dcfa5a9ca9ea62d6"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 prior-art implementation and verification ledger for SACMAT (PolicyTrace: Temporal Conformance Testing of Delegated Consent across Heterogeneous Policy Engines): literature_matrix.csv with 15 comparators carrying exactly comparator_matrix.REQUIRED_COLUMNS and >=40-char mechanism_analysis on every row. Literature comparators use ONLY real registry ids from MANIFESTS/literature_registry.json (xacml18, xacbench20, zanzibar19, cedar, openfga, opa, nistabac, elle20; each row cites its registered URL, enforced by test). Blueprint arms B0-B4 all present (B0 uniform random weak reference; B1 MC/DC XACML port of xacml18; B2 XACBench profile translation; B3 hypothesis 6.167.1 property-based stateful generator, tag v6.167.1 -> a8dcd7422a325926693b5464f73349e361562b7c verified live via git ls-remote 2026-11-15, ORIGINAL_UPSTREAM with code_url; B4 PolicyTrace temporal-conformance candidate recorded for falsification transparency, never presented as an external comparator) plus the two publication_overlap_registry.yaml sacmat baselines registered as B5 static policy diff and B6 single-engine testing (RQ3 competing-explanation arms). Executable engines pinned and re-verified live 2026-11-15: Cedar v4.14.1 -> 47d82a8293354f235d3f8d092c71071706401741, OpenFGA v1.22.1 -> 44054f542f64e9b9589dd26a595081b3d2cfd942, OPA v1.22.4 -> ba39415db4b3c90cd68942a74b3cc2223ec2b23c, elle v0.2.8 -> 2843344620c7d0653eef1c20728aa8580a05f505 (all ORIGINAL_UPSTREAM, available_code=yes with code_url); xacml18/xacbench20 (paper/standard, no official reference implementation), zanzibar19 (design paper) and nistabac (NIST standard) are honestly UNAVAILABLE_NOT_RUN, never replaced by a toy under the same name (execution contract rule 8); in-project arms do not exist yet in evaluation/venue2027 and are honestly UNAVAILABLE_NOT_RUN with registered parity fixtures. Shared validator comparator_matrix.py: ok=true, row_count=15, exit 0. Tests import the SHARED validator (never reimplement it): 14 tests pass - real CSV pass, exactly-REQUIRED_COLUMNS check, registry-id/coverage assertions, overlap-baseline representation, B4 candidate-label check, available_code=yes -> code_url check, registry-locator consistency, and five adversarial failures (fabricated id UNKNOWN_COMPARATOR_ID, missing link MISSING_SOURCE_LINK, thin mechanism MECHANISM_ANALYSIS_MISSING, available_code=yes without code_url AVAILABLE_CODE_WITHOUT_URL, ORIGINAL_UPSTREAM without code UPSTREAM_WITHOUT_CODE). Combined shared + sacmat suite: 199 passed; whole research/venue2027 tree: 627 passed. ruff check + format clean. No empirical numbers invented; all guarantees quoted from registry/ledger/blueprint entries. source_sha_after records the base SHA; the deliverable commit SHA is reported in the task handoff (sibling convention: a report cannot embed its own commit SHA)."
+}

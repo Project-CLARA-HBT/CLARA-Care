@@ -1,0 +1,34 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/_shared/harness.py": "f1b06644a6e336ec05130b85f2454c8a47ba61fd2edd9b5435090c9e48a9aff7",
+    "evaluation/venue2027/_shared/test_harness.py": "affca4380ea79c0b28b84b43005e067f7bd1839f88453904243f71acd683edfc",
+    "research/venue2027/proof/artifacts/run_bundle_sample.jsonl": "3ca1ddfc303d5569bdbb1bc0019884b0fd12c818fa3646ef95eca354831f131e"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/_shared/harness.py",
+    "evaluation/venue2027/_shared/test_harness.py",
+    "research/venue2027/proof/artifacts/run_bundle_sample.jsonl",
+    "research/venue2027/proof/logs/SH-run_harness.pytest.log",
+    "research/venue2027/proof/logs/SH-run_harness.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/test_harness.py evaluation/venue2027/_shared/test_schedules.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-run_harness.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/_shared/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-run_harness.ruff.log"
+    }
+  ],
+  "notes": "Deterministic resumable multi-arm harness: execute(campaign, arms, oracle, workers=1) -> RunBundle. Every planned arm x case pair recorded (6/6 in real sample incl. EXECUTION_ERROR + INDETERMINATE, never dropped); journal-based idempotent resumption (re-run executes only missing pairs, zero adapter calls when complete, no duplicate pair keys); SEED_DRIFT refused between arms; JOURNAL_SOURCE_MISMATCH refuses resume across moving SHA; records source_commit, python_version, harness_version, durations, mutually exclusive outcome counts (admit=2 reject=2 indeterminate=1 execution_error=1). 15 harness tests + 10 schedule tests pass; ruff clean.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "9f3c9fc6eb3df479bdd0011459d38f288f950a05",
+  "source_sha_before": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "status": "PASS",
+  "task_id": "SH-run_harness",
+  "unresolved": []
+}

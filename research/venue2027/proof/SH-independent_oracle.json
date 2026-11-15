@@ -1,0 +1,74 @@
+{
+  "task_id": "SH-independent_oracle",
+  "status": "PASS",
+  "source_sha_before": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "source_sha_after": "cb7b41dc2412808962108cfb3f04611152411a9c",
+  "changed_paths": [
+    "evaluation/venue2027/_shared/oracle_contract.py",
+    "evaluation/venue2027/_shared/test_oracle_contract.py",
+    "evaluation/venue2027/_shared/_fixtures/__init__.py",
+    "evaluation/venue2027/_shared/_fixtures/candidate_arm.py",
+    "evaluation/venue2027/_shared/_fixtures/candidate_reasons.py",
+    "evaluation/venue2027/_shared/_fixtures/candidate_alias.py",
+    "evaluation/venue2027/_shared/_fixtures/baseline_labels.py",
+    "research/venue2027/proof/SH-independent_oracle.json",
+    "research/venue2027/proof/logs/SH-independent_oracle.pytest.log",
+    "research/venue2027/proof/logs/SH-independent_oracle.ruff.log",
+    "research/venue2027/proof/logs/SH-independent_oracle.scan-clean.log",
+    "research/venue2027/proof/logs/SH-independent_oracle.scan-negative.log",
+    "research/venue2027/proof/logs/SH-independent_oracle.suite.log",
+    "research/venue2027/proof/logs/SH-independent_oracle.mypy.log",
+    "research/venue2027/proof/logs/SH-independent_oracle.pytest-apienv.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/test_oracle_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-independent_oracle.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/_shared/ --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-independent_oracle.ruff.log"
+    },
+    {
+      "argv": "python3 evaluation/venue2027/_shared/oracle_contract.py scan evaluation/venue2027/_shared/oracle_contract.py evaluation/venue2027/_shared/_fixtures/candidate_arm.py evaluation/venue2027/_shared/_fixtures/candidate_reasons.py evaluation/venue2027/_shared/_fixtures/candidate_alias.py evaluation/venue2027/_shared/_fixtures/baseline_labels.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-independent_oracle.scan-clean.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-independent_oracle.suite.log"
+    },
+    {
+      "argv": "uv run --frozen --extra dev --no-editable --project services/api mypy evaluation/venue2027/_shared/oracle_contract.py --ignore-missing-imports",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-independent_oracle.mypy.log"
+    },
+    {
+      "argv": "uv run --frozen --extra dev --no-editable --project services/api pytest -q evaluation/venue2027/_shared/test_oracle_contract.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-independent_oracle.pytest-apienv.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/_shared/oracle_contract.py": "c6dc9f80973cf110c75753a9a590975f38d4c60c7a588b3349d39c0bd9fc8417",
+    "evaluation/venue2027/_shared/test_oracle_contract.py": "29190a1b69183671f37fcd29acc751ec4493de83de0e8991e8b52a54c570f8f1",
+    "evaluation/venue2027/_shared/_fixtures/candidate_arm.py": "875622ac320b5ac3f7f24e54a72571102126dfed046ef063ccbb16c34b128ca1",
+    "evaluation/venue2027/_shared/_fixtures/candidate_reasons.py": "e5350765c849e480c57a883518f30a856f500bc5c4353dffef1c97ad0eab497e",
+    "evaluation/venue2027/_shared/_fixtures/candidate_alias.py": "4c5a903ac5364c20b6314188d6d7b91df29325841dcc34210b1845476c023811",
+    "evaluation/venue2027/_shared/_fixtures/baseline_labels.py": "a5ae4ace81eee79fa7dc9c28c7e838111e4a6bb0ef679a1136c1d9a00d558239",
+    "research/venue2027/proof/logs/SH-independent_oracle.pytest.log": "ac87e1d114bc5da7dd44f223cf00c22a045e85083baebcbc249b1b2718004f94",
+    "research/venue2027/proof/logs/SH-independent_oracle.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/SH-independent_oracle.scan-clean.log": "b43e9917f829151d2f1a4797fa8c0f5f81d80107a775a76797a5c8848e91ccd4",
+    "research/venue2027/proof/logs/SH-independent_oracle.scan-negative.log": "e3ef49c9d9f37f93bfe21387becfe7f8b5d5d7c152c235cbb4bd2077b6c45fd8",
+    "research/venue2027/proof/logs/SH-independent_oracle.suite.log": "66cf5d92b91282dadbf9ad9fd20b0cde436d85089f6ec1c64b5836d3952445cc",
+    "research/venue2027/proof/logs/SH-independent_oracle.mypy.log": "c009208c7be15aaabbb3887775796cf417e66f808036f631fd1773fa4660f71c",
+    "research/venue2027/proof/logs/SH-independent_oracle.pytest-apienv.log": "fb2932f8616f102ce719c9a481996b03e2641a765a385574b241209c9bac57e5"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Independent truth derivation boundary (oracle_contract.py v1.0.0): typed Case (validated mirror of case.v1.schema.json, fail-closed), OracleVerdict (ADMIT|REJECT|INDETERMINATE + stable reason_code + frozen evidence_refs), Oracle Protocol (evaluate(case)->OracleVerdict), DeterministicReferenceOracle driven ONLY by a frozen label table copied at construction (unlabeled -> INDETERMINATE/UNLABELED_CASE, never a silent rejection). assert_oracle_independence(oracle_path, candidate_paths) PARSES the oracle source with ast (never executes it) and refuses any static import, relative import or constant-string dynamic import resolving to a candidate module (CANDIDATE_IMPORT) or baseline label module (BASELINE_LABEL_EXCHANGE); non-constant dynamic imports fail closed with DYNAMIC_IMPORT_UNRESOLVABLE. HumanAdjudicationRecord (reviewer pseudonym, blinded=True required, UTC timestamp, verdict) resolves ambiguous clinical/SoK cases: assert_countable refuses INDETERMINATE without a blinded record (INDETERMINATE_UNADJUDICATED / INDETERMINATE_STILL_AMBIGUOUS) so it is never tallied as a safe rejection. REAL independence scan logged (scan-clean.log, reason_code OK, oracle_sha256 c6dc9f80973cf110c75753a9a590975f38d4c60c7a588b3349d39c0bd9fc8417) against all four fixture modules; documented negative-control scans (NOT PASS commands, expected exit 1) refused a rogue oracle importing candidate_arm (CANDIDATE_IMPORT) and one importing baseline_labels (BASELINE_LABEL_EXCHANGE) in SH-independent_oracle.scan-negative.log. 18 task tests (10 positive incl. determinism-on-frozen-case, oracle_decision.v1/case.v1 schema validation, blinded adjudication path; 8 negative incl. 4 parametrized candidate-import vectors, baseline labels, alias transitivity, dynamic-import fail-closed) + full shared suite 28 passed; mypy clean. STATE marking deferred to orchestrator (single-commit policy)."
+}

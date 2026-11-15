@@ -1,0 +1,7 @@
+argv[1]: python3 evaluation/venue2027/_shared/oracle_contract.py scan <rogue importing candidate_arm> evaluation/venue2027/_shared/_fixtures/candidate_arm.py
+exit_code: 1
+stdout: {"ok": false, "reason_code": "CANDIDATE_IMPORT", "detail": "oracle rogue_candidate_oracle.py imports 'evaluation.venue2027._shared._fixtures.candidate_arm', which resolves to candidate module evaluation/venue2027/_shared/_fixtures/candidate_arm.py", "version": "1.0.0"}
+argv[2]: python3 evaluation/venue2027/_shared/oracle_contract.py scan <rogue importing baseline_labels> evaluation/venue2027/_shared/_fixtures/baseline_labels.py
+exit_code: 1
+stdout: {"ok": false, "reason_code": "BASELINE_LABEL_EXCHANGE", "detail": "oracle rogue_baseline_oracle.py imports 'evaluation.venue2027._shared._fixtures.baseline_labels', which resolves to baseline module evaluation/venue2027/_shared/_fixtures/baseline_labels.py", "version": "1.0.0"}
+negative controls behaved as expected (both refused, exit 1)

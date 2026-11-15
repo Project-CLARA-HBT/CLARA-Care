@@ -1,0 +1,57 @@
+{
+  "task_id": "DIMVA-funding",
+  "status": "PASS",
+  "source_sha_before": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "source_sha_after": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "changed_paths": [
+    "research/venue2027/dimva/submission/funding_and_author_check.md",
+    "research/venue2027/dimva/tests/test_funding_check.py",
+    "research/venue2027/proof/DIMVA-funding.json",
+    "research/venue2027/proof/logs/DIMVA-funding.validator.log",
+    "research/venue2027/proof/logs/DIMVA-funding.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-funding.ruff.check.log",
+    "research/venue2027/proof/logs/DIMVA-funding.ruff.format.log",
+    "research/venue2027/proof/logs/DIMVA-funding.suite.log",
+    "research/venue2027/proof/logs/DIMVA-funding.shared_regression.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/submission_contract.py research/venue2027/dimva/submission/funding_and_author_check.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-funding.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dimva/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-funding.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/dimva/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-funding.ruff.check.log"
+    },
+    {
+      "argv": "ruff format --check research/venue2027/dimva/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-funding.ruff.format.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dimva/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-funding.suite.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-funding.shared_regression.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/dimva/submission/funding_and_author_check.md": "93d239528fa010cdedcd19ddecdc3b06087bc7f78dfe312fed0071cd5b60d897",
+    "research/venue2027/dimva/tests/test_funding_check.py": "e147065bd6a852f9dd7ac89acdb54a6af6d2b505cb4c0057abb49c0ae67a76d8"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P09 submission/funding readiness artifact for DIMVA 2027: research/venue2027/dimva/submission/funding_and_author_check.md declares all ten REQUIRED_FIELDS as labeled lines (cfp_url, template, page_limit, fee_or_registration, waiver_path, authorship_and_contribution, conflicts_policy, simultaneous_submission_policy, verification_status, decision). Every external CFP/fee/waiver/deadline fact is UNVERIFIED with reason 'live CFP not fetched; re-verify at submission'; the Springer LNCS posture (typically no separate publication/APC fee on the standard proceedings route, conference registration expected) is stated as a hedged candidate claim, not a verified fact; fee amounts and deadlines UNVERIFIED; no guaranteed waiver; decision is HOLD (not GO) because verification is pending; the action ledger states no submission, registration, fee, or waiver action was taken and human authorization is required; double submission is refused and the IFIP SEC detection-vs-rejection firewall plus the dimva study entry in publication_overlap_registry.yaml apply. Includes a sponsor/registration request packet outline (post-acceptance only). Machine-checked: shared submission_contract validate ok:true (exit 0); 17 new tests pass including adversarial cases (CONFIRMED without URL+date refused; CONFIRMED with URL but no date refused; guaranteed waiver without source refused; missing REQUIRED field refused; missing simultaneous-submission policy refused; empty document refused); DIMVA suite 47 passed; shared foundations regression 167 passed; ruff check + ruff format clean. No external submission or payment action was performed by this agent; artifact derives from the DIMVA SPEC and SH-venue_formats checklist only. Deliverable commit SHA reported in task handoff (cannot embed a commit's own SHA); source_sha_before/after record the worktree base."
+}

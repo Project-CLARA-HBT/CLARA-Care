@@ -1,0 +1,52 @@
+{
+  "task_id": "AIME-funding",
+  "status": "PASS",
+  "source_sha_before": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "source_sha_after": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "changed_paths": [
+    "research/venue2027/aime/submission/funding_and_author_check.md",
+    "research/venue2027/aime/tests/test_funding_check.py",
+    "research/venue2027/proof/AIME-funding.json",
+    "research/venue2027/proof/logs/AIME-funding.validator.log",
+    "research/venue2027/proof/logs/AIME-funding.pytest.log",
+    "research/venue2027/proof/logs/AIME-funding.ruff.log",
+    "research/venue2027/proof/logs/AIME-funding.suite.log",
+    "research/venue2027/proof/logs/AIME-funding.shared_regression.log",
+    "research/venue2027/proof/logs/AIME-funding.protocol.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/submission_contract.py research/venue2027/aime/submission/funding_and_author_check.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-funding.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/aime/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-funding.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/aime/ && ruff format --check research/venue2027/aime/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-funding.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/aime/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-funding.suite.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-funding.shared_regression.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/aime/submission/funding_and_author_check.md": "7982526188b3c7dffa0c99c8ca54b6b25bc30a6bd670c8617d12490b70804019",
+    "research/venue2027/aime/tests/test_funding_check.py": "bc492d7376d6d82483434c512d1994a0580fb0e85a1eaf04abe74aa4f3b8e33b"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P09 submission/funding readiness artifact for AIME 2027 (Springer LNCS/LNAI, Artificial Intelligence in Medicine): research/venue2027/aime/submission/funding_and_author_check.md declares all ten REQUIRED_FIELDS as labeled lines (cfp_url, template, page_limit, fee_or_registration, waiver_path, authorship_and_contribution, conflicts_policy, simultaneous_submission_policy, verification_status, decision). Every external CFP/deadline/fee/waiver fact is UNVERIFIED (live CFP not fetched; re-verify at submission); the Springer proceedings-series attribution is itself a candidate classification. decision is HOLD (not GO) because verification is pending; no waiver is claimed as guaranteed; the action ledger states no submission, registration, fee, or waiver action was taken and human authorization is required. States the P09 double-submission refusal policy and an explicit ethics boundary: the study is synthetic-only (synthetic-aime-2027), and any human-involved extension requires independent ethics review (IRB/REC or equivalent) before that work begins. Includes a sponsor/registration request packet outline (post-acceptance only). Machine-checked: shared submission_contract validate ok:true (exit 0); 16 new tests pass including adversarial cases (CONFIRMED without URL+date refused; guaranteed waiver without source refused; missing REQUIRED field refused; missing simultaneous-submission policy refused; CONFIRMED deadline without citation refused); AIME suite 65 passed; shared foundations regression 167 passed; ruff check+format clean. No external submission or payment action was performed by this agent; artifact derives from the AIME SPEC and SH-venue_formats checklist only. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

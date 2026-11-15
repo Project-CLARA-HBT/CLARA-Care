@@ -1,0 +1,45 @@
+{
+  "task_id": "ACNS-prior",
+  "status": "PASS",
+  "source_sha_before": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "source_sha_after": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "changed_paths": [
+    "research/venue2027/acns/literature_matrix.csv",
+    "research/venue2027/acns/tests/test_literature_matrix.py",
+    "research/venue2027/proof/ACNS-prior.json",
+    "research/venue2027/proof/logs/ACNS-prior.validator.log",
+    "research/venue2027/proof/logs/ACNS-prior.pytest.log",
+    "research/venue2027/proof/logs/ACNS-prior.suite.log",
+    "research/venue2027/proof/logs/ACNS-prior.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/comparator_matrix.py research/venue2027/acns/literature_matrix.csv",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-prior.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/acns/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-prior.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/ research/venue2027/acns/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-prior.suite.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/acns/ && ruff format --check research/venue2027/acns/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-prior.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/acns/literature_matrix.csv": "313e8928faa903ce1e751f391dd8ea7798d3163c43d888fe6c0e321fe99b0d5e",
+    "research/venue2027/acns/tests/test_literature_matrix.py": "f2644eb0ea9bb8c0ec86e5754648238dbd6b76a55c445f765b15467ed228b49d"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 prior-art implementation and verification ledger for ACNS (SoK: Evidence Boundaries of Attestation in Tool-Using AI Systems): literature_matrix.csv with 12 comparators carrying exactly comparator_matrix.REQUIRED_COLUMNS and >=40-char mechanism_analysis on every row. SoK framing enforced: evidence-boundary coverage rows rats9334 (RFC 9334/RATS normative evidence taxonomy, baseline B0 source), ct9162 (RFC 9162 Certificate Transparency: verifiable logs are not processing/execution proof), macaroons14 (context-bound authority is not attestation evidence), zanzibar19 (verification-time consistency boundary), agentdojo24/toolemu24/tauben25 (agent-benchmark observability categories, baseline B2; AgentDojo and ToolEmu upstream pinned and ORIGINAL_UPSTREAM with code_url, tau-bench honestly UNAVAILABLE_NOT_RUN), fhir5 (retrospective consent/audit/provenance lineage, baseline B1 companion); blueprint arms B0-rats-evidence-framework, B1-prov-provenance-audit, B2-agentdojo-toolemu-observability, and candidate B3-dual-human-coded-taxonomy (declared falsifiable, never presented as a runnable comparator, cross-study firewall E15-E22/IFIP/DIMVA recorded in-row). Registry rows cite exactly their MANIFESTS/literature_registry.json locators (verified by test); no implementation was fabricated - in-project arm ports do not exist in this worktree (evaluation/venue2027/acns absent) so all B-arms are honestly UNAVAILABLE_NOT_RUN, and available_code=yes appears only on rows with verified upstream code (agentdojo24, toolemu24, B2 arm recording upstream source availability). Shared validator: ok=true, row_count=12, exit 0. Tests: 23 passed (real-matrix pass, exact REQUIRED_COLUMNS, registry-locator consistency, SoK framing - coverage-not-mechanism language, falsifiable candidate, evidence-boundary class coverage, no empirical values, cross-study firewall, contract SOK declaration - plus adversarial failures: fabricated id UNKNOWN_COMPARATOR_ID, missing link MISSING_SOURCE_LINK, thin mechanism MECHANISM_ANALYSIS_MISSING, available_code=yes without code_url AVAILABLE_CODE_WITHOUT_URL, ORIGINAL_UPSTREAM without code UPSTREAM_WITHOUT_CODE). Combined shared + acns suite: 229 passed. ruff check + format clean. No empirical numbers, no clinical claims, no real PHI; source_sha_after records the parent SHA of the single task commit per sibling convention (AIME-prior/IFIP_SEC-prior)."
+}

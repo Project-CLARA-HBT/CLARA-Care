@@ -1,0 +1,57 @@
+{
+  "task_id": "PST-funding",
+  "status": "PASS",
+  "source_sha_before": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "source_sha_after": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "changed_paths": [
+    "research/venue2027/pst/submission/funding_and_author_check.md",
+    "research/venue2027/pst/tests/test_funding_check.py",
+    "research/venue2027/proof/PST-funding.json",
+    "research/venue2027/proof/logs/PST-funding.validator.log",
+    "research/venue2027/proof/logs/PST-funding.pytest.log",
+    "research/venue2027/proof/logs/PST-funding.ruff.check.log",
+    "research/venue2027/proof/logs/PST-funding.ruff.format.log",
+    "research/venue2027/proof/logs/PST-funding.shared_regression.log",
+    "research/venue2027/proof/logs/PST-funding.report_validate.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/submission_contract.py research/venue2027/pst/submission/funding_and_author_check.md",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-funding.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/pst/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-funding.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/pst/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-funding.ruff.check.log"
+    },
+    {
+      "argv": "ruff format --check research/venue2027/pst/tests/test_funding_check.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-funding.ruff.format.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-funding.shared_regression.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/pst/submission/funding_and_author_check.md": "1e94b44add4b2ce6faa00553333a2f1c5d80b3fa56ecf50363e37f0ad6c81eda",
+    "research/venue2027/pst/tests/test_funding_check.py": "5e045c4080d70e4ba36f23dd9b357ddfd5acbc5d8a53086d81a1ce4f2dd05d3b",
+    "research/venue2027/proof/logs/PST-funding.validator.log": "c20a08d6161c5b3f02266f66206ccc5a29843e1dc0d731b32d61dc23c360104f",
+    "research/venue2027/proof/logs/PST-funding.pytest.log": "e915b21e1eb0672738c06e418f82a566418c43451fd59d6d003ca146aea1709e",
+    "research/venue2027/proof/logs/PST-funding.ruff.check.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/PST-funding.ruff.format.log": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50",
+    "research/venue2027/proof/logs/PST-funding.shared_regression.log": "4f11abd5b09b3bf2725abc75ad6ec3733d01ec910e0e4146b9700639fba4a732"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P09 funding/author check for IEEE PST 2027 (Privacy, Security and Trust), paper 'ReceiptMin: Measuring Forensic Reconstructability under Purpose-Bound Audit Minimization'. Every fee amount, deadline, tier and waiver path marked UNVERIFIED (live CFP at pstnet.ca/pst2027/callforpapers.html not fetched; no network access); candidate values (IEEE double-blind 2-column template, 6-page short / 10-page regular, 2027-04-10 deadline, author registration mandatory with fee TBA, remote presentation allowed) recorded as candidate-spec only; no guaranteed waiver — author-rate reduction and institutional underwriting are requests, not entitlements; decision: HOLD; no submission, account, registration or fee action taken, human authorization required; double/simultaneous submission prohibited, P09 STOP signal (dual archival submission or invented acceptance) acknowledged; PoPETs cache-privacy overlap firewall per publication_overlap_registry.yaml and novelty_contract.md restated. Shared validator submission_contract.validate_submission_check: ok=true (exit 0); 24/24 tests pass incl. adversarial mutations (CONFIRMED_WITHOUT_CITATION, UNVERIFIED_WAIVER_GUARANTEE, MISSING_FIELD, MISSING_SIMULTANEOUS_POLICY, empty doc); PST suite 55 passed; shared foundations regression 167 passed; ruff check + format clean. Deliverable commit SHA reported in task handoff (cannot embed a commit's own SHA)."
+}

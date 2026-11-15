@@ -1,0 +1,9 @@
+Using CPython 3.12.3 interpreter at: /home/clue/.local/bin/python
+Creating virtual environment at: services/api/.venv
+   Building clara-api @ file:///dev/shm/clara_worktrees/w3_sh-independent-oracle/services/api
+      Built clara-api @ file:///dev/shm/clara_worktrees/w3_sh-independent-oracle/services/api
+warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+Installed 63 packages in 1.94s
+Success: no issues found in 1 source file

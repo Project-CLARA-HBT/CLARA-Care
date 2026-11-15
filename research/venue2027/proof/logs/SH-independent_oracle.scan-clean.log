@@ -1,0 +1,36 @@
+{
+  "candidate_paths": [
+    "evaluation/venue2027/_shared/_fixtures/candidate_arm.py",
+    "evaluation/venue2027/_shared/_fixtures/candidate_reasons.py",
+    "evaluation/venue2027/_shared/_fixtures/candidate_alias.py",
+    "evaluation/venue2027/_shared/_fixtures/baseline_labels.py"
+  ],
+  "detail": "clean scan: 19 static import target(s) parsed from oracle_contract.py, no candidate/baseline module overlap",
+  "dynamic_import_expressions": [],
+  "imported_module_names": [
+    "__future__",
+    "__future__.annotations",
+    "argparse",
+    "ast",
+    "collections.abc",
+    "collections.abc.Mapping",
+    "collections.abc.Sequence",
+    "dataclasses",
+    "datetime",
+    "hashlib",
+    "json",
+    "pathlib",
+    "pathlib.Path",
+    "re",
+    "sys",
+    "typing",
+    "typing.Any",
+    "typing.Protocol",
+    "typing.runtime_checkable"
+  ],
+  "ok": true,
+  "oracle_path": "evaluation/venue2027/_shared/oracle_contract.py",
+  "oracle_sha256": "c6dc9f80973cf110c75753a9a590975f38d4c60c7a588b3349d39c0bd9fc8417",
+  "reason_code": "OK",
+  "version": "1.0.0"
+}

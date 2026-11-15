@@ -1,0 +1,39 @@
+{
+  "task_id": "DIMVA-overlap",
+  "status": "PASS",
+  "source_sha_before": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "source_sha_after": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "changed_paths": [
+    "research/venue2027/dimva/overlap_audit.md",
+    "research/venue2027/dimva/tests/test_overlap_audit.py",
+    "research/venue2027/proof/DIMVA-overlap.json",
+    "research/venue2027/proof/logs/DIMVA-overlap.validator.log",
+    "research/venue2027/proof/logs/DIMVA-overlap.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-overlap.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/overlap_contract.py research/venue2027/dimva/overlap_audit.md --venue dimva",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-overlap.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dimva/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-overlap.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/dimva/tests/test_overlap_audit.py && ruff format --check research/venue2027/dimva/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-overlap.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/dimva/overlap_audit.md": "04551ce0e00cd9390d2cfd9e9cdabb9d9b4e189e58181b777af3caf24c4b1cb1",
+    "research/venue2027/dimva/tests/test_overlap_audit.py": "08a8d041e7121e834d90f418ea2b1c21b6e34d36af7eedecd44a73e8ec4eaee3"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 overlap gate for venue dimva: comparison vs all eight sibling 2027 venues (compsac, popets, aime, ifip_sec, sacmat, acns, dsn, pst) and historical GLHS R4 / GovRed / GovMut / CareGuard / HEALTHINF; artifact reuse table with no reused raw case IDs, labels, figures, or endpoints; frozen E15-E22 outcomes explicitly NOT reused as new independent evidence (both directions per C8); DIMVA-IFIP SEC contrast (detection over event streams vs verification-time prevention). Shared validator overlap_contract.py ok:true; 14/14 tests pass including three adversarial mutants (missing sibling / missing frozen refusal / missing decision) each failing with stable reason codes. Decision: PASS. source_sha_after is the worktree HEAD at emit time; the deliverable commit SHA is reported in the task handoff (a commit cannot embed its own SHA)."
+}

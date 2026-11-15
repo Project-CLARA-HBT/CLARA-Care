@@ -1,0 +1,48 @@
+{
+  "task_id": "DIMVA-prior",
+  "status": "PASS",
+  "source_sha_before": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "source_sha_after": "43e964c7c4c9d4d5ca47007c30e910fcf7e5314d",
+  "changed_paths": [
+    "research/venue2027/dimva/literature_matrix.csv",
+    "research/venue2027/dimva/tests/test_literature_matrix.py",
+    "research/venue2027/proof/logs/DIMVA-prior.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-prior.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-prior.suite.log",
+    "research/venue2027/proof/logs/DIMVA-prior.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/comparator_matrix.py research/venue2027/dimva/literature_matrix.csv",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-prior.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dimva/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-prior.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/ research/venue2027/dimva/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-prior.suite.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/dimva/tests/test_literature_matrix.py research/venue2027/_shared/tools/comparator_matrix.py && ruff format --check research/venue2027/dimva/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-prior.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/dimva/literature_matrix.csv": "4b0ac181f73da023c325e8598a191763b84b7bd5cd53333fa9a6ec7626304641",
+    "research/venue2027/dimva/tests/test_literature_matrix.py": "522b99ffcf12cef0f14a46a781e296587905dab25f7065727cc01bd1cc59623f",
+    "research/venue2027/proof/logs/DIMVA-prior.pytest.log": "f45d543b12d2c6cff965f73c61374f00ccd4d88266b4483358289f228f6eebcc",
+    "research/venue2027/proof/logs/DIMVA-prior.ruff.log": "ce04ce92b16073000b77c97a42c00b98b96305692d9d5ed4dcfa5a9ca9ea62d6",
+    "research/venue2027/proof/logs/DIMVA-prior.suite.log": "240b4008888475fa28d56fb9c21cae4f948378e3f389b1537242bd066ae42c8f",
+    "research/venue2027/proof/logs/DIMVA-prior.validator.log": "c4186f957f84beaf1d1f17bc4742608b46ec5fee30e88ba9c2f1700b198474ac"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 prior-art ledger: literature_matrix.csv with 12 comparators - 7 real literature-registry ids (sommer10, agentdojo24, toolemu24, tauben25, injecagent24, zanzibar19, macaroons14; locators pulled mechanically from MANIFESTS/literature_registry.json and re-verified live via HTTP 200 on 2026-11-15) plus blueprint arms B0-B4 mapped to shared-baseline-registry entries static-threshold-denied-per-window, temporal-rule-sequence-signature, isolation-forest-privacy-minimized, gradient-boosted-trees-controlled-features. Verified upstream code: scikit-learn tag 1.8.0 (tag object 63acddb6 -> commit 646da0f0, BSD-3-Clause), agentdojo tag v0.1.35 -> a75aba76 (MIT), ToolEmu main HEAD ac4a7ab7 (Apache-2.0), tau-bench main HEAD 59a200c6 (MIT, no release tags exist), libmacaroons rescrv repo (macaroons14 reference implementation) - all resolved live via GitHub API on 2026-11-15 and recorded ORIGINAL_UPSTREAM, available_code=yes with code_url; sommer10/zanzibar19 are papers with no official implementation and B0/B1/B4 do not exist yet in evaluation/venue2027 (absent in this worktree), all honestly UNAVAILABLE_NOT_RUN with registered parity fixtures - never replaced by a toy under the same name (execution contract rule 8). Primary framing is DETECTION (campaign-level AUCPR at a fixed false-positive budget over minimal event streams), asserted by test_primary_framing_is_detection_not_prevention and test_matrix_makes_no_prevention_or_admission_claim; the IFIP SEC four-part prevention boundary and the glhs-journal archive refusal (no E15-E22 number re-labeled in either direction) are asserted from the novelty contract, threat model and publication registry without adding a non-registry row. Every row carries >=40-char mechanism_analysis; registry rows cite the exact registered locator. Test file imports the SHARED validator comparator_matrix (never reimplements it): the real CSV passes and adversarial tampering (fabricated comparator id, missing source link, thin mechanism analysis, available_code=yes without code_url, ORIGINAL_UPSTREAM without code, in-place mutation of a real row) fails loudly with stable reason codes - 23 tests pass (validator+suite: 220 pass); ruff check + format clean; shared validator exit 0 with ok:true, row_count 12. No empirical numbers invented; all guarantees quoted from registry/ledger/contract entries; source_sha_after records the work commit whose tree contains the hashed artifacts (sibling-convention: report JSON committed alongside in the same single task commit)."
+}

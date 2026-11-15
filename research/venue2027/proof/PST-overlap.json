@@ -1,0 +1,45 @@
+{
+  "task_id": "PST-overlap",
+  "status": "PASS",
+  "source_sha_before": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "source_sha_after": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "changed_paths": [
+    "research/venue2027/pst/overlap_audit.md",
+    "research/venue2027/pst/tests/test_overlap_audit.py",
+    "research/venue2027/proof/PST-overlap.json",
+    "research/venue2027/proof/logs/PST-overlap.validator.log",
+    "research/venue2027/proof/logs/PST-overlap.pytest.log",
+    "research/venue2027/proof/logs/PST-overlap.ruff.log",
+    "research/venue2027/proof/logs/PST-overlap.claim_overlap.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/overlap_contract.py research/venue2027/pst/overlap_audit.md --venue pst",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-overlap.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/pst/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-overlap.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/pst/tests/test_overlap_audit.py && ruff format --check research/venue2027/pst/tests/test_overlap_audit.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-overlap.ruff.log"
+    },
+    {
+      "argv": "python3 - # claim_overlap.py executable check against research/venue2027/_shared/study_claims.json: assert pst shares no question+endpoint with any other venue and reuses no archive",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-overlap.claim_overlap.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/pst/overlap_audit.md": "9a9fe75e9ab110275bf08b402a283095fba94329a60cd92eb4fba44a074bb136",
+    "research/venue2027/pst/tests/test_overlap_audit.py": "7a1531053ffded98fe01d0d68dc9c537fa2d52dc28003c7c1c2f021a703a7f26"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 overlap gate: comparison vs all nine 2027 venues and historical GLHS R4 / GovRed / GovMut / CareGuard / HEALTHINF; artifact-reuse table (no reused raw case IDs, labels, figures, endpoints); frozen E15-E22 outcomes explicitly NOT reused as new independent evidence; PST-PoPETs contrast resolved by post-hoc forensic reconstruction (minimized audit receipts, compromised read-only audit reader with auxiliary joins, artifact synthetic-pst-2027) vs PoPETs future-context disclosure (pre-dispatch outbound model dispatches after t_r, artifact synthetic-popets-2027). Shared document validator overlap_contract.py --venue pst: ok with zero reason codes. Executable claim_overlap.py check over study_claims.json: pst shares no question+endpoint pair with any other venue, reuses_archive=[], zero findings. Decision: PASS. Deliverable commit SHA reported in task handoff (cannot embed a commit's own SHA)."
+}

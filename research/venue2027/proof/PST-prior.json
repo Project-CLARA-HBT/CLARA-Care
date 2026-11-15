@@ -1,0 +1,46 @@
+{
+  "task_id": "PST-prior",
+  "status": "PASS",
+  "source_sha_before": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "source_sha_after": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+  "changed_paths": [
+    "research/venue2027/pst/literature_matrix.csv",
+    "research/venue2027/pst/tests/test_literature_matrix.py",
+    "research/venue2027/proof/logs/PST-prior.pytest.log",
+    "research/venue2027/proof/logs/PST-prior.ruff.log",
+    "research/venue2027/proof/logs/PST-prior.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/comparator_matrix.py research/venue2027/pst/literature_matrix.csv",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-prior.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/pst/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-prior.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/pst/tests/test_literature_matrix.py research/venue2027/_shared/tools/comparator_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-prior.ruff.log"
+    },
+    {
+      "argv": "ruff format --check research/venue2027/pst/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-prior.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/pst/literature_matrix.csv": "48121e65a6b44e6db45f00a0286a6800c04c18a2ec2df05871972d8bab20b16e",
+    "research/venue2027/pst/tests/test_literature_matrix.py": "4c328ff1cb116f41d637f4e72207a1826f9327e5906eb91f4e323e05a3a1ffc4",
+    "research/venue2027/proof/logs/PST-prior.pytest.log": "cea842628b61bdacdee6d97d1d94d86280b2949a61de3960c0b256d522cd79e1",
+    "research/venue2027/proof/logs/PST-prior.ruff.log": "ce04ce92b16073000b77c97a42c00b98b96305692d9d5ed4dcfa5a9ca9ea62d6",
+    "research/venue2027/proof/logs/PST-prior.validator.log": "56aac1900f15d629054630c9f76f239ef1c380d4a8b12d71cd7ee61733047dea"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 prior-art ledger for ReceiptMin: literature_matrix.csv with 15 comparators - 10 real literature-registry ids pulled mechanically from MANIFESTS/literature_registry.json and re-verified live via HTTP 200 on 2026-11-15 (ct9162, macaroons14, zanzibar19, fhir5, muse, rats9334, nistabac, who21, openfga, injecagent24) plus blueprint arms B0-B4 (B4 = ReceiptMin candidate, recorded for falsification transparency, never presented as an external comparator) mapped to shared-baseline-registry entries full-plaintext-append-only-log, hash-only-log-digests, encrypted-log-role-gated-deletion, ct-merkle-append-only-integrity. Verified upstream code: certificate-transparency-go HEAD bc63c417c7be and transparency-dev/merkle HEAD c39fbf350a40 (Apache-2.0), libmacaroons HEAD ca0211d8633c (BSD-3-Clause) with pymacaroons v0.13.0 -> 06b55110eda2 (MIT) cross-check, OpenFGA v1.22.1 -> 44054f542f64e9b9589dd26a595081b3d2cfd942 (Apache-2.0) - all available_code=yes with code_url; B3 FAITHFUL_PORT pins the RFC 9162 text SHA256 a0e432ce7580c99fcc8faf0cf3f6191f9ce6b4864f949158e020d4ecb295081f recomputed live from rfc-editor.org, matching the shared baseline registry pin; zanzibar19/fhir5/muse/rats9334/nistabac/who21/injecagent24 are design papers, standards or governance documents with no official runnable implementation to cite (honestly UNAVAILABLE_NOT_RUN, never replaced by a toy under the same name per execution contract rule 8); B0/B1/B2/B4 in-project arms do not exist yet in evaluation/venue2027 and are honestly UNAVAILABLE/UNAVAILABLE_NOT_RUN with registered parity fixtures. Every row carries a >=40-char mechanism_analysis; registry rows cite the exact registered locator. Primary endpoint framing asserted in tests: forensic reconstructability score on the reconstruction-versus-linkability frontier (RQ1 answerability + RQ2 exposure bounds against the independent oracle ledger), explicitly not a disclosure rate or any sibling-venue endpoint, and NOT a new access-control or authorization enforcement mechanism (novelty-contract boundary: B4 is an evaluation instrument; forbidden claim patterns rejected). Test file imports the SHARED validator comparator_matrix (never reimplements it): real CSV passes and adversarial tampering (unknown comparator id, available_code=yes without code_url, thin mechanism_analysis, ORIGINAL_UPSTREAM without code) fails loudly with stable reason codes - 15 tests pass; ruff check + format clean; shared validator exit 0 with ok:true, row_count 15. No empirical numbers invented; all guarantees quoted from registry/ledger entries; ledger statuses remain UNVERIFIED with primary_source_read=false pending primary-source review sign-off. source_sha_after records the parent SHA of the single task commit per sibling convention (AIME-prior / COMPSAC-prior / POPETS-prior): the task commit itself contains the report JSON alongside the hashed artifacts."
+}
