@@ -381,6 +381,16 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-prior.json",
       "status": "PASS"
     },
+    "PST-rq_registry": {
+      "marked_at": "2026-11-15T11:50:58.512055+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-rq_registry.json",
+      "status": "PASS"
+    },
+    "PST-schema": {
+      "marked_at": "2026-11-15T11:50:58.620699+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-schema.json",
+      "status": "PASS"
+    },
     "PST-scope": {
       "marked_at": "2026-11-14T18:51:15.961247+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-scope.json",
