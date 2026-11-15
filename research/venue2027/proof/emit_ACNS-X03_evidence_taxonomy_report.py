@@ -1,0 +1,140 @@
+"""Emit the ACNS-X03_evidence_taxonomy proof report via agent_protocol.build_report.
+
+Allowed input: this worktree's git state and the on-disk artifacts produced by
+the ACNS-X03_evidence_taxonomy task. No network access.
+
+Failure semantics: exits non-zero if report construction or validation fails.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "_shared" / "tools"))
+
+import agent_protocol as ap  # noqa: E402
+
+REPO = Path(__file__).resolve().parents[3]
+TASK = "ACNS-X03_evidence_taxonomy"
+
+BASE_SHA = "687a6f56def769fc930e0ee94b00476eecc1c69b"
+
+CHANGED = [
+    "research/venue2027/acns/protocols/evidence_taxonomy.yaml",
+    "research/venue2027/acns/tests/test_evidence_taxonomy.py",
+    "research/venue2027/proof/ACNS-X03_evidence_taxonomy.json",
+    "research/venue2027/proof/emit_ACNS-X03_evidence_taxonomy_report.py",
+    "research/venue2027/proof/logs/ACNS-X03_evidence_taxonomy.pytest.log",
+    "research/venue2027/proof/logs/ACNS-X03_evidence_taxonomy.ruff.log",
+]
+
+COMMANDS = [
+    {
+        "argv": "python3 -m pytest -q research/venue2027/acns/tests/test_evidence_taxonomy.py",
+        "exit_code": 0,
+        "log_path": "research/venue2027/proof/logs/ACNS-X03_evidence_taxonomy.pytest.log",
+    },
+    {
+        "argv": "uvx ruff@0.7.1 check research/venue2027/acns/ --config ruff.toml",
+        "exit_code": 0,
+        "log_path": "research/venue2027/proof/logs/ACNS-X03_evidence_taxonomy.ruff.log",
+    },
+]
+
+
+def main() -> int:
+    report = ap.build_report(
+        task_id=TASK,
+        status="PASS",
+        source_sha_before=BASE_SHA,
+        source_sha_after=BASE_SHA,
+        changed_paths=CHANGED,
+        commands=COMMANDS,
+        artifact_paths=CHANGED[:2],
+        repo=REPO,
+        unresolved=[],
+        baseline_parity="NOT_APPLICABLE",
+        notes=(
+            "ACNS-X03_evidence_taxonomy (Phase P04, RQ1): pre-registered "
+            "evidence-boundary taxonomy node set for the SoK's evidence-to-claim "
+            "lattice at research/venue2027/acns/protocols/evidence_taxonomy.yaml "
+            "(contract clara.venue2027.acns.evidence-taxonomy.v1). Distinguishes "
+            "the five mandated evidence classes - sender_known_bytes (levels "
+            "ASSUMED/ASSEMBLED), transport_delivery (DISPATCHED), "
+            "provider_signed_receipt (ACKNOWLEDGED), execution (EXECUTED) and "
+            "persisted_side_effect (COMMITTED) - as node_classes, with one node "
+            "per lattice level: N0_ASSUMED, N1_ASSEMBLED, N2_DISPATCHED, "
+            "N3_ACKNOWLEDGED, N4_EXECUTED, N5_COMMITTED (6 nodes). Every node "
+            "carries id, definition, trust_root, observer_location, proves, "
+            "does_not_prove and citations into a registry of three real upstream "
+            "sources: RFC 9334 (RATS: Attester/Evidence/Verifier/Relying Party; "
+            "Evidence must originate from an attesting environment), RFC 9162 "
+            "(Certificate Transparency v2: append-only Merkle log, inclusion "
+            "proofs; proves log integrity, never execution) and W3C PROV-DM "
+            "(wasGeneratedBy/used/wasAttributedTo retrospective lineage, "
+            "baseline B1). Ten edges, each declaring trust assumptions (DoD "
+            "item 1), boundary_condition, failure_family and status: four valid "
+            "(measured assembly under TC1/TC3; sender-side dispatch; "
+            "receipt+TEE gives EXECUTED exactly for the attested binary/input "
+            "pair; execution+service-verified record gives COMMITTED with "
+            "scope-matched cap) and six invalid implication candidates bound to "
+            "threat-model gap register boundaries G1/G2/G3/G7 and failure "
+            "families (E03 transport-ack->receipt, G1/replay; E04 receipt->"
+            "execution, G2/model_agency; E05 execution->committed, G3; E06 "
+            "transport->inference, G1+G2 composition; E07 hash-only token as "
+            "hardware attestation, G7/insider_or_observer; E08 receipt->"
+            "committed, G2+G3 composition). Paired controls: two adversarial "
+            "controls frozen REJECT before execution (hash-only token miscalled "
+            "hardware attestation; transport-ack implies inference - the task's "
+            "two mandated negative fixtures) and two positive controls capped "
+            "ACCEPT_AT_L3/ACCEPT_AT_L4 with explicit no-extension caps; labels "
+            "are design-time TC5 outputs, never repaired post hoc. Trusted "
+            "components TC1-TC6 align with threat_model.md section 3; "
+            "execution_status disclaims all empirical values (routing via "
+            "artifacts/venue2027/acns/<run_id>/manifest.json after ACNS-freeze); "
+            "mechanism_claim=none_declared enforces the SoK no-new-mechanism "
+            "boundary of novelty_contract.md section 1 (taxonomy extends RFC "
+            "9334 observation/trust axes to tool-dispatch/provider-receipt/"
+            "execution/commit classes RFC 9334 does not enumerate; not a "
+            "restatement - per-level trust roots and observer locations are "
+            "new coding axes; falsification rule honored). Test driver "
+            "research/venue2027/acns/tests/test_evidence_taxonomy.py (stdlib-"
+            "only besides pytest; PyYAML if importable else restricted fallback "
+            "block scanner, both paths exercised - 24 tests) machine-checks: "
+            "document loads with contract/schema_version/contribution_class/"
+            "mechanism_claim; exact six-level lattice_levels tuple; all five "
+            "node classes present with definitions; every node has trust_root + "
+            "observer_location + proves/does_not_prove (substantive, "
+            "does-not-prove states exclusions) + registry-resolved citations; "
+            "every edge has trust_assumptions + boundary_condition + valid/"
+            "invalid status + registered endpoints; invalid edges name a "
+            "registered threat-model family; full adjacent chain walkable "
+            "ASSUMED->COMMITTED; mandated invalid edges E03/E04/E06 present; "
+            "adversarial controls REJECT with hash-only and transport-inference "
+            "coverage; positive controls capped; citations real (RFC 9334/9162/"
+            "PROV-DM identifiers, https urls); no node text claims a mechanism "
+            "(regex gate over definition/proves/does_not_prove); TC alignment "
+            "with threat_model.md; G1-G9 register presence; execution_status "
+            "empirical_values=none; provenance base_sha full 40-hex. 24 passed; "
+            "uvx ruff@0.7.1 check clean on research/venue2027/acns/. "
+            "baseline_parity=NOT_APPLICABLE (coding instrument, not a decision "
+            "comparator; baseline arms B0-B3 enter via RQ1 executed coding "
+            "sessions downstream). source_sha_after records the base commit "
+            "687a6f56 per the established sibling convention; the single task "
+            "commit SHA is created immediately after this report and recorded "
+            "in the commit body. Downstream consumers: ACNS-X07_witness_gallery "
+            "(witness targets per invalid edge), ACNS-X08_taxonomy_graph, RQ1 "
+            "lattice-coverage coding, ACNS-X10_sok_synthesis."
+        ),
+    )
+    out = REPO / "research" / "venue2027" / "proof" / "ACNS-X03_evidence_taxonomy.json"
+    out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    result = ap.validate_report(report, repo=REPO, expected_task_id=TASK)
+    print(json.dumps(result.to_dict(), indent=2))
+    return 0 if result.ok else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

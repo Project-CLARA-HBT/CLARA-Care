@@ -1,0 +1,43 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/dimva/feature_encoding.py": "cd44b2c3ba23e58db8228237aecdf15c54c3a0a434dd4d155c72b79fb87a7df1",
+    "evaluation/venue2027/dimva/test_feature_encoder.py": "274e2b8fd6cc54cca34becaed30e8cead0b63b8f472e255c5b46dd018fbf4954",
+    "research/venue2027/proof/logs/DIMVA-X04_feature_encoder.pytest.log": "f18f49ff997cf48f6ca5ee9f1a7a56f7ad913f19e3209fa5dd2c717ce84c86ea",
+    "research/venue2027/proof/logs/DIMVA-X04_feature_encoder.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a",
+    "research/venue2027/proof/logs/DIMVA-X04_feature_encoder.suite.log": "e33e3a412ab2353fbbec4011f25c0b36d8b936c39078d5052781192911b99a59"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/dimva/feature_encoding.py",
+    "evaluation/venue2027/dimva/test_feature_encoder.py",
+    "research/venue2027/proof/DIMVA-X04_feature_encoder.json",
+    "research/venue2027/proof/logs/DIMVA-X04_feature_encoder.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-X04_feature_encoder.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-X04_feature_encoder.suite.log",
+    "research/venue2027/proof/logs/DIMVA-X04_feature_encoder.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dimva/test_feature_encoder.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X04_feature_encoder.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dimva/feature_encoding.py evaluation/venue2027/dimva/test_feature_encoder.py && uvx ruff@0.7.1 format --check evaluation/venue2027/dimva/feature_encoding.py evaluation/venue2027/dimva/test_feature_encoder.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X04_feature_encoder.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X04_feature_encoder.suite.log"
+    }
+  ],
+  "notes": "P04 DIMVA-X04_feature_encoder deliverable for venue dimva: evaluation/venue2027/dimva/feature_encoding.py implements the leak-safe sequence feature encoder for GovernanceTrace (RQ1). Core contract: FeatureEncoder.fit(train_events) fits ALL data-derived transforms on TRAINING data only and stores them (per-feature train median/IQR robust scaling constants plus the training reference denial rate); transform(events) applies the stored statistics read-only. transform before fit raises NOT_FITTED; fitting on holdout-tagged data (split/partition/split_tag of dev/test/holdout) raises HOLDOUT_LEAK; a refit of an already-fitted encoder is refused with HOLDOUT_LEAK (a second fit could launder non-training statistics); dev/test encodings never alter the stored stats (stats_digest before == after many transforms, asserted in tests; each row binds the digest via stats_sha256). 44 features = 22 raw + 22 normalized across five families: time gaps (7: mean/median/std/max/min inter-arrival, gap-after-denial mean, short-gap fraction vs the caller window), scope transitions (4: distinct scopes, switch rate, cross-scope denials within window, denial-followed-by-other-scope), denial-transition signatures (5: denied fraction, max/mean denial-run lengths, allowed-after-denied and denied-after-denied rates), entropy (2: Shannon bits over tool and scope distributions) and rate-adjusted counts (4: denials/events/distinct-tools per hour over the session span, plus the denial-rate ratio to the train reference). Zero-IQR training columns fall back to documented centering-only scaling (scale 1.0) instead of dividing by zero. Deterministic: pure functions, sorted iteration, no random module/clock/environment reads, floats rounded to 12 decimals; identical (state, events, window) yield byte-identical matrices and identical fits yield identical stats digests. feature_lineage() returns one record per output feature (name, family, source_fields, transform formula, fit_dependent) generated from the same registry the encoder iterates \u2014 complete by construction, asserted over every column; exactly the 22 normalized companions plus denial_rate_ratio_to_train are fit-dependent. Fail-closed leak surface: rejection reason-code-like event fields refused with EVENT_REASON_CODE_FIELD_FORBIDDEN (RQ1 masking), campaign-label fields refused with EVENT_LABEL_FIELD_FORBIDDEN, plus unknown/missing fields, bad types, non-monotonic ts, mixed actors, empty fit, invalid window and non-list inputs with stable uppercase reason codes; holdout-tagged sequences CAN be transformed (encoded) but never fitted on; empty sequences encode to an all-zero raw row. encode(events, window) provides the one-shot task-contract signature. evaluation/venue2027/dimva/test_feature_encoder.py: 40 tests \u2014 positive (fit-then-transform shape 44, JSON-serializable, determinism byte-identical, hand-computed feature values incl. entropy/rates/ratio, stats fitted-not-constants, dev/test transforms leave train stats digest untouched, lineage completeness over all 44 columns, code-level lineage independence, five families, one-shot encode) and adversarial (NOT_FITTED on transform/digest before fit; HOLDOUT_LEAK for all 9 split-tag x tag combinations; refit refusal; reason-code and label leak-surface refusals; unknown/missing/non-monotonic/mixed-actor/empty/invalid-window fail-closed). Commands: pytest exit 0 (40 passed); uvx ruff@0.7.1 check + format --check exit 0; full evaluation/venue2027/ suite exit 0 (1701 passed) \u2014 no regression. Proof emitted via agent_protocol.build_report(task_id='DIMVA-X04_feature_encoder') with real log_paths and validated ok:true; report + logs committed together with the work per established repo convention (SHA convention follows DIMVA-X08_splitter precedent: before==parent base, after=HEAD at emit time because the single required commit contains this self-referential report; the final deliverable commit SHA is reported in the handoff).",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "687a6f56def769fc930e0ee94b00476eecc1c69b",
+  "source_sha_before": "687a6f56def769fc930e0ee94b00476eecc1c69b",
+  "status": "PASS",
+  "task_id": "DIMVA-X04_feature_encoder",
+  "unresolved": []
+}

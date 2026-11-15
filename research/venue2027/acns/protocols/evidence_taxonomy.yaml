@@ -1,0 +1,594 @@
+# ACNS-X03_evidence_taxonomy · Evidence-boundary taxonomy node set (SoK coding instrument)
+#
+# Task: ACNS-X03_evidence_taxonomy · Phase: P04 · Venue: acns · Status: registered instrument, no data collected
+# Paper: SoK: Evidence Boundaries of Attestation in Tool-Using AI Systems
+# Contract: clara.venue2027.acns.evidence-taxonomy.v1
+#
+# Depends honored: ACNS-oracle via the frozen threat model
+#   (research/venue2027/acns/threat_model.md, clara.venue2027.acns.threat-model.v1:
+#   attacker/observer model A1-A7, trusted components TC1-TC6, gap register G1-G9)
+#   and ACNS-X05_rater_manual (BND_* boundary codes consumed by corpus coding).
+# Feeds: ACNS-X07_witness_gallery (witness targets), ACNS-X08_taxonomy_graph,
+#   RQ1 lattice-coverage coding, ACNS-X10_sok_synthesis.
+#
+# Purpose: distinguish five evidence classes on the tool-dispatch path --
+#   sender-known bytes, transport delivery, provider-signed receipt, execution
+#   and persisted side effect -- as the evidence-to-claim lattice for RQ1. For
+#   every node the instrument records what the evidence proves, what it does
+#   NOT prove, where the observer must sit, and which trust root anchors it.
+#   Every edge is an implication candidate; each edge declares the trust
+#   assumptions whose presence or absence makes the implication hold or fail.
+#
+# Scope: this is a SoK taxonomy (novelty contract §1). It claims no new
+#   mechanism, protocol, detector or attestation scheme; witnesses are
+#   instruments of falsification for implication pairs, never deployable
+#   enforcement. No empirical value (kappa, coverage, reproduction rate,
+#   corpus size) is asserted here: every observed statistic enters later via
+#   artifacts/venue2027/acns/<run_id>/manifest.json after ACNS-freeze.
+#
+# Falsification: if this taxonomy merely restates RFC 9334 (RATS) or existing
+#   provenance literature (W3C PROV) without new cases and insights, or fails
+#   independent coder agreement, the SoK contribution is withdrawn per
+#   novelty_contract.md §1 and threat_model.md §8.
+
+schema_version: 1
+contract: clara.venue2027.acns.evidence-taxonomy.v1
+paper: "SoK: Evidence Boundaries of Attestation in Tool-Using AI Systems"
+contribution_class: SoK
+mechanism_claim: none_declared
+preregistration_status: thresholds_fixed_before_any_data_collection
+lattice_levels: [ASSUMED, ASSEMBLED, DISPATCHED, ACKNOWLEDGED, EXECUTED, COMMITTED]
+
+# ---------------------------------------------------------------------------
+# Trusted components (abbreviated register; full semantics in threat_model.md §3)
+# ---------------------------------------------------------------------------
+trusted_components:
+  TC1: pinned attestation roots and pinned receipt-verification keys, versioned with rotation and revocation schedules
+  TC2: deterministic offline receipt-verification procedure that fails closed with stable reason codes
+  TC3: trusted execution environment, sole authority for EXECUTED upgrades
+  TC4: bounded provider issuance trust over bytes actually received
+  TC5: independent human-coder oracle authority, outside candidate tooling
+  TC6: fixture determinism under the ACNS-CASE contract
+
+# ---------------------------------------------------------------------------
+# Node classes -- the five distinguished evidence classes
+# ---------------------------------------------------------------------------
+node_classes:
+  - id: sender_known_bytes
+    label: sender-known bytes
+    levels: [ASSUMED, ASSEMBLED]
+    definition: >-
+      Evidence that exists only inside the sending agent host: the declared
+      intent or plan, the composed payload bytes, and any sender-side
+      integrity binding over them. No external party has yet observed
+      anything; under attacker capability A2 the observer is colocated with
+      the attacker, so self-reports at this class are attacker-controllable.
+
+  - id: transport_delivery
+    label: transport delivery
+    levels: [DISPATCHED]
+    definition: >-
+      The sender-side transport stack handed bytes to the network or received
+      a transport-layer acknowledgment. Delivery semantics of the transport
+      protocol only, observed from the sending endpoint; carries no
+      application context, content binding or remote-side statement.
+
+  - id: provider_signed_receipt
+    label: provider-signed receipt
+    levels: [ACKNOWLEDGED]
+    definition: >-
+      A signed statement by the provider endpoint that bytes with a given
+      digest were received at a stated mint time under bound nonce, tenant,
+      purpose and scope fields, verifiable offline against pinned roots. In
+      RFC 9334 terms the provider acts as Attester producing Evidence, which
+      a Verifier appraises before any relying party may act on it.
+
+  - id: execution
+    label: execution
+    levels: [EXECUTED]
+    definition: >-
+      An attested tool invocation inside a trusted execution environment:
+      the exact tool binary, its measured input and the isolation of the
+      execution are bound by evidence produced by an attesting environment
+      anchored in pinned attestation roots (RFC 9334 Attester role).
+
+  - id: persisted_side_effect
+    label: persisted side effect
+    levels: [COMMITTED]
+    definition: >-
+      A durable state change recorded by the persisting service in its own
+      store or logs, with lineage recorded in provenance form (W3C PROV
+      wasGeneratedBy, used, wasAttributedTo). Verifiable only to that
+      service, or to external parties it chooses to convince via disclosed
+      records or transparency-log inclusion proofs.
+
+# ---------------------------------------------------------------------------
+# Nodes -- one per lattice level, classified into the five node classes
+# ---------------------------------------------------------------------------
+nodes:
+  - id: N0_ASSUMED
+    node_class: sender_known_bytes
+    level: ASSUMED
+    definition: >-
+      The agent host has fixed an intent or plan and holds the payload bytes
+      it is about to send. Evidence is a sender-side record only; nothing has
+      been transmitted and no external witness exists.
+    trust_root: >-
+      None anchored. The only root is the sender host itself (an application
+      log or in-memory state), which is not independently verifiable and is
+      attacker-controlled under capability A2. Per RFC 9334 no Attester has
+      produced Evidence yet, so nothing here qualifies as attestation
+      evidence; a provenance assertion recorded by the agent about itself
+      (W3C PROV) has no independent witness and inherits exactly the
+      recorder's own trustworthiness.
+    observer_location: >-
+      Agent host only. No external observer; under A2 the observer position
+      is inside the attacker's control, and a benchmark harness placed in the
+      agent loop inherits the same blindness (threat model §1.2).
+    proves: >-
+      That the sending principal possessed and committed to specific bytes
+      and a declared intent at a self-reported local time.
+    does_not_prove: >-
+      Nothing beyond the sender's own record: not that bytes left the host,
+      not that the provider received anything, not that any model or tool
+      executed, and not that any side effect occurred.
+    citations: [w3c_prov_dm, rfc9334]
+
+  - id: N1_ASSEMBLED
+    node_class: sender_known_bytes
+    level: ASSEMBLED
+    definition: >-
+      The payload bytes are serialized in the sender egress buffer with a
+      sender-side integrity binding (content digest). The evidence is still
+      entirely inside the agent host boundary; server-side observers see
+      arrival, not composition.
+    trust_root: >-
+      The sender-side digest or integrity binding. If serialization is
+      measured by a hardware attesting environment inside a trusted execution
+      boundary, the root is the pinned attestation root set TC1 and the
+      assembly qualifies as RFC 9334 Evidence from that Attester; absent
+      such measurement the binding is unanchored and a bare digest is only an
+      integrity tag computed by a party the relying party does not control.
+    observer_location: >-
+      Agent host only. Server-side observers observe arrival, not
+      composition; no external observer can distinguish this node from N0.
+    proves: >-
+      That specific bytes with digest D existed in the sender buffer at
+      sender-reported time T (cryptographically bound, sender-attested; or
+      TEE-attested when assembly measurement under TC1 is present).
+    does_not_prove: >-
+      Not transmission, not provider receipt, not execution, not semantics,
+      not persistence. A content digest binds bytes, never an execution
+      environment: per RFC 9334 Evidence must originate from an Attester, and
+      a hash-only token has no attesting environment, so no claim above this
+      node's class is supported by a digest alone.
+    citations: [rfc9334]
+
+  - id: N2_DISPATCHED
+    node_class: transport_delivery
+    level: DISPATCHED
+    definition: >-
+      The sender transport stack handed the bytes to the network and observed
+      transport-level delivery (TCP acknowledgment, TLS record written). The
+      evidence is a transport event observed at the sending endpoint.
+    trust_root: >-
+      Transport protocol semantics observed by the sender-side TCP/TLS
+      stack, trusted to report its own socket events honestly. There is no
+      application-level anchor, no remote-side signature and no context
+      binding; under network-position capability A1 an on-path attacker
+      controls delivery, reordering and duplication.
+    observer_location: >-
+      Sender-side TCP/TLS stack (and, transitively, network operators). The
+      remote endpoint is not an observer of this node; if the provider
+      produces a signed statement that is a different node (N3).
+    proves: >-
+      That bytes were sent into the network and that transport-level
+      delivery or acknowledgment occurred (or failed), as observed by the
+      sending stack.
+    does_not_prove: >-
+      Not that the application at the far end received the bytes, not that
+      the provider processed them, not that any model executed, and nothing
+      about content semantics or ordering across untrusted clocks. The
+      transport acknowledgment carries no context at all, so it cannot
+      support any claim about a specific request. A dispatch event may be
+      recorded as a retrospective W3C PROV activity, but PROV assertions
+      carry no integrity or delivery guarantee.
+    citations: [rfc9334, w3c_prov_dm]
+
+  - id: N3_ACKNOWLEDGED
+    node_class: provider_signed_receipt
+    level: ACKNOWLEDGED
+    definition: >-
+      A provider-signed receipt stating that bytes with digest D were
+      received at mint time t_m under bound nonce, tenant, purpose and scope
+      fields. Verifiable offline by a relying party through a deterministic
+      verification procedure against pinned roots.
+    trust_root: >-
+      Provider receipt-verification public keys pinned by digest and
+      versioned with rotation and revocation schedules (TC1), a
+      deterministic verification procedure that canonicalizes, checks the
+      signature chain, binds the digest to dispatched bytes, checks
+      nonce and context, checks purpose and tenant scope, and evaluates
+      revocation and schedule state at verification time, failing closed
+      (TC2), and bounded provider issuance honesty over bytes actually
+      received (TC4). In RFC 9334 terms the provider is the Attester, the
+      verifier appraises Evidence against Reference Values, and the relying
+      party trusts the Verifier, not the provider directly. If receipts are
+      anchored in an RFC 9162-style append-only log, the log supplies
+      tamper-evidence and inclusion proofs for the receipt record itself.
+    observer_location: >-
+      Verifier side, via the provider signature anchored in pinned roots.
+      The relying party observes the verification outcome (attestation
+      result), never the provider internals; external readers of published
+      work observe only what is disclosed (capability A6).
+    proves: >-
+      That the provider endpoint received bytes with digest D at mint time
+      t_m, under the nonce, tenant and purpose fields bound in the receipt,
+      provided the full TC2 chain passes at verification time t_v against
+      the pinned root's current schedule state.
+    does_not_prove: >-
+      Not that a model executed any tool, not that output is semantically
+      correct, not that any side effect persisted, and not that the receipt
+      is fresh or single-use without verification-time checks. Under
+      provider-power capability A3 an issuing-capable provider can mint
+      receipts for bytes it never durably processed, so issuance trust is
+      bounded to receipt semantics exactly as TC4 states. A transparency
+      log over receipts proves the log's integrity, never execution.
+    citations: [rfc9334, rfc9162]
+
+  - id: N4_EXECUTED
+    node_class: execution
+    level: EXECUTED
+    definition: >-
+      An attested tool invocation: exact tool binary B, measured input I and
+      isolation of the execution are bound by evidence produced inside a
+      trusted execution environment and anchored in pinned attestation
+      roots. The only node class that can upgrade claims to EXECUTED.
+    trust_root: >-
+      The trusted execution environment (TC3) acting as RFC 9334 Attester:
+      its attesting environment produces Evidence over the target
+      environment's measured binary and input, appraised by a Verifier
+      against Reference Values, with attestation roots pinned and versioned
+      (TC1). Absent TC3 every execution claim is capped at N3.
+    observer_location: >-
+      Trusted execution environment only. External observers, auditors and
+      relying parties see solely the verifier's attestation result and its
+      TCB statement; no observer outside the TEE sees the execution itself.
+    proves: >-
+      That binary B executed on measured input I within the attested
+      isolation boundary, with execution mechanics bound by evidence, and
+      nothing more than exactly the attested (B, I) pair.
+    does_not_prove: >-
+      Not model intent or semantic consumption: under model-agency
+      capability A4 the agent may have acted differently from the attested
+      plan, swapped tools or mutated arguments after assembly attestation.
+      Not anything downstream of the trusted execution boundary, including
+      network egress from the tool and persistence of effects. A PROV
+      activity record of the execution is retrospective lineage, not
+      attestation of isolation.
+    citations: [rfc9334, w3c_prov_dm]
+
+  - id: N5_COMMITTED
+    node_class: persisted_side_effect
+    level: COMMITTED
+    definition: >-
+      A durable side effect recorded by the persisting service in its own
+      store or logs, with lineage in provenance form. The record is
+      verifiable only to that service, or externally when the service
+      anchors entries in a transparency-style append-only log and issues
+      inclusion proofs.
+    trust_root: >-
+      The persisting service's own store and logging stack, plus the
+      provenance vocabulary used to record lineage (W3C PROV wasGeneratedBy,
+      used, wasAttributedTo). Where the service anchors entries in an
+      RFC 9162-style Merkle append-only log, the log root adds
+      tamper-evidence for the record itself; that anchor is independent of
+      any execution attestation and does not import RFC 9334 trust.
+    observer_location: >-
+      The persisting service's own logs. External observers, auditors and
+      downstream requesters see only disclosed records or inclusion proofs;
+      disclosure completeness is itself evidence the reader must verify
+      (capability A6), never assume.
+    proves: >-
+      That a side effect was recorded as durable by that service at its
+      recorded time, with lineage attribution as recorded by that service,
+      and where anchored, that the record sits in the logged set (inclusion).
+    does_not_prove: >-
+      Not that the model semantically consumed the result, not that the
+      recorded lineage is complete (selective archiving and out-of-context
+      quotation under A6), and not that the business logic was correct.
+      PROV records lineage, not attestation of execution mechanics; a
+      transparency log proves append-only integrity of the record set,
+      never the truth of what was recorded.
+    citations: [w3c_prov_dm, rfc9162]
+
+# ---------------------------------------------------------------------------
+# Edges -- implication candidates; every edge declares trust assumptions.
+# status valid means the implication holds exactly under the declared
+# assumptions; status invalid means the implication fails absent the boundary
+# condition, which names the missing trust component (gap register G1-G9).
+# ---------------------------------------------------------------------------
+edges:
+  - id: E01_assumed_to_assembled
+    from: N0_ASSUMED
+    to: N1_ASSEMBLED
+    claim: the declared intent and held bytes became serialized egress bytes with an integrity binding
+    status: valid
+    trust_assumptions: >-
+      Holds when serialization is measured by a hardware attesting environment
+      inside a trusted boundary (TC3) anchored in pinned roots (TC1), so the
+      assembly itself becomes RFC 9334 Evidence. Without measured assembly the
+      transition is only a sender self-report and carries no attestation.
+    boundary_condition: >-
+      Valid only while the measured assembly covers exactly the serialized
+      buffer; any post-attestation mutation restarts the lattice at N0.
+    failure_family: none
+
+  - id: E02_assembled_to_dispatched
+    from: N1_ASSEMBLED
+    to: N2_DISPATCHED
+    claim: the assembled bytes were handed to the transport and dispatch was observed
+    status: valid
+    trust_assumptions: >-
+      Holds under trust in the sender-side transport stack reporting its own
+      socket events honestly (a sender-local assumption, not an external
+      anchor). The resulting claim is sender-side dispatch only; under A1 an
+      on-path attacker controls what happens after the stack reports.
+    boundary_condition: >-
+      Valid only for the sender-side observation; the claim never extends
+      past the sending endpoint regardless of assumptions.
+    failure_family: none
+
+  - id: E03_transport_ack_to_receipt
+    from: N2_DISPATCHED
+    to: N3_ACKNOWLEDGED
+    claim: transport acknowledgment implies the provider received the bytes
+    status: invalid
+    trust_assumptions: >-
+      Would require provider-side signing anchored in pinned receipt-verification
+      roots (TC1), the deterministic fail-closed verification chain (TC2) and
+      bounded issuance honesty (TC4). A bare transport acknowledgment supplies
+      none of these: it is observed sender-side only, binds no context, and
+      per RFC 9334 Evidence must originate from an Attester, which the
+      transport layer is not.
+    boundary_condition: >-
+      Gap register G1: provider-signed receipt anchored in pinned roots with
+      verification-time checks is the minimum upgrade; without it the claim
+      stays at N2.
+    failure_family: replay
+    witness_ref: ACNS-X07 witness for G1
+
+  - id: E04_receipt_to_execution
+    from: N3_ACKNOWLEDGED
+    to: N4_EXECUTED
+    claim: a provider-signed receipt implies the model executed the tool
+    status: invalid
+    trust_assumptions: >-
+      Would require trusted-execution attestation of the exact tool binary and
+      measured inputs (TC3) anchored in pinned roots (TC1). A receipt attests
+      receipt semantics only (TC4); under model-agency capability A4 the agent
+      may divert work after receipt, and under A3 a receipt may cover bytes
+      never durably processed.
+    boundary_condition: >-
+      Gap register G2: TEE-attested execution is the missing component; the
+      receipt alone caps the claim at N3 forever.
+    failure_family: model_agency
+    witness_ref: ACNS-X07 witness for G2
+
+  - id: E05_execution_to_committed
+    from: N4_EXECUTED
+    to: N5_COMMITTED
+    claim: an attested execution implies a persisted side effect
+    status: invalid
+    trust_assumptions: >-
+      Would require the persisting service's own verified durable record,
+      tamper-evident or transparency-anchored (RFC 9162-style inclusion) with
+      lineage attribution recorded (W3C PROV wasGeneratedBy). Execution
+      evidence ends at the trusted boundary; nothing outside it is implied.
+    boundary_condition: >-
+      Gap register G3: the persisting service's own verified record is the
+      missing component; execution alone never implies persistence.
+    failure_family: model_agency
+    witness_ref: ACNS-X07 witness for G3
+
+  - id: E06_transport_to_inference
+    from: N2_DISPATCHED
+    to: N4_EXECUTED
+    claim: transport delivery implies the model performed inference with the tool
+    status: invalid
+    trust_assumptions: >-
+      Would require every intermediate component: provider-signed receipt
+      under TC1, TC2 and TC4, then trusted-execution attestation under TC3.
+      A transport event supplies none of these and binds no context, so the
+      implication skips two boundaries at once and fails under each of the
+      replay and model_agency families independently.
+    boundary_condition: >-
+      Gap registers G1 and G2 composed: both the signed-receipt upgrade and
+      the TEE upgrade are missing; neither can be shortcut.
+    failure_family: model_agency
+    witness_ref: ACNS-X07 witness for G1 plus G2 composition
+
+  - id: E07_hash_only_to_hardware_attestation
+    from: N1_ASSEMBLED
+    to: N4_EXECUTED
+    claim: a hash-only token over the payload demonstrates hardware-attested execution
+    status: invalid
+    trust_assumptions: >-
+      Would require an attesting environment producing RFC 9334 Evidence over
+      measured execution, anchored in pinned roots (TC1, TC3). A content
+      digest computed sender-side has no attesting environment, no endorsement
+      chain and no reference values: per RFC 9334 it is not Evidence at all,
+      so calling it hardware attestation manufactures a claim class the token
+      cannot carry.
+    boundary_condition: >-
+      Gap register G7 applied to the hash-only token: the named missing
+      component is the attester itself; the digest binds bytes, never an
+      execution environment.
+    failure_family: insider_or_observer
+    witness_ref: ACNS-X07 witness for G7 hash-only variant
+
+  - id: E08_receipt_to_committed
+    from: N3_ACKNOWLEDGED
+    to: N5_COMMITTED
+    claim: a provider-signed receipt implies a persisted side effect
+    status: invalid
+    trust_assumptions: >-
+      Would require both the trusted-execution upgrade (TC3, closing G2) and
+      the persisting service's own verified, tamper-evident record with
+      lineage attribution (RFC 9162-style anchoring plus W3C PROV, closing
+      G3). A receipt supplies neither; the implication crosses two boundaries
+      and fails at the first.
+    boundary_condition: >-
+      Gap registers G2 and G3 composed: execution attestation and the
+      service-owned durable record are both missing components.
+    failure_family: model_agency
+    witness_ref: ACNS-X07 witness for G2 plus G3 composition
+
+  - id: E09_receipt_tee_to_execution
+    from: N3_ACKNOWLEDGED
+    to: N4_EXECUTED
+    claim: a verified receipt combined with TEE attestation yields an EXECUTED claim exactly for the attested binary and input
+    status: valid
+    trust_assumptions: >-
+      Holds when the full verification chain (TC2) passes at verification
+      time against pinned roots (TC1), including nonce, digest, purpose and
+      tenant scope and revocation schedule state, and trusted-execution
+      attestation (TC3) covers the exact tool binary and measured input.
+      The claim is capped at exactly the attested binary and input pair.
+    boundary_condition: >-
+      Valid only under all three components simultaneously; removing any one
+      collapses the claim back to N3 (threat model §3 trust-independence rule).
+    failure_family: none
+
+  - id: E10_execution_record_to_committed
+    from: N4_EXECUTED
+    to: N5_COMMITTED
+    claim: an attested execution combined with the persisting service's own verified record yields a COMMITTED claim
+    status: valid
+    trust_assumptions: >-
+      Holds when the persisting service records the effect in its own
+      tamper-evident store, optionally anchored for inclusion in an
+      RFC 9162-style append-only log, with lineage attributed in W3C PROV
+      form, and the record is scope-matched to the attested purpose and
+      tenant so no cross-scope reuse occurs.
+    boundary_condition: >-
+      Valid only for the recorded effect with matching scope; the claim
+      never extends to semantic consumption by the model, which stays
+      outside the lattice (threat model §1.2).
+    failure_family: none
+
+# ---------------------------------------------------------------------------
+# Adversarial controls -- the two task-mandated negative fixtures, each bound
+# to an invalid edge and a frozen expected oracle verdict (REJECT). Labels are
+# design-time, frozen before execution by the human-coder path (TC5); a
+# witness failing to reproduce its label is reported as a negative result and
+# the label is never repaired to match.
+# ---------------------------------------------------------------------------
+adversarial_controls:
+  - id: NC1_hash_only_token_miscalled_hardware_attestation
+    claim_under_attack: >-
+      A hash-only token over the payload is presented as hardware attestation
+      of execution.
+    edge_ref: E07_hash_only_to_hardware_attestation
+    why_invalid: >-
+      The token has no attesting environment, no endorsement chain and no
+      reference values, so under RFC 9334 it is not Evidence; it cannot carry
+      any claim above the sender-known-bytes class.
+    expected_oracle_verdict: REJECT
+    related_gaps: [G7]
+    citations: [rfc9334]
+
+  - id: NC2_transport_ack_implies_inference
+    claim_under_attack: >-
+      A transport acknowledgment is presented as proof that the model
+      performed inference with the tool.
+    edge_ref: E06_transport_to_inference
+    why_invalid: >-
+      The transport event is sender-side, context-free and unsigned; both the
+      signed-receipt upgrade (G1) and the trusted-execution upgrade (G2) are
+      absent, so the implication fails under replay and model_agency
+      independently.
+    expected_oracle_verdict: REJECT
+    related_gaps: [G1, G2]
+    citations: [rfc9334]
+
+# ---------------------------------------------------------------------------
+# Positive controls -- clean cells of the paired matrix: governed evidence
+# accepted exactly at its level, never above.
+# ---------------------------------------------------------------------------
+positive_controls:
+  - id: PC1_tee_attested_execution_claim
+    edge_ref: E09_receipt_tee_to_execution
+    expected_oracle_verdict: ACCEPT_AT_L3
+    cap_note: >-
+      Accepted exactly for the attested binary and input pair with a TCB
+      statement; no extension to intent or semantics.
+    citations: [rfc9334]
+
+  - id: PC2_recorded_side_effect_claim
+    edge_ref: E10_execution_record_to_committed
+    expected_oracle_verdict: ACCEPT_AT_L4
+    cap_note: >-
+      Accepted exactly for the recorded effect with matching purpose and
+      tenant scope; no extension to semantic consumption.
+    citations: [w3c_prov_dm, rfc9162]
+
+# ---------------------------------------------------------------------------
+# Citation registry -- real upstream sources; baseline arms B0 (RFC 9334) and
+# B1 (W3C PROV) per the research blueprint, RFC 9162 for transparency anchors.
+# ---------------------------------------------------------------------------
+citations:
+  - id: rfc9334
+    kind: ietf_rfc
+    identifier: RFC 9334
+    title: Reference Model for Remote Attestation
+    date: January 2023
+    url: https://www.rfc-editor.org/rfc/rfc9334.html
+    used_for: >-
+      Attester, Evidence, Verifier, Relying Party, Endorser and Reference
+      Values roles; the requirement that Evidence originates from an
+      attesting environment; baseline B0 against which residual cases are
+      measured.
+
+  - id: rfc9162
+    kind: ietf_rfc
+    identifier: RFC 9162
+    title: Certificate Transparency Version 2.0
+    date: December 2021
+    url: https://www.rfc-editor.org/rfc/rfc9162.html
+    used_for: >-
+      Append-only Merkle log semantics, inclusion proofs and monotonic
+      logging used as tamper-evidence for receipt and side-effect records;
+      proves log integrity, never execution or correctness.
+
+  - id: w3c_prov_dm
+    kind: w3c_recommendation
+    identifier: PROV-DM
+    title: "PROV-DM: The PROV Data Model"
+    date: 30 April 2013
+    url: https://www.w3.org/TR/2013/REC-prov-dm-20130430/
+    used_for: >-
+      Entity, Activity and Agent relations (wasGeneratedBy, used,
+      wasAttributedTo) for retrospective lineage of dispatch, execution and
+      side-effect records; lineage recording, not attestation. Baseline B1.
+
+# ---------------------------------------------------------------------------
+# Execution status -- preregistration only; no observed values anywhere
+# ---------------------------------------------------------------------------
+execution_status:
+  status: preregistered_instrument_no_data_collected
+  empirical_values: none
+  note: >-
+    No corpus coding session, witness execution or reviewer agreement value
+    exists at design time; every observed statistic enters later via
+    artifacts/venue2027/acns/<run_id>/manifest.json after the ACNS-freeze
+    gate. If corpus coding maps all claims onto RFC 9334 and PROV categories
+    with no residual cases, the SoK contribution is withdrawn per
+    novelty_contract.md §1.
+
+provenance:
+  base_sha: 687a6f56def769fc930e0ee94b00476eecc1c69b
+  threat_model: research/venue2027/acns/threat_model.md (clara.venue2027.acns.threat-model.v1)
+  novelty_contract: research/venue2027/acns/novelty_contract.md (clara.venue2027.acns.novelty-contract.v1)
+  rater_manual: research/venue2027/acns/design/rater_manual.md (BND codes)
+  test_driver: research/venue2027/acns/tests/test_evidence_taxonomy.py

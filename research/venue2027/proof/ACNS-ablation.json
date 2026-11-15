@@ -1,0 +1,40 @@
+{
+  "task_id": "ACNS-ablation",
+  "status": "PASS",
+  "source_sha_before": "687a6f56def769fc930e0ee94b00476eecc1c69b",
+  "source_sha_after": "687a6f56def769fc930e0ee94b00476eecc1c69b",
+  "changed_paths": [
+    "evaluation/venue2027/acns/ablations.py",
+    "evaluation/venue2027/acns/test_ablations.py",
+    "research/venue2027/proof/ACNS-ablation.json",
+    "research/venue2027/proof/logs/ACNS-ablation.pytest.log",
+    "research/venue2027/proof/logs/ACNS-ablation.ruff.log",
+    "research/venue2027/proof/logs/ACNS-ablation.suite.log",
+    "research/venue2027/proof/logs/ACNS-ablation.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/test_ablations.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-ablation.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/acns/ablations.py evaluation/venue2027/acns/test_ablations.py && uvx ruff@0.7.1 format --check evaluation/venue2027/acns/ablations.py evaluation/venue2027/acns/test_ablations.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-ablation.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-ablation.suite.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/acns/ablations.py": "d4c002a9f4a9497f386358e0573d21d89320bae3f841c28f93628fda579e36f8",
+    "evaluation/venue2027/acns/test_ablations.py": "1efa7685e439565ed4c47107164dc1e136e9f1fbf9976d23664cb550dfd7ca6c"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "ACNS-ablation (Phase P04, venue acns; SoK: Evidence Boundaries of Attestation in Tool-Using AI Systems): registered the four SoK reference-class ablation variants at evaluation/venue2027/acns/ablations.py behind the task-manifest signature run_ablation(name, case) -> Outcome, reusing the EXISTING EVIDENCE-BOUNDARY reference-class classifiers from evaluation/venue2027/acns/baselines.py verbatim (baselines._classify + baselines._CLASS_POLICIES; no classifier duplicated). Each variant declares which evidence component it omits (AblationVariant.omitted_component): B0-attestation-only omits the receipt/evidence table (COMPONENT_RECEIPT_TABLE); B1-receipt-without-binding omits the receipt-to-claim binding field (COMPONENT_RECEIPT_BINDING, bound_to_claim_id + receipt_id references deleted so presence-without-linkage is exactly expressible); B2-timestamp-only omits every artifact component (COMPONENT_ALL_ARTIFACTS: receipts, bindings, attestation anchor, schedule flag stripped, timestamps carry all evidential weight); B3-evidence-boundary-aware omits nothing (COMPONENT_NONE, the full reference row). The ablation is expressed purely as component absence on the input record copy; the classifier itself is never modified. ABLATION_REGISTRY maps the four ids to typed AblationVariant specs with declared blind gap codes; refuse_unregistered_variant + run_ablation fail closed with UNKNOWN_ABLATION_VARIANT for any name outside the registry - explicitly including a self-described omit-nothing variant other than the registered B3 row (omission completeness is a property OF the registered row, not of the caller's intent). Mechanistic inference matrix (threat model section 6 register G1-G9 x four variants, cells detects/blind/not_applicable) is frozen design-time and verified against EXECUTED behavior by verify_inference_matrix: every detects cell must have fired and every blind cell must have stayed silent on the synthetic-acns-2027 fixture surface - divergence fails verification and is never repaired post hoc. Executed witnesses (tests/evaluation/venue2027/acns/test_ablations.py, 32 passed): B0 detects nothing at all and accepts the receipt-quoted-as-execution downgrade; B1 accepts a replayed receipt bound to a different claim (G4 undetectable - the omitted binding IS the detection mechanism); B2 accepts an unbound claim on timestamp freshness (G2/G4/G5/G7 all silent); B3 rejects all three records citing G2/G4/G7 respectively; each weaker class demonstrably misses a gap B3 catches (test_positive_each_weaker_class_misses_a_gap_b3_catches); run_ablation_suite outcome grid over identical case keys for every variant (same-cases invariant) with inference_matrix_verified=true. Adversarial: unregistered variants (B4-full-copy, forged B0, ALLOW-ALL, empty) refused; omit-nothing impostor refused while the genuine B3 row admits the same record; matrix rejects a false detects cell; malformed cases fail closed INVALID_RESULT/NOT_RUN_EXTERNAL and are never counted as acceptances. Tests: 32 passed (python3 -m pytest -q evaluation/venue2027/acns/test_ablations.py, exit 0); full acns suite regression 143 passed (exit 0); uvx ruff@0.7.1 check + format --check clean on touched paths (exit 0). source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

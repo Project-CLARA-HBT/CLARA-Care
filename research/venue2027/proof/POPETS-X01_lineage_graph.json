@@ -1,0 +1,48 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/popets/lineage_graph.py": "5ebd054de2d9f7a0473b35aeeb226b12f19055774d8c99ecb44c0df8aa0cac62",
+    "evaluation/venue2027/popets/test_lineage_graph.py": "ff5799dcb9e88c183fde0ebc8094940bd977ea127e6b9f0ff3a350cce0e75798",
+    "research/venue2027/proof/logs/POPETS-X01_lineage_graph.pytest.log": "b35589acd987ba6ee2282bbc4591d8c3043a09bd0cadac0d5bf1ad43c0728ab3",
+    "research/venue2027/proof/logs/POPETS-X01_lineage_graph.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a",
+    "research/venue2027/proof/logs/POPETS-X01_lineage_graph.suite.log": "813b5bcbab36978df310529bd1c58b266585f2ed81a9a7ea1c79676e44f4d997"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/popets/lineage_graph.py",
+    "evaluation/venue2027/popets/test_lineage_graph.py",
+    "research/venue2027/proof/POPETS-X01_lineage_graph.json",
+    "research/venue2027/proof/logs/POPETS-X01_lineage_graph.pytest.log",
+    "research/venue2027/proof/logs/POPETS-X01_lineage_graph.ruff.log",
+    "research/venue2027/proof/logs/POPETS-X01_lineage_graph.suite.log",
+    "research/venue2027/proof/logs/POPETS-X01_lineage_graph.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/popets/test_lineage_graph.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-X01_lineage_graph.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/popets/lineage_graph.py evaluation/venue2027/popets/test_lineage_graph.py && uvx ruff@0.7.1 format --check evaluation/venue2027/popets/lineage_graph.py evaluation/venue2027/popets/test_lineage_graph.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-X01_lineage_graph.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-X01_lineage_graph.suite.log"
+    },
+    {
+      "argv": "PYTHONPATH=. python3 research/venue2027/proof/emit_POPETS-X01_lineage_graph_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/POPETS-X01_lineage_graph.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-X01_lineage_graph.validator.log"
+    }
+  ],
+  "notes": "P04 POPETS-X01_lineage_graph deliverable: evaluation/venue2027/popets/lineage_graph.py implements the exact target contract derive_graph(disclosures, transforms) -> LineageGraph as a pure, injected-I/O, deterministic JSON-serializable context-lineage graph (no hidden clock, no randomness, no network, no DB, no provider; synthetic nodes/labels only). Nodes are context artifacts on the five derivation paths of threat-model \u00a71 (origin_field, derived_summary, cache_object, retry_payload, provider_transport, embedding_pointer); edges are derivation/disclosure relations labeled with (principal, purpose, time, transform/digest). CORE SURFACES: descendants(node) returns ALL transitively derived items (cycle-safe iterative DFS with an on-path set \u2014 a corrupted store containing a cycle can never hang traversal); revocation_closure(node, scope) returns every transitively derived item PLUS the node itself that must be purged on revocation, following only edges whose label intersects the revoked (principal, purpose) scope (edge-level reverse-edge invalidation, arm B4) with purpose='*' as the subject-wide withdrawal of the X05 vocabulary and unlabeled edges treated as in-scope (fail closed, never a silent escape hatch); assert_revocation_complete(graph, node, closure, scope) re-walks the reachable subgraph independently of the supplied closure and raises REVOCATION_CLOSURE_INCOMPLETE naming every missed descendant \u2014 the RQ1 adversarial leak class (a forgotten retry payload / transport item) is detectable by construction, never silently accepted. FAIL-CLOSED VALIDATION at construction: derivation parents must be a child somewhere or a declared trusted root, else EDGE_UNKNOWN_ANCESTOR (unlinked derivative, POPETS-CASE-07 shape); cycles refused with EDGE_CYCLE plus a concrete cycle path (Kahn + explicit path extraction) per the task's 'validate cycles and missing ancestors'; malformed records raise stable uppercase reason codes (EDGE_MALFORMED, NODE_MALFORMED) \u2014 explicit refusals, never unhandled exceptions miscounted as safe rejections. Determinism: nodes sorted by id, edges by (parent, child, transform, digest); repeated construction from the same inputs yields byte-equal serializations. Scope honesty (threat-model \u00a75.2, task \u00a78): the closure covers platform-side stored artifacts only; no claim of retroactive erasure of already-delivered bytes (OUT_OF_SCOPE_PAST) and no claim of model memorization removal (NOT_GUARANTEED) is made anywhere. test_lineage_graph.py: 14 tests pass (positive: typed JSON-serializable graph with node kinds + label tuples, transitive descent on the linear chain origin->summary->cache->retry->transport returning ALL descendants, complete revocation closure incl. the origin, scope-filtered closure excluding other-purpose branches, wildcard subject-wide coverage, transform-spec diamond fan-out/fan-in with digest edges, determinism + JSON round-trip, LineageGraphError-is-ValueError; adversarial: cycle refused at construction with EDGE_CYCLE, cycle-safe traversal terminates on an injected cyclic store without infinite loop, unknown ancestor refused (record and transform input), unknown-node query fails closed, MISSED descendant detected by assert_revocation_complete (deepest retry payload + transport named in the error), origin-only omission detected, scope-filtered missed branch detected under the wildcard, 5 malformed-input stable-code refusals). Full evaluation/venue2027 regression: 1675 passed. uvx ruff@0.7.1 check + format --check clean on touched files. source_sha_after records the base commit 687a6f56 per the sibling convention (POPETS-X02, POPETS-X06); the single task commit SHA is created immediately after this report and recorded in the commit body. Baseline parity NOT_APPLICABLE (structural lineage layer; arms B0-B4 execute in P03 against this substrate).",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "687a6f56def769fc930e0ee94b00476eecc1c69b",
+  "source_sha_before": "687a6f56def769fc930e0ee94b00476eecc1c69b",
+  "status": "PASS",
+  "task_id": "POPETS-X01_lineage_graph",
+  "unresolved": []
+}

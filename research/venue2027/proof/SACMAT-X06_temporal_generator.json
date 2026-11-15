@@ -1,0 +1,44 @@
+{
+  "task_id": "SACMAT-X06_temporal_generator",
+  "status": "PASS",
+  "source_sha_before": "687a6f56def769fc930e0ee94b00476eecc1c69b",
+  "source_sha_after": "687a6f56def769fc930e0ee94b00476eecc1c69b",
+  "changed_paths": [
+    "evaluation/venue2027/sacmat/temporal_trace_generator.py",
+    "research/venue2027/sacmat/tests/test_temporal_generator.py",
+    "research/venue2027/proof/artifacts/sacmat_temporal_corpus.json",
+    "research/venue2027/proof/SACMAT-X06_temporal_generator.json",
+    "research/venue2027/proof/emit_SACMAT-X06_temporal_generator_report.py",
+    "research/venue2027/proof/logs/SACMAT-X06_temporal_generator.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-X06_temporal_generator.ruff.log",
+    "research/venue2027/proof/logs/SACMAT-X06_temporal_generator.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/sacmat/tests/test_temporal_generator.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X06_temporal_generator.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/sacmat/temporal_trace_generator.py research/venue2027/sacmat/tests/test_temporal_generator.py --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X06_temporal_generator.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_SACMAT-X06_temporal_generator_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/SACMAT-X06_temporal_generator.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X06_temporal_generator.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/sacmat/temporal_trace_generator.py": "526adaa048fbf2aa27686b53f1433729cb5c0f04b5694f8d8715a75c492b9719",
+    "research/venue2027/sacmat/tests/test_temporal_generator.py": "d924cbef690505dbe1c5c9a75440c01a698a8065d31d7286fd0f1093922ac1e7",
+    "research/venue2027/proof/artifacts/sacmat_temporal_corpus.json": "bd42fa2fa91047628e3705053f0e2458a3156846075bcb63e97d0e06a4d5bb71",
+    "research/venue2027/proof/logs/SACMAT-X06_temporal_generator.pytest.log": "42fa8098c2d7886e19bde984c8719abfe2aef6d4a3e7a2f8171837f251098d74",
+    "research/venue2027/proof/logs/SACMAT-X06_temporal_generator.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P04 task SACMAT-X06_temporal_generator (PolicyTrace RQ1): bounded deterministic temporal trace corpus generator with bug-control pairing. evaluation/venue2027/sacmat/temporal_trace_generator.py (GENERATOR_VERSION 1.0.0, corpus schema clara.venue2027.sacmat.temporal_corpus.v1) implements generate_traces(seed, depth, hops, mutation_points) -> list[PolicyTrace-ish dict] over the audited DSL (evaluation/venue2027/sacmat/policy_trace_dsl.py, task X01; DELEGATE events follow the DSL convention principal=delegating source, policy_state=delegatee). Bounds: depth in [3,12] caps the event count of EVERY emitted trace, hops in [0,4] caps DELEGATE events per trace (hops+3 <= depth enforced so grant, request and one mutation slot always fit), mutation_points in [0,4] caps distinct temporal bug classes; every violation refused with a stable reason code (DEPTH_OUT_OF_RANGE, HOPS_OUT_OF_RANGE, MUTATION_POINTS_OUT_OF_RANGE, HOPS_EXCEED_DEPTH, INVALID_SEED) \u2014 never silently clamped. Corpus layout: exactly one VALID trace (grant -> hops delegations -> terminal request by the deepest actor) preserved and verified to replay PERMIT with zero findings under the independent DSL oracle (VALID_TRACE_BROKEN fail-closed otherwise), plus for each of at most mutation_points bug classes (seed-rotated deterministic selection restricted to hop-eligible classes) one bug trace carrying EXACTLY ONE temporal mutation and its static request-matched CONTROL: same request (same principal/tenant/resource/purpose/logical_time), same event budget, no temporal mutation \u2014 so decision-only comparisons see no difference and only the trace-level witness discriminates. Bug classes: REVOKE_BEFORE_GRANT (intruder revoke inserted before grant via temporal reordering), DELEGATION_CYCLE (requires hops>=2; last delegation retargeted to close a cycle), REVOKED_ACTOR_TRANSITIVITY (requires hops>=1; root revoked after the chain, before a downstream delegatee's replay \u2014 revocation-before-replay), TIME_TRAVEL_ACCESS (request copy replayed at t=0 before any authority \u2014 UNESTABLISHED_AUTHORITY). Each bug's expected_outcome/expected_findings are derived from a REAL evaluate_trace replay; MUTATION_NOT_OBSERVABLE refuses emission of a bug whose declared witness finding is absent from the independent replay (a silently non-discriminating trace is never emitted). Corpus invariants machine-checked: assert_corpus_integrity refuses duplicate trace_ids AND duplicate canonical trace_sha256 hashes (unique-hash corpus, never silently deduplicated); assert_all_paired refuses every bug without its existing matched control carrying the SAME request (UNPAIRED_BUG, UNPAIRED_CONTROL, REQUEST_MISMATCH, PAIRING_MISMATCH); verify_corpus re-derives every embedded verdict with a fresh independent replay and refuses tampered events/outcomes/hashes. coverage_summary reconciles totals (valid+bug+control==total, per-class bug_traces==matched_controls, unique id/hash counts). Deterministic: pure integer arithmetic, no clock, no PRNG, no I/O; identical inputs give byte-identical corpora. Real corpus artifact written at research/venue2027/proof/artifacts/sacmat_temporal_corpus.json (params seed=2027, depth=8, hops=3, mutation_points=4; 9 traces = 1 valid + 4 bugs + 4 matched controls; 4 bug-control pairs; 9 unique trace_sha256 hashes; coverage summary embedded and re-verified from disk with verify_corpus). Test driver research/venue2027/sacmat/tests/test_temporal_generator.py: 31 tests, all passed \u2014 positive: determinism per parameters plus a 48-seed sweep (replay stability, verify_corpus on every corpus), valid-only corpus at mutation_points=0, request-matched pairing with pair-half bug_class equality, exactly-one declared witness per bug trace, unique trace ids/hashes within each corpus AND across the 48-seed corpus union, coverage-summary totals reconciliation, depth/hops/ordering bounds respected in every emitted trace, build_corpus_document JSON round-trip; adversarial: out-of-bound depth/hops/mutation_points and non-int/bool inputs and negative seeds refused with stable reason codes, hops exceeding the depth budget refused (HOPS_EXCEED_DEPTH), a bug without its control and a control without its bug rejected by the assert_all_paired helper (UNPAIRED_CONTROL / UNPAIRED_BUG), request mismatch between pair halves (REQUEST_MISMATCH), dangling paired_trace_id (UNPAIRED_CONTROL), duplicate trace ids (DUPLICATE_TRACE_ID) and duplicate hashes (DUPLICATE_TRACE_HASH), tampered events / tampered expected verdicts / tampered hash / valid-trace shortening all refused by verify_corpus (INVALID_TRACE_RECORD), malformed records (non-object, missing fields, unknown role, bug record without a known bug_class) rejected (INVALID_TRACE_RECORD). Commands: pytest 31 passed in 1.17s (exit 0); uvx ruff@0.7.1 check + format --check clean (exit 0); full local evaluation/venue2027/sacmat + research/venue2027/sacmat/tests suite 385 passed, 9 skipped (pre-existing conditional real-binary skips), 0 failed. oracle_disagreement_count=0: every generated verdict was derived from and re-verified against the independent DSL replay. baseline_parity=NOT_APPLICABLE (generation layer; arms B0-B4 execute in SACMAT-runner/traces). source_sha_after records the base commit 687a6f56 per the established sibling convention; the single task commit SHA is created immediately after this report and recorded in the commit body. Downstream consumers: SACMAT-X07_mutation_ops, SACMAT-X08_budget_runner, SACMAT-X09_minimizer, SACMAT-pilot."
+}

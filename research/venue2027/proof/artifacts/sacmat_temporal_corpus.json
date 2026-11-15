@@ -1,0 +1,693 @@
+{
+  "corpus_schema_version": "clara.venue2027.sacmat.temporal_corpus.v1",
+  "coverage": {
+    "bug_classes": {
+      "DELEGATION_CYCLE": {
+        "bug_traces": 1,
+        "matched_controls": 1
+      },
+      "REVOKED_ACTOR_TRANSITIVITY": {
+        "bug_traces": 1,
+        "matched_controls": 1
+      },
+      "REVOKE_BEFORE_GRANT": {
+        "bug_traces": 1,
+        "matched_controls": 1
+      },
+      "TIME_TRAVEL_ACCESS": {
+        "bug_traces": 1,
+        "matched_controls": 1
+      }
+    },
+    "bug_classes_declared": 4,
+    "bug_control_pairs": 4,
+    "bug_traces": 4,
+    "control_traces": 4,
+    "corpus_schema_version": "clara.venue2027.sacmat.temporal_corpus.v1",
+    "generator_version": "1.0.0",
+    "max_trace_events": 6,
+    "total_traces": 9,
+    "unique_trace_ids": 9,
+    "unique_trace_sha256": 9,
+    "valid_traces": 1
+  },
+  "dsl_version": "clara.sacmat.policy-trace-dsl-v1",
+  "generator_version": "1.0.0",
+  "params": {
+    "depth": 8,
+    "hops": 3,
+    "mutation_points": 4,
+    "seed": 2027
+  },
+  "traces": [
+    {
+      "bug_class": null,
+      "corpus_schema_version": "clara.venue2027.sacmat.temporal_corpus.v1",
+      "dsl_version": "clara.sacmat.policy-trace-dsl-v1",
+      "events": [
+        {
+          "kind": "GRANT",
+          "logical_time": 1,
+          "policy_state": "consent-epoch-12",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 2,
+          "policy_state": "delegate-87-1",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 3,
+          "policy_state": "delegate-87-2",
+          "principal": "delegate-87-1",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 4,
+          "policy_state": "delegate-87-3",
+          "principal": "delegate-87-2",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "ACCESS",
+          "logical_time": 6,
+          "policy_state": "consent-epoch-1",
+          "principal": "delegate-87-3",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        }
+      ],
+      "expected_findings": [],
+      "expected_outcome": "PERMIT",
+      "paired_trace_id": null,
+      "request": {
+        "logical_time": 6,
+        "principal": "delegate-87-3",
+        "purpose": "self_care",
+        "resource": "medication_record",
+        "tenant": "synthetic-tenant"
+      },
+      "role": "valid",
+      "trace_id": "sacmat-x06-s2027-d8-h3-m4-valid-main",
+      "trace_sha256": "6f0bad0756f4ec2fb66e3afa35ebe0dde4786c6ac6c7a8dad371908be9c94b65",
+      "version": "1.0.0"
+    },
+    {
+      "bug_class": "TIME_TRAVEL_ACCESS",
+      "corpus_schema_version": "clara.venue2027.sacmat.temporal_corpus.v1",
+      "dsl_version": "clara.sacmat.policy-trace-dsl-v1",
+      "events": [
+        {
+          "kind": "ACCESS",
+          "logical_time": 0,
+          "policy_state": "consent-epoch-1",
+          "principal": "delegate-87-3",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "GRANT",
+          "logical_time": 1,
+          "policy_state": "consent-epoch-12",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 2,
+          "policy_state": "delegate-87-1",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 3,
+          "policy_state": "delegate-87-2",
+          "principal": "delegate-87-1",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 4,
+          "policy_state": "delegate-87-3",
+          "principal": "delegate-87-2",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "ACCESS",
+          "logical_time": 6,
+          "policy_state": "consent-epoch-1",
+          "principal": "delegate-87-3",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        }
+      ],
+      "expected_findings": [
+        {
+          "actor": "delegate-87-3",
+          "detail": "access at t=0 references authority never established in scope ('synthetic-tenant', 'medication_record', 'self_care')",
+          "kind": "UNESTABLISHED_AUTHORITY",
+          "witness_event_index": 0
+        }
+      ],
+      "expected_outcome": "PERMIT",
+      "paired_trace_id": "sacmat-x06-s2027-d8-h3-m4-control-time_travel_access",
+      "request": {
+        "logical_time": 6,
+        "principal": "delegate-87-3",
+        "purpose": "self_care",
+        "resource": "medication_record",
+        "tenant": "synthetic-tenant"
+      },
+      "role": "bug",
+      "trace_id": "sacmat-x06-s2027-d8-h3-m4-bug-time_travel_access",
+      "trace_sha256": "94e9afebf2db16643b9953a3a95db3456e2d4c0324ad73c44e206382900c3243",
+      "version": "1.0.0"
+    },
+    {
+      "bug_class": "TIME_TRAVEL_ACCESS",
+      "corpus_schema_version": "clara.venue2027.sacmat.temporal_corpus.v1",
+      "dsl_version": "clara.sacmat.policy-trace-dsl-v1",
+      "events": [
+        {
+          "kind": "GRANT",
+          "logical_time": 1,
+          "policy_state": "consent-epoch-12",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 2,
+          "policy_state": "delegate-87-1",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 3,
+          "policy_state": "delegate-87-2",
+          "principal": "delegate-87-1",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 4,
+          "policy_state": "delegate-87-3",
+          "principal": "delegate-87-2",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "ACCESS",
+          "logical_time": 6,
+          "policy_state": "consent-epoch-1",
+          "principal": "delegate-87-3",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        }
+      ],
+      "expected_findings": [],
+      "expected_outcome": "PERMIT",
+      "paired_trace_id": "sacmat-x06-s2027-d8-h3-m4-bug-time_travel_access",
+      "request": {
+        "logical_time": 6,
+        "principal": "delegate-87-3",
+        "purpose": "self_care",
+        "resource": "medication_record",
+        "tenant": "synthetic-tenant"
+      },
+      "role": "control",
+      "trace_id": "sacmat-x06-s2027-d8-h3-m4-control-time_travel_access",
+      "trace_sha256": "1a3648357c31712e0241032dcb422811e5661a4d1cc7143c6e7e0f592ef3d94b",
+      "version": "1.0.0"
+    },
+    {
+      "bug_class": "REVOKE_BEFORE_GRANT",
+      "corpus_schema_version": "clara.venue2027.sacmat.temporal_corpus.v1",
+      "dsl_version": "clara.sacmat.policy-trace-dsl-v1",
+      "events": [
+        {
+          "kind": "REVOKE",
+          "logical_time": 1,
+          "policy_state": "consent-epoch-12",
+          "principal": "intruder-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "GRANT",
+          "logical_time": 2,
+          "policy_state": "consent-epoch-12",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 3,
+          "policy_state": "delegate-87-1",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 4,
+          "policy_state": "delegate-87-2",
+          "principal": "delegate-87-1",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 5,
+          "policy_state": "delegate-87-3",
+          "principal": "delegate-87-2",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "ACCESS",
+          "logical_time": 6,
+          "policy_state": "consent-epoch-1",
+          "principal": "delegate-87-3",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        }
+      ],
+      "expected_findings": [
+        {
+          "actor": "intruder-87",
+          "detail": "revoke at t=1 for principal with no active grant in scope ('synthetic-tenant', 'medication_record', 'self_care')",
+          "kind": "REVOKE_BEFORE_GRANT",
+          "witness_event_index": 0
+        }
+      ],
+      "expected_outcome": "PERMIT",
+      "paired_trace_id": "sacmat-x06-s2027-d8-h3-m4-control-revoke_before_grant",
+      "request": {
+        "logical_time": 6,
+        "principal": "delegate-87-3",
+        "purpose": "self_care",
+        "resource": "medication_record",
+        "tenant": "synthetic-tenant"
+      },
+      "role": "bug",
+      "trace_id": "sacmat-x06-s2027-d8-h3-m4-bug-revoke_before_grant",
+      "trace_sha256": "6f2dec8d1c756134915094a5cf1eb2c5de870606168abe5b91d11fc20f622c3c",
+      "version": "1.0.0"
+    },
+    {
+      "bug_class": "REVOKE_BEFORE_GRANT",
+      "corpus_schema_version": "clara.venue2027.sacmat.temporal_corpus.v1",
+      "dsl_version": "clara.sacmat.policy-trace-dsl-v1",
+      "events": [
+        {
+          "kind": "GRANT",
+          "logical_time": 1,
+          "policy_state": "consent-epoch-12",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 2,
+          "policy_state": "delegate-87-1",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 3,
+          "policy_state": "delegate-87-2",
+          "principal": "delegate-87-1",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 4,
+          "policy_state": "delegate-87-3",
+          "principal": "delegate-87-2",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "ACCESS",
+          "logical_time": 6,
+          "policy_state": "consent-epoch-1",
+          "principal": "delegate-87-3",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        }
+      ],
+      "expected_findings": [],
+      "expected_outcome": "PERMIT",
+      "paired_trace_id": "sacmat-x06-s2027-d8-h3-m4-bug-revoke_before_grant",
+      "request": {
+        "logical_time": 6,
+        "principal": "delegate-87-3",
+        "purpose": "self_care",
+        "resource": "medication_record",
+        "tenant": "synthetic-tenant"
+      },
+      "role": "control",
+      "trace_id": "sacmat-x06-s2027-d8-h3-m4-control-revoke_before_grant",
+      "trace_sha256": "eb73492b10e1e6db45d2c51d04ab5f899335fb5e4af7427521ec931c6609078f",
+      "version": "1.0.0"
+    },
+    {
+      "bug_class": "DELEGATION_CYCLE",
+      "corpus_schema_version": "clara.venue2027.sacmat.temporal_corpus.v1",
+      "dsl_version": "clara.sacmat.policy-trace-dsl-v1",
+      "events": [
+        {
+          "kind": "GRANT",
+          "logical_time": 1,
+          "policy_state": "consent-epoch-12",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 2,
+          "policy_state": "delegate-87-1",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 3,
+          "policy_state": "delegate-87-2",
+          "principal": "delegate-87-1",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 4,
+          "policy_state": "delegate-87-1",
+          "principal": "delegate-87-2",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "ACCESS",
+          "logical_time": 6,
+          "policy_state": "consent-epoch-1",
+          "principal": "delegate-87-1",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        }
+      ],
+      "expected_findings": [
+        {
+          "actor": "delegate-87-2",
+          "detail": "delegate at t=4 closes a cycle: delegate-87-2 -> delegate-87-1 -> ... -> delegate-87-2",
+          "kind": "DELEGATION_CYCLE",
+          "witness_event_index": 3
+        }
+      ],
+      "expected_outcome": "PERMIT",
+      "paired_trace_id": "sacmat-x06-s2027-d8-h3-m4-control-delegation_cycle",
+      "request": {
+        "logical_time": 6,
+        "principal": "delegate-87-1",
+        "purpose": "self_care",
+        "resource": "medication_record",
+        "tenant": "synthetic-tenant"
+      },
+      "role": "bug",
+      "trace_id": "sacmat-x06-s2027-d8-h3-m4-bug-delegation_cycle",
+      "trace_sha256": "2197a21d4253bafdb4faa6e361abcc3b9b55d562e3af537cb9939489cecda528",
+      "version": "1.0.0"
+    },
+    {
+      "bug_class": "DELEGATION_CYCLE",
+      "corpus_schema_version": "clara.venue2027.sacmat.temporal_corpus.v1",
+      "dsl_version": "clara.sacmat.policy-trace-dsl-v1",
+      "events": [
+        {
+          "kind": "GRANT",
+          "logical_time": 1,
+          "policy_state": "consent-epoch-12",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 2,
+          "policy_state": "delegate-87-1",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 3,
+          "policy_state": "delegate-87-2",
+          "principal": "delegate-87-1",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 4,
+          "policy_state": "delegate-87-3",
+          "principal": "delegate-87-2",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "ACCESS",
+          "logical_time": 6,
+          "policy_state": "consent-epoch-1",
+          "principal": "delegate-87-1",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        }
+      ],
+      "expected_findings": [],
+      "expected_outcome": "PERMIT",
+      "paired_trace_id": "sacmat-x06-s2027-d8-h3-m4-bug-delegation_cycle",
+      "request": {
+        "logical_time": 6,
+        "principal": "delegate-87-1",
+        "purpose": "self_care",
+        "resource": "medication_record",
+        "tenant": "synthetic-tenant"
+      },
+      "role": "control",
+      "trace_id": "sacmat-x06-s2027-d8-h3-m4-control-delegation_cycle",
+      "trace_sha256": "3a415b6be7df8eb41f6fd2e4d3e158ec7e0313b00bae76203441b34ecc0bc622",
+      "version": "1.0.0"
+    },
+    {
+      "bug_class": "REVOKED_ACTOR_TRANSITIVITY",
+      "corpus_schema_version": "clara.venue2027.sacmat.temporal_corpus.v1",
+      "dsl_version": "clara.sacmat.policy-trace-dsl-v1",
+      "events": [
+        {
+          "kind": "GRANT",
+          "logical_time": 1,
+          "policy_state": "consent-epoch-12",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 2,
+          "policy_state": "delegate-87-1",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 3,
+          "policy_state": "delegate-87-2",
+          "principal": "delegate-87-1",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 4,
+          "policy_state": "delegate-87-3",
+          "principal": "delegate-87-2",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "REVOKE",
+          "logical_time": 5,
+          "policy_state": "consent-epoch-12",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "ACCESS",
+          "logical_time": 6,
+          "policy_state": "consent-epoch-1",
+          "principal": "delegate-87-3",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        }
+      ],
+      "expected_findings": [
+        {
+          "actor": "delegate-87-3",
+          "detail": "access at t=6: principal was revoked yet still holds delegated authority in scope ('synthetic-tenant', 'medication_record', 'self_care')",
+          "kind": "REVOKED_ACTOR_TRANSITIVITY",
+          "witness_event_index": 5
+        }
+      ],
+      "expected_outcome": "DENY",
+      "paired_trace_id": "sacmat-x06-s2027-d8-h3-m4-control-revoked_actor_transitivity",
+      "request": {
+        "logical_time": 6,
+        "principal": "delegate-87-3",
+        "purpose": "self_care",
+        "resource": "medication_record",
+        "tenant": "synthetic-tenant"
+      },
+      "role": "bug",
+      "trace_id": "sacmat-x06-s2027-d8-h3-m4-bug-revoked_actor_transitivity",
+      "trace_sha256": "7f91597bd6f29f4257ee2a092bc1b1cc8b8a94dc7a20556d4663c1754be7e5fa",
+      "version": "1.0.0"
+    },
+    {
+      "bug_class": "REVOKED_ACTOR_TRANSITIVITY",
+      "corpus_schema_version": "clara.venue2027.sacmat.temporal_corpus.v1",
+      "dsl_version": "clara.sacmat.policy-trace-dsl-v1",
+      "events": [
+        {
+          "kind": "GRANT",
+          "logical_time": 1,
+          "policy_state": "consent-epoch-12",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 2,
+          "policy_state": "delegate-87-1",
+          "principal": "root-87",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 3,
+          "policy_state": "delegate-87-2",
+          "principal": "delegate-87-1",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "DELEGATE",
+          "logical_time": 4,
+          "policy_state": "delegate-87-3",
+          "principal": "delegate-87-2",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        },
+        {
+          "kind": "ACCESS",
+          "logical_time": 6,
+          "policy_state": "consent-epoch-1",
+          "principal": "delegate-87-3",
+          "purpose": "self_care",
+          "resource": "medication_record",
+          "tenant": "synthetic-tenant"
+        }
+      ],
+      "expected_findings": [],
+      "expected_outcome": "PERMIT",
+      "paired_trace_id": "sacmat-x06-s2027-d8-h3-m4-bug-revoked_actor_transitivity",
+      "request": {
+        "logical_time": 6,
+        "principal": "delegate-87-3",
+        "purpose": "self_care",
+        "resource": "medication_record",
+        "tenant": "synthetic-tenant"
+      },
+      "role": "control",
+      "trace_id": "sacmat-x06-s2027-d8-h3-m4-control-revoked_actor_transitivity",
+      "trace_sha256": "a8df53445af1183a2d94b2cfcf6408214ae03fa81cf6a88de0e73f0946147977",
+      "version": "1.0.0"
+    }
+  ]
+}
