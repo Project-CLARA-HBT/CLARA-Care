@@ -11,6 +11,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-X02_citation_corpus.json",
       "status": "PASS"
     },
+    "ACNS-X05_rater_manual": {
+      "marked_at": "2026-11-15T13:25:40.565049+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-X05_rater_manual.json",
+      "status": "PASS"
+    },
     "ACNS-baselines": {
       "marked_at": "2026-11-15T04:03:21.333036+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-baselines.json",
@@ -59,6 +64,11 @@
     "ACNS-threat": {
       "marked_at": "2026-11-14T19:48:31.434965+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-threat.json",
+      "status": "PASS"
+    },
+    "AIME-X01_vignette_schema": {
+      "marked_at": "2026-11-15T13:25:40.241476+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/AIME-X01_vignette_schema.json",
       "status": "PASS"
     },
     "AIME-X02_case_generator": {
@@ -141,6 +151,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/COMPSAC-X02_closure_oracle.json",
       "status": "PASS"
     },
+    "COMPSAC-X03_pg_schema": {
+      "marked_at": "2026-11-15T13:25:41.176212+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/COMPSAC-X03_pg_schema.json",
+      "status": "PASS"
+    },
     "COMPSAC-X05_silo_occ": {
       "marked_at": "2026-11-15T11:48:12.673766+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/COMPSAC-X05_silo_occ.json",
@@ -154,6 +169,11 @@
     "COMPSAC-baselines": {
       "marked_at": "2026-11-15T04:33:24.056838+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/COMPSAC-baselines.json",
+      "status": "PASS"
+    },
+    "COMPSAC-candidate": {
+      "marked_at": "2026-11-15T13:25:41.075267+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/COMPSAC-candidate.json",
       "status": "PASS"
     },
     "COMPSAC-dataset": {
@@ -201,6 +221,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/COMPSAC-threat.json",
       "status": "PASS"
     },
+    "DIMVA-X01_event_schema": {
+      "marked_at": "2026-11-15T13:25:40.770824+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-X01_event_schema.json",
+      "status": "PASS"
+    },
     "DIMVA-X05_rules_detector": {
       "marked_at": "2026-11-15T11:48:11.969395+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-X05_rules_detector.json",
@@ -219,6 +244,11 @@
     "DIMVA-funding": {
       "marked_at": "2026-11-15T03:01:34.205325+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-funding.json",
+      "status": "PASS"
+    },
+    "DIMVA-oracle": {
+      "marked_at": "2026-11-15T13:25:40.668839+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-oracle.json",
       "status": "PASS"
     },
     "DIMVA-overlap": {
@@ -316,6 +346,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-X06_zanzibar_style.json",
       "status": "PASS"
     },
+    "IFIP_SEC-X07_replay_generator": {
+      "marked_at": "2026-11-15T13:25:40.453621+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-X07_replay_generator.json",
+      "status": "PASS"
+    },
     "IFIP_SEC-baselines": {
       "marked_at": "2026-11-15T04:03:21.219836+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-baselines.json",
@@ -396,6 +431,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/POPETS-funding.json",
       "status": "PASS"
     },
+    "POPETS-oracle": {
+      "marked_at": "2026-11-15T13:25:40.346405+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/POPETS-oracle.json",
+      "status": "PASS"
+    },
     "POPETS-overlap": {
       "marked_at": "2026-11-15T02:33:30.467448+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/POPETS-overlap.json",
@@ -424,6 +464,16 @@
     "POPETS-threat": {
       "marked_at": "2026-11-14T19:48:31.030008+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/POPETS-threat.json",
+      "status": "PASS"
+    },
+    "PST-X01_receipt_contract": {
+      "marked_at": "2026-11-15T13:25:40.879340+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-X01_receipt_contract.json",
+      "status": "PASS"
+    },
+    "PST-X02_forensic_queries": {
+      "marked_at": "2026-11-15T13:25:40.977762+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-X02_forensic_queries.json",
       "status": "PASS"
     },
     "PST-funding": {
