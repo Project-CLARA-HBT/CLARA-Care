@@ -1,0 +1,44 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/popets/baselines.py": "20c03f49e109ecec632d5c4fb4ca3add9ffd0ed76169b1a3a4dbfa1b83bda4ca",
+    "evaluation/venue2027/popets/fixtures/always_recompute_parity.json": "20e631a85646a491e95b29e1212edf937a5824e621854f8e222564a24b5c532f",
+    "evaluation/venue2027/popets/fixtures/coarse_purge_parity.json": "62708ab47db7cc3f068dae18cd2414d85d7042bfbb381a75e3561d0a2349ee8a",
+    "evaluation/venue2027/popets/fixtures/purpose_bound_cache_keying_parity.json": "00a2c2892001f8512292da811fbd6736cd1ff8b46a2d1cafae622e2b69c3da39",
+    "evaluation/venue2027/popets/test_baselines.py": "11b4e6ed42fe611e4cebd1383a2026231aed3f8def4999574c5012cb68113179"
+  },
+  "baseline_parity": "PASS",
+  "changed_paths": [
+    "evaluation/venue2027/popets/__init__.py",
+    "evaluation/venue2027/popets/baselines.py",
+    "evaluation/venue2027/popets/test_baselines.py",
+    "evaluation/venue2027/popets/fixtures/coarse_purge_parity.json",
+    "evaluation/venue2027/popets/fixtures/always_recompute_parity.json",
+    "evaluation/venue2027/popets/fixtures/purpose_bound_cache_keying_parity.json",
+    "research/venue2027/proof/logs/POPETS-baselines.pytest.log",
+    "research/venue2027/proof/logs/POPETS-baselines.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/popets/test_baselines.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-baselines.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/popets/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-baselines.ruff.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 format --check evaluation/venue2027/popets/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-baselines.ruff.log"
+    }
+  ],
+  "notes": "POPETS-baselines (Phase P03): implemented in-process baselines coarse-cache-purge-on-revocation (B1), always-recompute-authorized-projection (B2) and purpose-bound-cache-keying (design reference ablation) as real deterministic algorithms over synthetic revocation/cache workloads with parity vectors at the registry-declared fixture paths (all reproduce; baseline_parity=PASS for implemented set). Honest NOT_RUN_EXTERNAL with reason_code BASELINE_UNAVAILABLE for ttl-only-cache (registry UNAVAILABLE_NOT_RUN, no verifiable upstream revision), zanzibar-like-consistency-token-cache / zanzibar-openfga (require pinned OpenFGA v1.22.1 server binary, unavailable in-process) and muse-unlearning-comparator (taxonomy-only). EXECUTION_CONTRACT rule 8 respected: no toy substitution under a declared name; no fabricated numbers. 33 positive+adversarial tests pass; ruff 0.7.1 check+format clean.",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "source_sha_before": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "status": "PASS",
+  "task_id": "POPETS-baselines",
+  "unresolved": []
+}

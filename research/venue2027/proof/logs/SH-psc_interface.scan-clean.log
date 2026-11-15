@@ -1,0 +1,31 @@
+{
+  "candidate_paths": [
+    "evaluation/venue2027/_shared/_fixtures/candidate_arm.py"
+  ],
+  "detail": "clean scan: 17 static import target(s) parsed from psc.py, no candidate/baseline module overlap",
+  "dynamic_import_expressions": [],
+  "imported_module_names": [
+    "__future__",
+    "__future__.annotations",
+    "argparse",
+    "collections.abc",
+    "collections.abc.Mapping",
+    "collections.abc.Sequence",
+    "dataclasses",
+    "hashlib",
+    "json",
+    "pathlib",
+    "pathlib.Path",
+    "re",
+    "sys",
+    "typing",
+    "typing.Any",
+    "typing.Protocol",
+    "typing.runtime_checkable"
+  ],
+  "ok": true,
+  "oracle_path": "evaluation/venue2027/_shared/psc.py",
+  "oracle_sha256": "2c776060f262303a4ef722cbb59329b0304bf101fddaa98cb85849304c0bdde2",
+  "reason_code": "OK",
+  "version": "1.0.0"
+}

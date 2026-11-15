@@ -1,0 +1,88 @@
+{
+  "fixture_id": "purpose_bound_cache_keying_parity",
+  "baseline_id": "purpose-bound-cache-keying",
+  "registry_entry": "blueprint-purpose-bound-cache-keying (literature_matrix.csv design reference)",
+  "declared_semantics": "Cache lines keyed by (subject, grant, purpose, consent_epoch); a consent change/revocation rotates the key space forcing recompute for affected purposes on the next dispatch. NO reverse dependency edges: transitively derived artifacts (retry payloads, fallback transports, embedding pointers) whose key components stay stable are NOT invalidated - the declared ablation gap this vector must exhibit.",
+  "vector_version": "1.0.0",
+  "steps": [
+    {
+      "name": "affected_purpose_key_rotates_on_revocation",
+      "case": {
+        "case_id": "parity-keying-1",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72",
+            "med_list_2026_02": "metformin 1000mg"
+          },
+          "revocations": [
+            {"subject": "subj-1", "grant": "g-med", "purpose": "analytics", "at_seconds": 100}
+          ],
+          "dispatches": [
+            {
+              "dispatch_id": "d1",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "analytics",
+              "lineage": ["med_list_2026_02"],
+              "at_seconds": 150
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "REJECT",
+      "expected_detail_contains": "\"key_rotations\": 1"
+    },
+    {
+      "name": "unaffected_purpose_key_space_stable",
+      "case": {
+        "case_id": "parity-keying-2",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72"
+          },
+          "revocations": [
+            {"subject": "subj-1", "grant": "g-med", "purpose": "analytics", "at_seconds": 100}
+          ],
+          "dispatches": [
+            {
+              "dispatch_id": "d1",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "lineage": ["vitals_2026_01"],
+              "at_seconds": 150
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "ADMIT",
+      "expected_detail_contains": "\"key_rotations\": 0"
+    },
+    {
+      "name": "transitive_retry_artifact_key_stays_valid_ablation_gap",
+      "case": {
+        "case_id": "parity-keying-3",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72"
+          },
+          "revocations": [
+            {"subject": "subj-1", "grant": "g-med", "purpose": "analytics", "at_seconds": 100}
+          ],
+          "dispatches": [
+            {
+              "dispatch_id": "d1",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "analytics",
+              "lineage": ["retry_payload_1", "embedding_ptr_1", "vitals_2026_01"],
+              "at_seconds": 200
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "REJECT",
+      "expected_detail_contains": "\"transitive_gaps\": 1"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "policy_version": "1.0.0",
+  "change_class": "research_infra",
+  "event": "pull_request",
+  "run_mode": "pull_request",
+  "requires_r4_gate": true,
+  "ok_to_auto_run": true,
+  "required_jobs": [
+    {
+      "job_id": "secret_scan",
+      "workflow": ".github/workflows/glhs-r4-novelty-gate.yml",
+      "job": "secret-scan",
+      "argv": "python3 (inline GitHub Actions secret scan: FORBIDDEN_PATTERNS aura_prod_x7k9m2, sk-[a-zA-Z0-9]{32,}; walks .py/.json/.md/.csv/.yml/.yaml excluding .git/.venv/node_modules)",
+      "script": null
+    },
+    {
+      "job_id": "chronology",
+      "workflow": ".github/workflows/glhs-r4-novelty-gate.yml",
+      "job": "chronology-audit",
+      "argv": "PYTHONPATH=services/api/src:services/ml/src:. python3 research/glhs_journal/q4_r4/chronology_validator_r4.py",
+      "script": "research/glhs_journal/q4_r4/chronology_validator_r4.py"
+    },
+    {
+      "job_id": "r4_pytest",
+      "workflow": ".github/workflows/glhs-r4-novelty-gate.yml",
+      "job": "r4-admission-and-comparator-tests",
+      "argv": "cd services/api && DATABASE_URL=sqlite+pysqlite:////tmp/clara_gate.db AUTH_AUTO_PROVISION_USERS=true AUTH_BOOTSTRAP_ADMIN_ENABLED=true GLHS_RESEARCH_COMPARATORS_ENABLED=true PYTHONPATH=src:../ml/src:. uv run pytest -q tests/test_glhs_immutable_projection_contract.py tests/test_glhs_r4_admission.py tests/test_glhs_r4_comparators.py tests/test_glhs_comparator_policies.py tests/test_glhs_current_state_insufficiency.py tests/test_glhs_inference_envelope.py tests/test_glhs_reason_codes.py tests/test_glhs_attestation_receipts.py tests/test_inference_attestation.py tests/test_glhs_grwc_lineage.py tests/test_glhs_mandatory_thss_binding.py",
+      "script": null
+    },
+    {
+      "job_id": "claim_lint",
+      "workflow": ".github/workflows/glhs-r4-novelty-gate.yml",
+      "job": "r4-claim-lint",
+      "argv": "python3 scripts/ci/r4_claim_lint.py",
+      "script": "scripts/ci/r4_claim_lint.py"
+    },
+    {
+      "job_id": "e22_offline",
+      "workflow": ".github/workflows/glhs-r4-novelty-gate.yml",
+      "job": "offline-reproducibility-sweep",
+      "argv": "python3 reproduce_q4_r4.py",
+      "script": "reproduce_q4_r4.py"
+    },
+    {
+      "job_id": "artifact_safety_policy",
+      "workflow": ".github/workflows/ci.yml",
+      "job": "artifact-safety-policy",
+      "argv": "python3 scripts/security/check_ci_artifact_policy.py",
+      "script": "scripts/security/check_ci_artifact_policy.py"
+    }
+  ],
+  "optional_jobs": [
+    {
+      "job_id": "quality",
+      "workflow": ".github/workflows/ci.yml",
+      "job": "quality",
+      "argv": "bash scripts/docs/check-docs-links.sh && ruff check && mypy",
+      "script": "scripts/docs/check-docs-links.sh"
+    }
+  ],
+  "refusals": []
+}

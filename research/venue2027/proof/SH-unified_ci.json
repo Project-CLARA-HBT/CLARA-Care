@@ -1,0 +1,45 @@
+{
+  "task_id": "SH-unified_ci",
+  "status": "PASS",
+  "source_sha_before": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "source_sha_after": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "changed_paths": [
+    "research/venue2027/_shared/ci_policy.md",
+    "research/venue2027/_shared/tools/ci_policy.py",
+    "research/venue2027/_shared/tests/test_ci_policy.py",
+    "research/venue2027/proof/artifacts/SH-unified_ci_routing_sample.json",
+    "research/venue2027/proof/logs/SH-unified_ci.pytest.log",
+    "research/venue2027/proof/logs/SH-unified_ci.ruff.log",
+    "research/venue2027/proof/logs/SH-unified_ci.shared_suite.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/test_ci_policy.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-unified_ci.pytest.log"
+    },
+    {
+      "argv": "ruff check research/venue2027/_shared/tools/ci_policy.py research/venue2027/_shared/tests/test_ci_policy.py && ruff format --check research/venue2027/_shared/tools/ci_policy.py research/venue2027/_shared/tests/test_ci_policy.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-unified_ci.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-unified_ci.shared_suite.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/_shared/ci_policy.md": "dec42b4a2675b2dba9acc7029d9f4273d46b19510a7d5d7570ab8d846f262525",
+    "research/venue2027/_shared/tools/ci_policy.py": "865952d3de2abde56cb334d1a1e7d467a06ea8dbbcede51e4ad31338dc523383",
+    "research/venue2027/_shared/tests/test_ci_policy.py": "dd5ea560574d560373070ef4681e978f1173777d8dc13ff7dc5846dc3c7b041a",
+    "research/venue2027/proof/artifacts/SH-unified_ci_routing_sample.json": "eabd79bb8eef3b41606ea237005ee7c17def9397b4527763fde8f5f456f0af59",
+    "research/venue2027/proof/logs/SH-unified_ci.pytest.log": "398f82d33280ecd36ba0df12d04038fa0bb6114ccafc8f72d48213ee43427c8e",
+    "research/venue2027/proof/logs/SH-unified_ci.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a",
+    "research/venue2027/proof/logs/SH-unified_ci.shared_suite.log": "a53c9a1f5989b714ff74ce4f443375be1ad331aa7cccd790c9f3f7ddb93352fe"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Unified CI policy (P08, shared): ci_policy.py implements choose_gate(change_set, event)->Checks routing change classes to real gates (all workflows/scripts verified with test -f) plus audit_policy() fail-closed auditor (MISSING_GATE_WORKFLOW / MISSING_GATE_SCRIPT / UNKNOWN_CHANGE_CLASS / POLICY_ENTRY_INVALID / POLICY_EMPTY / RESEARCH_CLASS_MISSING_R4_GATE) and assert_r4_gate_green() over the recorded green gate evidence (R4_EVIDENCE_OK). Adversarial run controls: FROZEN_RELEASE_DATA_AUTO_RUN (auto events may not touch research/glhs_journal/q4_r4/), HEAVY_GATE_ON_SCHEDULE (nightly = light smoke only), UNKNOWN_EVENT fails closed with no claimed gates. 22 contract tests pass (positive: research-only change selects full R4 gate + artifact checks, docs-only selects docs check; adversarial: nonexistent workflow/script refused, R4-bearing change cannot be routed to a trivial check). Full shared suite 189 passed; ruff check + format clean. Default policy table audits clean: 49 entries, ok:true."
+}

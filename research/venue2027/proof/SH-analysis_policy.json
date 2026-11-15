@@ -1,0 +1,49 @@
+{
+  "task_id": "SH-analysis_policy",
+  "status": "PASS",
+  "source_sha_before": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "source_sha_after": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "changed_paths": [
+    "evaluation/venue2027/_shared/analysis_policy.py",
+    "evaluation/venue2027/_shared/test_analysis_policy.py",
+    "research/venue2027/proof/SH-analysis_policy.json",
+    "research/venue2027/proof/logs/SH-analysis_policy.pytest.log",
+    "research/venue2027/proof/logs/SH-analysis_policy.suite.log",
+    "research/venue2027/proof/logs/SH-analysis_policy.ruff.log",
+    "research/venue2027/proof/logs/SH-analysis_policy.mypy.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/test_analysis_policy.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-analysis_policy.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-analysis_policy.suite.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/_shared/ --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-analysis_policy.ruff.log"
+    },
+    {
+      "argv": "uv run --frozen --extra dev --no-editable --project services/api mypy evaluation/venue2027/_shared/analysis_policy.py --ignore-missing-imports",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-analysis_policy.mypy.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/_shared/analysis_policy.py": "ba7deefc0197bb5892a28f96b58d859ad6959efd2a6d79f406feca819ed6b498",
+    "evaluation/venue2027/_shared/test_analysis_policy.py": "938f3095d1017aaecc0c771682fd2f37e35b72c880fe07bf9f48ccb298e4cfa0",
+    "research/venue2027/proof/logs/SH-analysis_policy.pytest.log": "ece6bd7028376aba334ef4dd60dceb04ae962e8cf68876b7c265d77d53ed2f8c",
+    "research/venue2027/proof/logs/SH-analysis_policy.suite.log": "1d0396c77a56ff497a63a7cf8ae72cd66aa3dcad67479bbe7ed450457a324ab8",
+    "research/venue2027/proof/logs/SH-analysis_policy.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/SH-analysis_policy.mypy.log": "7e0d6dd2f227b418814c8bb135bd48af96d641bae172481ac8a8ee3d8e298d2e"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Frozen inferential analysis contract (analysis_policy.py v1.0.0, stdlib-only): exact two-sided McNemar (exact binomial on discordant pairs; references 22/1024 for (1,9) and 120920/2^20 for (6,14) reproduced), seeded deterministic cluster bootstrap CI resampling whole cluster_id groups (raw per-unit differences retained for recalculation per evidence protocol rule 8), Clopper-Pearson zero-event upper bound 1-0.05**(1/n) (0/598 -> ~0.0050), two_gate_non_inferiority requiring BOTH the one-sided safety bound to meet the frozen margin AND the utility improvement to meet its criterion (a non-significant safety difference is never a certificate; 0/10 inside margin 0.02 still fails because the CP bound 0.2589 exceeds it), and assert_frozen_analysis refusing post-hoc endpoint/test/margin/unit/alpha/seed changes with stable reason_code ANALYSIS_DRIFT (seed change refused; 200 same-patient events stay one cluster, n_clusters=1, degenerate CI at the point estimate). 25 positive + adversarial tests pass; full _shared suite 68 passed; ruff and mypy clean."
+}

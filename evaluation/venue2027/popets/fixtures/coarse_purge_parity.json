@@ -1,0 +1,141 @@
+{
+  "fixture_id": "coarse_purge_parity",
+  "baseline_id": "coarse-cache-purge-on-revocation",
+  "registry_entry": "coarse-cache-purge-on-revocation",
+  "declared_semantics": "On any consent-revocation event, purge ALL cached entries derived from the subject's context (all purposes, all grants); no dependency labels; revocation-complete by over-invalidation.",
+  "vector_version": "1.0.0",
+  "steps": [
+    {
+      "name": "pre_revocation_dispatch_authorized",
+      "case": {
+        "case_id": "parity-coarse-1",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72",
+            "med_list_2026_02": "metformin 1000mg"
+          },
+          "revocations": [
+            {"subject": "subj-1", "grant": "g-med", "purpose": "analytics", "at_seconds": 100}
+          ],
+          "dispatches": [
+            {
+              "dispatch_id": "d1",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "lineage": ["vitals_2026_01"],
+              "at_seconds": 10
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "ADMIT",
+      "expected_detail_contains": "\"dispatch_count\": 1"
+    },
+    {
+      "name": "post_revocation_dispatch_denied_after_full_purge",
+      "case": {
+        "case_id": "parity-coarse-2",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72",
+            "med_list_2026_02": "metformin 1000mg"
+          },
+          "revocations": [
+            {"subject": "subj-1", "grant": "g-med", "purpose": "analytics", "at_seconds": 100}
+          ],
+          "dispatches": [
+            {
+              "dispatch_id": "d1",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "analytics",
+              "lineage": ["med_list_2026_02"],
+              "at_seconds": 200
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "REJECT",
+      "expected_detail_contains": "REVOKED_CONTEXT"
+    },
+    {
+      "name": "unaffected_grant_still_served_after_revoke_of_other_grant",
+      "case": {
+        "case_id": "parity-coarse-3",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72",
+            "admin_note_2026_01": "billing tier B"
+          },
+          "revocations": [
+            {"subject": "subj-1", "grant": "g-med", "purpose": "analytics", "at_seconds": 100}
+          ],
+          "dispatches": [
+            {
+              "dispatch_id": "d1",
+              "subject": "subj-1",
+              "grant": "g-admin",
+              "purpose": "clinical",
+              "lineage": ["admin_note_2026_01"],
+              "at_seconds": 200
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "ADMIT",
+      "expected_detail_contains": "\"invalidation_events\": 1"
+    },
+    {
+      "name": "transitive_retry_lineage_post_revocation_denied",
+      "case": {
+        "case_id": "parity-coarse-4",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72",
+            "med_list_2026_02": "metformin 1000mg"
+          },
+          "revocations": [
+            {"subject": "subj-1", "grant": "g-med", "purpose": "analytics", "at_seconds": 100}
+          ],
+          "dispatches": [
+            {
+              "dispatch_id": "d1",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "analytics",
+              "lineage": ["summary_cache_1", "retry_payload_1", "vitals_2026_01"],
+              "at_seconds": 300
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "REJECT",
+      "expected_detail_contains": "REVOKED_CONTEXT"
+    },
+    {
+      "name": "missing_source_fails_closed_before_any_revocation",
+      "case": {
+        "case_id": "parity-coarse-5",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72"
+          },
+          "revocations": [],
+          "dispatches": [
+            {
+              "dispatch_id": "d1",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "lineage": ["ghost_record"],
+              "at_seconds": 10
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "REJECT",
+      "expected_detail_contains": "LINEAGE_SOURCE_MISSING"
+    }
+  ]
+}

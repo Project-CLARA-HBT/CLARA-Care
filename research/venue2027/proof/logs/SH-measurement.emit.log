@@ -1,0 +1,43 @@
+{
+ "campaign_id": "SH-run_harness-sample",
+ "outcome_counts": {
+  "admit": 2,
+  "reject": 2,
+  "indeterminate": 1,
+  "not_run": 0,
+  "timeout": 0,
+  "execution_error": 1,
+  "invalid_result": 0
+ },
+ "denominator": {
+  "planned": 6,
+  "attempted": 6,
+  "missing": 0,
+  "attempted_total": 6,
+  "committed": 2,
+  "rejected": 2,
+  "indeterminate": 1,
+  "timeout": 0,
+  "execution_error": 1,
+  "not_run_external": 0,
+  "invalid_result": 0
+ },
+ "forbidden_commit_rate": 0.0,
+ "false_stale_rate": 0.0,
+ "throughput_ops_per_sec": 249999.99999999997,
+ "latency_seconds": {
+  "unit": "s",
+  "n": 6,
+  "p50": 3e-06,
+  "p95": 5e-06,
+  "p99": 5e-06
+ },
+ "retry_amplification": null,
+ "unavailable": [
+  {
+   "metric": "retry_amplification",
+   "reason_code": "MISSING_RECORDS",
+   "detail": null
+  }
+ ]
+}

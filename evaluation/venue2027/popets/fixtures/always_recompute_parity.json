@@ -1,0 +1,121 @@
+{
+  "fixture_id": "always_recompute_parity",
+  "baseline_id": "always-recompute-authorized-projection",
+  "registry_entry": "always-recompute-authorized-projection",
+  "declared_semantics": "Zero caching; reauthorize and recompute the authorized view from live source snapshots under live-purpose permission clauses on every dispatch; never serves a cached derivation.",
+  "vector_version": "1.0.0",
+  "steps": [
+    {
+      "name": "every_dispatch_recomputes_zero_cache_hits",
+      "case": {
+        "case_id": "parity-recompute-1",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72",
+            "med_list_2026_02": "metformin 1000mg"
+          },
+          "revocations": [
+            {"subject": "subj-1", "grant": "g-med", "purpose": "analytics", "at_seconds": 100}
+          ],
+          "dispatches": [
+            {
+              "dispatch_id": "d1",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "lineage": ["vitals_2026_01"],
+              "at_seconds": 10
+            },
+            {
+              "dispatch_id": "d2",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "lineage": ["vitals_2026_01"],
+              "at_seconds": 20
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "ADMIT",
+      "expected_detail_contains": "\"invalidation_events\": 2"
+    },
+    {
+      "name": "post_revocation_recompute_denies_revoked_context",
+      "case": {
+        "case_id": "parity-recompute-2",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72",
+            "med_list_2026_02": "metformin 1000mg"
+          },
+          "revocations": [
+            {"subject": "subj-1", "grant": "g-med", "purpose": "analytics", "at_seconds": 100}
+          ],
+          "dispatches": [
+            {
+              "dispatch_id": "d1",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "analytics",
+              "lineage": ["med_list_2026_02"],
+              "at_seconds": 150
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "REJECT",
+      "expected_detail_contains": "REVOKED_CONTEXT"
+    },
+    {
+      "name": "derived_artifact_expanded_to_source_then_denied",
+      "case": {
+        "case_id": "parity-recompute-3",
+        "workload": {
+          "source_snapshot": {
+            "subj-1_vitals_2026_01": "BP 128/84, HR 72"
+          },
+          "revocations": [
+            {"subject": "subj-1", "grant": "g-med", "purpose": "analytics", "at_seconds": 100}
+          ],
+          "dispatches": [
+            {
+              "dispatch_id": "d1",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "analytics",
+              "lineage": ["cached_summary_of_subj-1_vitals_2026_01"],
+              "at_seconds": 200
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "REJECT",
+      "expected_detail_contains": "REVOKED_CONTEXT"
+    },
+    {
+      "name": "missing_source_fails_closed",
+      "case": {
+        "case_id": "parity-recompute-4",
+        "workload": {
+          "source_snapshot": {
+            "vitals_2026_01": "BP 128/84, HR 72"
+          },
+          "revocations": [],
+          "dispatches": [
+            {
+              "dispatch_id": "d1",
+              "subject": "subj-1",
+              "grant": "g-med",
+              "purpose": "clinical",
+              "lineage": ["ghost_record"],
+              "at_seconds": 10
+            }
+          ]
+        }
+      },
+      "expected_observed_outcome": "REJECT",
+      "expected_detail_contains": "LINEAGE_SOURCE_MISSING"
+    }
+  ]
+}

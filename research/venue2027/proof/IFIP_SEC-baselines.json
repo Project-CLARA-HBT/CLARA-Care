@@ -1,0 +1,37 @@
+{
+    "artifacts_sha256": {
+        "evaluation/venue2027/ifip_sec/__init__.py": "c1773fc92647f99d8be9009e4c052cbfb3ba8e24a518a42e51410d15d3f3b298",
+        "evaluation/venue2027/ifip_sec/baselines.py": "65424268e6ae9f040119db5b54f84be3050645014271b8c3ac1a068863bf4fe8",
+        "evaluation/venue2027/ifip_sec/test_baselines.py": "b2c2178d3ee0265c8d7996316f8cc8a53aa9c96a40170296c243f64581f8ed7e",
+        "research/venue2027/proof/logs/IFIP_SEC-baselines.pytest.log": "a37571aa28850f526a0645386223138a2bdd0c1ef1ba91efad68493f03950742",
+        "research/venue2027/proof/logs/IFIP_SEC-baselines.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    "baseline_parity": "PASS",
+    "changed_paths": [
+        "evaluation/venue2027/ifip_sec/__init__.py",
+        "evaluation/venue2027/ifip_sec/baselines.py",
+        "evaluation/venue2027/ifip_sec/test_baselines.py",
+        "research/venue2027/proof/logs/IFIP_SEC-baselines.pytest.log",
+        "research/venue2027/proof/logs/IFIP_SEC-baselines.ruff.log",
+        "research/venue2027/proof/IFIP_SEC-baselines.json"
+    ],
+    "commands": [
+        {
+            "argv": "python3 -m pytest -q evaluation/venue2027/ifip_sec/test_baselines.py",
+            "exit_code": 0,
+            "log_path": "research/venue2027/proof/logs/IFIP_SEC-baselines.pytest.log"
+        },
+        {
+            "argv": "uvx ruff@0.7.1 check evaluation/venue2027/ifip_sec/ --config ruff.toml",
+            "exit_code": 0,
+            "log_path": "research/venue2027/proof/logs/IFIP_SEC-baselines.ruff.log"
+        }
+    ],
+    "notes": "P03 baseline fidelity adapters: run_baseline(baseline_id, case, ctx) -> Outcome with real in-process implementations for B0 bearer-signed receipt (signature+expiry only; replay ACCEPTED is the asserted RQ1 weak-control signal), B1 stateless purpose binding (pointwise claim checks, nonce form-only, replay within expiry admitted - faithful stateless semantics), B2 real HMAC caveat-chain attenuation over hmac+hashlib (Macaroon-style: build_caveat_chain folds actor/purpose/task/expiry/nonce/parent into the running signature; tampering any caveat byte fails constant-time verification; pointwise satisfaction), B3 real consume-once nonce store (set.discard consume; replay REJECTED with NONCE_REPLAYED; paired B0-vs-B3 divergence test). parity_check round-trips the caveat construction (attenuate->serialize->verify) and proves tampered variants fail byte binding (PARITY_TAMPER_DETECTED path exercised via a broken-verifier simulation). External pinned upstreams (OpenFGA v1.22.1, Cedar v4.14.1, OPA v1.22.4 binaries) are NOT bundled: B2_OPENFGA/B3_CEDAR registry rows return NOT_RUN_EXTERNAL / BASELINE_UNAVAILABLE with retriable=True (execution contract rule 8 - never a toy under the same name; adapters are tasks X05/X03/X06). BASELINE_REGISTRY carries provenance for all six rows. 33 tests (16 positive incl. end-to-end admits + parity round-trip; 17 adversarial incl. NOT_RUN_EXTERNAL, B0/B1 replay admission, tampered caveat/signature/epoch, constant-deny stub refusal, unknown-id fail-closed, short-key refusal, no-oracle-import AST check) pass; ruff 0.7.1 clean. source_sha_after = the task commit that contains the hashed artifacts (sibling convention; hashes bound at emit time).",
+    "oracle_disagreement_count": 0,
+    "source_sha_after": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+    "source_sha_before": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+    "status": "PASS",
+    "task_id": "IFIP_SEC-baselines",
+    "unresolved": []
+}

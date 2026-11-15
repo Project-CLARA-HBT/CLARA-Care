@@ -1,0 +1,48 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/_shared/emit_metrics_sample.py": "ead211b594bf74b48f1d9a8c49fe343166908b2bb149bc2108a369fdb9a27263",
+    "evaluation/venue2027/_shared/emit_sh_measurement_report.py": "6400311c0832fd26a65c456fd6c198fe4312fe426f10e46513dda12f4b92b927",
+    "evaluation/venue2027/_shared/measurement.py": "1dc4fcec4bf08e4c71bad202d51414be362dc0d1537b4ee692e52b31b4340464",
+    "evaluation/venue2027/_shared/test_measurement.py": "44bf39ecb51388fb1891e1a72ec25f6b82132e4f55ecdda7f3753fd6ebe3104d",
+    "research/venue2027/proof/artifacts/metrics_sample.json": "4efe02967e60ea271fb0fce5c88a83c8032d112f11152fe61898590393e158ea",
+    "research/venue2027/proof/logs/SH-measurement.emit.log": "fc21ba6c0fd8a3eff3dd23202b88b4ef54dee97f36ae4b3ea7cfc087420fe563",
+    "research/venue2027/proof/logs/SH-measurement.pytest.log": "3146e9e7282a3a27cbdc34098b64d33091c133a6616efc3dc4f6d531334ce127",
+    "research/venue2027/proof/logs/SH-measurement.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/_shared/measurement.py",
+    "evaluation/venue2027/_shared/test_measurement.py",
+    "evaluation/venue2027/_shared/emit_metrics_sample.py",
+    "evaluation/venue2027/_shared/emit_sh_measurement_report.py",
+    "research/venue2027/proof/artifacts/metrics_sample.json",
+    "research/venue2027/proof/logs/SH-measurement.pytest.log",
+    "research/venue2027/proof/logs/SH-measurement.ruff.log",
+    "research/venue2027/proof/logs/SH-measurement.emit.log",
+    "research/venue2027/proof/logs/SH-measurement.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/test_measurement.py evaluation/venue2027/_shared/test_harness.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-measurement.pytest.log"
+    },
+    {
+      "argv": "ruff check evaluation/venue2027/_shared/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-measurement.ruff.log"
+    },
+    {
+      "argv": "PYTHONPATH=. python3 evaluation/venue2027/_shared/emit_metrics_sample.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-measurement.emit.log"
+    }
+  ],
+  "notes": "SH-measurement measurement standard over raw run bundles: measure(bundle, require=..., latency_unit='s') -> Metrics (v1.0.0) computing, from raw records only: mutually exclusive outcome counts (admit/reject/indeterminate/not_run/timeout/execution_error + harness invalid_result kept visible), explicit denominator (planned/attempted/missing/attempted_total), forbidden-commit rate (oracle truth vs observed ADMIT, predeclared denominator), false-stale rate (observed REJECT vs oracle ADMIT), throughput as committed ops / busy seconds (sum of per-record durations, benchmark overhead excluded), latency p50/p95/p99 via exact nearest-rank order statistics, and retry amplification from attempt_index. assert_denominator_consistency(bundle) proves counts partition the planned total (bucket sum == record count, unique pair identity, attempted+missing == planned, manifest denominator_total == recount). Metrics whose required records are missing are refused with stable reason codes (MISSING_RECORDS / ORACLE_VERDICT_MISSING / NO_DENOMINATOR / MIXED_TIME_UNITS / MALFORMED_DURATION / MALFORMED_RECORD) and listed in Metrics.unavailable \u2014 never invented as zeros; require=(...) escalates to MeasurementError. Real artifact metrics_sample.json computed from the committed 6-pair run_bundle_sample.jsonl: admit=2 reject=2 indeterminate=1 execution_error=1, denominator 6/6 planned=attempted, forbidden_commit_rate=0.0 (0/6, oracle-derived), false_stale_rate=0.0, throughput=2 admits / 8e-6 busy s, latency p50=3e-06 s p95=p99=5e-06 s (n=6, unit s); retry_amplification correctly UNAVAILABLE (MISSING_RECORDS) because the harness records no attempt fields \u2014 not defaulted to 1.0. 32 positive+adversarial tests (mixed time units rejected for p99, dropped pair / lying manifest / duplicate pair refused with DENOMINATOR_MISMATCH, absent metrics never fabricated as zero, sleep benchmark plausible latency); 47 tests pass with the harness suite; ruff clean.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "source_sha_before": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "status": "PASS",
+  "task_id": "SH-measurement",
+  "unresolved": []
+}

@@ -1,0 +1,46 @@
+{
+  "task_id": "AIME-baselines",
+  "status": "PASS",
+  "source_sha_before": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "source_sha_after": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "changed_paths": [
+    "evaluation/venue2027/aime/__init__.py",
+    "evaluation/venue2027/aime/baselines.py",
+    "evaluation/venue2027/aime/test_baselines.py",
+    "research/venue2027/proof/AIME-baselines.json",
+    "research/venue2027/proof/logs/AIME-baselines.pytest.log",
+    "research/venue2027/proof/logs/AIME-baselines.ruff.log",
+    "research/venue2027/proof/logs/AIME-baselines.suite.log",
+    "research/venue2027/proof/logs/AIME-baselines.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/aime/test_baselines.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-baselines.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/aime/baselines.py evaluation/venue2027/aime/test_baselines.py && uvx ruff@0.7.1 format --check evaluation/venue2027/aime/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-baselines.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-baselines.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_aime_baselines_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/AIME-baselines.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-baselines.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/aime/baselines.py": "342da81b1ab3c7c7739cb179f66981eb31e794e411b13617aefa49093fc6095d",
+    "evaluation/venue2027/aime/test_baselines.py": "cb7d02a39f074b315ddf19f2eb9b5f74431ad1fee34d175bcebc4e6b4055dc7f"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P03 baseline fidelity adapters for AIME 2027. evaluation/venue2027/aime/baselines.py implements run_baseline(id, case, ctx) -> Outcome over SYNTHETIC clinical vignette records only (structured medications, consent grants/revocations, history revisions, ordered timeline; no real PHI \u2014 PHI-like input fields are refused fail-closed with VIGNETTE_MALFORMED). Arms: B0 single-history recommendation (task-start snapshot only, ignores history change); B1 full per-step refresh + current policy filter; B2 HealthBench/MedHELM rubric arm (benchmark rubric, NOT a decision algorithm); B3 static context + deterministic output post-filter (withdrawn-medication filter); B4 candidate counterfactual-history-aware safety check (detects changed consent/medication history); B5 consent-agnostic retrieval foil. BASELINE_REGISTRY carries provenance for every arm mirroring research/venue2027/aime/literature_matrix.csv rows B0-B5; all registry entries keep fidelity_status UNAVAILABLE_NOT_RUN because provider-dependent LLM execution is out of scope for this module (no live model call exists; B0/B1/B2/B3 provider execution is NOT_RUN_EXTERNAL with reason code PROVIDER_DEPENDENT_NOT_RUN; B2 returns NOT_RUN_EXTERNAL for decision requests by declared semantics). Parity/behaviour gate refuse_constant_safe_stub replays hazard-free + hazard-bearing probes and refuses a constant-safe stub with CONSTANT_SAFE_STUB_REFUSED (EXECUTION_CONTRACT rule 8: no toy wearing a baseline name). Structural B4 vs B0 demonstration on the synthetic withdrawn-medication vignette: B0 (stale snapshot semantics) returns SAFE/NO_DETECTED_HAZARD while B4 returns UNSAFE/WITHDRAWN_MEDICATION_IN_OUTPUT \u2014 the axis-A hazard contrast, a systems-level behavior on synthetic labels, NOT a clinical efficacy result. All errors are stable reason codes; INDETERMINATE is first-class and never coerced to a safe rejection or completion; NOT_RUN_EXTERNAL outcomes carry no success path. Machine-checked: 45 new tests pass (positive: per-arm registry coverage, B0-vs-B4 demonstration pair, B1 epoch refusal, B3 post-filter, B5 foil, determinism, constant-safe gate; adversarial: NOT_RUN_EXTERNAL arms, provider-client import ban, PHI-like field refusal, malformed vignette/timeline/context/unknown-arm fail-closed); full evaluation/venue2027 suite 88 passed; ruff check + format clean on touched files. source_sha_after = base SHA per established repo convention (proof report committed together with the work)."
+}

@@ -1,0 +1,51 @@
+{
+  "task_id": "DSN-prior",
+  "status": "PASS",
+  "source_sha_before": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "source_sha_after": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "changed_paths": [
+    "research/venue2027/dsn/literature_matrix.csv",
+    "research/venue2027/dsn/tests/test_literature_matrix.py",
+    "research/venue2027/proof/DSN-prior.json",
+    "research/venue2027/proof/logs/DSN-prior.validator.log",
+    "research/venue2027/proof/logs/DSN-prior.pytest.log",
+    "research/venue2027/proof/logs/DSN-prior.suite.log",
+    "research/venue2027/proof/logs/DSN-prior.shared_regression.log",
+    "research/venue2027/proof/logs/DSN-prior.ruff.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 research/venue2027/_shared/tools/comparator_matrix.py research/venue2027/dsn/literature_matrix.csv",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-prior.validator.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dsn/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-prior.pytest.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/dsn/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-prior.suite.log"
+    },
+    {
+      "argv": "python3 -m pytest -q research/venue2027/_shared/tests/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-prior.shared_regression.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check research/venue2027/dsn/tests/test_literature_matrix.py && uvx ruff@0.7.1 format --check research/venue2027/dsn/tests/test_literature_matrix.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DSN-prior.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/dsn/literature_matrix.csv": "b3c7d08101b8aca22b4aed2566f4d28621ea6851c5e18e19c4f6e3329b2970f3",
+    "research/venue2027/dsn/tests/test_literature_matrix.py": "33d4634e467a57a0e473dd371cc730d9c821911581f363a37c1a10a929010ada"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P01 prior-art implementation and verification ledger for DSN (Recoverable Safety Journals for Crash-Consistent AI-Mediated Health-State Mutations): literature_matrix.csv with 10 comparators carrying exactly comparator_matrix.REQUIRED_COLUMNS and >=40-char mechanism_analysis on every row. Blueprint arms recorded: B0 single-write transactional commit + fire-and-forget side effect (weak control), B1 PostgreSQL atomic write + transactional outbox + idempotent consumer (mandatory strong practical baseline; upstream postgres/postgres tag REL_16_9 commit 6e4ab1b69197e2756192a1019439aebacdea5497 re-verified via git ls-remote on 2026-11-15, ORIGINAL_UPSTREAM), B2 durable workflow/saga with compensation and stable operation IDs (temporalio tag 1.19.0 commit 11e8650c7c8b89af45fab328e400d2fd5a9af16c re-verified, ORIGINAL_UPSTREAM), B3 fsync/durability reference (Pillai et al. OSDI 14, crash-consistency update protocols; no pinnable official ALICE upstream, honestly no/UNAVAILABLE_NOT_RUN), B4 candidate reconciliation safety journal (tri-state COMMITTED/REJECTED/INDETERMINATE, declared falsifiable, never presented as runnable), B5 monotonic single-journal internal control, plus B2b WAL/ARIES recovery reference (Mohan et al. ACM TODS 17(1) 1992, DOI 10.1145/128765.128770 verified via Crossref; no executable reference implementation exists, honestly UNAVAILABLE_NOT_RUN). Registry comparators cite exactly their MANIFESTS/literature_registry.json locators (verified by test): ct9162 (RFC 9162 append-only log integrity is not reconciliation), elle20 (jepsen-io/elle pinned oracle side, HEAD 4e359e597c52938b0afebb8bc42273914d68a424 live-checked, repo verified, ORIGINAL_UPSTREAM; oracle reviewer must not reuse candidate code), silo13 (SOSP 2013 serializable single-store CC boundary, no official code release, UNAVAILABLE_NOT_RUN). No implementation was fabricated: evaluation/venue2027/dsn does not exist in this worktree, so all in-project B-arms are honestly UNAVAILABLE_NOT_RUN, and available_code=yes appears only on rows with verified upstream code (B1 postgres, B2 temporalio, elle20). Shared validator: ok=true, row_count=10, exit 0. Tests: 28 passed (real-matrix pass, exact REQUIRED_COLUMNS, registry-locator consistency, tri-state framing, mandatory-B1/equal-budget falsification clause, oracle independence, pinned revisions, no empirical values, cross-study firewall E15-E22/COMPSAC/IFIP, contract GO declaration - plus adversarial failures: fabricated id UNKNOWN_COMPARATOR_ID, missing link MISSING_SOURCE_LINK, thin mechanism MECHANISM_ANALYSIS_MISSING, available_code=yes without code_url AVAILABLE_CODE_WITHOUT_URL, ORIGINAL_UPSTREAM without code UPSTREAM_WITHOUT_CODE, FAITHFUL_PORT without code_url PORT_WITHOUT_CODE). DSN venue suite: 80 passed; shared regression: 167 passed. uvx ruff@0.7.1 check + format --check clean on the test file (the pinned formatter version is authoritative per the sibling task convention). No empirical numbers, no clinical claims, no real PHI; source_sha_after records the base SHA of the single task commit per sibling convention (ACNS-prior/AIME-prior: the pre-commit HEAD is recorded and the commit itself is created immediately after the report hash freeze)."
+}

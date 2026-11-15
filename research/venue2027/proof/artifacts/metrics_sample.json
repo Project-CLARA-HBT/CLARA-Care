@@ -1,0 +1,65 @@
+{
+  "artifact_provenance": {
+    "measurement_module": "evaluation/venue2027/_shared/measurement.py",
+    "note": "computed from research/venue2027/proof/artifacts/run_bundle_sample.jsonl",
+    "source_bundle": "research/venue2027/proof/artifacts/run_bundle_sample.jsonl"
+  },
+  "campaign_id": "SH-run_harness-sample",
+  "denominator": {
+    "attempted": 6,
+    "attempted_total": 6,
+    "committed": 2,
+    "execution_error": 1,
+    "indeterminate": 1,
+    "invalid_result": 0,
+    "missing": 0,
+    "not_run_external": 0,
+    "planned": 6,
+    "rejected": 2,
+    "timeout": 0
+  },
+  "false_stale_rate": 0.0,
+  "forbidden_commit_rate": 0.0,
+  "latency_seconds": {
+    "n": 6,
+    "p50": 3e-06,
+    "p95": 5e-06,
+    "p99": 5e-06,
+    "unit": "s"
+  },
+  "measurement_version": "1.0.0",
+  "outcome_counts": {
+    "admit": 2,
+    "execution_error": 1,
+    "indeterminate": 1,
+    "invalid_result": 0,
+    "not_run": 0,
+    "reject": 2,
+    "timeout": 0
+  },
+  "provenance": {
+    "harness_version": "1.0.0",
+    "metric_sources": {
+      "false_stale_rate": "observed REJECT vs oracle truth ADMIT",
+      "forbidden_commit_rate": "oracle.expected_outcome truth vs observed ADMIT",
+      "latency_seconds": "nearest-rank p50/p95/p99 over duration_seconds (unit=s)",
+      "outcome_counts": "raw records outcome.observed_outcome (mutually exclusive tally)",
+      "retry_amplification": "attempt_index maxima / distinct logical_op_id",
+      "throughput_ops_per_sec": "committed admits / sum(duration_seconds) busy time"
+    },
+    "record_count": 6,
+    "seed": 2027,
+    "source_commit": "573d5369abd2e9d35f8039a99cf647e6ba9b3f32",
+    "unit_of_inference": "arm_x_case_pair",
+    "wall_seconds": 0.000458
+  },
+  "retry_amplification": null,
+  "throughput_ops_per_sec": 249999.99999999997,
+  "unavailable": [
+    {
+      "detail": null,
+      "metric": "retry_amplification",
+      "reason_code": "MISSING_RECORDS"
+    }
+  ]
+}

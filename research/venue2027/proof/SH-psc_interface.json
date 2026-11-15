@@ -1,0 +1,77 @@
+{
+  "task_id": "SH-psc_interface",
+  "status": "PASS",
+  "source_sha_before": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "source_sha_after": "9b6be889db89c2228c6ea1ac599f0000d03c63a4",
+  "changed_paths": [
+    "evaluation/venue2027/_shared/psc.py",
+    "evaluation/venue2027/_shared/test_psc.py",
+    "research/venue2027/proof/SH-psc_interface.json",
+    "research/venue2027/proof/logs/SH-psc_interface.pytest.log",
+    "research/venue2027/proof/logs/SH-psc_interface.ruff.log",
+    "research/venue2027/proof/logs/SH-psc_interface.ruff-format.log",
+    "research/venue2027/proof/logs/SH-psc_interface.suite.log",
+    "research/venue2027/proof/logs/SH-psc_interface.mypy.log",
+    "research/venue2027/proof/logs/SH-psc_interface.cli-smoke.log",
+    "research/venue2027/proof/logs/SH-psc_interface.scan-clean.log",
+    "research/venue2027/proof/logs/SH-psc_interface.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/test_psc.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-psc_interface.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/_shared/psc.py evaluation/venue2027/_shared/test_psc.py --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-psc_interface.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/_shared/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-psc_interface.suite.log"
+    },
+    {
+      "argv": "uv run --frozen --extra dev --no-editable --project services/api mypy evaluation/venue2027/_shared/psc.py --ignore-missing-imports",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-psc_interface.mypy.log"
+    },
+    {
+      "argv": "python3 evaluation/venue2027/_shared/psc.py evaluate /tmp/opencode/psc_build/req.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-psc_interface.cli-smoke.log"
+    },
+    {
+      "argv": "python3 evaluation/venue2027/_shared/oracle_contract.py scan evaluation/venue2027/_shared/psc.py evaluation/venue2027/_shared/_fixtures/candidate_arm.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-psc_interface.scan-clean.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 format --check evaluation/venue2027/_shared/psc.py evaluation/venue2027/_shared/test_psc.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-psc_interface.ruff-format.log"
+    },
+    {
+      "argv": "python3 /tmp/opencode/psc_build/emit_report.py (agent_protocol.build_report + validate_report)",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-psc_interface.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/_shared/psc.py": "2c776060f262303a4ef722cbb59329b0304bf101fddaa98cb85849304c0bdde2",
+    "evaluation/venue2027/_shared/test_psc.py": "af8844cdf9d3c4c2c382b329d7c8409bf1df0b0c20b66f6b5c737304c15d6c76",
+    "research/venue2027/proof/logs/SH-psc_interface.pytest.log": "3c5c77ae771d9e4e2c2a7779f4ad977f04cafb131264ff2e7a91de0e254f44fb",
+    "research/venue2027/proof/logs/SH-psc_interface.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/SH-psc_interface.ruff-format.log": "3bc53bf3e981a98a34a852e175bf9b77af841edea74fca595d9aedcbaf9a4938",
+    "research/venue2027/proof/logs/SH-psc_interface.suite.log": "bbf4ba284e3493d93fa4be66f2a9bdd127c7f87cec8154ee22615303764de355",
+    "research/venue2027/proof/logs/SH-psc_interface.mypy.log": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e",
+    "research/venue2027/proof/logs/SH-psc_interface.cli-smoke.log": "75343b5fdaf4b60de54b443ab7cda4995786a86e1ab69a9e2e5e15b7e1900499",
+    "research/venue2027/proof/logs/SH-psc_interface.scan-clean.log": "949ad41ed13e3deaba29676141336763e09218e6696821b4166adc073b1b8fdc",
+    "research/venue2027/proof/logs/SH-psc_interface.validator.log": "ec4a661b1c1d1230805cb522f0b505074649a82721c83e0bb0107a37524c1669"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "Typed Policy-Scoped Commit advisory-witness interface (psc.py v1.0.0, stdlib-only). PolicyScope (tenant, principal, purpose, consent_epoch, policy_version) fails closed on missing/unknown/malformed fields; PscRequest binds a commit-time claimed scope AND a dispatch-time scope (any divergence => REJECT SCOPE_CONFUSION, method-card threat table H). evaluate_psc(request, *, dependency_oracle, epoch_source) is a pure, total, deterministic function: wiring errors raise with stable codes; every case-level problem returns a typed PscDecision instead of raising. Outcomes COMMIT | REJECT | INDETERMINATE with stable reason codes; INDETERMINATE (DEPENDENCY_UNRESOLVED, DEPENDENCY_ORACLE_ERROR, EPOCH_SOURCE_ERROR, EPOCH_SOURCE_MALFORMED, EPOCH_SOURCE_UNKNOWN_PRINCIPAL) is a first-class outcome never counted as a safe rejection or completion (INDEPENDENT_EVIDENCE_PROTOCOL rule 4); oracle/epoch failures become INDETERMINATE, never fabricated rejections; foreign exception text is sanitized to the exception class name only. Consent-epoch drift => REJECT EPOCH_CONSENT_STALE; claimed policy_version older than live => REJECT EPOCH_POLICY_DOWNGRADE; no orderable relation => REJECT EPOCH_POLICY_DIVERGENT; dependency changed since dispatch => REJECT DEPENDENCY_STALE; empty declared closure => REJECT DEPENDENCY_CLOSURE_EMPTY (arms cannot bypass the oracle). COMMIT is ADVISORY_WITNESS-enforced by construction: the decision type refuses any enforcement claim other than advisory, mirroring the method card's requirement that authorization be repeated inside the atomic transaction. DependencyOracle / GovernanceEpochSource are injected Protocols with frozen table-driven reference implementations (no I/O, no clock, no randomness); psc.py never imports candidate code — verified by a REAL oracle_contract.py AST independence scan (scan-clean.log, reason_code OK, 17 static imports, oracle_sha256 2c776060f262303a4ef722cbb59329b0304bf101fddaa98cb85849304c0bdde2). 26 task tests (8 positive incl. determinism/round-trip/first-class INDETERMINATE; 18 adversarial incl. missing tenant/purpose, unknown scope key, stale consent epoch, policy downgrade + divergent relation, cross-purpose/tenant/principal scope confusion, stale dependency version+digest, oracle/epoch crash sanitization, forged enforcement, empty closure injection) + full shared suite 69 passed; mypy clean under services/api env; ruff@0.7.1 check + format clean. source_sha_after = source_sha_before = base HEAD 9b6be889 (single-commit policy: report is written inside the same commit, so the recorded SHA cannot be the commit itself); STATE marking and sha refresh deferred to orchestrator. Downstream dependents (nine *-candidate venue tasks) should import from evaluation/venue2027/_shared/psc.py: PolicyScope, PscRequest, PscDecision, DependencyRef, evaluate_psc, plus the two reference injections."
+}

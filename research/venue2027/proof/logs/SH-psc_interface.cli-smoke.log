@@ -1,0 +1,19 @@
+{
+  "contract_version": "1.0.0",
+  "detail": "all advisory predicates passed; re-verify every predicate inside the atomic transaction before writing",
+  "enforcement": "ADVISORY_WITNESS",
+  "outcome": "COMMIT",
+  "reason_code": "ADVISORY_COMMIT_ELIGIBLE",
+  "request_id": "req-cli-1",
+  "request_sha256": "da13c7c40f74f7f754fc9f37b29e1a02f96cc0239d113a5a492852727452f0bb",
+  "scope": {
+    "consent_epoch": "c1",
+    "policy_version": "1.2.0",
+    "principal": "dr.ash",
+    "purpose": "med_review",
+    "tenant": "t1"
+  },
+  "verified_dependency_keys": [
+    "med/allergy-list"
+  ]
+}
