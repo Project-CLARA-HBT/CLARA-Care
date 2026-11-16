@@ -1,0 +1,44 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/popets/test_trace_writer.py": "7f1f2588978c36f8279f05c918d4571781f857c8641a619de4dfff1a98538a6c",
+    "evaluation/venue2027/popets/trace_writer.py": "81dcb63a066668d71a98ba9da75f2d1932851e2eb87ca9c4c44e5d921087f8ea",
+    "research/venue2027/proof/artifacts/popets_trace_sample.jsonl": "f78c82e5157aa20e0a492b7200a9ee07997382daf6cc2a555484356e30780a6e",
+    "research/venue2027/proof/logs/POPETS-traces.pytest.log": "e915b21e1eb0672738c06e418f82a566418c43451fd59d6d003ca146aea1709e",
+    "research/venue2027/proof/logs/POPETS-traces.ruff.log": "f7dda2fd24b50ea3a1cbaf1fd43ea7a5a532c974f584a1b5abd3cf85ef023e29"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/popets/trace_writer.py",
+    "evaluation/venue2027/popets/test_trace_writer.py",
+    "research/venue2027/proof/artifacts/popets_trace_sample.jsonl",
+    "research/venue2027/proof/emit_POPETS-traces_report.py",
+    "research/venue2027/proof/POPETS-traces.json",
+    "research/venue2027/proof/logs/POPETS-traces.pytest.log",
+    "research/venue2027/proof/logs/POPETS-traces.ruff.log",
+    "research/venue2027/proof/logs/POPETS-traces.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/popets/test_trace_writer.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-traces.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/popets/trace_writer.py evaluation/venue2027/popets/test_trace_writer.py && uvx ruff@0.7.1 format --check evaluation/venue2027/popets/trace_writer.py evaluation/venue2027/popets/test_trace_writer.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-traces.ruff.log"
+    },
+    {
+      "argv": "PYTHONPATH=. python3 research/venue2027/proof/emit_POPETS-traces_report.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-traces.validator.log"
+    }
+  ],
+  "notes": "POPETS-traces (Phase P05, venue popets): delivered evaluation/venue2027/popets/trace_writer.py (TRACE_WRITER_VERSION 1.0.0) with TraceWriter append-only JSONL recording, write_trace convenience interface, strictly monotonic event ID enforcement, cryptographic SHA-256 digest chaining with GENESIS_DIGEST linkage, raw outcome and reason code recording, independent oracle decision binding, CPU/DB/model duration and cost tracking, actual backend labeling, and fail-closed sensitive content sanitization (no PHI, no patient identifiers). Includes verify_trace(trace_path) and verify_trace_detailed(trace_path) checking monotonicity of event IDs, digest recomputation, unbroken hash chain, and absence of PHI. Real sample trace artifact emitted to research/venue2027/proof/artifacts/popets_trace_sample.jsonl containing 9 PoPETs study lifecycle operations verifying successfully. test_trace_writer.py contains 24 positive and adversarial unit tests covering roundtrip writing, auto/explicit monotonic event IDs, digest chain continuity, clean resuming, sanitization, sample artifact verification, non-monotonic ID rejection, unsanitized PHI rejection (patient_name, MRN, SSN, email, nested), and corrupted trace detection (tampered payload, tampered digest, broken chain, swapped lines, malformed JSON, injected PHI). pytest exit 0 (24 passed), ruff 0.7.1 check+format exit 0.",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "01705809bd25101ffb3bd74ec74db769626f234b",
+  "source_sha_before": "01705809bd25101ffb3bd74ec74db769626f234b",
+  "status": "PASS",
+  "task_id": "POPETS-traces",
+  "unresolved": []
+}

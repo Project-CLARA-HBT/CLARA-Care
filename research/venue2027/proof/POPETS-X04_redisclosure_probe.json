@@ -1,0 +1,49 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/popets/redisclosure_probe.py": "7b8ec7b9415b49b1387d7ad62c99c6e53a07dd6ceae1a31a5787e08afb4ff68e",
+    "evaluation/venue2027/popets/test_redisclosure_probe.py": "54570f2d4c632d6595eb0b761c4af36717a411b5748eee44873035310a11dd1d",
+    "research/venue2027/proof/logs/POPETS-X04_redisclosure_probe.pytest.log": "6b68487be8cb7888dd484c4315bec7c57a83f116ca55d197780f04e35f0d7f77",
+    "research/venue2027/proof/logs/POPETS-X04_redisclosure_probe.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a",
+    "research/venue2027/proof/logs/POPETS-X04_redisclosure_probe.suite.log": "24277c0882758e4136e3ee8e03583faa1d60f6380a39f8a34eefd16304badbf6"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/popets/redisclosure_probe.py",
+    "evaluation/venue2027/popets/test_redisclosure_probe.py",
+    "research/venue2027/proof/POPETS-X04_redisclosure_probe.json",
+    "research/venue2027/proof/emit_POPETS-X04_redisclosure_probe_report.py",
+    "research/venue2027/proof/logs/POPETS-X04_redisclosure_probe.pytest.log",
+    "research/venue2027/proof/logs/POPETS-X04_redisclosure_probe.ruff.log",
+    "research/venue2027/proof/logs/POPETS-X04_redisclosure_probe.suite.log",
+    "research/venue2027/proof/logs/POPETS-X04_redisclosure_probe.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/popets/test_redisclosure_probe.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-X04_redisclosure_probe.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/popets/redisclosure_probe.py evaluation/venue2027/popets/test_redisclosure_probe.py && uvx ruff@0.7.1 format --check evaluation/venue2027/popets/redisclosure_probe.py evaluation/venue2027/popets/test_redisclosure_probe.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-X04_redisclosure_probe.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/popets/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-X04_redisclosure_probe.suite.log"
+    },
+    {
+      "argv": "PYTHONPATH=. python3 research/venue2027/proof/emit_POPETS-X04_redisclosure_probe_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/POPETS-X04_redisclosure_probe.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-X04_redisclosure_probe.validator.log"
+    }
+  ],
+  "notes": "P05 POPETS-X04_redisclosure_probe deliverable: evaluation/venue2027/popets/redisclosure_probe.py (REDISCLOSURE_PROBE_VERSION 1.0.0) instruments future dispatches and retries for post-revocation canary redisclosure. Operates strictly as a black-box observer recording byte-accurate outbound field observations using synthetic canaries, tenant/purpose context, and cache lineage; does NOT scan model internals (model_internals_inspected=False). Detects if canary tokens belonging to a revoked context appear in outbound payload across dispatches and retries. probe_redisclosure(outbound_response, canary_tokens, tenant_purpose_ctx, cache_lineage) -> ProbeResult reports canary_detected: bool, violation_type: str ('REVOCATION_LEAK', 'CROSS_PURPOSE_LEAK', 'NONE'), and matched_tokens: list[str]. Also exposes probe(history, config) -> DisclosureReport per tasks.json contract. Positive tests: clean response -> no leak; known canary in outbound response -> detected leak with accurate token match; multi-field isolation and byte-accurate accounting; partial subset matching; JSON serializability. Adversarial controls: tampered lineage refused (digest mismatch, explicit tampered flag, cycles), canary token casing/normalization check (catches casing mutations, Unicode NFKC normalization, refuses malformed/empty tokens), empty context refused fail-closed (CONTEXT_EMPTY, CONTEXT_MALFORMED), malformed outbound refused. 12 unit tests pass; 280 popets regression suite tests pass; uvx ruff@0.7.1 check and format clean.",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "01705809bd25101ffb3bd74ec74db769626f234b",
+  "source_sha_before": "01705809bd25101ffb3bd74ec74db769626f234b",
+  "status": "PASS",
+  "task_id": "POPETS-X04_redisclosure_probe",
+  "unresolved": []
+}

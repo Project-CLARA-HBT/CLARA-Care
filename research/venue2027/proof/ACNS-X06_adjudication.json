@@ -1,0 +1,41 @@
+{
+  "task_id": "ACNS-X06_adjudication",
+  "status": "PASS",
+  "source_sha_before": "01705809bd25101ffb3bd74ec74db769626f234b",
+  "source_sha_after": "01705809bd25101ffb3bd74ec74db769626f234b",
+  "changed_paths": [
+    "evaluation/venue2027/acns/rater_agreement.py",
+    "evaluation/venue2027/acns/test_rater_agreement.py",
+    "research/venue2027/proof/ACNS-X06_adjudication.json",
+    "research/venue2027/proof/emit_acns_x06_adjudication_report.py",
+    "research/venue2027/proof/logs/ACNS-X06_adjudication.pytest.log",
+    "research/venue2027/proof/logs/ACNS-X06_adjudication.ruff.log",
+    "research/venue2027/proof/logs/ACNS-X06_adjudication.suite.log",
+    "research/venue2027/proof/logs/ACNS-X06_adjudication.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/test_rater_agreement.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X06_adjudication.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/acns/rater_agreement.py evaluation/venue2027/acns/test_rater_agreement.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X06_adjudication.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X06_adjudication.suite.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/acns/rater_agreement.py": "7e9dce311ad46a9033926d0bc64f53d0063cc92a6eb19c044c2d7e4e8361e477",
+    "evaluation/venue2027/acns/test_rater_agreement.py": "24f15da28ef79fa551f197e42d0533299987a1ef87ba59a630d6778d8513ef03"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "ACNS-X06_adjudication (Phase P05, venue acns; SoK: Evidence Boundaries of Attestation in Tool-Using AI Systems): delivered evaluation/venue2027/acns/rater_agreement.py implementing compute_agreement(ratings_matrix, num_bootstraps=1000, seed=2027) -> AgreementResult and measure(labels_a, labels_b) -> AgreementResult (Agreement alias). Computes Krippendorff's alpha for nominal data with arbitrary observers and missing labels; cross-checks Cohen's kappa if complete pairs across two raters are present; computes case/paper clustered percentile bootstrap confidence intervals with a deterministic seed. Pure standard library implementation (no external stats dependencies). All errors fail closed with stable reason codes (EMPTY_RATINGS_MATRIX, INSUFFICIENT_RATERS, NO_PAIRABLE_UNITS, INSUFFICIENT_DATA, MISMATCHED_LENGTHS, INVALID_RATINGS_MATRIX, INVALID_BOOTSTRAP_PARAMS). Tests in evaluation/venue2027/acns/test_rater_agreement.py (15 tests) cover positive controls (perfect agreement alpha=1.0 and kappa=1.0 across 2 and 4 raters; complete pairs matching known analytical Cohen kappa values 7/12 and 7/15; bootstrap CI bounds correct, enclosing point estimate, and seed-deterministic; measure convenience wrapper; JSON serializability) and adversarial controls (empty ratings matrices refused with EMPTY_RATINGS_MATRIX; insufficient raters refused with INSUFFICIENT_RATERS; unpairable matrices refused with NO_PAIRABLE_UNITS; all-disagreement handled without NaN crash for 2 and 3 raters; missing labels with None, empty strings, and NaN handled gracefully; invalid bootstrap and shape parameters fail closed). Full ACNS test suite regression passed (177 tests). ruff@0.7.1 check and format clean on touched paths. source_sha_after = base commit SHA per repo convention."
+}

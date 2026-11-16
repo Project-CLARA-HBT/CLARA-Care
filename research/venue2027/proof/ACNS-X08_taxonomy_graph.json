@@ -1,0 +1,44 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/acns/taxonomy_graph.py": "c2076a31a2003a3d8a582b84b0c6397e46735b0b5a6d0c8f8591061fa0a2a90d",
+    "evaluation/venue2027/acns/test_taxonomy_graph.py": "19f34288aac1fcb09929a185d2754894f699719f61be7207df56f38c8b4277f9",
+    "research/venue2027/proof/logs/ACNS-X08_taxonomy_graph.pytest.log": "9e54890e1442bd5cf7bcdfa22f226721993c297cd88bc59cd922a457b6fafe64",
+    "research/venue2027/proof/logs/ACNS-X08_taxonomy_graph.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "research/venue2027/proof/logs/ACNS-X08_taxonomy_graph.suite.log": "00560675ed87996ab8cb16f6f0bec78d76078c6542ced0b2eb213cbb7f6d33ec"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/acns/taxonomy_graph.py",
+    "evaluation/venue2027/acns/test_taxonomy_graph.py",
+    "research/venue2027/proof/ACNS-X08_taxonomy_graph.json",
+    "research/venue2027/proof/emit_ACNS-X08_taxonomy_graph_report.py",
+    "research/venue2027/proof/logs/ACNS-X08_taxonomy_graph.pytest.log",
+    "research/venue2027/proof/logs/ACNS-X08_taxonomy_graph.ruff.log",
+    "research/venue2027/proof/logs/ACNS-X08_taxonomy_graph.suite.log",
+    "research/venue2027/proof/logs/ACNS-X08_taxonomy_graph.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/test_taxonomy_graph.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X08_taxonomy_graph.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/acns/taxonomy_graph.py evaluation/venue2027/acns/test_taxonomy_graph.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X08_taxonomy_graph.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/acns/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/ACNS-X08_taxonomy_graph.suite.log"
+    }
+  ],
+  "notes": "ACNS-X08_taxonomy_graph (Phase P05, venue acns; SoK: Evidence Boundaries of Attestation in Tool-Using AI Systems, RQ2): delivers evaluation/venue2027/acns/taxonomy_graph.py implementing graph representation of the evidence taxonomy where edges are annotated with extra assumptions, counterexample IDs, and threat model failure families. Avoids directional implication without evidence: validate_evidence_path(graph, from_node, to_node) -> PathValidityResult verifies whether a path of valid evidence transitions exists; unsupported level jumps, unbridged transitions (e.g. bare transport ACK E03, receipt-to-execution E04, execution-to-committed E05, transport-to-inference E06, hash-only token E07), and reverse directional implications fail closed and report concrete counterexample IDs (dispatched-not-acknowledged, acknowledged-not-executed, executed-not-committed, assembled-not-sent, NC1_hash_only_token_miscalled_hardware_attestation, NC2_transport_ack_implies_inference), missing trust assumptions, and gap codes (G1, G2, G3, G7). Functions build_taxonomy_graph(yaml_path) -> TaxonomyGraph, validate_evidence_path, export_graph() -> dict, render_graph(evidence_types, edges) -> SVG string, and emit_taxonomy_graph(run_id) -> Path. Adversarial controls: cycles detected via DFS recursion stack and assert_acyclic(), unsupported jumps rejected with reason_code UNSUPPORTED_JUMP, invalid node IDs raise stable reason-coded TaxonomyGraphError(INVALID_NODE_ID), malformed taxonomy YAML raises TaxonomyGraphError(MALFORMED_TAXONOMY). Machine-readable JSON artifact emitted at artifacts/venue2027/acns/acns-x08-taxonomy-graph-1.0.0/taxonomy_graph.json. Tests: 12 passed in evaluation/venue2027/acns/test_taxonomy_graph.py (positive + adversarial); 174 passed across full evaluation/venue2027/acns/ regression. uvx ruff@0.7.1 check and format clean on touched files. source_sha_after = base SHA per established repo convention.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "01705809bd25101ffb3bd74ec74db769626f234b",
+  "source_sha_before": "01705809bd25101ffb3bd74ec74db769626f234b",
+  "status": "PASS",
+  "task_id": "ACNS-X08_taxonomy_graph",
+  "unresolved": []
+}
