@@ -361,6 +361,16 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-X05_rules_detector.json",
       "status": "PASS"
     },
+    "DIMVA-X06_seq_detector": {
+      "marked_at": "2026-11-16T05:31:02.602128+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-X06_seq_detector.json",
+      "status": "PASS"
+    },
+    "DIMVA-X07_adaptive_evasion": {
+      "marked_at": "2026-11-16T05:31:02.705297+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-X07_adaptive_evasion.json",
+      "status": "PASS"
+    },
     "DIMVA-X08_splitter": {
       "marked_at": "2026-11-15T13:56:31.484857+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-X08_splitter.json",
@@ -434,6 +444,11 @@
     "DIMVA-threat": {
       "marked_at": "2026-11-14T19:48:31.634014+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-threat.json",
+      "status": "PASS"
+    },
+    "DIMVA-traces": {
+      "marked_at": "2026-11-16T05:31:02.500875+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/DIMVA-traces.json",
       "status": "PASS"
     },
     "DIMVA-unit": {
@@ -769,6 +784,16 @@
     "PST-X06_key_rotation": {
       "marked_at": "2026-11-15T19:07:56.721125+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-X06_key_rotation.json",
+      "status": "PASS"
+    },
+    "PST-ablation": {
+      "marked_at": "2026-11-16T05:31:02.909266+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-ablation.json",
+      "status": "PASS"
+    },
+    "PST-baseline_tests": {
+      "marked_at": "2026-11-16T05:31:02.807773+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-baseline_tests.json",
       "status": "PASS"
     },
     "PST-baselines": {
