@@ -1,0 +1,47 @@
+{
+  "task_id": "SACMAT-X08_budget_runner",
+  "status": "PASS",
+  "source_sha_before": "4f5ad0ab2e7c3bce4b410c47a53c5595bcd12614",
+  "source_sha_after": "4f5ad0ab2e7c3bce4b410c47a53c5595bcd12614",
+  "changed_paths": [
+    "evaluation/venue2027/sacmat/budget_fair_runner.py",
+    "evaluation/venue2027/sacmat/test_budget_fair_runner.py",
+    "research/venue2027/proof/SACMAT-X08_budget_runner.json",
+    "research/venue2027/proof/emit_SACMAT-X08_budget_runner_report.py",
+    "research/venue2027/proof/logs/SACMAT-X08_budget_runner.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-X08_budget_runner.ruff.log",
+    "research/venue2027/proof/logs/SACMAT-X08_budget_runner.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/sacmat/test_budget_fair_runner.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X08_budget_runner.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/sacmat/budget_fair_runner.py evaluation/venue2027/sacmat/test_budget_fair_runner.py --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X08_budget_runner.ruff.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 format --check evaluation/venue2027/sacmat/budget_fair_runner.py evaluation/venue2027/sacmat/test_budget_fair_runner.py --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X08_budget_runner.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_SACMAT-X08_budget_runner_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/SACMAT-X08_budget_runner.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X08_budget_runner.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/sacmat/budget_fair_runner.py": "ef0925c1481812517fa7e42aba66ea733e20fe88e6ba61af57a9c2a20c3bc6f7",
+    "evaluation/venue2027/sacmat/test_budget_fair_runner.py": "cb6050f9672e14cce108a6b92e117b5ee8b13c1238b40b523012ebfaef49c001",
+    "research/venue2027/proof/logs/SACMAT-X08_budget_runner.pytest.log": "dca494ad5ea7a502fc4f1aaa6b1ec2ba688cab969d437edf46d0e3bc6e02cb18",
+    "research/venue2027/proof/logs/SACMAT-X08_budget_runner.ruff.log": "c6486b51f483249343d4a4bdb91c41be31f0bdc28887b2f4cd4800e174f8bd6b"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P05 task SACMAT-X08_budget_runner (Equal-budget competitor benchmark for PolicyTrace RQ2). evaluation/venue2027/sacmat/budget_fair_runner.py (BUDGET_FAIR_RUNNER_VERSION 1.0.0) implements run_budget_fair(campaign, budget_config) -> BudgetRunResult and assert_budget_fairness(results) verifying every competitor strategy (sequence_aware, mcdc_static, random, coverage_guided) executed under strictly EQUAL oracle query budgets, generation CPU limits, and wall-clock timeouts. Records query_trace and cumulative fault_discovery_curve. Positive controls prove: all strategies consume <= allocated budget; sequence-aware candidate discovers temporal faults (MUT_SWAP_GRANT_REVOKE, MUT_REMOVE_REVOKE) that random misses at equal budget; MC/DC static testing kills static obligation mutants but misses temporal ordering swaps; fault discovery curves are monotonically non-decreasing; and results are JSON-serializable. Adversarial controls enforce fail-closed rejection: budget overruns raise BUDGET_OVERRUN, unequal budget allocations raise UNEQUAL_BUDGET_ALLOCATION, invalid budgets raise INVALID_BUDGET, unknown strategies raise UNKNOWN_STRATEGY, and empty campaigns raise EMPTY_CAMPAIGN. Tests: 25 passed in 0.36s (exit 0); ruff check and format check clean (exit 0)."
+}

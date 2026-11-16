@@ -1,0 +1,44 @@
+{
+  "task_id": "SACMAT-traces",
+  "status": "PASS",
+  "source_sha_before": "4f5ad0ab2e7c3bce4b410c47a53c5595bcd12614",
+  "source_sha_after": "4f5ad0ab2e7c3bce4b410c47a53c5595bcd12614",
+  "changed_paths": [
+    "evaluation/venue2027/sacmat/trace_writer.py",
+    "evaluation/venue2027/sacmat/test_trace_writer.py",
+    "research/venue2027/proof/SACMAT-traces.json",
+    "research/venue2027/proof/artifacts/sacmat_trace_sample.jsonl",
+    "research/venue2027/proof/emit_sacmat_traces_report.py",
+    "research/venue2027/proof/logs/SACMAT-traces.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-traces.ruff.log",
+    "research/venue2027/proof/logs/SACMAT-traces.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/sacmat/test_trace_writer.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-traces.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/sacmat/trace_writer.py evaluation/venue2027/sacmat/test_trace_writer.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-traces.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_sacmat_traces_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/SACMAT-traces.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-traces.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/sacmat/trace_writer.py": "efe1173df3dcf9cc533473c7fd125f4b6ff0e644892d87fefd35cb02e771d264",
+    "evaluation/venue2027/sacmat/test_trace_writer.py": "965fae83d4a1b06182309f015dc7f5097c3e3041158d930dfc5c6fa705e99677",
+    "research/venue2027/proof/artifacts/sacmat_trace_sample.jsonl": "916a8e520d97400277c9d6777b6915841798c0b102a73746d2e944b6d19659a2",
+    "research/venue2027/proof/logs/SACMAT-traces.pytest.log": "60729b5b3c9cc644fa4eba971ff1860d948cea64a6e4f7849ff1c8caba43fbf8",
+    "research/venue2027/proof/logs/SACMAT-traces.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P05 task SACMAT-traces (PolicyTrace RQ1-RQ3): append-only JSONL recording with strictly monotonic event IDs, raw outcome, reason code, oracle decision, delegation lineage/digest references, CPU/DB duration/cost metrics, actual backend, and sensitive field sanitization. evaluation/venue2027/sacmat/trace_writer.py implements write_trace(event)->sha256 exact contract, TraceWriter append-only recorder with cryptographic hash chain (prev_digest, payload_digest, entry_digest), automatic adaptation of _shared.harness pair_result objects, recursive sanitization of credentials and PII (passwords, secrets, tokens, API keys, patient names, SSNs, emails, phone numbers), and verify_trace(trace_path)->bool for tamper, monotonicity, and leak detection. Real sample trace artifact emitted at research/venue2027/proof/artifacts/sacmat_trace_sample.jsonl recording 6 distinct SACMAT conformance events (conformant grant, delegation cycle, revocation-before-replay, delegation expiry, revoked actor transitivity, indeterminate unestablished authority) across candidate, cedar, openfga, and opa backends. All positive and adversarial tests pass (25 tests covering monotonicity, hash chaining, lineage, duration/cost, resumption, sanitization, tampering with outcomes/reasons/lineage/durations/digests, and credential/PII leak detection)."
+}

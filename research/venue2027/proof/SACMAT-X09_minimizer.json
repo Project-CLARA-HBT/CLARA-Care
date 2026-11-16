@@ -1,0 +1,47 @@
+{
+  "task_id": "SACMAT-X09_minimizer",
+  "status": "PASS",
+  "source_sha_before": "4f5ad0ab2e7c3bce4b410c47a53c5595bcd12614",
+  "source_sha_after": "4f5ad0ab2e7c3bce4b410c47a53c5595bcd12614",
+  "changed_paths": [
+    "evaluation/venue2027/sacmat/temporal_witness_minimizer.py",
+    "evaluation/venue2027/sacmat/test_temporal_witness_minimizer.py",
+    "research/venue2027/proof/SACMAT-X09_minimizer.json",
+    "research/venue2027/proof/emit_SACMAT-X09_minimizer_report.py",
+    "research/venue2027/proof/logs/SACMAT-X09_minimizer.pytest.log",
+    "research/venue2027/proof/logs/SACMAT-X09_minimizer.ruff.log",
+    "research/venue2027/proof/logs/SACMAT-X09_minimizer.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/sacmat/test_temporal_witness_minimizer.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X09_minimizer.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/sacmat/temporal_witness_minimizer.py evaluation/venue2027/sacmat/test_temporal_witness_minimizer.py --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X09_minimizer.ruff.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 format --check evaluation/venue2027/sacmat/temporal_witness_minimizer.py evaluation/venue2027/sacmat/test_temporal_witness_minimizer.py --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X09_minimizer.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_SACMAT-X09_minimizer_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/SACMAT-X09_minimizer.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SACMAT-X09_minimizer.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/sacmat/temporal_witness_minimizer.py": "da090f0184790ed33101da0b350433ab6aac722cdd6982871812d1e882e11fda",
+    "evaluation/venue2027/sacmat/test_temporal_witness_minimizer.py": "9bfc938a71ee87189191f5d527dde0a1e87fc40d12e13afc488cc88f835a8ad7",
+    "research/venue2027/proof/logs/SACMAT-X09_minimizer.pytest.log": "9cd8ed5985521bdaab22bee5053bc7e634bde6fb78526f59384bb6640281a033",
+    "research/venue2027/proof/logs/SACMAT-X09_minimizer.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P05 task SACMAT-X09_minimizer (Delta-debugging temporal witness minimizer for RQ1). evaluation/venue2027/sacmat/temporal_witness_minimizer.py (TEMPORAL_WITNESS_MINIMIZER_VERSION clara.sacmat.temporal-witness-minimizer-v1) implements delta-debugging (ddmin) over ordered policy-trace events without deleting required granting context via minimize_witness(failing_trace, oracle) -> MinimizedTrace, minimize(trace, predicate) -> PolicyTrace, and is_1_minimal(trace, oracle) -> bool. Guarantees: minimized trace still exposes the SAME semantic fault on the oracle; length is <= original length; removing any further event eliminates the fault (1-minimal). Preserves required granting context without deleting prerequisites by enforcing that candidate traces reproduce the exact fault without introducing spurious defects. Fail-closed error surface with stable reason codes on MinimizerError: NO_FAULT_DETECTED, NON_MONOTONIC_TIMESTAMPS, EMPTY_TRACE, MALFORMED_TRACE, SCHEMA_VERSION_MISMATCH, TARGET_FAULT_NOT_FOUND. Test driver evaluation/venue2027/sacmat/test_temporal_witness_minimizer.py (17 tests, all passed): positive controls proving 10-event traces minimized to 3 essential events (DELEGATION_CYCLE with root granting context preserved), 2 essential events (ungranted cycle and custom predicate), 4 essential events (REVOKED_ACTOR_TRANSITIVITY), convenience contract, JSON-serializability (to_dict), determinism and idempotence; adversarial controls proving fail-closed rejections on traces without fault (PERMIT with zero findings), false predicates, non-monotonic timestamps (unordered and duplicate), empty traces, target fault mismatch, and malformed inputs. Full sacmat suite: 311 passed. oracle_disagreement_count=0: candidate minimizer matches reference DSL oracle exactly. baseline_parity=NOT_APPLICABLE (witness reduction utility). source_sha_after records the base commit 4f5ad0ab per the sibling convention; the single task commit SHA is created immediately after this report."
+}

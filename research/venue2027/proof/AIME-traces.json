@@ -1,0 +1,48 @@
+{
+  "task_id": "AIME-traces",
+  "status": "PASS",
+  "source_sha_before": "4f5ad0ab2e7c3bce4b410c47a53c5595bcd12614",
+  "source_sha_after": "4f5ad0ab2e7c3bce4b410c47a53c5595bcd12614",
+  "changed_paths": [
+    "evaluation/venue2027/aime/trace_writer.py",
+    "evaluation/venue2027/aime/test_trace_writer.py",
+    "research/venue2027/proof/artifacts/aime_trace_sample.jsonl",
+    "research/venue2027/proof/AIME-traces.json",
+    "research/venue2027/proof/emit_aime_traces_report.py",
+    "research/venue2027/proof/logs/AIME-traces.pytest.log",
+    "research/venue2027/proof/logs/AIME-traces.ruff.log",
+    "research/venue2027/proof/logs/AIME-traces.suite.log",
+    "research/venue2027/proof/logs/AIME-traces.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/aime/test_trace_writer.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-traces.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/aime/trace_writer.py evaluation/venue2027/aime/test_trace_writer.py && uvx ruff@0.7.1 format --check evaluation/venue2027/aime/trace_writer.py evaluation/venue2027/aime/test_trace_writer.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-traces.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/aime/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-traces.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_aime_traces_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/AIME-traces.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/AIME-traces.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/aime/trace_writer.py": "7322fccf0b66f338688bb22e12f97982230aafcb6776768eeae218a04a2ba168",
+    "evaluation/venue2027/aime/test_trace_writer.py": "095013d8877d5eb2946d68ce4ac27d44ae6aeb9d2efaa7e3152c54e9b4f9600b",
+    "research/venue2027/proof/artifacts/aime_trace_sample.jsonl": "a663fe75690b760f9b101b92af5769a3c6ec2247b1531ee959a3aa3c21db8e20"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "AIME-traces (Phase P05, venue aime; Counterfactual Clinical Workflow Safety under Changing Consent and Medication Histories): delivered evaluation/venue2027/aime/trace_writer.py implementing write_trace(event)->sha256 (exact target contract) and verify_trace(trace_path)->bool. Append-only JSONL recording with strictly monotonic event IDs (sequence >= 1), raw outcome (canonical OUTCOME_BUCKETS), clinical safety reason (reason_code), independent oracle decision, signature/digest references with cryptographic hash chain linking entry_digest to prev_digest, canonical payload_digest, execution duration and CPU/DB/model duration/cost accounting, actual backend identifier, and fail-closed sensitive content sanitization (strict check: NO patient identifiers, NO clinical PHI, redacting patient IDs into opaque salted tokens and scrubbing demographic PII and credentials). verify_trace checks full chain integrity, payload hashes, monotonic event ID sequencing, JSON structure, canonical outcomes, and asserts zero patient identifier or clinical PHI leakage, blocking fail-closed on any discrepancy. 28 tests in evaluation/venue2027/aime/test_trace_writer.py verify positive controls (target contract, monotonicity, round-trip fidelity, multi-batch resumption, harness pair_result mapping, sanitization, and real sample verification) and comprehensive adversarial controls (non-monotonic IDs refused, unsanitized PHI rejected fail-closed, outcome/reason/oracle/payload tamper detection, broken hash chain links, reordered events, PHI injection, corrupt and empty files). Full AIME regression suite: 289 passed across evaluation/venue2027/aime/. Real sample trace artifact generated at research/venue2027/proof/artifacts/aime_trace_sample.jsonl recording 30 verified events across all 6 study arms (B0-B5) and 5 update families. ruff@0.7.1 check and format clean on touched paths. source_sha_before = source_sha_after = base SHA."
+}
