@@ -26,9 +26,19 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-X05_rater_manual.json",
       "status": "PASS"
     },
+    "ACNS-X06_adjudication": {
+      "marked_at": "2026-11-16T04:59:37.024503+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-X06_adjudication.json",
+      "status": "PASS"
+    },
     "ACNS-X07_witness_gallery": {
       "marked_at": "2026-11-15T19:08:17.297826+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-X07_witness_gallery.json",
+      "status": "PASS"
+    },
+    "ACNS-X08_taxonomy_graph": {
+      "marked_at": "2026-11-16T04:59:37.127689+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-X08_taxonomy_graph.json",
       "status": "PASS"
     },
     "ACNS-ablation": {
@@ -99,6 +109,11 @@
     "ACNS-threat": {
       "marked_at": "2026-11-14T19:48:31.434965+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-threat.json",
+      "status": "PASS"
+    },
+    "ACNS-traces": {
+      "marked_at": "2026-11-16T04:59:36.912005+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/ACNS-traces.json",
       "status": "PASS"
     },
     "ACNS-unit": {
@@ -621,6 +636,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/POPETS-X03_cache_control.json",
       "status": "PASS"
     },
+    "POPETS-X04_redisclosure_probe": {
+      "marked_at": "2026-11-16T04:59:36.806905+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/POPETS-X04_redisclosure_probe.json",
+      "status": "PASS"
+    },
     "POPETS-X05_full_refresh": {
       "marked_at": "2026-11-15T05:15:02.558292+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/POPETS-X05_full_refresh.json",
@@ -709,6 +729,11 @@
     "POPETS-threat": {
       "marked_at": "2026-11-14T19:48:31.030008+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/POPETS-threat.json",
+      "status": "PASS"
+    },
+    "POPETS-traces": {
+      "marked_at": "2026-11-16T04:59:36.698660+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/POPETS-traces.json",
       "status": "PASS"
     },
     "POPETS-unit": {
