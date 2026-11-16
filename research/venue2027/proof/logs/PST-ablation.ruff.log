@@ -1,0 +1,10 @@
+$ bash -c uvx ruff@0.7.1 check evaluation/venue2027/pst/ablations.py evaluation/venue2027/pst/test_ablations.py --config ruff.toml && uvx ruff@0.7.1 format --check evaluation/venue2027/pst/ablations.py evaluation/venue2027/pst/test_ablations.py
+exit_code: 0
+
+STDOUT:
+All checks passed!
+2 files already formatted
+
+
+STDERR:
+

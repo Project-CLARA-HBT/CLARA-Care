@@ -1,0 +1,42 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/pst/ablations.py": "e8aa7bcc5a261baeefc8e571a42c384970b51bf95e0637fd3681115633a25f4b",
+    "evaluation/venue2027/pst/test_ablations.py": "6ab58058c65d229f285af83099908f7c415e567b308cd24f44596d9317e49375",
+    "research/venue2027/proof/logs/PST-ablation.pytest.log": "dc1839f6e97784211c44c53ed623bda356d585411cffefef0fbb86cd97041ae1",
+    "research/venue2027/proof/logs/PST-ablation.ruff.log": "b0663ca87bd9753da06292d2222c3c7f3fa93ec456e8f212f947fb780fbec63a"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/pst/ablations.py",
+    "evaluation/venue2027/pst/test_ablations.py",
+    "research/venue2027/proof/PST-ablation.json",
+    "research/venue2027/proof/emit_PST-ablation_report.py",
+    "research/venue2027/proof/logs/PST-ablation.pytest.log",
+    "research/venue2027/proof/logs/PST-ablation.ruff.log",
+    "research/venue2027/proof/logs/PST-ablation.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/pst/test_ablations.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-ablation.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/pst/ablations.py evaluation/venue2027/pst/test_ablations.py --config ruff.toml && uvx ruff@0.7.1 format --check evaluation/venue2027/pst/ablations.py evaluation/venue2027/pst/test_ablations.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-ablation.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_PST-ablation_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/PST-ablation.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-ablation.validator.log"
+    }
+  ],
+  "notes": "P04 causal mechanism ablation variants for venue pst (ReceiptMin: Measuring Forensic Reconstructability under Purpose-Bound Audit Minimization). Implemented ABLATION_REGISTRY at evaluation/venue2027/pst/ablations.py with 5 preregistered variants: without_purpose_binding (receipts lack purpose constraint; collapses purpose isolation, causing cross-purpose linkability), without_epoch_rotation (fixed static key; collapses epoch isolation, causing long-term epoch linkability), without_retention_enforcement (retains indefinitely; causes post-retention data exposure), with_common_safety_gate (replaces cryptographic proofs with point-in-time check; admits tampered claims), and full_candidate (reference ceiling). Target contract run_ablation(name, case) -> Outcome implemented. refuse_unregistered_variant enforces fail-closed discipline (UNKNOWN_ABLATION_VARIANT on unknown variants, VARIANT_REMOVES_NOTHING on non-ablation identities). mechanistic_inference_matrix and verify_mechanistic_inference_matrix evaluate 25 variant x family cells over frozen synthetic families with all_cells_match=True. Unit tests in test_ablations.py prove positive degradation for each ablated mechanism, clean control admission, and fail-closed adversarial controls.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "08dbda2900c97a208b3228639f51998db833bb60",
+  "source_sha_before": "08dbda2900c97a208b3228639f51998db833bb60",
+  "status": "PASS",
+  "task_id": "PST-ablation",
+  "unresolved": []
+}

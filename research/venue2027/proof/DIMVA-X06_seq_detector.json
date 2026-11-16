@@ -1,0 +1,37 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/dimva/sequence_detector.py": "6dafacc96bcf0142898f22be862108d4a574cbfa20b8177ab1ecc19b63ef8746",
+    "evaluation/venue2027/dimva/test_sequence_detector.py": "662dd304124ab3eaa07668042e2db3b7b773749cf629cf0831a43390faba7bf6",
+    "research/venue2027/proof/logs/DIMVA-X06_seq_detector.pytest.log": "99f8f8234f268758fab0b86c8b1f53d094f44e367653c6c8a5c2ec56d48e7b80",
+    "research/venue2027/proof/logs/DIMVA-X06_seq_detector.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "baseline_parity": "PASS",
+  "changed_paths": [
+    "evaluation/venue2027/dimva/sequence_detector.py",
+    "evaluation/venue2027/dimva/test_sequence_detector.py",
+    "research/venue2027/proof/DIMVA-X06_seq_detector.json",
+    "research/venue2027/proof/emit_dimva_x06_seq_detector_report.py",
+    "research/venue2027/proof/logs/DIMVA-X06_seq_detector.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-X06_seq_detector.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-X06_seq_detector.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dimva/test_sequence_detector.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X06_seq_detector.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dimva/sequence_detector.py evaluation/venue2027/dimva/test_sequence_detector.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X06_seq_detector.ruff.log"
+    }
+  ],
+  "notes": "P04 DIMVA-X06_seq_detector deliverable for venue dimva: evaluation/venue2027/dimva/sequence_detector.py implements a sequence-aware detector capturing order and transition dynamics over minimal leak-safe agent event sequences. Exact contracts: fit(train, dev) -> SequenceModel, score(stream) -> float, detect(events, threshold) -> Detection. Captures cross-tool transitions after denials, temporal pacing consistency, dispersion, and low-and-slow fixed-window evasion. Catches low-and-slow campaigns that per-window count thresholds (B0) and static rules (B1) miss, while strictly enforcing the RQ1 no-leakage contract (no label peeking, fail closed on reason codes or label keys). Score is strictly monotonic with campaign length. Adversarial checks confirm benign bursts, legitimate retries, and clean exploration do not false-positive at threshold. Pure deterministic stdlib math. AST scans verify zero imports of oracle or dataset generator modules.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "08dbda2900c97a208b3228639f51998db833bb60",
+  "source_sha_before": "08dbda2900c97a208b3228639f51998db833bb60",
+  "status": "PASS",
+  "task_id": "DIMVA-X06_seq_detector",
+  "unresolved": []
+}

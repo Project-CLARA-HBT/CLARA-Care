@@ -1,0 +1,10 @@
+$ /usr/bin/python3 -m pytest -q evaluation/venue2027/pst/test_ablations.py
+exit_code: 0
+
+STDOUT:
+............................................                             [100%]
+44 passed in 0.28s
+
+
+STDERR:
+

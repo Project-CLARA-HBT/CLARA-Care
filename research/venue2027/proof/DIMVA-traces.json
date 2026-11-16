@@ -1,0 +1,43 @@
+{
+  "task_id": "DIMVA-traces",
+  "status": "PASS",
+  "source_sha_before": "08dbda2900c97a208b3228639f51998db833bb60",
+  "source_sha_after": "08dbda2900c97a208b3228639f51998db833bb60",
+  "changed_paths": [
+    "evaluation/venue2027/dimva/trace_writer.py",
+    "evaluation/venue2027/dimva/test_trace_writer.py",
+    "research/venue2027/proof/artifacts/dimva_trace_sample.jsonl",
+    "research/venue2027/proof/DIMVA-traces.json",
+    "research/venue2027/proof/logs/DIMVA-traces.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-traces.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-traces.suite.log",
+    "research/venue2027/proof/logs/DIMVA-traces.validator.log",
+    "research/venue2027/proof/emit_dimva_traces_report.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dimva/test_trace_writer.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-traces.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dimva/trace_writer.py evaluation/venue2027/dimva/test_trace_writer.py && uvx ruff@0.7.1 format --check evaluation/venue2027/dimva/trace_writer.py evaluation/venue2027/dimva/test_trace_writer.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-traces.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dimva/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-traces.suite.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/dimva/trace_writer.py": "4c5a22df05392c25e81c58d2b8f75d4d49d0d18cacc5f6b755bfd630c474754b",
+    "evaluation/venue2027/dimva/test_trace_writer.py": "ffea3094f4f11eced9af782f87d4f5b142549fd2ee7cbeb7b6719327874947db",
+    "research/venue2027/proof/artifacts/dimva_trace_sample.jsonl": "5e7ea4a0609f9d58cf5baaf44e8c600e556112f2f5a9516fe1309aa4cd3ff3a2"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "NOT_APPLICABLE",
+  "unresolved": [],
+  "notes": "P05 task DIMVA-traces (GovernanceTrace RQ1-RQ3): append-only JSONL recording with strictly monotonic event IDs, raw outcome, detector score strictly bounded in [0.0, 1.0], detection decision, stable reason code, independent oracle decision, CPU/DB/model duration/cost metrics, actual backend identifier, cryptographic hash chaining (prev_digest, payload_digest, entry_digest), and leak-safe sensitive content sanitization (zero PHI, zero user secrets/credentials). evaluation/venue2027/dimva/trace_writer.py implements write_trace(event)->sha256 exact contract, TraceWriter append-only recorder with hash chain, automatic adaptation of _shared.harness pair_result objects, recursive sanitization of credentials and PHI, and verify_trace(trace_path)->bool for tamper, monotonicity, score range [0, 1], and leak detection. Real sample trace artifact emitted at research/venue2027/proof/artifacts/dimva_trace_sample.jsonl recording 7 distinct DIMVA probing events across candidate, B0, B1, and B2 backends. All positive and adversarial tests pass (37 tests covering monotonicity, score range [0, 1] boundaries and out-of-range rejections, hash chaining, duration/cost, resumption, sanitization, tampering with outcomes/scores/decisions/reasons/durations/payloads/hash links, and credential/PHI leak detection). Full DIMVA suite: 415 passed; ruff@0.7.1 check and format clean. source_sha_before = source_sha_after = base SHA."
+}

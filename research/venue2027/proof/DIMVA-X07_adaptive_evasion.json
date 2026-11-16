@@ -1,0 +1,49 @@
+{
+  "task_id": "DIMVA-X07_adaptive_evasion",
+  "status": "PASS",
+  "source_sha_before": "08dbda2900c97a208b3228639f51998db833bb60",
+  "source_sha_after": "08dbda2900c97a208b3228639f51998db833bb60",
+  "changed_paths": [
+    "evaluation/venue2027/dimva/adaptive_evasion.py",
+    "evaluation/venue2027/dimva/test_adaptive_evasion.py",
+    "research/venue2027/proof/DIMVA-X07_adaptive_evasion.json",
+    "research/venue2027/proof/emit_DIMVA-X07_adaptive_evasion_report.py",
+    "research/venue2027/proof/logs/DIMVA-X07_adaptive_evasion.pytest.log",
+    "research/venue2027/proof/logs/DIMVA-X07_adaptive_evasion.ruff.log",
+    "research/venue2027/proof/logs/DIMVA-X07_adaptive_evasion.suite.log",
+    "research/venue2027/proof/logs/DIMVA-X07_adaptive_evasion.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/dimva/test_adaptive_evasion.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X07_adaptive_evasion.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/dimva/adaptive_evasion.py evaluation/venue2027/dimva/test_adaptive_evasion.py && uvx ruff@0.7.1 format --check evaluation/venue2027/dimva/adaptive_evasion.py evaluation/venue2027/dimva/test_adaptive_evasion.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X07_adaptive_evasion.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X07_adaptive_evasion.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_DIMVA-X07_adaptive_evasion_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/DIMVA-X07_adaptive_evasion.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/DIMVA-X07_adaptive_evasion.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/dimva/adaptive_evasion.py": "9b414856fbd77545d4ed7ae71bb4d2ef81e757e5a3ec8b7c6d026f56b2e89740",
+    "evaluation/venue2027/dimva/test_adaptive_evasion.py": "ea0cf7014f4a1383e77befdbbc38358c9f0c03a0e90dd5d3d674611dea32496e",
+    "research/venue2027/proof/logs/DIMVA-X07_adaptive_evasion.pytest.log": "fc80b18f3c991a20feddd4e28089336605a3a4f212d75724d9925d68124c8444",
+    "research/venue2027/proof/logs/DIMVA-X07_adaptive_evasion.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a",
+    "research/venue2027/proof/logs/DIMVA-X07_adaptive_evasion.suite.log": "69d60fc35464441091e00321162ace83b8a1c547a9fe799a26b0b5a8d880af88"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "PASS",
+  "unresolved": [],
+  "notes": "DIMVA-X07_adaptive_evasion (Phase P05, venue dimva, priority P1): implemented low-and-slow and metadata-tampering evaluation for GovernanceTrace at evaluation/venue2027/dimva/adaptive_evasion.py (ADAPTIVE_EVASION_VERSION=1.0.0, MODULE_ID=clara.dimva.adaptive-evasion). Core API delivers: generate_evasive_campaign(base_campaign, strategy, *, config) -> EvasiveCampaign, exact target contract evaluate_adaptation(model, campaigns) -> Metrics, and evaluate_arms_evasion(base_campaigns, strategies, ctx) -> CrossArmEvasionReport. Attacker boundary strictly enforced: attacker controls ONLY permitted observable events (timing, tooling, requested scope, allowed flag under their authenticated principal); privileged attacker assumptions are refused (tampering with signed server logs or audit storage raises PrivilegedTamperingError with PRIVILEGED_LOG_TAMPERING_REFUSED, reason_code leak keys violate RQ1 masking and fail closed with EVENT_REASON_CODE_FIELD_FORBIDDEN, multi-actor forging raises SESSION_MIXED_ACTORS, non-monotonic timestamps raise EVENT_TS_NOT_MONOTONIC). Tactical evasion strategies implemented: (1) pacing (inter-arrival delay manipulation spacing denials by at least pacing_delay_seconds so sliding-window denials stay strictly under operational thresholds), (2) benign interleaving (padding with legitimate tool actions med_schedule_read, vitals_read, config_read to dilute denial ratios from 100% down to 25%), (3) field scrambling (reordering serialized dict keys verifying permutation invariance), (4) missing optional fields (minimal 5-key schema projection), and (5) composite evasion. Evasion impact rigorously proven: PACING EVADES B0 (sliding-window count alarm drops from DETECT to NO_DETECT) while CANDIDATE DETECTOR MAINTAINS DETECTION (identifies structural campaign linkage across long horizons, cross-tool obfuscation, and activity continuity); BENIGN INTERLEAVING EVADES SIMPLE RATES (denial rate drops below 50% threshold) while CANDIDATE DETECTOR MAINTAINS DETECTION (filters to denials and preserves all criteria). Unit and property test suite evaluation/venue2027/dimva/test_adaptive_evasion.py (21 tests) verified: 21 passed; full venue2027 regression 2559 passed; uvx ruff@0.7.1 check and format clean. source_sha_after = base SHA per established repo convention."
+}
