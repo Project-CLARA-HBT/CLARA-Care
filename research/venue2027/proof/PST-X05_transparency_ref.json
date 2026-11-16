@@ -1,0 +1,48 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/pst/merkle_transparency.py": "f7799ee9416ecc3f6c904cdde2d83f6ece6fcb7863b152fdd3a2d8615d08fffa",
+    "evaluation/venue2027/pst/test_merkle_transparency.py": "2826a3ede2c785c15c89674d0f03295cfd29f2c53d4ecae83a50d74c7d8be608",
+    "research/venue2027/proof/logs/PST-X05_transparency_ref.pytest.log": "8daee30494d67efb19b3ea2fdd4aec3420031d27d78dfc3f40cb7bacbac225b2",
+    "research/venue2027/proof/logs/PST-X05_transparency_ref.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/pst/merkle_transparency.py",
+    "evaluation/venue2027/pst/test_merkle_transparency.py",
+    "research/venue2027/proof/PST-X05_transparency_ref.json",
+    "research/venue2027/proof/emit_pst_x05_transparency_ref_report.py",
+    "research/venue2027/proof/logs/PST-X05_transparency_ref.pytest.log",
+    "research/venue2027/proof/logs/PST-X05_transparency_ref.ruff.log",
+    "research/venue2027/proof/logs/PST-X05_transparency_ref.suite.log",
+    "research/venue2027/proof/logs/PST-X05_transparency_ref.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/pst/test_merkle_transparency.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-X05_transparency_ref.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/pst/merkle_transparency.py evaluation/venue2027/pst/test_merkle_transparency.py && uvx ruff@0.7.1 format --check evaluation/venue2027/pst/merkle_transparency.py evaluation/venue2027/pst/test_merkle_transparency.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-X05_transparency_ref.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/pst/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-X05_transparency_ref.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_pst_x05_transparency_ref_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/PST-X05_transparency_ref.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-X05_transparency_ref.validator.log"
+    }
+  ],
+  "notes": "P03 PST-X05_transparency_ref deliverable: evaluation/venue2027/pst/merkle_transparency.py implements the Merkle inclusion and consistency proof model aligned with RFC 9162 (Certificate Transparency v2) and RFC 6962. It provides SHA-256 leaf and interior nodes (0x00 and 0x01 domain-separated prefixes), append(entry)->int, root_hash()->str, inclusion_proof(index, size)->list[str], consistency_proof(m, n)->list[str], verify_inclusion(entry, index, size, proof, root)->bool, and verify_consistency(m, n, root_m, root_n, proof)->bool. Explicitly disclaims equating public immutable hash trees with encrypted secrecy (transparency is for public tamper-evidence, NOT confidentiality; retention decay and privacy require cryptographic key management and purpose-bound minimization). Test suite test_merkle_transparency.py covers positive controls (leaf append, root computation matching RFC test vectors including empty tree SHA-256('') and RFC 6962 Section 2.1.3 7-leaf intermediate node graph, inclusion proofs across sizes 1..25, and consistency proofs across 1 <= m <= n <= 20) and adversarial controls (tampered leaf fails, tampered root fails, forged inclusion/consistency proofs fail, diverged tree branches fail, out-of-bounds parameters fail closed, stable reason codes). All unit and regression tests pass; ruff lint and format check clean.",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "75ad321ea230ad398d71f4a0afb26e0cdef83982",
+  "source_sha_before": "75ad321ea230ad398d71f4a0afb26e0cdef83982",
+  "status": "PASS",
+  "task_id": "PST-X05_transparency_ref",
+  "unresolved": []
+}

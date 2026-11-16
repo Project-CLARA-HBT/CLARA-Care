@@ -1,0 +1,44 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/pst/runner.py": "e75c26fd4cabd30a31359c32975f8472de675234dce4279ee70a1740a9ddb6e5",
+    "evaluation/venue2027/pst/test_runner.py": "50ff54fc9c7bfa5dce0daf6e3823589fc9319d6e307baae16158417b35df5e3c",
+    "research/venue2027/proof/artifacts/pst_run_bundle.jsonl": "660a2ff25c5cb624af2bbd030ee556bd1f9a06edfc164bcb8b07d200fbe0b3e1",
+    "research/venue2027/proof/logs/PST-runner.pytest.log": "37f52093758a4c9d83663c90e91ab05a6c0b3839839336d729304574cb6cb964",
+    "research/venue2027/proof/logs/PST-runner.ruff.log": "f7dda2fd24b50ea3a1cbaf1fd43ea7a5a532c974f584a1b5abd3cf85ef023e29"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/pst/runner.py",
+    "evaluation/venue2027/pst/test_runner.py",
+    "research/venue2027/proof/PST-runner.json",
+    "research/venue2027/proof/artifacts/pst_run_bundle.jsonl",
+    "research/venue2027/proof/emit_PST-runner_report.py",
+    "research/venue2027/proof/logs/PST-runner.pytest.log",
+    "research/venue2027/proof/logs/PST-runner.ruff.log",
+    "research/venue2027/proof/logs/PST-runner.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/pst/test_runner.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-runner.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/pst/runner.py evaluation/venue2027/pst/test_runner.py && uvx ruff@0.7.1 format --check evaluation/venue2027/pst/runner.py evaluation/venue2027/pst/test_runner.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-runner.ruff.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_PST-runner_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/PST-runner.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-runner.validator.log"
+    }
+  ],
+  "notes": "PST-runner (Phase P05, venue pst): delivered evaluation/venue2027/pst/runner.py (PST_RUNNER_VERSION 1.0.0) with run_campaign(config) -> RunBundle executing a balanced paired case/order/seed plan across all PST arms (B0 full retention, B1 minimized without receipts, B2 minimized + receipt anchoring, B3 candidate ReceiptMin) with identical timeout, retry budget, execution backend, randomness (frozen seed), and compiler/model versions. Reuses _shared.harness.execute directly. Reconstructability score and linkability score are recorded per arm x case pair, mutually exclusive outcomes (ADMIT, REJECT, INDETERMINATE, TIMEOUT, EXECUTION_ERROR, NOT_RUN_EXTERNAL, INVALID_RESULT), source commit SHA, and seeds. Strict parity validation refuses seed drift across arms, timeout variance, retry budget variance, backend variance, compiler/model variance, and differing per-arm configuration dictionaries with stable reason code UNEQUAL_ARM_CONFIG. An arm that crashes is recorded as EXECUTION_ERROR with the exception class and never dropped from the denominator (complete=True). Real sample run bundle emitted to research/venue2027/proof/artifacts/pst_run_bundle.jsonl with 16 planned and attempted pairs (9 ADMIT, 7 REJECT, 0 EXECUTION_ERROR, 0 TIMEOUT). test_runner.py has 21 positive and adversarial tests covering paired counts, balanced pairing, determinism, reconstructability/linkability frontier, journal idempotency, crashing arm accounting, and all unequal-config refusals. pytest exit 0, ruff 0.7.1 check+format exit 0.",
+  "oracle_disagreement_count": 0,
+  "source_sha_after": "75ad321ea230ad398d71f4a0afb26e0cdef83982",
+  "source_sha_before": "75ad321ea230ad398d71f4a0afb26e0cdef83982",
+  "status": "PASS",
+  "task_id": "PST-runner",
+  "unresolved": []
+}

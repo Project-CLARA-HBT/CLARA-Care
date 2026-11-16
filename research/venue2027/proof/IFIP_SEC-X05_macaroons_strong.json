@@ -1,0 +1,36 @@
+{
+  "task_id": "IFIP_SEC-X05_macaroons_strong",
+  "status": "PASS",
+  "source_sha_before": "75ad321ea230ad398d71f4a0afb26e0cdef83982",
+  "source_sha_after": "75ad321ea230ad398d71f4a0afb26e0cdef83982",
+  "changed_paths": [
+    "evaluation/venue2027/ifip_sec/macaroon_adapter.py",
+    "evaluation/venue2027/ifip_sec/test_macaroon_adapter.py",
+    "research/venue2027/proof/IFIP_SEC-X05_macaroons_strong.json",
+    "research/venue2027/proof/logs/IFIP_SEC-X05_macaroons_strong.pytest.log",
+    "research/venue2027/proof/logs/IFIP_SEC-X05_macaroons_strong.ruff.log",
+    "research/venue2027/proof/emit_IFIP_SEC-X05_macaroons_strong_report.py"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/ifip_sec/test_macaroon_adapter.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-X05_macaroons_strong.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/ifip_sec/ --config ruff.toml",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/IFIP_SEC-X05_macaroons_strong.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/ifip_sec/macaroon_adapter.py": "437c8fbeb41f1c0ab6ab9b66008715954d122c58a3f2692a6c987e84c40f42c2",
+    "evaluation/venue2027/ifip_sec/test_macaroon_adapter.py": "68a21911773b1ef5339c320a72d2876f8e55774d005c54bdfca0db26f3cbc694",
+    "research/venue2027/proof/logs/IFIP_SEC-X05_macaroons_strong.pytest.log": "b2c1e843cd81f68eba3b0e55799e8d6f6e542c3138615a7fb806e4c09a181ebd",
+    "research/venue2027/proof/logs/IFIP_SEC-X05_macaroons_strong.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "oracle_disagreement_count": null,
+  "baseline_parity": "PASS",
+  "unresolved": [],
+  "notes": "IFIP_SEC-X05_macaroons_strong (Phase P03, RQ1): implemented genuine caveat-bound capability baseline in evaluation/venue2027/ifip_sec/macaroon_adapter.py (MACAROON_ADAPTER_VERSION 1.0.0). MacaroonAdapter provides create_macaroon(root_key, identifier, location), add_first_party_caveat(macaroon, caveat), bind_proposal_lineage(macaroon, lineage_hash), and verify_macaroon(macaroon, root_key, check_context) -> MacaroonVerificationResult, plus target contract authorize(token, caveats, tx) -> Verdict. Implements full HMAC-SHA256 attenuation chain recomputation and constant-time verification. Enforces tenant, purpose, epoch, proposal lineage hash, and online checking. Separates offline-only mode as an explicit ablation where online-required caveats are rejected with ONLINE_CHECK_REQUIRED and offline vs online verifications are distinguished via online_checked. 24 unit/property tests covering positive controls (valid macaroons with purpose, epoch, lineage caveats verify cleanly; offline vs online check distinguished; authorize target contract; serialization roundtrip) and adversarial controls (tampered caveat breaks HMAC chain, expired caveat fails, lineage hash mismatch fails, offline check rejects online-required caveats, cross-purpose and cross-tenant fail closed, online revocation check rejects, short root key fails closed). uvx ruff@0.7.1 check clean; python3 -m pytest -q exits 0."
+}

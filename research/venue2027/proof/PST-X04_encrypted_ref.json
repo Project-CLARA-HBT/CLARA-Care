@@ -1,0 +1,49 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/pst/encrypted_full_log.py": "130db95aa47c87af4f8e6e50701c4fe6b07547983a25aa0291c4a38eb9649fdd",
+    "evaluation/venue2027/pst/test_encrypted_full_log.py": "ef31aba6633fc92c2fe69f1d8d68e8dbeab6b4d8eedade3b8b24fb204006f75a",
+    "research/venue2027/proof/logs/PST-X04_encrypted_ref.pytest.log": "b65a40f373bc362f3bd3c1d7ce1ebd778a96f8db439dfb90d3f77b5588aecdcb",
+    "research/venue2027/proof/logs/PST-X04_encrypted_ref.ruff.log": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a",
+    "research/venue2027/proof/logs/PST-X04_encrypted_ref.suite.log": "2f6298ddf526a4fa1ab7e238bed794a2603cfd59afe0419e86221d6c2127d6de"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/pst/encrypted_full_log.py",
+    "evaluation/venue2027/pst/test_encrypted_full_log.py",
+    "research/venue2027/proof/PST-X04_encrypted_ref.json",
+    "research/venue2027/proof/emit_pst_x04_encrypted_ref_report.py",
+    "research/venue2027/proof/logs/PST-X04_encrypted_ref.pytest.log",
+    "research/venue2027/proof/logs/PST-X04_encrypted_ref.ruff.log",
+    "research/venue2027/proof/logs/PST-X04_encrypted_ref.suite.log",
+    "research/venue2027/proof/logs/PST-X04_encrypted_ref.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/pst/test_encrypted_full_log.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-X04_encrypted_ref.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/pst/encrypted_full_log.py evaluation/venue2027/pst/test_encrypted_full_log.py --config ruff.toml && uvx ruff@0.7.1 format --check evaluation/venue2027/pst/encrypted_full_log.py evaluation/venue2027/pst/test_encrypted_full_log.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-X04_encrypted_ref.ruff.log"
+    },
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-X04_encrypted_ref.suite.log"
+    },
+    {
+      "argv": "python3 research/venue2027/proof/emit_pst_x04_encrypted_ref_report.py # build_report + validate_report(ok:true) recorded in research/venue2027/proof/PST-X04_encrypted_ref.json",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-X04_encrypted_ref.validator.log"
+    }
+  ],
+  "notes": "P03 deliverable PST-X04_encrypted_ref (ReceiptMin RQ2 comparator mechanism, B2 arm): evaluation/venue2027/pst/encrypted_full_log.py implements the strong confidentiality baseline with authenticated encryption (AES-GCM / ChaCha20-Poly1305), strict nonce discipline, role-based access control ACL, periodic key rotation, explicit retention expiration, and compare_audit_vs_leakage. (1) AUTHENTICATED ENCRYPTION: standard AES-GCM (RFC 5116 / NIST SP 800-38D) and ChaCha20-Poly1305 (RFC 8439) guarantee confidentiality and integrity; tampered ciphertext, auth tag, or AAD fail closed with AUTH_TAG_FAILED. (2) STRICT NONCE DISCIPLINE: unique 12-byte nonces; NonceTracker detects nonce reuse per key and fails closed with NONCE_REUSED. (3) ACCESS CONTROL: role ACL enforced on decrypt_audit_record; unauthorized roles denied with UNAUTHORIZED_ROLE. (4) KEY ROTATION: KeyRing manages key lifecycle, rotation, and crypto-shredding (KEY_DESTROYED); reencrypt_record enables record migration under fresh epoch keys without plaintext disclosure. (5) RETENTION EXPIRATION: decryption past expires_at is refused with RETENTION_EXPIRED. (6) COMPARATOR: compare_audit_vs_leakage demonstrates that while legitimate audits achieve 1.0 reconstruction, an insider with a compromised key recovers 100% of sensitive payload and linkability, establishing the scientific need for B4 ReceiptMin.",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "75ad321ea230ad398d71f4a0afb26e0cdef83982",
+  "source_sha_before": "75ad321ea230ad398d71f4a0afb26e0cdef83982",
+  "status": "PASS",
+  "task_id": "PST-X04_encrypted_ref",
+  "unresolved": []
+}
