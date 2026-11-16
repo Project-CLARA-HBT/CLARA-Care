@@ -151,6 +151,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/AIME-X06_selective_refresh.json",
       "status": "PASS"
     },
+    "AIME-X08_workflow_eval": {
+      "marked_at": "2026-11-16T05:15:21.017935+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/AIME-X08_workflow_eval.json",
+      "status": "PASS"
+    },
     "AIME-ablation": {
       "marked_at": "2026-11-15T23:56:27.059876+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/AIME-ablation.json",
@@ -219,6 +224,11 @@
     "AIME-threat": {
       "marked_at": "2026-11-14T19:48:31.232245+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/AIME-threat.json",
+      "status": "PASS"
+    },
+    "AIME-traces": {
+      "marked_at": "2026-11-16T05:15:20.911119+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/AIME-traces.json",
       "status": "PASS"
     },
     "AIME-unit": {
@@ -851,6 +861,16 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SACMAT-X07_mutation_ops.json",
       "status": "PASS"
     },
+    "SACMAT-X08_budget_runner": {
+      "marked_at": "2026-11-16T05:15:21.212493+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SACMAT-X08_budget_runner.json",
+      "status": "PASS"
+    },
+    "SACMAT-X09_minimizer": {
+      "marked_at": "2026-11-16T05:15:21.308264+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SACMAT-X09_minimizer.json",
+      "status": "PASS"
+    },
     "SACMAT-ablation": {
       "marked_at": "2026-11-15T18:03:03.227018+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SACMAT-ablation.json",
@@ -919,6 +939,11 @@
     "SACMAT-threat": {
       "marked_at": "2026-11-14T19:48:31.533814+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SACMAT-threat.json",
+      "status": "PASS"
+    },
+    "SACMAT-traces": {
+      "marked_at": "2026-11-16T05:15:21.116756+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SACMAT-traces.json",
       "status": "PASS"
     },
     "SACMAT-unit": {
