@@ -1,0 +1,47 @@
+{
+  "task_id": "POPETS-pilot",
+  "status": "PASS",
+  "source_sha_before": "6faf61e1238fd7caae5e0f6113283cc4856f0398",
+  "source_sha_after": "6faf61e1238fd7caae5e0f6113283cc4856f0398",
+  "changed_paths": [
+    "research/venue2027/popets/protocols/pilot_plan.yaml",
+    "evaluation/venue2027/popets/pilot_executor.py",
+    "evaluation/venue2027/popets/test_pilot_executor.py",
+    "research/venue2027/proof/artifacts/popets_pilot_report.json",
+    "research/venue2027/proof/emit_POPETS-pilot_report.py",
+    "research/venue2027/proof/POPETS-pilot.json",
+    "research/venue2027/proof/logs/POPETS-pilot.pytest.log",
+    "research/venue2027/proof/logs/POPETS-pilot.ruff.log",
+    "research/venue2027/proof/logs/POPETS-pilot.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/popets/test_pilot_executor.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-pilot.pytest.log"
+    },
+    {
+      "argv": "uvx ruff@0.7.1 check evaluation/venue2027/popets/pilot_executor.py evaluation/venue2027/popets/test_pilot_executor.py && uvx ruff@0.7.1 format --check evaluation/venue2027/popets/pilot_executor.py evaluation/venue2027/popets/test_pilot_executor.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-pilot.ruff.log"
+    },
+    {
+      "argv": "PYTHONPATH=. python3 research/venue2027/proof/emit_POPETS-pilot_report.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-pilot.validator.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "research/venue2027/popets/protocols/pilot_plan.yaml": "228879621226a38bd9761de6cec91122c01c32536306b6fe6500395316b4d43e",
+    "evaluation/venue2027/popets/pilot_executor.py": "94bbcf318c1a3a0f557ca9b91d0981e8b2fa85138c4e9aea3a4b8932f78feba9",
+    "evaluation/venue2027/popets/test_pilot_executor.py": "4be5c634a8188af7c59a752b0b5e2b9c4e9e1bbc85b6f6bd03afc180d71f5125",
+    "research/venue2027/proof/artifacts/popets_pilot_report.json": "3a3f2a2910121e11758d42bb3f4bcbed3da06c03a865c4a167047012f8909576",
+    "research/venue2027/proof/logs/POPETS-pilot.pytest.log": "5c6e3ab22fd8f18f42a0b2079e07ce466aca8a9c44f75b8b4ba44ee8be07eaa5",
+    "research/venue2027/proof/logs/POPETS-pilot.ruff.log": "4c4efc3a3f5d7ea47cc3f36c66190d14ba62be8405f7fc95e6607e4f9851fada",
+    "research/venue2027/proof/logs/POPETS-pilot.validator.log": "d89c08f39ea5dde1e18484cf95960b6a2d29a4a70b375b5b24e0730b68ee9cf5"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "PASS",
+  "unresolved": [],
+  "notes": "POPETS-pilot (Phase P06, venue popets): delivered development-split pilot evaluation plan (research/venue2027/popets/protocols/pilot_plan.yaml) and pilot executor (evaluation/venue2027/popets/pilot_executor.py, POPETS_PILOT_EXECUTOR_VERSION 1.0.0). Executes strictly on the development split ('split: dev') and refuses any access to test or holdout splits with stable reason code HOLDOUT_ACCESS_FORBIDDEN. Evaluates baseline fairness and parity across all arms (B0-B4), measures empirical runtime distribution (mean, variance, p95), outcome variance, and paired difference variance. Computes prospective power estimates and Clopper-Pearson zero-event bounds across sample sizes (20..1200) to select a feasible experimental matrix (seeds [42, 101, 2027], N=1200, timeout=60.0s, retry_budget=0, resource=cpu) without unsealing the main holdout split. Implements target contracts execute_pilot(config, dev_dataset)->PilotReport and pilot(config)->PilotReport. Sample run emitted to research/venue2027/proof/artifacts/popets_pilot_report.json. 15 tests pass in test_pilot_executor.py (positive + adversarial holdout controls); pytest exit 0; uvx ruff@0.7.1 check and format clean (exit 0)."
+}
