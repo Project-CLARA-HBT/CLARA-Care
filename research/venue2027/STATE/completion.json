@@ -566,6 +566,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-X03_nonce_store.json",
       "status": "PASS"
     },
+    "IFIP_SEC-X05_macaroons_strong": {
+      "marked_at": "2026-11-16T05:46:30.126794+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-X05_macaroons_strong.json",
+      "status": "PASS"
+    },
     "IFIP_SEC-X06_zanzibar_style": {
       "marked_at": "2026-11-15T11:48:12.391636+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/IFIP_SEC-X06_zanzibar_style.json",
@@ -781,6 +786,16 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-X03_minimization.json",
       "status": "PASS"
     },
+    "PST-X04_encrypted_ref": {
+      "marked_at": "2026-11-16T05:46:29.905652+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-X04_encrypted_ref.json",
+      "status": "PASS"
+    },
+    "PST-X05_transparency_ref": {
+      "marked_at": "2026-11-16T05:46:30.017869+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-X05_transparency_ref.json",
+      "status": "PASS"
+    },
     "PST-X06_key_rotation": {
       "marked_at": "2026-11-15T19:07:56.721125+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-X06_key_rotation.json",
@@ -836,6 +851,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-rq_registry.json",
       "status": "PASS"
     },
+    "PST-runner": {
+      "marked_at": "2026-11-16T05:46:29.669128+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-runner.json",
+      "status": "PASS"
+    },
     "PST-schema": {
       "marked_at": "2026-11-15T11:50:58.620699+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-schema.json",
@@ -849,6 +869,11 @@
     "PST-threat": {
       "marked_at": "2026-11-14T19:48:31.731906+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-threat.json",
+      "status": "PASS"
+    },
+    "PST-unit": {
+      "marked_at": "2026-11-16T05:46:29.791531+00:00",
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-unit.json",
       "status": "PASS"
     },
     "SACMAT-X01_policy_trace_dsl": {
