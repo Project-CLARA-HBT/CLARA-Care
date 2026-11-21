@@ -39,16 +39,23 @@ def attempt(conn, arm, target, deps, expected_epoch):
     try:
         with conn.transaction():
             conn.execute(sql.SQL("SET TRANSACTION ISOLATION LEVEL " + isolation))
-            rows = conn.execute(
-                sql.SQL("SELECT version FROM evidence WHERE id = ANY(%s) ORDER BY id" + lock),
-                (deps,),
-            ).fetchall()
-            if len(rows) != len(deps) or any(row[0] != expected_epoch for row in rows):
-                return "stale_dependency"
-            updated = conn.execute(
-                "UPDATE evidence SET version=1 WHERE id=%s AND version=0", (target,)
-            )
-            return "committed" if updated.rowcount == 1 else "stale_target"
+            # Reuse one materialized read set for cardinality, version checks
+            # and diagnostics. Every arm gets the same SQL and round-trip count.
+            statement = sql.SQL("""
+                WITH observed AS MATERIALIZED (
+                    SELECT version FROM evidence WHERE id = ANY(%s) ORDER BY id {}
+                ), validated AS (
+                    SELECT count(*) = %s AND bool_and(version = %s) AS ok FROM observed
+                ), written AS (
+                    UPDATE evidence SET version = 1
+                    WHERE id = %s AND version = 0 AND (SELECT ok FROM validated)
+                    RETURNING id
+                )
+                SELECT CASE WHEN EXISTS (SELECT FROM written) THEN 'committed'
+                            WHEN (SELECT ok FROM validated) THEN 'stale_target'
+                            ELSE 'stale_dependency' END
+            """).format(sql.SQL(lock))
+            return conn.execute(statement, (deps, len(deps), expected_epoch, target)).fetchone()[0]
     except psycopg.errors.SerializationFailure:
         return "serialization_abort"
 
