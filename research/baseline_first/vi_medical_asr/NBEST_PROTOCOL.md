@@ -1,0 +1,7 @@
+# Sàng lọc chấm lại năm giả thuyết PhoWhisper-large
+
+Đây là phép đo development đặt trước khi có output từ checkpoint large. Dùng lại đúng 168 đoạn đã chọn trong protocol lỗi, ở cùng 21 người nói. Câu hỏi là liệu trong năm giả thuyết cho mỗi đoạn đã có đủ token đúng để một bộ chấm lại đạt biên giảm 15% số lỗi hay không. Oracle biết transcript nên chỉ cho trần của phương pháp chọn nguyên giả thuyết. Dùng riêng kết quả lần decode này để so các thứ hạng.
+
+Dùng log-Mel 16 kHz, CUDA float16, PhoWhisper-large, tiếng Việt, tác vụ transcribe, không timestamp, không prompt ngoài, beam 5, trả 5 giả thuyết, length penalty 1, patience 1. Mỗi đoạn xử lý trọn trong 30 giây. Nếu dài hơn, ghi lỗi và chưa kết luận về toàn mẫu. Ghi cả các giả thuyết trùng sau chuẩn hóa. Giữ thứ tự decoder khi hòa.
+
+Báo số lỗi của (1) hạng đầu, (2) medoid theo tổng edit distance tới năm giả thuyết, cùng trọng số cho mỗi vị trí, (3) oracle chọn giả thuyết ít lỗi nhất so transcript. Đếm số đoạn oracle có bản chính xác, so với hạng đầu, cùng số người nói và bản ghi có ít nhất một lỗi sửa được. Tính mọi tử và mẫu từ ID nhóm ẩn danh và số đếm. Nếu oracle không giảm nổi 15% trước một trong hai đối chứng trên tập đủ 168 đoạn, dừng hướng chọn nguyên giả thuyết cho cấu hình này. Nếu trần đủ, cần thêm phép so với LM được tune và checkpoint chuyên miền trước khi xuất hiện một claim. Kết quả không timestamp có thể khác phép decode có timestamp trong khảo sát cũ. Không ghép tử số của hai giao thức.
