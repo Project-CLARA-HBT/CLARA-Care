@@ -1,5 +1,11 @@
 {
-  "blocked": {},
+  "blocked": {
+    "POPETS-pilot": {
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/POPETS-pilot.json",
+      "status": "BLOCKED",
+      "marked_at": "2026-11-21T06:15:08.841319+00:00"
+    }
+  },
   "completed": {
     "ACNS-X01_review_protocol": {
       "marked_at": "2026-11-15T04:03:21.532437+00:00",
@@ -1125,6 +1131,11 @@
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-release_integrity.json",
       "status": "PASS",
       "marked_at": "2026-11-21T06:11:48.091278+00:00"
+    },
+    "PST-traces": {
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/PST-traces.json",
+      "status": "PASS",
+      "marked_at": "2026-11-21T06:15:08.779779+00:00"
     }
   },
   "schema_version": 1
