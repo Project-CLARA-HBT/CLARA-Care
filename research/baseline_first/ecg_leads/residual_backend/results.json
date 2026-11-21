@@ -1,0 +1,201 @@
+{
+  "totals": {
+    "flac": 870339,
+    "direct": 1262694,
+    "limb": 1020652
+  },
+  "records": [
+    {
+      "record": "07215_hr",
+      "flac": 25503,
+      "direct": 36466,
+      "limb": 29786
+    },
+    {
+      "record": "01644_hr",
+      "flac": 28639,
+      "direct": 40970,
+      "limb": 32962
+    },
+    {
+      "record": "01318_hr",
+      "flac": 25908,
+      "direct": 36898,
+      "limb": 29938
+    },
+    {
+      "record": "15092_hr",
+      "flac": 26397,
+      "direct": 37882,
+      "limb": 31554
+    },
+    {
+      "record": "10245_hr",
+      "flac": 30210,
+      "direct": 46650,
+      "limb": 35466
+    },
+    {
+      "record": "13678_hr",
+      "flac": 25455,
+      "direct": 36810,
+      "limb": 30290
+    },
+    {
+      "record": "17333_hr",
+      "flac": 27177,
+      "direct": 40794,
+      "limb": 31730
+    },
+    {
+      "record": "06053_hr",
+      "flac": 28448,
+      "direct": 43434,
+      "limb": 34458
+    },
+    {
+      "record": "15443_hr",
+      "flac": 24191,
+      "direct": 33802,
+      "limb": 28338
+    },
+    {
+      "record": "18863_hr",
+      "flac": 21705,
+      "direct": 30484,
+      "limb": 25396
+    },
+    {
+      "record": "21693_hr",
+      "flac": 28280,
+      "direct": 40514,
+      "limb": 33250
+    },
+    {
+      "record": "15764_hr",
+      "flac": 29221,
+      "direct": 44474,
+      "limb": 34418
+    },
+    {
+      "record": "15277_hr",
+      "flac": 26657,
+      "direct": 37506,
+      "limb": 31306
+    },
+    {
+      "record": "08964_hr",
+      "flac": 26557,
+      "direct": 35978,
+      "limb": 28458
+    },
+    {
+      "record": "07131_hr",
+      "flac": 30091,
+      "direct": 45682,
+      "limb": 35434
+    },
+    {
+      "record": "02599_hr",
+      "flac": 31490,
+      "direct": 47066,
+      "limb": 38930
+    },
+    {
+      "record": "02710_hr",
+      "flac": 30479,
+      "direct": 46882,
+      "limb": 35826
+    },
+    {
+      "record": "14866_hr",
+      "flac": 27245,
+      "direct": 38826,
+      "limb": 31698
+    },
+    {
+      "record": "13155_hr",
+      "flac": 31509,
+      "direct": 49610,
+      "limb": 39498
+    },
+    {
+      "record": "02178_hr",
+      "flac": 23732,
+      "direct": 31510,
+      "limb": 26574
+    },
+    {
+      "record": "18002_hr",
+      "flac": 29037,
+      "direct": 42650,
+      "limb": 34018
+    },
+    {
+      "record": "09158_hr",
+      "flac": 35502,
+      "direct": 50434,
+      "limb": 39642
+    },
+    {
+      "record": "17925_hr",
+      "flac": 26339,
+      "direct": 36994,
+      "limb": 30834
+    },
+    {
+      "record": "04397_hr",
+      "flac": 23353,
+      "direct": 32114,
+      "limb": 26722
+    },
+    {
+      "record": "04388_hr",
+      "flac": 21486,
+      "direct": 28902,
+      "limb": 24142
+    },
+    {
+      "record": "11109_hr",
+      "flac": 30480,
+      "direct": 46626,
+      "limb": 36306
+    },
+    {
+      "record": "21029_hr",
+      "flac": 25437,
+      "direct": 37362,
+      "limb": 30010
+    },
+    {
+      "record": "11028_hr",
+      "flac": 29919,
+      "direct": 44130,
+      "limb": 36610
+    },
+    {
+      "record": "13795_hr",
+      "flac": 21848,
+      "direct": 29562,
+      "limb": 24952
+    },
+    {
+      "record": "12904_hr",
+      "flac": 30603,
+      "direct": 44666,
+      "limb": 36882
+    },
+    {
+      "record": "13571_hr",
+      "flac": 25634,
+      "direct": 37298,
+      "limb": 30170
+    },
+    {
+      "record": "06176_hr",
+      "flac": 21807,
+      "direct": 29718,
+      "limb": 25054
+    }
+  ]
+}
