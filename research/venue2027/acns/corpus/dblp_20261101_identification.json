@@ -1,0 +1,923 @@
+{
+  "scope": "DBLP title-field identification; pre-cutoff interim run",
+  "distribution": "dblp-2026-11-01.xml.gz",
+  "xml_gz_sha256": "0376ad019b216553faff0a14e1757b2d4c7a3b84c1beacf0511ef83695211b18",
+  "dtd_sha256": "03ec35cb34a4227572a0e89da407b06b6e44a6cc23e19cabc3b49b702a5f897d",
+  "selection_protocol_sha256": "c6fd9e76b055ccaf38616718d4017881a5e61c6f887ec77823c39a78709a7940",
+  "counts": {
+    "records_scanned": 13073341,
+    "records_in_window": 3992890,
+    "titled_records_in_window": 3992890,
+    "unique_matching_dblp_keys": 69
+  },
+  "hits_by_query": {
+    "S1_attestation": 2,
+    "S2_provenance": 63,
+    "S3_receipts": 0,
+    "S4_benchmark_observability": 0,
+    "S5_supply_chain_verification": 6
+  },
+  "rows": [
+    {
+      "key": "conf/acl/LiSPZGLZPLWHLZW26",
+      "year": 2026,
+      "title": "Tracing the Roots: A Multi-Agent Framework for Uncovering Data Lineage in Post-Training LLMs.",
+      "first_author": "Yu Li 0006",
+      "venue": "ACL (1)",
+      "electronic_editions": [
+        "https://doi.org/10.18653/v1/2026.acl-long.435",
+        "https://aclanthology.org/2026.acl-long.435/"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/chi/Martin-BoyleLBK26",
+      "year": 2026,
+      "title": "PaperTrail: A Claim-Evidence Interface for Grounding Provenance in LLM-based Scholarly Q&A.",
+      "first_author": "Anna Martin-Boyle",
+      "venue": "CHI",
+      "electronic_editions": [
+        "https://doi.org/10.1145/3772318.3791101"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/date/AlsharkawyANGKAXH26",
+      "year": 2026,
+      "title": "TrustSeed: Lightweight Attestation Protocol for Ensuring LLM Integrity.",
+      "first_author": "Mohamed Alsharkawy",
+      "venue": "DATE",
+      "electronic_editions": [
+        "https://doi.org/10.23919/DATE69613.2026.11539273"
+      ],
+      "query_ids": [
+        "S1_attestation"
+      ]
+    },
+    {
+      "key": "conf/eScience/0001GDRGRBS25",
+      "year": 2025,
+      "title": "PROV-AGENT: Unified Provenance for Tracking AI Agent Interactions in Agentic Workflows.",
+      "first_author": "Renan Souza 0001",
+      "venue": "eScience",
+      "electronic_editions": [
+        "https://doi.org/10.1109/eScience65000.2025.00093"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/emnlp/SankararamanYSB24",
+      "year": 2024,
+      "title": "Provenance: A Light-weight Fact-checker for Retrieval Augmented LLM Generation Output.",
+      "first_author": "Hithesh Sankararaman",
+      "venue": "EMNLP (Industry Track)",
+      "electronic_editions": [
+        "https://doi.org/10.18653/v1/2024.emnlp-industry.97",
+        "https://aclanthology.org/2024.emnlp-industry.97"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/iccbr/ChenCLLWWL26",
+      "year": 2026,
+      "title": "CBR-PAR: LLM-Augmented Case-Based Reasoning for Provenance-Based Alert Reduction.",
+      "first_author": "Canhua Chen",
+      "venue": "ICCBR",
+      "electronic_editions": [
+        "https://doi.org/10.1007/978-3-032-33865-5_33"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/icdcs/OckLC26",
+      "year": 2026,
+      "title": "Distributed Multi-LLM Provenance Graph Construction for Scalable Correlation of APT Logs.",
+      "first_author": "Jiwon Ock",
+      "venue": "ICDCS (Workshops)",
+      "electronic_editions": [
+        "https://doi.org/10.1109/ICDCSW72724.2026.00008"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/icdm/KhanAA25",
+      "year": 2025,
+      "title": "Multi-Agent Framework for Controllable and Protected Generative Content Creation: Addressing Copyright and Provenance in AI-Generated Media.",
+      "first_author": "Haris Khan",
+      "venue": "ICDM (Workshops)",
+      "electronic_editions": [
+        "https://doi.org/10.1109/ICDMW69685.2025.00293"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/iclr/LiuYMWSZY26",
+      "year": 2026,
+      "title": "Where Did This Sentence Come From? Tracing Provenance in LLM Reasoning Distillation.",
+      "first_author": "Kaiyuan Liu",
+      "venue": "ICLR",
+      "electronic_editions": [
+        "https://proceedings.iclr.cc/paper_files/paper/2026/hash/85a67c093f26d9d6f2a197aa24b50414-Abstract-Conference.html"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/ictc/KwonLP25",
+      "year": 2025,
+      "title": "Ontology-Driven LLM Service Protocol for HPC Platforms: Design for Workflow Interoperability and Provenance-Aware Automation.",
+      "first_author": "Yejin Kwon",
+      "venue": "ICTC",
+      "electronic_editions": [
+        "https://doi.org/10.1109/ICTC66702.2025.11388233"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/icws/MaityBBM26",
+      "year": 2026,
+      "title": "Auditing Black-Box LLM APIs via Token Probabilities and Data Provenance: A Case Study in Source Code Generation.",
+      "first_author": "Subhankar Maity",
+      "venue": "ICWS",
+      "electronic_editions": [
+        "https://doi.org/10.1109/ICWS72778.2026.00083"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/ijcnn/RenWCZSL25",
+      "year": 2025,
+      "title": "MOLE: Provenance Graph Generation Framework Based on LLM Prompting.",
+      "first_author": "Yiming Ren",
+      "venue": "IJCNN",
+      "electronic_editions": [
+        "https://doi.org/10.1109/IJCNN64981.2025.11229381"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/iri/Kumar26",
+      "year": 2026,
+      "title": "SynthLineage: Submodular-Guided Corpus Distillation and Knowledge Graph Provenance for Collapse-Resistant LLM Fine-Tuning.",
+      "first_author": "Vikash Kumar",
+      "venue": "IRI",
+      "electronic_editions": [
+        "https://doi.org/10.1109/IRI69576.2026.00092"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/jcdl/DengA26",
+      "year": 2026,
+      "title": "Creating Linked Provenance Data for Chinese Art in US Museums: An LLM-in-the-Loop Workflow.",
+      "first_author": "Ximeng Deng",
+      "venue": "JCDL",
+      "electronic_editions": [
+        "https://doi.org/10.1145/3805696.3846493"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/sc/0001PERGSBS25",
+      "year": 2025,
+      "title": "LLM Agents for Interactive Workflow Provenance: Reference Architecture and Evaluation Methodology.",
+      "first_author": "Renan Souza 0001",
+      "venue": "SC Workshops",
+      "electronic_editions": [
+        "https://doi.org/10.1145/3731599.3767582"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/trustcom/FuDZCW25",
+      "year": 2025,
+      "title": "LLM-Driven APT Analysis and Detection Based on Provenance Graph by Threat Pattern.",
+      "first_author": "Yibin Fu",
+      "venue": "TrustCom",
+      "electronic_editions": [
+        "https://doi.org/10.1109/Trustcom66490.2025.00064"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/trustcom/YiZZ25",
+      "year": 2025,
+      "title": "DataLineage RCA: Root Cause Diagnosis for Data Lineage Issues Using Large Language Model-Based Agents.",
+      "first_author": "Xin Yi",
+      "venue": "TrustCom",
+      "electronic_editions": [
+        "https://doi.org/10.1109/Trustcom66490.2025.00281"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "conf/uist/MengZTHWW26",
+      "year": 2026,
+      "title": "Veriscope: Provenance-Aware Verification of LLM Reasoning Artifacts in Conversational Data Analysis.",
+      "first_author": "Lingyu Meng",
+      "venue": "UIST",
+      "electronic_editions": [
+        "https://doi.org/10.1145/3830398.3830599"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/access/ChenL26b",
+      "year": 2026,
+      "title": "TrustTrace: Provenance-Aware Tracing of Indirect Prompt Injection Propagation in LLM-Assisted Learning Workflows.",
+      "first_author": "Jingyi Chen",
+      "venue": "IEEE Access",
+      "electronic_editions": [
+        "https://doi.org/10.1109/ACCESS.2026.3726909"
+      ],
+      "query_ids": [
+        "S2_provenance",
+        "S5_supply_chain_verification"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2411-01022",
+      "year": 2024,
+      "title": "Provenance: A Light-weight Fact-checker for Retrieval Augmented LLM Generation Output.",
+      "first_author": "Hithesh Sankararaman",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2411.01022"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2508-02866",
+      "year": 2025,
+      "title": "PROV-AGENT: Unified Provenance for Tracking AI Agent Interactions in Agentic Workflows.",
+      "first_author": "Renan Souza 0001",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2508.02866"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2508-21323",
+      "year": 2025,
+      "title": "LLM-driven Provenance Forensics for Threat Investigation and Detection.",
+      "first_author": "Kunal Mukherjee",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2508.21323"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2509-13978",
+      "year": 2025,
+      "title": "LLM Agents for Interactive Workflow Provenance: Reference Architecture and Evaluation Methodology.",
+      "first_author": "Renan Souza 0001",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2509.13978"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2512-20908",
+      "year": 2025,
+      "title": "Where Did This Sentence Come From? Tracing Provenance in LLM Reasoning Distillation.",
+      "first_author": "Kaiyuan Liu",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2512.20908"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2601-01966",
+      "year": 2026,
+      "title": "Refinement Provenance Inference: Detecting LLM-Refined Training Prompts from Model Behavior.",
+      "first_author": "Bo Yin",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2601.01966"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2601-06232",
+      "year": 2026,
+      "title": "Multi-Agent Framework for Controllable and Protected Generative Content Creation: Addressing Copyright and Provenance in AI-Generated Media.",
+      "first_author": "Haris Khan",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2601.06232"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2602-21045",
+      "year": 2026,
+      "title": "PaperTrail: A Claim-Evidence Interface for Grounding Provenance in LLM-based Scholarly Q&A.",
+      "first_author": "Anna Martin-Boyle",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2602.21045"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2603-14283",
+      "year": 2026,
+      "title": "AEX: Non-Intrusive Multi-Hop Attestation and Provenance for LLM APIs.",
+      "first_author": "Yongjie Guan",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2603.14283"
+      ],
+      "query_ids": [
+        "S1_attestation",
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2603-18043",
+      "year": 2026,
+      "title": "The Provenance Paradox in Multi-Agent LLM Routing: Delegation Contracts and Attested Identity in LDP.",
+      "first_author": "Sunil Prakash",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2603.18043"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2603-18433",
+      "year": 2026,
+      "title": "Prompt Control-Flow Integrity: A Priority-Aware Runtime Defense Against Prompt Injection in LLM Systems.",
+      "first_author": "Md Takrim Ul Alam",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2603.18433"
+      ],
+      "query_ids": [
+        "S5_supply_chain_verification"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2603-22868",
+      "year": 2026,
+      "title": "Agent-Sentry: Bounding LLM Agents via Execution Provenance.",
+      "first_author": "Rohan Sequeira",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2603.22868"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2604-03820",
+      "year": 2026,
+      "title": "Affording Process Auditability with QualAnalyzer: An Atomistic LLM Analysis Tool for Qualitative Research.",
+      "first_author": "Max Hao Lu",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2604.03820"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2604-10134",
+      "year": 2026,
+      "title": "PlanGuard: Defending Agents against Indirect Prompt Injection via Planning-based Consistency Verification.",
+      "first_author": "Guangyu Gong",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2604.10134"
+      ],
+      "query_ids": [
+        "S5_supply_chain_verification"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2604-10480",
+      "year": 2026,
+      "title": "Tracing the Roots: A Multi-Agent Framework for Uncovering Data Lineage in Post-Training LLMs.",
+      "first_author": "Yu Li 0006",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2604.10480"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2605-11039",
+      "year": 2026,
+      "title": "The Granularity Mismatch in Agent Security: Argument-Level Provenance Solves Enforcement and Isolates the LLM Reasoning Bottleneck.",
+      "first_author": "Linfeng Fan",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2605.11039"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2605-12456",
+      "year": 2026,
+      "title": "TextSeal: A Localized LLM Watermark for Provenance & Distillation Protection.",
+      "first_author": "Tom Sander",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2605.12456"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2605-13471",
+      "year": 2026,
+      "title": "Sleeper Channels and Provenance Gates: Persistent Prompt Injection in Always-on Autonomous AI Agents.",
+      "first_author": "Narek Maloyan",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2605.13471"
+      ],
+      "query_ids": [
+        "S5_supply_chain_verification"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2605-26269",
+      "year": 2026,
+      "title": "AgentSecBench: Measuring Prompt Injection, Privacy Leakage, and Tool-Use Integrity in LLM Agents.",
+      "first_author": "Faruk Alpay",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2605.26269"
+      ],
+      "query_ids": [
+        "S5_supply_chain_verification"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2605-26497",
+      "year": 2026,
+      "title": "Aligning Provenance with Authorization: A Dual-Graph Defense for LLM Agents.",
+      "first_author": "Peiran Wang",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2605.26497"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2605-28510",
+      "year": 2026,
+      "title": "Efficient and Scalable Provenance Tracking for LLM-Generated Code Snippets.",
+      "first_author": "Andrea Gurioli",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2605.28510"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2606-04990",
+      "year": 2026,
+      "title": "From Agent Traces to Trust: A Survey of Evidence Tracing and Execution Provenance in LLM Agents.",
+      "first_author": "Yiqi Wang",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2606.04990"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2606-09084",
+      "year": 2026,
+      "title": "Context-Fractured Decomposition Attacks on Tool-Using LLM Agents: Exploiting Artifact Provenance Gaps.",
+      "first_author": "Xiaofeng Lin 0005",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2606.09084"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2606-10612",
+      "year": 2026,
+      "title": "GaussTrace: Provenance Analysis of 3D Gaussian Splatting Models with Evidence-based LLM Reasoning.",
+      "first_author": "Haoliang Han",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2606.10612"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2606-17467",
+      "year": 2026,
+      "title": "PARSE: Provenance-Aware Retrieval Sanitization for Professional Domain LLM Agents.",
+      "first_author": "Aaditya Pai",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2606.17467"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2606-22560",
+      "year": 2026,
+      "title": "Evidence-Bound Gateway-Path Provenance for Third-Party LLM Inference.",
+      "first_author": "Fei Wang",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2606.22560"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2606-29605",
+      "year": 2026,
+      "title": "How much of an LLM-generated clinical corpus is actually new? A production-scale measurement of content redundancy for provenance classification.",
+      "first_author": "Ali H. Lazem",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2606.29605"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2607-01236",
+      "year": 2026,
+      "title": "Safeguarding LLM Agents from Misalignment through Provenance Analysis.",
+      "first_author": "Yining She",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2607.01236"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2607-20827",
+      "year": 2026,
+      "title": "Auditing Provenance Sensitivity in LLM Agent Action Selection.",
+      "first_author": "Junchi Liao",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2607.20827"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2607-25880",
+      "year": 2026,
+      "title": "Stemma: Induced Decision Regions Reveal LLM Provenance.",
+      "first_author": "Keyu Zhang",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2607.25880"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2607-29167",
+      "year": 2026,
+      "title": "Memory Provenance Laundering in LLM Agents: A Non-Amplification Firewall for Persistent Memory.",
+      "first_author": "Jinghan Xu",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2607.29167"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2608-02154",
+      "year": 2026,
+      "title": "Auditing Data Provenance in LLM Fine-tuning via Intrinsic Distributional Fingerprints.",
+      "first_author": "Zirui Huang",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2608.02154"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2608-05204",
+      "year": 2026,
+      "title": "SkillTrace: Multi-Trace Provenance Auditing for LLM-Agent Skill Reuse.",
+      "first_author": "Jialuo Chen",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2608.05204"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2608-07202",
+      "year": 2026,
+      "title": "Authoring and Management of Transparent Research Integrity Assessments of Randomised Clinical Trial Publications Using LLM-assisted Tools and Provenance Knowledge Graphs.",
+      "first_author": "Milan Markovic",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2608.07202"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2608-12713",
+      "year": 2026,
+      "title": "Tracing Provenance and Detecting Tampering with Complementary LLM Watermarks.",
+      "first_author": "Xiaoyan Feng",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2608.12713"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2608-25210",
+      "year": 2026,
+      "title": "Bolt-on, Verifiable Provenance for LLM-Powered Data Processing.",
+      "first_author": "Yiming Lin 0002",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2608.25210"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2608-25245",
+      "year": 2026,
+      "title": "The \"Curse of Knowledge\" in LLM Query Simulation: Concept Provenance for Tracing Answer-Side Intrusion.",
+      "first_author": "Chenglong Ma 0001",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2608.25245"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2608-26237",
+      "year": 2026,
+      "title": "How Do LLM Agents Actually Get the Flag? Trace-Level Provenance for Agentic Offensive Security Evaluation.",
+      "first_author": "Kimberly Milner",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2608.26237"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2608-29606",
+      "year": 2026,
+      "title": "Agent Zero Memory: Provenance-Aware Long-Term Memory for LLM Agents.",
+      "first_author": "Ming Wu",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2608.29606"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2609-02553",
+      "year": 2026,
+      "title": "The Shape of Ownership: Verifying LLM Provenance through Semantic Structures.",
+      "first_author": "Zhongrui Sun",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2609.02553"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2609-06127",
+      "year": 2026,
+      "title": "PAGR: Proof-Carrying Algebraic-Geometric Retrieval: A Quiver-, Provenance-, and Sheaf-Theoretic Framework for Grounded LLM Retrieval.",
+      "first_author": "Xingting Wang",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2609.06127"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2609-17695",
+      "year": 2026,
+      "title": "GraphEcho: Structural Redundancy and Evidence Provenance in LLM Graph Agents.",
+      "first_author": "Sikun Wang",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2609.17695"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2609-30830",
+      "year": 2026,
+      "title": "AGATE: Provenance-Based Runtime Defense Against Compositional Attacks on LLM Agents.",
+      "first_author": "Xiaorui Zhang",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2609.30830"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2609-32424",
+      "year": 2026,
+      "title": "CyberClear: A Benchmark for LLM Agent Systems on APT Attack Chain Provenance.",
+      "first_author": "Qi Chen",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2609.32424"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2609-36494",
+      "year": 2026,
+      "title": "Know the Normal, Track the Attack: Context-Grounded and Stateful LLM Investigation over System Provenance.",
+      "first_author": "Lijie Zheng",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2609.36494"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2609-38245",
+      "year": 2026,
+      "title": "Agent-Warden: eBPF-Based Kernel-Native Process-File Provenance Tracking for LLM Agents.",
+      "first_author": "Dongxu Cui",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2609.38245"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/corr/abs-2609-38706",
+      "year": 2026,
+      "title": "Preserving Provenance in Shared KV Caches for LLM Serving.",
+      "first_author": "Wei Song",
+      "venue": "CoRR",
+      "electronic_editions": [
+        "https://doi.org/10.48550/arXiv.2609.38706"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/jbd/GregoriLLMT25",
+      "year": 2025,
+      "title": "An LLM-guided platform for multi-granular collection and management of data provenance.",
+      "first_author": "Luca Gregori",
+      "venue": "J. Big Data",
+      "electronic_editions": [
+        "https://doi.org/10.1186/s40537-025-01209-3"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/pvldb/LinZP26",
+      "year": 2026,
+      "title": "Bolt-on, Verifiable Provenance for LLM-Powered Data Processing.",
+      "first_author": "Yiming Lin 0002",
+      "venue": "Proc. VLDB Endow.",
+      "electronic_editions": [
+        "https://www.vldb.org/pvldb/vol19/p2992-lin.pdf"
+      ],
+      "query_ids": [
+        "S2_provenance"
+      ]
+    },
+    {
+      "key": "journals/scientometrics/TorrielliLRC26",
+      "year": 2026,
+      "title": "Exploiting large language models in peer review: indirect prompt injection attacks and integrity probes.",
+      "first_author": "Federico Torrielli",
+      "venue": "Scientometrics",
+      "electronic_editions": [
+        "https://doi.org/10.1007/s11192-026-05695-x"
+      ],
+      "query_ids": [
+        "S5_supply_chain_verification"
+      ]
+    }
+  ]
+}
