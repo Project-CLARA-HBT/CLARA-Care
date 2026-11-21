@@ -1,0 +1,190 @@
+{
+  "scope": "development_in_process_microbenchmark",
+  "baseline_commit": "2c026ade9a800ae368501b33ba59d7019b8d3a1b",
+  "indexed_module_sha256": "88468e5448842233ba788cf4e2a07eccd5423a939456b790f79bbea442f67423",
+  "python": "3.12.3",
+  "machine": "x86_64",
+  "revocations_per_trial": 32,
+  "results": [
+    {
+      "subjects": 128,
+      "median_paired_revoke_speedup": 3.375904964285904,
+      "trials": [
+        {
+          "seed": 0,
+          "times": {
+            "old": {
+              "build_ms": 3.460261,
+              "revoke_ms": 6.730023
+            },
+            "indexed": {
+              "build_ms": 2.435344,
+              "revoke_ms": 1.919038
+            }
+          },
+          "receipt_read_digest": "898b66420ed8c1fcf037b91c0421fa45356860bb651d75874260bef067808cb7"
+        },
+        {
+          "seed": 1,
+          "times": {
+            "indexed": {
+              "build_ms": 3.264903,
+              "revoke_ms": 2.165865
+            },
+            "old": {
+              "build_ms": 3.774139,
+              "revoke_ms": 5.417264
+            }
+          },
+          "receipt_read_digest": "6c5b5afa9b4d9bc9efa3d2b32ac58aa3285a64c4d98e8d9b5352aac269305074"
+        },
+        {
+          "seed": 2,
+          "times": {
+            "old": {
+              "build_ms": 3.498901,
+              "revoke_ms": 5.819729
+            },
+            "indexed": {
+              "build_ms": 2.486406,
+              "revoke_ms": 1.622412
+            }
+          },
+          "receipt_read_digest": "4ec70a6e351f40cbd4b0324b7e192ed8400ea9f25d685e435f415ebf7067d00a"
+        },
+        {
+          "seed": 3,
+          "times": {
+            "indexed": {
+              "build_ms": 2.267537,
+              "revoke_ms": 1.582909
+            },
+            "old": {
+              "build_ms": 3.166666,
+              "revoke_ms": 5.073493
+            }
+          },
+          "receipt_read_digest": "40969d0b71453e28574739da55d0e57d1412b9954c3f6ef57811e1271aed94cc"
+        },
+        {
+          "seed": 4,
+          "times": {
+            "old": {
+              "build_ms": 3.312507,
+              "revoke_ms": 6.16724
+            },
+            "indexed": {
+              "build_ms": 2.534983,
+              "revoke_ms": 1.643672
+            }
+          },
+          "receipt_read_digest": "bc65b9fc821b3908de441e088ee40f6fbd24dbcbe63238722943b0ede0ef9d29"
+        },
+        {
+          "seed": 5,
+          "times": {
+            "indexed": {
+              "build_ms": 2.189376,
+              "revoke_ms": 1.578802
+            },
+            "old": {
+              "build_ms": 3.201896,
+              "revoke_ms": 5.122948
+            }
+          },
+          "receipt_read_digest": "f57e0d45893cbe3854fcb6fac8cf99d6b350e26a68fe5b9c0b83f6ead99fef05"
+        }
+      ]
+    },
+    {
+      "subjects": 1024,
+      "median_paired_revoke_speedup": 2.61695885465349,
+      "trials": [
+        {
+          "seed": 0,
+          "times": {
+            "old": {
+              "build_ms": 127.116205,
+              "revoke_ms": 50.825066
+            },
+            "indexed": {
+              "build_ms": 20.842652,
+              "revoke_ms": 18.581146
+            }
+          },
+          "receipt_read_digest": "e1f9958f641418b8bb531be96d892e88fbdee7183943b1daca6d8693f440af3d"
+        },
+        {
+          "seed": 1,
+          "times": {
+            "indexed": {
+              "build_ms": 21.094308,
+              "revoke_ms": 19.202901
+            },
+            "old": {
+              "build_ms": 134.052514,
+              "revoke_ms": 50.527264
+            }
+          },
+          "receipt_read_digest": "584bd2476a4bfc8c97b42b142e8141eb41566c3ba40a708ebb6f57a7e3d815c4"
+        },
+        {
+          "seed": 2,
+          "times": {
+            "old": {
+              "build_ms": 141.607756,
+              "revoke_ms": 52.254154
+            },
+            "indexed": {
+              "build_ms": 21.084519,
+              "revoke_ms": 20.398463
+            }
+          },
+          "receipt_read_digest": "7750a956250c63a9966262549f755803a9dba8518f87a8b6a1e75297708302ae"
+        },
+        {
+          "seed": 3,
+          "times": {
+            "indexed": {
+              "build_ms": 22.144263,
+              "revoke_ms": 19.281074
+            },
+            "old": {
+              "build_ms": 188.49739,
+              "revoke_ms": 51.87431
+            }
+          },
+          "receipt_read_digest": "506a8720e79ad9af99bd782de95636ea2e44d5ef0431b148ff7b62202c9be28f"
+        },
+        {
+          "seed": 4,
+          "times": {
+            "old": {
+              "build_ms": 138.898729,
+              "revoke_ms": 51.252269
+            },
+            "indexed": {
+              "build_ms": 21.407974,
+              "revoke_ms": 20.357658
+            }
+          },
+          "receipt_read_digest": "7770097ac8e83d506aa04e7c78c7e4672d009f9ccbd4948539067aff438088f9"
+        },
+        {
+          "seed": 5,
+          "times": {
+            "indexed": {
+              "build_ms": 21.869376,
+              "revoke_ms": 19.706294
+            },
+            "old": {
+              "build_ms": 142.467833,
+              "revoke_ms": 51.289314
+            }
+          },
+          "receipt_read_digest": "e926db99ceac6f62502501d931c552cbacd98e2b932ffcaa30622fcd17c7e65d"
+        }
+      ]
+    }
+  ]
+}
