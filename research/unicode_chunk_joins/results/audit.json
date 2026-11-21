@@ -1,0 +1,52 @@
+{
+  "corpus_sha256": "871238e37e3be0696ec2bd0891119a041b052da1a84485eda05a5438724b223e",
+  "counts": {
+    "NFC": {
+      "distinct_inputs": 36482,
+      "splittable": 17694
+    },
+    "NFD": {
+      "distinct_inputs": 36482,
+      "splittable": 17694
+    },
+    "NFKC": {
+      "distinct_inputs": 36482,
+      "splittable": 17694
+    },
+    "NFKD": {
+      "distinct_inputs": 36482,
+      "splittable": 17694
+    }
+  },
+  "examples": {
+    "NFC_pair": {
+      "cut": 1,
+      "expected": "1E0A 031B",
+      "input": "0044 031B 0307",
+      "left": "0044",
+      "right": "031B 0307"
+    },
+    "NFC_starter": {
+      "cut": 1,
+      "expected": "09CB",
+      "input": "09C7 09BE",
+      "left": "09C7",
+      "right": "09BE"
+    },
+    "NFKC_pair": {
+      "cut": 1,
+      "expected": "1E0A 031B",
+      "input": "0044 031B 0307",
+      "left": "0044",
+      "right": "031B 0307"
+    },
+    "NFKC_starter": {
+      "cut": 1,
+      "expected": "09CB",
+      "input": "09C7 09BE",
+      "left": "09C7",
+      "right": "09BE"
+    }
+  },
+  "explicit_rows": 19074
+}
