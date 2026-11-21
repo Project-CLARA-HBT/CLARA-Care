@@ -111,6 +111,10 @@ Output evaluate(const Query& q, Mode mode) {
     return result;
 }
 
+#ifdef RANKPATH_EXTENSIONS
+#include "frontier.hpp"
+#endif
+
 int main(int argc,char** argv) {
     if (argc!=4) throw std::runtime_error("usage: path inputs.txt changes.tsv timings.csv");
     std::ifstream in(argv[1]); std::ofstream curves(argv[2]), times(argv[3]);
@@ -143,13 +147,25 @@ int main(int argc,char** argv) {
     for(size_t first=0;first<queries.size();) {
         size_t end=first+1;
         while(end<queries.size() && queries[end].source==queries[first].source) ++end;
+#ifdef RANKPATH_EXTENSIONS
+        std::array<int,8> order={Sweep,BandSweep,Early,Clip,BandClip,5,6,7};
+#else
         std::array<Mode,5> order={Sweep,BandSweep,Early,Clip,BandClip};
+#endif
         for(int round=0;round<=12;++round) {
             std::shuffle(order.begin(),order.end(),rng);
             for(size_t pos=0;pos<order.size();++pos) {
                 std::vector<Output> out;
                 auto start=std::chrono::steady_clock::now();
-                for(size_t j=first;j<end;++j) out.push_back(evaluate(queries[j],order[pos]));
+                for(size_t j=first;j<end;++j) {
+#ifdef RANKPATH_EXTENSIONS
+                    if (order[pos] > BandClip) {
+                        out.push_back(vector_evaluate(queries[j], order[pos]));
+                        continue;
+                    }
+#endif
+                    out.push_back(evaluate(queries[j],static_cast<Mode>(order[pos])));
+                }
                 auto elapsed=std::chrono::steady_clock::now()-start;
                 if (!std::equal(out.begin(),out.end(),expected.begin()+first))
                     throw std::runtime_error("path mismatch");
