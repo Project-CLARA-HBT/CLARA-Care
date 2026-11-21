@@ -102,9 +102,10 @@ def decode(payload):
     stream = io.BytesIO(payload)
     mode, = stream.read(1)
     arm = ARMS[mode]
-    adc = np.zeros((5000,12),dtype=np.int64)
-    for j in KEEP:
-        adc[:,j] = read_frame(stream)
+    leads = [read_frame(stream) for _ in KEEP]
+    adc = np.zeros((len(leads[0]),12),dtype=np.int64)
+    for j, lead in zip(KEEP, leads, strict=True):
+        adc[:,j] = lead
     if arm == "flac":
         res = np.column_stack([read_frame(stream) for _ in range(4)])
     else:
