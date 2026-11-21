@@ -38,3 +38,17 @@ Reading a full day on either side of the missing segment reduced the error furth
 ```sh
 OPENBLAS_NUM_THREADS=1 python -m evaluation.sensor_gap.conditional /tmp/ett-hourly evaluation/sensor_gap/periodic_results/losses.csv /tmp/conditional-losses.csv
 ```
+
+## Load excursions on the WSL GPU
+
+The additive temperature/load kernel had macro MAE 1.2511 on the same 174 development outages. The temperature-only kernel reached 1.2107 under the same chronological tuning budget. The candidate's paired improvement against this ablation was negative, with a 95% four-week block-bootstrap interval of −0.062 to −0.019 temperature units. A concatenated kernel also had lower MAE (1.2405). These data reject the specific additive-load hypothesis. They do not establish that transformer load is uninformative at other sites or under natural outages.
+
+The WSL2 run used an NVIDIA GeForce RTX 4060 Ti, PyTorch 2.6.0+cu124, and float64 kernels. Its JSON records each training/validation size, validation score and choice. Each target forecaster receives an identical outage and the original target interval is used for calculating loss. Run from the repository root with CUDA PyTorch and the dependencies in requirements.txt:
+
+```sh
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python -m evaluation.sensor_gap.kernel /tmp/ett-hourly /tmp/gap-new-gpu-output
+cmp /tmp/gap-new-gpu-output/losses.csv evaluation/sensor_gap/kernel_results/losses.csv
+python -m evaluation.sensor_gap.summarize_kernel
+```
+
+[Protocol](kernel-protocol.md) · [GPU runtime and validation scores](kernel_results/run.json) · [All comparisons and paired intervals](kernel_results/comparison.csv)

@@ -91,8 +91,7 @@ def evaluate(cache):
                     )
 
 
-def compare(rows):
-    methods = (*ARMS, *NEW_ARMS)
+def compare(rows, methods=(*ARMS, *NEW_ARMS)):
     grid = {
         (int(r["week"]), r["station"], int(r["hours"]), r["method"]): float(r["mae"]) for r in rows
     }
