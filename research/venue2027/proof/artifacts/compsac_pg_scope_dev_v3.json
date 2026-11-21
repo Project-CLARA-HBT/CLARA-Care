@@ -1,0 +1,1042 @@
+{
+  "scope": "development_disjoint_targets_shared_dependencies",
+  "server_version_num": 160004,
+  "retry_limit": 2,
+  "planner_statistics": "ANALYZE after each population",
+  "runner_sha256": "43cf6f9d991976ec90584e2e5837ef45f96b36a478783a936eb44472b86e93d4",
+  "operations_per_campaign": 96,
+  "rows": [
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 0,
+      "arm": "ssi",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.2761046589585021,
+      "committed_per_second": 304.23246140379325
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 0,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.2660706980386749,
+      "committed_per_second": 315.70556479612844
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 0,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.2600329059641808,
+      "committed_per_second": 323.0360391833289
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 1,
+      "arm": "ssi",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.20506199297960848,
+      "committed_per_second": 409.63222281933554
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 1,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.23576800094451755,
+      "committed_per_second": 356.28244572412274
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 1,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.2406813909765333,
+      "committed_per_second": 349.0091180675871
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 2,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.23756462498567998,
+      "committed_per_second": 353.58799739255534
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 2,
+      "arm": "ssi",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.22124650806654245,
+      "committed_per_second": 379.66700913867544
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 2,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.23410573799628764,
+      "committed_per_second": 358.81222185733884
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 3,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.2518300670199096,
+      "committed_per_second": 333.55826408670646
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 3,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.25721110904123634,
+      "committed_per_second": 326.5799844847799
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 3,
+      "arm": "ssi",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.2371533679543063,
+      "committed_per_second": 354.2011683181525
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 4,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.30309652106370777,
+      "committed_per_second": 277.1394396253861
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 4,
+      "arm": "ssi",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.28347647294867784,
+      "committed_per_second": 296.32088732530485
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 4,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.3361895789857954,
+      "committed_per_second": 249.85902374906496
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 5,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.3364675740012899,
+      "committed_per_second": 249.65258613502522
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 5,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.3996520839864388,
+      "committed_per_second": 210.1828149177131
+    },
+    {
+      "workers": 1,
+      "fanout": 1,
+      "seed": 5,
+      "arm": "ssi",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.30658792005851865,
+      "committed_per_second": 273.9833975975533
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 0,
+      "arm": "ssi",
+      "counts": {
+        "stale_dependency": 12,
+        "committed": 84
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.27940998401027173,
+      "committed_per_second": 300.6334948894023
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 0,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "stale_dependency": 12,
+        "committed": 84
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.32691000995691866,
+      "committed_per_second": 256.9514467026256
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 0,
+      "arm": "shared_dependencies",
+      "counts": {
+        "stale_dependency": 12,
+        "committed": 84
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.3037142310058698,
+      "committed_per_second": 276.57577888859794
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 1,
+      "arm": "ssi",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.25968600006308407,
+      "committed_per_second": 323.46757229729116
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 1,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 1.0450743510155007,
+      "committed_per_second": 80.37705634855266
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 1,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.350838613929227,
+      "committed_per_second": 239.42632499666905
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 2,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.2901132609695196,
+      "committed_per_second": 289.54209028323373
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 2,
+      "arm": "ssi",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.23057247896213084,
+      "committed_per_second": 364.3106080053732
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 2,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.39578309701755643,
+      "committed_per_second": 212.23746196587538
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 3,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.3267585360445082,
+      "committed_per_second": 257.07056047208584
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 3,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.28649016201961786,
+      "committed_per_second": 293.203785455809
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 3,
+      "arm": "ssi",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.27422743500210345,
+      "committed_per_second": 306.3150847739056
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 4,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.33271133096423,
+      "committed_per_second": 252.47111289104515
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 4,
+      "arm": "ssi",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.28547515196260065,
+      "committed_per_second": 294.246274754605
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 4,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.3248964659869671,
+      "committed_per_second": 258.54390180830586
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 5,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.29929552995599806,
+      "committed_per_second": 280.65905298468556
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 5,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.3076022790046409,
+      "committed_per_second": 273.0799013317215
+    },
+    {
+      "workers": 1,
+      "fanout": 8,
+      "seed": 5,
+      "arm": "ssi",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.26941825298126787,
+      "committed_per_second": 311.78288430903143
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 0,
+      "arm": "ssi",
+      "counts": {
+        "retries": 122,
+        "committed": 49,
+        "serialization_abort": 35,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 35,
+      "seconds": 0.11136231804266572,
+      "committed_per_second": 440.0052087747209
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 0,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.19456668407656252,
+      "committed_per_second": 431.7285890884884
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 0,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.0743402229854837,
+      "committed_per_second": 1129.940113529153
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 1,
+      "arm": "ssi",
+      "counts": {
+        "retries": 136,
+        "serialization_abort": 48,
+        "stale_dependency": 12,
+        "committed": 36
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 48,
+      "seconds": 0.1134216480422765,
+      "committed_per_second": 317.3997259022497
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 1,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.10015687299892306,
+      "committed_per_second": 838.6843307388721
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 1,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.18018985097296536,
+      "committed_per_second": 466.17497903698734
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 2,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.21770489495247602,
+      "committed_per_second": 385.8434143997397
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 2,
+      "arm": "ssi",
+      "counts": {
+        "retries": 138,
+        "committed": 37,
+        "stale_dependency": 12,
+        "serialization_abort": 47
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 47,
+      "seconds": 0.12100891501177102,
+      "committed_per_second": 305.76259605666957
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 2,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.09879873995669186,
+      "committed_per_second": 850.2132723233227
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 3,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.18492011295165867,
+      "committed_per_second": 454.2502092347254
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 3,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.09958443802315742,
+      "committed_per_second": 843.505287246453
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 3,
+      "arm": "ssi",
+      "counts": {
+        "retries": 124,
+        "committed": 45,
+        "stale_dependency": 12,
+        "serialization_abort": 39
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 39,
+      "seconds": 0.12785872293170542,
+      "committed_per_second": 351.95095780861465
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 4,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.10706231603398919,
+      "committed_per_second": 784.5897894954227
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 4,
+      "arm": "ssi",
+      "counts": {
+        "retries": 126,
+        "committed": 45,
+        "serialization_abort": 39,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 39,
+      "seconds": 0.10629383299965411,
+      "committed_per_second": 423.35475850368886
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 4,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.19805139501113445,
+      "committed_per_second": 424.1323318892933
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 5,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.12757581297773868,
+      "committed_per_second": 658.4320181025032
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 5,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.19129588000942022,
+      "committed_per_second": 439.11034568995154
+    },
+    {
+      "workers": 4,
+      "fanout": 1,
+      "seed": 5,
+      "arm": "ssi",
+      "counts": {
+        "committed": 40,
+        "retries": 119,
+        "serialization_abort": 44,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 44,
+      "seconds": 0.1649999920045957,
+      "committed_per_second": 242.42425417139347
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 0,
+      "arm": "ssi",
+      "counts": {
+        "stale_dependency": 12,
+        "retries": 130,
+        "serialization_abort": 45,
+        "committed": 39
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 45,
+      "seconds": 0.12611155002377927,
+      "committed_per_second": 309.25002501869386
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 0,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "stale_dependency": 12,
+        "committed": 84
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.1994157909648493,
+      "committed_per_second": 421.23043312455906
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 0,
+      "arm": "shared_dependencies",
+      "counts": {
+        "stale_dependency": 12,
+        "committed": 84
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.12384667107835412,
+      "committed_per_second": 678.2580368822
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 1,
+      "arm": "ssi",
+      "counts": {
+        "retries": 122,
+        "committed": 48,
+        "serialization_abort": 36,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 36,
+      "seconds": 0.13008534396067262,
+      "committed_per_second": 368.98853121002895
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 1,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.13937376497779042,
+      "committed_per_second": 602.695923536152
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 1,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.23546438198536634,
+      "committed_per_second": 356.7418532337534
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 2,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.2534379940479994,
+      "committed_per_second": 331.44201726948245
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 2,
+      "arm": "ssi",
+      "counts": {
+        "retries": 116,
+        "serialization_abort": 36,
+        "committed": 48,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 36,
+      "seconds": 0.12644064403139055,
+      "committed_per_second": 379.6247667647388
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 2,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.1358418669551611,
+      "committed_per_second": 618.366059616413
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 3,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.22197496390435845,
+      "committed_per_second": 378.42105489064426
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 3,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.06828219001181424,
+      "committed_per_second": 1230.1890139356435
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 3,
+      "arm": "ssi",
+      "counts": {
+        "retries": 132,
+        "committed": 35,
+        "serialization_abort": 49,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 49,
+      "seconds": 0.1217904279474169,
+      "committed_per_second": 287.3789064532335
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 4,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.09523073793388903,
+      "committed_per_second": 882.0681412582813
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 4,
+      "arm": "ssi",
+      "counts": {
+        "retries": 136,
+        "committed": 35,
+        "stale_dependency": 12,
+        "serialization_abort": 49
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 49,
+      "seconds": 0.12898966507054865,
+      "committed_per_second": 271.3395680255264
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 4,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.19078316702507436,
+      "committed_per_second": 440.2904161296368
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 5,
+      "arm": "shared_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.13941293500829488,
+      "committed_per_second": 602.5265876154326
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 5,
+      "arm": "exclusive_dependencies",
+      "counts": {
+        "committed": 84,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 0,
+      "seconds": 0.1752978329313919,
+      "committed_per_second": 479.18447476116796
+    },
+    {
+      "workers": 4,
+      "fanout": 8,
+      "seed": 5,
+      "arm": "ssi",
+      "counts": {
+        "retries": 131,
+        "committed": 38,
+        "serialization_abort": 46,
+        "stale_dependency": 12
+      },
+      "forbidden_installs": 0,
+      "missing_valid": 46,
+      "seconds": 0.11584017996210605,
+      "committed_per_second": 328.03816441264735
+    }
+  ]
+}
