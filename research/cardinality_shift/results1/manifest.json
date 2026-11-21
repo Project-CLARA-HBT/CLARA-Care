@@ -1,0 +1,61 @@
+{
+  "python": "3.12.15",
+  "platform": "6.18.33.2-microsoft-standard-WSL2",
+  "numpy": "2.5.4",
+  "source_rows": 32561,
+  "external_rows": 16281,
+  "shape": [
+    9,
+    16,
+    7,
+    15,
+    6,
+    42
+  ],
+  "tree_bytes": 4762,
+  "full_sorted_bytes": 15361,
+  "full_sparse_bytes": 17760,
+  "cap": 32768,
+  "seeds": {
+    "11": {
+      "compressed_bytes": 15361,
+      "compressed_rows": 32561,
+      "uniform_rows": 5461,
+      "hybrid_tree_rows": 4667,
+      "hybrid_independence_rows": 5398,
+      "independence_bytes": 380
+    },
+    "12": {
+      "compressed_bytes": 15361,
+      "compressed_rows": 32561,
+      "uniform_rows": 5461,
+      "hybrid_tree_rows": 4667,
+      "hybrid_independence_rows": 5398,
+      "independence_bytes": 380
+    },
+    "13": {
+      "compressed_bytes": 15361,
+      "compressed_rows": 32561,
+      "uniform_rows": 5461,
+      "hybrid_tree_rows": 4667,
+      "hybrid_independence_rows": 5398,
+      "independence_bytes": 380
+    },
+    "14": {
+      "compressed_bytes": 15361,
+      "compressed_rows": 32561,
+      "uniform_rows": 5461,
+      "hybrid_tree_rows": 4667,
+      "hybrid_independence_rows": 5398,
+      "independence_bytes": 380
+    },
+    "15": {
+      "compressed_bytes": 15361,
+      "compressed_rows": 32561,
+      "uniform_rows": 5461,
+      "hybrid_tree_rows": 4667,
+      "hybrid_independence_rows": 5398,
+      "independence_bytes": 380
+    }
+  }
+}

@@ -8,8 +8,8 @@ import itertools
 import json
 import platform
 import struct
-import zlib
 import zipfile
+import zlib
 from collections import Counter
 from pathlib import Path
 
@@ -165,6 +165,23 @@ def run(path, out):
         for _, _, c, v in qlist
     ]
     exact_ok = min(len(zs), len(sparse_blob)) <= CAP
+    if exact_ok:
+        if len(zs) <= len(sparse_blob):
+            reconstructed = np.frombuffer(zlib.decompress(zs), dtype=np.uint8).reshape(-1, 6)
+        else:
+            payload = zlib.decompress(sparse_blob)
+            items = [
+                (payload[i : i + 6], struct.unpack_from("<I", payload, i + 6)[0])
+                for i in range(0, len(payload), 10)
+            ]
+            reconstructed = np.repeat(
+                np.frombuffer(b"".join(k for k, _ in items), dtype=np.uint8).reshape(-1, 6),
+                [v for _, v in items],
+                axis=0,
+            )
+        exact = [matching(reconstructed, c, v) for _, _, c, v in qlist]
+        if exact != truth:
+            raise ValueError("lossless synopsis failed")
     with (out / "predictions.csv").open("w", newline="") as f:
         writer = csv.writer(f, lineterminator="\n")
         methods = [
@@ -216,7 +233,7 @@ def run(path, out):
                     *[estimate_sample(ct, len(st), tree[i], x, n) for x in (4, 32, 32 / (1 + ct))],
                 ]
                 if exact_ok:
-                    preds.append(truth[i])
+                    preds.append(exact[i])
                 writer.writerow([seed, work, idx, len(cols), truth[i], *[float(x) for x in preds]])
     (out / "manifest.json").write_text(json.dumps(meta, indent=2) + "\n")
 

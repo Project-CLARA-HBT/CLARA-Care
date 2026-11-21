@@ -1,0 +1,200 @@
+{
+  "independence": {
+    "macro": {
+      "mean": 1.0763790893163363,
+      "cases": 6000
+    },
+    "joint": {
+      "mean": 0.752788190996316,
+      "cases": 3000
+    },
+    "positive": {
+      "mean": 0.7393678881346185,
+      "cases": 5055
+    },
+    "zero": {
+      "mean": 2.879121546431225,
+      "cases": 945
+    },
+    "independent": {
+      "mean": 1.3999699876363505,
+      "cases": 3000
+    }
+  },
+  "chow_liu": {
+    "macro": {
+      "mean": 0.19055775265154792,
+      "cases": 6000
+    },
+    "joint": {
+      "mean": 0.20125819490774524,
+      "cases": 3000
+    },
+    "positive": {
+      "mean": 0.18916949803110886,
+      "cases": 5055
+    },
+    "zero": {
+      "mean": 0.19798381308151775,
+      "cases": 945
+    },
+    "independent": {
+      "mean": 0.1798573103953516,
+      "cases": 3000
+    }
+  },
+  "uniform": {
+    "macro": {
+      "mean": 0.20327287865366478,
+      "cases": 6000
+    },
+    "joint": {
+      "mean": 0.2016447743152588,
+      "cases": 3000
+    },
+    "positive": {
+      "mean": 0.24127344647319263,
+      "cases": 5055
+    },
+    "zero": {
+      "mean": 0,
+      "cases": 945
+    },
+    "independent": {
+      "mean": 0.2049009829920704,
+      "cases": 3000
+    }
+  },
+  "compressed_uniform": {
+    "macro": {
+      "mean": 0,
+      "cases": 6000
+    },
+    "joint": {
+      "mean": 0,
+      "cases": 3000
+    },
+    "positive": {
+      "mean": 0,
+      "cases": 5055
+    },
+    "zero": {
+      "mean": 0,
+      "cases": 945
+    },
+    "independent": {
+      "mean": 0,
+      "cases": 3000
+    }
+  },
+  "indep_prior4": {
+    "macro": {
+      "mean": 0.21698850487826118,
+      "cases": 6000
+    },
+    "joint": {
+      "mean": 0.20191012675229134,
+      "cases": 3000
+    },
+    "positive": {
+      "mean": 0.24002691592681738,
+      "cases": 5055
+    },
+    "zero": {
+      "mean": 0.09375129022169865,
+      "cases": 945
+    },
+    "independent": {
+      "mean": 0.23206688300422926,
+      "cases": 3000
+    }
+  },
+  "tree_prior4": {
+    "macro": {
+      "mean": 0.22473138529836012,
+      "cases": 6000
+    },
+    "joint": {
+      "mean": 0.22051398391873575,
+      "cases": 3000
+    },
+    "positive": {
+      "mean": 0.26669277985927026,
+      "cases": 5055
+    },
+    "zero": {
+      "mean": 0.00027122709158633343,
+      "cases": 945
+    },
+    "independent": {
+      "mean": 0.228948786677985,
+      "cases": 3000
+    }
+  },
+  "tree_prior32": {
+    "macro": {
+      "mean": 0.22234101524491462,
+      "cases": 6000
+    },
+    "joint": {
+      "mean": 0.21820598851279938,
+      "cases": 3000
+    },
+    "positive": {
+      "mean": 0.2635050979461479,
+      "cases": 5055
+    },
+    "zero": {
+      "mean": 0.002145842700223051,
+      "cases": 945
+    },
+    "independent": {
+      "mean": 0.22647604197702953,
+      "cases": 3000
+    }
+  },
+  "candidate": {
+    "macro": {
+      "mean": 0.22312349537277934,
+      "cases": 6000
+    },
+    "joint": {
+      "mean": 0.2190453573251969,
+      "cases": 3000
+    },
+    "positive": {
+      "mean": 0.264433857741833,
+      "cases": 5055
+    },
+    "zero": {
+      "mean": 0.002145842700223051,
+      "cases": 945
+    },
+    "independent": {
+      "mean": 0.22720163342036218,
+      "cases": 3000
+    }
+  },
+  "exact": {
+    "macro": {
+      "mean": 0,
+      "cases": 6000
+    },
+    "joint": {
+      "mean": 0,
+      "cases": 3000
+    },
+    "positive": {
+      "mean": 0,
+      "cases": 5055
+    },
+    "zero": {
+      "mean": 0,
+      "cases": 945
+    },
+    "independent": {
+      "mean": 0,
+      "cases": 3000
+    }
+  }
+}
