@@ -1,0 +1,7 @@
+# Nén chung bốn sai số làm tròn ở chuyển đạo chi
+
+Phân tích development trước protocol cho thấy chỉ 85 vector phần dư khác nhau ở bốn kênh trên 160.000 thời điểm; entropy thực nghiệm từ giải phẫu bố trí kênh là gợi ý thiết kế. Không dùng nhãn chẩn đoán. Dùng lại 32 record PTB-XL đã phát triển. Ngưỡng mạnh vốn đã khóa là 10% tổng kích thước tệp trước từng baseline, khôi phục ADC chính xác.
+
+Giữ tám kênh I, II, V1–V6 dưới dạng các FLAC mono của phép so cũ. Từ (I,II), trừ chính xác cùng bốn công thức nguyên. Trên từng record, so (1) FLAC cả bốn phần dư riêng như trước, (2) mã entropy cho từng phần dư riêng, (3) một ký hiệu cho vector bốn phần dư với một phân phối trên cả record, (4) cùng mã vector sau phân nhóm theo hai bit chẵn/lẻ của hai kênh tham chiếu. Các nhóm có thể được suy lại từ I,II đã giải mã. Thêm đối chứng cùng đầu vào dùng LZMA trên ID vector nguyên gốc hoặc chia bốn nhóm. Mọi arm có toàn quyền nhìn record khi nén; từ điển, bảng đếm, độ dài, byte căn chỉnh và header nằm trong tệp. Dùng rANS của constriction và lưu bảng đếm tĩnh. Đếm đầy đủ độ dài tám kênh còn lại. Mỗi record tự giải mã. Báo thắng/hòa/thua trước ablation trực tiếp và FLAC kiểu cũ. Báo các trường hợp candidate thua kể cả khi chỉ thua trên một comparator. Không mở INCART.
+
+Giả thuyết là chẵn/lẻ của I và II tiết lộ một phần kết quả làm tròn của nhiều kênh dẫn xuất, tạo xác suất ký hiệu chung tốt hơn một mô hình vector vô điều kiện. Cần tiếp tục đối chiếu các codec ECG chuyên dụng nếu hiệu ứng còn lại đáng kể.
