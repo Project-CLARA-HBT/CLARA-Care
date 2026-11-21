@@ -1,0 +1,61 @@
+{
+  "archive_sha256": "ce211a05f27022ff1038000243a9291825ceb0107394e399b14c967948c030c3",
+  "results": {
+    "full_scan": {
+      "attempted": 6050,
+      "delivered": 6050,
+      "full": 6050,
+      "partial": 0,
+      "rebuilt_dependencies": 36300,
+      "review": 0,
+      "stale": 0,
+      "subjects_with_stale_view": 0
+    },
+    "interval_sweep": {
+      "attempted": 6050,
+      "delivered": 6050,
+      "review": 0,
+      "stale": 0,
+      "subjects_with_stale_view": 0
+    },
+    "single_section": {
+      "attempted": 6050,
+      "delivered": 5688,
+      "full": 2386,
+      "partial": 3302,
+      "rebuilt_dependencies": 17618,
+      "review": 362,
+      "stale": 179,
+      "subjects_with_stale_view": 78
+    },
+    "snapshot_checked": {
+      "attempted": 6050,
+      "delivered": 5657,
+      "full": 2534,
+      "partial": 3123,
+      "rebuilt_dependencies": 18327,
+      "review": 393,
+      "stale": 0,
+      "subjects_with_stale_view": 0
+    }
+  },
+  "source_commit": "e468b9163e04c34ad389ffa9160a3bacab22e892",
+  "source_rows": {
+    "allergies": 131,
+    "encounters": 6762,
+    "invalid_medications": 11,
+    "medications": 8054
+  },
+  "subjects": {
+    "source_subjects": 120,
+    "unscored_invalid_history": 4,
+    "with_encounters": 120,
+    "with_paired_dates": 120
+  },
+  "transition_counts": {
+    "change_without_new_start": 179,
+    "structured_change": 734,
+    "total": 6050,
+    "unscored_invalid_history": 464
+  }
+}
