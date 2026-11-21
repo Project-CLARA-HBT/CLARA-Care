@@ -1,0 +1,23 @@
+--- base.cpp
++++ fast.cpp
+@@ -344,6 +344,20 @@
+ 		    value_ptr, size, static_cast<uint64_t *>(vector_ptr[chunk_col_id])[number_of_rows], false);
+ 		break;
+ 	case LogicalTypeId::DOUBLE:
++		if (size >= 5 && size <= 9 && value_ptr[size-4] == '.' && state_machine.options.decimal_separator[0] == '.') {
++			unsigned value = 0;
++			bool valid = true;
++			for (idx_t i = 0; i < size; ++i) {
++				if (i == size-4) continue;
++				unsigned digit = static_cast<unsigned>(value_ptr[i] - '0');
++				if (digit > 9) { valid = false; break; }
++				value = value * 10 + digit;
++			}
++			if (valid) {
++				static_cast<double *>(vector_ptr[chunk_col_id])[number_of_rows] = value / 1000.0;
++				break;
++			}
++		}
+ 		success =
+ 		    TryDoubleCast<double>(value_ptr, size, static_cast<double *>(vector_ptr[chunk_col_id])[number_of_rows],
+ 		                          false, state_machine.options.decimal_separator[0]);
