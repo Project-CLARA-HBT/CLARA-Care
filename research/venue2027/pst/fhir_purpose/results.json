@@ -1,0 +1,87 @@
+{
+  "sources": 13,
+  "purpose_codes_in_terminology": 59,
+  "scope_counts": {
+    "neither": 9,
+    "event_only": 2,
+    "agent_only": 1,
+    "both": 1
+  },
+  "rows": [
+    {
+      "source": "audit-event-example-create-traceID.json",
+      "scope_group": "neither",
+      "projection_sha256": "104cc0912b524d0bcc0196ee287ee9297cc3f90ff37cdb85c48f45782679d9f0"
+    },
+    {
+      "source": "audit-event-example-login.json",
+      "scope_group": "neither",
+      "projection_sha256": "104cc0912b524d0bcc0196ee287ee9297cc3f90ff37cdb85c48f45782679d9f0"
+    },
+    {
+      "source": "audit-event-example-logout.json",
+      "scope_group": "neither",
+      "projection_sha256": "104cc0912b524d0bcc0196ee287ee9297cc3f90ff37cdb85c48f45782679d9f0"
+    },
+    {
+      "source": "audit-event-example-media.json",
+      "scope_group": "neither",
+      "projection_sha256": "8c26fd89a454f43563ea4261b328db981492ce90082f0f1d20623e15eaa946f4"
+    },
+    {
+      "source": "audit-event-example-pixQuery.json",
+      "scope_group": "neither",
+      "projection_sha256": "104cc0912b524d0bcc0196ee287ee9297cc3f90ff37cdb85c48f45782679d9f0"
+    },
+    {
+      "source": "audit-event-example-search.json",
+      "scope_group": "neither",
+      "projection_sha256": "104cc0912b524d0bcc0196ee287ee9297cc3f90ff37cdb85c48f45782679d9f0"
+    },
+    {
+      "source": "audit-event-example-vread.json",
+      "scope_group": "neither",
+      "projection_sha256": "104cc0912b524d0bcc0196ee287ee9297cc3f90ff37cdb85c48f45782679d9f0"
+    },
+    {
+      "source": "auditevent-example-advanced-create.json",
+      "scope_group": "event_only",
+      "projection_sha256": "95c2d4d27b368c3597613d286c6d25e0e7521d3e382961c23edc1cb6937778dd",
+      "event_declarations": 1,
+      "event_purpose_codings": 1
+    },
+    {
+      "source": "auditevent-example-breakglass-start.json",
+      "scope_group": "event_only",
+      "projection_sha256": "847caf49c170e765a9b4e37b0556aba58291cfb0e5b7161689811de0f99aa446",
+      "event_declarations": 1,
+      "event_purpose_codings": 1
+    },
+    {
+      "source": "auditevent-example-consent-authz.json",
+      "scope_group": "agent_only",
+      "projection_sha256": "db90f603f1def956d78e2da3ff78621f54e7c770496042f169a66192822c61ed",
+      "agent_declarations": 1,
+      "agent_purpose_codings": 1
+    },
+    {
+      "source": "auditevent-example-disclosure.json",
+      "scope_group": "both",
+      "projection_sha256": "4302106dfe67d10e6bdd154c6e11791bd7302105f0edc1cacc3187d3fd9b1cda",
+      "event_declarations": 1,
+      "event_purpose_codings": 1,
+      "agent_declarations": 1,
+      "agent_purpose_codings": 1
+    },
+    {
+      "source": "auditevent-example-error.json",
+      "scope_group": "neither",
+      "projection_sha256": "104cc0912b524d0bcc0196ee287ee9297cc3f90ff37cdb85c48f45782679d9f0"
+    },
+    {
+      "source": "auditevent-example.json",
+      "scope_group": "neither",
+      "projection_sha256": "104cc0912b524d0bcc0196ee287ee9297cc3f90ff37cdb85c48f45782679d9f0"
+    }
+  ]
+}

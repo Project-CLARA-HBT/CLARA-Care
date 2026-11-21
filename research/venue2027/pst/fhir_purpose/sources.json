@@ -1,0 +1,70 @@
+[
+  {
+    "url": "https://hl7.org/fhir/R5/auditevent-examples.html",
+    "sha256": "bd23c858afaa3220d087b1ee471e52a512bb5588525b1a0bcd7bf2530d062961"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/auditevent.profile.json",
+    "sha256": "8495f3f408c2a56ad64976a60bb5e726498267fdbb5c7d12de1cc5d80627beb3"
+  },
+  {
+    "url": "https://terminology.hl7.org/5.1.0/ValueSet-v3-PurposeOfUse.json",
+    "sha256": "8e8e5e28635bf6212075c12c45db4768eb5839ee75639d0b465bebd119066a6b"
+  },
+  {
+    "url": "https://terminology.hl7.org/5.1.0/CodeSystem-v3-ActReason.json",
+    "sha256": "f82444326a953029642da54f5440a4e16cc5dbcce7c6d45b59721ea16b4e0676"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/audit-event-example-create-traceID.json",
+    "sha256": "30f09e6220daeead94c427e45eaff391feb2b5c071ab784ab0f39d5015c4db3c"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/audit-event-example-login.json",
+    "sha256": "6e08e10643f9bf474519ab6b72b8e38e5206d1202244c70431ade13b72ca9f12"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/audit-event-example-logout.json",
+    "sha256": "8bf27517e710e330d6bc07bab7617cfb7f29d082c68d949c0bde6e41bdd65ae5"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/audit-event-example-media.json",
+    "sha256": "1f3c988e070636ac5c16bbc352cd5c9d3dcd637294d1aed59e513a3bfef2b8e6"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/audit-event-example-pixQuery.json",
+    "sha256": "0c1a45461e85a98f00d3ec37a5da7ac6c7209d12b77a8547aaf72ab443ffd0d5"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/audit-event-example-search.json",
+    "sha256": "4f49155748c4e364e6e2c333345e98be7d775268df9df86d23df5d83099fd0e5"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/audit-event-example-vread.json",
+    "sha256": "6f698d6bb368ecc11b97a1c7d335302012ecfece1118ecbbbeae5f172d935af5"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/auditevent-example-advanced-create.json",
+    "sha256": "5f75130a3753a7589cbd8890e8eed247b2026049df27025c6af8bd91e944fbda"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/auditevent-example-breakglass-start.json",
+    "sha256": "279af57a43e5f8e7d6a25c24f211836d2081f7cbb1f0cf11766e4c4462265593"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/auditevent-example-consent-authz.json",
+    "sha256": "35d4575d12b039a38a00895606ca4bbf74b929ed6d784eaf9b906d6e4759a3dd"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/auditevent-example-disclosure.json",
+    "sha256": "3b6370c3d2596e918e55f8f70c31bc59a1fb7151bae8e44064df0efd633402f1"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/auditevent-example-error.json",
+    "sha256": "02ddae7ed46301acbec6642bb98a763dba6cd6918046daa6a64fb8e6ae6d4e3a"
+  },
+  {
+    "url": "https://hl7.org/fhir/R5/auditevent-example.json",
+    "sha256": "b63ea1c9100f12f89ed9d05e7dc35b5e7d0963166c9f9fcb4d6df316d932c1f9"
+  }
+]
