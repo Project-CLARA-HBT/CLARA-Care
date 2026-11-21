@@ -1,0 +1,15 @@
+{
+  "sealed_revision": "9006ac5c5379ead2620e47bc2c924ab4f7d45373",
+  "paired_cases": 100,
+  "clean_admitted": {
+    "c0": 100,
+    "c1": 100,
+    "c3": 0,
+    "c4": 100
+  },
+  "clean_supplied_observed_projection": {
+    "res_c3_good": false,
+    "res_c4_good": true
+  },
+  "raw_control_rows_record_c3_reason": false
+}

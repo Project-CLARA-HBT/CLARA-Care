@@ -28,3 +28,8 @@ budget-normalized**; it does not establish cost-effectiveness under equal
 wall-clock budgets. A budget-fair comparison, survivor classification, and W9
 extension remain separate gates. No claim of clinical correctness, deployment
 security, or superiority over unrelated prior systems follows.
+
+
+## Retrospective matched-budget comparison
+
+Using the recorded subprocess times, a 233-second pytest budget per mutant gave M3 and a serial schedule of its components the same 20 detections among 45 mutants. The component schedule used 48.95% less charged pytest time. For each of the three smaller budgets, the component schedule detected more mutants. Setup and cleanup times were unavailable and the schedule was replayed retrospectively. These results withdraw the W8 claim of a detection advantage at matched pytest cost. [All budget comparisons](../govred_rivf/budget_recheck/RESULTS.md)

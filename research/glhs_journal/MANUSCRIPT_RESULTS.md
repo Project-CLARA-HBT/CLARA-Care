@@ -1,5 +1,11 @@
 # GLHS Journal Revision — PostgreSQL TOCTOU Evidence Status
 
+## Correction to the R4 comparator results
+
+E16 evaluated five validators on 500 synthetic schedules in SQLite. Both the signed token and full GLHS accepted all 100 valid proposals and rejected all 400 invalid proposals. The harness assigned a reconstruction score from the arm name before evaluating the schedules. The published 100 and 50 scores should be withdrawn as evidence of byte recovery. An equal-retention comparison subsequently read actual bytes from 1,233 public dialogue snapshots across three retention stages. GLHS and a signed receipt with content-addressed storage tied on 3,699 reads. [E16 audit](comparator_recheck/RESULTS.md) · [Measured byte recovery](byte_reconstruction/RESULTS.md)
+
+For E17, the sealed clean-control rows record 100/100 admissions by C0, C1 and C4, and 0/100 by C3. The archived prose's assertion of 100% clean liveness for all four arms is incorrect. The runner explicitly passed the observed projection to C4 on clean cases and omitted it from the corresponding C3 call. It recorded no C3 rejection reasons in these rows. These data cannot support an equally informed comparison of clean liveness. The historical R4 manuscript and its seal retain the original release. [Clean-control audit](comparator_recheck/clean_controls.json)
+
 ## Canonical guarantee
 
 On the evaluated snapshot-bound path, a proposal derived from THSS retains the exact disclosure binding through GST admission; universal provenance-sensitive retention across every internal review/adaptation path has not yet been established.
