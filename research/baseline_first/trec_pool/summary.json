@@ -1,0 +1,50 @@
+{
+  "added": 12856,
+  "changed": 0,
+  "comparisons": {
+    "P_5": {
+      "kendall_tau_b": 0.9319273100346357,
+      "pairs": 10153,
+      "preserved": 9669,
+      "reversed": 305,
+      "tie_both": 31,
+      "tie_early_only": 85,
+      "tie_late_only": 63
+    },
+    "ndcg_cut_10": {
+      "kendall_tau_b": 0.9521979105066036,
+      "pairs": 10153,
+      "preserved": 9903,
+      "reversed": 242,
+      "tie_both": 6,
+      "tie_early_only": 1,
+      "tie_late_only": 1
+    }
+  },
+  "grades_early": {
+    "0": 6339,
+    "1": 1115,
+    "2": 1237
+  },
+  "grades_late": {
+    "0": 16622,
+    "1": 2682,
+    "2": 2241
+  },
+  "off_frame_early": {
+    "0": 2
+  },
+  "off_frame_late": {},
+  "qrels_early": 8691,
+  "qrels_late": 21545,
+  "removed": 2,
+  "runs": 143,
+  "sources": {
+    "data/docids-rnd1.txt": "098c1a7d5075dacd9fe475982f02fe5ce8ca3eb6d9b8bc255ab13ada57af14e1",
+    "data/qrels-covid_d1_j0.5-1.txt": "dff92d8a9a7165abeb9d5a70fa4f282c89c03d60e46bd5f472c9b31b89a2cb6d",
+    "data/qrels-covid_d1_j0.5-5.txt": "84f608d302d07df206243b051e52ea0592a09ef0413cf56a12b77c9a30d022f5",
+    "data/topics-rnd1.xml": "ba5bf4914dc9f69457eb722577d00196535e6f5595ef47f9d20a02efb9280810"
+  },
+  "topics": 30,
+  "valid_docids": 51070
+}
