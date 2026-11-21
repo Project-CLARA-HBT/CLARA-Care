@@ -65,7 +65,7 @@ def campaign(admin, dsn, schema, arm, workers, fanout, seed):
     admin.execute("TRUNCATE evidence, dependencies")
     admin.execute("INSERT INTO dependencies SELECT i,0 FROM generate_series(1,%s) AS i", (fanout,))
     admin.execute(
-        "INSERT INTO evidence SELECT i,0 FROM generate_series(%s,%s) AS i",
+        "INSERT INTO evidence SELECT i,0 FROM generate_series(%s::int,%s::int) AS i",
         (fanout + 1, OPS + fanout),
     )
     admin.execute("ANALYZE dependencies")
