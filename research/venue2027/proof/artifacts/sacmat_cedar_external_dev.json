@@ -1,0 +1,567 @@
+{
+  "dataset": "cedar-policy/cedar-integration-tests",
+  "commit": "aff4b8b99acb71aa5b288fa236295cccbb40d541",
+  "cohort": "all handwritten tests/*/*.json with requests; includes format variants",
+  "engine": "cedar-policy-cli 4.14.1",
+  "engine_sha256": "c80ad3779bddb7801a24e750042b28c6d9827bcb60e9795c4f79a9ef382e9d5c",
+  "requests": 78,
+  "fixtures": 24,
+  "summary": {
+    "legacy": {
+      "disagreement": 8,
+      "error": 2,
+      "match": 68
+    },
+    "source_declared": {
+      "match": 78
+    }
+  },
+  "rows": [
+    {
+      "fixture": "tests/decimal/1.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/decimal/1.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/decimal/2.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/decimal/2.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/decimal/2.json",
+      "request": 2,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/1a.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/1a.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/1a.json",
+      "request": 2,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/1a.json",
+      "request": 3,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/2a.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/2a.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/2a.json",
+      "request": 2,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/2a_json_policy.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "EXECUTION_ERROR",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/2a_json_policy.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "EXECUTION_ERROR",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/2a_json_schema.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/2a_json_schema.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/2b.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/2b.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/2b.json",
+      "request": 2,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/2c.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/2c.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/2c.json",
+      "request": 2,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/2c.json",
+      "request": 3,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/3a.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/3a.json",
+      "request": 1,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/3a.json",
+      "request": 2,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/3a.json",
+      "request": 3,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/3b.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/3b.json",
+      "request": 1,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/3b.json",
+      "request": 2,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/3b.json",
+      "request": 3,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/3c.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/3c.json",
+      "request": 1,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/3c.json",
+      "request": 2,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/4a.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/4a.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/4a.json",
+      "request": 2,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/4d.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "DENY",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/4d.json",
+      "request": 1,
+      "expected": "ALLOW",
+      "legacy": "DENY",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/4d.json",
+      "request": 2,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/4e.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "DENY",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/4e.json",
+      "request": 1,
+      "expected": "ALLOW",
+      "legacy": "DENY",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/4e.json",
+      "request": 2,
+      "expected": "ALLOW",
+      "legacy": "DENY",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/4e.json",
+      "request": 3,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/4f.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "DENY",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/4f.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/4f.json",
+      "request": 2,
+      "expected": "ALLOW",
+      "legacy": "DENY",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/5b.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/5b.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/5b.json",
+      "request": 2,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/5b.json",
+      "request": 3,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/5b.json",
+      "request": 4,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/example_use_cases/5b.json",
+      "request": 5,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/5b.json",
+      "request": 6,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/example_use_cases/5b.json",
+      "request": 7,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/ip/1.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/ip/1.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/ip/2.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/ip/2.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/ip/2.json",
+      "request": 2,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/ip/2.json",
+      "request": 3,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/ip/3.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/ip/3.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/multi/1.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/multi/1.json",
+      "request": 1,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/multi/1.json",
+      "request": 2,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/multi/1.json",
+      "request": 3,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/multi/2.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/multi/2.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/multi/3.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/multi/3.json",
+      "request": 1,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/multi/3.json",
+      "request": 2,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/multi/3.json",
+      "request": 3,
+      "expected": "DENY",
+      "legacy": "ALLOW",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/multi/4.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/multi/4.json",
+      "request": 1,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/multi/4.json",
+      "request": 2,
+      "expected": "DENY",
+      "legacy": "DENY",
+      "source_declared": "DENY"
+    },
+    {
+      "fixture": "tests/multi/5.json",
+      "request": 0,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    },
+    {
+      "fixture": "tests/multi/5.json",
+      "request": 1,
+      "expected": "ALLOW",
+      "legacy": "ALLOW",
+      "source_declared": "ALLOW"
+    }
+  ]
+}
