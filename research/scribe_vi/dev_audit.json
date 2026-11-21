@@ -1,0 +1,18 @@
+{
+  "clips": 361,
+  "unique_filenames": 361,
+  "unique_ids": 149,
+  "ids_with_multiple_normalized_references": 0,
+  "gender_field": {
+    "MALE": 361
+  },
+  "minutes_at_16khz": 71.659,
+  "digit": {
+    "clips": 44,
+    "prompt_ids": 20
+  },
+  "negation_string": {
+    "clips": 85,
+    "prompt_ids": 37
+  }
+}
