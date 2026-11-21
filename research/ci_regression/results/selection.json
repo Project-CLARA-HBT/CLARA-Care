@@ -1,0 +1,18 @@
+{
+  "methods": {
+    "candidate": "candidate_8",
+    "ewma": "ewma_0.2",
+    "frequency": "frequency_2",
+    "greedy": "greedy",
+    "latestfail": "latestfail",
+    "latestfail_cost": "latestfail_cost",
+    "latesttrans": "latesttrans",
+    "latesttrans_cost": "latesttrans_cost",
+    "mostfail": "mostfail",
+    "mostfail_cost": "mostfail_cost",
+    "shortest": "shortest",
+    "tree": "tree",
+    "verdict": "verdict_2"
+  },
+  "primary_comparator": "ewma_0.2"
+}

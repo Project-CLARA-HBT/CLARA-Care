@@ -1,0 +1,359 @@
+{
+  "candidate_2": {
+    "macro": 0.534761552987002,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6923076923076923,
+        "cycles": 64,
+        "recall": 0.37596648794305043,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9705882352941176,
+        "cycles": 70,
+        "recall": 0.6935566180309537,
+        "zero_failure": 2
+      }
+    }
+  },
+  "candidate_32": {
+    "macro": 0.5329057966163931,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7115384615384616,
+        "cycles": 64,
+        "recall": 0.3764435358253743,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9705882352941176,
+        "cycles": 70,
+        "recall": 0.689368057407412,
+        "zero_failure": 2
+      }
+    }
+  },
+  "candidate_8": {
+    "macro": 0.5362547427458388,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7115384615384616,
+        "cycles": 64,
+        "recall": 0.3781209156854572,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9705882352941176,
+        "cycles": 70,
+        "recall": 0.6943885698062205,
+        "zero_failure": 2
+      }
+    }
+  },
+  "ewma_0.2": {
+    "macro": 0.548203731880826,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7115384615384616,
+        "cycles": 64,
+        "recall": 0.3811421333601533,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9705882352941176,
+        "cycles": 70,
+        "recall": 0.7152653304014989,
+        "zero_failure": 2
+      }
+    }
+  },
+  "ewma_0.5": {
+    "macro": 0.5410708052736538,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7115384615384616,
+        "cycles": 64,
+        "recall": 0.39362519727041384,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9852941176470589,
+        "cycles": 70,
+        "recall": 0.6885164132768937,
+        "zero_failure": 2
+      }
+    }
+  },
+  "ewma_0.8": {
+    "macro": 0.5396428935873052,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7115384615384616,
+        "cycles": 64,
+        "recall": 0.3892973090953525,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9852941176470589,
+        "cycles": 70,
+        "recall": 0.6899884780792579,
+        "zero_failure": 2
+      }
+    }
+  },
+  "frequency_2": {
+    "macro": 0.486329225074866,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6923076923076923,
+        "cycles": 64,
+        "recall": 0.3876436707741047,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9705882352941176,
+        "cycles": 70,
+        "recall": 0.5850147793756273,
+        "zero_failure": 2
+      }
+    }
+  },
+  "frequency_32": {
+    "macro": 0.46082456977048886,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7115384615384616,
+        "cycles": 64,
+        "recall": 0.38314750145790355,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9558823529411765,
+        "cycles": 70,
+        "recall": 0.5385016380830742,
+        "zero_failure": 2
+      }
+    }
+  },
+  "frequency_8": {
+    "macro": 0.47953631658353824,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6923076923076923,
+        "cycles": 64,
+        "recall": 0.3826362851639982,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9705882352941176,
+        "cycles": 70,
+        "recall": 0.5764363480030782,
+        "zero_failure": 2
+      }
+    }
+  },
+  "greedy": {
+    "macro": 0.5125086103733981,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6923076923076923,
+        "cycles": 64,
+        "recall": 0.3751541419792623,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9852941176470589,
+        "cycles": 70,
+        "recall": 0.6498630787675339,
+        "zero_failure": 2
+      }
+    }
+  },
+  "latestfail": {
+    "macro": 0.44081762411945813,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6538461538461539,
+        "cycles": 64,
+        "recall": 0.3053476320474954,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9264705882352942,
+        "cycles": 70,
+        "recall": 0.5762876161914209,
+        "zero_failure": 2
+      }
+    }
+  },
+  "latestfail_cost": {
+    "macro": 0.5219327574760579,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6730769230769231,
+        "cycles": 64,
+        "recall": 0.3456919181871193,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9852941176470589,
+        "cycles": 70,
+        "recall": 0.6981735967649966,
+        "zero_failure": 2
+      }
+    }
+  },
+  "latesttrans": {
+    "macro": 0.20858633025792564,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.5576923076923077,
+        "cycles": 64,
+        "recall": 0.14573002125074042,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.6617647058823529,
+        "cycles": 70,
+        "recall": 0.27144263926511086,
+        "zero_failure": 2
+      }
+    }
+  },
+  "latesttrans_cost": {
+    "macro": 0.291332425897922,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.5576923076923077,
+        "cycles": 64,
+        "recall": 0.19521846063060014,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.8382352941176471,
+        "cycles": 70,
+        "recall": 0.3874463911652439,
+        "zero_failure": 2
+      }
+    }
+  },
+  "mostfail": {
+    "macro": 0.3769367783575205,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6538461538461539,
+        "cycles": 64,
+        "recall": 0.3175725315634346,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9264705882352942,
+        "cycles": 70,
+        "recall": 0.4363010251516063,
+        "zero_failure": 2
+      }
+    }
+  },
+  "mostfail_cost": {
+    "macro": 0.4528149877592249,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6538461538461539,
+        "cycles": 64,
+        "recall": 0.3477447877585279,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9705882352941176,
+        "cycles": 70,
+        "recall": 0.5578851877599219,
+        "zero_failure": 2
+      }
+    }
+  },
+  "shortest": {
+    "macro": 0.322362070027506,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.5961538461538461,
+        "cycles": 64,
+        "recall": 0.24444484742634023,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.8970588235294118,
+        "cycles": 70,
+        "recall": 0.4002792926286718,
+        "zero_failure": 2
+      }
+    }
+  },
+  "tree": {
+    "macro": 0.5389613891501379,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6923076923076923,
+        "cycles": 64,
+        "recall": 0.3859079214675896,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9705882352941176,
+        "cycles": 70,
+        "recall": 0.6920148568326862,
+        "zero_failure": 2
+      }
+    }
+  },
+  "verdict_2": {
+    "macro": 0.5324065586587841,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6923076923076923,
+        "cycles": 64,
+        "recall": 0.3803892009642073,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9705882352941176,
+        "cycles": 70,
+        "recall": 0.6844239163533608,
+        "zero_failure": 2
+      }
+    }
+  },
+  "verdict_32": {
+    "macro": 0.5314748173730109,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7115384615384616,
+        "cycles": 64,
+        "recall": 0.3835093785233801,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9705882352941176,
+        "cycles": 70,
+        "recall": 0.6794402562226418,
+        "zero_failure": 2
+      }
+    }
+  },
+  "verdict_8": {
+    "macro": 0.5312657066115516,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6923076923076923,
+        "cycles": 64,
+        "recall": 0.3777806994841216,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9705882352941176,
+        "cycles": 70,
+        "recall": 0.6847507137389817,
+        "zero_failure": 2
+      }
+    }
+  }
+}
