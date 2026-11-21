@@ -1,0 +1,75 @@
+{
+  "claim_limit": "normalization_reproducibility_and_local_systems_metrics_not_clinical_validation",
+  "dataset_id": "diabetes_130_us_hospitals",
+  "evidence": {
+    "dataset_id": "diabetes_130_us_hospitals",
+    "normalization": {
+      "adapter": "diabetes_130_tabular",
+      "claim_limit": "source_normalization_not_clinical_oracle_or_validation",
+      "common_schema": "clara-common-longitudinal-evidence.v1",
+      "dataset_id": "diabetes_130_us_hospitals",
+      "estimated_times_created": 0,
+      "metrics": {
+        "domain_counts": {
+          "diagnoses_problems": 303496,
+          "encounters_utilization": 101766,
+          "medications": 2340618,
+          "observations": 22364
+        },
+        "duplicate_encounter_id_count": 0,
+        "encounter_count": 101766,
+        "missing_knowledge_time": 2768244,
+        "missing_valid_time": 2768244,
+        "operational": {
+          "normalized_records_bytes": 2988916669,
+          "peak_rss_kib": 239204,
+          "process_system_seconds": 2.922136,
+          "process_user_seconds": 72.57794,
+          "records_per_second": 35861.90095929123,
+          "source_bytes": 3170254,
+          "storage_amplification": 942.8003778246159,
+          "wall_clock_seconds": 77.19178085797466
+        },
+        "record_count": 2768244,
+        "source_field_missing_counts": {
+          "diag_1": 21,
+          "diag_2": 358,
+          "diag_3": 1423,
+          "medical_specialty": 49949,
+          "payer_code": 40256,
+          "race": 2273,
+          "weight": 98569
+        },
+        "source_row_count": 101766,
+        "subject_count": 71518
+      },
+      "normalized_at_utc": "2026-11-21T06:13:27.167630+00:00",
+      "raw_payloads_persisted": false,
+      "records_compression": "none",
+      "records_file": "records.jsonl",
+      "records_sha256": "9962c20af14eab834680aa1a3d4c2beae784752ed48b63ca0e6a567613e78760",
+      "schema_version": "clara-dataset-normalization.v1",
+      "source_ids_preserved_locally": true,
+      "source_inventory_sha256": "9e172516f858e23adf539735c9418e12ad2fad3019e5508bcee4a9b65376fd91",
+      "source_schema": "tabular encounter CSV",
+      "status": "COMPLETE"
+    },
+    "normalization_manifest_path": "datasets/normalized/diabetes_130_us_hospitals/normalization_manifest.json",
+    "normalization_manifest_sha256": "5ef3be35397caa6a8cfb2e3ef4995f2c16790ccf63ac70173c77f8921fae4779",
+    "record_line_count": 2768244,
+    "records_bytes": 2988916669,
+    "records_path_local_only": "datasets/normalized/diabetes_130_us_hospitals/records.jsonl",
+    "records_sha256": "9962c20af14eab834680aa1a3d4c2beae784752ed48b63ca0e6a567613e78760",
+    "source_canonical_checksum_status": "NOT_PROVIDED",
+    "source_inventory_sha256": "9e172516f858e23adf539735c9418e12ad2fad3019e5508bcee4a9b65376fd91",
+    "source_manifest_file_sha256": "4d143894a122a7553a11a64db5447ab13ec842750dd8c181998499eff91ecd14",
+    "source_manifest_path": "datasets/manifests/diabetes_130_us_hospitals.json",
+    "source_manifest_payload_sha256": "0d8bdbd621e0e54a4acd15ec7461de5edcceb8376f4f413a2f2f125c64992ec8"
+  },
+  "frozen_at_utc": "2026-11-21T06:14:42.076312+00:00",
+  "manifest_payload_sha256": "85d4203a7bb5654fe32b9929429620c5785a60c45faf36ce2f74cb9aaee0f224",
+  "schema_version": "clara-dataset-normalization-freeze.v1",
+  "source_git_sha": "5d65e913759336902ac0898cf086efb36005cbaa",
+  "status": "FROZEN_NORMALIZATION_AGGREGATE_EVIDENCE",
+  "tracked_worktree_clean_before_freeze": true
+}
