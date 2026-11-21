@@ -1,0 +1,13 @@
+{
+  "source_revision": "5af5afd818bf2f120b61fbf4ad920759bfdc8372",
+  "warp": "1.19.0",
+  "numpy": "2.4.4",
+  "torch": "2.7.1+cu118",
+  "seed": 702341,
+  "batch_size": 8,
+  "batches": 80,
+  "hashes_C_order": {
+    "material_uint8": "9966d99986682db2f13d0f051ba71f938ed3e62d05317ac74e4302e6f3474369",
+    "pressure_float32": "2d9044f409781b8567eb098c52b25b0473c6986acca1e13f05e925f1f4f0f906"
+  }
+}
