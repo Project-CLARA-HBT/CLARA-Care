@@ -1,0 +1,44 @@
+{
+  "shards": {
+    "train": "c316eda2f98b65da68cda370ca674c3109291a0977d3a6d7105c9b31fdb52d5f",
+    "dev": "ddbce77039a150053a3a6dbe7c92c8f07a7924537a4681a1a1788aa2f917b18b"
+  },
+  "train_rows": 2773,
+  "dev_rows": 2912,
+  "overlap": {
+    "speaker_name": {
+      "train_unique": 13,
+      "dev_unique": 21,
+      "shared": 0,
+      "dev_rows_shared": 0
+    },
+    "audio_name": {
+      "train_unique": 5,
+      "dev_unique": 10,
+      "shared": 0,
+      "dev_rows_shared": 0
+    },
+    "utterance_id": {
+      "train_unique": 2773,
+      "dev_unique": 2912,
+      "shared": 0,
+      "dev_rows_shared": 0
+    },
+    "digest": {
+      "train_unique": 2773,
+      "dev_unique": 2912,
+      "shared": 0,
+      "dev_rows_shared": 0
+    },
+    "normalized": {
+      "train_unique": 2773,
+      "dev_unique": 2912,
+      "shared": 0,
+      "dev_rows_shared": 0
+    }
+  },
+  "selected_rows": 168,
+  "selected_speakers": 21,
+  "selected_recordings": 10,
+  "selected_ref_tokens": 3730
+}
