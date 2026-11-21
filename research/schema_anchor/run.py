@@ -86,14 +86,15 @@ def run(path):
                 (m["source_column"], m["target_column"])
                 for m in json.loads(z.read(file))["matches"]
             }
-            for a, b in gold:
-                if a not in tables[0] or b not in tables[1]:
-                    raise ValueError(f"unmapped gold column in {file}: {(a, b)}")
+            missing_keys = sorted(
+                (a, b) for a, b in gold if a not in tables[0] or b not in tables[1]
+            )
             records.append(
                 dict(
                     pair=prefix,
                     rows=[len(t) for t in tables],
                     gold=sorted(gold),
+                    missing_gold_columns=missing_keys,
                     predictions={k: sorted(v) for k, v in arms.items()},
                 )
             )
