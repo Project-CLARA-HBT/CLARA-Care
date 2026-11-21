@@ -1120,6 +1120,11 @@
       "marked_at": "2026-11-14T18:51:14.226496+00:00",
       "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-worktree_layout.json",
       "status": "PASS"
+    },
+    "SH-release_integrity": {
+      "report": "/home/clue/Documents/CLARA-Care/research/venue2027/proof/SH-release_integrity.json",
+      "status": "PASS",
+      "marked_at": "2026-11-21T06:11:48.091278+00:00"
     }
   },
   "schema_version": 1
