@@ -1,0 +1,154 @@
+{
+  "prompts": 149,
+  "recordings": 361,
+  "ref_tokens": 10422,
+  "total_beam_errors": 4626,
+  "beam_exceptions": 0,
+  "greedy_exceptions": 0,
+  "methods": {
+    "hash_control": {
+      "accepted": 291,
+      "errors": 3602,
+      "reference_tokens": 8314,
+      "accepted_wer_pct": 43.32451286985807,
+      "deferred_audio_minutes": 14.947,
+      "fold_wer_pct": [
+        49.23076923076923,
+        42.50430786904078,
+        37.93876026885736,
+        48.92897406989854,
+        36.94915254237288
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -10.201795775431485,
+        -2.673251975914177
+      ]
+    },
+    "confidence": {
+      "accepted": 291,
+      "errors": 3803,
+      "reference_tokens": 8889,
+      "accepted_wer_pct": 42.783215209809875,
+      "deferred_audio_minutes": 11.990999999999998,
+      "fold_wer_pct": [
+        45.925925925925924,
+        40.845824411134906,
+        37.14699493120927,
+        55.22620904836194,
+        33.5881753312946
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -10.121344112036812,
+        -1.6175863694096266
+      ]
+    },
+    "disagreement": {
+      "accepted": 291,
+      "errors": 3180,
+      "reference_tokens": 8519,
+      "accepted_wer_pct": 37.32832492076535,
+      "deferred_audio_minutes": 14.588999999999999,
+      "fold_wer_pct": [
+        39.49337938975245,
+        35.46218487394958,
+        36.228656273199704,
+        41.43337066069429,
+        33.95922746781116
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -1.1567865944084397,
+        0.9823259100224051
+      ]
+    },
+    "confidence_ridge": {
+      "accepted": 291,
+      "errors": 3878,
+      "reference_tokens": 8456,
+      "accepted_wer_pct": 45.86092715231788,
+      "deferred_audio_minutes": 12.883999999999997,
+      "fold_wer_pct": [
+        45.55754323196184,
+        43.15610859728507,
+        44.05487804878049,
+        55.22620904836194,
+        40.03378378378378
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -13.053258278239388,
+        -5.235447195006339
+      ]
+    },
+    "multifeature_wer": {
+      "accepted": 291,
+      "errors": 3127,
+      "reference_tokens": 8392,
+      "accepted_wer_pct": 37.26167778836987,
+      "deferred_audio_minutes": 15.925999999999998,
+      "fold_wer_pct": [
+        38.78303626306085,
+        36.95150115473441,
+        36.69590643274854,
+        40.919409761634505,
+        33.26326852338413
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -0.504570148824822,
+        0.4552205213476306
+      ]
+    },
+    "error_count": {
+      "accepted": 291,
+      "errors": 2903,
+      "reference_tokens": 7500,
+      "accepted_wer_pct": 38.70666666666666,
+      "deferred_audio_minutes": 21.065999999999995,
+      "fold_wer_pct": [
+        40.19672131147541,
+        39.08196721311475,
+        37.245313773431135,
+        40.4320987654321,
+        36.3069245165315
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -2.5682112590458983,
+        -0.4556507462856707
+      ]
+    },
+    "predicted_ratio": {
+      "accepted": 291,
+      "errors": 3209,
+      "reference_tokens": 8545,
+      "accepted_wer_pct": 37.55412521942657,
+      "deferred_audio_minutes": 15.093999999999998,
+      "fold_wer_pct": [
+        39.37947494033413,
+        37.07541738629821,
+        36.343772760378734,
+        41.445916114790286,
+        33.64149974319466
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -0.9988970177263299,
+        0.33603116692999463
+      ]
+    },
+    "fractional": {
+      "accepted": 291,
+      "errors": 3062,
+      "reference_tokens": 8221,
+      "accepted_wer_pct": 37.24607711957183,
+      "deferred_audio_minutes": 17.317999999999998,
+      "fold_wer_pct": [
+        38.786764705882355,
+        37.17183770883055,
+        36.93009118541033,
+        40.595794392523366,
+        33.15649867374005
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        0.0,
+        0.0
+      ]
+    }
+  }
+}

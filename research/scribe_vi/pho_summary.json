@@ -1,0 +1,154 @@
+{
+  "prompts": 149,
+  "recordings": 361,
+  "ref_tokens": 10422,
+  "total_beam_errors": 1989,
+  "beam_exceptions": 0,
+  "greedy_exceptions": 0,
+  "methods": {
+    "hash_control": {
+      "accepted": 291,
+      "errors": 1533,
+      "reference_tokens": 8314,
+      "accepted_wer_pct": 18.43877796487852,
+      "deferred_audio_minutes": 14.947,
+      "fold_wer_pct": [
+        19.467455621301774,
+        15.163699023549684,
+        21.65795369678865,
+        20.405862457722662,
+        16.271186440677965
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -5.4500628457096605,
+        -2.1902092884772295
+      ]
+    },
+    "confidence": {
+      "accepted": 291,
+      "errors": 1314,
+      "reference_tokens": 8771,
+      "accepted_wer_pct": 14.981188005928628,
+      "deferred_audio_minutes": 14.318999999999999,
+      "fold_wer_pct": [
+        14.92117117117117,
+        12.070874861572536,
+        17.98825256975037,
+        17.659688674181428,
+        13.085539714867616
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -1.156867288319968,
+        0.4498647719090413
+      ]
+    },
+    "disagreement": {
+      "accepted": 291,
+      "errors": 1332,
+      "reference_tokens": 8412,
+      "accepted_wer_pct": 15.834522111269616,
+      "deferred_audio_minutes": 15.115999999999998,
+      "fold_wer_pct": [
+        16.89814814814815,
+        11.842865395725015,
+        20.25411061285501,
+        16.880222841225628,
+        14.340659340659341
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -2.310996824401044,
+        -0.06977621749857914
+      ]
+    },
+    "confidence_ridge": {
+      "accepted": 291,
+      "errors": 1314,
+      "reference_tokens": 8771,
+      "accepted_wer_pct": 14.981188005928628,
+      "deferred_audio_minutes": 14.318999999999999,
+      "fold_wer_pct": [
+        14.92117117117117,
+        12.070874861572536,
+        17.98825256975037,
+        17.659688674181428,
+        13.085539714867616
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -1.156867288319968,
+        0.4498647719090413
+      ]
+    },
+    "multifeature_wer": {
+      "accepted": 291,
+      "errors": 1226,
+      "reference_tokens": 8507,
+      "accepted_wer_pct": 14.411660985071117,
+      "deferred_audio_minutes": 16.464000000000002,
+      "fold_wer_pct": [
+        14.301929625425652,
+        11.034877072612922,
+        17.651515151515152,
+        16.750139120756817,
+        13.145290047897818
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -0.18376058988646732,
+        0.733008340562714
+      ]
+    },
+    "error_count": {
+      "accepted": 291,
+      "errors": 1209,
+      "reference_tokens": 7819,
+      "accepted_wer_pct": 15.462335336999617,
+      "deferred_audio_minutes": 20.197000000000003,
+      "fold_wer_pct": [
+        14.568345323741006,
+        10.92861655085281,
+        18.838304552590266,
+        18.0,
+        15.571776155717762
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -1.3939029010924993,
+        -0.19966454963869362
+      ]
+    },
+    "predicted_ratio": {
+      "accepted": 291,
+      "errors": 1241,
+      "reference_tokens": 8515,
+      "accepted_wer_pct": 14.57428068115091,
+      "deferred_audio_minutes": 16.571,
+      "fold_wer_pct": [
+        14.301929625425652,
+        11.034877072612922,
+        18.188736681887367,
+        17.117614577581445,
+        13.145290047897818
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -0.3241912041883875,
+        0.504419308312098
+      ]
+    },
+    "fractional": {
+      "accepted": 291,
+      "errors": 1205,
+      "reference_tokens": 8213,
+      "accepted_wer_pct": 14.671861682698161,
+      "deferred_audio_minutes": 18.512999999999998,
+      "fold_wer_pct": [
+        14.03308613804906,
+        10.964912280701755,
+        18.46986089644513,
+        17.011494252873565,
+        13.60655737704918
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        0.0,
+        0.0
+      ]
+    }
+  }
+}
