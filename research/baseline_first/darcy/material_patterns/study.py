@@ -18,9 +18,9 @@ def fit_ridge(x, y):
     return np.linalg.solve(gram + np.eye(gram.shape[0]) * 64, x.T @ y)
 
 
-def group_model(x, y, code, sites):
+def group_model(x, y, code, sites, split):
     flat = x.reshape(-1, x.shape[-1])
-    n = SPLIT * sites
+    n = split * sites
     scale = np.sqrt(np.mean(flat[:n] ** 2, axis=0))
     x = flat / np.where(scale > 0, scale, 1)
     code = code.ravel()
@@ -44,17 +44,17 @@ def group_model(x, y, code, sites):
     return preds
 
 
-def run(data):
+def run(data, split=SPLIT, end=END):
     coarse, fine = [torch.load(data / f"darcy_train_{size}.pt", weights_only=True)
                     for size in (16, 32)]
-    a, p = [coarse[k][:END].numpy().astype(float) for k in ("x", "y")]
-    target = fine["y"][:END].numpy().astype(float)
+    a, p = [coarse[k][:end].numpy().astype(float) for k in ("x", "y")]
+    target = fine["y"][:end].numpy().astype(float)
     np.testing.assert_array_equal(p, target[:, ::2, ::2])
-    np.testing.assert_array_equal(a, fine["x"][:END, ::2, ::2].numpy())
+    np.testing.assert_array_equal(a, fine["x"][:end, ::2, ::2].numpy())
     assert set(np.unique(a)) == {0, 1}
     grid = np.indices((16, 16))
     offset = grid - np.clip(grid - 1, 0, 12)
-    baseline = p[SPLIT:].repeat(2, 1).repeat(2, 2)
+    baseline = p[split:].repeat(2, 1).repeat(2, 2)
     preds = {arm: baseline.copy() for arm in ARMS}
     for u, v in np.unique(offset.reshape(2, -1).T, axis=0):
         r, c = np.where((offset[0] == u) & (offset[1] == v))
@@ -70,18 +70,18 @@ def run(data):
         code = (corner @ [1, 2, 4, 8]).astype(np.uint8)
         for i, j in [(1, 0), (0, 1), (1, 1)]:
             rr, cc = 2*r+i, 2*c+j
-            y = (target[:SPLIT, rr, cc] - anchor[:SPLIT, :, 0]).ravel()
-            for name, delta in group_model(x, y, code, len(r)).items():
-                preds[name][:, rr, cc] = anchor[SPLIT:, :, 0] + delta.reshape(END-SPLIT, -1)
+            y = (target[:split, rr, cc] - anchor[:split, :, 0]).ravel()
+            for name, delta in group_model(x, y, code, len(r), split).items():
+                preds[name][:, rr, cc] = anchor[split:, :, 0] + delta.reshape(end-split, -1)
     masks = np.ones((32, 32), dtype=bool)
     masks[::2, ::2] = False
     outer = np.indices((32, 32)).max(axis=0) == 31
     scores = {}
     for name, pred in preds.items():
-        np.testing.assert_array_equal(pred[:, ::2, ::2], p[SPLIT:])
+        np.testing.assert_array_equal(pred[:, ::2, ::2], p[split:])
         splits = []
         for mask in [masks, masks & ~outer, outer]:
-            truth = target[SPLIT:, mask]
+            truth = target[split:, mask]
             splits.append(np.linalg.norm(pred[:, mask]-truth, axis=1)/np.linalg.norm(truth, axis=1))
         scores[name] = np.column_stack(splits)
     return scores
