@@ -1,0 +1,5 @@
+On 9,024 development rows (141 resident batches), whole-batch routing at k=32 reached log loss 0.28809 in 11.39 ms. The fastest measured per-batch top-k configuration meeting the same loss ceiling was k=32 at 22.08 ms (loss 0.28629). At equal expert counts, top-k achieved lower loss at every interior point. Full expert inference tied on loss. See frontier.csv for all operating points.
+
+The comparison measures offline dispatch with all batch scores available together. Whole-batch dispatch fills the exact budget with a prefix of the last selected batch. Per-batch top-k launches one expert call per batch. Packing top-k selections across batches could remove much of the observed advantage and was not benchmarked. Times are medians of six synchronized runs after two warmups on the WSL RTX 4060 Ti. This single random split and timing session provide no estimate of production latency or statistical uncertainty. The credit holdout stayed closed.
+
+To reproduce, unpack bank-full.csv from bank.zip inside the UCI Bank Marketing archive and run experiment.py with its path using Python with pandas, NumPy, scikit-learn and CUDA PyTorch.
