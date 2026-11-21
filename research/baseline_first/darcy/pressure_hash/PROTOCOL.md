@@ -1,0 +1,7 @@
+# Đăng ký đối chứng băm áp suất
+
+Dùng lại đúng hai cohort development và split đã công bố (512/128, 128/64). Cả hai nhánh giữ nguyên đặc trưng, ridge nền, phạt 64, pha, phân vùng stencil và nút đo của material_patterns. Mỗi vùng và pha có tối đa 16 hiệu chỉnh ridge 50 hệ số mỗi nhánh, bucket vắng dùng ridge nền. Báo ridge nền làm mốc. Đây là bản thích nghi từ [Romano, Isidoro và Milanfar, RAISR](https://arxiv.org/abs/1606.01299), do nhóm viết cho Darcy.
+
+Tại nút neo, đạo hàm theo cột và hàng bằng sai phân trung tâm bước 1, padding lặp biên. Tensor cấu trúc là trung bình đều của tích ngoài hai đạo hàm trong cửa sổ 3×3, padding lặp biên. Góc bằng nửa atan2(2Jxy,Jxx−Jyy) modulo π, góc bằng 0 khi tensor đẳng hướng. Chia 4 khoảng bằng nhau từ 0. Cường độ bằng căn trị riêng lớn nhất. Coherence bằng hiệu chia tổng hai căn trị riêng, bằng 0 nếu mẫu bằng 0. Cả hai ngưỡng dùng trung vị toàn bộ nút neo thuộc split fit riêng mỗi archive, mức cao khi lớn hơn trung vị. Mã bằng 4 lần bin góc cộng 2 lần bit cường độ cộng bit coherence.
+
+Báo relative L2 từng trường trên nút thiếu, nội vùng, hàng/cột cuối, và các nút thiếu có ô vật liệu bốn đỉnh không đồng nhất (cùng ô kẹp biên như nhánh pattern). Bootstrap ghép cặp 10000 lần seed 412, mức giảm tỉ số trung bình. Chỉ nhận thắng mạnh nếu cận dưới 95% vượt 10% trên toàn nút thiếu. Đây là phân tích lại development, câu hỏi về bộ sinh độc lập vẫn mở.
