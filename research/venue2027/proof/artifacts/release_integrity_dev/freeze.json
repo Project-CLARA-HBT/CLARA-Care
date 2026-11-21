@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "ok": true,
+  "reason_code": "OK",
+  "study_id": "release-dev",
+  "stage": "development",
+  "freeze_id": "26f723c3b92a42c28afb220804ab6489a513debf488f630cd80e96709494d692",
+  "entries": [
+    {
+      "path": "plan.json",
+      "sha256": "bd1b16cab8f4c7cee607ad8f6afdce07a41c10c0beb900d537f6229e1ff7ee57",
+      "timestamp_utc": "2026-11-21T06:08:10.893942+00:00",
+      "size_bytes": 596
+    }
+  ],
+  "amendments": [],
+  "detail": ""
+}

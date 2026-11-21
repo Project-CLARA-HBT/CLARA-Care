@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="314">
+<title>Recorded outcomes by arm</title>
+<text x="4" y="16">Recorded outcomes by arm</text>
+<text x="4" y="36">local / admit</text>
+<rect x="310" y="24" width="0.00" height="12" fill="#30689a"/>
+<text x="580" y="36">0</text>
+<text x="4" y="56">local / reject</text>
+<rect x="310" y="44" width="130.00" height="12" fill="#30689a"/>
+<text x="580" y="56">1</text>
+<text x="4" y="76">local / indeterminate</text>
+<rect x="310" y="64" width="0.00" height="12" fill="#30689a"/>
+<text x="580" y="76">0</text>
+<text x="4" y="96">local / timeout</text>
+<rect x="310" y="84" width="130.00" height="12" fill="#30689a"/>
+<text x="580" y="96">1</text>
+<text x="4" y="116">local / execution_error</text>
+<rect x="310" y="104" width="0.00" height="12" fill="#30689a"/>
+<text x="580" y="116">0</text>
+<text x="4" y="136">local / not_run_external</text>
+<rect x="310" y="124" width="0.00" height="12" fill="#30689a"/>
+<text x="580" y="136">0</text>
+<text x="4" y="156">local / invalid_result</text>
+<rect x="310" y="144" width="0.00" height="12" fill="#30689a"/>
+<text x="580" y="156">0</text>
+<text x="4" y="176">unavailable / admit</text>
+<rect x="310" y="164" width="0.00" height="12" fill="#30689a"/>
+<text x="580" y="176">0</text>
+<text x="4" y="196">unavailable / reject</text>
+<rect x="310" y="184" width="0.00" height="12" fill="#30689a"/>
+<text x="580" y="196">0</text>
+<text x="4" y="216">unavailable / indeterminate</text>
+<rect x="310" y="204" width="0.00" height="12" fill="#30689a"/>
+<text x="580" y="216">0</text>
+<text x="4" y="236">unavailable / timeout</text>
+<rect x="310" y="224" width="0.00" height="12" fill="#30689a"/>
+<text x="580" y="236">0</text>
+<text x="4" y="256">unavailable / execution_error</text>
+<rect x="310" y="244" width="0.00" height="12" fill="#30689a"/>
+<text x="580" y="256">0</text>
+<text x="4" y="276">unavailable / not_run_external</text>
+<rect x="310" y="264" width="260.00" height="12" fill="#30689a"/>
+<text x="580" y="276">2</text>
+<text x="4" y="296">unavailable / invalid_result</text>
+<rect x="310" y="284" width="0.00" height="12" fill="#30689a"/>
+<text x="580" y="296">0</text>
+</svg>

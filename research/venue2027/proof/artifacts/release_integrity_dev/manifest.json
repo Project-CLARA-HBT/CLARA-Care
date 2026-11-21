@@ -1,0 +1,17 @@
+{
+  "schema_version": "harness-release.v1",
+  "freeze": "freeze.json",
+  "plan": "plan.json",
+  "raw": "raw.jsonl",
+  "analysis": "analysis.json",
+  "figure": "counts.svg",
+  "ledger": "claims.csv",
+  "sha256": {
+    "freeze.json": "90610813fac89c4fd76633a3730a1086af2f8327547aae15a4de1d5e5f1ec974",
+    "plan.json": "bd1b16cab8f4c7cee607ad8f6afdce07a41c10c0beb900d537f6229e1ff7ee57",
+    "raw.jsonl": "edcc348c9e60d6cdf3c90df83cab452dd089b0e185c7642bd9b3cdea658f6110",
+    "analysis.json": "dbd3fba6dcded0497a9e5edbc1c7a04d67580d9df0ecbae7290c56449a4f56f4",
+    "claims.csv": "0b78d04b29113b1494ba0e1b95d28656e9e977e874d9a133f581ab5fc68dd845",
+    "counts.svg": "2014d46c12ae67b84358bf13af5886bdf263f8e1087788fa60e656f31f6fe72b"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "campaign": {
+    "campaign_id": "release-dev",
+    "case_ids": [
+      "unit-1",
+      "unit-2"
+    ],
+    "arm_ids": [
+      "local",
+      "unavailable"
+    ],
+    "seeds": [
+      8,
+      8
+    ],
+    "source_commit": "17dc6dc89e377ab94e661e2203cbfb530fbd2c3c",
+    "per_pair_timeout_seconds": 60.0
+  },
+  "analysis_id": "harness-counts.v1",
+  "claims": [
+    {
+      "claim_id": "local-completions",
+      "arm_id": "local",
+      "metric": "completed"
+    },
+    {
+      "claim_id": "unavailable-external",
+      "arm_id": "unavailable",
+      "metric": "not_run_external"
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "artifacts_sha256": {
+    "research/venue2027/proof/artifacts/release_integrity_dev/analysis.json": "dbd3fba6dcded0497a9e5edbc1c7a04d67580d9df0ecbae7290c56449a4f56f4",
+    "research/venue2027/proof/artifacts/release_integrity_dev/claims.csv": "0b78d04b29113b1494ba0e1b95d28656e9e977e874d9a133f581ab5fc68dd845",
+    "research/venue2027/proof/artifacts/release_integrity_dev/counts.svg": "2014d46c12ae67b84358bf13af5886bdf263f8e1087788fa60e656f31f6fe72b",
+    "research/venue2027/proof/artifacts/release_integrity_dev/freeze.json": "90610813fac89c4fd76633a3730a1086af2f8327547aae15a4de1d5e5f1ec974",
+    "research/venue2027/proof/artifacts/release_integrity_dev/manifest.json": "d3de8f5fe09f11f4b888702af1afc6171279d7489babba6c62183aa3cecab2f4",
+    "research/venue2027/proof/artifacts/release_integrity_dev/plan.json": "bd1b16cab8f4c7cee607ad8f6afdce07a41c10c0beb900d537f6229e1ff7ee57",
+    "research/venue2027/proof/artifacts/release_integrity_dev/raw.jsonl": "edcc348c9e60d6cdf3c90df83cab452dd089b0e185c7642bd9b3cdea658f6110",
+    "research/venue2027/proof/logs/SH-release_integrity.dag.log": "09e13078d7c6a63284c79d6f68a776710203f7d105310bda4b261815a70d7cfd",
+    "research/venue2027/proof/logs/SH-release_integrity.generate.log": "c13938c97d85ef537e7829312ca8ff534158e80d4f3f7849cb9206eb80665d26",
+    "research/venue2027/proof/logs/SH-release_integrity.pytest.log": "d1ea235f70e79d216e29eedecdcd5556d960b69645b0ed52cc237d8506e1a454",
+    "research/venue2027/proof/logs/SH-release_integrity.replay.log": "2be8bc6032adb258ab705b84078f95a5cd01b12f0ddcb47ad371b4a845bfe08b",
+    "research/venue2027/proof/logs/SH-release_integrity.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "scripts/research/venue2027/test_verify_release.py": "d19b496eb5f1cd00a389aec11a9d0df575e3c77e584d62c7a21991858b76e46c",
+    "scripts/research/venue2027/verify_release.py": "7964dcbf9b52ef50d5286ab5c6af67dae621aa0684deaa28d0ad5505096eb7be"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "scripts/research/venue2027/verify_release.py",
+    "scripts/research/venue2027/test_verify_release.py",
+    "research/venue2027/proof/artifacts/release_integrity_dev/analysis.json",
+    "research/venue2027/proof/artifacts/release_integrity_dev/claims.csv",
+    "research/venue2027/proof/artifacts/release_integrity_dev/counts.svg",
+    "research/venue2027/proof/artifacts/release_integrity_dev/freeze.json",
+    "research/venue2027/proof/artifacts/release_integrity_dev/manifest.json",
+    "research/venue2027/proof/artifacts/release_integrity_dev/plan.json",
+    "research/venue2027/proof/artifacts/release_integrity_dev/raw.jsonl",
+    "research/venue2027/proof/logs/SH-release_integrity.pytest.log",
+    "research/venue2027/proof/logs/SH-release_integrity.ruff.log",
+    "research/venue2027/proof/logs/SH-release_integrity.generate.log",
+    "research/venue2027/proof/logs/SH-release_integrity.replay.log",
+    "research/venue2027/proof/logs/SH-release_integrity.dag.log",
+    "research/venue2027/proof/SH-release_integrity.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q scripts/research/venue2027/test_verify_release.py scripts/research/venue2027/test_freeze_protocol.py evaluation/venue2027/_shared/test_harness.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-release_integrity.pytest.log"
+    },
+    {
+      "argv": "ruff check scripts/research/venue2027/verify_release.py scripts/research/venue2027/test_verify_release.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-release_integrity.ruff.log"
+    },
+    {
+      "argv": "python3 -c 'from pathlib import Path; from scripts.research.venue2027.test_verify_release import build_example; print(build_example(Path('\"'\"'research/venue2027/proof/artifacts/release_integrity_dev'\"'\"'), '\"'\"'17dc6dc89e377ab94e661e2203cbfb530fbd2c3c'\"'\"'))'",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-release_integrity.generate.log"
+    },
+    {
+      "argv": "python3 -m scripts.research.venue2027.verify_release research/venue2027/proof/artifacts/release_integrity_dev/manifest.json d3de8f5fe09f11f4b888702af1afc6171279d7489babba6c62183aa3cecab2f4",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-release_integrity.replay.log"
+    },
+    {
+      "argv": "python3 research/venue2027/scripts/taskctl.py validate",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/SH-release_integrity.dag.log"
+    }
+  ],
+  "notes": "Offline harness-counts.v1 engineering gate. The fixture exercised four synthetic arm/case rows and two prespecified operational count claims. Trusted fixture manifest SHA-256: d3de8f5fe09f11f4b888702af1afc6171279d7489babba6c62183aa3cecab2f4. Preregistered pair identities and explicit unavailable arms, timeouts and indeterminate outcomes are retained. Tests reject missing, duplicate, falsified, late-frozen and resealed inconsistent evidence. No holdout, clinical source, DB or provider was accessed. The gate certifies only descriptive harness counts. Unsupported study-specific estimands, amended protocols and inference require their own reviewed replay code.",
+  "oracle_disagreement_count": null,
+  "source_sha_after": "17dc6dc89e377ab94e661e2203cbfb530fbd2c3c",
+  "source_sha_before": "6faf61e1238fd7caae5e0f6113283cc4856f0398",
+  "status": "PASS",
+  "task_id": "SH-release_integrity",
+  "unresolved": []
+}
