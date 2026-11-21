@@ -61,3 +61,9 @@ The historical v1 matrix demonstrates governance/state revalidation rejecting st
 or no-longer-authorized persistent proposals in observed serial schedules, with one
 concurrent-writer schedule honestly left INDETERMINATE. Neither run claims clinical
 benefit or a universal production guarantee.
+
+## External descriptive study of medication projection identity
+
+We selected the first two encounters in source-file order for each person with repeat encounters in the UCI Diabetes 130-US Hospitals dataset. Of 101,766 encounters from 71,518 people, 16,773 people contributed one pair each. The other 54,745 people had a single encounter. A further 13,475 encounters occurred beyond the two selected records in file order. The study used the 23 recorded medication-status fields. File order supplied a reproducible selection rule and conveyed no assumption about clinical chronology. [Dataset (Clore, Cios, DeShazo and Strack)](https://doi.org/10.24432/C5230J)
+
+For 5,603 pairs (33.4%), distinct encounter records yielded identical medication projections. For another 2,418 pairs (14.4%), the drug-presence indicators agreed but at least one recorded medication status differed. The remaining 8,752 pairs (52.2%) differed on presence. The production GLHS projection digest agreed with direct comparison of all source fields on 16,773/16,773 pairs. A content digest alone therefore could not distinguish the encounter instances for the first 5,603 pairs. This observation concerns one projection and sampling rule. The source contains no GLHS dispatch records, consent transitions, or observed write decisions from which to estimate a governance failure rate. [Protocol](../../evaluation/external_validation/protocols/uci296-projection-identity-v1.md) · [Aggregate result](results/uci296-projection-identity-v1.json)

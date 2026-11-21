@@ -1,0 +1,21 @@
+{
+  "counts": {
+    "different_on_presence": 8752,
+    "digest_vs_direct_equality_disagreements": 0,
+    "encounters": 101766,
+    "encounters_after_second": 13475,
+    "equal_full_projection": 5603,
+    "equal_only_on_presence": 2418,
+    "paired_subjects": 16773,
+    "singletons": 54745,
+    "subjects": 71518
+  },
+  "dataset_doi": "10.24432/C5230J",
+  "independent_unit": "subject",
+  "protocol_sha256": "686807f20ba8c834bac0a84a02066c8a72405b623246f9d328c1920a13fddf28",
+  "runner_sha256": "c4ac1773749d6afa6107db52456a0103ba87db187bad9f5d8c10ced337bec65d",
+  "schema": "uci296-projection-identity.v1",
+  "scope": "descriptive_source_projection_identity",
+  "source_manifest_sha256": "4d143894a122a7553a11a64db5447ab13ec842750dd8c181998499eff91ecd14",
+  "source_sha256": "f82ac129da2ddd2299391ff6fbae3a6a58b3edcf59ac9d7bd480c00fe453112a"
+}

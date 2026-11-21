@@ -101,3 +101,10 @@ source subject token or task row. `--verify` rehashes and fully rescans the
 local ignored artifact. `--verify --metadata-only` verifies the self-hash and
 source Git commit when the local artifact is unavailable, but is not a
 substitute for full artifact validation.
+
+The UCI 296 projection-identity development study reads the registered public archive directly. With the archive fetched and the API dependencies available, run the following from the repository root to compare the complete aggregate output against the stored result.
+
+```bash
+set -o pipefail
+PYTHONPATH=services/api/src:. python3 -m evaluation.external_validation.uci_projection_identity | diff - research/glhs_journal/results/uci296-projection-identity-v1.json
+```
