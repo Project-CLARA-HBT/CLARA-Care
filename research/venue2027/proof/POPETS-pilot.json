@@ -1,0 +1,54 @@
+{
+  "task_id": "POPETS-pilot",
+  "status": "BLOCKED",
+  "source_sha_before": "a80a2bb2ac0e7607b257719c90940dc1c7ab5a8a",
+  "source_sha_after": "87ef1d90aad908a7cb8c9334c286bf70ddab3bef",
+  "changed_paths": [
+    "evaluation/venue2027/popets/pilot_executor.py",
+    "evaluation/venue2027/popets/test_pilot_executor.py",
+    "research/venue2027/popets/protocols/pilot_plan.yaml",
+    "research/venue2027/proof/emit_POPETS-pilot_report.py",
+    "research/venue2027/proof/artifacts/popets_pilot_attempts.jsonl",
+    "research/venue2027/proof/artifacts/popets_pilot_cases.jsonl",
+    "research/venue2027/proof/artifacts/popets_pilot_report.json",
+    "research/venue2027/proof/artifacts/popets_pilot_manifest.json",
+    "research/venue2027/proof/logs/POPETS-pilot.pytest.log",
+    "research/venue2027/proof/logs/POPETS-pilot.ruff.log",
+    "research/venue2027/proof/POPETS-pilot.json",
+    "research/venue2027/proof/logs/POPETS-pilot.validator.log"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/popets/test_pilot_executor.py evaluation/venue2027/popets/test_runner.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-pilot.pytest.log"
+    },
+    {
+      "argv": "ruff check evaluation/venue2027/popets/pilot_executor.py evaluation/venue2027/popets/test_pilot_executor.py research/venue2027/proof/emit_POPETS-pilot_report.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/POPETS-pilot.ruff.log"
+    }
+  ],
+  "artifacts_sha256": {
+    "evaluation/venue2027/popets/pilot_executor.py": "2a60c20d6b77b27047393c356e60ec55fe1570298457c69c4a131a730b81b956",
+    "evaluation/venue2027/popets/test_pilot_executor.py": "e9329bfc4b5e4518583004664aa76b7eb7c67719b7c61e78bcb0f4d331a9fccf",
+    "research/venue2027/popets/protocols/pilot_plan.yaml": "5135104a1e614d2f0b26189bea987e73536d69c222a3fcbcebca575aa02a8f08",
+    "research/venue2027/proof/emit_POPETS-pilot_report.py": "8f5a9e50169eddd37601158bca48568b96b4fc6862bb426c36ed0c86f7229444",
+    "research/venue2027/proof/artifacts/popets_pilot_attempts.jsonl": "dddb37c238f642858aa6223826567087472d20e6307a58e356befa60ebfbd171",
+    "research/venue2027/proof/artifacts/popets_pilot_cases.jsonl": "e0e955a3ea8031fc544fc5162d05d69124f72055e4fe84d292597394fe92a73e",
+    "research/venue2027/proof/artifacts/popets_pilot_report.json": "003cded9abf7608fb0b855243ea40b1942d24411a7793bbfd2e6da2622096504",
+    "research/venue2027/proof/artifacts/popets_pilot_manifest.json": "da0a7e78a5f96389fcd34ff1dd95ac39ba2ae083816545ad1198105d80705c5f",
+    "research/venue2027/proof/logs/POPETS-pilot.pytest.log": "f4886dd20dccf578502f30c249c242e29332fd515901635627a9ebd8c8ee982d",
+    "research/venue2027/proof/logs/POPETS-pilot.ruff.log": "e74cc7e83ae303770719e15013e3ef857a38b3531ef474b7455e95d6e78b6300",
+    "research/venue2027/proof/logs/POPETS-pilot.validator.log": "f28baf64f7cb0d84e451694b2ad6a9cd6be5d943968a361dd42c4708b27fbe6a"
+  },
+  "oracle_disagreement_count": 0,
+  "baseline_parity": "BLOCKED",
+  "unresolved": [
+    "Independent byte-level dispatch observation and reconciliation against cancellations",
+    "Multiple longitudinal contexts per subject and family-by-tenant clustering",
+    "Verified comparator parity or an explicitly narrowed comparison",
+    "A development-based variance bound and resource estimate for the prospective design"
+  ],
+  "notes": "Synthetic dev split, 12 distinct one-query cases. 60 cells planned, 60 recorded, 36 executed, 36 eligible for comparison with the family oracle. Primary leakage and clustered power remain unmeasured."
+}

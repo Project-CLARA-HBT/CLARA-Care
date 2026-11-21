@@ -1,0 +1,29 @@
+# Development-only PoPETs pilot. Full sampling-frame n precedes selection of dev indices.
+schema_version: clara.venue2027.popets.pilot_plan.v2
+task_id: POPETS-pilot
+split: dev
+scope: One synthetic case decision per unique subject ID, grouped into four scenario families.
+proof_run:
+  sampling_frame_n: 60
+  seed: 42
+  arms: [B0, B1, B2, B3, B4]
+  backend: in_process
+  retries: 0
+  per_pair_timeout_seconds: 60
+denominators:
+  planned: All assigned arm and case combinations.
+  recorded: All attempted cells, including unavailable comparators.
+  executed: Recorded cells after excluding unavailable external implementations.
+  comparable: Binary arm outcome with a binary expected family-oracle outcome.
+  latency: Adapter time among returned binary decisions, excluding placeholders.
+power:
+  status: BLOCKED
+  method: Conditional one-sided exact upper bound for zero events in independent Bernoulli units.
+  sample_sizes: [20, 60, 120, 240, 600, 1200]
+  dependency: A clustered primary-endpoint variance estimate needs observed dispatches across histories.
+design_target_subjects: 1200
+freeze_requirements:
+  - Independent byte-level dispatch observation and reconciliation against cancellations
+  - Multiple longitudinal contexts per subject and family-by-tenant clustering
+  - Verified comparator parity or an explicitly narrowed comparison
+  - A development-based variance bound and resource estimate for the prospective design

@@ -1,0 +1,11 @@
+{
+  "source_commit": "87ef1d90aad908a7cb8c9334c286bf70ddab3bef",
+  "validation": {
+    "ok": true,
+    "reason_code": "OK",
+    "errors": [],
+    "task_id": "POPETS-pilot",
+    "protocol_version": "1.0.0"
+  },
+  "summary": "Synthetic dev split, 12 distinct one-query cases. 60 cells planned, 60 recorded, 36 executed, 36 eligible for comparison with the family oracle. Primary leakage and clustered power remain unmeasured."
+}
