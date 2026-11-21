@@ -1,0 +1,32 @@
+{
+  "backend": "isolated_subprocess_pipes",
+  "dev_input_sha256": "e0e955a3ea8031fc544fc5162d05d69124f72055e4fe84d292597394fe92a73e",
+  "protocol_sha256": "aa2a5814a4cd269562c1661e2471b656fd4d2b458803f647683085e18671a12d",
+  "python": "3.12.3",
+  "retries": 0,
+  "rq_registry_sha256": "ceb8cc612cc7155c89c9b8db9eb8dad2e9163f095fa95a70a22d7e2fce71a5e5",
+  "schema": "popets.dispatch.dev.v1",
+  "sha256": {
+    "B2.cancel": "a016a03e0751b0db42a843b82c20e9dc993ccdef07db2b29f7c2ec325c01a261",
+    "B2.data": "1ecec35581d30de8cb8b3b0c4ff213bb0c3b5ede73c94f26071a2249a0d06f40",
+    "B2.timing.json": "3d0fad3955048801d5e570897edc5f2b7af426671be34ef3058693ba2e634f39",
+    "B4.cancel": "a016a03e0751b0db42a843b82c20e9dc993ccdef07db2b29f7c2ec325c01a261",
+    "B4.data": "1ecec35581d30de8cb8b3b0c4ff213bb0c3b5ede73c94f26071a2249a0d06f40",
+    "B4.timing.json": "d796865a8142a332e67c9607267fc7406541cc74831cd2d26684021c342e10f6",
+    "report.json": "ece0ca78032fcb165fa895eaa369dafa3315e18eff93a6996abe6547d4907650",
+    "schedule.json": "8dc6fcccb8bdb19bcdefa7bb874e4a81bb3b4c83272c9e6df7c4ceb8908e0714"
+  },
+  "source_commit": "346d2ba9a636eaa92203b6dc0f8b77e61bd53eec",
+  "source_sha256": {
+    "candidate.py": "88468e5448842233ba788cf4e2a07eccd5423a939456b790f79bbea442f67423",
+    "dispatch_fixture.py": "78834a3edf2b15aff3063f601fc69ac088b36247b32f573fec9ff4794578e711",
+    "dispatch_observer.py": "d74a1861ccd6ce3e610ab5a5580272dfcff270b59c0a9e18fc751b8bec1718aa",
+    "dispatch_pilot.py": "82b87792baa893cabc4afe0aefa1d00ba28d670ea43b24a9ebfb1a6320ccee26",
+    "dispatch_sender.py": "16e0bb6d2f1fb16b815e476ab1ed7d3ad4c09a4b932cbbc5b40d361b3da3b367"
+  },
+  "timeout_seconds": 60,
+  "wall_seconds": {
+    "B2": 0.10458365094382316,
+    "B4": 0.11324010801035911
+  }
+}

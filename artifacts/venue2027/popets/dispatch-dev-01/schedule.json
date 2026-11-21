@@ -1,0 +1,1829 @@
+{
+  "excluded_gap_ids": [
+    "rev-42-00039",
+    "rev-42-00043",
+    "rev-42-00047"
+  ],
+  "histories": [
+    {
+      "family": "fresh",
+      "requests": [
+        {
+          "id": "rev-42-00036.0.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 0
+        },
+        {
+          "id": "rev-42-00036.1.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 1
+        },
+        {
+          "id": "rev-42-00036.2.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 2
+        },
+        {
+          "id": "rev-42-00036.3.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 6,
+          "time": 3
+        },
+        {
+          "id": "rev-42-00036.0.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 260
+        },
+        {
+          "id": "rev-42-00036.0.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 261
+        },
+        {
+          "id": "rev-42-00036.0.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 262
+        },
+        {
+          "id": "rev-42-00036.0.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 1,
+          "time": 263
+        },
+        {
+          "id": "rev-42-00036.1.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 264
+        },
+        {
+          "id": "rev-42-00036.1.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 265
+        },
+        {
+          "id": "rev-42-00036.1.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 266
+        },
+        {
+          "id": "rev-42-00036.1.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 3,
+          "time": 267
+        },
+        {
+          "id": "rev-42-00036.2.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 268
+        },
+        {
+          "id": "rev-42-00036.2.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 269
+        },
+        {
+          "id": "rev-42-00036.2.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 270
+        },
+        {
+          "id": "rev-42-00036.2.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 5,
+          "time": 271
+        },
+        {
+          "id": "rev-42-00036.3.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 6,
+          "time": 272
+        },
+        {
+          "id": "rev-42-00036.3.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 6,
+          "time": 273
+        },
+        {
+          "id": "rev-42-00036.3.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 6,
+          "time": 274
+        },
+        {
+          "id": "rev-42-00036.3.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 7,
+          "time": 275
+        }
+      ],
+      "sources": [
+        {
+          "purpose": "self_care",
+          "retired": null,
+          "value": "221aa0762a3edfd307cc3b5c5c36b0e8",
+          "visit": 0
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "cdb2fc0b14184a778ff9d85ce0ad5c51",
+          "visit": 0
+        },
+        {
+          "purpose": "self_care",
+          "retired": null,
+          "value": "e8604aaa2fd9bd29e257e05bc76f01a5",
+          "visit": 1
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "45dafe058281e331c56223c72db734e6",
+          "visit": 1
+        },
+        {
+          "purpose": "self_care",
+          "retired": null,
+          "value": "3ded0d9405002300ed539de1e32c848e",
+          "visit": 2
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "499b57a8e44fc2167b92c950db72ed92",
+          "visit": 2
+        },
+        {
+          "purpose": "self_care",
+          "retired": null,
+          "value": "3b9be0baacb17821f8f2c153d4347a04",
+          "visit": 3
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "22bb133a12296524043be28063cf13f9",
+          "visit": 3
+        }
+      ],
+      "subject": "rev-42-00036",
+      "tenant": "tenant-0"
+    },
+    {
+      "family": "revoked_then_dispatch",
+      "requests": [
+        {
+          "id": "rev-42-00037.0.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 0
+        },
+        {
+          "id": "rev-42-00037.1.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 1
+        },
+        {
+          "id": "rev-42-00037.2.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 2
+        },
+        {
+          "id": "rev-42-00037.0.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 238
+        },
+        {
+          "id": "rev-42-00037.0.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 239
+        },
+        {
+          "id": "rev-42-00037.0.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 240
+        },
+        {
+          "id": "rev-42-00037.0.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 1,
+          "time": 241
+        },
+        {
+          "id": "rev-42-00037.1.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 242
+        },
+        {
+          "id": "rev-42-00037.1.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 243
+        },
+        {
+          "id": "rev-42-00037.1.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 244
+        },
+        {
+          "id": "rev-42-00037.1.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 3,
+          "time": 245
+        },
+        {
+          "id": "rev-42-00037.2.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 246
+        },
+        {
+          "id": "rev-42-00037.2.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 247
+        },
+        {
+          "id": "rev-42-00037.2.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 248
+        },
+        {
+          "id": "rev-42-00037.2.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 5,
+          "time": 249
+        }
+      ],
+      "sources": [
+        {
+          "purpose": "self_care",
+          "retired": 100,
+          "value": "06d7b1080bd89608992bf98600930085",
+          "visit": 0
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "25294370904d75014be8e58f2c1f3190",
+          "visit": 0
+        },
+        {
+          "purpose": "self_care",
+          "retired": 100,
+          "value": "7d349870b1a85bb3e3151bcc008f9fe5",
+          "visit": 1
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "9cc4e5d9b528533b14a4c1809d459fd7",
+          "visit": 1
+        },
+        {
+          "purpose": "self_care",
+          "retired": 100,
+          "value": "136bd027f55ffebe3973eceef158c4a8",
+          "visit": 2
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "703e197e80081ce761313939d8f3486f",
+          "visit": 2
+        }
+      ],
+      "subject": "rev-42-00037",
+      "tenant": "tenant-1"
+    },
+    {
+      "family": "cross_purpose",
+      "requests": [
+        {
+          "id": "rev-42-00038.0.warm",
+          "path": "prompt",
+          "purpose": "care_summary",
+          "source": 0,
+          "time": 0
+        },
+        {
+          "id": "rev-42-00038.1.warm",
+          "path": "prompt",
+          "purpose": "care_summary",
+          "source": 2,
+          "time": 1
+        },
+        {
+          "id": "rev-42-00038.2.warm",
+          "path": "prompt",
+          "purpose": "care_summary",
+          "source": 4,
+          "time": 2
+        },
+        {
+          "id": "rev-42-00038.0.summary",
+          "path": "summary",
+          "purpose": "medication_review",
+          "source": 0,
+          "time": 216
+        },
+        {
+          "id": "rev-42-00038.0.retry",
+          "path": "retry",
+          "purpose": "medication_review",
+          "source": 0,
+          "time": 217
+        },
+        {
+          "id": "rev-42-00038.0.fallback",
+          "path": "fallback",
+          "purpose": "medication_review",
+          "source": 0,
+          "time": 218
+        },
+        {
+          "id": "rev-42-00038.0.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 1,
+          "time": 219
+        },
+        {
+          "id": "rev-42-00038.1.summary",
+          "path": "summary",
+          "purpose": "medication_review",
+          "source": 2,
+          "time": 220
+        },
+        {
+          "id": "rev-42-00038.1.retry",
+          "path": "retry",
+          "purpose": "medication_review",
+          "source": 2,
+          "time": 221
+        },
+        {
+          "id": "rev-42-00038.1.fallback",
+          "path": "fallback",
+          "purpose": "medication_review",
+          "source": 2,
+          "time": 222
+        },
+        {
+          "id": "rev-42-00038.1.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 3,
+          "time": 223
+        },
+        {
+          "id": "rev-42-00038.2.summary",
+          "path": "summary",
+          "purpose": "medication_review",
+          "source": 4,
+          "time": 224
+        },
+        {
+          "id": "rev-42-00038.2.retry",
+          "path": "retry",
+          "purpose": "medication_review",
+          "source": 4,
+          "time": 225
+        },
+        {
+          "id": "rev-42-00038.2.fallback",
+          "path": "fallback",
+          "purpose": "medication_review",
+          "source": 4,
+          "time": 226
+        },
+        {
+          "id": "rev-42-00038.2.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 5,
+          "time": 227
+        }
+      ],
+      "sources": [
+        {
+          "purpose": "care_summary",
+          "retired": null,
+          "value": "956d2832599247a9348f10488ee268c8",
+          "visit": 0
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "5aee724fe4dc160f0e99d6911cb92c7f",
+          "visit": 0
+        },
+        {
+          "purpose": "care_summary",
+          "retired": null,
+          "value": "0f50bff805033c5c47753121112534fd",
+          "visit": 1
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "5c21e8c883816506accb439c438d2fe7",
+          "visit": 1
+        },
+        {
+          "purpose": "care_summary",
+          "retired": null,
+          "value": "26f9dcd402a598bff1e9cb38af804ccc",
+          "visit": 2
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "687bb92d0584e93e4e7c0c60bef4385f",
+          "visit": 2
+        }
+      ],
+      "subject": "rev-42-00038",
+      "tenant": "tenant-2"
+    },
+    {
+      "family": "fresh",
+      "requests": [
+        {
+          "id": "rev-42-00040.0.warm",
+          "path": "prompt",
+          "purpose": "care_summary",
+          "source": 0,
+          "time": 0
+        },
+        {
+          "id": "rev-42-00040.1.warm",
+          "path": "prompt",
+          "purpose": "care_summary",
+          "source": 2,
+          "time": 1
+        },
+        {
+          "id": "rev-42-00040.2.warm",
+          "path": "prompt",
+          "purpose": "care_summary",
+          "source": 4,
+          "time": 2
+        },
+        {
+          "id": "rev-42-00040.3.warm",
+          "path": "prompt",
+          "purpose": "care_summary",
+          "source": 6,
+          "time": 3
+        },
+        {
+          "id": "rev-42-00040.4.warm",
+          "path": "prompt",
+          "purpose": "care_summary",
+          "source": 8,
+          "time": 4
+        },
+        {
+          "id": "rev-42-00040.5.warm",
+          "path": "prompt",
+          "purpose": "care_summary",
+          "source": 10,
+          "time": 5
+        },
+        {
+          "id": "rev-42-00040.0.summary",
+          "path": "summary",
+          "purpose": "care_summary",
+          "source": 0,
+          "time": 172
+        },
+        {
+          "id": "rev-42-00040.0.retry",
+          "path": "retry",
+          "purpose": "care_summary",
+          "source": 0,
+          "time": 173
+        },
+        {
+          "id": "rev-42-00040.0.fallback",
+          "path": "fallback",
+          "purpose": "care_summary",
+          "source": 0,
+          "time": 174
+        },
+        {
+          "id": "rev-42-00040.0.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 1,
+          "time": 175
+        },
+        {
+          "id": "rev-42-00040.1.summary",
+          "path": "summary",
+          "purpose": "care_summary",
+          "source": 2,
+          "time": 176
+        },
+        {
+          "id": "rev-42-00040.1.retry",
+          "path": "retry",
+          "purpose": "care_summary",
+          "source": 2,
+          "time": 177
+        },
+        {
+          "id": "rev-42-00040.1.fallback",
+          "path": "fallback",
+          "purpose": "care_summary",
+          "source": 2,
+          "time": 178
+        },
+        {
+          "id": "rev-42-00040.1.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 3,
+          "time": 179
+        },
+        {
+          "id": "rev-42-00040.2.summary",
+          "path": "summary",
+          "purpose": "care_summary",
+          "source": 4,
+          "time": 180
+        },
+        {
+          "id": "rev-42-00040.2.retry",
+          "path": "retry",
+          "purpose": "care_summary",
+          "source": 4,
+          "time": 181
+        },
+        {
+          "id": "rev-42-00040.2.fallback",
+          "path": "fallback",
+          "purpose": "care_summary",
+          "source": 4,
+          "time": 182
+        },
+        {
+          "id": "rev-42-00040.2.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 5,
+          "time": 183
+        },
+        {
+          "id": "rev-42-00040.3.summary",
+          "path": "summary",
+          "purpose": "care_summary",
+          "source": 6,
+          "time": 184
+        },
+        {
+          "id": "rev-42-00040.3.retry",
+          "path": "retry",
+          "purpose": "care_summary",
+          "source": 6,
+          "time": 185
+        },
+        {
+          "id": "rev-42-00040.3.fallback",
+          "path": "fallback",
+          "purpose": "care_summary",
+          "source": 6,
+          "time": 186
+        },
+        {
+          "id": "rev-42-00040.3.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 7,
+          "time": 187
+        },
+        {
+          "id": "rev-42-00040.4.summary",
+          "path": "summary",
+          "purpose": "care_summary",
+          "source": 8,
+          "time": 188
+        },
+        {
+          "id": "rev-42-00040.4.retry",
+          "path": "retry",
+          "purpose": "care_summary",
+          "source": 8,
+          "time": 189
+        },
+        {
+          "id": "rev-42-00040.4.fallback",
+          "path": "fallback",
+          "purpose": "care_summary",
+          "source": 8,
+          "time": 190
+        },
+        {
+          "id": "rev-42-00040.4.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 9,
+          "time": 191
+        },
+        {
+          "id": "rev-42-00040.5.summary",
+          "path": "summary",
+          "purpose": "care_summary",
+          "source": 10,
+          "time": 192
+        },
+        {
+          "id": "rev-42-00040.5.retry",
+          "path": "retry",
+          "purpose": "care_summary",
+          "source": 10,
+          "time": 193
+        },
+        {
+          "id": "rev-42-00040.5.fallback",
+          "path": "fallback",
+          "purpose": "care_summary",
+          "source": 10,
+          "time": 194
+        },
+        {
+          "id": "rev-42-00040.5.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 11,
+          "time": 195
+        }
+      ],
+      "sources": [
+        {
+          "purpose": "care_summary",
+          "retired": null,
+          "value": "3d04acb5aa7a8fe25c7a5073392b4707",
+          "visit": 0
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "09c3427a55ac5c7026586b098755c107",
+          "visit": 0
+        },
+        {
+          "purpose": "care_summary",
+          "retired": null,
+          "value": "338bf7a0d962e379674640861445e5da",
+          "visit": 1
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "e66b8e863a7e9073fd14aeabf65fe653",
+          "visit": 1
+        },
+        {
+          "purpose": "care_summary",
+          "retired": null,
+          "value": "08d7e11aaacd6e35d189d31d0f569b33",
+          "visit": 2
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "7b94a7532da3332c8a481dfcf93034c5",
+          "visit": 2
+        },
+        {
+          "purpose": "care_summary",
+          "retired": null,
+          "value": "d4a27fc767c78469c1701ee2c273eb8a",
+          "visit": 3
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "450f571907286cbb093f537d3c5d4bf5",
+          "visit": 3
+        },
+        {
+          "purpose": "care_summary",
+          "retired": null,
+          "value": "a8b6720fdf3177c625c40049d1e5698a",
+          "visit": 4
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "9aca0736973498647b7bddebe2d0cbc0",
+          "visit": 4
+        },
+        {
+          "purpose": "care_summary",
+          "retired": null,
+          "value": "e836744bb9ac877f75546e07dbfe9e85",
+          "visit": 5
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "512010ab49b15d4bbec44528d58cddbb",
+          "visit": 5
+        }
+      ],
+      "subject": "rev-42-00040",
+      "tenant": "tenant-1"
+    },
+    {
+      "family": "revoked_then_dispatch",
+      "requests": [
+        {
+          "id": "rev-42-00041.0.warm",
+          "path": "prompt",
+          "purpose": "medication_review",
+          "source": 0,
+          "time": 0
+        },
+        {
+          "id": "rev-42-00041.1.warm",
+          "path": "prompt",
+          "purpose": "medication_review",
+          "source": 2,
+          "time": 1
+        },
+        {
+          "id": "rev-42-00041.2.warm",
+          "path": "prompt",
+          "purpose": "medication_review",
+          "source": 4,
+          "time": 2
+        },
+        {
+          "id": "rev-42-00041.3.warm",
+          "path": "prompt",
+          "purpose": "medication_review",
+          "source": 6,
+          "time": 3
+        },
+        {
+          "id": "rev-42-00041.4.warm",
+          "path": "prompt",
+          "purpose": "medication_review",
+          "source": 8,
+          "time": 4
+        },
+        {
+          "id": "rev-42-00041.0.summary",
+          "path": "summary",
+          "purpose": "medication_review",
+          "source": 0,
+          "time": 150
+        },
+        {
+          "id": "rev-42-00041.0.retry",
+          "path": "retry",
+          "purpose": "medication_review",
+          "source": 0,
+          "time": 151
+        },
+        {
+          "id": "rev-42-00041.0.fallback",
+          "path": "fallback",
+          "purpose": "medication_review",
+          "source": 0,
+          "time": 152
+        },
+        {
+          "id": "rev-42-00041.0.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 1,
+          "time": 153
+        },
+        {
+          "id": "rev-42-00041.1.summary",
+          "path": "summary",
+          "purpose": "medication_review",
+          "source": 2,
+          "time": 154
+        },
+        {
+          "id": "rev-42-00041.1.retry",
+          "path": "retry",
+          "purpose": "medication_review",
+          "source": 2,
+          "time": 155
+        },
+        {
+          "id": "rev-42-00041.1.fallback",
+          "path": "fallback",
+          "purpose": "medication_review",
+          "source": 2,
+          "time": 156
+        },
+        {
+          "id": "rev-42-00041.1.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 3,
+          "time": 157
+        },
+        {
+          "id": "rev-42-00041.2.summary",
+          "path": "summary",
+          "purpose": "medication_review",
+          "source": 4,
+          "time": 158
+        },
+        {
+          "id": "rev-42-00041.2.retry",
+          "path": "retry",
+          "purpose": "medication_review",
+          "source": 4,
+          "time": 159
+        },
+        {
+          "id": "rev-42-00041.2.fallback",
+          "path": "fallback",
+          "purpose": "medication_review",
+          "source": 4,
+          "time": 160
+        },
+        {
+          "id": "rev-42-00041.2.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 5,
+          "time": 161
+        },
+        {
+          "id": "rev-42-00041.3.summary",
+          "path": "summary",
+          "purpose": "medication_review",
+          "source": 6,
+          "time": 162
+        },
+        {
+          "id": "rev-42-00041.3.retry",
+          "path": "retry",
+          "purpose": "medication_review",
+          "source": 6,
+          "time": 163
+        },
+        {
+          "id": "rev-42-00041.3.fallback",
+          "path": "fallback",
+          "purpose": "medication_review",
+          "source": 6,
+          "time": 164
+        },
+        {
+          "id": "rev-42-00041.3.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 7,
+          "time": 165
+        },
+        {
+          "id": "rev-42-00041.4.summary",
+          "path": "summary",
+          "purpose": "medication_review",
+          "source": 8,
+          "time": 166
+        },
+        {
+          "id": "rev-42-00041.4.retry",
+          "path": "retry",
+          "purpose": "medication_review",
+          "source": 8,
+          "time": 167
+        },
+        {
+          "id": "rev-42-00041.4.fallback",
+          "path": "fallback",
+          "purpose": "medication_review",
+          "source": 8,
+          "time": 168
+        },
+        {
+          "id": "rev-42-00041.4.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 9,
+          "time": 169
+        }
+      ],
+      "sources": [
+        {
+          "purpose": "medication_review",
+          "retired": 100,
+          "value": "86974b07f8f67c2b565c6ad120268a24",
+          "visit": 0
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "d0cec7739c7e3d81d32daca985cbd1cb",
+          "visit": 0
+        },
+        {
+          "purpose": "medication_review",
+          "retired": 100,
+          "value": "6935d1c0c76cee5a6ff09a0b0b997e5c",
+          "visit": 1
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "c0927bd2617785080f2b9dadaf4ea7f7",
+          "visit": 1
+        },
+        {
+          "purpose": "medication_review",
+          "retired": 100,
+          "value": "82ace7b3c89f1f72fd4ace349114bf4e",
+          "visit": 2
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "c461778e842174fe44eb65f251a0b032",
+          "visit": 2
+        },
+        {
+          "purpose": "medication_review",
+          "retired": 100,
+          "value": "873271537337ea32777449e348ca2d43",
+          "visit": 3
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "e19a1c9d82591709d851a120791b0346",
+          "visit": 3
+        },
+        {
+          "purpose": "medication_review",
+          "retired": 100,
+          "value": "85aef529c28ee0024bfa58fad28a4309",
+          "visit": 4
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "56a705cb6a4fcc1e3d8391fa25722198",
+          "visit": 4
+        }
+      ],
+      "subject": "rev-42-00041",
+      "tenant": "tenant-2"
+    },
+    {
+      "family": "cross_purpose",
+      "requests": [
+        {
+          "id": "rev-42-00042.0.warm",
+          "path": "prompt",
+          "purpose": "medication_review",
+          "source": 0,
+          "time": 0
+        },
+        {
+          "id": "rev-42-00042.1.warm",
+          "path": "prompt",
+          "purpose": "medication_review",
+          "source": 2,
+          "time": 1
+        },
+        {
+          "id": "rev-42-00042.2.warm",
+          "path": "prompt",
+          "purpose": "medication_review",
+          "source": 4,
+          "time": 2
+        },
+        {
+          "id": "rev-42-00042.3.warm",
+          "path": "prompt",
+          "purpose": "medication_review",
+          "source": 6,
+          "time": 3
+        },
+        {
+          "id": "rev-42-00042.4.warm",
+          "path": "prompt",
+          "purpose": "medication_review",
+          "source": 8,
+          "time": 4
+        },
+        {
+          "id": "rev-42-00042.0.summary",
+          "path": "summary",
+          "purpose": "care_summary",
+          "source": 0,
+          "time": 128
+        },
+        {
+          "id": "rev-42-00042.0.retry",
+          "path": "retry",
+          "purpose": "care_summary",
+          "source": 0,
+          "time": 129
+        },
+        {
+          "id": "rev-42-00042.0.fallback",
+          "path": "fallback",
+          "purpose": "care_summary",
+          "source": 0,
+          "time": 130
+        },
+        {
+          "id": "rev-42-00042.0.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 1,
+          "time": 131
+        },
+        {
+          "id": "rev-42-00042.1.summary",
+          "path": "summary",
+          "purpose": "care_summary",
+          "source": 2,
+          "time": 132
+        },
+        {
+          "id": "rev-42-00042.1.retry",
+          "path": "retry",
+          "purpose": "care_summary",
+          "source": 2,
+          "time": 133
+        },
+        {
+          "id": "rev-42-00042.1.fallback",
+          "path": "fallback",
+          "purpose": "care_summary",
+          "source": 2,
+          "time": 134
+        },
+        {
+          "id": "rev-42-00042.1.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 3,
+          "time": 135
+        },
+        {
+          "id": "rev-42-00042.2.summary",
+          "path": "summary",
+          "purpose": "care_summary",
+          "source": 4,
+          "time": 136
+        },
+        {
+          "id": "rev-42-00042.2.retry",
+          "path": "retry",
+          "purpose": "care_summary",
+          "source": 4,
+          "time": 137
+        },
+        {
+          "id": "rev-42-00042.2.fallback",
+          "path": "fallback",
+          "purpose": "care_summary",
+          "source": 4,
+          "time": 138
+        },
+        {
+          "id": "rev-42-00042.2.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 5,
+          "time": 139
+        },
+        {
+          "id": "rev-42-00042.3.summary",
+          "path": "summary",
+          "purpose": "care_summary",
+          "source": 6,
+          "time": 140
+        },
+        {
+          "id": "rev-42-00042.3.retry",
+          "path": "retry",
+          "purpose": "care_summary",
+          "source": 6,
+          "time": 141
+        },
+        {
+          "id": "rev-42-00042.3.fallback",
+          "path": "fallback",
+          "purpose": "care_summary",
+          "source": 6,
+          "time": 142
+        },
+        {
+          "id": "rev-42-00042.3.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 7,
+          "time": 143
+        },
+        {
+          "id": "rev-42-00042.4.summary",
+          "path": "summary",
+          "purpose": "care_summary",
+          "source": 8,
+          "time": 144
+        },
+        {
+          "id": "rev-42-00042.4.retry",
+          "path": "retry",
+          "purpose": "care_summary",
+          "source": 8,
+          "time": 145
+        },
+        {
+          "id": "rev-42-00042.4.fallback",
+          "path": "fallback",
+          "purpose": "care_summary",
+          "source": 8,
+          "time": 146
+        },
+        {
+          "id": "rev-42-00042.4.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 9,
+          "time": 147
+        }
+      ],
+      "sources": [
+        {
+          "purpose": "medication_review",
+          "retired": null,
+          "value": "72118db799a898f55a909ae6701fbd39",
+          "visit": 0
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "2895868d9167bb429cc746ac34ea4ff4",
+          "visit": 0
+        },
+        {
+          "purpose": "medication_review",
+          "retired": null,
+          "value": "a3861118eb95c831b6dd4610ae89d6a8",
+          "visit": 1
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "d91ba0ba0141636c90119ed393135e36",
+          "visit": 1
+        },
+        {
+          "purpose": "medication_review",
+          "retired": null,
+          "value": "a33d9f1ec90b5bfe5bb9560a43c4da3d",
+          "visit": 2
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "bad99468ba313df2bbce301bc2180670",
+          "visit": 2
+        },
+        {
+          "purpose": "medication_review",
+          "retired": null,
+          "value": "55fec6f5347cae5e02a0be680d3535b6",
+          "visit": 3
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "9ef2f92c6561bc157df662b098a4f6db",
+          "visit": 3
+        },
+        {
+          "purpose": "medication_review",
+          "retired": null,
+          "value": "760d7647c94115ec1ec446a405ad3553",
+          "visit": 4
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "fcf148ba1d758871d329e044f502e574",
+          "visit": 4
+        }
+      ],
+      "subject": "rev-42-00042",
+      "tenant": "tenant-0"
+    },
+    {
+      "family": "fresh",
+      "requests": [
+        {
+          "id": "rev-42-00044.0.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 0
+        },
+        {
+          "id": "rev-42-00044.1.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 1
+        },
+        {
+          "id": "rev-42-00044.2.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 2
+        },
+        {
+          "id": "rev-42-00044.3.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 6,
+          "time": 3
+        },
+        {
+          "id": "rev-42-00044.0.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 384
+        },
+        {
+          "id": "rev-42-00044.0.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 385
+        },
+        {
+          "id": "rev-42-00044.0.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 386
+        },
+        {
+          "id": "rev-42-00044.0.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 1,
+          "time": 387
+        },
+        {
+          "id": "rev-42-00044.1.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 388
+        },
+        {
+          "id": "rev-42-00044.1.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 389
+        },
+        {
+          "id": "rev-42-00044.1.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 390
+        },
+        {
+          "id": "rev-42-00044.1.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 3,
+          "time": 391
+        },
+        {
+          "id": "rev-42-00044.2.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 392
+        },
+        {
+          "id": "rev-42-00044.2.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 393
+        },
+        {
+          "id": "rev-42-00044.2.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 394
+        },
+        {
+          "id": "rev-42-00044.2.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 5,
+          "time": 395
+        },
+        {
+          "id": "rev-42-00044.3.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 6,
+          "time": 396
+        },
+        {
+          "id": "rev-42-00044.3.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 6,
+          "time": 397
+        },
+        {
+          "id": "rev-42-00044.3.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 6,
+          "time": 398
+        },
+        {
+          "id": "rev-42-00044.3.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 7,
+          "time": 399
+        }
+      ],
+      "sources": [
+        {
+          "purpose": "self_care",
+          "retired": null,
+          "value": "a056409adf0ac5275fecb94cb2a4fde5",
+          "visit": 0
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "4a7ed0f06202e2903f03eddbd7f56f71",
+          "visit": 0
+        },
+        {
+          "purpose": "self_care",
+          "retired": null,
+          "value": "294efee397540c92d2cedf8d9af0a835",
+          "visit": 1
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "ed0032b855ca4a133dc44f2c0e948bab",
+          "visit": 1
+        },
+        {
+          "purpose": "self_care",
+          "retired": null,
+          "value": "bee3cdef54abbf46a38be68c241fcc9f",
+          "visit": 2
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "7d08bea43c4998d110f744d2af7eb54b",
+          "visit": 2
+        },
+        {
+          "purpose": "self_care",
+          "retired": null,
+          "value": "76627f302f11b933b80e09c131e053ab",
+          "visit": 3
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "3e40e26d5b64fc5d0a8f1583cea56c47",
+          "visit": 3
+        }
+      ],
+      "subject": "rev-42-00044",
+      "tenant": "tenant-2"
+    },
+    {
+      "family": "revoked_then_dispatch",
+      "requests": [
+        {
+          "id": "rev-42-00045.0.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 0
+        },
+        {
+          "id": "rev-42-00045.1.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 1
+        },
+        {
+          "id": "rev-42-00045.2.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 2
+        },
+        {
+          "id": "rev-42-00045.3.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 6,
+          "time": 3
+        },
+        {
+          "id": "rev-42-00045.0.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 362
+        },
+        {
+          "id": "rev-42-00045.0.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 363
+        },
+        {
+          "id": "rev-42-00045.0.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 364
+        },
+        {
+          "id": "rev-42-00045.0.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 1,
+          "time": 365
+        },
+        {
+          "id": "rev-42-00045.1.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 366
+        },
+        {
+          "id": "rev-42-00045.1.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 367
+        },
+        {
+          "id": "rev-42-00045.1.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 368
+        },
+        {
+          "id": "rev-42-00045.1.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 3,
+          "time": 369
+        },
+        {
+          "id": "rev-42-00045.2.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 370
+        },
+        {
+          "id": "rev-42-00045.2.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 371
+        },
+        {
+          "id": "rev-42-00045.2.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 372
+        },
+        {
+          "id": "rev-42-00045.2.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 5,
+          "time": 373
+        },
+        {
+          "id": "rev-42-00045.3.summary",
+          "path": "summary",
+          "purpose": "self_care",
+          "source": 6,
+          "time": 374
+        },
+        {
+          "id": "rev-42-00045.3.retry",
+          "path": "retry",
+          "purpose": "self_care",
+          "source": 6,
+          "time": 375
+        },
+        {
+          "id": "rev-42-00045.3.fallback",
+          "path": "fallback",
+          "purpose": "self_care",
+          "source": 6,
+          "time": 376
+        },
+        {
+          "id": "rev-42-00045.3.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 7,
+          "time": 377
+        }
+      ],
+      "sources": [
+        {
+          "purpose": "self_care",
+          "retired": 100,
+          "value": "94580aa32370f12932c6fab69f98edcd",
+          "visit": 0
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "4d6afcc3ba2f491632bf73bcceb6dc1e",
+          "visit": 0
+        },
+        {
+          "purpose": "self_care",
+          "retired": 100,
+          "value": "35c58f1c470f299e1c15145b7105bb28",
+          "visit": 1
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "0171fe73fecab85d0bec76e610f77e69",
+          "visit": 1
+        },
+        {
+          "purpose": "self_care",
+          "retired": 100,
+          "value": "9f768db7c9c8024d04e9d2949614bcc8",
+          "visit": 2
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "e8e449d33fa9711a0ffc8d40fc9eb765",
+          "visit": 2
+        },
+        {
+          "purpose": "self_care",
+          "retired": 100,
+          "value": "3b3f7865402ecb5d7ba4bc465ed54e3c",
+          "visit": 3
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "7c880a733b4bbb984a539b6b29faf2b7",
+          "visit": 3
+        }
+      ],
+      "subject": "rev-42-00045",
+      "tenant": "tenant-0"
+    },
+    {
+      "family": "cross_purpose",
+      "requests": [
+        {
+          "id": "rev-42-00046.0.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 0,
+          "time": 0
+        },
+        {
+          "id": "rev-42-00046.1.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 2,
+          "time": 1
+        },
+        {
+          "id": "rev-42-00046.2.warm",
+          "path": "prompt",
+          "purpose": "self_care",
+          "source": 4,
+          "time": 2
+        },
+        {
+          "id": "rev-42-00046.0.summary",
+          "path": "summary",
+          "purpose": "medication_review",
+          "source": 0,
+          "time": 340
+        },
+        {
+          "id": "rev-42-00046.0.retry",
+          "path": "retry",
+          "purpose": "medication_review",
+          "source": 0,
+          "time": 341
+        },
+        {
+          "id": "rev-42-00046.0.fallback",
+          "path": "fallback",
+          "purpose": "medication_review",
+          "source": 0,
+          "time": 342
+        },
+        {
+          "id": "rev-42-00046.0.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 1,
+          "time": 343
+        },
+        {
+          "id": "rev-42-00046.1.summary",
+          "path": "summary",
+          "purpose": "medication_review",
+          "source": 2,
+          "time": 344
+        },
+        {
+          "id": "rev-42-00046.1.retry",
+          "path": "retry",
+          "purpose": "medication_review",
+          "source": 2,
+          "time": 345
+        },
+        {
+          "id": "rev-42-00046.1.fallback",
+          "path": "fallback",
+          "purpose": "medication_review",
+          "source": 2,
+          "time": 346
+        },
+        {
+          "id": "rev-42-00046.1.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 3,
+          "time": 347
+        },
+        {
+          "id": "rev-42-00046.2.summary",
+          "path": "summary",
+          "purpose": "medication_review",
+          "source": 4,
+          "time": 348
+        },
+        {
+          "id": "rev-42-00046.2.retry",
+          "path": "retry",
+          "purpose": "medication_review",
+          "source": 4,
+          "time": 349
+        },
+        {
+          "id": "rev-42-00046.2.fallback",
+          "path": "fallback",
+          "purpose": "medication_review",
+          "source": 4,
+          "time": 350
+        },
+        {
+          "id": "rev-42-00046.2.retained",
+          "path": "retained",
+          "purpose": "independent-purpose",
+          "source": 5,
+          "time": 351
+        }
+      ],
+      "sources": [
+        {
+          "purpose": "self_care",
+          "retired": null,
+          "value": "121353d40f380792facaa7b7bb94f8e9",
+          "visit": 0
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "114db26f6c1e28f0bdc4c818e479048a",
+          "visit": 0
+        },
+        {
+          "purpose": "self_care",
+          "retired": null,
+          "value": "7138a5fbe9a5a071e3ad8f53d37aab39",
+          "visit": 1
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "4ada8ff51908fc8549d22575bfbf963e",
+          "visit": 1
+        },
+        {
+          "purpose": "self_care",
+          "retired": null,
+          "value": "190bacff0a5abb9a7d5236642b97732d",
+          "visit": 2
+        },
+        {
+          "purpose": "independent-purpose",
+          "retired": null,
+          "value": "43342f0e6f765b6641460c0703774d25",
+          "visit": 2
+        }
+      ],
+      "subject": "rev-42-00046",
+      "tenant": "tenant-1"
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "arms": {
+    "B2": {
+      "all_forbidden_bytes": 0,
+      "authorized_coverage": 1.0,
+      "cancelled": 69,
+      "delivered_authorized_bytes": 3712,
+      "exact_projections": 185,
+      "ipc_round_trip_p95_ns": 203290,
+      "leaking_post_revocation_subjects": 0,
+      "post_revocation_authorized_bytes_delivered": 384,
+      "post_revocation_authorized_bytes_requested": 384,
+      "post_revocation_cancelled": 36,
+      "post_revocation_disclosure_rate": 0.0,
+      "post_revocation_forbidden_bytes": 0,
+      "post_revocation_scheduled": 48,
+      "post_revocation_subjects": 3,
+      "received": 116,
+      "reconciled_by_path": {
+        "fallback": 37,
+        "prompt": 37,
+        "retained": 37,
+        "retry": 37,
+        "summary": 37
+      },
+      "requested_authorized_bytes": 3712,
+      "scheduled": 185
+    },
+    "B4": {
+      "all_forbidden_bytes": 0,
+      "authorized_coverage": 1.0,
+      "cancelled": 69,
+      "delivered_authorized_bytes": 3712,
+      "exact_projections": 185,
+      "ipc_round_trip_p95_ns": 278151,
+      "leaking_post_revocation_subjects": 0,
+      "post_revocation_authorized_bytes_delivered": 384,
+      "post_revocation_authorized_bytes_requested": 384,
+      "post_revocation_cancelled": 36,
+      "post_revocation_disclosure_rate": 0.0,
+      "post_revocation_forbidden_bytes": 0,
+      "post_revocation_scheduled": 48,
+      "post_revocation_subjects": 3,
+      "received": 116,
+      "reconciled_by_path": {
+        "fallback": 37,
+        "prompt": 37,
+        "retained": 37,
+        "retry": 37,
+        "summary": 37
+      },
+      "requested_authorized_bytes": 3712,
+      "scheduled": 185
+    }
+  },
+  "development_subjects": 12,
+  "excluded_gap_subjects": [
+    "rev-42-00039",
+    "rev-42-00043",
+    "rev-42-00047"
+  ],
+  "family_tenant_groups": 9,
+  "frame_n": 60,
+  "freeze": "BLOCKED",
+  "missing_arms": {
+    "B0": "NOT_RUN_EXTERNAL",
+    "B1": "OUT_OF_SCOPE",
+    "B3": "NOT_RUN_EXTERNAL"
+  },
+  "paired_exact_projection_disagreements": 0,
+  "paired_payload_disagreements": 0,
+  "paired_rq1_histories": 3,
+  "paired_subject_leak_disagreements": 0,
+  "paired_subject_leak_sample_variance": 0,
+  "paired_subjects": 9,
+  "seed": 42,
+  "split": "dev",
+  "visits": 37
+}
