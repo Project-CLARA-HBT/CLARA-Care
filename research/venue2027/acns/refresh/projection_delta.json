@@ -1,0 +1,1978 @@
+{
+  "new_sha256": "f1fd4bc0f36318e8ec84f8e23d869cfcdaa82d0761f8d6c1b9c0066855ac6793",
+  "old_sha256": "5fa4b6f09938cb46c5ca257ce0f3b97fd6928913685e26d413038511ac4b32f4",
+  "remove": [],
+  "upsert": {
+    "conf/IEEEares/2026-1": [
+      "2026-11-05",
+      [
+        "Availability, Reliability and Security - 21st International Conference, ARES 2026, Link\u00f6ping, Sweden, August 24-27, 2026, Proceedings, Part I"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/acii/2025": [
+      "2026-11-16",
+      [
+        "13th International Conference on Affective Computing and Intelligent Interaction, ACII 2025, Canberra, Australia, October 8-11, 2025"
+      ],
+      [
+        "2025"
+      ]
+    ],
+    "conf/acii/2025w": [
+      "2026-11-16",
+      [
+        "13th International Conference on Affective Computing and Intelligent Interaction, ACII 2025 - Workshops and Demos, Canberra, Australia, October 11, 2025"
+      ],
+      [
+        "2025"
+      ]
+    ],
+    "conf/acsos/2026": [
+      "2026-11-18",
+      [
+        "IEEE International Conference on Autonomic Computing and Self-Organizing Systems, ACSOS 2026, Cesena, Italy, September 7-11, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/adma/2026-2": [
+      "2026-11-12",
+      [
+        "Advanced Data Mining and Applications - 22nd International Conference, ADMA 2026, Hong Kong, China, November 13-15, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/adma/2026-4": [
+      "2026-11-12",
+      [
+        "Advanced Data Mining and Applications - 22nd International Conference, ADMA 2026, Hong Kong, China, November 13-15, 2026, Proceedings, Part IV"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/agile/2019": [
+      "2026-11-17",
+      [
+        "Geospatial Technologies for Local and Regional Development - Proceedings of the 22nd AGILE Conference on Geographic Information Science, Limassol, Cyprus, June 17-20, 2019"
+      ],
+      [
+        "2020"
+      ]
+    ],
+    "conf/agile/2020": [
+      "2026-11-17",
+      [
+        "Proceedings of the 23rd AGILE Conference on Geographic Information Science, Chania, Greece [cancelled], June 16-19, 2020"
+      ],
+      [
+        "2020"
+      ]
+    ],
+    "conf/aldt/2026": [
+      "2026-11-20",
+      [
+        "Algorithmic Decision Theory - 9th International Conference, ADT 2026, Paris, France, November 16-18, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/amps/2026": [
+      "2026-11-11",
+      [
+        "16th IEEE International Workshop on Applied Measurements for Power Systems, AMPS 2026, Valencia, Spain, September 29 - October 1, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/apweb/2026-1": [
+      "2026-11-15",
+      [
+        "Web and Big Data - 10th Asia-Pacific Web (APWeb) and Web-Age Information Management (WAIM) International Joint Conference, APWeb-WAIM 2026, Danang, Vietnam, September 7-9, 2026, Proceedings, Part I"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/apweb/2026-2": [
+      "2026-11-15",
+      [
+        "Web and Big Data - 10th Asia-Pacific Web (APWeb) and Web-Age Information Management (WAIM) International Joint Conference, APWeb-WAIM 2026, Danang, Vietnam, September 7-9, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/apweb/2026-3": [
+      "2026-11-15",
+      [
+        "Web and Big Data - 10th Asia-Pacific Web (APWeb) and Web-Age Information Management (WAIM) International Joint Conference, APWeb-WAIM 2026, Danang, Vietnam, September 7-9, 2026, Proceedings, Part III"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/arith/2026": [
+      "2026-11-17",
+      [
+        "33rd IEEE Symposium on Computer Arithmetic, ARITH 2026, Fulda, Germany, June 28 - July 1, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/asiasim/2014": [
+      "2026-11-07",
+      [
+        "AsiaSim 2014 - 14th International Conference on Systems Simulation, Kitakyushu, Japan, October 26-30, 2014. Proceedings"
+      ],
+      [
+        "2014"
+      ]
+    ],
+    "conf/atva/2008": [
+      "2026-11-19",
+      [
+        "Automated Technology for Verification and Analysis, 6th International Symposium, ATVA 2008, Seoul, Korea, October 20-23, 2008. Proceedings"
+      ],
+      [
+        "2008"
+      ]
+    ],
+    "conf/avr/2026-1": [
+      "2026-11-20",
+      [
+        "Extended Reality - 5th International Conference, XR Salento 2026, Otranto, Italy, June 16-20, 2026, Proceedings, Part I"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/avr/2026-4": [
+      "2026-11-18",
+      [
+        "Extended Reality - 5th International Conference, XR Salento 2026, Otranto, Italy, June 16-20, 2026, Proceedings, Part IV"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/belief/2026": [
+      "2026-11-06",
+      [
+        "Belief Functions: Theory and Applications - 9th International Conference, BELIEF 2026, Nanjing, China, October 19-21, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/besc/2026-1": [
+      "2026-11-12",
+      [
+        "Behavioural and Social Computing - 13th International Conference, BESC 2026, Bangkok, Thailand, October 26-28, 2026, Proceedings, Part I"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/besc/2026-2": [
+      "2026-11-12",
+      [
+        "Behavioural and Social Computing - 13th International Conference, BESC 2026, Bangkok, Thailand, October 26-28, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/besc/2026-3": [
+      "2026-11-09",
+      [
+        "Behavioural and Social Computing - 13th International Conference, BESC 2026, Bangkok, Thailand, October 26-28, 2026, Proceedings, Part III"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/birthday/2026Franzle": [
+      "2026-11-06",
+      [
+        "Design and Verification of Cyber-Physical Systems: From Theory to Applications - Essays Dedicated to Martin Fr\u00e4nzle on the Occasion of His 60th Birthday"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/blackboxnlp/2024": [
+      "2026-11-11",
+      [
+        "Proceedings of the 7th BlackboxNLP Workshop: Analyzing and Interpreting Neural Networks for NLP, BlackboxNLP@EMNLP 2024, Miami, FL, USA, November, 2024"
+      ],
+      [
+        "2024"
+      ]
+    ],
+    "conf/bmvc/2025": [
+      "2026-11-03",
+      [
+        "36th British Machine Vision Conference, BMVC 2025, Sheffield, UK, November 24-27, 2025"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/bracis/2026-2": [
+      "2026-11-15",
+      [
+        "Intelligent Systems - 36th Brazilian Conference, BRACIS 2026, Cuiaba, Brazil, October 19-22, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/bracis/2026-4": [
+      "2026-11-15",
+      [
+        "Intelligent Systems - 36th Brazilian Conference, BRACIS 2026, Cuiaba, Brazil, October 19-22, 2026, Proceedings, Part IV"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/bracis/2026-5": [
+      "2026-11-15",
+      [
+        "Intelligent Systems - 36th Brazilian Conference, BRACIS 2026, Cuiaba, Brazil, October 19-22, 2026, Proceedings, Part V"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/caepia/2026": [
+      "2026-11-15",
+      [
+        "Advances in Artificial Intelligence - 21st Conference of the Spanish Association for Artificial Intelligence, CAEPIA 2026, Ja\u00e9n, Spain, November 11-13, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/case/2026": [
+      "2026-11-18",
+      [
+        "22nd IEEE International Conference on Automation Science and Engineering, CASE 2026, Shenyang, China, August 17-21, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/cbms/2026": [
+      "2026-11-19",
+      [
+        "39th IEEE International Symposium on Computer-Based Medical Systems, CBMS 2026, Limassol, Cyprus, June 3-5, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/cec/2026": [
+      "2026-11-05",
+      [
+        "IEEE Congress on Evolutionary Computation, CEC 2026, Maastricht, The Netherlands, June 21-26, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/cev/2022": [
+      "2026-11-16",
+      [
+        "Actas del I Congreso Espa\u00f1ol de Videojuegos, Madrid, Spain, December 1-2, 2022."
+      ],
+      [
+        "2022"
+      ]
+    ],
+    "conf/ciarp/2026-1": [
+      "2026-11-05",
+      [
+        "Progress in Pattern Recognition, Image Analysis, Computer Vision, and Applications - 29th Iberoamerican Congress, CIARP 2026, Mexico City, Mexico, November 24-27, 2026, Proceedings, Part I"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/ciarp/2026-2": [
+      "2026-11-16",
+      [
+        "Progress in Pattern Recognition, Image Analysis, Computer Vision, and Applications - 29th Iberoamerican Congress, CIARP 2026, Mexico City, Mexico, November 24-27, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/cisc/2026-1": [
+      "2026-11-18",
+      [
+        "Information Security and Cryptology - 22nd International Conference, Inscrypt 2026, Hong Kong, China, November 7-9, 2026, Proceedings, Part I"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/cisc/2026-2": [
+      "2026-11-18",
+      [
+        "Information Security and Cryptology - 22nd International Conference, Inscrypt 2026, Hong Kong, China, November 7-9, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/cisc/2026-3": [
+      "2026-11-18",
+      [
+        "Information Security and Cryptology - 22nd International Conference, Inscrypt 2026, Hong Kong, China, November 7-9, 2026, Proceedings, Part III"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/cluster/2026": [
+      "2026-11-05",
+      [
+        "IEEE International Conference on Cluster Computing, CLUSTER 2026, Alexandria, VA, USA, September 22-25, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/cns/2026": [
+      "2026-11-18",
+      [
+        "IEEE Conference on Communications and Network Security, CNS 2026, Newark, DE, USA, September 14-17, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/codit/2026": [
+      "2026-11-17",
+      [
+        "12th International Conference on Control, Decision and Information Technologies, CoDIT 2026, Bari, Italy, July 13-16, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/colcom/2024-1": [
+      "2026-11-20",
+      [
+        "Collaborative Computing: Networking, Applications and Worksharing - 20th EAI International Conference, CollaborateCom 2024, Wuzhen, China, November 14-17, 2024, Proceedings, Part I"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/colcom/2024-2": [
+      "2026-11-20",
+      [
+        "Collaborative Computing: Networking, Applications and Worksharing - 20th EAI International Conference, CollaborateCom 2024, Wuzhen, China, November 14-17, 2024, Proceedings, Part II"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/colcom/2024-3": [
+      "2026-11-20",
+      [
+        "Collaborative Computing: Networking, Applications and Worksharing - 20th EAI International Conference, CollaborateCom 2024, Wuzhen, China, November 14-17, 2024, Proceedings, Part III"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/colcom/2025-1": [
+      "2026-11-18",
+      [
+        "Collaborative Computing: Networking, Applications and Worksharing - 21st EAI International Conference, CollaborateCom 2025, Shanghai, China, November 15-16, 2025, Proceedings, Part I"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/colcom/2025-2": [
+      "2026-11-18",
+      [
+        "Collaborative Computing: Networking, Applications and Worksharing - 21st EAI International Conference, CollaborateCom 2025, Shanghai, China, November 15-16, 2025, Proceedings, Part II"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/collabtech/2014": [
+      "2026-11-05",
+      [
+        "Collaboration Technologies and Social Computing - 7th International Conference, CollabTech 2014, Santiago, Chile, September 8-10, 2014. Proceedings"
+      ],
+      [
+        "2014"
+      ]
+    ],
+    "conf/collabtech/2016": [
+      "2026-11-05",
+      [
+        "Collaboration Technologies and Social Computing - 8th International Conference, CollabTech 2016, Kanazawa, Japan, September 14-16, 2016, Proceedings"
+      ],
+      [
+        "2016"
+      ]
+    ],
+    "conf/collabtech/2020": [
+      "2026-11-05",
+      [
+        "Collaboration Technologies and Social Computing - 26th International Conference, CollabTech 2020, Tartu, Estonia, September 8-11, 2020, Proceedings"
+      ],
+      [
+        "2020"
+      ]
+    ],
+    "conf/collabtech/2023": [
+      "2026-11-05",
+      [
+        "Collaboration Technologies and Social Computing - 29th International Conference, CollabTech 2023, Osaka, Japan, August 29 - September 1, 2023, Proceedings"
+      ],
+      [
+        "2023"
+      ]
+    ],
+    "conf/collabtech/2025": [
+      "2026-11-05",
+      [
+        "Collaboration Technologies and Social Computing - 31st International Conference, CollabTech 2025, Jakarta, Indonesia, November 4-7, 2025, Proceedings"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/collabtech/2026": [
+      "2026-11-05",
+      [
+        "Collaboration Technologies and Social Computing - 32nd International Conference, CollabTech 2026, Trier, Germany, September 22-24, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/compeng/2026": [
+      "2026-11-17",
+      [
+        "IEEE Workshop on Complexity in Engineering, COMPENG 2026, Castel Ivano, Italy, July 8-10, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/complenet/2016": [
+      "2026-11-07",
+      [
+        "Complex Networks VII - Proceedings of the 7th Workshop on Complex Networks, CompleNet 2016, Dijon, France, March 23-25, 2016."
+      ],
+      [
+        "2016"
+      ]
+    ],
+    "conf/compsac/2010": [
+      "2026-11-19",
+      [
+        "Proceedings of the 34th Annual IEEE International Computer Software and Applications Conference, COMPSAC 2010, Seoul, Korea, 19-23 July 2010"
+      ],
+      [
+        "2010"
+      ]
+    ],
+    "conf/cosecivi/2020": [
+      "2026-11-16",
+      [
+        "Proceedings of the VI Congreso de la Sociedad Espa\u00f1ola para las Ciencias del Videojuego, On-line, October 7-8, 2020."
+      ],
+      [
+        "2020"
+      ]
+    ],
+    "conf/cosit/2026": [
+      "2026-11-20",
+      [
+        "17th International Conference on Spatial Information Theory, COSIT 2026, York, UK, September 22-25, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/criwg/2017": [
+      "2026-11-05",
+      [
+        "Collaboration and Technology - 23rd International Conference, CRIWG 2017, Saskatoon, SK, Canada, August 9-11, 2017, Proceedings"
+      ],
+      [
+        "2017"
+      ]
+    ],
+    "conf/cscml/2026": [
+      "2026-11-17",
+      [
+        "Cyber Security, Cryptology, and Machine Learning - 10th International Symposium, CSCML 2026, Be'er Sheva, Israel, December 3-4, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/csr2/2026": [
+      "2026-11-18",
+      [
+        "IEEE International Conference on Cyber Security and Resilience, CSR 2026, Lisbon, Portugal, August 3-5, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/cui/2023": [
+      "2026-11-02",
+      [
+        "Proceedings of the 5th International Conference on Conversational User Interfaces, CUI 2023, Eindhoven, The Netherlands, July 19-21, 2023"
+      ],
+      [
+        "2023"
+      ]
+    ],
+    "conf/cui/2026": [
+      "2026-11-07",
+      [
+        "Proceedings of the 8th ACM Conference on Conversational User Interfaces, CUI 2026, Bremen, Germany, July 21-24, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/dessert/2024": [
+      "2026-11-03",
+      [
+        "14th International Conference on Dependable Systems, Services and Technologies, DESSERT 2024, Athens, Greece, October 11-13, 2024"
+      ],
+      [
+        "2024"
+      ]
+    ],
+    "conf/dft/2026": [
+      "2026-11-20",
+      [
+        "2026 IEEE International Symposium on Defect and Fault Tolerance in VLSI and Nanotechnology Systems, DFT 2026, Rome, Italy, September 30 - Oct. 2, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eais/2026": [
+      "2026-11-17",
+      [
+        "IEEE International Conference on Evolving and Adaptive Intelligent Systems, EAIS 2026, Pisa, Italy, September 21-23, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-15": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part XV"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-22": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part XXII"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-30": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part XXX"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-34": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part XXXIV"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-37": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part XXXVII"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-4": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part IV"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-45": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part XLV"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-48": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part XLVIII"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-54": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part LIV"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-58": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part LVIII"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-59": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part LIX"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-68": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part LXVIII"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-72": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part LXXII"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eccv/2026-73": [
+      "2026-11-15",
+      [
+        "Computer Vision - ECCV 2026 - 19th European Conference, Malm\u00f6, Sweden, September 8-12, 2026, Proceedings, Part LXXIII"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/edbtw/2002": [
+      "2026-11-07",
+      [
+        "XML-Based Data Management and Multimedia Engineering - EDBT 2002 Workshops, EDBT 2002 Workshops XMLDM, MDDE, and YRWS, Prague, Czech Republic, March 24-28, 2002, Revised Papers"
+      ],
+      [
+        "2002"
+      ]
+    ],
+    "conf/emnlp/2026": [
+      "2026-11-04",
+      [
+        "Proceedings of the 2026 Conference on Empirical Methods in Natural Language Processing, EMNLP 2026, Budapest, Hungary, October 24-29, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/euromed/2024": [
+      "2026-11-18",
+      [
+        "Digital Heritage. Progress in Cultural Heritage: Documentation, Preservation, and Protection - 10th International Conference, EuroMed 2024, Limassol, Cyprus, December 2-4, 2024, Revised Selected Papers"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/europar/2013w": [
+      "2026-11-07",
+      [
+        "Euro-Par 2013: Parallel Processing Workshops - BigDataCloud, DIHC, FedICI, HeteroPar, HiBB, LSDVE, MHPC, OMHI, PADABS, PROPER, Resilience, ROME, and UCHPC 2013, Aachen, Germany, August 26-27, 2013. Revised Selected Papers"
+      ],
+      [
+        "2014"
+      ]
+    ],
+    "conf/europar/2025s": [
+      "2026-11-20",
+      [
+        "Euro-Par 2025: Parallel Processing Workshops - Euro-Par 2025 Satellite Events, Dresden, Germany, August 25-29, 2025, Revised Selected Papers"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/eurovr/2026": [
+      "2026-11-14",
+      [
+        "Virtual Reality and Mixed Reality - 23rd EuroXR International Conference, EuroXR 2026, Valencia, Spain, November 3-6, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/f-egc/2026": [
+      "2026-11-20",
+      [
+        "Extraction et Gestion des Connaissances, EGC 2026, Anglet, France, January 26-30, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/f-egc/2026a": [
+      "2026-11-20",
+      [
+        "Extraction et Gestion des Connaissances : Ateliers, EGC 2026 Ateliers, Anglet, France, January 26-30, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/fc/2020w": [
+      "2026-11-07",
+      [
+        "Financial Cryptography and Data Security - FC 2020 International Workshops, AsiaUSEC, CoDeFi, VOTING, and WTSC, Kota Kinabalu, Malaysia, February 14, 2020, Revised Selected Papers"
+      ],
+      [
+        "2020"
+      ]
+    ],
+    "conf/gala/2026": [
+      "2026-11-12",
+      [
+        "Games and Learning Alliance - 15th International Conference, GALA 2026, L'Aquila, Italy, November 17-20, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/gamesec/2022": [
+      "2026-11-14",
+      [
+        "Decision and Game Theory for Security - 13th International Conference, GameSec 2022, Pittsburgh, PA, USA, October 26-28, 2022, Proceedings"
+      ],
+      [
+        "2023"
+      ]
+    ],
+    "conf/gamesem/2026": [
+      "2026-11-18",
+      [
+        "IEEE Gaming, Entertainment, and Media Conference, GEM 2026, Berlin, Germany, September 5-7, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/gd/2026": [
+      "2026-11-18",
+      [
+        "34th International Symposium on Graph Drawing and Network Visualization, GD 2026, St. Catharines, Ontario, Canada, August 17-21, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/gp/1996": [
+      "2026-11-04",
+      [
+        "Proceedings of the First Annual Conference on Genetic Programming, Genetic Programming 1996, Stanford, CA, USA, July 28-31, 1996"
+      ],
+      [
+        "1996"
+      ]
+    ],
+    "conf/his2/2026": [
+      "2026-11-19",
+      [
+        "Health Information Science - 15th International Conference, HIS 2026, Haikou, China, November 11-14, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/hoti/2026": [
+      "2026-11-17",
+      [
+        "IEEE Symposium on High-Performance Interconnects, HotI 2026, Stanford, CA, USA, August 19-21, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/icaie/2024": [
+      "2026-11-06",
+      [
+        "Proceedings of the 3rd International Conference on Artificial Intelligence and Education, ICAIE 2024, Xiamen, China, November 22-24, 2024"
+      ],
+      [
+        "2024"
+      ]
+    ],
+    "conf/icaie/2025": [
+      "2026-11-06",
+      [
+        "Proceedings of the 4th International Conference on Artificial Intelligence and Education, ICAIE 2025, Nanjing, China, November 21-23, 2025"
+      ],
+      [
+        "2025"
+      ]
+    ],
+    "conf/icaita/2022": [
+      "2026-11-02",
+      [
+        "Artificial Intelligence: Theories and Applications - First International Conference, ICAITA 2022, Mascara, Algeria, November 7-8, 2022, Revised Selected Papers"
+      ],
+      [
+        "2023"
+      ]
+    ],
+    "conf/icalt/2026": [
+      "2026-11-18",
+      [
+        "IEEE International Conference on Advanced Learning Technologies, ICALT 2026, Hung Yen, Vietnam, July 6-9, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/iccci/2009s": [
+      "2026-11-20",
+      [
+        "New Challenges in Computational Collective Intelligence [selected papers from the 1st International Conference on Collective Intelligence - Semantic Web, Social Networks & Multiagent Systems, ICCCI 2009]"
+      ],
+      [
+        "2009"
+      ]
+    ],
+    "conf/icdar2/2023": [
+      "2026-11-18",
+      [
+        "Proceedings of the 4th ACM Workshop on Intelligent Cross-Data Analysis and Retrieval, ICDAR 2023, Thessaloniki, Greece, June 12-15, 2023"
+      ],
+      [
+        "2023"
+      ]
+    ],
+    "conf/icegov/2025": [
+      "2026-11-20",
+      [
+        "Theory and Practice of Electronic Governance - 18th International Conference, ICEGOV 2025, Abuja, Nigeria, November 4-7, 2025, Proceedings"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/icics/2026-1": [
+      "2026-11-18",
+      [
+        "Information and Communications Security - 28th International Conference, ICICS 2026, Fukui, Japan, October 27-30, 2026, Proceedings, Part I"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/icics/2026-2": [
+      "2026-11-18",
+      [
+        "Information and Communications Security - 28th International Conference, ICICS 2026, Fukui, Japan, October 27-30, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/icics/2026-3": [
+      "2026-11-19",
+      [
+        "Information and Communications Security - 28th International Conference, ICICS 2026, Fukui, Japan, October 27-30, 2026, Proceedings, Part III"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/icics/2026-4": [
+      "2026-11-18",
+      [
+        "Information and Communications Security - 28th International Conference, ICICS 2026, Fukui, Japan, October 27-30, 2026, Proceedings, Part IV"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/icics/2026-6": [
+      "2026-11-19",
+      [
+        "Information and Communications Security - 28th International Conference, ICICS 2026, Fukui, Japan, October 27-30, 2026, Proceedings, Part VI"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/icmcs/2026w": [
+      "2026-11-18",
+      [
+        "IEEE International Conference on Multimedia and Expo, ICME 2026 -Workshops, Bangkok, Thailand, July 5-9, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/icmla/2006": [
+      "2026-11-04",
+      [
+        "The Fifth International Conference on Machine Learning and Applications, ICMLA 2006, Orlando, Florida, USA, 14-16 December 2006"
+      ],
+      [
+        "2006"
+      ]
+    ],
+    "conf/icmla/2007": [
+      "2026-11-03",
+      [
+        "The Sixth International Conference on Machine Learning and Applications, ICMLA 2007, Cincinnati, Ohio, USA, 13-15 December 2007"
+      ],
+      [
+        "2008"
+      ]
+    ],
+    "conf/icmla/2015": [
+      "2026-11-04",
+      [
+        "14th IEEE International Conference on Machine Learning and Applications, ICMLA 2015, Miami, FL, USA, December 9-11, 2015"
+      ],
+      [
+        "2015"
+      ]
+    ],
+    "conf/icmla/2026": [
+      "2026-11-18",
+      [
+        "25th International Conference on Machine Learning and Applications, ICMLA 2026, Rochester, MI, USA, October 5-7, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/icmlc/2005": [
+      "2026-11-19",
+      [
+        "Advances in Machine Learning and Cybernetics, 4th International Conference, ICMLC 2005, Guangzhou, China, August 18-21, 2005, Revised Selected Papers"
+      ],
+      [
+        "2006"
+      ]
+    ],
+    "conf/icmlc/2014": [
+      "2026-11-07",
+      [
+        "Machine Learning and Cybernetics - 13th International Conference, Lanzhou, China, July 13-16, 2014. Proceedings"
+      ],
+      [
+        "2014"
+      ]
+    ],
+    "conf/icpr/2026-w2": [
+      "2026-11-18",
+      [
+        "Pattern Recognition. ICPR 2026 International Workshops - Lyon, France, August 17-22, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/icsm/2026": [
+      "2026-11-12",
+      [
+        "2026 IEEE International Conference on Software Maintenance and Evolution, ICSME 2026, Benevento, Italy, September 14-18, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/ictac/2026": [
+      "2026-11-18",
+      [
+        "Theoretical Aspects of Computing - ICTAC 2026 - 23rd International Colloquium, ICTAC 2026, Bariloche, Argentina, November 11-13, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/icusi/2026": [
+      "2026-11-02",
+      [
+        "Proceedings of ICUSI 2026, the International Conference on User-System Interaction, Suceava, Romania / Online, October 15-16, 2026."
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/idsta/2026": [
+      "2026-11-17",
+      [
+        "Seventh International Conference on Intelligent Data Science Technologies and Applications, IDSTA 2026, Bucharest, Romania, September 22-25, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/ieaaie/2022": [
+      "2026-11-18",
+      [
+        "Advances and Trends in Artificial Intelligence. Theory and Practices in Artificial Intelligence - 35th International Conference on Industrial, Engineering and Other Applications of Applied Intelligent Systems, IEA/AIE 2022, Kitakyushu, Japan, July 19-22, 2022, Proceedings"
+      ],
+      [
+        "2022"
+      ]
+    ],
+    "conf/ieaaie/2023-1": [
+      "2026-11-18",
+      [
+        "Advances and Trends in Artificial Intelligence. Theory and Applications - 36th International Conference on Industrial, Engineering and Other Applications of Applied Intelligent Systems, IEA/AIE 2023, Shanghai, China, July 19-22, 2023, Proceedings, Part I"
+      ],
+      [
+        "2023"
+      ]
+    ],
+    "conf/ieaaie/2023-2": [
+      "2026-11-18",
+      [
+        "Advances and Trends in Artificial Intelligence. Theory and Applications - 36th International Conference on Industrial, Engineering and Other Applications of Applied Intelligent Systems, IEA/AIE 2023, Shanghai, China, July 19-22, 2023, Proceedings, Part II"
+      ],
+      [
+        "2023"
+      ]
+    ],
+    "conf/ieaaie/2025-1": [
+      "2026-11-19",
+      [
+        "Advances and Trends in Artificial Intelligence. Theory and Applications - 38th International Conference on Industrial, Engineering and Other Applications of Applied Intelligent Systems, IEA/AIE 2025, Kitakyushu, Japan, July 1-4, 2025, Proceedings, Part I"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/ieaaie/2025-2": [
+      "2026-11-19",
+      [
+        "Advances and Trends in Artificial Intelligence. Theory and Applications - 38th International Conference on Industrial, Engineering and Other Applications of Applied Intelligent Systems, IEA/AIE 2025, Kitakyushu, Japan, July 1-4, 2025, Proceedings, Part II"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/ifip8-6/2022": [
+      "2026-11-03",
+      [
+        "Co-creating for Context in the Transfer and Diffusion of IT - IFIP WG 8.6 International Working Conference on Transfer and Diffusion of IT, TDIT 2022, Maynooth, Ireland, June 15-16, 2022, Proceedings"
+      ],
+      [
+        "2022"
+      ]
+    ],
+    "conf/iiswc/2026": [
+      "2026-11-16",
+      [
+        "IEEE International Symposium on Workload Characterization, IISWC 2026, Boulder, CO, USA, September 27-29, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/ijcnn/2026": [
+      "2026-11-05",
+      [
+        "International Joint Conference on Neural Networks, IJCNN 2026, Maastricht, Netherlands, June 22-26, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/insci/2017": [
+      "2026-11-07",
+      [
+        "Internet Science - 4th International Conference, INSCI 2017, Thessaloniki, Greece, November 22-24, 2017, Proceedings"
+      ],
+      [
+        "2017"
+      ]
+    ],
+    "conf/is/2026": [
+      "2026-11-06",
+      [
+        "13th IEEE International Conference on Intelligent Systems, IS 2026, Varna, Bulgaria, September 3-5, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/iscopt/2026": [
+      "2026-11-06",
+      [
+        "Combinatorial Optimization - 9th International Symposium, ISCO 2026, Ku\u015fadas\u0131, T\u00fcrkiye, May 4-8, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/ismar/2026": [
+      "2026-11-18",
+      [
+        "IEEE International Symposium on Mixed and Augmented Reality, ISMAR 2026, Bari, Italy, October 5-9, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/ismir/2025": [
+      "2026-11-11",
+      [
+        "Proceedings of the 26th International Society for Music Information Retrieval Conference, ISMIR 2025, Daejeon, South Korea, September 21-25, 2025"
+      ],
+      [
+        "2025"
+      ]
+    ],
+    "conf/isnn/2020": [
+      "2026-11-20",
+      [
+        "Advances in Neural Networks - ISNN 2020 - 17th International Symposium on Neural Networks, ISNN 2020, Cairo, Egypt, December 4-6, 2020, Proceedings"
+      ],
+      [
+        "2020"
+      ]
+    ],
+    "conf/isola/2026-3": [
+      "2026-11-05",
+      [
+        "Leveraging Applications of Formal Methods, Verification and Validation. Bridging Gaps between Software and System Contracts - 13th International Symposium, ISoLA 2026, Kos, Greece, October 24-28, 2026, Proceedings, Part III"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/ispec/2026": [
+      "2026-11-20",
+      [
+        "Information Security Practice and Experience - 21st International Conference, ISPEC 2026, Xi'an, China, November 6-8, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/its/2026-1": [
+      "2026-11-20",
+      [
+        "Agentic Learning Ecosystems and Intelligent Tutoring Systems - 22nd International Conference, ITS 2026, Pafos, Cyprus, June 1-5, 2026, Proceedings, Part I"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/its/2026-2": [
+      "2026-11-20",
+      [
+        "Agentic Learning Ecosystems and Intelligent Tutoring Systems - 22nd International Conference, ITS 2026, Pafos, Cyprus, June 1-5, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/iukm/2026-1": [
+      "2026-11-18",
+      [
+        "Integrated Uncertainty in Knowledge Modelling and Decision Making - 12th International Symposium, IUKM 2026, Quy Nhon Nam, Gia Lai, Vietnam, September 14-17, 2026, Proceedings, Part I"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/iwcit/2026": [
+      "2026-11-16",
+      [
+        "14th Iran Workshop on Communication and Information Theory, IWCIT 2026, Tehran, Iran, April 28-30, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/kdd/2002mdm-kdmcd": [
+      "2026-11-07",
+      [
+        "Mining Multimedia and Complex Data, KDD Workshop MDM/KDD 2002, PAKDD Workshop KDMCD 2002, Revised Papers"
+      ],
+      [
+        "2003"
+      ]
+    ],
+    "conf/kdd/2009dmmt": [
+      "2026-11-03",
+      [
+        "Proceedings of the 2nd ACM SIGKDD Workshop on Data Mining using Matrices and Tensors, Paris, France, June 28, 2009"
+      ],
+      [
+        "2009"
+      ]
+    ],
+    "conf/ladc/2025": [
+      "2026-11-20",
+      [
+        "Dependable and Secure Computing - 14th Latin-American Symposium, LADC 2025, Valpara\u00edso, Chile, October 27-31, 2025, Proceedings"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/llms4ol/2026": [
+      "2026-11-12",
+      [
+        "LLMs4OL 2026: The 3rd Large Language Models for Ontology Learning Challenge at the 25th ISWC, Co-located with the 25th International Semantic Web Conference (ISWC 2026), Bari, Italy, October 25-29, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/mind/2024-1": [
+      "2026-11-20",
+      [
+        "Machine Learning, Image Processing, Network Security and Data Sciences - 6th International Conference, MIND 2024, Goa, India, December 20-21, 2024, Revised Selected Papers, Part I"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/mind/2024-2": [
+      "2026-11-20",
+      [
+        "Machine Learning, Image Processing, Network Security and Data Sciences - 6th International Conference, MIND 2024, Goa, India, December 20-21, 2024, Revised Selected Papers, Part II"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/miua/2017": [
+      "2026-11-06",
+      [
+        "Medical Image Understanding and Analysis - 21st Annual Conference, MIUA 2017, Edinburgh, UK, July 11-13, 2017, Proceedings"
+      ],
+      [
+        "2017"
+      ]
+    ],
+    "conf/miwai/2026-2": [
+      "2026-11-18",
+      [
+        "Multi-disciplinary Trends in Artificial Intelligence - 19th International Conference, MIWAI 2026, Halifax, NS, Canada, October 10-12, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/ml4cs/2020-1": [
+      "2026-11-09",
+      [
+        "Machine Learning for Cyber Security - Third International Conference, ML4CS 2020, Guangzhou, China, October 8-10, 2020, Proceedings, Part I"
+      ],
+      [
+        "2020"
+      ]
+    ],
+    "conf/ml4cs/2020-2": [
+      "2026-11-09",
+      [
+        "Machine Learning for Cyber Security - Third International Conference, ML4CS 2020, Guangzhou, China, October 8-10, 2020, Proceedings, Part II"
+      ],
+      [
+        "2020"
+      ]
+    ],
+    "conf/ml4cs/2020-3": [
+      "2026-11-09",
+      [
+        "Machine Learning for Cyber Security - Third International Conference, ML4CS 2020, Guangzhou, China, October 8-10, 2020, Proceedings, Part III"
+      ],
+      [
+        "2020"
+      ]
+    ],
+    "conf/nca/2022": [
+      "2026-11-12",
+      [
+        "21st IEEE International Symposium on Network Computing and Applications, NCA 2022, Boston, MA, USA, December 14-16, 2022"
+      ],
+      [
+        "2022"
+      ]
+    ],
+    "conf/nesy/2024-1": [
+      "2026-11-03",
+      [
+        "Neural-Symbolic Learning and Reasoning - 18th International Conference, NeSy 2024, Barcelona, Spain, September 9-12, 2024, Proceedings, Part I"
+      ],
+      [
+        "2024"
+      ]
+    ],
+    "conf/nesy/2024-2": [
+      "2026-11-03",
+      [
+        "Neural-Symbolic Learning and Reasoning - 18th International Conference, NeSy 2024, Barcelona, Spain, September 9-12, 2024, Proceedings, Part II"
+      ],
+      [
+        "2024"
+      ]
+    ],
+    "conf/nips/2011mlini": [
+      "2026-11-02",
+      [
+        "Machine Learning and Interpretation in Neuroimaging - International Workshop, MLINI 2011, Held at NIPS 2011, Sierra Nevada, Spain, December 16-17, 2011, Revised Selected and Invited Contributions"
+      ],
+      [
+        "2012"
+      ]
+    ],
+    "conf/nips/2014mlini": [
+      "2026-11-02",
+      [
+        "Machine Learning and Interpretation in Neuroimaging - 4th International Workshop, MLINI 2014, Held at NIPS 2014, Montreal, QC, Canada, December 13, 2014, Revised Selected Papers"
+      ],
+      [
+        "2016"
+      ]
+    ],
+    "conf/npc/2008w": [
+      "2026-11-19",
+      [
+        "IFIP International Conference on Network and Parallel Computing, NPC 2008, Shanghai, China, October 18-21, 2008, Workshop Proceedings"
+      ],
+      [
+        "2008"
+      ]
+    ],
+    "conf/ol2a/2021": [
+      "2026-11-20",
+      [
+        "Optimization, Learning Algorithms and Applications - First International Conference, OL2A 2021, Bragan\u00e7a, Portugal, July 19-21, 2021, Revised Selected Papers"
+      ],
+      [
+        "2021"
+      ]
+    ],
+    "conf/ozchi/2023": [
+      "2026-11-09",
+      [
+        "Proceedings of the 35th Australian Computer-Human Interaction Conference, OzCHI 2023, Wellington, New Zealand, December 2-6, 2023"
+      ],
+      [
+        "2023"
+      ]
+    ],
+    "conf/pacis/2026": [
+      "2026-11-16",
+      [
+        "30th Pacific Asia Conference on Information Systems, PACIS 2026, Jakarta, Indonesia, July 4-8, 2026."
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/pacmi/2026": [
+      "2026-11-02",
+      [
+        "Proceedings of the 5th Workshop on Practical Adoption Challenges of ML for Systems, PACMI 2026, Prague, Czech Republic, 29 September 2026 - 2 October 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/pkdd/2026-8": [
+      "2026-11-15",
+      [
+        "Machine Learning and Knowledge Discovery in Databases. Research Track and Applied Data Science Track - European Conference, ECML PKDD 2026, Naples, Italy, September 7-11, 2026, Proceedings, Part VIII"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/pkdd/2026-9": [
+      "2026-11-15",
+      [
+        "Machine Learning and Knowledge Discovery in Databases. Applied Data Science Track - European Conference, ECML PKDD 2026, Naples, Italy, September 7-11, 2026, Proceedings, Part IX"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/raid/2026-1": [
+      "2026-11-05",
+      [
+        "29th International Symposium on Research in Attacks, Intrusions, and Defenses, RAID 2026, Lancaster, UK, October 11-14, 2026, Proceedings, Part I"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/raid/2026-2": [
+      "2026-11-14",
+      [
+        "Research in Attacks, Intrusions, and Defenses - 29th International Symposium, RAID 2026, Lancaster, UK, October 11-14, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/raid/2026-3": [
+      "2026-11-05",
+      [
+        "Research in Attacks, Intrusions, and Defenses - 29th International Symposium, RAID 2026, Lancaster, UK, October 11-14, 2026, Proceedings, Part III"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/rskt/2014": [
+      "2026-11-07",
+      [
+        "Rough Sets and Knowledge Technology - 9th International Conference, RSKT 2014, Shanghai, China, October 24-26, 2014, Proceedings"
+      ],
+      [
+        "2014"
+      ]
+    ],
+    "conf/sblp/2021": [
+      "2026-11-06",
+      [
+        "SBLP'21: 25th Brazilian Symposium on Programming Languages, Joinville, Brazil, 27 September 2021 - 1 October 2021"
+      ],
+      [
+        "2021"
+      ]
+    ],
+    "conf/sbp-brims/2024": [
+      "2026-11-07",
+      [
+        "Social, Cultural, and Behavioral Modeling - 17th International Conference, SBP-BRiMS 2024, Pittsburgh, PA, USA, September 18-20, 2024, Proceedings"
+      ],
+      [
+        "2024"
+      ]
+    ],
+    "conf/scam/2026": [
+      "2026-11-18",
+      [
+        "IEEE International Conference on Source Code Analysis & Manipulation, SCAM 2026, Benevento, Italy, September 14-15, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/secsr/2015": [
+      "2026-11-07",
+      [
+        "Security Standardisation Research - Second International Conference, SSR 2015, Tokyo, Japan, December 15-16, 2015, Proceedings"
+      ],
+      [
+        "2015"
+      ]
+    ],
+    "conf/securecomm/2025-1": [
+      "2026-11-12",
+      [
+        "Security and Privacy in Communication Networks - 21st EAI International Conference, SecureComm 2025, Xiangtan, China, July 4-6, 2025, Proceedings, Part I"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/securecomm/2025-2": [
+      "2026-11-12",
+      [
+        "Security and Privacy in Communication Networks - 21st EAI International Conference, SecureComm 2025, Xiangtan, China, July 4-6, 2025, Proceedings, Part II"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/securecomm/2025-3": [
+      "2026-11-12",
+      [
+        "Security and Privacy in Communication Networks - 21st EAI International Conference, SecureComm 2025, Xiangtan, China, July 4-6, 2025, Proceedings, Part III"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/securecomm/2025-4": [
+      "2026-11-12",
+      [
+        "Security and Privacy in Communication Networks - 21st EAI International Conference, SecureComm 2025, Xiangtan, China, July 4-6, 2025, Proceedings, Part IV"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/semweb/2026-1": [
+      "2026-11-03",
+      [
+        "The Semantic Web - ISWC 2026 - 25th International Semantic Web Conference, Bari, Italy, October 25-29, 2026, Proceedings, Part I"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/semweb/2026-2": [
+      "2026-11-05",
+      [
+        "The Semantic Web - ISWC 2026 - 25th International Semantic Web Conference, Bari, Italy, October 25-29, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/semweb/2026-3": [
+      "2026-11-05",
+      [
+        "The Semantic Web - ISWC 2026 - 25th International Semantic Web Conference, Bari, Italy, October 25-29, 2026, Proceedings, Part III"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/sgda/2026": [
+      "2026-11-20",
+      [
+        "Serious Games - 12th Joint International Conference, JCSG 2026, Valletta, Malta, December 3-4, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/sisap/2026": [
+      "2026-11-20",
+      [
+        "Similarity Search and Applications - 19th International Conference, SISAP 2026, Brno, Czech Republic, October 14-16, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/sosp/2026": [
+      "2026-11-02",
+      [
+        "Proceedings of the ACM SIGOPS 32nd Symposium on Operating Systems Principles, SOSP 2026, Prague, Czech Republic, 29 September 2026 - 2 October 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/spin/2019": [
+      "2026-11-07",
+      [
+        "Model Checking Software - 26th International Symposium, SPIN 2019, Beijing, China, July 15-16, 2019, Proceedings"
+      ],
+      [
+        "2019"
+      ]
+    ],
+    "conf/spire/2026": [
+      "2026-11-11",
+      [
+        "String Processing and Information Retrieval - 33rd International Symposium, SPIRE 2026, Hamilton, ON, Canada, October 13-15, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/sportshci/2026": [
+      "2026-11-02",
+      [
+        "Proceedings of the Second Annual Conference on Sports and Human-Computer Interaction, SportsHCI 2026, Saarbr\u00fccken, Germany, November 16-18, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/sportshci/2026c": [
+      "2026-11-02",
+      [
+        "Companion Proceedings of the Second Annual Conference on Sports and Human-Computer Interaction, SportsHCI 2026, Saarbr\u00fccken, Germany, November 16-18, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/sum/2026": [
+      "2026-11-11",
+      [
+        "Scalable Uncertainty Management - 17th International Conference, SUM 2026, Athens, Greece, October 21-23, 2026, Proceedings"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/tbillc/2017": [
+      "2026-11-07",
+      [
+        "Language, Logic, and Computation - 12th International Tbilisi Symposium, TbiLLC 2017, Lagodekhi, Georgia, September 18-22, 2017, Revised Selected Papers"
+      ],
+      [
+        "2019"
+      ]
+    ],
+    "conf/tcc/2021-1": [
+      "2026-11-07",
+      [
+        "Theory of Cryptography - 19th International Conference, TCC 2021, Raleigh, NC, USA, November 8-11, 2021, Proceedings, Part I"
+      ],
+      [
+        "2021"
+      ]
+    ],
+    "conf/tcc/2021-2": [
+      "2026-11-07",
+      [
+        "Theory of Cryptography - 19th International Conference, TCC 2021, Raleigh, NC, USA, November 8-11, 2021, Proceedings, Part II"
+      ],
+      [
+        "2021"
+      ]
+    ],
+    "conf/tcc/2021-3": [
+      "2026-11-07",
+      [
+        "Theory of Cryptography - 19th International Conference, TCC 2021, Raleigh, NC, USA, November 8-11, 2021, Proceedings, Part III"
+      ],
+      [
+        "2021"
+      ]
+    ],
+    "conf/tcc/2026-1": [
+      "2026-11-17",
+      [
+        "Theory of Cryptography - 24th International Conference, TCC 2026, New York City, NY, USA, November 10-13, 2026, Proceedings, Part I"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/tcc/2026-2": [
+      "2026-11-10",
+      [
+        "Theory of Cryptography - 24th International Conference, TCC 2026, New York City, NY, USA, November 10-13, 2026, Proceedings, Part II"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/tcc/2026-3": [
+      "2026-11-10",
+      [
+        "Theory of Cryptography - 24th International Conference, TCC 2026, New York City, NY, USA, November 10-13, 2026, Proceedings, Part III"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/tcc/2026-4": [
+      "2026-11-17",
+      [
+        "Theory of Cryptography - 24th International Conference, TCC 2026, New York City, NY, USA, November 10-13, 2026, Proceedings, Part IV"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/techdefense/2023": [
+      "2026-11-12",
+      [
+        "IEEE International Workshop on Technologies for Defense and Security, TechDefense 2023, Rome, Italy, November 20-22, 2023"
+      ],
+      [
+        "2023"
+      ]
+    ],
+    "conf/techdefense/2024": [
+      "2026-11-12",
+      [
+        "IEEE International Workshop on Technologies for Defense and Security, TechDefense 2024, Naples, Italy, November 11-13, 2024"
+      ],
+      [
+        "2024"
+      ]
+    ],
+    "conf/techdefense/2025": [
+      "2026-11-12",
+      [
+        "IEEE International Workshop on Technologies for Defense and Security, TechDefense 2025, Rome, Italy, November 5-7, 2025"
+      ],
+      [
+        "2025"
+      ]
+    ],
+    "conf/tei/2018": [
+      "2026-11-07",
+      [
+        "Proceedings of the Twelfth International Conference on Tangible, Embedded, and Embodied Interaction, TEI 2018, Stockholm, Sweden, March 18-21, 2018"
+      ],
+      [
+        "2018"
+      ]
+    ],
+    "conf/uss/2026": [
+      "2026-11-05",
+      [
+        "35th USENIX Security Symposium, USENIX Security 2026, Baltimore, MD, USA, August 12-14, 2026."
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/vissoft/2026": [
+      "2026-11-18",
+      [
+        "IEEE Working Conference on Software Visualization, VISSOFT 2026, Benevento, Italy, September 14-15, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/vl/2026": [
+      "2026-11-18",
+      [
+        "IEEE Symposium on Visual Languages and Human-Centric Computing, VL/HCC 2026, Paderborn, Germany, September 29 - October 2, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/vlsi/2026": [
+      "2026-11-12",
+      [
+        "34th IFIP/IEEE International Conference on Very Large Scale Integration, VLSI-SoC 2026, Limassol, Cyprus, October 11-14, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/wdag/2026": [
+      "2026-11-02",
+      [
+        "40th International Symposium on Distributed Computing, DISC 2026, Rome, Italy, November 9-13, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/wetice/2026": [
+      "2026-11-20",
+      [
+        "34th International Conference on Enabling Technologies: Infrastructure for Collaborative Enterprises, WETICE 2026, Paris, France, July 8-10, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/wikidata/2025": [
+      "2026-11-20",
+      [
+        "Proceedings of the 5th Wikidata Workshop (Wikidata 2025) co-located with 24th International Semantic Web Conference (ISWC 2025), Nara, Japan, November 2, 2025."
+      ],
+      [
+        "2025"
+      ]
+    ],
+    "conf/wise/2025w": [
+      "2026-11-18",
+      [
+        "Web Information Systems Engineering - WISE 2025 PhD Symposium, Demos and Workshops - The 26th International Conference on Web Information Systems Engineering, WISE 2025, Marrakech, Morocco, 15-17 December 2025"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/wmt/2026": [
+      "2026-11-02",
+      [
+        "Proceedings of the Eleventh Conference on Machine Translation, WMT 2026, Budapest, Hungary, October 28-29, 2026"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/worldcist/2025-1": [
+      "2026-11-16",
+      [
+        "Emerging Trends in Information Systems and Technologies, WorldCIST 2025, Florian\u00f3polis, Brazil, April 15-17, 2025, Volume 1"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/worldcist/2025-2": [
+      "2026-11-16",
+      [
+        "Emerging Trends in Information Systems and Technologies, WorldCIST 2025, Florian\u00f3polis, Brazil, April 15-17, 2025, Volume 2"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/worldcist/2025-3": [
+      "2026-11-16",
+      [
+        "Emerging Trends in Information Systems and Technologies, WorldCIST 2025, Florian\u00f3polis, Brazil, April 15-17, 2025, Volume 3"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/worldcist/2025-4": [
+      "2026-11-16",
+      [
+        "Emerging Trends in Information Systems and Technologies, WorldCIST 2025, Florian\u00f3polis, Brazil, April 15-17, 2025, Volume 4"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/worldcist/2025-5": [
+      "2026-11-16",
+      [
+        "Emerging Trends in Information Systems and Technologies, WorldCIST 2025, Florian\u00f3polis, Brazil, April 15-17, 2025, Volume 5"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/worldcist/2026-1": [
+      "2026-11-16",
+      [
+        "Recent Trends and Challenges in Information Systems and Technologies, WorldCIST 2026, Madeira Island, Portugal, March 31 - April 2, 2026, Volume 1"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/worldcist/2026-2": [
+      "2026-11-16",
+      [
+        "Recent Trends and Challenges in Information Systems and Technologies, WorldCIST 2026, Madeira Island, Portugal, March 31 - April 2, 2026, Volume 2"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/worldcist/2026-3": [
+      "2026-11-16",
+      [
+        "Recent Trends and Challenges in Information Systems and Technologies, WorldCIST 2026, Madeira Island, Portugal, March 31 - April 2, 2026, Volume 3"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/worldcist/2026-4": [
+      "2026-11-16",
+      [
+        "Recent Trends and Challenges in Information Systems and Technologies, WorldCIST 2026, Madeira Island, Portugal, March 31 - April 2, 2026, Volume 4"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/worldcist/2026-5": [
+      "2026-11-16",
+      [
+        "Recent Trends and Challenges in Information Systems and Technologies, WorldCIST 2026, Madeira Island, Portugal, March 31 - April 2, 2026, Volume 5"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "conf/xmeeting/2025": [
+      "2026-11-10",
+      [
+        "Bioinformatics and Computational Biology - 21st Brazilian Conference, X-Meeting 2025, Jo\u00e3o Pessoa, Brazil, June 3-6, 2025, Proceedings"
+      ],
+      [
+        "2026"
+      ]
+    ],
+    "conf/xpu/2026w": [
+      "2026-11-04",
+      [
+        "Agile Processes in Software Engineering and Extreme Programming - Workshops - XP 2026 Workshops, S\u00e3o Paulo, Brazil, April 8-11, 2026, Revised Selected Papers"
+      ],
+      [
+        "2027"
+      ]
+    ],
+    "journals/corr/abs-2312-08138": [
+      "2026-11-07",
+      [
+        "Proceedings of the Sixth International Conference on Applied Category Theory 2023, ACT 2023, University of Maryland, 31 July - 4 August 2023."
+      ],
+      [
+        "2023"
+      ]
+    ]
+  }
+}
