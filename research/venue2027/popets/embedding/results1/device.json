@@ -1,0 +1,8 @@
+{
+  "gpu": "NVIDIA GeForce RTX 4060 Ti",
+  "cuda": "12.4",
+  "torch": "2.6.0+cu124",
+  "transformers": "4.49.0",
+  "python": "3.12.15",
+  "platform": "6.18.33.2-microsoft-standard-WSL2"
+}

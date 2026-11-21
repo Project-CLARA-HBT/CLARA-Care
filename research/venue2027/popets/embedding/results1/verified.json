@@ -1,0 +1,39 @@
+{
+  "arms": [
+    "B1",
+    "B2",
+    "lazy",
+    "B4"
+  ],
+  "totals": [
+    {
+      "requests": 5177,
+      "builds": 1458,
+      "hits": 3073,
+      "cancelled": 646,
+      "authorized_bytes": 6959616
+    },
+    {
+      "requests": 5177,
+      "builds": 4531,
+      "hits": 0,
+      "cancelled": 646,
+      "authorized_bytes": 6959616
+    },
+    {
+      "requests": 5177,
+      "builds": 1153,
+      "hits": 3378,
+      "cancelled": 646,
+      "authorized_bytes": 6959616
+    },
+    {
+      "requests": 5177,
+      "builds": 1153,
+      "hits": 3378,
+      "cancelled": 646,
+      "authorized_bytes": 6959616
+    }
+  ],
+  "complete_byte_equality": true
+}
