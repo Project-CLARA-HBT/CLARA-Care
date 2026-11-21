@@ -85,7 +85,7 @@ lacks this invariant (that absence IS the leak).
 
 Version
 -------
-``CANDIDATE_VERSION = "1.0.0"``; ``CANDIDATE_ID =
+``CANDIDATE_VERSION = "1.1.0"``; ``CANDIDATE_ID =
 "popets-revocation-complete-future-disclosure"``.
 """
 
@@ -112,7 +112,7 @@ __all__ = [
 ]
 
 CANDIDATE_ID = "popets-revocation-complete-future-disclosure"
-CANDIDATE_VERSION = "1.0.0"
+CANDIDATE_VERSION = "1.1.0"
 ABLATION_ID = "popets-ablation-no-reverse-edges"
 
 #: Read statuses returned by :meth:`RevocationCompleteCache.get`.
@@ -306,6 +306,7 @@ class RevocationCompleteCache:
         self._entries: dict[str, CacheEntry] = {}
         self._tombstoned: dict[str, bool] = {}
         self._children: dict[str, set[str]] = {}
+        self._by_scope: dict[Dependency, set[str]] = {}
         self._revoked_scopes: set[tuple[str, str, int]] = set()
         self._closure_keys: set[str] = set()
         self._revocation_log: list[dict[str, Any]] = []
@@ -325,13 +326,20 @@ class RevocationCompleteCache:
         checked_value = _checked_value(value)
         checked_deps = _checked_deps(deps)
         parents = frozenset(_checked_key(p) for p in derived_from)
-        for revoked in sorted(self._revoked_scopes):
-            if revoked in {(d.subject, d.purpose, d.consent_epoch) for d in checked_deps}:
-                raise ValueError(
-                    f"{REASON_REVOKED_DEPENDENCY}: refusing to cache {checked_key!r}: "
-                    f"dependency (subject={revoked[0]!r}, purpose={revoked[1]!r}, "
-                    f"consent_epoch={revoked[2]}) is revoked"
-                )
+        revoked = min(
+            (
+                (d.subject, d.purpose, d.consent_epoch)
+                for d in checked_deps
+                if (d.subject, d.purpose, d.consent_epoch) in self._revoked_scopes
+            ),
+            default=None,
+        )
+        if revoked is not None:
+            raise ValueError(
+                f"{REASON_REVOKED_DEPENDENCY}: refusing to cache {checked_key!r}: "
+                f"dependency (subject={revoked[0]!r}, purpose={revoked[1]!r}, "
+                f"consent_epoch={revoked[2]}) is revoked"
+            )
         for parent in sorted(parents):
             if parent == checked_key:
                 raise ValueError(
@@ -354,19 +362,23 @@ class RevocationCompleteCache:
             derived_from=parents,
             created_at_revocation_events=self._revocation_events,
         )
-        self._drop_reverse_edges(checked_key)
+        previous = self._entries.get(checked_key)
+        if previous is not None:
+            for dep in previous.deps:
+                self._by_scope[dep].remove(checked_key)
+                if not self._by_scope[dep]:
+                    del self._by_scope[dep]
+            for parent in previous.derived_from:
+                self._children[parent].remove(checked_key)
+                if not self._children[parent]:
+                    del self._children[parent]
+        for dep in checked_deps:
+            self._by_scope.setdefault(dep, set()).add(checked_key)
         self._entries[checked_key] = entry
         self._tombstoned[checked_key] = False
         for parent in parents:
             self._children.setdefault(parent, set()).add(checked_key)
         return entry
-
-    def _drop_reverse_edges(self, key: str) -> None:
-        """Remove key's stale reverse edges before overwrite (child index rebuild)."""
-        for parent, children in list(self._children.items()):
-            children.discard(key)
-            if not children:
-                del self._children[parent]
 
     # -- get ----------------------------------------------------------------
 
@@ -453,16 +465,7 @@ class RevocationCompleteCache:
         checked_purpose = _checked_purpose(purpose)
         checked_epoch = _checked_epoch(epoch)
         scope = (checked_subject, checked_purpose, checked_epoch)
-        direct = sorted(
-            key
-            for key, entry in self._entries.items()
-            if any(
-                d.subject == checked_subject
-                and d.purpose == checked_purpose
-                and d.consent_epoch == checked_epoch
-                for d in entry.deps
-            )
-        )
+        direct = sorted(self._by_scope.get(Dependency(*scope), ()))
         # Closure is always computed (audit surface); enforcement decides whether
         # the transitive set is tombstoned. The ablation detects but does not act.
         transitive = self._transitive_closure(direct)
@@ -584,7 +587,7 @@ class RevocationCompleteCache:
                 "path from an invalidated entry stay live (no full flush).",
                 "G4 purpose boundary: a get under a purpose the entry does not carry "
                 "is refused (PURPOSE_MISMATCH).",
-                "G5 epoch boundary: a get under a superseded epoch is refused " "(EPOCH_STALE).",
+                "G5 epoch boundary: a get under a superseded epoch is refused (EPOCH_STALE).",
                 "G6 admission: put() refuses entries whose deps or derivation parents "
                 "are already revoked (REVOKED_DEPENDENCY).",
             ),

@@ -31,6 +31,7 @@ from evaluation.venue2027.popets.candidate import (
     ABLATION_ID,
     CANDIDATE_ID,
     CANDIDATE_VERSION,
+    REASON_REVOKED_DEPENDENCY,
     Dependency,
     RevocationCompleteCache,
     ablation_no_reverse_edges,
@@ -345,3 +346,16 @@ def test_describe_mechanism_flags_and_module_level() -> None:
         assert desc["version"] == CANDIDATE_VERSION
         assert desc["guarantees"] and desc["non_guarantees"]
         json.dumps(desc)  # JSON-serializable
+
+
+def test_overwrite_moves_scope_and_parent_indexes_after_validation_only():
+    cache = RevocationCompleteCache()
+    for key in ("old", "new"):
+        cache.put(key, key, [(key, "care", 1)])
+    cache.put("child", "v1", [("old", "care", 1)], ["old"])
+    cache.put("child", "v2", [("new", "care", 1)], ["new"])
+    assert cache.revoke("old", "care", 1)["invalidated_keys"] == ["old"]
+    with pytest.raises(ValueError, match=REASON_REVOKED_DEPENDENCY):
+        cache.put("child", "v3", [("old", "care", 1)], ["new"])
+    assert cache.get("child", "care", 1).status == "HIT"
+    assert cache.revoke("new", "care", 1)["invalidated_keys"] == ["child", "new"]
