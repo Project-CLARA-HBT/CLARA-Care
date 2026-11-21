@@ -1,0 +1,333 @@
+{
+  "totals": {
+    "flac": 871907,
+    "marginal": 833408,
+    "marginal_parity": 834088,
+    "joint": 830959,
+    "joint_parity": 826597,
+    "lzma": 832621,
+    "lzma_parity": 828361
+  },
+  "records": [
+    {
+      "record": "07215_hr",
+      "flac": 25552,
+      "marginal": 24340,
+      "marginal_parity": 24354,
+      "joint": 24215,
+      "joint_parity": 24063,
+      "lzma": 24363,
+      "lzma_parity": 24219
+    },
+    {
+      "record": "01644_hr",
+      "flac": 28688,
+      "marginal": 27597,
+      "marginal_parity": 27631,
+      "joint": 27502,
+      "joint_parity": 27407,
+      "lzma": 27562,
+      "lzma_parity": 27494
+    },
+    {
+      "record": "01318_hr",
+      "flac": 25957,
+      "marginal": 24808,
+      "marginal_parity": 24866,
+      "joint": 24731,
+      "joint_parity": 24633,
+      "lzma": 24864,
+      "lzma_parity": 24788
+    },
+    {
+      "record": "15092_hr",
+      "flac": 26446,
+      "marginal": 25351,
+      "marginal_parity": 25373,
+      "joint": 25233,
+      "joint_parity": 25072,
+      "lzma": 25293,
+      "lzma_parity": 25169
+    },
+    {
+      "record": "10245_hr",
+      "flac": 30259,
+      "marginal": 29114,
+      "marginal_parity": 29142,
+      "joint": 29045,
+      "joint_parity": 28945,
+      "lzma": 29153,
+      "lzma_parity": 29025
+    },
+    {
+      "record": "13678_hr",
+      "flac": 25504,
+      "marginal": 24178,
+      "marginal_parity": 24256,
+      "joint": 24129,
+      "joint_parity": 24068,
+      "lzma": 24265,
+      "lzma_parity": 24177
+    },
+    {
+      "record": "17333_hr",
+      "flac": 27226,
+      "marginal": 26084,
+      "marginal_parity": 26146,
+      "joint": 26009,
+      "joint_parity": 25917,
+      "lzma": 26148,
+      "lzma_parity": 26044
+    },
+    {
+      "record": "06053_hr",
+      "flac": 28497,
+      "marginal": 27254,
+      "marginal_parity": 27288,
+      "joint": 27157,
+      "joint_parity": 27043,
+      "lzma": 27344,
+      "lzma_parity": 27188
+    },
+    {
+      "record": "15443_hr",
+      "flac": 24240,
+      "marginal": 22931,
+      "marginal_parity": 22967,
+      "joint": 22888,
+      "joint_parity": 22772,
+      "lzma": 22894,
+      "lzma_parity": 22698
+    },
+    {
+      "record": "18863_hr",
+      "flac": 21754,
+      "marginal": 20439,
+      "marginal_parity": 20481,
+      "joint": 20379,
+      "joint_parity": 20238,
+      "lzma": 20280,
+      "lzma_parity": 20088
+    },
+    {
+      "record": "21693_hr",
+      "flac": 28329,
+      "marginal": 27017,
+      "marginal_parity": 27021,
+      "joint": 26954,
+      "joint_parity": 26822,
+      "lzma": 27046,
+      "lzma_parity": 26922
+    },
+    {
+      "record": "15764_hr",
+      "flac": 29270,
+      "marginal": 28109,
+      "marginal_parity": 28127,
+      "joint": 28027,
+      "joint_parity": 27884,
+      "lzma": 28159,
+      "lzma_parity": 28011
+    },
+    {
+      "record": "15277_hr",
+      "flac": 26706,
+      "marginal": 25424,
+      "marginal_parity": 25486,
+      "joint": 25351,
+      "joint_parity": 25261,
+      "lzma": 25457,
+      "lzma_parity": 25369
+    },
+    {
+      "record": "08964_hr",
+      "flac": 26606,
+      "marginal": 25297,
+      "marginal_parity": 25129,
+      "joint": 25243,
+      "joint_parity": 24851,
+      "lzma": 25205,
+      "lzma_parity": 25005
+    },
+    {
+      "record": "07131_hr",
+      "flac": 30140,
+      "marginal": 29014,
+      "marginal_parity": 29084,
+      "joint": 28957,
+      "joint_parity": 28885,
+      "lzma": 29047,
+      "lzma_parity": 28955
+    },
+    {
+      "record": "02599_hr",
+      "flac": 31539,
+      "marginal": 30350,
+      "marginal_parity": 30356,
+      "joint": 30273,
+      "joint_parity": 30114,
+      "lzma": 30366,
+      "lzma_parity": 30218
+    },
+    {
+      "record": "02710_hr",
+      "flac": 30528,
+      "marginal": 29413,
+      "marginal_parity": 29455,
+      "joint": 29347,
+      "joint_parity": 29252,
+      "lzma": 29469,
+      "lzma_parity": 29337
+    },
+    {
+      "record": "14866_hr",
+      "flac": 27294,
+      "marginal": 26151,
+      "marginal_parity": 26153,
+      "joint": 26079,
+      "joint_parity": 25948,
+      "lzma": 26157,
+      "lzma_parity": 26001
+    },
+    {
+      "record": "13155_hr",
+      "flac": 31558,
+      "marginal": 30469,
+      "marginal_parity": 30491,
+      "joint": 30392,
+      "joint_parity": 30262,
+      "lzma": 30546,
+      "lzma_parity": 30434
+    },
+    {
+      "record": "02178_hr",
+      "flac": 23781,
+      "marginal": 22448,
+      "marginal_parity": 22504,
+      "joint": 22368,
+      "joint_parity": 22286,
+      "lzma": 22202,
+      "lzma_parity": 22106
+    },
+    {
+      "record": "18002_hr",
+      "flac": 29086,
+      "marginal": 27903,
+      "marginal_parity": 27961,
+      "joint": 27840,
+      "joint_parity": 27764,
+      "lzma": 27955,
+      "lzma_parity": 27879
+    },
+    {
+      "record": "09158_hr",
+      "flac": 35551,
+      "marginal": 34452,
+      "marginal_parity": 34488,
+      "joint": 34356,
+      "joint_parity": 34249,
+      "lzma": 34498,
+      "lzma_parity": 34358
+    },
+    {
+      "record": "17925_hr",
+      "flac": 26388,
+      "marginal": 25150,
+      "marginal_parity": 25168,
+      "joint": 25077,
+      "joint_parity": 24918,
+      "lzma": 25087,
+      "lzma_parity": 24931
+    },
+    {
+      "record": "04397_hr",
+      "flac": 23402,
+      "marginal": 22137,
+      "marginal_parity": 22093,
+      "joint": 22074,
+      "joint_parity": 21850,
+      "lzma": 21998,
+      "lzma_parity": 21742
+    },
+    {
+      "record": "04388_hr",
+      "flac": 21535,
+      "marginal": 20177,
+      "marginal_parity": 20179,
+      "joint": 20090,
+      "joint_parity": 19896,
+      "lzma": 19916,
+      "lzma_parity": 19780
+    },
+    {
+      "record": "11109_hr",
+      "flac": 30529,
+      "marginal": 29262,
+      "marginal_parity": 29288,
+      "joint": 29186,
+      "joint_parity": 29082,
+      "lzma": 29266,
+      "lzma_parity": 29210
+    },
+    {
+      "record": "21029_hr",
+      "flac": 25486,
+      "marginal": 24350,
+      "marginal_parity": 24400,
+      "joint": 24253,
+      "joint_parity": 24159,
+      "lzma": 24358,
+      "lzma_parity": 24270
+    },
+    {
+      "record": "11028_hr",
+      "flac": 29968,
+      "marginal": 28876,
+      "marginal_parity": 28866,
+      "joint": 28811,
+      "joint_parity": 28642,
+      "lzma": 28916,
+      "lzma_parity": 28764
+    },
+    {
+      "record": "13795_hr",
+      "flac": 21897,
+      "marginal": 20711,
+      "marginal_parity": 20655,
+      "joint": 20578,
+      "joint_parity": 20275,
+      "lzma": 20308,
+      "lzma_parity": 20076
+    },
+    {
+      "record": "12904_hr",
+      "flac": 30652,
+      "marginal": 29516,
+      "marginal_parity": 29528,
+      "joint": 29436,
+      "joint_parity": 29307,
+      "lzma": 29504,
+      "lzma_parity": 29384
+    },
+    {
+      "record": "13571_hr",
+      "flac": 25683,
+      "marginal": 24543,
+      "marginal_parity": 24577,
+      "joint": 24486,
+      "joint_parity": 24397,
+      "lzma": 24634,
+      "lzma_parity": 24554
+    },
+    {
+      "record": "06176_hr",
+      "flac": 21856,
+      "marginal": 20543,
+      "marginal_parity": 20575,
+      "joint": 20493,
+      "joint_parity": 20335,
+      "lzma": 20361,
+      "lzma_parity": 20165
+    }
+  ]
+}
