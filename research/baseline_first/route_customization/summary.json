@@ -1,0 +1,236 @@
+{
+  "snapshots": [
+    {
+      "date": "2026-11-12T21:23:05Z",
+      "source": "dated_pbf",
+      "sequence": 4966,
+      "sha256": "c10f645189f68c6134daf49facbda104f34f99d2525daff1596157c74a02b834",
+      "nodes": 1270,
+      "arcs": 2173,
+      "restrictions": 49,
+      "digests": {
+        "first": "411bacd03b8f508e62a25d34c3e08dc238f000060ec9da9a6750173eab2d5451",
+        "head": "3a243292b410300088bef4f7f0ee5f11ef75c2e33e213f207014212c6458aa82",
+        "to": "4824ea5a1d73d8ae7faa189a2340b828525638375448de736fdc641f21c8992b",
+        "from": "9b17bbed95f7be1b8e94cd73e4481635b9b4b4c498b5aa07620394b14d65c472",
+        "time": "e4efbe3bb509c0f2d1f841c11633bab758146280fcdb3c81ff38844b91fb9966",
+        "lat": "d414a0177c4c90c3133fff588da39a53a2e2591aeb3b99546b908e042a662eb9",
+        "lon": "173a3cfea50dac3a0cd9e43a71b90c0d8b80587864f1f6b33855597f0ac0ebca"
+      }
+    },
+    {
+      "date": "2026-11-13T21:22:20Z",
+      "source": "dated_pbf",
+      "sequence": 4967,
+      "sha256": "844bf1b8ae2729a70a943b82c5c8f8327915a1087968e06dfbc671b8799c5589",
+      "nodes": 1270,
+      "arcs": 2173,
+      "restrictions": 49,
+      "digests": {
+        "first": "411bacd03b8f508e62a25d34c3e08dc238f000060ec9da9a6750173eab2d5451",
+        "head": "3a243292b410300088bef4f7f0ee5f11ef75c2e33e213f207014212c6458aa82",
+        "to": "4824ea5a1d73d8ae7faa189a2340b828525638375448de736fdc641f21c8992b",
+        "from": "9b17bbed95f7be1b8e94cd73e4481635b9b4b4c498b5aa07620394b14d65c472",
+        "time": "e4efbe3bb509c0f2d1f841c11633bab758146280fcdb3c81ff38844b91fb9966",
+        "lat": "d414a0177c4c90c3133fff588da39a53a2e2591aeb3b99546b908e042a662eb9",
+        "lon": "173a3cfea50dac3a0cd9e43a71b90c0d8b80587864f1f6b33855597f0ac0ebca"
+      }
+    },
+    {
+      "date": "2026-11-14T21:20:41Z",
+      "source": "dated_pbf",
+      "sequence": 4968,
+      "sha256": "1c1b0fe2f741b80f5e070623a9eb8682edb69a6efb8cf922d5a9b5c2135edcc4",
+      "nodes": 1270,
+      "arcs": 2173,
+      "restrictions": 49,
+      "digests": {
+        "first": "411bacd03b8f508e62a25d34c3e08dc238f000060ec9da9a6750173eab2d5451",
+        "head": "3a243292b410300088bef4f7f0ee5f11ef75c2e33e213f207014212c6458aa82",
+        "to": "4824ea5a1d73d8ae7faa189a2340b828525638375448de736fdc641f21c8992b",
+        "from": "9b17bbed95f7be1b8e94cd73e4481635b9b4b4c498b5aa07620394b14d65c472",
+        "time": "e4efbe3bb509c0f2d1f841c11633bab758146280fcdb3c81ff38844b91fb9966",
+        "lat": "d414a0177c4c90c3133fff588da39a53a2e2591aeb3b99546b908e042a662eb9",
+        "lon": "173a3cfea50dac3a0cd9e43a71b90c0d8b80587864f1f6b33855597f0ac0ebca"
+      }
+    },
+    {
+      "date": "2026-11-15T21:22:28Z",
+      "source": "replayed_diff",
+      "sequence": 4969,
+      "sha256": "d35d64fde04dc83062910bb858ccb4750e223694b85def924a200b4246621d36",
+      "nodes": 1270,
+      "arcs": 2173,
+      "restrictions": 49,
+      "digests": {
+        "first": "411bacd03b8f508e62a25d34c3e08dc238f000060ec9da9a6750173eab2d5451",
+        "head": "3a243292b410300088bef4f7f0ee5f11ef75c2e33e213f207014212c6458aa82",
+        "to": "4824ea5a1d73d8ae7faa189a2340b828525638375448de736fdc641f21c8992b",
+        "from": "9b17bbed95f7be1b8e94cd73e4481635b9b4b4c498b5aa07620394b14d65c472",
+        "time": "e4efbe3bb509c0f2d1f841c11633bab758146280fcdb3c81ff38844b91fb9966",
+        "lat": "d414a0177c4c90c3133fff588da39a53a2e2591aeb3b99546b908e042a662eb9",
+        "lon": "173a3cfea50dac3a0cd9e43a71b90c0d8b80587864f1f6b33855597f0ac0ebca"
+      }
+    },
+    {
+      "date": "2026-11-16T21:22:36Z",
+      "source": "dated_pbf",
+      "sequence": 4970,
+      "sha256": "5dea424d434520fa34ea2b0376f99279e93167594e5bb8ac8b5ffe606c213ec9",
+      "nodes": 1270,
+      "arcs": 2173,
+      "restrictions": 49,
+      "digests": {
+        "first": "411bacd03b8f508e62a25d34c3e08dc238f000060ec9da9a6750173eab2d5451",
+        "head": "3a243292b410300088bef4f7f0ee5f11ef75c2e33e213f207014212c6458aa82",
+        "to": "4824ea5a1d73d8ae7faa189a2340b828525638375448de736fdc641f21c8992b",
+        "from": "9b17bbed95f7be1b8e94cd73e4481635b9b4b4c498b5aa07620394b14d65c472",
+        "time": "e4efbe3bb509c0f2d1f841c11633bab758146280fcdb3c81ff38844b91fb9966",
+        "lat": "d414a0177c4c90c3133fff588da39a53a2e2591aeb3b99546b908e042a662eb9",
+        "lon": "173a3cfea50dac3a0cd9e43a71b90c0d8b80587864f1f6b33855597f0ac0ebca"
+      }
+    },
+    {
+      "date": "2026-11-17T21:24:30Z",
+      "source": "dated_pbf",
+      "sequence": 4971,
+      "sha256": "c7eaa1448cac9ff5293ccebec2f26719d42b157c4a17b8e476aacaf31ddecdba",
+      "nodes": 1270,
+      "arcs": 2173,
+      "restrictions": 49,
+      "digests": {
+        "first": "411bacd03b8f508e62a25d34c3e08dc238f000060ec9da9a6750173eab2d5451",
+        "head": "3a243292b410300088bef4f7f0ee5f11ef75c2e33e213f207014212c6458aa82",
+        "to": "4824ea5a1d73d8ae7faa189a2340b828525638375448de736fdc641f21c8992b",
+        "from": "9b17bbed95f7be1b8e94cd73e4481635b9b4b4c498b5aa07620394b14d65c472",
+        "time": "e4efbe3bb509c0f2d1f841c11633bab758146280fcdb3c81ff38844b91fb9966",
+        "lat": "d414a0177c4c90c3133fff588da39a53a2e2591aeb3b99546b908e042a662eb9",
+        "lon": "173a3cfea50dac3a0cd9e43a71b90c0d8b80587864f1f6b33855597f0ac0ebca"
+      }
+    },
+    {
+      "date": "2026-11-18T21:21:02Z",
+      "source": "dated_pbf",
+      "sequence": 4972,
+      "sha256": "c77bb28caf2fe4f3d6b0727fc1a30574a1017e5182ee82d4a292b1aebf819e42",
+      "nodes": 1270,
+      "arcs": 2173,
+      "restrictions": 49,
+      "digests": {
+        "first": "411bacd03b8f508e62a25d34c3e08dc238f000060ec9da9a6750173eab2d5451",
+        "head": "3a243292b410300088bef4f7f0ee5f11ef75c2e33e213f207014212c6458aa82",
+        "to": "4824ea5a1d73d8ae7faa189a2340b828525638375448de736fdc641f21c8992b",
+        "from": "9b17bbed95f7be1b8e94cd73e4481635b9b4b4c498b5aa07620394b14d65c472",
+        "time": "e4efbe3bb509c0f2d1f841c11633bab758146280fcdb3c81ff38844b91fb9966",
+        "lat": "d414a0177c4c90c3133fff588da39a53a2e2591aeb3b99546b908e042a662eb9",
+        "lon": "173a3cfea50dac3a0cd9e43a71b90c0d8b80587864f1f6b33855597f0ac0ebca"
+      }
+    },
+    {
+      "date": "2026-11-19T21:22:20Z",
+      "source": "dated_pbf",
+      "sequence": 4973,
+      "sha256": "65cf5f41547f30bf8adb1f004f0bb5b769237642d76fa0db687de540d1bcb8da",
+      "nodes": 1270,
+      "arcs": 2173,
+      "restrictions": 49,
+      "digests": {
+        "first": "411bacd03b8f508e62a25d34c3e08dc238f000060ec9da9a6750173eab2d5451",
+        "head": "3a243292b410300088bef4f7f0ee5f11ef75c2e33e213f207014212c6458aa82",
+        "to": "4824ea5a1d73d8ae7faa189a2340b828525638375448de736fdc641f21c8992b",
+        "from": "9b17bbed95f7be1b8e94cd73e4481635b9b4b4c498b5aa07620394b14d65c472",
+        "time": "e4efbe3bb509c0f2d1f841c11633bab758146280fcdb3c81ff38844b91fb9966",
+        "lat": "d414a0177c4c90c3133fff588da39a53a2e2591aeb3b99546b908e042a662eb9",
+        "lon": "173a3cfea50dac3a0cd9e43a71b90c0d8b80587864f1f6b33855597f0ac0ebca"
+      }
+    },
+    {
+      "date": "2026-11-20T21:21:21Z",
+      "source": "dated_pbf",
+      "sequence": 4974,
+      "sha256": "0138f33c14c8e2116ff77277682e26cda9502199905a73a1876f905b8c0a27d1",
+      "nodes": 1270,
+      "arcs": 2173,
+      "restrictions": 49,
+      "digests": {
+        "first": "411bacd03b8f508e62a25d34c3e08dc238f000060ec9da9a6750173eab2d5451",
+        "head": "3a243292b410300088bef4f7f0ee5f11ef75c2e33e213f207014212c6458aa82",
+        "to": "4824ea5a1d73d8ae7faa189a2340b828525638375448de736fdc641f21c8992b",
+        "from": "9b17bbed95f7be1b8e94cd73e4481635b9b4b4c498b5aa07620394b14d65c472",
+        "time": "e4efbe3bb509c0f2d1f841c11633bab758146280fcdb3c81ff38844b91fb9966",
+        "lat": "d414a0177c4c90c3133fff588da39a53a2e2591aeb3b99546b908e042a662eb9",
+        "lon": "173a3cfea50dac3a0cd9e43a71b90c0d8b80587864f1f6b33855597f0ac0ebca"
+      }
+    }
+  ],
+  "batches": [
+    {
+      "sequence": 4967,
+      "diff_sha256": "caa3fd8f81c1bfe9fe31a665259010b0b2d7aa16e8ac8e7cbad3fcbe59d578b8",
+      "edits": {
+        "modify_node": 4,
+        "modify_relation": 1
+      },
+      "changed_vectors": []
+    },
+    {
+      "sequence": 4968,
+      "diff_sha256": "c57e8440a8ad34bd6f194bdfc6fa6367e6d1e33ea81b6e818f4ef0603ba6e745",
+      "edits": {
+        "modify_node": 1,
+        "create_node": 4,
+        "modify_way": 3,
+        "modify_relation": 3
+      },
+      "changed_vectors": []
+    },
+    {
+      "sequence": 4969,
+      "diff_sha256": "b4abcf1acfffd3b08fcfb831798f4ff80ce3e4a702576715514f68b98baefe23",
+      "edits": {
+        "modify_node": 1,
+        "modify_relation": 2
+      },
+      "changed_vectors": []
+    },
+    {
+      "sequence": 4970,
+      "diff_sha256": "8658466f48068bc44fec33cb64f32255ff7e3fcf0469c1fa4d1e6b82e7ff570c",
+      "edits": {},
+      "changed_vectors": []
+    },
+    {
+      "sequence": 4971,
+      "diff_sha256": "8658466f48068bc44fec33cb64f32255ff7e3fcf0469c1fa4d1e6b82e7ff570c",
+      "edits": {},
+      "changed_vectors": []
+    },
+    {
+      "sequence": 4972,
+      "diff_sha256": "d28d80f0918590b40bd1982dfa5d073730fdc88f3bdfbf696759092c346a1dfd",
+      "edits": {
+        "modify_relation": 3
+      },
+      "changed_vectors": []
+    },
+    {
+      "sequence": 4973,
+      "diff_sha256": "bd89da042a1a4f69b9963397225951d2deb4789eb606018e62843494c68ca09d",
+      "edits": {
+        "modify_relation": 2
+      },
+      "changed_vectors": []
+    },
+    {
+      "sequence": 4974,
+      "diff_sha256": "514c079337f1e7f0384cbd06a6336fce7c410dc09c8c35c01bcc7fdca447e7fd",
+      "edits": {
+        "modify_node": 3,
+        "create_node": 1,
+        "modify_way": 6,
+        "modify_relation": 4
+      },
+      "changed_vectors": []
+    }
+  ]
+}
