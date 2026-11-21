@@ -1,0 +1,284 @@
+{
+  "upstream": "e852981ae34990f4358979625854259302feaa78",
+  "file": "train/dialogues_001.json",
+  "training_sha256": "5ce28a6e656bc88c1da29c983d243d5a81eb37de92698da3864d1cf02894ca24",
+  "shape_sha256": "06c4f921c0381c85e393d7a7d5c7ba85e235f99def3156e062112e823258f9f5",
+  "dialogues": 128,
+  "user_turns": 1233,
+  "versions": 1155,
+  "implementation": "e800f6bd866a40690589422b13b38cea3354ffaa",
+  "platform": "Linux-6.17.0-20-generic-x86_64-with-glibc2.39",
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "runs": {
+    "round-1-B1.json.gz": {
+      "sha256": "178771457732befbb6decaaf46550ee258a440a8c29a7a2db23ef2460d816712",
+      "metrics": {
+        "post_revocation_scheduled": 3837,
+        "post_revocation_cancelled": 646,
+        "post_revocation_authorized_bytes_requested": 102112,
+        "post_revocation_authorized_bytes_delivered": 102112,
+        "scheduled": 5177,
+        "received": 4531,
+        "cancelled": 646,
+        "reconciled_by_path": {
+          "state": 5177
+        },
+        "post_revocation_subjects": 128,
+        "leaking_post_revocation_subjects": 0,
+        "post_revocation_disclosure_rate": 0.0,
+        "post_revocation_forbidden_bytes": 0,
+        "all_forbidden_bytes": 0,
+        "requested_authorized_bytes": 144992,
+        "delivered_authorized_bytes": 144992,
+        "authorized_coverage": 1.0,
+        "exact_projections": 5177,
+        "hits": 3073,
+        "post_revocation_hits": 2230,
+        "authorized_reads": 4531,
+        "builds": 1458,
+        "p95_send_ns": 1764,
+        "process_wall_ns": 111608361
+      }
+    },
+    "round-1-B2.json.gz": {
+      "sha256": "b73b1e6f9b7b7ab044bbcac1684d71058b1128d3e9c8d99e53df94ff9284b140",
+      "metrics": {
+        "post_revocation_scheduled": 3837,
+        "post_revocation_cancelled": 646,
+        "post_revocation_authorized_bytes_requested": 102112,
+        "post_revocation_authorized_bytes_delivered": 102112,
+        "scheduled": 5177,
+        "received": 4531,
+        "cancelled": 646,
+        "reconciled_by_path": {
+          "state": 5177
+        },
+        "post_revocation_subjects": 128,
+        "leaking_post_revocation_subjects": 0,
+        "post_revocation_disclosure_rate": 0.0,
+        "post_revocation_forbidden_bytes": 0,
+        "all_forbidden_bytes": 0,
+        "requested_authorized_bytes": 144992,
+        "delivered_authorized_bytes": 144992,
+        "authorized_coverage": 1.0,
+        "exact_projections": 5177,
+        "hits": 0,
+        "post_revocation_hits": 0,
+        "authorized_reads": 4531,
+        "builds": 4531,
+        "p95_send_ns": 1657,
+        "process_wall_ns": 105713853
+      }
+    },
+    "round-1-B4.json.gz": {
+      "sha256": "bd3afeaec7de4736bf33b9488b8df42e731335fe51d7e314d91d4991c518637e",
+      "metrics": {
+        "post_revocation_scheduled": 3837,
+        "post_revocation_cancelled": 646,
+        "post_revocation_authorized_bytes_requested": 102112,
+        "post_revocation_authorized_bytes_delivered": 102112,
+        "scheduled": 5177,
+        "received": 4531,
+        "cancelled": 646,
+        "reconciled_by_path": {
+          "state": 5177
+        },
+        "post_revocation_subjects": 128,
+        "leaking_post_revocation_subjects": 0,
+        "post_revocation_disclosure_rate": 0.0,
+        "post_revocation_forbidden_bytes": 0,
+        "all_forbidden_bytes": 0,
+        "requested_authorized_bytes": 144992,
+        "delivered_authorized_bytes": 144992,
+        "authorized_coverage": 1.0,
+        "exact_projections": 5177,
+        "hits": 3378,
+        "post_revocation_hits": 2535,
+        "authorized_reads": 4531,
+        "builds": 1153,
+        "p95_send_ns": 26386,
+        "process_wall_ns": 159945099
+      }
+    },
+    "round-2-B2.json.gz": {
+      "sha256": "2b116479ea24cc0873a5e8706b1ae99e96e677a77c150183da41a98c8dc51530",
+      "metrics": {
+        "post_revocation_scheduled": 3837,
+        "post_revocation_cancelled": 646,
+        "post_revocation_authorized_bytes_requested": 102112,
+        "post_revocation_authorized_bytes_delivered": 102112,
+        "scheduled": 5177,
+        "received": 4531,
+        "cancelled": 646,
+        "reconciled_by_path": {
+          "state": 5177
+        },
+        "post_revocation_subjects": 128,
+        "leaking_post_revocation_subjects": 0,
+        "post_revocation_disclosure_rate": 0.0,
+        "post_revocation_forbidden_bytes": 0,
+        "all_forbidden_bytes": 0,
+        "requested_authorized_bytes": 144992,
+        "delivered_authorized_bytes": 144992,
+        "authorized_coverage": 1.0,
+        "exact_projections": 5177,
+        "hits": 0,
+        "post_revocation_hits": 0,
+        "authorized_reads": 4531,
+        "builds": 4531,
+        "p95_send_ns": 1680,
+        "process_wall_ns": 108997513
+      }
+    },
+    "round-2-B4.json.gz": {
+      "sha256": "af4eef7b8b1c21f147d3b55b334bfef75bcdc83a513a08e2daa405ff48876be6",
+      "metrics": {
+        "post_revocation_scheduled": 3837,
+        "post_revocation_cancelled": 646,
+        "post_revocation_authorized_bytes_requested": 102112,
+        "post_revocation_authorized_bytes_delivered": 102112,
+        "scheduled": 5177,
+        "received": 4531,
+        "cancelled": 646,
+        "reconciled_by_path": {
+          "state": 5177
+        },
+        "post_revocation_subjects": 128,
+        "leaking_post_revocation_subjects": 0,
+        "post_revocation_disclosure_rate": 0.0,
+        "post_revocation_forbidden_bytes": 0,
+        "all_forbidden_bytes": 0,
+        "requested_authorized_bytes": 144992,
+        "delivered_authorized_bytes": 144992,
+        "authorized_coverage": 1.0,
+        "exact_projections": 5177,
+        "hits": 3378,
+        "post_revocation_hits": 2535,
+        "authorized_reads": 4531,
+        "builds": 1153,
+        "p95_send_ns": 25337,
+        "process_wall_ns": 157925930
+      }
+    },
+    "round-2-B1.json.gz": {
+      "sha256": "fcd6e4a52ee4def2dcfa768d2a3672f34c256cea176a6b03c6c557030d2f9213",
+      "metrics": {
+        "post_revocation_scheduled": 3837,
+        "post_revocation_cancelled": 646,
+        "post_revocation_authorized_bytes_requested": 102112,
+        "post_revocation_authorized_bytes_delivered": 102112,
+        "scheduled": 5177,
+        "received": 4531,
+        "cancelled": 646,
+        "reconciled_by_path": {
+          "state": 5177
+        },
+        "post_revocation_subjects": 128,
+        "leaking_post_revocation_subjects": 0,
+        "post_revocation_disclosure_rate": 0.0,
+        "post_revocation_forbidden_bytes": 0,
+        "all_forbidden_bytes": 0,
+        "requested_authorized_bytes": 144992,
+        "delivered_authorized_bytes": 144992,
+        "authorized_coverage": 1.0,
+        "exact_projections": 5177,
+        "hits": 3073,
+        "post_revocation_hits": 2230,
+        "authorized_reads": 4531,
+        "builds": 1458,
+        "p95_send_ns": 1921,
+        "process_wall_ns": 104812148
+      }
+    },
+    "round-3-B4.json.gz": {
+      "sha256": "80259df6f00c20fdb6052adb57f7fc33e3e3c7e60ab7a6f5019aba6b307ac772",
+      "metrics": {
+        "post_revocation_scheduled": 3837,
+        "post_revocation_cancelled": 646,
+        "post_revocation_authorized_bytes_requested": 102112,
+        "post_revocation_authorized_bytes_delivered": 102112,
+        "scheduled": 5177,
+        "received": 4531,
+        "cancelled": 646,
+        "reconciled_by_path": {
+          "state": 5177
+        },
+        "post_revocation_subjects": 128,
+        "leaking_post_revocation_subjects": 0,
+        "post_revocation_disclosure_rate": 0.0,
+        "post_revocation_forbidden_bytes": 0,
+        "all_forbidden_bytes": 0,
+        "requested_authorized_bytes": 144992,
+        "delivered_authorized_bytes": 144992,
+        "authorized_coverage": 1.0,
+        "exact_projections": 5177,
+        "hits": 3378,
+        "post_revocation_hits": 2535,
+        "authorized_reads": 4531,
+        "builds": 1153,
+        "p95_send_ns": 25547,
+        "process_wall_ns": 160849939
+      }
+    },
+    "round-3-B1.json.gz": {
+      "sha256": "8bed925b0bf0b0fa807d14cc1008375eec72adb64495e6a3a7d58e6ff2cf787b",
+      "metrics": {
+        "post_revocation_scheduled": 3837,
+        "post_revocation_cancelled": 646,
+        "post_revocation_authorized_bytes_requested": 102112,
+        "post_revocation_authorized_bytes_delivered": 102112,
+        "scheduled": 5177,
+        "received": 4531,
+        "cancelled": 646,
+        "reconciled_by_path": {
+          "state": 5177
+        },
+        "post_revocation_subjects": 128,
+        "leaking_post_revocation_subjects": 0,
+        "post_revocation_disclosure_rate": 0.0,
+        "post_revocation_forbidden_bytes": 0,
+        "all_forbidden_bytes": 0,
+        "requested_authorized_bytes": 144992,
+        "delivered_authorized_bytes": 144992,
+        "authorized_coverage": 1.0,
+        "exact_projections": 5177,
+        "hits": 3073,
+        "post_revocation_hits": 2230,
+        "authorized_reads": 4531,
+        "builds": 1458,
+        "p95_send_ns": 1822,
+        "process_wall_ns": 110907939
+      }
+    },
+    "round-3-B2.json.gz": {
+      "sha256": "493955c346a476a817de506f6e5bf255b53509514b57fec3a6bf725d1eaf3785",
+      "metrics": {
+        "post_revocation_scheduled": 3837,
+        "post_revocation_cancelled": 646,
+        "post_revocation_authorized_bytes_requested": 102112,
+        "post_revocation_authorized_bytes_delivered": 102112,
+        "scheduled": 5177,
+        "received": 4531,
+        "cancelled": 646,
+        "reconciled_by_path": {
+          "state": 5177
+        },
+        "post_revocation_subjects": 128,
+        "leaking_post_revocation_subjects": 0,
+        "post_revocation_disclosure_rate": 0.0,
+        "post_revocation_forbidden_bytes": 0,
+        "all_forbidden_bytes": 0,
+        "requested_authorized_bytes": 144992,
+        "delivered_authorized_bytes": 144992,
+        "authorized_coverage": 1.0,
+        "exact_projections": 5177,
+        "hits": 0,
+        "post_revocation_hits": 0,
+        "authorized_reads": 4531,
+        "builds": 4531,
+        "p95_send_ns": 1623,
+        "process_wall_ns": 103820946
+      }
+    }
+  }
+}
