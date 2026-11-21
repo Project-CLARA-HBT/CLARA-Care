@@ -13,10 +13,12 @@ Each cell is the equal-pair mean of exact-link F1. The seven Magellan pairs cont
 
 Koutras, Siachamis, Ionescu, Psarakis, Brons, Fragkoulis, Lofi, Bonifati and Katsifodimos published the original Valentine benchmark tables and mappings under CC BY 4.0. The paired artifact reproduces column-link labels and adds predictions. It contains no cell values. [Original deposit and license](https://doi.org/10.5281/zenodo.5084605)
 
-Use Python 3.12.3, the package versions in the paired JSON and the pinned matcher implementation. Download the benchmark ZIP from the deposit, preserving its bytes. From the repository root:
+A second execution reproduced both JSON artifacts byte for byte. All 81 table-pair gold links were cross-checked against the archive.
+
+Use Python 3.12.3, the package versions in the paired JSON and the released Valentine 1.0.0 package used in the run. Download the benchmark ZIP from the deposit, preserving its bytes. From the repository root:
 
 ```sh
-python -m pip install 'valentine @ git+https://github.com/delftdata/valentine@f6f801971b674a520a07094c184582b7a77d48c5' 'pandas==3.1.1' 'numpy==2.5.5' 'nltk==3.10.4' 'rapidfuzz==3.14.6'
+python -m pip install 'valentine==1.0.0' 'pandas==3.1.1' 'numpy==2.5.5' 'nltk==3.10.4' 'rapidfuzz==3.14.6'
 python -m nltk.downloader punkt_tab omw-1.4 stopwords wordnet
 study=research/schema_anchor
 python "$study/run.py" /path/to/Valentine-datasets.zip /tmp/schema-paired.json
