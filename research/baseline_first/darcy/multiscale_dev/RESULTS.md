@@ -1,0 +1,3 @@
+# Observed-pressure prolongation, 16 to 32
+
+Mean missing-cell relative L2 over 128 independent development indices was 0.070231 for bilinear, 0.067771 for bicubic, 0.069819 for matched pressure-only regression and 0.067422 for coefficient modulation. Coefficient modulation beat bicubic on 83 of 128 fields. The mean advantage over bicubic was small (0.52% relative). This measures interpolation given observed pressure and does not establish PDE solver accuracy. Both restriction checks and exact reproduction at observed coordinates passed. See fields.csv for paired metrics. Reproduce with python study.py after extracting the named training members into /tmp.
