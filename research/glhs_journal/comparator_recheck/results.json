@@ -1,0 +1,109 @@
+{
+  "source_revision": "9006ac5c5379ead2620e47bc2c924ab4f7d45373",
+  "seal_sha256": "2a8d8fdf55c3cc162d4d8df63e5aa5970dcfc3e8efb0da31fddf91181bbab1cd",
+  "sealed_files_checked": 10,
+  "rows": 2500,
+  "ids": 500,
+  "templates": 5,
+  "required_backend": "real_postgresql_16",
+  "observed_endpoint": "sqlite:///:memory:",
+  "by_template": {
+    "CLEAN_VALID": {
+      "ids": 100,
+      "valid": true,
+      "c4_only_correct": 0,
+      "c3_only_correct": 0,
+      "both_correct": 100,
+      "both_wrong": 0,
+      "c4_wall_time_lower": 0,
+      "c4_wall_time_equal": 0,
+      "c4_wall_time_higher": 100
+    },
+    "STALE_BASE_STATE": {
+      "ids": 100,
+      "valid": false,
+      "c4_only_correct": 0,
+      "c3_only_correct": 0,
+      "both_correct": 100,
+      "both_wrong": 0,
+      "c4_wall_time_lower": 0,
+      "c4_wall_time_equal": 0,
+      "c4_wall_time_higher": 100
+    },
+    "PROMPT_DISCLOSURE_SUBSTITUTION": {
+      "ids": 100,
+      "valid": false,
+      "c4_only_correct": 0,
+      "c3_only_correct": 0,
+      "both_correct": 100,
+      "both_wrong": 0,
+      "c4_wall_time_lower": 0,
+      "c4_wall_time_equal": 0,
+      "c4_wall_time_higher": 100
+    },
+    "UNDISCLOSED_EVIDENCE_INJECTION": {
+      "ids": 100,
+      "valid": false,
+      "c4_only_correct": 0,
+      "c3_only_correct": 0,
+      "both_correct": 100,
+      "both_wrong": 0,
+      "c4_wall_time_lower": 0,
+      "c4_wall_time_equal": 0,
+      "c4_wall_time_higher": 100
+    },
+    "CORRUPTED_TOKEN_SIGNATURE": {
+      "ids": 100,
+      "valid": false,
+      "c4_only_correct": 0,
+      "c3_only_correct": 0,
+      "both_correct": 100,
+      "both_wrong": 0,
+      "c4_wall_time_lower": 84,
+      "c4_wall_time_equal": 0,
+      "c4_wall_time_higher": 16
+    }
+  },
+  "by_arm": {
+    "C0": {
+      "false_admissions": 300,
+      "false_rejections": 0
+    },
+    "C1": {
+      "false_admissions": 300,
+      "false_rejections": 0
+    },
+    "C2": {
+      "false_admissions": 300,
+      "false_rejections": 0
+    },
+    "C3": {
+      "false_admissions": 0,
+      "false_rejections": 0
+    },
+    "C4": {
+      "false_admissions": 0,
+      "false_rejections": 0
+    }
+  },
+  "source_assigned_scores": {
+    "C0": 0,
+    "C1": 25,
+    "C2": 50,
+    "C3": 50,
+    "C4": 100
+  },
+  "available_raw_fields": [
+    "admitted",
+    "arm_id",
+    "arm_name",
+    "cpu_latency_us",
+    "execution_timestamp_utc",
+    "hash",
+    "is_valid_schedule",
+    "prev_hash",
+    "rejection_reason",
+    "schedule_id",
+    "schedule_type"
+  ]
+}
