@@ -359,3 +359,21 @@ def test_overwrite_moves_scope_and_parent_indexes_after_validation_only():
         cache.put("child", "v3", [("old", "care", 1)], ["new"])
     assert cache.get("child", "care", 1).status == "HIT"
     assert cache.revoke("new", "care", 1)["invalidated_keys"] == ["child", "new"]
+
+
+def test_read_receipt_after_replacing_single_label_with_multiple_scopes():
+    cache = RevocationCompleteCache()
+    cache.put("view", "v1", [("c", "care", 0)])
+    assert cache.get("view", "care", 0).covering_deps == (_dep("care", 0, "c"),)
+    cache.put("view", "v2", [["z", "care", 1], ["a", "care", 1], ["a", "research", 2]])
+    assert cache.get("view", "care", 1).covering_deps == (
+        _dep("care", 1, "a"),
+        _dep("care", 1, "z"),
+    )
+    assert cache.get("view", "care", 2).status == "EPOCH_STALE"
+    assert cache.get("view", "admin", 1).status == "PURPOSE_MISMATCH"
+    cache.revoke("z", "care", 1)
+    cache.revoke("a", "research", 2)
+    with pytest.raises(ValueError, match="subject='a', purpose='research'"):
+        cache.put("view", "v3", [("z", "care", 1), ("a", "research", 2)])
+    assert cache.get("view", "care", 1).status == "REVOKED_ENTRY"

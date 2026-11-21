@@ -163,27 +163,22 @@ class Dependency:
     @classmethod
     def from_input(cls, raw: Dependency | Mapping[str, Any] | Sequence[Any]) -> Dependency:
         """Normalize a Dependency, mapping, or ``(subject, purpose, epoch)`` triple."""
-        if isinstance(raw, Dependency):
+        if type(raw) in (tuple, list) and len(raw) == 3:
+            subject, purpose, epoch = raw
+        elif isinstance(raw, Dependency):
             return raw
-        if isinstance(raw, Mapping):
+        elif isinstance(raw, Mapping):
             subject = raw.get("subject")
             purpose = raw.get("purpose")
             epoch = raw.get("consent_epoch", raw.get("epoch"))
-            return cls(
-                subject=_checked_subject(subject),
-                purpose=_checked_purpose(purpose),
-                consent_epoch=_checked_epoch(epoch),
+        elif isinstance(raw, Sequence) and not isinstance(raw, str | bytes) and len(raw) == 3:
+            subject, purpose, epoch = raw[0], raw[1], raw[2]
+        else:
+            raise ValueError(
+                f"{REASON_DEPS_MALFORMED}: dependency must be a Dependency, mapping or "
+                f"(subject, purpose, consent_epoch) triple, got {type(raw).__name__}"
             )
-        if isinstance(raw, Sequence) and not isinstance(raw, str | bytes) and len(raw) == 3:
-            return cls(
-                subject=_checked_subject(raw[0]),
-                purpose=_checked_purpose(raw[1]),
-                consent_epoch=_checked_epoch(raw[2]),
-            )
-        raise ValueError(
-            f"{REASON_DEPS_MALFORMED}: dependency must be a Dependency, mapping or "
-            f"(subject, purpose, consent_epoch) triple, got {type(raw).__name__}"
-        )
+        return cls(_checked_subject(subject), _checked_purpose(purpose), _checked_epoch(epoch))
 
 
 @dataclasses.dataclass(frozen=True)
@@ -235,25 +230,25 @@ class CacheReadResult:
 
 
 def _checked_key(key: Any) -> str:
-    if isinstance(key, bool) or not isinstance(key, str) or not key:
+    if not isinstance(key, str) or not key:
         raise ValueError(f"{REASON_KEY_MALFORMED}: key must be a non-empty string")
     return key
 
 
 def _checked_value(value: Any) -> str:
-    if isinstance(value, bool) or not isinstance(value, str) or not value:
+    if not isinstance(value, str) or not value:
         raise ValueError(f"{REASON_VALUE_MALFORMED}: value must be a non-empty string")
     return value
 
 
 def _checked_subject(subject: Any) -> str:
-    if isinstance(subject, bool) or not isinstance(subject, str) or not subject:
+    if not isinstance(subject, str) or not subject:
         raise ValueError(f"{REASON_SUBJECT_MALFORMED}: subject must be a non-empty string")
     return subject
 
 
 def _checked_purpose(purpose: Any) -> str:
-    if isinstance(purpose, bool) or not isinstance(purpose, str) or not purpose:
+    if not isinstance(purpose, str) or not purpose:
         raise ValueError(f"{REASON_PURPOSE_MALFORMED}: purpose must be a non-empty string")
     return purpose
 
@@ -269,7 +264,7 @@ def _checked_deps(deps: Any) -> frozenset[Dependency]:
         raise ValueError(
             f"{REASON_DEPS_MALFORMED}: deps must be a non-empty collection of dependencies"
         )
-    parsed = frozenset(Dependency.from_input(d) for d in deps)
+    parsed = frozenset(map(Dependency.from_input, deps))
     if not parsed:
         raise ValueError(
             f"{REASON_DEPS_MALFORMED}: every cache entry must carry at least one "
@@ -325,21 +320,18 @@ class RevocationCompleteCache:
         checked_key = _checked_key(key)
         checked_value = _checked_value(value)
         checked_deps = _checked_deps(deps)
-        parents = frozenset(_checked_key(p) for p in derived_from)
-        revoked = min(
-            (
-                (d.subject, d.purpose, d.consent_epoch)
-                for d in checked_deps
-                if (d.subject, d.purpose, d.consent_epoch) in self._revoked_scopes
-            ),
-            default=None,
-        )
-        if revoked is not None:
-            raise ValueError(
-                f"{REASON_REVOKED_DEPENDENCY}: refusing to cache {checked_key!r}: "
-                f"dependency (subject={revoked[0]!r}, purpose={revoked[1]!r}, "
-                f"consent_epoch={revoked[2]}) is revoked"
+        parents = frozenset(map(_checked_key, derived_from))
+        if self._revoked_scopes:
+            scopes = ((d.subject, d.purpose, d.consent_epoch) for d in checked_deps)
+            revoked = min(
+                (scope for scope in scopes if scope in self._revoked_scopes), default=None
             )
+            if revoked is not None:
+                raise ValueError(
+                    f"{REASON_REVOKED_DEPENDENCY}: refusing to cache {checked_key!r}: "
+                    f"dependency (subject={revoked[0]!r}, purpose={revoked[1]!r}, "
+                    f"consent_epoch={revoked[2]}) is revoked"
+                )
         for parent in sorted(parents):
             if parent == checked_key:
                 raise ValueError(
@@ -412,23 +404,20 @@ class RevocationCompleteCache:
                 served_from_revoked_ancestry=checked_key in self._closure_keys,
                 covering_deps=(),
             )
-        same_purpose = [d for d in entry.deps if d.purpose == checked_purpose]
-        if not same_purpose:
-            return CacheReadResult(
-                key=checked_key,
-                purpose=checked_purpose,
-                epoch=checked_epoch,
-                status=STATUS_PURPOSE_MISMATCH,
-                served_from_revoked_ancestry=False,
-                covering_deps=(),
-            )
-        covering = tuple(sorted(d for d in same_purpose if d.consent_epoch == checked_epoch))
+        if len(entry.deps) == 1:
+            dep = next(iter(entry.deps))
+            same_purpose = dep.purpose == checked_purpose
+            covering = (dep,) if same_purpose and dep.consent_epoch == checked_epoch else ()
+        else:
+            matching = [d for d in entry.deps if d.purpose == checked_purpose]
+            same_purpose = bool(matching)
+            covering = tuple(sorted(d for d in matching if d.consent_epoch == checked_epoch))
         if not covering:
             return CacheReadResult(
                 key=checked_key,
                 purpose=checked_purpose,
                 epoch=checked_epoch,
-                status=STATUS_EPOCH_STALE,
+                status=STATUS_EPOCH_STALE if same_purpose else STATUS_PURPOSE_MISMATCH,
                 served_from_revoked_ancestry=False,
                 covering_deps=(),
             )
