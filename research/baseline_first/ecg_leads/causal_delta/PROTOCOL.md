@@ -1,0 +1,9 @@
+# Dự báo sai phân chuyển đạo ngực từ kênh đã giải mã
+
+Phép thử development kế thừa nguyên danh sách và digest của 32 record PTB-XL ở summary.json. Mỗi arm giữ dự báo đại số cố định trên bốn chuyển đạo chi. Mục tiêu là giảm ít nhất 10% byte trên toàn bộ tập so với từng đối chứng, giải mã chính xác nguyên từng mẫu. Đối chiếu cả tổng byte của FLAC và Sprintz đã công bố trên cùng record. INCART dành cho kiểm định độc lập.
+
+Mỗi record có 12 stream FLAC đơn kênh, cùng mức nén, đóng khung độ dài 4 byte mỗi stream. Số kênh, thứ tự, phương pháp và tần số là quy ước cố định của từng codec. Tính cả khung và header FLAC. Trường hợp đối chứng dùng kích thước kế thừa nhỏ hơn, báo thêm so sánh theo kích thước kế thừa.
+
+Với V1–V6, thử sai phân thời gian nguyên (mẫu đầu trừ 0). Với mỗi block 250 mẫu sau block đầu, chọn một trong I, II và các chuyển đạo ngực đã giải mã phía trước. Dùng block ngay trước của kênh đích để fit một hệ số hồi quy qua gốc trên sai phân của từng nguồn, làm tròn về bội số 1/8 và chặn trong [-2,2]. Chọn nguồn có tổng bình phương phần dư nhỏ nhất. Cho phép dự báo 0. Không gửi hệ số. Nguồn kênh trước tại thời điểm hiện tại đã có ở decoder. Candidate chia các mẫu nguồn thành hai nhóm theo độ lớn sai phân vượt median tuyệt đối trên block trước, học riêng hệ số mỗi nhóm. Ablation dùng một hệ số. Baseline còn có FLAC chi cố định và chỉ sai phân ở ngực. Dùng cùng quy tắc làm tròn số nguyên và cùng bộ stream. Khôi phục tuần tự từ dữ liệu đã mã hóa, kiểm tra digest từng record và thống kê thắng/hòa/thua theo người. Báo mọi arm.
+
+Đóng góp đang kiểm định là liệu điều kiện theo biên độ có tiết kiệm byte ngoài một hồi quy nhân quả cùng nguồn. Dự báo tuyến tính đa chuyển đạo đã có prior. Đây là phép kiểm tra cơ chế có thể bác bỏ trước khi tìm đối chứng ECG chuyên dụng. [Rzepka và cộng sự](https://doi.org/10.1016/j.bspc.2019.101705)
