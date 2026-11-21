@@ -1,0 +1,1 @@
+Compare prescan, direct and cursor in rotating order over the existing 14 development days on WSL CPU 2. Use ten rounds and 32 passes per arm. Report each day’s median elapsed time and all direct-arm losses. Require bitwise agreement with the independent integer oracle and mixed edge cases. Keep holdout closed.
