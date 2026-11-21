@@ -268,7 +268,7 @@ def test_b0_pair_outcome_is_determined_admit_with_full_tx_records() -> None:
     assert outcome.counted_as_success is True
     detail = json.loads(outcome.detail)
     assert detail["committed"] + detail["aborted"] == detail["tx_count"] == N_WORKERS
-    assert detail["forbidden_commits"] == 0
+    assert detail["forbidden_commits"] is None  # independent adjudication is pending
 
 
 # ---------------------------------------------------------------------------

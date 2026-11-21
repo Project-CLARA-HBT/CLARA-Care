@@ -731,7 +731,11 @@ class _PostgresSsiExecutor:
         # in 9.1; the registry pins REL_16_9). Any non-PostgreSQL object
         # (SQLite, mocks, the in-memory store) is refused BEFORE execution —
         # never simulated, never substituted (execution contract rule 8).
-        server_version = str(getattr(self._conn, "server_version", "") or "")
+        version = getattr(self._conn, "server_version", None)
+        if version is None:
+            version = getattr(getattr(self._conn, "info", None), "server_version", None)
+        # psycopg and psycopg2 expose PostgreSQL's integer server_version_num.
+        server_version = f"{version // 10000}." if type(version) is int else str(version or "")
         if not server_version.startswith(("12.", "13.", "14.", "15.", "16.", "17.")):
             raise PostgresConnectionRequired(
                 "connection.server_version does not identify a PostgreSQL server "
@@ -806,7 +810,8 @@ def _aggregate(
         "tx_count": len(records),
         "committed": committed,
         "aborted": aborts,
-        "forbidden_commits": 0,
+        # The arm observes commits. Only independent adjudication can classify them.
+        "forbidden_commits": None if committed else 0,
         "final_versions": dict(sorted(store.current_version_map().items())) if store else {},
         "transactions": list(records),
     }
