@@ -1,0 +1,223 @@
+{
+  "candidate_8": {
+    "macro": 0.6093828565425633,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7692307692307693,
+        "cycles": 64,
+        "recall": 0.4185842696857252,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9444444444444444,
+        "cycles": 71,
+        "recall": 0.8001814433994013,
+        "zero_failure": 17
+      }
+    }
+  },
+  "ewma_0.2": {
+    "macro": 0.6234467316719516,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7884615384615384,
+        "cycles": 64,
+        "recall": 0.4502155396902503,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9259259259259259,
+        "cycles": 71,
+        "recall": 0.796677923653653,
+        "zero_failure": 17
+      }
+    }
+  },
+  "frequency_2": {
+    "macro": 0.49235783277059914,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7692307692307693,
+        "cycles": 64,
+        "recall": 0.46282637685372685,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.7962962962962963,
+        "cycles": 71,
+        "recall": 0.5218892886874714,
+        "zero_failure": 17
+      }
+    }
+  },
+  "greedy": {
+    "macro": 0.6056435410626965,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7884615384615384,
+        "cycles": 64,
+        "recall": 0.4552156946724895,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9074074074074074,
+        "cycles": 71,
+        "recall": 0.7560713874529035,
+        "zero_failure": 17
+      }
+    }
+  },
+  "latestfail": {
+    "macro": 0.5136912769909554,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6923076923076923,
+        "cycles": 64,
+        "recall": 0.3031630626623477,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.8703703703703703,
+        "cycles": 71,
+        "recall": 0.7242194913195631,
+        "zero_failure": 17
+      }
+    }
+  },
+  "latestfail_cost": {
+    "macro": 0.5665755941143931,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7692307692307693,
+        "cycles": 64,
+        "recall": 0.3849901351896843,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.8888888888888888,
+        "cycles": 71,
+        "recall": 0.7481610530391019,
+        "zero_failure": 17
+      }
+    }
+  },
+  "latesttrans": {
+    "macro": 0.2179706293808979,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6153846153846154,
+        "cycles": 64,
+        "recall": 0.18887734286119887,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.4444444444444444,
+        "cycles": 71,
+        "recall": 0.2470639159005969,
+        "zero_failure": 17
+      }
+    }
+  },
+  "latesttrans_cost": {
+    "macro": 0.3171354716747119,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.6730769230769231,
+        "cycles": 64,
+        "recall": 0.2558688598421275,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.6481481481481481,
+        "cycles": 71,
+        "recall": 0.3784020835072963,
+        "zero_failure": 17
+      }
+    }
+  },
+  "mostfail": {
+    "macro": 0.31803528408255805,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.75,
+        "cycles": 64,
+        "recall": 0.38166984220174066,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.42592592592592593,
+        "cycles": 71,
+        "recall": 0.25440072596337543,
+        "zero_failure": 17
+      }
+    }
+  },
+  "mostfail_cost": {
+    "macro": 0.3486450514422472,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7884615384615384,
+        "cycles": 64,
+        "recall": 0.4358446032754367,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.42592592592592593,
+        "cycles": 71,
+        "recall": 0.2614454996090577,
+        "zero_failure": 17
+      }
+    }
+  },
+  "shortest": {
+    "macro": 0.23602096810910528,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7115384615384616,
+        "cycles": 64,
+        "recall": 0.2809973612066341,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.4444444444444444,
+        "cycles": 71,
+        "recall": 0.19104457501157643,
+        "zero_failure": 17
+      }
+    }
+  },
+  "tree": {
+    "macro": 0.4950535871889321,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7692307692307693,
+        "cycles": 64,
+        "recall": 0.4316853887711193,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.6851851851851852,
+        "cycles": 71,
+        "recall": 0.5584217856067449,
+        "zero_failure": 17
+      }
+    }
+  },
+  "verdict_2": {
+    "macro": 0.6192073157449841,
+    "projects": {
+      "iofrol": {
+        "any_failure": 0.7692307692307693,
+        "cycles": 64,
+        "recall": 0.4205018679202223,
+        "zero_failure": 12
+      },
+      "paintcontrol": {
+        "any_failure": 0.9444444444444444,
+        "cycles": 71,
+        "recall": 0.8179127635697458,
+        "zero_failure": 17
+      }
+    }
+  }
+}
