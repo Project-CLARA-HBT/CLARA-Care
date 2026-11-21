@@ -1,0 +1,154 @@
+{
+  "prompts": 149,
+  "recordings": 361,
+  "ref_tokens": 10422,
+  "total_beam_errors": 4323,
+  "beam_exceptions": 0,
+  "greedy_exceptions": 0,
+  "methods": {
+    "hash_control": {
+      "accepted": 291,
+      "errors": 3372,
+      "reference_tokens": 8314,
+      "accepted_wer_pct": 40.558094779889345,
+      "deferred_audio_minutes": 14.947,
+      "fold_wer_pct": [
+        42.603550295857985,
+        43.30844342331993,
+        37.71471247199403,
+        42.55918827508455,
+        36.045197740113
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -1.446462922914086,
+        3.5514588744955686
+      ]
+    },
+    "confidence": {
+      "accepted": 291,
+      "errors": 3484,
+      "reference_tokens": 8854,
+      "accepted_wer_pct": 39.349446577817936,
+      "deferred_audio_minutes": 12.322999999999999,
+      "fold_wer_pct": [
+        39.41142527409117,
+        41.42550911039657,
+        37.77937995674117,
+        45.24435102469784,
+        32.72264631043257
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        0.7482983741759268,
+        3.0775071095330344
+      ]
+    },
+    "disagreement": {
+      "accepted": 291,
+      "errors": 3340,
+      "reference_tokens": 8687,
+      "accepted_wer_pct": 38.44825601473466,
+      "deferred_audio_minutes": 13.434999999999999,
+      "fold_wer_pct": [
+        39.58097395243488,
+        35.11904761904762,
+        38.51851851851852,
+        46.36563876651982,
+        33.036182485579445
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        0.4159382034178741,
+        5.562558510453856
+      ]
+    },
+    "confidence_ridge": {
+      "accepted": 291,
+      "errors": 3484,
+      "reference_tokens": 8854,
+      "accepted_wer_pct": 39.349446577817936,
+      "deferred_audio_minutes": 12.322999999999999,
+      "fold_wer_pct": [
+        39.41142527409117,
+        41.42550911039657,
+        37.77937995674117,
+        45.24435102469784,
+        32.72264631043257
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        0.7482983741759268,
+        3.0775071095330344
+      ]
+    },
+    "multifeature_wer": {
+      "accepted": 291,
+      "errors": 3276,
+      "reference_tokens": 8148,
+      "accepted_wer_pct": 40.20618556701031,
+      "deferred_audio_minutes": 16.098,
+      "fold_wer_pct": [
+        40.754039497307005,
+        42.65734265734266,
+        38.0292532717475,
+        44.81159420289855,
+        34.31203223949338
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        0.38708854703144374,
+        1.7834623935691232
+      ]
+    },
+    "error_count": {
+      "accepted": 291,
+      "errors": 2929,
+      "reference_tokens": 7371,
+      "accepted_wer_pct": 39.73680640347307,
+      "deferred_audio_minutes": 20.451000000000004,
+      "fold_wer_pct": [
+        39.6,
+        41.64490861618799,
+        40.53601340033501,
+        40.71702944942381,
+        36.44977890082122
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -0.8771044598384504,
+        4.626692242979366
+      ]
+    },
+    "predicted_ratio": {
+      "accepted": 291,
+      "errors": 3374,
+      "reference_tokens": 8269,
+      "accepted_wer_pct": 40.80299915346475,
+      "deferred_audio_minutes": 15.139999999999999,
+      "fold_wer_pct": [
+        41.244909831297264,
+        42.33409610983982,
+        38.06949806949807,
+        45.72531715388858,
+        35.596221959858326
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        -0.4073113959655103,
+        1.1299946955898323
+      ]
+    },
+    "fractional": {
+      "accepted": 291,
+      "errors": 3264,
+      "reference_tokens": 7917,
+      "accepted_wer_pct": 41.22773777946192,
+      "deferred_audio_minutes": 16.941,
+      "fold_wer_pct": [
+        40.78144078144078,
+        44.33676559660812,
+        39.14759273875296,
+        45.261918775750445,
+        36.040914560770155
+      ],
+      "fractional_minus_baseline_pp_interval": [
+        0.0,
+        0.0
+      ]
+    }
+  }
+}
