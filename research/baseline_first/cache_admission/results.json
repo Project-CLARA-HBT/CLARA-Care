@@ -1,0 +1,147 @@
+{
+  "cluster17": {
+    "cells": [
+      {
+        "capacity_objects": 256,
+        "common_previously_observed_misses": 34699,
+        "common_sieve_s3fifo_misses": 50896,
+        "first_in_prefix_misses": 16197,
+        "misses": {
+          "LRU": 63857,
+          "S3FIFO": 53458,
+          "Sieve": 53534
+        },
+        "previously_observed_misses": {
+          "LRU": 47660,
+          "S3FIFO": 37261,
+          "Sieve": 37337
+        },
+        "scored": 79731,
+        "warmup": 19937
+      },
+      {
+        "capacity_objects": 1024,
+        "common_previously_observed_misses": 20916,
+        "common_sieve_s3fifo_misses": 37113,
+        "first_in_prefix_misses": 16197,
+        "misses": {
+          "LRU": 48665,
+          "S3FIFO": 39593,
+          "Sieve": 41040
+        },
+        "previously_observed_misses": {
+          "LRU": 32468,
+          "S3FIFO": 23396,
+          "Sieve": 24843
+        },
+        "scored": 79731,
+        "warmup": 19937
+      },
+      {
+        "capacity_objects": 4096,
+        "common_previously_observed_misses": 8595,
+        "common_sieve_s3fifo_misses": 24792,
+        "first_in_prefix_misses": 16197,
+        "misses": {
+          "LRU": 31495,
+          "S3FIFO": 26444,
+          "Sieve": 27659
+        },
+        "previously_observed_misses": {
+          "LRU": 15298,
+          "S3FIFO": 10247,
+          "Sieve": 11462
+        },
+        "scored": 79731,
+        "warmup": 19937
+      }
+    ],
+    "compressed_slice_sha256": "289032f2a49e32b01e6e317221ccd605af58f88b9d7b2dc737de75010d59128f",
+    "distinct_read_keys": 24468,
+    "operations": {
+      "add": 96,
+      "cas": 87,
+      "get": 99567,
+      "gets": 101,
+      "set": 149
+    },
+    "raw_sha256": "d278aa37edbecf4ddac87529590c69e982a8ab99794b289955c97dee93afc2f6",
+    "timestamp_first_last": [
+      0,
+      138
+    ]
+  },
+  "cluster52": {
+    "cells": [
+      {
+        "capacity_objects": 256,
+        "common_previously_observed_misses": 25641,
+        "common_sieve_s3fifo_misses": 53749,
+        "first_in_prefix_misses": 28108,
+        "misses": {
+          "LRU": 56939,
+          "S3FIFO": 55974,
+          "Sieve": 56043
+        },
+        "previously_observed_misses": {
+          "LRU": 28831,
+          "S3FIFO": 27866,
+          "Sieve": 27935
+        },
+        "scored": 73773,
+        "warmup": 18463
+      },
+      {
+        "capacity_objects": 1024,
+        "common_previously_observed_misses": 16085,
+        "common_sieve_s3fifo_misses": 44193,
+        "first_in_prefix_misses": 28108,
+        "misses": {
+          "LRU": 46913,
+          "S3FIFO": 46232,
+          "Sieve": 47404
+        },
+        "previously_observed_misses": {
+          "LRU": 18805,
+          "S3FIFO": 18124,
+          "Sieve": 19296
+        },
+        "scored": 73773,
+        "warmup": 18463
+      },
+      {
+        "capacity_objects": 4096,
+        "common_previously_observed_misses": 7122,
+        "common_sieve_s3fifo_misses": 35230,
+        "first_in_prefix_misses": 28108,
+        "misses": {
+          "LRU": 37970,
+          "S3FIFO": 37111,
+          "Sieve": 38216
+        },
+        "previously_observed_misses": {
+          "LRU": 9862,
+          "S3FIFO": 9003,
+          "Sieve": 10108
+        },
+        "scored": 73773,
+        "warmup": 18463
+      }
+    ],
+    "compressed_slice_sha256": "fc292fda44c1474e9f2df617b170b80f6ad52fb73b60bf29bb975d05a45b4b90",
+    "distinct_read_keys": 37538,
+    "operations": {
+      "add": 4423,
+      "cas": 2467,
+      "delete": 860,
+      "get": 89313,
+      "gets": 2923,
+      "set": 14
+    },
+    "raw_sha256": "03505d9400902fe985bf53abc71a86cda29c8b7fff8158d4422d2b51f149459d",
+    "timestamp_first_last": [
+      0,
+      6
+    ]
+  }
+}
