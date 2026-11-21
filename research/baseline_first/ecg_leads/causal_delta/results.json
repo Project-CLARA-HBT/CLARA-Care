@@ -1,0 +1,234 @@
+{
+  "totals": {
+    "limb": 871875,
+    "delta": 872129,
+    "linear": 901435,
+    "gated": 901767
+  },
+  "records": [
+    {
+      "record": "07215_hr",
+      "limb": 25551,
+      "delta": 25570,
+      "linear": 27260,
+      "gated": 27283
+    },
+    {
+      "record": "01644_hr",
+      "limb": 28687,
+      "delta": 28689,
+      "linear": 29684,
+      "gated": 29682
+    },
+    {
+      "record": "01318_hr",
+      "limb": 25956,
+      "delta": 25963,
+      "linear": 27196,
+      "gated": 27180
+    },
+    {
+      "record": "15092_hr",
+      "limb": 26445,
+      "delta": 26477,
+      "linear": 27706,
+      "gated": 27729
+    },
+    {
+      "record": "10245_hr",
+      "limb": 30258,
+      "delta": 30252,
+      "linear": 31198,
+      "gated": 31221
+    },
+    {
+      "record": "13678_hr",
+      "limb": 25503,
+      "delta": 25532,
+      "linear": 26804,
+      "gated": 26832
+    },
+    {
+      "record": "17333_hr",
+      "limb": 27225,
+      "delta": 27261,
+      "linear": 28586,
+      "gated": 28608
+    },
+    {
+      "record": "06053_hr",
+      "limb": 28496,
+      "delta": 28539,
+      "linear": 28408,
+      "gated": 28443
+    },
+    {
+      "record": "15443_hr",
+      "limb": 24239,
+      "delta": 24277,
+      "linear": 25563,
+      "gated": 25498
+    },
+    {
+      "record": "18863_hr",
+      "limb": 21753,
+      "delta": 21775,
+      "linear": 23413,
+      "gated": 23390
+    },
+    {
+      "record": "21693_hr",
+      "limb": 28328,
+      "delta": 28319,
+      "linear": 28694,
+      "gated": 28736
+    },
+    {
+      "record": "15764_hr",
+      "limb": 29269,
+      "delta": 29239,
+      "linear": 29883,
+      "gated": 29897
+    },
+    {
+      "record": "15277_hr",
+      "limb": 26705,
+      "delta": 26712,
+      "linear": 28340,
+      "gated": 28343
+    },
+    {
+      "record": "08964_hr",
+      "limb": 26605,
+      "delta": 26602,
+      "linear": 27722,
+      "gated": 27711
+    },
+    {
+      "record": "07131_hr",
+      "limb": 30139,
+      "delta": 30082,
+      "linear": 31024,
+      "gated": 31002
+    },
+    {
+      "record": "02599_hr",
+      "limb": 31538,
+      "delta": 31588,
+      "linear": 31513,
+      "gated": 31708
+    },
+    {
+      "record": "02710_hr",
+      "limb": 30527,
+      "delta": 30467,
+      "linear": 30745,
+      "gated": 30745
+    },
+    {
+      "record": "14866_hr",
+      "limb": 27293,
+      "delta": 27297,
+      "linear": 29155,
+      "gated": 29140
+    },
+    {
+      "record": "13155_hr",
+      "limb": 31557,
+      "delta": 31575,
+      "linear": 31370,
+      "gated": 31451
+    },
+    {
+      "record": "02178_hr",
+      "limb": 23780,
+      "delta": 23810,
+      "linear": 24839,
+      "gated": 24806
+    },
+    {
+      "record": "18002_hr",
+      "limb": 29085,
+      "delta": 29076,
+      "linear": 29962,
+      "gated": 30018
+    },
+    {
+      "record": "09158_hr",
+      "limb": 35550,
+      "delta": 35548,
+      "linear": 34320,
+      "gated": 34343
+    },
+    {
+      "record": "17925_hr",
+      "limb": 26387,
+      "delta": 26416,
+      "linear": 27086,
+      "gated": 27114
+    },
+    {
+      "record": "04397_hr",
+      "limb": 23401,
+      "delta": 23370,
+      "linear": 24518,
+      "gated": 24504
+    },
+    {
+      "record": "04388_hr",
+      "limb": 21534,
+      "delta": 21517,
+      "linear": 22666,
+      "gated": 22666
+    },
+    {
+      "record": "11109_hr",
+      "limb": 30528,
+      "delta": 30502,
+      "linear": 31116,
+      "gated": 31142
+    },
+    {
+      "record": "21029_hr",
+      "limb": 25485,
+      "delta": 25482,
+      "linear": 26804,
+      "gated": 26803
+    },
+    {
+      "record": "11028_hr",
+      "limb": 29967,
+      "delta": 29987,
+      "linear": 30128,
+      "gated": 30192
+    },
+    {
+      "record": "13795_hr",
+      "limb": 21896,
+      "delta": 21938,
+      "linear": 23507,
+      "gated": 23409
+    },
+    {
+      "record": "12904_hr",
+      "limb": 30651,
+      "delta": 30676,
+      "linear": 31244,
+      "gated": 31335
+    },
+    {
+      "record": "13571_hr",
+      "limb": 25682,
+      "delta": 25673,
+      "linear": 27272,
+      "gated": 27215
+    },
+    {
+      "record": "06176_hr",
+      "limb": 21855,
+      "delta": 21918,
+      "linear": 23709,
+      "gated": 23621
+    }
+  ]
+}
