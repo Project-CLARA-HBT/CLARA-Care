@@ -1,0 +1,72 @@
+{
+  "age_bin": {
+    "-1": {
+      "missing": 168
+    },
+    "0": {
+      "age_raw": 318,
+      "scored": 397,
+      "shrink_4": 318,
+      "zero": 288
+    },
+    "1": {
+      "age_raw": 101,
+      "scored": 258,
+      "shrink_4": 101,
+      "zero": 100
+    },
+    "2": {
+      "age_raw": 111,
+      "scored": 341,
+      "shrink_4": 111,
+      "zero": 110
+    },
+    "3": {
+      "age_raw": 115,
+      "scored": 369,
+      "shrink_4": 115,
+      "zero": 115
+    },
+    "4": {
+      "age_raw": 59,
+      "scored": 515,
+      "shrink_4": 59,
+      "zero": 59
+    }
+  },
+  "freq_bin": {
+    "0": {
+      "missing": 168
+    },
+    "1": {
+      "age_raw": 54,
+      "scored": 438,
+      "shrink_4": 54,
+      "zero": 54
+    },
+    "2": {
+      "age_raw": 207,
+      "scored": 611,
+      "shrink_4": 207,
+      "zero": 207
+    },
+    "3": {
+      "age_raw": 248,
+      "scored": 512,
+      "shrink_4": 248,
+      "zero": 248
+    },
+    "4": {
+      "age_raw": 187,
+      "scored": 307,
+      "shrink_4": 187,
+      "zero": 157
+    },
+    "5": {
+      "age_raw": 8,
+      "scored": 12,
+      "shrink_4": 8,
+      "zero": 6
+    }
+  }
+}
