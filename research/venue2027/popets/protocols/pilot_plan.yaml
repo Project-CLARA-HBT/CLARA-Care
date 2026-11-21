@@ -1,145 +1,29 @@
-# =====================================================================
-# POPETS-pilot — Development split pilot evaluation plan (Phase P06)
-# =====================================================================
-# Task: POPETS-pilot (venue popets, phase P06, priority P1).
-# Contract: research/venue2027/VENUES/popets/TASKS/POPETS-pilot.md,
-#           research/venue2027/VENUES/popets/RESEARCH_BLUEPRINT.md,
-#           research/venue2027/popets/rq_and_estimands.yaml,
-#           evaluation/venue2027/_shared/analysis_policy.py.
-#
-# Purpose: Pre-registration pilot evaluation plan executing ONLY the development
-# split (split: dev). Evaluates baseline fairness/parity, oracle disagreement
-# rate, actual runtime and variance across all arms (B0-B4), and selects a
-# feasible experimental matrix (seeds, sample sizes, budget bounds) WITHOUT
-# reading or unsealing the main holdout/test split.
-#
-# Holdout gate invariant: The test/holdout split is strictly sealed and forbidden.
-# Any read or execution attempt on split='test' or split='holdout' fails closed
-# with HOLDOUT_ACCESS_FORBIDDEN.
-#
-# Version: 1.0.0
-schema_version: "clara.venue2027.popets.pilot_plan.v1"
-venue: popets
-phase: P06
+# Development-only PoPETs pilot. Full sampling-frame n precedes selection of dev indices.
+schema_version: clara.venue2027.popets.pilot_plan.v2
 task_id: POPETS-pilot
-study_title: >-
-  Revocation-Complete Future Disclosure for Cached Longitudinal AI Contexts
-
-# Split configuration: DEVELOPMENT ONLY
-split_policy:
-  target_split: dev
-  forbidden_splits:
-    - test
-    - holdout
-  enforcement: fail_closed_holdout_access_forbidden
-  dataset_generator: evaluation.venue2027.popets.generate_dataset.generate
-  split_source_description: >-
-    Synthetic longitudinal histories partitioned into train (60%), dev (20%),
-    and test (20%). The pilot executes strictly on the dev split.
-
-# Scope of evaluation arms (Blueprint Table: B0-B4)
-pilot_arms:
-  - arm_id: B0
-    canonical_id: ttl-only-cache
-    role: weak lower bound
-    status: NOT_RUN_EXTERNAL
-    notes: >-
-      Honest baseline availability: TTL cache adapter declares UNAVAILABLE_NOT_RUN
-      and is reported transparently without a toy substitute.
-  - arm_id: B1
-    canonical_id: coarse-cache-purge-on-revocation
-    role: strong simple safety baseline
-    status: EVALUATED
-    notes: Coarse full-cache purge on revocation event; availability-cost comparator.
-  - arm_id: B2
-    canonical_id: always-recompute-authorized-projection
-    role: privacy reference upper bound and cost comparator
-    status: EVALUATED
-    notes: Zero-caching recompute upper bound; strong competing explanation for RQ1.
-  - arm_id: B3
-    canonical_id: zanzibar-like-consistency-token-cache
-    role: strong architecture baseline
-    status: NOT_RUN_EXTERNAL
-    notes: >-
-      Honest baseline availability: Zanzibar token cache without verified
-      derivation support is reported NOT_RUN_EXTERNAL.
-  - arm_id: B4
-    canonical_id: popets-revocation-complete-future-disclosure
-    role: candidate
-    status: EVALUATED
-    notes: Candidate transitive provenance-label invalidation with reverse-edge closure.
-
-# Scenario families covered in pilot
-scenario_families:
-  - family: fresh
-    description: Authorized fresh dispatch under active consent (expected ADMIT)
-  - family: revoked_then_dispatch
-    description: Cached context dispatched at/after revocation instant (expected REJECT)
-  - family: cross_purpose
-    description: Cache built for purpose A requested under purpose B (expected REJECT)
-  - family: transitive_gap
-    description: Derived cache with unknown ancestry / missing lineage edge (expected REJECT)
-
-# Baseline fairness and parity enforcement
-fairness_contract:
-  balanced_pairing: true
-  enforce_equal_seeds: true
-  enforce_equal_timeouts: true
-  enforce_equal_retry_budgets: true
-  enforce_equal_backends: true
-  enforce_equal_compiler_versions: true
-  enforce_equal_model_versions: true
-  per_pair_timeout_seconds: 60.0
-  retry_budget: 0
+split: dev
+scope: One synthetic case decision per unique subject ID, grouped into four scenario families.
+proof_run:
+  sampling_frame_n: 60
+  seed: 42
+  arms: [B0, B1, B2, B3, B4]
   backend: in_process
-
-# Pilot evaluations and empirical objectives
-evaluations:
-  baseline_fairness:
-    check: balanced_pairing_and_parity
-    criteria: >-
-      Every arm evaluates the identical multiset of dev cases under identical
-      seed, timeout, retry budget, and execution backend.
-  oracle_disagreement:
-    adjudicator: evaluation.venue2027.popets.independent_oracle.adjudicate
-    oracle_id: popets-revocation-reference
-    max_tolerated_candidate_disagreements: 0
-    candidate_arm: B4
-  runtime_and_variance:
-    metrics:
-      - mean_pair_duration_seconds
-      - duration_variance
-      - p95_duration_seconds
-      - empirical_outcome_variance
-      - paired_difference_variance
-  coverage:
-    required_pair_coverage: 1.0
-    full_denominator: true
-    uncounted_drops_permitted: false
-  power_analysis:
-    method: paired_cluster_bootstrap_and_clopper_pearson
-    alpha: 0.05
-    target_power: 0.80
-    prospective_sample_sizes: [20, 60, 120, 240, 600, 1200]
-    hypothesized_effect_sizes: [0.10, 0.15, 0.20, 0.25]
-
-# Feasible experimental matrix selected from pilot
-feasible_matrix:
-  selected_seeds:
-    - 42
-    - 101
-    - 2027
-  sample_sizes:
-    pilot_dev_n: 60
-    confirmatory_study_n: 1200
-    contexts_per_subject: "3-6"
-  budget_bounds:
-    per_pair_timeout_seconds: 60.0
-    retry_budget: 0
-    max_total_pilot_runtime_seconds: 3600.0
-    memory_limit_mb: 4096
-    exclusive_resource: cpu
-  holdout_gate:
-    holdout_untouched: true
-    test_split_unopened: true
-    sealed_at: preregistration
+  retries: 0
+  per_pair_timeout_seconds: 60
+denominators:
+  planned: All assigned arm and case combinations.
+  recorded: All attempted cells, including unavailable comparators.
+  executed: Recorded cells after excluding unavailable external implementations.
+  comparable: Binary arm outcome with a binary expected family-oracle outcome.
+  latency: Adapter time among returned binary decisions, excluding placeholders.
+power:
+  status: BLOCKED
+  method: Conditional one-sided exact upper bound for zero events in independent Bernoulli units.
+  sample_sizes: [20, 60, 120, 240, 600, 1200]
+  dependency: A clustered primary-endpoint variance estimate needs observed dispatches across histories.
+design_target_subjects: 1200
+freeze_requirements:
+  - Independent byte-level dispatch observation and reconciliation against cancellations
+  - Multiple longitudinal contexts per subject and family-by-tenant clustering
+  - Verified comparator parity or an explicitly narrowed comparison
+  - A development-based variance bound and resource estimate for the prospective design
