@@ -1,0 +1,61 @@
+{
+  "archive_sha256": "870b68a127f3570ca964e89e49dd3433cf3e7a27cc4079d2bff5f094be0a43c2",
+  "results": {
+    "full_scan": {
+      "attempted": 58917,
+      "delivered": 58917,
+      "full": 58917,
+      "partial": 0,
+      "rebuilt_dependencies": 353502,
+      "review": 0,
+      "stale": 0,
+      "subjects_with_stale_view": 0
+    },
+    "interval_sweep": {
+      "attempted": 58917,
+      "delivered": 58917,
+      "review": 0,
+      "stale": 0,
+      "subjects_with_stale_view": 0
+    },
+    "single_section": {
+      "attempted": 58917,
+      "delivered": 54469,
+      "full": 21616,
+      "partial": 32853,
+      "rebuilt_dependencies": 162549,
+      "review": 4448,
+      "stale": 1813,
+      "subjects_with_stale_view": 856
+    },
+    "snapshot_checked": {
+      "attempted": 58917,
+      "delivered": 54193,
+      "full": 23153,
+      "partial": 31040,
+      "rebuilt_dependencies": 169958,
+      "review": 4724,
+      "stale": 0,
+      "subjects_with_stale_view": 0
+    }
+  },
+  "source_commit": "e468b9163e04c34ad389ffa9160a3bacab22e892",
+  "source_rows": {
+    "allergies": 794,
+    "encounters": 61459,
+    "invalid_medications": 5,
+    "medications": 56430
+  },
+  "subjects": {
+    "source_subjects": 1163,
+    "unscored_invalid_history": 2,
+    "with_encounters": 1163,
+    "with_paired_dates": 1163
+  },
+  "transition_counts": {
+    "change_without_new_start": 1813,
+    "structured_change": 7570,
+    "total": 58917,
+    "unscored_invalid_history": 58
+  }
+}

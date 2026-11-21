@@ -20,6 +20,10 @@ from . import selective_refresh as sr
 from .selective_refresh import plan_transition
 
 ARCHIVE_SHA256 = "ce211a05f27022ff1038000243a9291825ceb0107394e399b14c967948c030c3"
+ARCHIVE_PREFIX = {
+    ARCHIVE_SHA256: "",
+    "870b68a127f3570ca964e89e49dd3433cf3e7a27cc4079d2bff5f094be0a43c2": "csv/",
+}
 FIELDS = ("medications", "allergies")
 ARMS = ("single_section", "snapshot_checked", "full_scan", "interval_sweep")
 METRICS = ("attempted", "delivered", "stale", "review", "partial", "full", "rebuilt_dependencies")
@@ -40,11 +44,11 @@ class History:
     invalid_intervals: int = 0
 
 
-def read(archive):
+def read(archive, prefix=""):
     histories = defaultdict(History)
     counts = Counter()
     for table in ("encounters", *FIELDS):
-        with archive.open(table + ".csv") as raw:
+        with archive.open(prefix + table + ".csv") as raw:
             for row in csv.DictReader(io.TextIOWrapper(raw, encoding="utf-8-sig")):
                 counts[table] += 1
                 history = histories[row["PATIENT"]]
@@ -142,10 +146,11 @@ def evaluate(history):
 
 def replay(path):
     with path.open("rb") as source:
-        if hashlib.file_digest(source, "sha256").hexdigest() != ARCHIVE_SHA256:
+        digest = hashlib.file_digest(source, "sha256").hexdigest()
+        if digest not in ARCHIVE_PREFIX:
             raise ValueError("unexpected_synthetic_archive")
     with zipfile.ZipFile(path) as archive:
-        histories, source_rows = read(archive)
+        histories, source_rows = read(archive, ARCHIVE_PREFIX[digest])
     results = {arm: Counter() for arm in ARMS}
     transitions = Counter()
     subjects = Counter()
@@ -174,7 +179,7 @@ def replay(path):
         results["interval_sweep"].pop(key)
     return dict(
         source_commit="e468b9163e04c34ad389ffa9160a3bacab22e892",
-        archive_sha256=ARCHIVE_SHA256,
+        archive_sha256=digest,
         source_rows=source_rows,
         subjects=subjects,
         transition_counts=transitions,
