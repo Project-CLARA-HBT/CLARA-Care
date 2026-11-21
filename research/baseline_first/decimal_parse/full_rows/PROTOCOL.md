@@ -1,0 +1,3 @@
+# Full-row development protocol
+
+Use the fourteen files in ../production_matched/days.sha256. Compare direct delimiter recognition with prescanning using the same fixed-width converter, fallback and seven growing binary64 columns plus seven byte missing masks. Time opening a warm regular file, reading 8 KiB blocks, carrying partial rows, skipping date/time, conversion, allocation and destruction. No row count hint. Rotate order across eight rounds per date. Report the median daily saving and losses. Reuse the paired DuckDB 1.4.3 SQL-through-NumPy development timings as a contextual comparator with distinct I/O and output interfaces. Verify all output against exact Python fractions and exercise fallback on a mixed fixture. No holdout access.
