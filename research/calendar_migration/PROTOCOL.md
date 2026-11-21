@@ -1,0 +1,7 @@
+# Khả năng đo tác động của nâng cấp múi giờ
+
+Development audit. Xét cặp IANA 2023b và 2023c, được chọn vì NEWS công bố việc đảo thay đổi DST của Lebanon. Đã xem phần mô tả thay đổi và cấu trúc các test trước khi khóa phép kiểm dưới đây. Xác định khả năng chấm một câu hỏi cụ thể: một bản ghi lịch lặp công khai có những lần xuất hiện nào đổi thời điểm UTC giữa hai release?
+
+1. Kiểm tra múi giờ thực sự đổi bằng cách biên dịch hai tệp asia gốc bằng cùng zic, rồi đọc TZif độc lập qua Python zoneinfo. Báo các khoảng cách biệt offset trong năm 2023 trên lưới từng giờ UTC ở Beirut. Công bố hai đầu mút và tất cả khoảng, kể cả nếu bằng nhau. Đây là kiểm tra dữ liệu quy tắc.
+2. Kiểm tra toàn bộ khối RRULE trong tệp vàng icalrecur_test.txt của libical, toàn bộ VEVENT trong test-data/recur.txt của cùng revision, fixture RecurDstOverlapSpec của ical4j và các ví dụ ở mục 3.8.5.3 của RFC 5545. Đếm các ca, các TZID và việc có hay không có phiên bản đôi cùng đáp án cũ/mới độc lập. Tài liệu định nghĩa VTIMEZONE cũng có thể tự mang quy tắc của tác giả, do đó tên TZID tự nó chưa chỉ định phải tính lại theo IANA.
+3. Cần ít nhất một lịch thực sự có nhãn chuyển đổi ở cả hai phiên bản và một đối chứng cùng thông tin trước khi có thể chấm đề xuất. Khi thiếu, dừng đề tài ở kiểm toán nguồn. Di chuyển một fixture sang Beirut hoặc thay ngày của nó sẽ tạo lịch tổng hợp. Loại các thao tác này khỏi bằng chứng ngoài.

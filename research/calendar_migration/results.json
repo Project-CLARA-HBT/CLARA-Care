@@ -1,0 +1,64 @@
+{
+  "sources": {
+    "gold": {
+      "url": "https://raw.githubusercontent.com/libical/libical/bb88226d94ab6d173c5e06fd1e548ad38e8414a6/src/test/icalrecur_test.txt",
+      "sha256": "7a1a5dda2569f642ed750651d8733023029c1c78eacabb38df6d0dddc7369c73"
+    },
+    "events": {
+      "url": "https://raw.githubusercontent.com/libical/libical/bb88226d94ab6d173c5e06fd1e548ad38e8414a6/test-data/recur.txt",
+      "sha256": "c1b0b4c42c4861baa5c13d2eda92e60bb55a7a23e06542f1c31360451c9f23c8"
+    },
+    "overlap": {
+      "url": "https://raw.githubusercontent.com/ical4j/ical4j/4dac4d913706b41fa633449e8a95f7d3a0b410a2/src/test/groovy/net/fortuna/ical4j/model/RecurDstOverlapSpec.groovy",
+      "sha256": "7068897f27e9e58f3971b9ac31deaada01dda9a20a4d7310b0c91d59f5afc2b5"
+    },
+    "rfc5545": {
+      "url": "https://www.rfc-editor.org/rfc/rfc5545.txt",
+      "sha256": "c256f809479d98aa23d71bbd1658b3800ea9f13f41ca56e59c8d2de1b31cbfcb"
+    },
+    "2023b": {
+      "url": "https://data.iana.org/time-zones/releases/tzdata2023b.tar.gz",
+      "sha256": "9b78fd264f95611fe987a95721456cd5aac9f55e6915be4a9ca2997bc7ce0e6c"
+    },
+    "2023c": {
+      "url": "https://data.iana.org/time-zones/releases/tzdata2023c.tar.gz",
+      "sha256": "3f510b5d1b4ae9bb38e485aa302a776b317fb3637bdb6404c4adf7b6cadd965c"
+    }
+  },
+  "beirut": [
+    {
+      "start_utc": "2023-03-25T22:00:00+00:00",
+      "offset_min": [
+        120,
+        180
+      ],
+      "hours": 624,
+      "end_utc": "2023-04-20T22:00:00+00:00"
+    }
+  ],
+  "fixtures": {
+    "libical_gold": {
+      "rules": 157,
+      "instance_lists": 157,
+      "tzids": []
+    },
+    "libical_events": {
+      "vevents": 58,
+      "count_labels": 58,
+      "tzids": [
+        "America/Los_Angeles"
+      ]
+    },
+    "ical4j_overlap": {
+      "zones": [
+        "America/Los_Angeles"
+      ]
+    },
+    "rfc5545_section": {
+      "tzids": [
+        "America/New_York"
+      ]
+    },
+    "2023b_or_c_named_in_fixtures": false
+  }
+}
