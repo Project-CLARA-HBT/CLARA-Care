@@ -1,0 +1,253 @@
+{
+  "source": "https://raw.githubusercontent.com/openfga/sample-stores/6802b4d859d2773eea72c2315b3a9f027a2893a0/stores/temporal-access/store.fga.yaml",
+  "source_sha256": "60d3fb4076a1c374713ca10de32c6596bc2dc33cab978e37a9eef75b79b13bfb",
+  "openfga_image": "openfga/openfga@sha256:b852071314f1fda1194d341a6ebac0a4f619b3cd87a6626d2ccc7048af4ec671",
+  "opa": "1.22.4",
+  "opa_binary_sha256": "35e3b352e715e80624ead6c89930d8585f6f7d94cdc409eb2a9fe36620dcccba",
+  "fga_cli": "fga version v`0.9.0` (commit: `4b10e119c40a02dac0a665c9f8516b2ea3a36291`, date: `2026-11-12T14:47:14Z`)",
+  "translation_sha256": "0a276d7194bb3804c13192fe7435aacb3d6ebeb7f1c7671428b7173e8b9659c5",
+  "summary": {
+    "published": {
+      "opa": {
+        "match": 7
+      },
+      "openfga": {
+        "match": 7
+      }
+    },
+    "expiry_boundary_dev": {
+      "opa": {
+        "match": 6
+      },
+      "openfga": {
+        "match": 6
+      }
+    }
+  },
+  "rows": [
+    {
+      "group": "published",
+      "operation": "check",
+      "query": {
+        "user": "user:anne",
+        "object": "document:1",
+        "context": {
+          "current_time": "2023-01-01T00:10:00Z"
+        },
+        "relation": "viewer"
+      },
+      "expected": true,
+      "openfga": true,
+      "opa": true
+    },
+    {
+      "group": "published",
+      "operation": "check",
+      "query": {
+        "user": "user:anne",
+        "object": "document:1",
+        "context": {
+          "current_time": "2023-01-01T02:00:00Z"
+        },
+        "relation": "viewer"
+      },
+      "expected": false,
+      "openfga": false,
+      "opa": false
+    },
+    {
+      "group": "published",
+      "operation": "check",
+      "query": {
+        "user": "user:anne",
+        "object": "document:2",
+        "context": {
+          "current_time": "2023-01-01T00:00:09Z"
+        },
+        "relation": "viewer"
+      },
+      "expected": false,
+      "openfga": false,
+      "opa": false
+    },
+    {
+      "group": "published",
+      "operation": "check",
+      "query": {
+        "user": "user:bob",
+        "object": "document:1",
+        "relation": "viewer"
+      },
+      "expected": true,
+      "openfga": true,
+      "opa": true
+    },
+    {
+      "group": "published",
+      "operation": "list_objects",
+      "query": {
+        "user": "user:anne",
+        "type": "document",
+        "context": {
+          "current_time": "2023-01-01T00:00:01Z"
+        },
+        "relation": "viewer"
+      },
+      "expected": [
+        "document:1",
+        "document:2"
+      ],
+      "openfga": [
+        "document:1",
+        "document:2"
+      ],
+      "opa": [
+        "document:1",
+        "document:2"
+      ]
+    },
+    {
+      "group": "published",
+      "operation": "list_users",
+      "query": {
+        "object": "document:1",
+        "context": {
+          "current_time": "2023-01-01T00:00:01Z"
+        },
+        "user_filter": [
+          {
+            "type": "user"
+          }
+        ],
+        "relation": "viewer"
+      },
+      "expected": [
+        "user:anne",
+        "user:bob"
+      ],
+      "openfga": [
+        "user:anne",
+        "user:bob"
+      ],
+      "opa": [
+        "user:anne",
+        "user:bob"
+      ]
+    },
+    {
+      "group": "published",
+      "operation": "list_users",
+      "query": {
+        "object": "document:2",
+        "context": {
+          "current_time": "2023-01-01T00:00:01Z"
+        },
+        "user_filter": [
+          {
+            "type": "user"
+          }
+        ],
+        "relation": "viewer"
+      },
+      "expected": [
+        "user:anne"
+      ],
+      "openfga": [
+        "user:anne"
+      ],
+      "opa": [
+        "user:anne"
+      ]
+    },
+    {
+      "group": "expiry_boundary_dev",
+      "operation": "check",
+      "query": {
+        "user": "user:anne",
+        "object": "document:1",
+        "relation": "viewer",
+        "context": {
+          "current_time": "2023-01-01T00:59:59.999999999Z"
+        }
+      },
+      "expected": true,
+      "openfga": true,
+      "opa": true
+    },
+    {
+      "group": "expiry_boundary_dev",
+      "operation": "check",
+      "query": {
+        "user": "user:anne",
+        "object": "document:1",
+        "relation": "viewer",
+        "context": {
+          "current_time": "2023-01-01T01:00:00Z"
+        }
+      },
+      "expected": false,
+      "openfga": false,
+      "opa": false
+    },
+    {
+      "group": "expiry_boundary_dev",
+      "operation": "check",
+      "query": {
+        "user": "user:anne",
+        "object": "document:1",
+        "relation": "viewer",
+        "context": {
+          "current_time": "2023-01-01T01:00:00.000000001Z"
+        }
+      },
+      "expected": false,
+      "openfga": false,
+      "opa": false
+    },
+    {
+      "group": "expiry_boundary_dev",
+      "operation": "check",
+      "query": {
+        "user": "user:anne",
+        "object": "document:2",
+        "relation": "viewer",
+        "context": {
+          "current_time": "2023-01-01T00:00:04.999999999Z"
+        }
+      },
+      "expected": true,
+      "openfga": true,
+      "opa": true
+    },
+    {
+      "group": "expiry_boundary_dev",
+      "operation": "check",
+      "query": {
+        "user": "user:anne",
+        "object": "document:2",
+        "relation": "viewer",
+        "context": {
+          "current_time": "2023-01-01T00:00:05Z"
+        }
+      },
+      "expected": false,
+      "openfga": false,
+      "opa": false
+    },
+    {
+      "group": "expiry_boundary_dev",
+      "operation": "check",
+      "query": {
+        "user": "user:anne",
+        "object": "document:2",
+        "relation": "viewer",
+        "context": {
+          "current_time": "2023-01-01T00:00:05.000000001Z"
+        }
+      },
+      "expected": false,
+      "openfga": false,
+      "opa": false
+    }
+  ]
+}
