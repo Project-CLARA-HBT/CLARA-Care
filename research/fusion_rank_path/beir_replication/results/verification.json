@@ -1,0 +1,14 @@
+{
+  "external": {
+    "queries": 623,
+    "positives": 12673,
+    "ranks": 830537728,
+    "full_sorts": 5607
+  },
+  "fixture": {
+    "queries": 1,
+    "positives": 23,
+    "ranks": 1507328,
+    "full_sorts": 65536
+  }
+}

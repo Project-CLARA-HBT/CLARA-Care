@@ -1,0 +1,32 @@
+{
+  "SciFact/queries.parquet": {
+    "url": "https://huggingface.co/datasets/BeIR/scifact/resolve/b3b5335604bf5ee3c4447671af975ea25143d4f5/queries/queries-00000-of-00001.parquet",
+    "bytes": 64982,
+    "sha256": "1c37956c5dc8b810b60302323c24d1a9e79e26411ba8f5ad9d0888642e2a9034"
+  },
+  "SciFact/corpus.parquet": {
+    "url": "https://huggingface.co/datasets/BeIR/scifact/resolve/b3b5335604bf5ee3c4447671af975ea25143d4f5/corpus/corpus-00000-of-00001.parquet",
+    "bytes": 4469916,
+    "sha256": "243324b35f03d82bd6d98a5f575966876e86cad7ce16e5333a35b1b793dc4f45"
+  },
+  "SciFact/test.tsv": {
+    "url": "https://huggingface.co/datasets/BeIR/scifact-qrels/resolve/2938d17dc3b09882fdb8c12bbbe2e2dc0e75a029/test.tsv",
+    "bytes": 5389,
+    "sha256": "0864bb985e0ca2367ba217977e72004d549054b2b06666ed9d4825ac7c21284c"
+  },
+  "NFCorpus/queries.parquet": {
+    "url": "https://huggingface.co/datasets/BeIR/nfcorpus/resolve/b5026a0e96e8a7ac4f95f482a596389289d46269/queries/queries-00000-of-00001.parquet",
+    "bytes": 80929,
+    "sha256": "edd2b878b8130fb3b5e3c4b9428ddc1e67fbd6eedf8ae099fca3b87838ba6b29"
+  },
+  "NFCorpus/corpus.parquet": {
+    "url": "https://huggingface.co/datasets/BeIR/nfcorpus/resolve/b5026a0e96e8a7ac4f95f482a596389289d46269/corpus/corpus-00000-of-00001.parquet",
+    "bytes": 3157570,
+    "sha256": "f2a1c0b570a5efdf23cfa36f5e573d062cc113c6e7251e22c69b323a33ea895e"
+  },
+  "NFCorpus/test.tsv": {
+    "url": "https://huggingface.co/datasets/BeIR/nfcorpus-qrels/resolve/a451b3b26d3ae1358f259c1a3a4dd61fcea35a65/test.tsv",
+    "bytes": 279572,
+    "sha256": "f8fba6ef3d4dd9c3a242a8ba4ae38276fc3622fce7dcbae764766d564542fd2a"
+  }
+}

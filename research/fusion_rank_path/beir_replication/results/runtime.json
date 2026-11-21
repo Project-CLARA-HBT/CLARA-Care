@@ -1,0 +1,17 @@
+{
+  "frozen_revision": "c6c4a60f10e1f3a5aa8c4a9fe273e47ff807fe2b",
+  "source_sha256": {
+    "research/fusion_rank_path/path.cpp": "d7e56e57bca1117f9489892d71c4108575908502d1a89ae63664d3ee850fdfdb",
+    "research/fusion_rank_path/frontier.hpp": "5f3cf739a8d1a3db59c663edb1217183de354dd640f075793b39650469b5ac3d",
+    "research/fusion_rank_path/cta/lp_cta.hpp": "20c8f33357ba4be1e1ec8ecf5d1b065dcc4f3a8e8b00cad7ada245e09b79dbcd",
+    "research/fusion_rank_path/directrank/path.hpp": "0723c353f524b0ba44e30bcce7e97c5ded22651fe518697e1a2ddcaefd00153f",
+    "research/fusion_rank_path/verify.py": "7b95acac24141e86e189f1a06f55e88a5bc0cbf3cfd1ab4b7b1c7f7d2ce080e0",
+    "research/fusion_rank_path/inputs.py": "06743410884fd0e6346fd05a58fece9b55fbdc4469ef9ed239f37a1e0080eb8c",
+    "research/retrieval_disagreement/generate.py": "88741a51b09f501485bd2c0b6b34b2a40e5210a5987e7ff02f0fc242254b2ad7",
+    "research/retrieval_disagreement/fetch.py": "1d253279fd44c9d6b9be6edf3d88b4442a0be5ec8ba54eadf4b56ba77399f763"
+  },
+  "benchmark_sha256": "4c285027adbe2753b9582c045e9ead333d0d4c6b447236c12d787faacd6b663e",
+  "device": "WSL2 Intel Core i5-12600K; taskset -c 0; shared host",
+  "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "cuda_score_device": "WSL2 NVIDIA GeForce RTX 4060 Ti"
+}
