@@ -30,3 +30,11 @@ Run the following in the repository root with an unused temporary output path. E
 ```sh
 python -m evaluation.sensor_gap.periodic_bridge /tmp/ett-hourly evaluation/sensor_gap/results/losses.csv /tmp/periodic-losses.csv
 ```
+
+## Conditional regression on the adjacent hours
+
+Reading a full day on either side of the missing segment reduced the error further. On the same two records the prespecified high/low-volatility regressors reached macro MAE 1.2415. A single pooled ridge using the identical features scored 1.2361, and soft routing scored 1.2420. The hard split lost to the pooled estimator by 0.44% and the paired interval for the absolute improvement includes zero. Retire the volatility-routing claim. These results quantify the benefit of the adjacent hours on already inspected development outages. Sensor-disjoint transfer, measured natural outages and matched published imputation systems remain untested. [Frozen design](conditional-protocol.md) · [All paired comparisons](conditional_results/comparison.csv)
+
+```sh
+OPENBLAS_NUM_THREADS=1 python -m evaluation.sensor_gap.conditional /tmp/ett-hourly evaluation/sensor_gap/periodic_results/losses.csv /tmp/conditional-losses.csv
+```
