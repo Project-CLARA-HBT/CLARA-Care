@@ -1,0 +1,9 @@
+{
+  "previous_decode": {
+    "rows": 361,
+    "sha256": "412b5992bf10e41078b006f27258cef2f108a6944694e3ffa9e1ecdeeb173ecc",
+    "paired_type_errors": 361,
+    "analysis_use": "excluded host incompatibility; successful inference rerun with av 16.0.1"
+  },
+  "model_conversion": "Reconverted November 21, 2026 from pinned PhoWhisper weights with float16 storage and verified every destination file against converted.sha256. Inference compute type int8 for both models."
+}
