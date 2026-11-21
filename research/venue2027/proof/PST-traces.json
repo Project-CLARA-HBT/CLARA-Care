@@ -1,0 +1,63 @@
+{
+  "artifacts_sha256": {
+    "evaluation/venue2027/pst/test_trace_writer.py": "54bf841a4e2943bc374fc0660a7547d6c3f6b17e1b6cddc96420a3b83269edc0",
+    "evaluation/venue2027/pst/trace_writer.py": "80f2cc84098cf8627275dbde81ec2e350ac3e78ee915fd12d3b57f98dd829ff8",
+    "research/venue2027/proof/artifacts/pst_run_bundle.jsonl": "660a2ff25c5cb624af2bbd030ee556bd1f9a06edfc164bcb8b07d200fbe0b3e1",
+    "research/venue2027/proof/artifacts/pst_trace_manifest.json": "d4fdf233a87b553add11e16b1b6d7e24653c343e5c5bab7ece9bb3a3082e9b67",
+    "research/venue2027/proof/artifacts/pst_trace_sample.jsonl": "0ae5f095cfc173f7b97efd400fb69fdcc0155f06d23ea2d39e9f605b2ab6b851",
+    "research/venue2027/proof/emit_pst_traces_report.py": "6429b6802178afedd6039ce413f50b3dcd4f36003638ad6a1fd93ebce5047200",
+    "research/venue2027/proof/logs/PST-traces.format.log": "eee76f865de5a9f2456950f710ae5d5f9b5bd0ea02aa54f614c5eed6642a0bfd",
+    "research/venue2027/proof/logs/PST-traces.gate.log": "09e13078d7c6a63284c79d6f68a776710203f7d105310bda4b261815a70d7cfd",
+    "research/venue2027/proof/logs/PST-traces.pytest.log": "5d3350f597222905d88780cb49b266d923d966ad1679095f58039f8ded8b2a96",
+    "research/venue2027/proof/logs/PST-traces.replay.log": "fabce0c165b8a0df982e8b58ca9016e3f4404e5d77b531cf346dbc1d17386c0a",
+    "research/venue2027/proof/logs/PST-traces.ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "baseline_parity": "NOT_APPLICABLE",
+  "changed_paths": [
+    "evaluation/venue2027/pst/trace_writer.py",
+    "evaluation/venue2027/pst/test_trace_writer.py",
+    "research/venue2027/proof/emit_pst_traces_report.py",
+    "research/venue2027/proof/artifacts/pst_trace_sample.jsonl",
+    "research/venue2027/proof/artifacts/pst_trace_manifest.json",
+    "research/venue2027/proof/logs/PST-traces.pytest.log",
+    "research/venue2027/proof/logs/PST-traces.ruff.log",
+    "research/venue2027/proof/logs/PST-traces.format.log",
+    "research/venue2027/proof/logs/PST-traces.gate.log",
+    "research/venue2027/proof/logs/PST-traces.replay.log",
+    "research/venue2027/proof/PST-traces.json"
+  ],
+  "commands": [
+    {
+      "argv": "python3 -m pytest -q evaluation/venue2027/pst research/venue2027/pst/tests",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-traces.pytest.log"
+    },
+    {
+      "argv": "ruff check evaluation/venue2027/pst/trace_writer.py evaluation/venue2027/pst/test_trace_writer.py research/venue2027/proof/emit_pst_traces_report.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-traces.ruff.log"
+    },
+    {
+      "argv": "ruff format --check evaluation/venue2027/pst/trace_writer.py evaluation/venue2027/pst/test_trace_writer.py research/venue2027/proof/emit_pst_traces_report.py",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-traces.format.log"
+    },
+    {
+      "argv": "python3 research/venue2027/scripts/taskctl.py validate",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-traces.gate.log"
+    },
+    {
+      "argv": "python3 -m research.venue2027.proof.emit_pst_traces_report --replay-only",
+      "exit_code": 0,
+      "log_path": "research/venue2027/proof/logs/PST-traces.replay.log"
+    }
+  ],
+  "notes": "Instrumentation replay of the pinned synthetic runner bundle. The manifest records oracle mismatches and missing cost/backend observations. No fresh scientific study executed.",
+  "oracle_disagreement_count": 5,
+  "source_sha_after": "09a81cf71a92aba89d03dfc322f937a42cb54a62",
+  "source_sha_before": "6faf61e1238fd7caae5e0f6113283cc4856f0398",
+  "status": "PASS",
+  "task_id": "PST-traces",
+  "unresolved": []
+}
