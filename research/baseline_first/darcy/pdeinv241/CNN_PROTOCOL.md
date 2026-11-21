@@ -1,0 +1,3 @@
+# Đối chứng CNN trên cùng 192 file train
+
+Bổ sung cùng hai CNN từ conv_control sau khi đã chạy chương trình thu thập 192 file. Tiếp tục giữ tất cả 64 trường đánh giá ngoài bước chọn epoch. Trên 128 trường fit, dùng 112 tối ưu và 16 chọn epoch riêng cho mỗi arm theo relative L2 điểm thiếu. Cho tối đa 140 epoch để hai CNN nhỏ có khoảng 560 cập nhật AdamW trước chọn, bằng số bước xấp xỉ của nghiên cứu 512 trường. Sau đó fit lại toàn bộ 128 trường, seed 412 như trước. Giữ cùng kiến trúc và các tham số còn lại. Công bố cả hai đường hội tụ và lỗi trên toàn bộ 64 trường, mọi kết quả cho cả pressure-only và pressure+material. Phép thử này thêm đối thủ vào kết quả archive 241; archive này vẫn là development.
