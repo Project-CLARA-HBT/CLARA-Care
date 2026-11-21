@@ -57,7 +57,7 @@ def run_bank(operation, initial):
         if refused != (target == "refused"):
             raise ValueError(("business decision mismatch", operation, initial))
         for table, balance in initial.items():
-            actual, = db.execute(f"SELECT bal FROM {table}").fetchone()
+            (actual,) = db.execute(f"SELECT bal FROM {table}").fetchone()
             expected = balance + (tenths / 10 if table == target else 0)
             if not math.isclose(actual, expected, rel_tol=0, abs_tol=1e-12):
                 raise ValueError(("balance mismatch", operation, initial, table, actual, expected))
@@ -66,8 +66,13 @@ def run_bank(operation, initial):
 
 def decision_row(family, case, before, after, labels, templates):
     return dict(
-        family=family, case=case, before=before, after=after,
-        original=labels[0], replay=labels[1], valid=labels[0] == labels[1],
+        family=family,
+        case=case,
+        before=before,
+        after=after,
+        original=labels[0],
+        replay=labels[1],
+        valid=labels[0] == labels[1],
         dependencies={arm: sorted(keys) for arm, keys in templates.items()},
         admit={arm: all(before[k] == after[k] for k in keys) for arm, keys in templates.items()},
     )
@@ -79,8 +84,14 @@ def bank_rows():
         observed = [run_bank(operation, state) for state in states]
         for i, j in itertools.product(range(len(states)), repeat=2):
             derived, original = observed[i]
-            yield decision_row(operation, operation, states[i], states[j],
-                               (original, observed[j][1]), dict(derived=derived, manual=manual))
+            yield decision_row(
+                operation,
+                operation,
+                states[i],
+                states[j],
+                (original, observed[j][1]),
+                dict(derived=derived, manual=manual),
+            )
 
 
 class MembershipView:
@@ -117,8 +128,11 @@ def load_rule(revision):
 
 
 def registry(state):
-    return {ref: "history" if state[f"field.{ref}"] else "other"
-            for ref in IDS if state[f"member.{ref}"]}
+    return {
+        ref: "history" if state[f"field.{ref}"] else "other"
+        for ref in IDS
+        if state[f"member.{ref}"]
+    }
 
 
 def findings(rule, proposal, fields, bound, reads=None):
@@ -137,11 +151,18 @@ def clinical_rows():
         bound = revision == REVISIONS[1]
         rule = load_rule(revision)
         for refs in itertools.combinations(IDS, 2):
-            proposal = dict(source="nli", revision_ids=list(refs), field_key="history",
-                            relation="possible_duplicate")
+            proposal = dict(
+                source="nli",
+                revision_ids=list(refs),
+                field_key="history",
+                relation="possible_duplicate",
+            )
             derived = set()
             original = findings(rule, proposal, registry(before), bound)
-            if len(original) != 1 or findings(rule, proposal, registry(before), bound, derived) != original:
+            if (
+                len(original) != 1
+                or findings(rule, proposal, registry(before), bound, derived) != original
+            ):
                 raise ValueError(("preparation mismatch", revision, refs))
             lag = {f"member.{ref}" for ref in refs}
             manual = lag | ({f"field.{ref}" for ref in refs} if bound else set())
@@ -165,7 +186,13 @@ def summarize(rows):
             counts[f"{arm}_false_admit"] += int(admit and not valid)
             counts[f"{arm}_false_reject"] += int(valid and not admit)
             if arm != "derived":
-                outcome = "tie" if arms["derived"] == admit else "win" if arms["derived"] == valid else "loss"
+                outcome = (
+                    "tie"
+                    if arms["derived"] == admit
+                    else "win"
+                    if arms["derived"] == valid
+                    else "loss"
+                )
                 counts[f"vs_{arm}_{outcome}"] += 1
     return summary
 
