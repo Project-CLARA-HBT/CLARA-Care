@@ -333,6 +333,11 @@ class CedarCli:
         policy_text: str,
         entities_json: str,
         request_json: str,
+        *,
+        schema_text: str | None = None,
+        schema_format: str = "cedar",
+        policy_format: str = "cedar",
+        validate_request: bool = False,
     ) -> tuple[int, str, str]:
         """Run ``cedar authorize``; returns ``(returncode, stdout, stderr)``.
 
@@ -344,13 +349,20 @@ class CedarCli:
             raise CedarRunnerError(
                 RC_ENGINE_UNAVAILABLE, "authorize() called without a detected engine"
             )
+        if schema_format not in {"cedar", "json"} or policy_format not in {"cedar", "json"}:
+            raise CedarRunnerError(
+                "ENGINE_INPUT_FORMAT_INVALID", "unsupported policy or schema format"
+            )
         paths: list[str] = []
         try:
-            for content, suffix in (
+            inputs = [
                 (policy_text, ".cedar"),
                 (entities_json, ".entities.json"),
                 (request_json, ".request.json"),
-            ):
+            ]
+            if schema_text is not None:
+                inputs.append((schema_text, ".schema"))
+            for content, suffix in inputs:
                 with tempfile.NamedTemporaryFile(
                     "w", suffix=suffix, prefix="clara_sacmat_", encoding="utf-8", delete=False
                 ) as handle:
@@ -370,7 +382,14 @@ class CedarCli:
                         "--request-json",
                         paths[2],
                         "--request-validation",
-                        "false",
+                        str(validate_request).lower(),
+                        "--policy-format",
+                        policy_format,
+                        *(
+                            ["--schema", paths[3], "--schema-format", schema_format]
+                            if schema_text is not None
+                            else []
+                        ),
                     ],
                     capture_output=True,
                     text=True,
