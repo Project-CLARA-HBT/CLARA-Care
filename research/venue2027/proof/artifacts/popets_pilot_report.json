@@ -11,152 +11,91 @@
   "n_cases": 12,
   "planned_pairs": 60,
   "attempted_pairs": 60,
-  "complete": true,
+  "complete": false,
   "baseline_fairness": {
     "balanced_pairing": true,
-    "enforce_equal_seeds": true,
-    "enforce_equal_timeouts": true,
-    "enforce_equal_retry_budgets": true,
-    "enforce_equal_backends": true,
     "seed": 42,
-    "per_pair_timeout_seconds": 60.0,
     "retry_budget": 0,
     "backend": "in_process",
-    "arm_count": 5,
-    "arms": [
-      "B0",
-      "B1",
-      "B2",
-      "B3",
-      "B4"
-    ]
+    "per_pair_timeout_seconds": 60,
+    "semantic_parity": "UNVERIFIED"
   },
-  "oracle_disagreements": 24,
+  "oracle_disagreements": 0,
   "candidate_disagreements": 0,
-  "disagreement_rate": 0.4,
+  "disagreement_rate": 0.0,
   "runtime_stats": {
-    "total_wall_seconds": 0.005589,
-    "mean_pair_duration_seconds": 5.1e-05,
-    "variance_pair_duration": 0.0,
-    "p95_pair_duration_seconds": 0.000137,
-    "per_arm_stats": {
-      "B0": {
-        "count": 12.0,
-        "mean_seconds": 1.3e-05,
-        "variance": 0.0,
-        "std_seconds": 8e-06,
-        "min_seconds": 7e-06,
-        "max_seconds": 3.2e-05,
-        "p95_seconds": 2.8e-05
-      },
+    "total_wall_seconds": 0.005058,
+    "mean_pair_duration_seconds": 7.283333333333333e-05,
+    "per_arm": {
       "B1": {
-        "count": 12.0,
-        "mean_seconds": 8.2e-05,
-        "variance": 0.0,
-        "std_seconds": 2.5e-05,
-        "min_seconds": 5.9e-05,
-        "max_seconds": 0.000126,
-        "p95_seconds": 0.000123
+        "n": 12,
+        "mean": 7.958333333333333e-05,
+        "variance": 5.480833333333334e-10,
+        "p95": 0.000133
       },
       "B2": {
-        "count": 12.0,
-        "mean_seconds": 4.8e-05,
-        "variance": 0.0,
-        "std_seconds": 1.6e-05,
-        "min_seconds": 3.5e-05,
-        "max_seconds": 8.9e-05,
-        "p95_seconds": 7.4e-05
-      },
-      "B3": {
-        "count": 12.0,
-        "mean_seconds": 1e-05,
-        "variance": 0.0,
-        "std_seconds": 5e-06,
-        "min_seconds": 7e-06,
-        "max_seconds": 2.6e-05,
-        "p95_seconds": 1.7e-05
+        "n": 12,
+        "mean": 4.3666666666666666e-05,
+        "variance": 1.6751515151515155e-10,
+        "p95": 8.1e-05
       },
       "B4": {
-        "count": 12.0,
-        "mean_seconds": 0.000105,
-        "variance": 0.0,
-        "std_seconds": 4e-05,
-        "min_seconds": 5.4e-05,
-        "max_seconds": 0.000185,
-        "p95_seconds": 0.000167
+        "n": 12,
+        "mean": 9.525e-05,
+        "variance": 1.4403863636363637e-09,
+        "p95": 0.000195
       }
-    }
+    },
+    "scope": "Adapter duration for ADMIT/REJECT pairs; excludes unavailable and failed decisions."
   },
   "variance_estimates": {
-    "outcome_variance_by_arm": {
-      "B0": 0.0,
-      "B1": 0.204545,
-      "B2": 0.204545,
-      "B3": 0.0,
-      "B4": 0.204545
+    "admission_indicator_by_arm": {
+      "B0": null,
+      "B1": 0.20454545454545456,
+      "B2": 0.20454545454545456,
+      "B3": null,
+      "B4": 0.20454545454545456
     },
-    "paired_difference_variance": {
-      "B4_vs_B1": 0.0,
-      "B4_vs_B2": 0.0
-    },
-    "duration_variance": 0.0
+    "paired_admission_difference": {
+      "B4_vs_B1": {
+        "n": 12,
+        "variance": 0
+      },
+      "B4_vs_B2": {
+        "n": 12,
+        "variance": 0
+      }
+    }
   },
   "power_estimates": {
     "alpha": 0.05,
     "target_power": 0.8,
-    "clopper_pearson_bounds": {
-      "20": 0.139108,
-      "60": 0.048703,
-      "120": 0.024655,
-      "240": 0.012405,
-      "600": 0.00498,
-      "1200": 0.002493
+    "status": "BLOCKED",
+    "required_sample_size": null,
+    "primary_endpoint_power": null,
+    "zero_event_upper_if_independent": {
+      "20": 0.13910834066826516,
+      "60": 0.04870291331009746,
+      "120": 0.024655401055656334,
+      "240": 0.012404638050409034,
+      "600": 0.004980443380361299,
+      "1200": 0.002493330037518726
     },
-    "power_by_sample_size": {
-      "delta_0.10": {
-        "20": 0.1433,
-        "60": 0.3406,
-        "120": 0.5913,
-        "240": 0.8725,
-        "600": 0.9984,
-        "1200": 1.0
-      },
-      "delta_0.15": {
-        "20": 0.2682,
-        "60": 0.642,
-        "120": 0.9076,
-        "240": 0.9964,
-        "600": 1.0,
-        "1200": 1.0
-      },
-      "delta_0.20": {
-        "20": 0.4321,
-        "60": 0.8725,
-        "120": 0.9923,
-        "240": 1.0,
-        "600": 1.0,
-        "1200": 1.0
-      },
-      "delta_0.25": {
-        "20": 0.6088,
-        "60": 0.9721,
-        "120": 0.9998,
-        "240": 1.0,
-        "600": 1.0,
-        "1200": 1.0
-      }
-    },
-    "required_sample_sizes": {
-      "delta_0.10": 197,
-      "delta_0.15": 88,
-      "delta_0.20": 50,
-      "delta_0.25": 32
-    }
+    "assumptions": "One-sided binomial bounds assume zero observed events in N independent units. They illustrate possible designs. Decisions from this pilot cannot estimate variance of the clustered, dispatch-level primary endpoints."
   },
   "coverage": {
-    "planned_pairs": 60,
-    "attempted_pairs": 60,
-    "missing_pairs": 0,
+    "planned": 60,
+    "recorded": 60,
+    "missing": 0,
+    "executed": 36,
+    "decision_returned": 36,
+    "comparable": 36,
+    "oracle_unassessed": 0,
+    "outcomes": {
+      "not_run_external": 24,
+      "admit": 9,
+      "reject": 27
+    },
     "by_arm_outcome": {
       "B0": {
         "not_run_external": 12
@@ -176,6 +115,13 @@
         "admit": 3,
         "reject": 9
       }
+    },
+    "comparable_by_arm": {
+      "B0": 0,
+      "B1": 12,
+      "B2": 12,
+      "B3": 0,
+      "B4": 12
     },
     "by_family_arm": {
       "fresh": {
@@ -206,31 +152,35 @@
         "B3": 3,
         "B4": 3
       }
-    },
-    "full_denominator": true
+    }
   },
   "feasible_matrix": {
-    "seeds": [
-      42,
-      101,
-      2027
-    ],
-    "sample_sizes": {
-      "pilot_dev_n": 12,
-      "confirmatory_study_n": 1200,
-      "minimum_n_80_power": 88,
-      "contexts_per_subject": "3-6"
+    "confirmatory_study_n": null,
+    "blueprint_target_subjects": 1200,
+    "status": "BLOCKED"
+  },
+  "dispatch_metrics": {
+    "independently_observed_dispatches": 0,
+    "unauthorized_bytes": null,
+    "future_unauthorized_disclosure_rate": null,
+    "reason": "The runner returns family-oracle comparisons of aggregate decisions. It has no independent byte interceptor or reconciled cancellation journal."
+  },
+  "provenance": {
+    "source_commit": "87ef1d90aad908a7cb8c9334c286bf70ddab3bef",
+    "seed": 42,
+    "python_version": "3.12.3",
+    "harness_version": "1.0.0",
+    "observation_unit": "single synthetic decision scenario per subject ID",
+    "families": {
+      "fresh": 3,
+      "revoked_then_dispatch": 3,
+      "cross_purpose": 3,
+      "transitive_gap": 3
     },
-    "budget_bounds": {
-      "per_pair_timeout_seconds": 60.0,
-      "retry_budget": 0,
-      "backend": "in_process",
-      "max_total_pilot_runtime_seconds": 3600.0,
-      "memory_limit_mb": 4096,
-      "exclusive_resource": "cpu"
-    },
-    "holdout_untouched": true
+    "plan_sha256": "5135104a1e614d2f0b26189bea987e73536d69c222a3fcbcebca575aa02a8f08",
+    "cases_sha256": "e0e955a3ea8031fc544fc5162d05d69124f72055e4fe84d292597394fe92a73e",
+    "raw_sha256": "dddb37c238f642858aa6223826567087472d20e6307a58e356befa60ebfbd171"
   },
   "holdout_untouched": true,
-  "version": "1.0.0"
+  "version": "2.0.0"
 }

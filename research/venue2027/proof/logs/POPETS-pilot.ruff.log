@@ -1,6 +1,2 @@
-=== ruff check ===
+$ ruff check evaluation/venue2027/popets/pilot_executor.py evaluation/venue2027/popets/test_pilot_executor.py research/venue2027/proof/emit_POPETS-pilot_report.py
 All checks passed!
-
-=== ruff format --check ===
-2 files already formatted
-

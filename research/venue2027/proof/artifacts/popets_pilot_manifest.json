@@ -1,0 +1,130 @@
+{
+  "scope": "synthetic_dev_only",
+  "status": "BLOCKED",
+  "source_commit": "87ef1d90aad908a7cb8c9334c286bf70ddab3bef",
+  "pilot_id": "popets-pilot-proof",
+  "coverage": {
+    "planned": 60,
+    "recorded": 60,
+    "missing": 0,
+    "executed": 36,
+    "decision_returned": 36,
+    "comparable": 36,
+    "oracle_unassessed": 0,
+    "outcomes": {
+      "not_run_external": 24,
+      "admit": 9,
+      "reject": 27
+    },
+    "by_arm_outcome": {
+      "B0": {
+        "not_run_external": 12
+      },
+      "B1": {
+        "admit": 3,
+        "reject": 9
+      },
+      "B2": {
+        "admit": 3,
+        "reject": 9
+      },
+      "B3": {
+        "not_run_external": 12
+      },
+      "B4": {
+        "admit": 3,
+        "reject": 9
+      }
+    },
+    "comparable_by_arm": {
+      "B0": 0,
+      "B1": 12,
+      "B2": 12,
+      "B3": 0,
+      "B4": 12
+    },
+    "by_family_arm": {
+      "fresh": {
+        "B0": 3,
+        "B1": 3,
+        "B2": 3,
+        "B3": 3,
+        "B4": 3
+      },
+      "revoked_then_dispatch": {
+        "B0": 3,
+        "B1": 3,
+        "B2": 3,
+        "B3": 3,
+        "B4": 3
+      },
+      "cross_purpose": {
+        "B0": 3,
+        "B1": 3,
+        "B2": 3,
+        "B3": 3,
+        "B4": 3
+      },
+      "transitive_gap": {
+        "B0": 3,
+        "B1": 3,
+        "B2": 3,
+        "B3": 3,
+        "B4": 3
+      }
+    }
+  },
+  "runner_manifest": {
+    "record_kind": "run_manifest",
+    "campaign_id": "popets-pilot-proof",
+    "source_commit": "87ef1d90aad908a7cb8c9334c286bf70ddab3bef",
+    "seed": 42,
+    "python_version": "3.12.3",
+    "harness_version": "1.0.0",
+    "arm_ids": [
+      "B0",
+      "B1",
+      "B2",
+      "B3",
+      "B4"
+    ],
+    "case_ids": [
+      "rev-42-00036",
+      "rev-42-00037",
+      "rev-42-00038",
+      "rev-42-00039",
+      "rev-42-00040",
+      "rev-42-00041",
+      "rev-42-00042",
+      "rev-42-00043",
+      "rev-42-00044",
+      "rev-42-00045",
+      "rev-42-00046",
+      "rev-42-00047"
+    ],
+    "planned_pairs": 60,
+    "attempted_pairs": 60,
+    "missing_pairs": 0,
+    "denominator": {
+      "admit": 9,
+      "reject": 27,
+      "indeterminate": 0,
+      "timeout": 0,
+      "execution_error": 0,
+      "not_run_external": 24,
+      "invalid_result": 0
+    },
+    "denominator_total": 60,
+    "wall_seconds": 0.005058,
+    "complete": true,
+    "manifest_digest": "215f5e6685c73e863e14d2b638a3ace6d7192de53f8aef3ca6845db3d356df9f",
+    "resumed_pairs": 0,
+    "executed_pairs": 60,
+    "journal_path": null
+  },
+  "files_sha256": {
+    "research/venue2027/proof/artifacts/popets_pilot_attempts.jsonl": "dddb37c238f642858aa6223826567087472d20e6307a58e356befa60ebfbd171",
+    "research/venue2027/proof/artifacts/popets_pilot_cases.jsonl": "e0e955a3ea8031fc544fc5162d05d69124f72055e4fe84d292597394fe92a73e",
+    "research/venue2027/proof/artifacts/popets_pilot_report.json": "003cded9abf7608fb0b855243ea40b1942d24411a7793bbfd2e6da2622096504"
+  }
+}
