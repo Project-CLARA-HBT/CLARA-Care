@@ -4,6 +4,15 @@
 
 **Số bài đã chứng minh ưu thế theo yêu cầu mới: 0.** Danh mục chỉ tính mỗi công trình một lần sau khi có phép kiểm tra độc lập trên mọi đối chứng mạnh thuộc phạm vi tuyên bố. Bảng 11 đề tài và hạng venue bên dưới là phương án lịch sử. Các tuyến hạng B cần được đánh giá lại về đóng góp và độ phù hợp trước khi đề xuất sang A/A*.
 
+**Chiến lược mới.** [Mười câu hỏi sàng lọc trên dữ liệu ngoài](baseline_first/OPPORTUNITIES.md) thay cho thứ tự ưu tiên lịch sử. Tài liệu *TwinFedSem, Hướng dẫn nghiên cứu và thực nghiệm*, mục 9.10, 10, 12, 13 và 14, gợi ý ba việc áp dụng được ở đây. Với mỗi baseline, lưu revision, thay đổi khi chuyển tác vụ và ngân sách tuning. Cho ablation sát nhất dùng cùng đầu vào và cùng ngân sách, rồi đo riêng lợi ích của thành phần được coi là mới. Chạy trước cấu hình có khả năng bác bỏ giả thuyết cao nhất; chỉ mở nguồn kiểm định khi thí nghiệm development đã phân biệt được cơ chế với từng đối chứng. Khi vòng sàng lọc thất bại, bảng phải ghi rõ phạm vi bị loại và nguồn còn giữ riêng. [Nguồn nhãn và điều kiện sử dụng](EXTERNAL_VALIDATION_SOURCES.md)
+
+| Phép sàng lọc mới | Kết quả và quyết định |
+|---|---|
+| Admission theo tiền tố khóa | Trên hai cluster Twitter, thua đối chứng tốt nhất cả sáu cấu hình. Ở mức 1.024 đối tượng, số miss tăng 1,89% và 4,61%. Loại cơ chế. [Cache](baseline_first/cache_admission/RESULTS.md) |
+| Đọc số thập phân theo cặp | Trên 14 ngày dữ liệu điện UCI, cùng quy tắc nhận dạng định dạng, bản scalar nhanh hơn bản SIMD cả 14 ngày. Tất cả parser trả đúng từng bit ở 133.812 trường. Loại cơ chế ghép cặp. [Parser](baseline_first/decimal_parse/RESULTS.md) |
+| Bổ sung nhãn cho thứ hạng TREC | Cố định 143 run, 30 truy vấn và corpus vòng 1. Khi bổ sung 12.856 nhãn, 242/10.153 cặp đảo thứ tự theo nDCG@10. NIST đã nghiên cứu tác động này trên cùng run. Giữ kết quả tái lập, rút đề xuất bài mới. [TREC](baseline_first/trec_pool/RESULTS.md) |
+| Nâng cấp dữ liệu múi giờ | Hai bản IANA lệch offset Beirut trong 624 giờ. Những nguồn lịch đã kiểm thiếu nhãn của cùng cuộc hẹn trước và sau nâng cấp. Rút đề tài. [Lịch](calendar_migration/RESULTS.md) |
+
 | Hướng | Quyết định theo bằng chứng hiện có |
 |---|---|
 | PolicyTrace | Giữ để thử nghiệm ở ICST. Xu et al. đã có kiểm thử theo độ bao phủ. Câu hỏi hẹp hơn là liệu lịch sử có thứ tự và ngân sách oracle cố định có tăng số họ lỗi phát hiện được so với cả phương pháp đó lẫn sinh kiểm thử có trạng thái. 78/78 assertion Cedar kiểm tra adapter. Đã chạy XPA gốc trên policy hội nghị. Bộ sinh tạo 25 yêu cầu sau 25 lượt gọi solver và 217 lượt đánh giá target, đạt đủ 28 nghĩa vụ MC/DC và 14 nghĩa vụ lỗi. Chưa có phép so phát hiện lỗi trên lịch sử giữ riêng. [Mã gốc, số lần gọi và kết quả](venue2027/sacmat/xpa_execution/RESULTS.md) |
