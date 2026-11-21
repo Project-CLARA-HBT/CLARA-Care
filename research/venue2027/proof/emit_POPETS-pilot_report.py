@@ -114,7 +114,15 @@ def main() -> None:
     )
     path = PROOF / "POPETS-pilot.json"
     validation_log = LOG / "POPETS-pilot.validator.log"
-    paths = [*SOURCE, raw, inputs, artifact, Path(tests["log_path"]), Path(lint["log_path"])]
+    paths = [
+        *SOURCE,
+        raw,
+        inputs,
+        artifact,
+        tracked_manifest,
+        Path(tests["log_path"]),
+        Path(lint["log_path"]),
+    ]
 
     def build(artifacts):
         return ap.build_report(
