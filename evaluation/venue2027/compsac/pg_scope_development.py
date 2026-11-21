@@ -44,7 +44,7 @@ def attempt(conn, arm, target, deps, expected_epoch):
             # and diagnostics. Every arm gets the same SQL and round-trip count.
             statement = sql.SQL("""
                 WITH observed AS MATERIALIZED (
-                    SELECT version FROM evidence WHERE id = ANY(%s) ORDER BY id {}
+                    SELECT version FROM dependencies WHERE id = ANY(%s) ORDER BY id {}
                 ), validated AS (
                     SELECT count(*) = %s AND bool_and(version = %s) AS ok FROM observed
                 ), written AS (
@@ -62,10 +62,13 @@ def attempt(conn, arm, target, deps, expected_epoch):
 
 
 def campaign(admin, dsn, schema, arm, workers, fanout, seed):
-    admin.execute("TRUNCATE evidence")
+    admin.execute("TRUNCATE evidence, dependencies")
+    admin.execute("INSERT INTO dependencies SELECT i,0 FROM generate_series(1,%s) AS i", (fanout,))
     admin.execute(
-        "INSERT INTO evidence SELECT i,0 FROM generate_series(1,%s) AS i", (OPS + fanout,)
+        "INSERT INTO evidence SELECT i,0 FROM generate_series(%s,%s) AS i",
+        (fanout + 1, OPS + fanout),
     )
+    admin.execute("ANALYZE dependencies")
     admin.execute("ANALYZE evidence")
     targets = list(range(fanout + 1, fanout + OPS + 1))
     random.Random(seed).shuffle(targets)
@@ -126,6 +129,7 @@ def main(socket):
         admin.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(schema)))
         try:
             admin.execute(sql.SQL("SET search_path TO {}").format(sql.Identifier(schema)))
+            admin.execute("CREATE TABLE dependencies (id int PRIMARY KEY, version int NOT NULL)")
             admin.execute("CREATE TABLE evidence (id int PRIMARY KEY, version int NOT NULL)")
             for workers in (1, 4):
                 for fanout in (1, 8):
@@ -143,6 +147,7 @@ def main(socket):
     return dict(
         scope="development_disjoint_targets_shared_dependencies",
         server_version_num=version,
+        layout="separate_dependency_and_target_relations",
         retry_limit=2,
         planner_statistics="ANALYZE after each population",
         runner_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
