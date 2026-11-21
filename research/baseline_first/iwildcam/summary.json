@@ -1,0 +1,40 @@
+{
+  "train": {
+    "cameras": 243,
+    "sequences": 24109,
+    "multi_sequences": 23490,
+    "mixed_sequences": 1513,
+    "mixed_images": 7383,
+    "mode_oracle": {
+      "images": 129809,
+      "classes": 182,
+      "accuracy": 0.9822970672295449,
+      "macro_f1": 0.8801644294852463
+    },
+    "other_images_only": {
+      "images": 129190,
+      "classes": 165,
+      "accuracy": 0.9741853084604072,
+      "macro_f1": 0.809997918178181
+    }
+  },
+  "val": {
+    "cameras": 32,
+    "sequences": 2533,
+    "multi_sequences": 2484,
+    "mixed_sequences": 162,
+    "mixed_images": 647,
+    "mode_oracle": {
+      "images": 14961,
+      "classes": 75,
+      "accuracy": 0.98529510059488,
+      "macro_f1": 0.8861802292172238
+    },
+    "other_images_only": {
+      "images": 14912,
+      "classes": 74,
+      "accuracy": 0.9776019313304721,
+      "macro_f1": 0.8336773973718392
+    }
+  }
+}
