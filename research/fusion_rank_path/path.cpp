@@ -113,6 +113,10 @@ Output evaluate(const Query& q, Mode mode) {
 
 #ifdef RANKPATH_EXTENSIONS
 #include "frontier.hpp"
+#ifdef RANKPATH_PUBLISHED
+#include "cta/lp_cta.hpp"
+#include "directrank/path.hpp"
+#endif
 #endif
 
 int main(int argc,char** argv) {
@@ -148,7 +152,11 @@ int main(int argc,char** argv) {
         size_t end=first+1;
         while(end<queries.size() && queries[end].source==queries[first].source) ++end;
 #ifdef RANKPATH_EXTENSIONS
+#ifdef RANKPATH_PUBLISHED
+        std::array<int,10> order={Sweep,BandSweep,Early,Clip,BandClip,5,6,7,8,9};
+#else
         std::array<int,8> order={Sweep,BandSweep,Early,Clip,BandClip,5,6,7};
+#endif
 #else
         std::array<Mode,5> order={Sweep,BandSweep,Early,Clip,BandClip};
 #endif
@@ -159,6 +167,20 @@ int main(int argc,char** argv) {
                 auto start=std::chrono::steady_clock::now();
                 for(size_t j=first;j<end;++j) {
 #ifdef RANKPATH_EXTENSIONS
+#ifdef RANKPATH_PUBLISHED
+                    const auto& q = queries[j];
+                    if (order[pos] == 8) {
+                        out.push_back(rank_path_cta::evaluate(q.rows, q.positives));
+                        continue;
+                    }
+                    if (order[pos] == 9) {
+                        out.push_back(directrank::rank_paths(static_cast<int>(q.rows.size()),
+                            [&](int i) { return q.rows[i].a; }, [&](int i) { return q.rows[i].b; },
+                            static_cast<int>(q.positives.size()),
+                            [&](int i) { return q.positives[i].id; }, K));
+                        continue;
+                    }
+#endif
                     if (order[pos] > BandClip) {
                         out.push_back(vector_evaluate(queries[j], order[pos]));
                         continue;
