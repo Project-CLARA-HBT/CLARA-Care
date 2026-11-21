@@ -1,0 +1,7 @@
+{
+  "gpu": "NVIDIA GeForce RTX 4060 Ti",
+  "torch": "2.6.0+cu124",
+  "transformers": "4.49.0",
+  "cuda": "12.4",
+  "peak_bytes": 266017280
+}

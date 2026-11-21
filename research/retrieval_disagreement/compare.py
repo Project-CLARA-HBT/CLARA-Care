@@ -57,7 +57,7 @@ def scores(path):
         def rank(v):
             return np.argsort(-v, kind="stable")
 
-        def ndcg(v):
+        def ndcg(v, pos=pos, ideal=ideal):
             return float(discount @ pos[rank(v)[:10]] / ideal)
 
         a, b = rank(bm), rank(de)
