@@ -11,7 +11,7 @@ import libcachesim as sim
 import zstandard
 
 
-def load_prefix(path):
+def load_prefix(path, namespace_ids=None):
     digest = hashlib.sha256()
     ids = {}
     requests = []
@@ -30,7 +30,11 @@ def load_prefix(path):
                 op = op.decode()
                 ops[op] += 1
                 if op in {"get", "gets"}:
-                    requests.append((index, ids.setdefault(key, len(ids) + 1)))
+                    identifier = ids.setdefault(key, len(ids) + 1)
+                    requests.append((index, identifier))
+                    if namespace_ids is not None and identifier not in namespace_ids:
+                        parts = key.lstrip(b":").split(b":", 1)
+                        namespace_ids[identifier] = parts[0] if b":" in key else b""
     if timestamps != sorted(timestamps):
         raise ValueError("source order changed")
     return requests, {

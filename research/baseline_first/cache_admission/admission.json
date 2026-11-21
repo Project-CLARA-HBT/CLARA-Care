@@ -1,0 +1,42 @@
+{
+  "cluster17": {
+    "256": {
+      "LFU": 56151,
+      "WTinyLFU": 53854,
+      "namespace": 53069,
+      "recent_only": 52548
+    },
+    "1024": {
+      "LFU": 42951,
+      "WTinyLFU": 39818,
+      "namespace": 39974,
+      "recent_only": 39234
+    },
+    "4096": {
+      "LFU": 27659,
+      "WTinyLFU": 27625,
+      "namespace": 27247,
+      "recent_only": 26569
+    }
+  },
+  "cluster52": {
+    "256": {
+      "LFU": 63005,
+      "WTinyLFU": 58076,
+      "namespace": 56335,
+      "recent_only": 56154
+    },
+    "1024": {
+      "LFU": 56561,
+      "WTinyLFU": 49957,
+      "namespace": 48365,
+      "recent_only": 48886
+    },
+    "4096": {
+      "LFU": 46854,
+      "WTinyLFU": 41963,
+      "namespace": 40083,
+      "recent_only": 41812
+    }
+  }
+}
