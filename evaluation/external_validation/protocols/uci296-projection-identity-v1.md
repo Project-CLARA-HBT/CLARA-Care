@@ -10,4 +10,4 @@ Project the 23 named medication-status columns from the Diabetes-130 adapter wit
 
 Report only aggregate finite-cohort counts and denominators. This describes content repetition and loss of distinctions under a coarser representation. It estimates neither clinical appropriateness nor a stale-write or disclosure failure rate. No classifier, causal treatment effect, tuning, or test-set claim is involved. This study is separate from sealed GLHS experiments and the FMC preprint.
 
-Source attribution: Beata Strack et al., *Diabetes 130-US Hospitals for Years 1999–2008*, UCI Machine Learning Repository, CC BY 4.0. [Dataset and citation](https://archive.ics.uci.edu/dataset/296/diabetes+130-us+hospitals+for+years+1999-2008).
+Source attribution: John Clore, Krzysztof Cios, Jon DeShazo and Beata Strack, *Diabetes 130-US Hospitals for Years 1999–2008*, UCI Machine Learning Repository, CC BY 4.0. [Dataset and citation](https://archive.ics.uci.edu/dataset/296/diabetes+130-us+hospitals+for+years+1999-2008).
