@@ -1,0 +1,26 @@
+{
+  "ko/NFD/all/NFC/starter": {
+    "entry": 1,
+    "scalar_cut": 22
+  },
+  "ko/NFD/all/NFKC/starter": {
+    "entry": 1,
+    "scalar_cut": 22
+  },
+  "stress/remote/256/NFC/pair": {
+    "entry": 256,
+    "scalar_cut": 1
+  },
+  "stress/remote/256/NFKC/pair": {
+    "entry": 256,
+    "scalar_cut": 1
+  },
+  "stress/remote/64/NFC/pair": {
+    "entry": 64,
+    "scalar_cut": 1
+  },
+  "stress/remote/64/NFKC/pair": {
+    "entry": 64,
+    "scalar_cut": 1
+  }
+}
