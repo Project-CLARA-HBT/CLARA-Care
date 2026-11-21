@@ -1,0 +1,385 @@
+{
+  "log_sha256": "452c7ce5efb17e6f4a6b63696846713959ab555fb3cec4b9f0d9b4e74d560d7c",
+  "manifest_sha256": "45969bb97f81f70c4174eba491916c7275e1fe1e394b050b646a05b784d80897",
+  "tasks": {
+    "CMakeFiles/example.dir/test/example.c.o": {
+      "finish": 15382,
+      "outputs": [
+        "CMakeFiles/example.dir/test/example.c.o"
+      ],
+      "parents": [],
+      "start": 14457
+    },
+    "CMakeFiles/example64.dir/test/example.c.o": {
+      "finish": 16660,
+      "outputs": [
+        "CMakeFiles/example64.dir/test/example.c.o"
+      ],
+      "parents": [],
+      "start": 15438
+    },
+    "CMakeFiles/minigzip.dir/test/minigzip.c.o": {
+      "finish": 15645,
+      "outputs": [
+        "CMakeFiles/minigzip.dir/test/minigzip.c.o"
+      ],
+      "parents": [],
+      "start": 14920
+    },
+    "CMakeFiles/minigzip64.dir/test/minigzip.c.o": {
+      "finish": 16496,
+      "outputs": [
+        "CMakeFiles/minigzip64.dir/test/minigzip.c.o"
+      ],
+      "parents": [],
+      "start": 15771
+    },
+    "CMakeFiles/zlib.dir/adler32.c.o": {
+      "finish": 815,
+      "outputs": [
+        "CMakeFiles/zlib.dir/adler32.c.o"
+      ],
+      "parents": [],
+      "start": 8
+    },
+    "CMakeFiles/zlib.dir/compress.c.o": {
+      "finish": 707,
+      "outputs": [
+        "CMakeFiles/zlib.dir/compress.c.o"
+      ],
+      "parents": [],
+      "start": 14
+    },
+    "CMakeFiles/zlib.dir/crc32.c.o": {
+      "finish": 2030,
+      "outputs": [
+        "CMakeFiles/zlib.dir/crc32.c.o"
+      ],
+      "parents": [],
+      "start": 16
+    },
+    "CMakeFiles/zlib.dir/deflate.c.o": {
+      "finish": 6966,
+      "outputs": [
+        "CMakeFiles/zlib.dir/deflate.c.o"
+      ],
+      "parents": [],
+      "start": 22
+    },
+    "CMakeFiles/zlib.dir/gzclose.c.o": {
+      "finish": 1172,
+      "outputs": [
+        "CMakeFiles/zlib.dir/gzclose.c.o"
+      ],
+      "parents": [],
+      "start": 708
+    },
+    "CMakeFiles/zlib.dir/gzlib.c.o": {
+      "finish": 1739,
+      "outputs": [
+        "CMakeFiles/zlib.dir/gzlib.c.o"
+      ],
+      "parents": [],
+      "start": 815
+    },
+    "CMakeFiles/zlib.dir/gzread.c.o": {
+      "finish": 2412,
+      "outputs": [
+        "CMakeFiles/zlib.dir/gzread.c.o"
+      ],
+      "parents": [],
+      "start": 1173
+    },
+    "CMakeFiles/zlib.dir/gzwrite.c.o": {
+      "finish": 2896,
+      "outputs": [
+        "CMakeFiles/zlib.dir/gzwrite.c.o"
+      ],
+      "parents": [],
+      "start": 1740
+    },
+    "CMakeFiles/zlib.dir/infback.c.o": {
+      "finish": 4987,
+      "outputs": [
+        "CMakeFiles/zlib.dir/infback.c.o"
+      ],
+      "parents": [],
+      "start": 2413
+    },
+    "CMakeFiles/zlib.dir/inffast.c.o": {
+      "finish": 7129,
+      "outputs": [
+        "CMakeFiles/zlib.dir/inffast.c.o"
+      ],
+      "parents": [],
+      "start": 3874
+    },
+    "CMakeFiles/zlib.dir/inflate.c.o": {
+      "finish": 10628,
+      "outputs": [
+        "CMakeFiles/zlib.dir/inflate.c.o"
+      ],
+      "parents": [],
+      "start": 2031
+    },
+    "CMakeFiles/zlib.dir/inftrees.c.o": {
+      "finish": 3874,
+      "outputs": [
+        "CMakeFiles/zlib.dir/inftrees.c.o"
+      ],
+      "parents": [],
+      "start": 2896
+    },
+    "CMakeFiles/zlib.dir/trees.c.o": {
+      "finish": 8376,
+      "outputs": [
+        "CMakeFiles/zlib.dir/trees.c.o"
+      ],
+      "parents": [],
+      "start": 4988
+    },
+    "CMakeFiles/zlib.dir/uncompr.c.o": {
+      "finish": 7605,
+      "outputs": [
+        "CMakeFiles/zlib.dir/uncompr.c.o"
+      ],
+      "parents": [],
+      "start": 6966
+    },
+    "CMakeFiles/zlib.dir/zutil.c.o": {
+      "finish": 7657,
+      "outputs": [
+        "CMakeFiles/zlib.dir/zutil.c.o"
+      ],
+      "parents": [],
+      "start": 7129
+    },
+    "CMakeFiles/zlibstatic.dir/adler32.c.o": {
+      "finish": 8394,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/adler32.c.o"
+      ],
+      "parents": [],
+      "start": 7606
+    },
+    "CMakeFiles/zlibstatic.dir/compress.c.o": {
+      "finish": 8088,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/compress.c.o"
+      ],
+      "parents": [],
+      "start": 7661
+    },
+    "CMakeFiles/zlibstatic.dir/crc32.c.o": {
+      "finish": 9342,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/crc32.c.o"
+      ],
+      "parents": [],
+      "start": 8088
+    },
+    "CMakeFiles/zlibstatic.dir/deflate.c.o": {
+      "finish": 13005,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/deflate.c.o"
+      ],
+      "parents": [],
+      "start": 8377
+    },
+    "CMakeFiles/zlibstatic.dir/gzclose.c.o": {
+      "finish": 8757,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/gzclose.c.o"
+      ],
+      "parents": [],
+      "start": 8395
+    },
+    "CMakeFiles/zlibstatic.dir/gzlib.c.o": {
+      "finish": 9785,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/gzlib.c.o"
+      ],
+      "parents": [],
+      "start": 8757
+    },
+    "CMakeFiles/zlibstatic.dir/gzread.c.o": {
+      "finish": 11307,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/gzread.c.o"
+      ],
+      "parents": [],
+      "start": 9343
+    },
+    "CMakeFiles/zlibstatic.dir/gzwrite.c.o": {
+      "finish": 10702,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/gzwrite.c.o"
+      ],
+      "parents": [],
+      "start": 9785
+    },
+    "CMakeFiles/zlibstatic.dir/infback.c.o": {
+      "finish": 14064,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/infback.c.o"
+      ],
+      "parents": [],
+      "start": 11201
+    },
+    "CMakeFiles/zlibstatic.dir/inffast.c.o": {
+      "finish": 14456,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/inffast.c.o"
+      ],
+      "parents": [],
+      "start": 12389
+    },
+    "CMakeFiles/zlibstatic.dir/inflate.c.o": {
+      "finish": 18628,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/inflate.c.o"
+      ],
+      "parents": [],
+      "start": 10702
+    },
+    "CMakeFiles/zlibstatic.dir/inftrees.c.o": {
+      "finish": 12388,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/inftrees.c.o"
+      ],
+      "parents": [],
+      "start": 11307
+    },
+    "CMakeFiles/zlibstatic.dir/trees.c.o": {
+      "finish": 15438,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/trees.c.o"
+      ],
+      "parents": [],
+      "start": 13006
+    },
+    "CMakeFiles/zlibstatic.dir/uncompr.c.o": {
+      "finish": 14409,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/uncompr.c.o"
+      ],
+      "parents": [],
+      "start": 14065
+    },
+    "CMakeFiles/zlibstatic.dir/zutil.c.o": {
+      "finish": 14919,
+      "outputs": [
+        "CMakeFiles/zlibstatic.dir/zutil.c.o"
+      ],
+      "parents": [],
+      "start": 14409
+    },
+    "example": {
+      "finish": 15770,
+      "outputs": [
+        "example"
+      ],
+      "parents": [
+        "CMakeFiles/example.dir/test/example.c.o",
+        "libz.so.1",
+        "libz.so.1.3.1"
+      ],
+      "start": 15382
+    },
+    "example64": {
+      "finish": 17095,
+      "outputs": [
+        "example64"
+      ],
+      "parents": [
+        "CMakeFiles/example64.dir/test/example.c.o",
+        "libz.so.1",
+        "libz.so.1.3.1"
+      ],
+      "start": 16661
+    },
+    "libz.a": {
+      "finish": 18924,
+      "outputs": [
+        "libz.a"
+      ],
+      "parents": [
+        "CMakeFiles/zlibstatic.dir/adler32.c.o",
+        "CMakeFiles/zlibstatic.dir/compress.c.o",
+        "CMakeFiles/zlibstatic.dir/crc32.c.o",
+        "CMakeFiles/zlibstatic.dir/deflate.c.o",
+        "CMakeFiles/zlibstatic.dir/gzclose.c.o",
+        "CMakeFiles/zlibstatic.dir/gzlib.c.o",
+        "CMakeFiles/zlibstatic.dir/gzread.c.o",
+        "CMakeFiles/zlibstatic.dir/gzwrite.c.o",
+        "CMakeFiles/zlibstatic.dir/infback.c.o",
+        "CMakeFiles/zlibstatic.dir/inffast.c.o",
+        "CMakeFiles/zlibstatic.dir/inflate.c.o",
+        "CMakeFiles/zlibstatic.dir/inftrees.c.o",
+        "CMakeFiles/zlibstatic.dir/trees.c.o",
+        "CMakeFiles/zlibstatic.dir/uncompr.c.o",
+        "CMakeFiles/zlibstatic.dir/zutil.c.o"
+      ],
+      "start": 18628
+    },
+    "libz.so.1": {
+      "finish": 11200,
+      "outputs": [
+        "libz.so.1",
+        "libz.so"
+      ],
+      "parents": [
+        "libz.so.1.3.1"
+      ],
+      "start": 11155
+    },
+    "libz.so.1.3.1": {
+      "finish": 11154,
+      "outputs": [
+        "libz.so.1.3.1"
+      ],
+      "parents": [
+        "CMakeFiles/zlib.dir/adler32.c.o",
+        "CMakeFiles/zlib.dir/compress.c.o",
+        "CMakeFiles/zlib.dir/crc32.c.o",
+        "CMakeFiles/zlib.dir/deflate.c.o",
+        "CMakeFiles/zlib.dir/gzclose.c.o",
+        "CMakeFiles/zlib.dir/gzlib.c.o",
+        "CMakeFiles/zlib.dir/gzread.c.o",
+        "CMakeFiles/zlib.dir/gzwrite.c.o",
+        "CMakeFiles/zlib.dir/infback.c.o",
+        "CMakeFiles/zlib.dir/inffast.c.o",
+        "CMakeFiles/zlib.dir/inflate.c.o",
+        "CMakeFiles/zlib.dir/inftrees.c.o",
+        "CMakeFiles/zlib.dir/trees.c.o",
+        "CMakeFiles/zlib.dir/uncompr.c.o",
+        "CMakeFiles/zlib.dir/zutil.c.o"
+      ],
+      "start": 10628
+    },
+    "minigzip": {
+      "finish": 16217,
+      "outputs": [
+        "minigzip"
+      ],
+      "parents": [
+        "CMakeFiles/minigzip.dir/test/minigzip.c.o",
+        "libz.so.1",
+        "libz.so.1.3.1"
+      ],
+      "start": 15645
+    },
+    "minigzip64": {
+      "finish": 17121,
+      "outputs": [
+        "minigzip64"
+      ],
+      "parents": [
+        "CMakeFiles/minigzip64.dir/test/minigzip.c.o",
+        "libz.so.1",
+        "libz.so.1.3.1"
+      ],
+      "start": 16497
+    }
+  }
+}

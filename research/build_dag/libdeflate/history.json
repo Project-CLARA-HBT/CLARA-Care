@@ -1,0 +1,280 @@
+{
+  "log_sha256": "7aa94cd84a2efcf6c6cedd29fe247e07a5ed5ee79db2a7f7e7491e7e80d8e9f5",
+  "manifest_sha256": "1dfdbb8994bd18339faf944af8aa2d1751239c4d7ce293810057856ec0a137ab",
+  "tasks": {
+    "CMakeFiles/libdeflate_shared.dir/lib/adler32.c.o": {
+      "finish": 254189,
+      "outputs": [
+        "CMakeFiles/libdeflate_shared.dir/lib/adler32.c.o"
+      ],
+      "parents": [],
+      "start": 241084
+    },
+    "CMakeFiles/libdeflate_shared.dir/lib/arm/cpu_features.c.o": {
+      "finish": 137638,
+      "outputs": [
+        "CMakeFiles/libdeflate_shared.dir/lib/arm/cpu_features.c.o"
+      ],
+      "parents": [],
+      "start": 136743
+    },
+    "CMakeFiles/libdeflate_shared.dir/lib/crc32.c.o": {
+      "finish": 272596,
+      "outputs": [
+        "CMakeFiles/libdeflate_shared.dir/lib/crc32.c.o"
+      ],
+      "parents": [],
+      "start": 256704
+    },
+    "CMakeFiles/libdeflate_shared.dir/lib/deflate_compress.c.o": {
+      "finish": 218833,
+      "outputs": [
+        "CMakeFiles/libdeflate_shared.dir/lib/deflate_compress.c.o"
+      ],
+      "parents": [],
+      "start": 147251
+    },
+    "CMakeFiles/libdeflate_shared.dir/lib/deflate_decompress.c.o": {
+      "finish": 241082,
+      "outputs": [
+        "CMakeFiles/libdeflate_shared.dir/lib/deflate_decompress.c.o"
+      ],
+      "parents": [],
+      "start": 218839
+    },
+    "CMakeFiles/libdeflate_shared.dir/lib/gzip_compress.c.o": {
+      "finish": 273807,
+      "outputs": [
+        "CMakeFiles/libdeflate_shared.dir/lib/gzip_compress.c.o"
+      ],
+      "parents": [],
+      "start": 272600
+    },
+    "CMakeFiles/libdeflate_shared.dir/lib/gzip_decompress.c.o": {
+      "finish": 275397,
+      "outputs": [
+        "CMakeFiles/libdeflate_shared.dir/lib/gzip_decompress.c.o"
+      ],
+      "parents": [],
+      "start": 273812
+    },
+    "CMakeFiles/libdeflate_shared.dir/lib/utils.c.o": {
+      "finish": 138988,
+      "outputs": [
+        "CMakeFiles/libdeflate_shared.dir/lib/utils.c.o"
+      ],
+      "parents": [],
+      "start": 137643
+    },
+    "CMakeFiles/libdeflate_shared.dir/lib/x86/cpu_features.c.o": {
+      "finish": 147247,
+      "outputs": [
+        "CMakeFiles/libdeflate_shared.dir/lib/x86/cpu_features.c.o"
+      ],
+      "parents": [],
+      "start": 138989
+    },
+    "CMakeFiles/libdeflate_shared.dir/lib/zlib_compress.c.o": {
+      "finish": 255137,
+      "outputs": [
+        "CMakeFiles/libdeflate_shared.dir/lib/zlib_compress.c.o"
+      ],
+      "parents": [],
+      "start": 254194
+    },
+    "CMakeFiles/libdeflate_shared.dir/lib/zlib_decompress.c.o": {
+      "finish": 256700,
+      "outputs": [
+        "CMakeFiles/libdeflate_shared.dir/lib/zlib_decompress.c.o"
+      ],
+      "parents": [],
+      "start": 255138
+    },
+    "CMakeFiles/libdeflate_static.dir/lib/adler32.c.o": {
+      "finish": 114607,
+      "outputs": [
+        "CMakeFiles/libdeflate_static.dir/lib/adler32.c.o"
+      ],
+      "parents": [],
+      "start": 100281
+    },
+    "CMakeFiles/libdeflate_static.dir/lib/arm/cpu_features.c.o": {
+      "finish": 1011,
+      "outputs": [
+        "CMakeFiles/libdeflate_static.dir/lib/arm/cpu_features.c.o"
+      ],
+      "parents": [],
+      "start": 82
+    },
+    "CMakeFiles/libdeflate_static.dir/lib/crc32.c.o": {
+      "finish": 133848,
+      "outputs": [
+        "CMakeFiles/libdeflate_static.dir/lib/crc32.c.o"
+      ],
+      "parents": [],
+      "start": 117473
+    },
+    "CMakeFiles/libdeflate_static.dir/lib/deflate_compress.c.o": {
+      "finish": 77418,
+      "outputs": [
+        "CMakeFiles/libdeflate_static.dir/lib/deflate_compress.c.o"
+      ],
+      "parents": [],
+      "start": 12747
+    },
+    "CMakeFiles/libdeflate_static.dir/lib/deflate_decompress.c.o": {
+      "finish": 100280,
+      "outputs": [
+        "CMakeFiles/libdeflate_static.dir/lib/deflate_decompress.c.o"
+      ],
+      "parents": [],
+      "start": 77419
+    },
+    "CMakeFiles/libdeflate_static.dir/lib/gzip_compress.c.o": {
+      "finish": 134988,
+      "outputs": [
+        "CMakeFiles/libdeflate_static.dir/lib/gzip_compress.c.o"
+      ],
+      "parents": [],
+      "start": 133849
+    },
+    "CMakeFiles/libdeflate_static.dir/lib/gzip_decompress.c.o": {
+      "finish": 136197,
+      "outputs": [
+        "CMakeFiles/libdeflate_static.dir/lib/gzip_decompress.c.o"
+      ],
+      "parents": [],
+      "start": 134989
+    },
+    "CMakeFiles/libdeflate_static.dir/lib/utils.c.o": {
+      "finish": 1991,
+      "outputs": [
+        "CMakeFiles/libdeflate_static.dir/lib/utils.c.o"
+      ],
+      "parents": [],
+      "start": 1018
+    },
+    "CMakeFiles/libdeflate_static.dir/lib/x86/cpu_features.c.o": {
+      "finish": 12740,
+      "outputs": [
+        "CMakeFiles/libdeflate_static.dir/lib/x86/cpu_features.c.o"
+      ],
+      "parents": [],
+      "start": 1992
+    },
+    "CMakeFiles/libdeflate_static.dir/lib/zlib_compress.c.o": {
+      "finish": 115732,
+      "outputs": [
+        "CMakeFiles/libdeflate_static.dir/lib/zlib_compress.c.o"
+      ],
+      "parents": [],
+      "start": 114608
+    },
+    "CMakeFiles/libdeflate_static.dir/lib/zlib_decompress.c.o": {
+      "finish": 117473,
+      "outputs": [
+        "CMakeFiles/libdeflate_static.dir/lib/zlib_decompress.c.o"
+      ],
+      "parents": [],
+      "start": 115732
+    },
+    "libdeflate.a": {
+      "finish": 136741,
+      "outputs": [
+        "libdeflate.a"
+      ],
+      "parents": [
+        "CMakeFiles/libdeflate_static.dir/lib/adler32.c.o",
+        "CMakeFiles/libdeflate_static.dir/lib/arm/cpu_features.c.o",
+        "CMakeFiles/libdeflate_static.dir/lib/crc32.c.o",
+        "CMakeFiles/libdeflate_static.dir/lib/deflate_compress.c.o",
+        "CMakeFiles/libdeflate_static.dir/lib/deflate_decompress.c.o",
+        "CMakeFiles/libdeflate_static.dir/lib/gzip_compress.c.o",
+        "CMakeFiles/libdeflate_static.dir/lib/gzip_decompress.c.o",
+        "CMakeFiles/libdeflate_static.dir/lib/utils.c.o",
+        "CMakeFiles/libdeflate_static.dir/lib/x86/cpu_features.c.o",
+        "CMakeFiles/libdeflate_static.dir/lib/zlib_compress.c.o",
+        "CMakeFiles/libdeflate_static.dir/lib/zlib_decompress.c.o"
+      ],
+      "start": 136202
+    },
+    "libdeflate.so": {
+      "finish": 277502,
+      "outputs": [
+        "libdeflate.so"
+      ],
+      "parents": [
+        "libdeflate.so.0"
+      ],
+      "start": 277361
+    },
+    "libdeflate.so.0": {
+      "finish": 277360,
+      "outputs": [
+        "libdeflate.so.0"
+      ],
+      "parents": [
+        "CMakeFiles/libdeflate_shared.dir/lib/adler32.c.o",
+        "CMakeFiles/libdeflate_shared.dir/lib/arm/cpu_features.c.o",
+        "CMakeFiles/libdeflate_shared.dir/lib/crc32.c.o",
+        "CMakeFiles/libdeflate_shared.dir/lib/deflate_compress.c.o",
+        "CMakeFiles/libdeflate_shared.dir/lib/deflate_decompress.c.o",
+        "CMakeFiles/libdeflate_shared.dir/lib/gzip_compress.c.o",
+        "CMakeFiles/libdeflate_shared.dir/lib/gzip_decompress.c.o",
+        "CMakeFiles/libdeflate_shared.dir/lib/utils.c.o",
+        "CMakeFiles/libdeflate_shared.dir/lib/x86/cpu_features.c.o",
+        "CMakeFiles/libdeflate_shared.dir/lib/zlib_compress.c.o",
+        "CMakeFiles/libdeflate_shared.dir/lib/zlib_decompress.c.o"
+      ],
+      "start": 275406
+    },
+    "programs/CMakeFiles/libdeflate-gzip.dir/gzip.c.o": {
+      "finish": 289575,
+      "outputs": [
+        "programs/CMakeFiles/libdeflate-gzip.dir/gzip.c.o"
+      ],
+      "parents": [],
+      "start": 283487
+    },
+    "programs/CMakeFiles/libdeflate_prog_utils.dir/prog_util.c.o": {
+      "finish": 281488,
+      "outputs": [
+        "programs/CMakeFiles/libdeflate_prog_utils.dir/prog_util.c.o"
+      ],
+      "parents": [],
+      "start": 277503
+    },
+    "programs/CMakeFiles/libdeflate_prog_utils.dir/tgetopt.c.o": {
+      "finish": 283007,
+      "outputs": [
+        "programs/CMakeFiles/libdeflate_prog_utils.dir/tgetopt.c.o"
+      ],
+      "parents": [],
+      "start": 281488
+    },
+    "programs/libdeflate-gzip": {
+      "finish": 291677,
+      "outputs": [
+        "programs/libdeflate-gzip"
+      ],
+      "parents": [
+        "libdeflate.a",
+        "programs/CMakeFiles/libdeflate-gzip.dir/gzip.c.o",
+        "programs/libdeflate_prog_utils.a"
+      ],
+      "start": 289577
+    },
+    "programs/libdeflate_prog_utils.a": {
+      "finish": 283480,
+      "outputs": [
+        "programs/libdeflate_prog_utils.a"
+      ],
+      "parents": [
+        "libdeflate.a",
+        "programs/CMakeFiles/libdeflate_prog_utils.dir/prog_util.c.o",
+        "programs/CMakeFiles/libdeflate_prog_utils.dir/tgetopt.c.o"
+      ],
+      "start": 283007
+    }
+  }
+}
