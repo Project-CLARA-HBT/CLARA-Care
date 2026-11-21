@@ -1,0 +1,5 @@
+# External development replication
+
+Use the complete unmodified statsmodels v0.14.5 co2.csv (SHA-256 16695fa2786e53414e5a6b54767a3fdf5de99cfbc68617f69d1362d92776a92f). Keeling and Whorf's Mauna Loa series contains weekly atmospheric CO₂ concentrations in ppmv. Skip the header and date, materialize one concentration vector and one missing mask, and preserve row order. The byte profile before timing is 2,284 rows, 2,225 unsigned three-digit values with one fractional digit, 59 empty values. The unchanged milliscale guard matches 0%. A tenths guard matches 2,225/2,284 (97.42%). Measure both separately.
+
+Compare direct recognition with prescanning within each guard, retaining fast_float fallback, 8 KiB reads, allocation, destruction and warm file open/close. Pin to the first allowed CPU. Check both complete outputs per guard against exact decimal fractions and missing sentinels before timing. Alternate guard order and arm order in 16 rounds, with 64 imports per observation. Report one minus median direct / median split, each round loss and all measurements. One source file is one development case. No confirmatory or production-engine claim.
