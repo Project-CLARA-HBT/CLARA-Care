@@ -467,10 +467,42 @@ def refresh(state: Mapping[str, Any], changed_field: Any) -> RefreshPlan:
         )
     return _full_plan(
         REASON_UNKNOWN_FIELD,
-        f"changed_field {field!r} has no proven-narrow dependency scope; " "full refresh forced",
+        f"changed_field {field!r} has no proven-narrow dependency scope; full refresh forced",
         "",
         digest,
     )
+
+
+def plan_transition(
+    previous: Mapping[str, Any], current: Mapping[str, Any], hint: str
+) -> RefreshPlan:
+    """Scope a refresh using two complete, authenticated same-subject research snapshots.
+
+    Review obligations at either endpoint survive other simultaneous edits.
+    The caller is responsible for same-subject binding and snapshot integrity.
+    """
+    digest = _sha256_state([previous, current, hint])
+    for state in (previous, current):
+        if not isinstance(state, Mapping) or _validate_state(state) or "allergies" not in state:
+            return _full_plan(
+                REASON_MALFORMED, "Complete structured snapshots required.", "", digest
+            )
+    fields = sorted(
+        k
+        for k in previous.keys() | current.keys()
+        if k not in previous or k not in current or previous[k] != current[k]
+    )
+    selected = refresh(current, hint)
+    for field in dict.fromkeys([hint, *fields]):
+        # Evaluate both ends: simultaneous removals can make the after-state
+        # alone conceal an entangled dependency present before the edit.
+        for state in (previous, current):
+            plan = refresh(state, field)
+            if plan.mode == MODE_CLINICIAN_REVIEW:
+                return dataclasses.replace(plan, input_sha256=digest)
+            if plan.mode == MODE_FULL:
+                selected = plan
+    return dataclasses.replace(selected, input_sha256=digest)
 
 
 def update_context(current: Mapping[str, Any], dependencies: Any) -> RefreshPlan:
@@ -478,6 +510,7 @@ def update_context(current: Mapping[str, Any], dependencies: Any) -> RefreshPlan
 
     ``dependencies`` is a mapping with:
     - ``changed_field``: the section that changed (see :func:`refresh`);
+    - ``previous_state``: optional complete prior snapshot for multi-section updates;
     - ``declared_dependencies``: the dependency names the caller currently
       holds (non-empty; unknown names fail closed to FULL).
 
@@ -528,7 +561,12 @@ def update_context(current: Mapping[str, Any], dependencies: Any) -> RefreshPlan
             )
         if dep not in declared:
             declared.append(dep)
-    plan = refresh(current, dependencies.get("changed_field"))
+    if "previous_state" in dependencies:
+        plan = plan_transition(
+            dependencies["previous_state"], current, dependencies.get("changed_field")
+        )
+    else:
+        plan = refresh(current, dependencies.get("changed_field"))
     if plan.mode != MODE_PARTIAL:
         return plan
     missing = sorted(set(plan.recompute_dependencies) - set(declared))
@@ -559,6 +597,7 @@ __all__ = [
     "affected_dependencies",
     "is_entangled",
     "pair_entangled",
+    "plan_transition",
     "refresh",
     "update_context",
 ]
