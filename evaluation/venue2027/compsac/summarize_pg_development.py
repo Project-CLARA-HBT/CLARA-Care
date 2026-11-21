@@ -17,6 +17,15 @@ ROUNDS = {
 }
 
 
+def triplet(cells, field):
+    return " / ".join(
+        str(
+            sum(r["counts"].get("retries", 0) if field == "retries" else r[field] for r in cells[a])
+        )
+        for a in ARMS
+    )
+
+
 def summarize():
     lines = [
         "# PostgreSQL development results",
@@ -61,19 +70,8 @@ def summarize():
                 for a in ARMS[1:]
             ]
 
-            def triplet(field):
-                return " / ".join(
-                    str(
-                        sum(
-                            r["counts"].get("retries", 0) if field == "retries" else r[field]
-                            for r in cells[a]
-                        )
-                    )
-                    for a in ARMS
-                )
-
             lines.append(
-                f"| {w} | {f} | {ratios[0]:.2f} | {ratios[1]:.2f} | {median(base):.1f} | {triplet('retries')} | {triplet('missing_valid')} | {triplet('forbidden_installs')} |"
+                f"| {w} | {f} | {ratios[0]:.2f} | {ratios[1]:.2f} | {median(base):.1f} | {triplet(cells, 'retries')} | {triplet(cells, 'missing_valid')} | {triplet(cells, 'forbidden_installs')} |"
             )
         lines.append("")
     lines.extend(
