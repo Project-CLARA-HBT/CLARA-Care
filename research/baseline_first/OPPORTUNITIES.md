@@ -4,6 +4,23 @@
 
 Ngày 21/11/2026, lượt rà soát này đọc tài liệu gốc, điều khoản, mô tả nhãn, mã đối chứng và các báo cáo development đã có. Các đường dẫn tới bộ kiểm định chỉ dùng để xác định nguồn và schema. Lượt rà soát không tải mẫu hoặc đọc nhãn giữ riêng. Các biên dưới đây là **ngưỡng sàng lọc đề xuất**. Chọn kích thước mẫu, biên phi suy giảm và phương pháp suy luận từ development, ghi commit trước khi mở holdout. Với dữ liệu có ít nguồn, chỉ tuyên bố trên đúng nguồn đã đo. Một thử nghiệm trên nhiều file của cùng tổ chức vẫn là một nguồn. [Protocol bằng chứng](../venue2027/GATES/INDEPENDENT_EVIDENCE_PROTOCOL.md)
 
+## Những phép đo đã thực hiện
+
+Các số sau đều ở development. Đối với bài toán có oracle, cần phân biệt lợi ích có thể đạt nếu biết đáp án và lợi ích thực sự đạt bằng dữ liệu có sẵn khi quyết định. Đã sàng lọc cả mười hướng ở các mức khác nhau; số công trình đủ điều kiện tính vào mục tiêu vẫn bằng **0**.
+
+| Hướng | Kết quả quyết định | Giới hạn |
+|---|---|---|
+| VietMed | Hạng đầu 553 lỗi, bigram đã tune 541, hai bộ chấm lại 548 và 549. [So cùng 10 lượt giữ riêng bản ghi](vi_medical_asr/RESULTS.md) | Oracle 445 lỗi. Cơ chế hiện có thua LM; test còn giữ riêng. |
+| Đọc số | Trên 14 ngày UCI, gộp quét và chuyển số nhanh hơn scalar cũ 54,33%. Thêm lịch sử chỉ giảm 0,36%. [Thời gian từng lượt](decimal_parse/fused/RESULTS.md) | Nguồn đã dùng để chỉnh phương pháp. Lợi ích riêng của fusion còn cần cùng kernel và fast_float dùng con trỏ trả về. |
+| ECG | Ngay cả lựa chọn miễn phí predictor tốt nhất theo từng record/kênh chỉ tiết kiệm 1,15% so với quy tắc chi cố định. [32 người PTB-XL](ecg_leads/RESULTS.md) | Cận áp dụng cho danh sách predictor và kiểu stream đã thử. |
+| Bản đồ | 38 thao tác trên tám ngày Monaco; toàn bộ 2.173 trọng số giữ nguyên. [Replay đồ thị thật](route_customization/RESULTS.md) | Không có batch cần cập nhật metric để đo tốc độ partial customization. |
+| Camera | Trong 2.533 chuỗi ở 32 camera validation, 162 chuỗi chứa nhiều nhãn. [Tổng theo split](iwildcam/RESULTS.md) | Oracle trên nhãn chưa chứng minh mô hình dùng ảnh thắng pooling. |
+| Darcy | Residual tương đối median 0,986 với nghiệm nguồn sau khi fit hệ số scale riêng từng trường. [Kiểm tra toán tử](darcy/RESULTS.md) | Timings trên toán tử dựng lại chỉ có ý nghĩa thăm dò. |
+| Audio máy | Shrinkage đạt 54,26% pAUC; centroid đạt 58,79% trên 200 clip bearing. [Điểm và khoảng bất định](machine_audio/results.json) | Thua đối chứng cùng đặc trưng trên subset development. |
+| Doanh số | 704 tổng sai số tuyệt đối so với 672 của boosting và dự báo 0; hòa mô hình không co. [Tám mốc đánh giá](intermittent_sales/RESULTS.md) | Chưa mở nguồn retail giữ riêng. |
+| Định tuyến GPU | Khi cho phép chung cách gom lô, chạy expert đầy đủ đạt loss 0,28436, tốt hơn điểm gốc 0,28809 và nhanh hơn. [Đối chứng dùng cùng cách gom lô](tabular_routing/PACKED_RESULTS.md) | Kết quả khác theo horizon và ràng buộc số lượt expert; giữ nguyên các điểm trên frontier. |
+| Tập mục đóng | Ngay cả bỏ toàn bộ thời gian mining chỉ tiết kiệm tối đa 5,37% trên chín lượt đã đo. [MovieLens và oracle độc lập](closed_itemsets/RESULTS.md) | Cận cố định bước chuẩn bị và ghi output trên lát 5.000 user, 50 phim. |
+
 ## 1. Phiên âm tiếng Việt y tế — Interspeech
 
 **Khoảng trống cần đo.** Trên cùng một đoạn nói, một bộ giải mã đã thích nghi tiếng Việt có còn tạo được giả thuyết đúng trong danh sách N-best nhưng xếp sau một từ thường gặp hay không? Nếu có, thử chấm lại phần cạnh tranh bằng ngữ cảnh âm tiết trước/sau và độ nhất quán giữa các giả thuyết. Đếm riêng lỗi hiếm, khác dấu, thêm và mất từ. Việc có transcript cho phép chấm token chính tả, chưa cung cấp nhãn đổi nghĩa lâm sàng. [VietMed, LREC-COLING](https://aclanthology.org/2024.lrec-main.1509/)
