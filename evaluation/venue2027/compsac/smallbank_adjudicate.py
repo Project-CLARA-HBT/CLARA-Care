@@ -59,6 +59,8 @@ def score(raw):
         arm, n, size, seed = (row[k] for k in ("arm", "workers", "accounts", "seed"))
         key = (size, n, seed, arm)
         assert key not in results
+        if "population" in row:
+            assert row["dormant"] == row["population"] - size and row["changed_dormant"] == 0
         before = row["initial"]
         assert before == [[k, 40.4, 0.0] for k in range(size)]
         counts = Counter()

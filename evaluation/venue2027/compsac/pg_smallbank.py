@@ -88,22 +88,36 @@ def shard(conn, arm, ops, barrier):
     return events
 
 
-def balances(conn):
+def balances(conn, accounts):
     return conn.execute(
-        "SELECT s.custid,s.bal,c.bal FROM savings s JOIN checking c USING(custid) ORDER BY s.custid"
+        "SELECT s.custid,s.bal,c.bal FROM savings s JOIN checking c USING(custid) WHERE s.custid < %s ORDER BY s.custid",
+        (accounts,),
     ).fetchall()
 
 
-def campaign(admin, pool, workers, arm, seed, accounts):
+def campaign(admin, pool, workers, arm, seed, accounts, padded):
+    population = 10000 if padded else accounts
     admin.execute("TRUNCATE checking,savings,accounts")
     admin.execute(
         "INSERT INTO accounts SELECT i,lpad(i::text,64,'0') FROM generate_series(0,%s) i",
-        (accounts - 1,),
+        (population - 1,),
     )
     admin.execute("INSERT INTO checking SELECT custid,0 FROM accounts")
     admin.execute("INSERT INTO savings SELECT custid,40.4 FROM accounts")
     for table in ("accounts", "savings", "checking"):
         admin.execute(sql.SQL("ANALYZE {}").format(sql.Identifier(table)))
+    plans = {}
+    for table, column, value in (
+        ("accounts", "name", "0" * 64),
+        ("savings", "custid", 0),
+        ("checking", "custid", 0),
+    ):
+        query = sql.SQL("EXPLAIN (FORMAT JSON) SELECT {} FROM {} WHERE {}=%s").format(
+            sql.SQL("*" if table == "accounts" else "bal"),
+            sql.Identifier(table),
+            sql.Identifier(column),
+        )
+        plans[table] = admin.execute(query, (value,)).fetchone()[0][0]["Plan"]
     level = "serializable" if arm == "ssi" else "read committed"
     for conn in workers:
         conn.execute(sql.SQL("SET default_transaction_isolation TO {}").format(sql.Literal(level)))
@@ -113,7 +127,7 @@ def campaign(admin, pool, workers, arm, seed, accounts):
     kinds = ["check"] * 120 + ["deposit"] * 84 + ["withdraw"] * 36
     rng.shuffle(kinds)
     ops = [(k, rng.randrange(accounts)) for k in kinds]
-    initial = balances(admin)
+    initial = balances(admin, accounts)
     waves = []
     for i in range(0, len(ops), 4):
         clock = []
@@ -131,15 +145,29 @@ def campaign(admin, pool, workers, arm, seed, accounts):
             dict(
                 events=events,
                 elapsed_ns=max(e["end"] for e in events) - clock[0],
-                after=balances(admin),
+                after=balances(admin, accounts),
             )
         )
+    dormant, changed = admin.execute(
+        "SELECT count(*), count(*) FILTER (WHERE c.bal <> 0 OR s.bal <> 40.4::float8) "
+        "FROM checking c JOIN savings s USING(custid) WHERE c.custid >= %s",
+        (accounts,),
+    ).fetchone()
     return dict(
-        arm=arm, seed=seed, accounts=accounts, workers=len(workers), initial=initial, waves=waves
+        population=population,
+        plans=plans,
+        dormant=dormant,
+        changed_dormant=changed,
+        arm=arm,
+        seed=seed,
+        accounts=accounts,
+        workers=len(workers),
+        initial=initial,
+        waves=waves,
     )
 
 
-def run(socket):
+def run(socket, padded):
     if not socket.is_absolute() or not (socket / ".s.PGSQL.5432").is_socket():
         raise ValueError("pass the absolute private socket directory")
     dsn = dict(host=str(socket), port=5432, dbname="postgres", user="postgres", autocommit=True)
@@ -164,7 +192,7 @@ def run(socket):
                 for conn in conns:
                     conn.execute(path)
                 rows = [
-                    campaign(admin, pool, conns[:n], arm, seed, accounts)
+                    campaign(admin, pool, conns[:n], arm, seed, accounts, padded)
                     for accounts in (4, 32)
                     for n in (1, 4)
                     for seed in range(6)
@@ -187,7 +215,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("socket", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--padded", action="store_true", help="load 10,000 accounts")
     args = parser.parse_args()
-    evidence = run(args.socket)
+    evidence = run(args.socket, args.padded)
     with gzip.open(args.output, "xt", encoding="utf-8") as stream:
         json.dump(evidence, stream, separators=(",", ":"))

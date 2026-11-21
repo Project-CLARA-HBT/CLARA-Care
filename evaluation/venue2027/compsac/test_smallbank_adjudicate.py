@@ -26,3 +26,30 @@ def test_insufficient_savings_and_exact_thresholds():
     assert witness([event("withdraw", [20.2], "insufficient")], (20.2, 0), (20.2, 0)) is None
     assert witness([event("withdraw", [0], "insufficient")], (0, 0), (0, 0)) == (0,)
     assert witness([event("check", [0, 5])], (0, 5), (0, 0)) == (0,)
+
+
+def test_all_recorded_campaigns_and_observed_histories():
+    import gzip
+    import json
+    from pathlib import Path
+
+    from .smallbank_adjudicate import score
+
+    artifacts = Path(__file__).resolve().parents[3] / "research/venue2027/proof/artifacts"
+    streams = []
+    for name in ("compsac_smallbank_dev", "compsac_smallbank_padded_dev"):
+        with gzip.open(artifacts / (name + ".json.gz")) as f:
+            data = json.load(f)
+        results = score(data)
+        assert all(not row["bad_waves"] for row in results.values())
+        if "padded" in name:
+            assert all(row["population"] == 10000 for row in data["rows"])
+        streams.append(
+            {
+                (r["accounts"], r["workers"], r["seed"], r["arm"]): [
+                    (e["account"], e["kind"]) for w in r["waves"] for e in w["events"]
+                ]
+                for r in data["rows"]
+            }
+        )
+    assert streams[0] == streams[1]

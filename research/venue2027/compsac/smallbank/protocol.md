@@ -43,3 +43,12 @@ enumerate all real-time-compatible orders of completed operations, checking both
 branches and exact balances against the pinned semantics. Exhausted DB aborts have
 no procedure result or effect. Require a witness for the entire wave including all
 money movements and business rejections. A mismatch stays in the evidence.
+
+## Follow-up after inspecting the compact grid
+
+Repeat all 48 campaigns with 10,000 loaded accounts and the same first 4 or 32
+active IDs. Keep the original compact run. Read all active balances between waves.
+At campaign end count dormant joined rows and any changed dormant balances.
+Record representative EXPLAIN plans for the three point reads after ANALYZE
+before worker execution. These are setup-time plans. The first active physical
+keys remain clustered. This follow-up was selected after seeing the compact results.
