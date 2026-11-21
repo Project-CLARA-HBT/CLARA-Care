@@ -1,0 +1,2339 @@
+{
+  "source_sha256": {
+    "ETTh1": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066",
+    "ETTh2": "a3dc2c597b9218c7ce1cd55eb77b283fd459a1d09d753063f944967dd6b9218b"
+  },
+  "python": "3.12.15",
+  "platform": "6.18.33.2-microsoft-standard-WSL2",
+  "numpy": "2.5.4",
+  "validation": {
+    "ETTh1_6": {
+      "train_end": 8794,
+      "first_validation": 8986,
+      "count": 123,
+      "settings": [
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            0.1
+          ],
+          "mae": 0.6661349108305388
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            1
+          ],
+          "mae": 0.6630569593807473
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            4
+          ],
+          "mae": 0.6949937699776056
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            0.1
+          ],
+          "mae": 0.7015144372905101
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            1
+          ],
+          "mae": 0.6759211569113465
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            4
+          ],
+          "mae": 0.6811209265368029
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            0.1
+          ],
+          "mae": 0.7822635170374136
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            1
+          ],
+          "mae": 0.7601690569060855
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            4
+          ],
+          "mae": 0.7475519003951558
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            0.1
+          ],
+          "mae": 0.6717468118856414
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            1
+          ],
+          "mae": 0.6659527768208984
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            4
+          ],
+          "mae": 0.6916632907538012
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            0.1
+          ],
+          "mae": 0.70940982964457
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            1
+          ],
+          "mae": 0.6810646380675383
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            4
+          ],
+          "mae": 0.6765037857752919
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            0.1
+          ],
+          "mae": 0.7881528790808496
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            1
+          ],
+          "mae": 0.7606473371226936
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            4
+          ],
+          "mae": 0.721137905575366
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            0.1
+          ],
+          "mae": 0.6951570725079017
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            1
+          ],
+          "mae": 0.6784831189796784
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            4
+          ],
+          "mae": 0.6764396372766013
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            0.1
+          ],
+          "mae": 0.7336708806255728
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            1
+          ],
+          "mae": 0.7002815072790358
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            4
+          ],
+          "mae": 0.6787664651167644
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            0.1
+          ],
+          "mae": 0.8016885972176911
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            1
+          ],
+          "mae": 0.7758212461282703
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            4
+          ],
+          "mae": 0.7336166154278858
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0
+          ],
+          "mae": 0.6697904194344914
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0.01
+          ],
+          "mae": 0.6694675517500316
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0.1
+          ],
+          "mae": 0.6948140864069658
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0
+          ],
+          "mae": 0.6552792878650673
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0.01
+          ],
+          "mae": 0.6595601565647042
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0.1
+          ],
+          "mae": 0.7254723499703863
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0
+          ],
+          "mae": 0.6584570163007918
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0.01
+          ],
+          "mae": 0.6651040997268067
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0.1
+          ],
+          "mae": 0.7870812236320682
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0
+          ],
+          "mae": 0.652900674644145
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0.01
+          ],
+          "mae": 0.6513168808180512
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0.1
+          ],
+          "mae": 0.7473373453922675
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0
+          ],
+          "mae": 0.6410050376631694
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0.01
+          ],
+          "mae": 0.6421960814424766
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0.1
+          ],
+          "mae": 0.7470218015231151
+        }
+      ],
+      "best": {
+        "structural": [
+          0.6630569593807473,
+          [
+            0,
+            0,
+            1
+          ]
+        ],
+        "autoregressive": [
+          0.6410050376631694,
+          [
+            48,
+            0
+          ]
+        ]
+      },
+      "selected": "autoregressive"
+    },
+    "ETTh1_24": {
+      "train_end": 8796,
+      "first_validation": 8988,
+      "count": 123,
+      "settings": [
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            0.1
+          ],
+          "mae": 1.0864744762264955
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            1
+          ],
+          "mae": 1.079226928839846
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            4
+          ],
+          "mae": 1.0848676920936562
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            0.1
+          ],
+          "mae": 1.0402330731058933
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            1
+          ],
+          "mae": 1.0375903188945366
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            4
+          ],
+          "mae": 1.04570807736508
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            0.1
+          ],
+          "mae": 1.1100761638384204
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            1
+          ],
+          "mae": 1.106167603281365
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            4
+          ],
+          "mae": 1.1162533150093037
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            0.1
+          ],
+          "mae": 1.1533698730920678
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            1
+          ],
+          "mae": 1.1360947103620305
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            4
+          ],
+          "mae": 1.1287858742961214
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            0.1
+          ],
+          "mae": 1.082911418523694
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            1
+          ],
+          "mae": 1.0753554474695
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            4
+          ],
+          "mae": 1.0769147779375445
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            0.1
+          ],
+          "mae": 1.0980312636664857
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            1
+          ],
+          "mae": 1.0861132590494178
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            4
+          ],
+          "mae": 1.084810851732745
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            0.1
+          ],
+          "mae": 1.3605157585393226
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            1
+          ],
+          "mae": 1.308115442324773
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            4
+          ],
+          "mae": 1.255144561062405
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            0.1
+          ],
+          "mae": 1.2966534529566858
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            1
+          ],
+          "mae": 1.2402659980362976
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            4
+          ],
+          "mae": 1.1874482511150084
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            0.1
+          ],
+          "mae": 1.1595366365416908
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            1
+          ],
+          "mae": 1.1316436078347223
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            4
+          ],
+          "mae": 1.1073496601264
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0
+          ],
+          "mae": 1.0875506077610315
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0.01
+          ],
+          "mae": 1.0804884930515988
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0.1
+          ],
+          "mae": 1.8754088881542
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0
+          ],
+          "mae": 1.0713383221339383
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0.01
+          ],
+          "mae": 1.0747005579972695
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0.1
+          ],
+          "mae": 1.0992728045325202
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0
+          ],
+          "mae": 1.0572657749406948
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0.01
+          ],
+          "mae": 1.0640997746600218
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0.1
+          ],
+          "mae": 1.1044905041397441
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0
+          ],
+          "mae": 1.0430781575921684
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0.01
+          ],
+          "mae": 1.0485409283482372
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0.1
+          ],
+          "mae": 1.0940768909530196
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0
+          ],
+          "mae": 1.015982642489717
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0.01
+          ],
+          "mae": 1.0238120069391157
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0.1
+          ],
+          "mae": 1.0771038263388202
+        }
+      ],
+      "best": {
+        "structural": [
+          1.0375903188945366,
+          [
+            0,
+            1,
+            1
+          ]
+        ],
+        "autoregressive": [
+          1.015982642489717,
+          [
+            48,
+            0
+          ]
+        ]
+      },
+      "selected": "autoregressive"
+    },
+    "ETTh1_72": {
+      "train_end": 8795,
+      "first_validation": 8987,
+      "count": 123,
+      "settings": [
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            0.1
+          ],
+          "mae": 1.606123762190961
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            1
+          ],
+          "mae": 1.622738629527336
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            4
+          ],
+          "mae": 1.6537696240972162
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            0.1
+          ],
+          "mae": 1.607521646442653
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            1
+          ],
+          "mae": 1.6161047417461307
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            4
+          ],
+          "mae": 1.6442244745102779
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            0.1
+          ],
+          "mae": 1.7023839791998265
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            1
+          ],
+          "mae": 1.6990974788807978
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            4
+          ],
+          "mae": 1.709033747591565
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            0.1
+          ],
+          "mae": 1.7676285172342863
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            1
+          ],
+          "mae": 1.7850967690095174
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            4
+          ],
+          "mae": 1.8059790348968578
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            0.1
+          ],
+          "mae": 1.6857115196653125
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            1
+          ],
+          "mae": 1.694306995841419
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            4
+          ],
+          "mae": 1.7319991848261551
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            0.1
+          ],
+          "mae": 1.7136297449334321
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            1
+          ],
+          "mae": 1.6973528996767928
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            4
+          ],
+          "mae": 1.700416583370865
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            0.1
+          ],
+          "mae": 2.2306033018850155
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            1
+          ],
+          "mae": 2.2032938159475504
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            4
+          ],
+          "mae": 2.2069319630698003
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            0.1
+          ],
+          "mae": 2.072397010540098
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            1
+          ],
+          "mae": 2.0186815371654774
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            4
+          ],
+          "mae": 2.040850720047717
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            0.1
+          ],
+          "mae": 1.8493085290769777
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            1
+          ],
+          "mae": 1.7696253843880643
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            4
+          ],
+          "mae": 1.740954191230756
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0
+          ],
+          "mae": 1.5999862983589037
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0.01
+          ],
+          "mae": 1.649901396032714
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0.1
+          ],
+          "mae": 3.7639275304960473
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0
+          ],
+          "mae": 1.6113979588931036
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0.01
+          ],
+          "mae": 1.626587881833715
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0.1
+          ],
+          "mae": 1.661369606811971
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0
+          ],
+          "mae": 1.612930858792646
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0.01
+          ],
+          "mae": 1.6322280969485816
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0.1
+          ],
+          "mae": 1.6881514916811968
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0
+          ],
+          "mae": 1.626800290755273
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0.01
+          ],
+          "mae": 1.6450507464937525
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0.1
+          ],
+          "mae": 1.7010019323472962
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0
+          ],
+          "mae": 1.6137817198865465
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0.01
+          ],
+          "mae": 1.6317347595591043
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0.1
+          ],
+          "mae": 1.6979613855250555
+        }
+      ],
+      "best": {
+        "structural": [
+          1.606123762190961,
+          [
+            0,
+            0,
+            0.1
+          ]
+        ],
+        "autoregressive": [
+          1.5999862983589037,
+          [
+            1,
+            0
+          ]
+        ]
+      },
+      "selected": "autoregressive"
+    },
+    "ETTh2_6": {
+      "train_end": 8794,
+      "first_validation": 8986,
+      "count": 123,
+      "settings": [
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            0.1
+          ],
+          "mae": 0.7772429904745223
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            1
+          ],
+          "mae": 0.9365478922037173
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            4
+          ],
+          "mae": 1.2042130687060466
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            0.1
+          ],
+          "mae": 0.6898877359663902
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            1
+          ],
+          "mae": 0.8106276102915172
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            4
+          ],
+          "mae": 1.0338868243616084
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            0.1
+          ],
+          "mae": 0.6504723738215086
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            1
+          ],
+          "mae": 0.7072983112514039
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            4
+          ],
+          "mae": 0.8490146163477502
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            0.1
+          ],
+          "mae": 0.76096325095368
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            1
+          ],
+          "mae": 0.9128515585388742
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            4
+          ],
+          "mae": 1.1739294299399428
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            0.1
+          ],
+          "mae": 0.6780625424786543
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            1
+          ],
+          "mae": 0.7949258658970364
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            4
+          ],
+          "mae": 1.0152764986598415
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            0.1
+          ],
+          "mae": 0.616002528322802
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            1
+          ],
+          "mae": 0.6580326087820404
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            4
+          ],
+          "mae": 0.7591480713249252
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            0.1
+          ],
+          "mae": 0.7009124204415124
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            1
+          ],
+          "mae": 0.8128658060167491
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            4
+          ],
+          "mae": 0.9805622866553071
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            0.1
+          ],
+          "mae": 0.6461158562354076
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            1
+          ],
+          "mae": 0.7373905826038784
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            4
+          ],
+          "mae": 0.9039878324147043
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            0.1
+          ],
+          "mae": 0.6115377159394442
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            1
+          ],
+          "mae": 0.6486782489229485
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            4
+          ],
+          "mae": 0.7372128120091658
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0
+          ],
+          "mae": 0.7499263318937227
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0.01
+          ],
+          "mae": 0.7494529492387458
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0.1
+          ],
+          "mae": 0.8599243738383794
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0
+          ],
+          "mae": 0.6037635547065162
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0.01
+          ],
+          "mae": 0.7838480860048559
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0.1
+          ],
+          "mae": 1.1865891009670846
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0
+          ],
+          "mae": 0.6246721703264602
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0.01
+          ],
+          "mae": 0.7641829157434061
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0.1
+          ],
+          "mae": 1.265220340283993
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0
+          ],
+          "mae": 0.6074117642328298
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0.01
+          ],
+          "mae": 0.7482074258516529
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0.1
+          ],
+          "mae": 1.0935600470568632
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0
+          ],
+          "mae": 0.5996453061857616
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0.01
+          ],
+          "mae": 0.7446096973700025
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0.1
+          ],
+          "mae": 1.1082451068704529
+        }
+      ],
+      "best": {
+        "structural": [
+          0.6115377159394442,
+          [
+            0.1,
+            10,
+            0.1
+          ]
+        ],
+        "autoregressive": [
+          0.5996453061857616,
+          [
+            48,
+            0
+          ]
+        ]
+      },
+      "selected": "autoregressive"
+    },
+    "ETTh2_24": {
+      "train_end": 8796,
+      "first_validation": 8988,
+      "count": 123,
+      "settings": [
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            0.1
+          ],
+          "mae": 2.181146297293877
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            1
+          ],
+          "mae": 2.2155243226194807
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            4
+          ],
+          "mae": 2.2366112580578363
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            0.1
+          ],
+          "mae": 1.7897743020498995
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            1
+          ],
+          "mae": 1.8443820113076161
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            4
+          ],
+          "mae": 1.9247619127437134
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            0.1
+          ],
+          "mae": 1.6939307578570026
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            1
+          ],
+          "mae": 1.7243498967874042
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            4
+          ],
+          "mae": 1.781813999797015
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            0.1
+          ],
+          "mae": 2.3429975768712703
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            1
+          ],
+          "mae": 2.3768278218166423
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            4
+          ],
+          "mae": 2.39167858490819
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            0.1
+          ],
+          "mae": 1.931067751755875
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            1
+          ],
+          "mae": 1.9790567725114563
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            4
+          ],
+          "mae": 2.0564901534568083
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            0.1
+          ],
+          "mae": 1.6854277236863904
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            1
+          ],
+          "mae": 1.7023982526464438
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            4
+          ],
+          "mae": 1.7454801518080236
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            0.1
+          ],
+          "mae": 2.6767743358805576
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            1
+          ],
+          "mae": 2.7239138492702164
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            4
+          ],
+          "mae": 2.7575770890486537
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            0.1
+          ],
+          "mae": 2.3816694838462875
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            1
+          ],
+          "mae": 2.4209459866972307
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            4
+          ],
+          "mae": 2.4737729906087327
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            0.1
+          ],
+          "mae": 1.8401305541609883
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            1
+          ],
+          "mae": 1.8380786136507636
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            4
+          ],
+          "mae": 1.8658333426710643
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0
+          ],
+          "mae": 2.172376687019188
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0.01
+          ],
+          "mae": 2.166616951943593
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0.1
+          ],
+          "mae": 3.575942589185493
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0
+          ],
+          "mae": 2.1120606666711566
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0.01
+          ],
+          "mae": 2.2014146183129473
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0.1
+          ],
+          "mae": 2.2670074441156545
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0
+          ],
+          "mae": 1.8629125140167755
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0.01
+          ],
+          "mae": 1.9645588496743354
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0.1
+          ],
+          "mae": 2.181649585886468
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0
+          ],
+          "mae": 1.6487546092564724
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0.01
+          ],
+          "mae": 1.7547548335843508
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0.1
+          ],
+          "mae": 1.9330195557275545
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0
+          ],
+          "mae": 1.6310534690611769
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0.01
+          ],
+          "mae": 1.6934874611321735
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0.1
+          ],
+          "mae": 1.8768894600045212
+        }
+      ],
+      "best": {
+        "structural": [
+          1.6854277236863904,
+          [
+            0.01,
+            10,
+            0.1
+          ]
+        ],
+        "autoregressive": [
+          1.6310534690611769,
+          [
+            48,
+            0
+          ]
+        ]
+      },
+      "selected": "autoregressive"
+    },
+    "ETTh2_72": {
+      "train_end": 8795,
+      "first_validation": 8987,
+      "count": 123,
+      "settings": [
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            0.1
+          ],
+          "mae": 3.0337275245588637
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            1
+          ],
+          "mae": 3.038367980363107
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            0,
+            4
+          ],
+          "mae": 3.038812105639506
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            0.1
+          ],
+          "mae": 2.8086847145848903
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            1
+          ],
+          "mae": 2.8372062900634734
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            1,
+            4
+          ],
+          "mae": 2.880889790013817
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            0.1
+          ],
+          "mae": 2.729748880426306
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            1
+          ],
+          "mae": 2.7519956020490777
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0,
+            10,
+            4
+          ],
+          "mae": 2.7912966684000495
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            0.1
+          ],
+          "mae": 3.672065981374711
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            1
+          ],
+          "mae": 3.6430318764073735
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            0,
+            4
+          ],
+          "mae": 3.566430037518114
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            0.1
+          ],
+          "mae": 3.2423524075742423
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            1
+          ],
+          "mae": 3.2467838842669434
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            1,
+            4
+          ],
+          "mae": 3.255689632791501
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            0.1
+          ],
+          "mae": 2.845605591505167
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            1
+          ],
+          "mae": 2.8637290430513227
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.01,
+            10,
+            4
+          ],
+          "mae": 2.8984501664097917
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            0.1
+          ],
+          "mae": 4.965884409469154
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            1
+          ],
+          "mae": 4.918397329731049
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            0,
+            4
+          ],
+          "mae": 4.797396866315479
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            0.1
+          ],
+          "mae": 4.506442357566477
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            1
+          ],
+          "mae": 4.469614036285594
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            1,
+            4
+          ],
+          "mae": 4.4027027230149
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            0.1
+          ],
+          "mae": 3.3935274593350746
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            1
+          ],
+          "mae": 3.3600242231283035
+        },
+        {
+          "family": "structural",
+          "settings": [
+            0.1,
+            10,
+            4
+          ],
+          "mae": 3.339846300087216
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0
+          ],
+          "mae": 3.031291848229678
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0.01
+          ],
+          "mae": 3.1093155434148594
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            1,
+            0.1
+          ],
+          "mae": 6.963061008702342
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0
+          ],
+          "mae": 3.00759774683582
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0.01
+          ],
+          "mae": 3.0628751468063418
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            6,
+            0.1
+          ],
+          "mae": 3.125232890415003
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0
+          ],
+          "mae": 2.8568113196037284
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0.01
+          ],
+          "mae": 2.916560464958286
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            12,
+            0.1
+          ],
+          "mae": 3.033270739934885
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0
+          ],
+          "mae": 2.7350529918897815
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0.01
+          ],
+          "mae": 2.822204591016026
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            24,
+            0.1
+          ],
+          "mae": 2.9445625113620815
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0
+          ],
+          "mae": 2.7184327303846745
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0.01
+          ],
+          "mae": 2.772917838743071
+        },
+        {
+          "family": "autoregressive",
+          "settings": [
+            48,
+            0.1
+          ],
+          "mae": 2.9046104832339625
+        }
+      ],
+      "best": {
+        "structural": [
+          2.729748880426306,
+          [
+            0,
+            10,
+            0.1
+          ]
+        ],
+        "autoregressive": [
+          2.7184327303846745,
+          [
+            48,
+            0
+          ]
+        ]
+      },
+      "selected": "autoregressive"
+    }
+  }
+}
