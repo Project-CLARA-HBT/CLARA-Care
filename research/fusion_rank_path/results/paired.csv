@@ -1,0 +1,13 @@
+source,baseline,clip_median_saving_pct,faster_rounds,slower_rounds
+NanoArguAna,0,4.960,6,6
+NanoArguAna,1,95.609,12,0
+NanoArguAna,2,2.266,7,5
+NanoArguAna,4,95.460,12,0
+NanoFiQA2018,0,37.716,11,1
+NanoFiQA2018,1,91.536,12,0
+NanoFiQA2018,2,6.030,9,3
+NanoFiQA2018,4,91.724,12,0
+NanoSCIDOCS,0,55.702,11,1
+NanoSCIDOCS,1,86.134,12,0
+NanoSCIDOCS,2,19.393,10,2
+NanoSCIDOCS,4,86.449,12,0
