@@ -1,0 +1,72 @@
+{
+  "source_sha256": "5ce28a6e656bc88c1da29c983d243d5a81eb37de92698da3864d1cf02894ca24",
+  "dialogues": 128,
+  "stages": [
+    {
+      "stage": "retained",
+      "glhs": {
+        "exact": 1233,
+        "omitted": 0,
+        "missing": 0,
+        "wrong": 0,
+        "forbidden": 0,
+        "bytes": 501721
+      },
+      "signed": {
+        "exact": 1233,
+        "omitted": 0,
+        "missing": 0,
+        "wrong": 0,
+        "forbidden": 0,
+        "bytes": 501721
+      },
+      "glhs_wins": 0,
+      "ties": 1233,
+      "glhs_losses": 0
+    },
+    {
+      "stage": "partial",
+      "glhs": {
+        "exact": 824,
+        "omitted": 409,
+        "missing": 0,
+        "wrong": 0,
+        "forbidden": 0,
+        "bytes": 334708
+      },
+      "signed": {
+        "exact": 824,
+        "omitted": 409,
+        "missing": 0,
+        "wrong": 0,
+        "forbidden": 0,
+        "bytes": 334708
+      },
+      "glhs_wins": 0,
+      "ties": 1233,
+      "glhs_losses": 0
+    },
+    {
+      "stage": "expired",
+      "glhs": {
+        "exact": 0,
+        "omitted": 1233,
+        "missing": 0,
+        "wrong": 0,
+        "forbidden": 0,
+        "bytes": 0
+      },
+      "signed": {
+        "exact": 0,
+        "omitted": 1233,
+        "missing": 0,
+        "wrong": 0,
+        "forbidden": 0,
+        "bytes": 0
+      },
+      "glhs_wins": 0,
+      "ties": 1233,
+      "glhs_losses": 0
+    }
+  ]
+}

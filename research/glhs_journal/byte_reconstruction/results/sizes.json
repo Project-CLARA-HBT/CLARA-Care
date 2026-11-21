@@ -1,0 +1,38 @@
+[
+  {
+    "stage": "retained",
+    "arm": "glhs",
+    "metadata_bytes": 1010143,
+    "content_bytes": 501721
+  },
+  {
+    "stage": "retained",
+    "arm": "signed",
+    "metadata_bytes": 311512,
+    "content_bytes": 499828
+  },
+  {
+    "stage": "partial",
+    "arm": "glhs",
+    "metadata_bytes": 1010143,
+    "content_bytes": 334708
+  },
+  {
+    "stage": "partial",
+    "arm": "signed",
+    "metadata_bytes": 311512,
+    "content_bytes": 333350
+  },
+  {
+    "stage": "expired",
+    "arm": "glhs",
+    "metadata_bytes": 1010143,
+    "content_bytes": 0
+  },
+  {
+    "stage": "expired",
+    "arm": "signed",
+    "metadata_bytes": 311512,
+    "content_bytes": 0
+  }
+]
