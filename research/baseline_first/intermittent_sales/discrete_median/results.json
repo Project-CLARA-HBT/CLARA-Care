@@ -1,0 +1,61 @@
+{
+  "months": {
+    "44": {
+      "hurdle": 115,
+      "raw": 115,
+      "gated": 128
+    },
+    "45": {
+      "hurdle": 82,
+      "raw": 82,
+      "gated": 98
+    },
+    "46": {
+      "hurdle": 89,
+      "raw": 89,
+      "gated": 99
+    },
+    "47": {
+      "hurdle": 84,
+      "raw": 84,
+      "gated": 91
+    },
+    "48": {
+      "hurdle": 76,
+      "raw": 76,
+      "gated": 85
+    },
+    "49": {
+      "hurdle": 86,
+      "raw": 86,
+      "gated": 95
+    },
+    "50": {
+      "hurdle": 87,
+      "raw": 87,
+      "gated": 106
+    },
+    "51": {
+      "hurdle": 85,
+      "raw": 85,
+      "gated": 95
+    }
+  },
+  "total": {
+    "hurdle": 704,
+    "raw": 704,
+    "gated": 797
+  },
+  "registered": {
+    "zero": 672,
+    "median": 785.0,
+    "sba": 1192.455575166922,
+    "adida": 990.7457494474153,
+    "imapa": 981.7560628598102,
+    "frequency": 674,
+    "age_raw": 704,
+    "tsb_0.2": 968.1189459905974,
+    "boost_7": 672.0,
+    "shrink_4": 704
+  }
+}
