@@ -1,0 +1,2006 @@
+{
+  "prefix_sha256": "7f190e9e6a88ca266bb3c2b9b71f91665d0a85fb80d96a698de1e4874efd5122",
+  "validated_frames": 684,
+  "scored_frames": 198,
+  "cameras": 22,
+  "bursts": 93,
+  "metrics": {
+    "individual": {
+      "correct": 95,
+      "accuracy": 0.4797979797979798,
+      "macro_f1": 0.27883917970656635
+    },
+    "mean": {
+      "correct": 98,
+      "accuracy": 0.494949494949495,
+      "macro_f1": 0.3302295139029055
+    },
+    "shrink": {
+      "correct": 95,
+      "accuracy": 0.4797979797979798,
+      "macro_f1": 0.29621444742761277
+    }
+  },
+  "frames": [
+    {
+      "file": "98f9d168-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "134",
+      "burst": "12192",
+      "y": 146,
+      "individual": 146,
+      "mean": 146,
+      "shrink": 146,
+      "sha256": "c08447096beba3af34bbd8c5a882450af5172b0844985d8eb219f6931b44b920"
+    },
+    {
+      "file": "8a61151c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "134",
+      "burst": "12192",
+      "y": 146,
+      "individual": 146,
+      "mean": 146,
+      "shrink": 146,
+      "sha256": "1a780e1c99bc97281199173c91df7e30c5db18d3740280df84a2168b97205e48"
+    },
+    {
+      "file": "97797c4e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "134",
+      "burst": "12192",
+      "y": 146,
+      "individual": 146,
+      "mean": 146,
+      "shrink": 146,
+      "sha256": "85bb2e8aa016a83fdfd243ef328a12d00c3870d40ba452eac74ecebdba956d30"
+    },
+    {
+      "file": "94753542-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "136",
+      "burst": "35886",
+      "y": 0,
+      "individual": 49,
+      "mean": 49,
+      "shrink": 49,
+      "sha256": "05b5657204e99f36b52fded4f74d227e67cabb8bca29fc00da2dde857ee0a761"
+    },
+    {
+      "file": "943d8c6e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "136",
+      "burst": "35886",
+      "y": 0,
+      "individual": 24,
+      "mean": 49,
+      "shrink": 24,
+      "sha256": "6586a3c479ad4fa2dcac63eac6800d9422c58c7fba8cbbcac0b9525419239e3b"
+    },
+    {
+      "file": "99270462-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "136",
+      "burst": "35886",
+      "y": 0,
+      "individual": 49,
+      "mean": 49,
+      "shrink": 49,
+      "sha256": "7144e2b11b664c9830e4397cf3fc82ced8a2bc7ee21131203a2d590f69a0c992"
+    },
+    {
+      "file": "983560e4-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "143",
+      "burst": "32632",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "97ddd7678f30289c462138d5b802d7aa2ebc8d6b0dfe760e7fcd0eb235a731d9"
+    },
+    {
+      "file": "8c3147fe-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "143",
+      "burst": "32632",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "a5b7bac9811025ff83076e29055cda016ade37b4738c26cc6a5f98d0c9d93e11"
+    },
+    {
+      "file": "914bb986-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "143",
+      "burst": "35917",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "c5a6ea339f79b4e08d77ec461a1b999fb05da8cb7cd1bc5b2ff77d1a55fb3674"
+    },
+    {
+      "file": "95445da4-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "143",
+      "burst": "35917",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "16ed25881ef8af654423b65d018619a3fde703b13e02a87f3249fb57e0d2ff01"
+    },
+    {
+      "file": "89f29e5c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "154",
+      "burst": "11913",
+      "y": 24,
+      "individual": 24,
+      "mean": 24,
+      "shrink": 24,
+      "sha256": "63124d575435a4d19b4d418ecc9732a670f49b5c6a10cf080e779b0136c6e643"
+    },
+    {
+      "file": "8bc84b32-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "154",
+      "burst": "11913",
+      "y": 24,
+      "individual": 24,
+      "mean": 24,
+      "shrink": 24,
+      "sha256": "96395fd87de731e07e3313d16b1d03367334064c63111c30194fb231d1f1236c"
+    },
+    {
+      "file": "94cc8a18-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "171",
+      "burst": "10696",
+      "y": 36,
+      "individual": 36,
+      "mean": 36,
+      "shrink": 36,
+      "sha256": "96f131290af1cf414e718e2bd90123252af90b5479cb05da96f1c85c26c4b690"
+    },
+    {
+      "file": "990d989c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "171",
+      "burst": "10696",
+      "y": 36,
+      "individual": 36,
+      "mean": 36,
+      "shrink": 36,
+      "sha256": "74f5d4239a90a5f47fef09b0f785df65f4589f7d5e94429181d104cb30aa3ac5"
+    },
+    {
+      "file": "8d91c60a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "171",
+      "burst": "14524",
+      "y": 24,
+      "individual": 24,
+      "mean": 24,
+      "shrink": 24,
+      "sha256": "9d41bbbfaddf78eb7a2da3a8e5f2e26f2e6663c74a97a9d394361c8e0f3c8775"
+    },
+    {
+      "file": "8dad8f02-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "171",
+      "burst": "14524",
+      "y": 24,
+      "individual": 24,
+      "mean": 24,
+      "shrink": 24,
+      "sha256": "0bf3bdfa62f9f82fb4dedc8cdafc3a786a4bccbd4a2f00214ccff8d1533b9151"
+    },
+    {
+      "file": "89f637e2-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "183",
+      "burst": "12465",
+      "y": 32,
+      "individual": 32,
+      "mean": 32,
+      "shrink": 32,
+      "sha256": "cf339a597fc7cd530cd440f1a0c0d9335992e369619fb25d30c9c7f7f0eca89f"
+    },
+    {
+      "file": "98c1046e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "183",
+      "burst": "12465",
+      "y": 32,
+      "individual": 32,
+      "mean": 32,
+      "shrink": 32,
+      "sha256": "8bacebc3abdaa2f4e1e2c0b2c10d27789089958e844fd1dfaa5eb40b1dc01611"
+    },
+    {
+      "file": "918424c4-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "10213",
+      "y": 115,
+      "individual": 120,
+      "mean": 115,
+      "shrink": 115,
+      "sha256": "fd0eb16d30c2c0c8cd75614aef15716144bc9743a84b594993ab7937f45829e3"
+    },
+    {
+      "file": "8878521a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "10213",
+      "y": 115,
+      "individual": 115,
+      "mean": 115,
+      "shrink": 115,
+      "sha256": "01af250c00f57324067b2e2eda32de0e1fafb3b86a6a9234a1b1156a0d52b9ba"
+    },
+    {
+      "file": "8763b306-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "10216",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "03ed5882fc2aeddadc4a6d3f1db5ffb0d3fdc1f07cbfd91cc62f1e2350d580e4"
+    },
+    {
+      "file": "882828d0-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "10216",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "37eb6fe84c15c9b43989e76fdfa02c27ae115903fdb356f7072a39aca63e8e6a"
+    },
+    {
+      "file": "98e2e93a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "12083",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "8cd2f3eddef7836795e79834e0d48c0a93f9528fdc443fa318b0bb2753c9dc85"
+    },
+    {
+      "file": "97142c18-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "12083",
+      "y": 114,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "db91a3477f708f6010b32eb372633d177e6c8877364d3b592cbef894b2be0d07"
+    },
+    {
+      "file": "94b9282e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "31550",
+      "y": 116,
+      "individual": 33,
+      "mean": 33,
+      "shrink": 33,
+      "sha256": "8485934ba83c442d5f3170ccccf59782d260ad22a9ed5b03275ac1f045eeadfb"
+    },
+    {
+      "file": "87ff53ce-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "31550",
+      "y": 116,
+      "individual": 33,
+      "mean": 33,
+      "shrink": 33,
+      "sha256": "e55e6f749147596b2490fcae80d12618e1ecf38d6b826862a81b2e2b6cc36c39"
+    },
+    {
+      "file": "89046f0c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "35160",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "f9158e27efc9239b6d0864e57eeef90217717748719288ad0ad5812c42eafbad"
+    },
+    {
+      "file": "9008dce8-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "35160",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "9b512224dc73883d81fd66f8fa2390deaf0838ed5e593b004d6f32f6c4e4eac8"
+    },
+    {
+      "file": "8dbd629c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "35183",
+      "y": 120,
+      "individual": 115,
+      "mean": 120,
+      "shrink": 115,
+      "sha256": "bfd02c9c068928b44941343b6d52de099f842f9283634a63f1c7bc837eb23dea"
+    },
+    {
+      "file": "8ef1ceaa-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "35183",
+      "y": 120,
+      "individual": 120,
+      "mean": 120,
+      "shrink": 120,
+      "sha256": "4f263dfe2f269f63276b1adfb31c47693f6ed4e8ea24f7725b0eeb29b4e1dcec"
+    },
+    {
+      "file": "986abba4-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "928",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "a3dfdc4a63108d29a2fdf6423f52c2b1020ae3e0c7725f51011205c6d7cb0766"
+    },
+    {
+      "file": "8edc7fa0-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "217",
+      "burst": "928",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "908ce04cb15e87fbc5152e3927a4755623a721f4683a6f1d3cecd3630a1e2eb8"
+    },
+    {
+      "file": "98963e3c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "22",
+      "burst": "33823",
+      "y": 68,
+      "individual": 68,
+      "mean": 68,
+      "shrink": 68,
+      "sha256": "8cbf742e78fb62537b1e1b692f85a56f2b366948055a262442cf16697526f12a"
+    },
+    {
+      "file": "96d9292e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "22",
+      "burst": "33823",
+      "y": 0,
+      "individual": 0,
+      "mean": 68,
+      "shrink": 0,
+      "sha256": "5cd8e443c216559d457d3228c0b36c0e63bfc49369bec8a592e3dd6a7865c062"
+    },
+    {
+      "file": "903cb928-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "224",
+      "burst": "12217",
+      "y": 0,
+      "individual": 70,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "acd9a8ffaa6f1a341d30f58275a93412753f79bb19e4c5329358e880d12b8806"
+    },
+    {
+      "file": "97152532-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "224",
+      "burst": "12217",
+      "y": 0,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "bec98f46a9f20b5468aa062420244fec5be3e504aab762fbc6f74e8e7517f002"
+    },
+    {
+      "file": "8d55644e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "224",
+      "burst": "14068",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "5614ece515befb6df0c4257397ead14490a9b29ee7115aed41b06cde3fba4387"
+    },
+    {
+      "file": "8c4dbbdc-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "224",
+      "burst": "14068",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "85b86b8c365853914499b87fcbaeb8050899cad74849785247da9a3d4330705f"
+    },
+    {
+      "file": "88dba798-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "224",
+      "burst": "14068",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "1935282ed690e620d34fbe41ecf4cb89bed037bd0360915874eb45c6f6709060"
+    },
+    {
+      "file": "983374a0-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "224",
+      "burst": "182",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "45e5775853113f906ca6ab7b59746ef1eb2347d170555b67f3cf7606d56cf164"
+    },
+    {
+      "file": "8e0599a4-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "224",
+      "burst": "182",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "25c44bf878fced5bfe62bfea19869dc44a6561bd5925d533d040c1f0ecead8de"
+    },
+    {
+      "file": "8d7c0a36-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7032",
+      "y": 8,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "a28e05c13ad861af0f88b6343188804de78bee5efae3beabbd187f4ed70ec832"
+    },
+    {
+      "file": "9775f290-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7032",
+      "y": 8,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "2e2259f82c832740e13c9ca33734c75a58b08eb6adff3a1a56773d20d352aa7f"
+    },
+    {
+      "file": "9838013c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7034",
+      "y": 0,
+      "individual": 155,
+      "mean": 155,
+      "shrink": 155,
+      "sha256": "1b30ea0973703c03e063bc4d1fcf9d6d60c6797bc536b44680e30dcafdeafc65"
+    },
+    {
+      "file": "950ddc48-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7034",
+      "y": 0,
+      "individual": 155,
+      "mean": 155,
+      "shrink": 155,
+      "sha256": "efe9c4715035b321b1a44a99e3caf3a2a584caaaa76165f9c2473ccac5ee1761"
+    },
+    {
+      "file": "892f4164-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7034",
+      "y": 0,
+      "individual": 155,
+      "mean": 155,
+      "shrink": 155,
+      "sha256": "d1c7cc8ca4dc14d3f419ec866b3abdbb4a5feea02ac153435dd5dacf0f6873b9"
+    },
+    {
+      "file": "90287ed6-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7041",
+      "y": 8,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "a16b048ced4cac5f871fae38f19726a54b4d6dcdc84537cccc5b9e9cd56abfb7"
+    },
+    {
+      "file": "8cbc5fce-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7041",
+      "y": 8,
+      "individual": 149,
+      "mean": 8,
+      "shrink": 149,
+      "sha256": "3b2f88caf633708e338261b9c75b1838439cbb495de1eb51197b24fb698e6535"
+    },
+    {
+      "file": "922ce06e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7075",
+      "y": 1,
+      "individual": 90,
+      "mean": 172,
+      "shrink": 90,
+      "sha256": "4409c7033d2ced8f3a2e4678bdcac45486e1b0d57afb5602beb4984936863441"
+    },
+    {
+      "file": "94b39012-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7075",
+      "y": 1,
+      "individual": 172,
+      "mean": 172,
+      "shrink": 172,
+      "sha256": "4961edbbd1e094be4224dfc8200643482281aba099fb40d67fea79f9fc673a63"
+    },
+    {
+      "file": "96b5af30-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7100",
+      "y": 1,
+      "individual": 146,
+      "mean": 6,
+      "shrink": 146,
+      "sha256": "e9e44f9f9c5e053386687d3175a25a689c4fa19cd78f5ceefe07de58d7b22832"
+    },
+    {
+      "file": "8ab89cf6-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7100",
+      "y": 1,
+      "individual": 6,
+      "mean": 6,
+      "shrink": 6,
+      "sha256": "d88f401488113b011c3d5b46b39f2c7ee5cd00cabdceb77c94d3352f975296f9"
+    },
+    {
+      "file": "88dd9170-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7106",
+      "y": 8,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "687a381bcb84407372fcca99ae06dc63d0842d2b765260fe7881614c727cc978"
+    },
+    {
+      "file": "8c217914-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7106",
+      "y": 8,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "f9f206982a888da2ade4b9d630b5fed59ae69e2580a8a91125771459a4aea9b1"
+    },
+    {
+      "file": "89bdacd8-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7107",
+      "y": 8,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "4394f83d675eb643a380e91b4d5bd269baacbe4effa75c8fdb14cfd5c3f236f6"
+    },
+    {
+      "file": "8bf5646e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7107",
+      "y": 8,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "f888c76fc488b11db8d9492cd9c39fa1e6de2d9d38dc28fa3df13f4197015463"
+    },
+    {
+      "file": "8fe4f21a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7110",
+      "y": 1,
+      "individual": 39,
+      "mean": 39,
+      "shrink": 39,
+      "sha256": "2020ab05fee9b59e408a76a027de1b47605d7d948671899ed74607026f39eb15"
+    },
+    {
+      "file": "89faab06-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7110",
+      "y": 1,
+      "individual": 39,
+      "mean": 39,
+      "shrink": 39,
+      "sha256": "b696d8f6dae63a74461acc2f4ffea01d0f170bae10a30fdeff0a79d5c6e81a48"
+    },
+    {
+      "file": "8b0b2138-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7150",
+      "y": 1,
+      "individual": 4,
+      "mean": 87,
+      "shrink": 87,
+      "sha256": "04f4bb53980050edab0360f3b945ec7ee792f70816d94a06ce161da24c51e9e3"
+    },
+    {
+      "file": "8dd7c060-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7150",
+      "y": 1,
+      "individual": 87,
+      "mean": 87,
+      "shrink": 87,
+      "sha256": "61a5e9c0e23728590759aab0de46edd2b2799f9310d8deed0a432e66cebbc0ed"
+    },
+    {
+      "file": "8d98c806-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7154",
+      "y": 1,
+      "individual": 15,
+      "mean": 15,
+      "shrink": 15,
+      "sha256": "95538fea7e6c6e40f6b0e46aa4e7de964621a4e51759bb9b8763b1c3a5890a89"
+    },
+    {
+      "file": "89bd100c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7154",
+      "y": 1,
+      "individual": 15,
+      "mean": 15,
+      "shrink": 15,
+      "sha256": "645278c9224d134966abb1478b58ea6b871774992be1c8552e9eee6a72823283"
+    },
+    {
+      "file": "8712bb4a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7158",
+      "y": 1,
+      "individual": 1,
+      "mean": 15,
+      "shrink": 1,
+      "sha256": "8b73d7b75dae7a35cdcbbbd1f9ce070ad6f4983077d292598608d259cfd4fb06"
+    },
+    {
+      "file": "8a8630fe-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7158",
+      "y": 1,
+      "individual": 15,
+      "mean": 15,
+      "shrink": 15,
+      "sha256": "abdb0b3b5a12cbc63f2d0887aa583cb80228de5a9b2ae256bf38c55efe0632db"
+    },
+    {
+      "file": "94c09578-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7164",
+      "y": 1,
+      "individual": 15,
+      "mean": 15,
+      "shrink": 15,
+      "sha256": "df76b37b667241bcb454b9f3d5dc2e43326e14587a328dc8f5fe8c6ed255ee7e"
+    },
+    {
+      "file": "902aba3e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7164",
+      "y": 1,
+      "individual": 6,
+      "mean": 15,
+      "shrink": 6,
+      "sha256": "8e9ffd8b529aa7d0bb8f1522bf9c3b83c2997d11a9cc51a2bcb92948d6afc01f"
+    },
+    {
+      "file": "94cddb8e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7165",
+      "y": 1,
+      "individual": 6,
+      "mean": 6,
+      "shrink": 6,
+      "sha256": "3fdfb2c426e732e7c67613e2792cca958370768bed20efedf764a1669c70e15a"
+    },
+    {
+      "file": "981bdfd4-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7165",
+      "y": 1,
+      "individual": 6,
+      "mean": 6,
+      "shrink": 6,
+      "sha256": "0dada2f116334ed352098cdc9da322c8b4f80c4f802152218e87542028e61502"
+    },
+    {
+      "file": "87e99d5e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7209",
+      "y": 1,
+      "individual": 6,
+      "mean": 6,
+      "shrink": 6,
+      "sha256": "169ccaad75002c49a1c8c13fdedac4c12388d3a7d5ccb8e50f467856a1e760e8"
+    },
+    {
+      "file": "94cb58d2-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7209",
+      "y": 1,
+      "individual": 15,
+      "mean": 6,
+      "shrink": 15,
+      "sha256": "df4305d90ccb1f90db042a6d206bcd54757a38586d316f9471231734338513f8"
+    },
+    {
+      "file": "890fc474-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7211",
+      "y": 1,
+      "individual": 2,
+      "mean": 147,
+      "shrink": 2,
+      "sha256": "28bb8a7a29017206b1099c4f9b885c90543f55f54ce1e3326977f9712493d96b"
+    },
+    {
+      "file": "8903113e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "260",
+      "burst": "7211",
+      "y": 1,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "68d33f0404df85a38bc195a94bf1a0fc06ac6998e4e20adf73632d41aba7c2cf"
+    },
+    {
+      "file": "937979fa-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "267",
+      "burst": "34118",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "39987cdadfef09142b4501c0981a9e5e858cecbba35aa81df4ed8ce661dda46f"
+    },
+    {
+      "file": "98aa3770-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "267",
+      "burst": "34118",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "521e9726a98db7d9db47e5137e1e64077a94c42a3ce1323a65bed23cbc1cd4ec"
+    },
+    {
+      "file": "8e4047e8-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "269",
+      "burst": "29301",
+      "y": 0,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "03c901561f5528e64215a88fea573220cf778f0d8fffe9b252bbd590779a2875"
+    },
+    {
+      "file": "9707213a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "269",
+      "burst": "29301",
+      "y": 0,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "f22711cf4ecde9194d7252cac5dbaec3c6952f6f3a4ab885a325116dd90d9eb3"
+    },
+    {
+      "file": "8a72e5a8-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "14676",
+      "y": 147,
+      "individual": 1,
+      "mean": 1,
+      "shrink": 1,
+      "sha256": "623e6f3e576ea5b4929c0484153f03d4a009ae30ce2dfefb53f77460fab1bb4c"
+    },
+    {
+      "file": "88c0dd32-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "14676",
+      "y": 147,
+      "individual": 1,
+      "mean": 1,
+      "shrink": 1,
+      "sha256": "882d490e312ddac13a3a8a2dcf345223c861c5a5b9973853b361717335503ea1"
+    },
+    {
+      "file": "87d59fc0-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6388",
+      "y": 146,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "b99997bd6239bee85034ae1e49ae4df97e6335c4242e8a6529e58c587f173cba"
+    },
+    {
+      "file": "8fd08456-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6388",
+      "y": 146,
+      "individual": 146,
+      "mean": 0,
+      "shrink": 146,
+      "sha256": "50a1e90927793dbfa759f3460ef41ef07179088e8c33af59ee3c99b0046cbbbb"
+    },
+    {
+      "file": "981a9a16-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6395",
+      "y": 148,
+      "individual": 145,
+      "mean": 145,
+      "shrink": 145,
+      "sha256": "db3e49f5536879d12ccc25c531c36e5d769abd03746c9ae2a64b9f62df2d49e9"
+    },
+    {
+      "file": "8fce555a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6395",
+      "y": 148,
+      "individual": 145,
+      "mean": 145,
+      "shrink": 145,
+      "sha256": "210b97c3033a656e51175e35130c4cb4f9bc2a8208b940702c72862c1aaa9007"
+    },
+    {
+      "file": "9028e524-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6395",
+      "y": 148,
+      "individual": 145,
+      "mean": 145,
+      "shrink": 145,
+      "sha256": "70c2e9f86a14928244a687776e6a652bc6715c0dc2d2ca5f12d1b59c86b5dc58"
+    },
+    {
+      "file": "890c204e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6397",
+      "y": 148,
+      "individual": 149,
+      "mean": 149,
+      "shrink": 149,
+      "sha256": "58a291854b26c0aa0dae98bb201f59f322187e2288cc0fb4d17eda32015ccf35"
+    },
+    {
+      "file": "8bf4b67c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6397",
+      "y": 148,
+      "individual": 145,
+      "mean": 149,
+      "shrink": 145,
+      "sha256": "d74301a31fa5d7004bdc6f607cdaf88b0ab3a64ec0ff55fecb1ca4b410c19fb7"
+    },
+    {
+      "file": "8acb242a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6418",
+      "y": 87,
+      "individual": 146,
+      "mean": 87,
+      "shrink": 146,
+      "sha256": "4422cbb4d1a927cad753238957403018faf49d6fbe880438484b7ce261630de4"
+    },
+    {
+      "file": "92a37c7e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6418",
+      "y": 87,
+      "individual": 87,
+      "mean": 87,
+      "shrink": 87,
+      "sha256": "3f2c8fc411a8751faa36dddb00b3b70f147a1d26348fa7b448a728dd0fa0a388"
+    },
+    {
+      "file": "90c93452-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6423",
+      "y": 15,
+      "individual": 15,
+      "mean": 15,
+      "shrink": 15,
+      "sha256": "9c1c07a8464acb3f9416ae0742df859f523a340af16c82a418eedb6b6a51a910"
+    },
+    {
+      "file": "8cae74d6-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6423",
+      "y": 15,
+      "individual": 15,
+      "mean": 15,
+      "shrink": 15,
+      "sha256": "d5b4e8f1841157103392ec6ae1eb6d7c00aa05b24869be189ca2b7096ef75b38"
+    },
+    {
+      "file": "9571fcf0-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6423",
+      "y": 15,
+      "individual": 15,
+      "mean": 15,
+      "shrink": 15,
+      "sha256": "4fe817c87dcec0e233ebfc4a9a64a891f37727805136526ab8edbcd40f1a13c5"
+    },
+    {
+      "file": "925f28e4-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6436",
+      "y": 87,
+      "individual": 146,
+      "mean": 87,
+      "shrink": 146,
+      "sha256": "cbefddb36956eeb82c82c36ebaa4bf4d44c35933a7113cdcbdc0d7f5eeaaec77"
+    },
+    {
+      "file": "95f16260-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "27",
+      "burst": "6436",
+      "y": 87,
+      "individual": 87,
+      "mean": 87,
+      "shrink": 87,
+      "sha256": "980c1a172c0600f20b73c43b0e79278c539fd0fc1c0f98745b8a1b7094999df7"
+    },
+    {
+      "file": "8a4519c0-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "275",
+      "burst": "12369",
+      "y": 36,
+      "individual": 36,
+      "mean": 36,
+      "shrink": 36,
+      "sha256": "942abdc09db54341ddac3c2484492ed0dea5b74e7368559bf8ab5e97c75ebdbe"
+    },
+    {
+      "file": "8dca0c9a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "275",
+      "burst": "12369",
+      "y": 36,
+      "individual": 36,
+      "mean": 36,
+      "shrink": 36,
+      "sha256": "858a965852b977cc6084fa4777ffd78dd8c0f90099330259d0a60e4480e6c009"
+    },
+    {
+      "file": "8c9ed6fc-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "279",
+      "burst": "24997",
+      "y": 0,
+      "individual": 65,
+      "mean": 65,
+      "shrink": 65,
+      "sha256": "e0cc96bb79ac0e84690b6f8de342fcd26df9b98038b4a19b0aed59f7c12a053c"
+    },
+    {
+      "file": "94eded52-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "279",
+      "burst": "24997",
+      "y": 0,
+      "individual": 0,
+      "mean": 65,
+      "shrink": 65,
+      "sha256": "392542ab1b459564707614637288a5da0e506ca49988b4dcfcebfe6e97676b1e"
+    },
+    {
+      "file": "8866e53e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "279",
+      "burst": "34074",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "b32c9ddb109510ba1d43a1c140091ad5c735de82dd94f61ca35be86476bff5d2"
+    },
+    {
+      "file": "97e1eaea-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "279",
+      "burst": "34074",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "52e758d28531410ca26d3b20e85c49ccb299d2ad035a4a6b775ac32a535130c5"
+    },
+    {
+      "file": "8eea3758-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2542",
+      "y": 147,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "d8897012618f3cdd99ca773303f70febd1215dcdfcc1ab1b33f87e2574fd282c"
+    },
+    {
+      "file": "87482b04-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2542",
+      "y": 147,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "e84bc0b3b0394e18f1e4f651ee92616d3bef2afcbadff046c4b818a5d3f9ca0c"
+    },
+    {
+      "file": "93f59e5e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2546",
+      "y": 145,
+      "individual": 152,
+      "mean": 172,
+      "shrink": 152,
+      "sha256": "c3af910dc2c5e70283dbe060382e56bf20787d5e2c3ba135ee2948b8ba581043"
+    },
+    {
+      "file": "87fdb7bc-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2546",
+      "y": 145,
+      "individual": 172,
+      "mean": 172,
+      "shrink": 172,
+      "sha256": "74f49b2e736657ccaf809c40928afa373af4e7d945156847d35361a970344a74"
+    },
+    {
+      "file": "8ac3048e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2553",
+      "y": 151,
+      "individual": 2,
+      "mean": 2,
+      "shrink": 2,
+      "sha256": "54f63619463e4b22c85ce03f1b8745f64d74b810001647a0b973d92c0ef5b2b8"
+    },
+    {
+      "file": "88cce42e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2553",
+      "y": 151,
+      "individual": 2,
+      "mean": 2,
+      "shrink": 2,
+      "sha256": "9af3ca68248411d46357f33e070ae947c3b9f50dd5f1e6918b75babe351ab3f5"
+    },
+    {
+      "file": "8a646fd2-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2553",
+      "y": 151,
+      "individual": 2,
+      "mean": 2,
+      "shrink": 2,
+      "sha256": "1011201726df2a0ab2020b45efe3984c2578b9a18ae04b802baa48255dc49a32"
+    },
+    {
+      "file": "8d583dae-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2575",
+      "y": 145,
+      "individual": 1,
+      "mean": 1,
+      "shrink": 1,
+      "sha256": "c2fcc2adba29a4595b6bf1402cc7038696e67c715fe5036e397a0409f8e17d81"
+    },
+    {
+      "file": "957bd02c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2575",
+      "y": 145,
+      "individual": 1,
+      "mean": 1,
+      "shrink": 1,
+      "sha256": "87bae88fa07f08d887ec2c4d63328ab2064b4e8a1a5be7510a83e8ed706a065f"
+    },
+    {
+      "file": "90475cde-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2580",
+      "y": 146,
+      "individual": 146,
+      "mean": 0,
+      "shrink": 146,
+      "sha256": "4397505615f1ac7d298e6143032214c31f4b1bf1afec24d10c81310f4f8fd0e3"
+    },
+    {
+      "file": "96a8a574-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2580",
+      "y": 146,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "f406711cf0c724597b505a177054ea59ed4cff812d83a1d8b7803e8afef13b8b"
+    },
+    {
+      "file": "872d3b14-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2595",
+      "y": 147,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "35825b6f23a6e7783e4365686d880b23a6a4343444e55ad134211e083e0b35d0"
+    },
+    {
+      "file": "8c3fb2bc-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2595",
+      "y": 147,
+      "individual": 90,
+      "mean": 147,
+      "shrink": 90,
+      "sha256": "c9a5b413b9296454aeda5b513dab587aafd149400d5439177ac610c7a6e5bf84"
+    },
+    {
+      "file": "8e0a42c4-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2595",
+      "y": 147,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "e8fbc515ffc846a2e0e675d7ebfe132ac42d9ee14041937badba068144718490"
+    },
+    {
+      "file": "9372b91c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2605",
+      "y": 145,
+      "individual": 15,
+      "mean": 15,
+      "shrink": 15,
+      "sha256": "9e47bccca17c46bca7efbc48b4c0934d4d426c25dca408620279ce96de91ccab"
+    },
+    {
+      "file": "86da7780-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "3",
+      "burst": "2605",
+      "y": 145,
+      "individual": 15,
+      "mean": 15,
+      "shrink": 15,
+      "sha256": "11b45c2f31e9b756ce581c39fe9046a84112d5c168a54e78eb15ca776718a8a3"
+    },
+    {
+      "file": "8f62f8e6-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "15210",
+      "y": 153,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "fd20289d40938d58102f4cc6bac4f1f4f9932886b19a79bbbd104713a64f02f5"
+    },
+    {
+      "file": "90337156-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "15210",
+      "y": 153,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "96f2dea170a3ca257e53bdda92197fadf0ab48065bfb79390afcdf8379194cc8"
+    },
+    {
+      "file": "951aca48-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3522",
+      "y": 4,
+      "individual": 4,
+      "mean": 4,
+      "shrink": 4,
+      "sha256": "1ecd3886c328bbda6c08dbaf7a31bb06998077964c3dc1609e6a43d949a42af7"
+    },
+    {
+      "file": "8abb9230-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3522",
+      "y": 4,
+      "individual": 4,
+      "mean": 4,
+      "shrink": 4,
+      "sha256": "1d89702905a50d8787c0631aeaf325bc062696cb50321b56094c68ffd0553bc0"
+    },
+    {
+      "file": "98871344-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3554",
+      "y": 147,
+      "individual": 147,
+      "mean": 156,
+      "shrink": 147,
+      "sha256": "482c29653008332985aed825ab550c361b1e906df4b360c52fa4d78c442db2d8"
+    },
+    {
+      "file": "8a1bff54-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3554",
+      "y": 147,
+      "individual": 156,
+      "mean": 156,
+      "shrink": 156,
+      "sha256": "0e62ef168778a95848419399400339b55f19c9d0ebb5c2b2e603d35d1067d5bc"
+    },
+    {
+      "file": "8a688824-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3556",
+      "y": 146,
+      "individual": 147,
+      "mean": 146,
+      "shrink": 147,
+      "sha256": "eef62a11e33bde70061e4500669eafb2a88a0e8c078d87bd97e86d74b3321dc8"
+    },
+    {
+      "file": "916f1250-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3556",
+      "y": 146,
+      "individual": 146,
+      "mean": 146,
+      "shrink": 146,
+      "sha256": "05f6f19c58c3fc91597eae70c30c2e04488097cb6f12f93c51d546acc9c4ed17"
+    },
+    {
+      "file": "9705736c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3558",
+      "y": 148,
+      "individual": 148,
+      "mean": 33,
+      "shrink": 148,
+      "sha256": "bc043268496681165cb668abf95bfd9afab0756a0e87e31b8e0e1ce1aee051b5"
+    },
+    {
+      "file": "91347fe6-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3558",
+      "y": 148,
+      "individual": 33,
+      "mean": 33,
+      "shrink": 33,
+      "sha256": "28be02a915142106cc19f555fb08131148600677638f485d45eb2b7ff9f00017"
+    },
+    {
+      "file": "98ba48cc-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3564",
+      "y": 145,
+      "individual": 145,
+      "mean": 145,
+      "shrink": 145,
+      "sha256": "7a9f148078326c62988b3b6da356368e2b934c9baebe61c35fe94e39bac98f2f"
+    },
+    {
+      "file": "95f21746-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3564",
+      "y": 145,
+      "individual": 145,
+      "mean": 145,
+      "shrink": 145,
+      "sha256": "0546d0a2e71a87c3b4dcc6cc0f51d1a7adff2170e077c5722d6ca930e9ac5b16"
+    },
+    {
+      "file": "8a547afa-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3598",
+      "y": 4,
+      "individual": 116,
+      "mean": 144,
+      "shrink": 144,
+      "sha256": "c4a20e372abe0eda14bd888f940900b87922acfedfa0fbb1e121ec691a59651a"
+    },
+    {
+      "file": "95e380d2-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3598",
+      "y": 4,
+      "individual": 144,
+      "mean": 144,
+      "shrink": 144,
+      "sha256": "66a37c3eaf4946777a10a4ab20b56b08c017e23a6dc20ca874328e585237c07f"
+    },
+    {
+      "file": "88bccd96-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3599",
+      "y": 4,
+      "individual": 153,
+      "mean": 4,
+      "shrink": 153,
+      "sha256": "efe7c62df3dfccf4838c02883de735996c2005a988b0bf2f3bef45a437842d42"
+    },
+    {
+      "file": "96fe4164-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3599",
+      "y": 4,
+      "individual": 4,
+      "mean": 4,
+      "shrink": 4,
+      "sha256": "ae33061eaf47b4d99ec37837f9c8575be3767d43be1063e7817051e686286712"
+    },
+    {
+      "file": "8844800c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3672",
+      "y": 147,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "f75e9af223f759fd80d5d48cde8ed3e79f09e8895d377684af02a5e34473c09e"
+    },
+    {
+      "file": "870552a2-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3672",
+      "y": 147,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "896918e8683c2be354d087cf8e7a98e640c35538a3e41c9e7a0e51c8771a494f"
+    },
+    {
+      "file": "9853845c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3675",
+      "y": 147,
+      "individual": 146,
+      "mean": 146,
+      "shrink": 146,
+      "sha256": "e84022852b7fa0150329a683a7a02a0d8fd031a30d805a2ba8365443c3c9e502"
+    },
+    {
+      "file": "8be27c5a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3675",
+      "y": 147,
+      "individual": 4,
+      "mean": 146,
+      "shrink": 146,
+      "sha256": "7273550780afcff2ccb57642ac0a703ae33bb357094bf518a89e5d40efbc8c55"
+    },
+    {
+      "file": "8ab3a99e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3683",
+      "y": 0,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "0ca9c41760f03cee69a3cbcb1c547400793d9a700eb7a9c66e0db24d596c70ac"
+    },
+    {
+      "file": "8ce6a2a2-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3683",
+      "y": 0,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "da44cd69a49064bf0edac2cba8ed834317330b9e27033925ffdbb509039ea02d"
+    },
+    {
+      "file": "899f1d36-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3714",
+      "y": 153,
+      "individual": 145,
+      "mean": 145,
+      "shrink": 145,
+      "sha256": "1d75fa213acd1b22814e95c022ad52c989bf04da26a8e88a9118b8ff038d548a"
+    },
+    {
+      "file": "96565a76-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3714",
+      "y": 153,
+      "individual": 145,
+      "mean": 145,
+      "shrink": 145,
+      "sha256": "3d0d73c18c87957169b6a411f38da97b452b7a5f2ada56ab9fd5ddebc863f37f"
+    },
+    {
+      "file": "987cbd0e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3716",
+      "y": 145,
+      "individual": 3,
+      "mean": 120,
+      "shrink": 3,
+      "sha256": "85c94f38cc259d3e66e022cb89d3ecef7cd7c5bccf7830d4929a725486895c96"
+    },
+    {
+      "file": "8eee00c2-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3716",
+      "y": 145,
+      "individual": 120,
+      "mean": 120,
+      "shrink": 120,
+      "sha256": "c1e29f9e221b47f22509a591e23f299bd0b70a97d655957d4cf81ed49818b4af"
+    },
+    {
+      "file": "983e529e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3739",
+      "y": 147,
+      "individual": 147,
+      "mean": 116,
+      "shrink": 147,
+      "sha256": "b4898654e356a2d24c1e424177ca332ae9662b12d505b724c06ebaa83d8cfa1c"
+    },
+    {
+      "file": "97324590-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "309",
+      "burst": "3739",
+      "y": 147,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "ab858b13a0e1c62e4280acb447dfe19025c4ab5cd6b03491260fc0cda0f96948"
+    },
+    {
+      "file": "88ad5d0c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4822",
+      "y": 146,
+      "individual": 146,
+      "mean": 146,
+      "shrink": 146,
+      "sha256": "c303e4e20d98a9a5449c2bdf59514f68fb339ea41c19db41caee514b825eaa47"
+    },
+    {
+      "file": "8fa2711a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4822",
+      "y": 146,
+      "individual": 146,
+      "mean": 146,
+      "shrink": 146,
+      "sha256": "1b3e5f0e7313f69946b5c82edcd03582842a1884f17cb6dfbebc83d557ae9228"
+    },
+    {
+      "file": "8c59fa6e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4848",
+      "y": 155,
+      "individual": 153,
+      "mean": 151,
+      "shrink": 153,
+      "sha256": "fb3cfecfc1d2e7c19d0d40499487ca8f971c13a10ca2110401927b37039ee0df"
+    },
+    {
+      "file": "8debc038-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4848",
+      "y": 155,
+      "individual": 151,
+      "mean": 151,
+      "shrink": 151,
+      "sha256": "6049a79b46d3d67163c7b357295596748f4c15a1be5aeb8b26549528cf91cd1d"
+    },
+    {
+      "file": "93239b48-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4852",
+      "y": 151,
+      "individual": 153,
+      "mean": 153,
+      "shrink": 153,
+      "sha256": "a556560256c226f90cda81d6ccce1f91c38f9e8c6c3bfdabd0f9b536ba6576f0"
+    },
+    {
+      "file": "8abb29e4-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4852",
+      "y": 151,
+      "individual": 36,
+      "mean": 153,
+      "shrink": 36,
+      "sha256": "e6ae5c6c04eaef587dc13452567b589ba42077dd984105da30e061c05bd101d2"
+    },
+    {
+      "file": "923ebdca-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4880",
+      "y": 147,
+      "individual": 8,
+      "mean": 148,
+      "shrink": 148,
+      "sha256": "a3e22adb35b97855bb021133f183fe5189f7219b4e2385cd8cf7720a5eef9270"
+    },
+    {
+      "file": "86d9afbc-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4880",
+      "y": 147,
+      "individual": 148,
+      "mean": 148,
+      "shrink": 148,
+      "sha256": "ecc86ded5d5b8effaa2740498a46b17af3d59957b4d30bb5cc298c01a0405b42"
+    },
+    {
+      "file": "8b35e170-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4898",
+      "y": 148,
+      "individual": 149,
+      "mean": 8,
+      "shrink": 149,
+      "sha256": "b04ff6f07c4224b781e1322f78cd188cee1b376293cc934491e8597ecb3cbb86"
+    },
+    {
+      "file": "97f5819a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4898",
+      "y": 148,
+      "individual": 8,
+      "mean": 8,
+      "shrink": 8,
+      "sha256": "6303072500dadb752326be18b5d14a15238a3e74de8a1eed7b2060c97b16432e"
+    },
+    {
+      "file": "8f03b5e8-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4898",
+      "y": 148,
+      "individual": 149,
+      "mean": 8,
+      "shrink": 149,
+      "sha256": "aa046208b32b8437e54b6e7c20e1748d36c7c095874cdf127e54121303775dcf"
+    },
+    {
+      "file": "98c59538-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4911",
+      "y": 147,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "adebf80a47939dd03e37b6f1430cece8c3bf6658d8e319b38cedefec4e2f8532"
+    },
+    {
+      "file": "987c977a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4911",
+      "y": 147,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "21c39d941547b067d5d16239c756cb8d3641af95acc1b96ca528b078525f38c1"
+    },
+    {
+      "file": "8f2286b2-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "320",
+      "burst": "4911",
+      "y": 147,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "a71ab5f0dbb00ac49dfd76a2623f07165bd7fa69d70ae64968c4dfa1a0163009"
+    },
+    {
+      "file": "8864ba0c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "16169",
+      "y": 172,
+      "individual": 1,
+      "mean": 1,
+      "shrink": 1,
+      "sha256": "64172c370cab4c3afd70c6c66cf99da821cc8a04e190c595eb81a76ff2ac0394"
+    },
+    {
+      "file": "98c882c0-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "16169",
+      "y": 172,
+      "individual": 1,
+      "mean": 1,
+      "shrink": 1,
+      "sha256": "05f9cf1d51e3607e93ba8ef279443b4952e815d9e74d153487a18fb2ac024863"
+    },
+    {
+      "file": "8d52d918-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "17305",
+      "y": 4,
+      "individual": 153,
+      "mean": 153,
+      "shrink": 153,
+      "sha256": "405f1ea097c8fd320c56ae3d55f64afc572970abad705a9639240112bf699ad3"
+    },
+    {
+      "file": "8ef9f4ae-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "17305",
+      "y": 4,
+      "individual": 153,
+      "mean": 153,
+      "shrink": 153,
+      "sha256": "e41d5eda164b6566d82c9b2e9df9be7867aacfa38b89a7792e87ba98536a8c43"
+    },
+    {
+      "file": "8f9d7c64-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9094",
+      "y": 147,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "23ceff8c165e90ce32ab0a0bbb002817de0de2a46485b49f136c5e900b706a4c"
+    },
+    {
+      "file": "8bf49084-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9094",
+      "y": 147,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "71647ca4e02124f07f0ed8e82b50588179b1a0e6aeccec663cc9893b83aad852"
+    },
+    {
+      "file": "892e414c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9112",
+      "y": 87,
+      "individual": 87,
+      "mean": 87,
+      "shrink": 87,
+      "sha256": "d85cb3e4d04631303b87ccbbf1396a2b5f0f1759fcb425e0818878cced0c10dd"
+    },
+    {
+      "file": "8d248914-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9112",
+      "y": 87,
+      "individual": 172,
+      "mean": 87,
+      "shrink": 172,
+      "sha256": "63d560184e8fd84915cf8962206eebadde440981688b838bc6c3cb8edfaac4b7"
+    },
+    {
+      "file": "88e71a24-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9142",
+      "y": 9,
+      "individual": 39,
+      "mean": 39,
+      "shrink": 39,
+      "sha256": "f1fbd768a4ee09d00b2db5d13b1b3fa7b75111064a5977fd3f2f909b5a359706"
+    },
+    {
+      "file": "90068d1c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9142",
+      "y": 9,
+      "individual": 39,
+      "mean": 39,
+      "shrink": 39,
+      "sha256": "0c548896db5a79a4018a7d6b73ababb9b3227f088e5bfb5e2385939f0781832e"
+    },
+    {
+      "file": "881a4cd8-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9166",
+      "y": 6,
+      "individual": 6,
+      "mean": 6,
+      "shrink": 6,
+      "sha256": "9e1d52a7865fa59cb0c7678f31c4aa30a0fc459c0c700a7097dc5a5ac5bbc81a"
+    },
+    {
+      "file": "8b0a6194-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9166",
+      "y": 6,
+      "individual": 6,
+      "mean": 6,
+      "shrink": 6,
+      "sha256": "81bcc63198403a11dfdd5874c58e7e6d762191e1b12d9a06fea9f4711d6b0d48"
+    },
+    {
+      "file": "97474026-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9172",
+      "y": 152,
+      "individual": 39,
+      "mean": 39,
+      "shrink": 39,
+      "sha256": "81e117ca25895fd7d4e94680da1ef868efc692d75e4c3fe1dfef62136e3ed998"
+    },
+    {
+      "file": "88ea67ec-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9172",
+      "y": 152,
+      "individual": 87,
+      "mean": 39,
+      "shrink": 87,
+      "sha256": "e012b0534dfe7d572d586197d52567fbeb44669b32b23cec38d8d3977925c558"
+    },
+    {
+      "file": "8daa2f88-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9196",
+      "y": 147,
+      "individual": 146,
+      "mean": 146,
+      "shrink": 146,
+      "sha256": "7d175e0d0133cef2738d468cf934ddf19dfb9b4a6c173f7f1b72da7feee60761"
+    },
+    {
+      "file": "918a0024-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9196",
+      "y": 147,
+      "individual": 145,
+      "mean": 146,
+      "shrink": 145,
+      "sha256": "f52a5ae24ec1079f5f648be226978df256d70d8443cb8f2d4c63955be71f93f0"
+    },
+    {
+      "file": "8c39a188-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9197",
+      "y": 147,
+      "individual": 147,
+      "mean": 147,
+      "shrink": 147,
+      "sha256": "df681766d5e22f65e1755eeba8beb54eb4589b375f4389127ee1c6cac219d150"
+    },
+    {
+      "file": "8a11cf48-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "57",
+      "burst": "9197",
+      "y": 147,
+      "individual": 156,
+      "mean": 147,
+      "shrink": 156,
+      "sha256": "5bdb21f0c47333dcc2d6a61747e6b383fc6231b26f14fc309e3ee08b2b215043"
+    },
+    {
+      "file": "96c44c5c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "66",
+      "burst": "13866",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "1e6ccd6a713519fba00470a290cf27b120edba6d6b6b0beb4dd9f6b46d9661f0"
+    },
+    {
+      "file": "9417a526-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "66",
+      "burst": "13866",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "96eb6d36555bb319f265b554b985fe00493c97a47da861fc8e1c8ad3dc85e2c8"
+    },
+    {
+      "file": "8cc9008a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "66",
+      "burst": "28632",
+      "y": 116,
+      "individual": 52,
+      "mean": 52,
+      "shrink": 52,
+      "sha256": "6acd6708abe530ed1973428dae6b161461b35c8382d04f6d4e8136475d8cbac6"
+    },
+    {
+      "file": "9237f490-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "66",
+      "burst": "28632",
+      "y": 116,
+      "individual": 116,
+      "mean": 52,
+      "shrink": 116,
+      "sha256": "7f7e18093d447eff379e68f04c83e0e07e99df4582f0160571e8ddb8410a2073"
+    },
+    {
+      "file": "8f7b32bc-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "66",
+      "burst": "805",
+      "y": 116,
+      "individual": 4,
+      "mean": 116,
+      "shrink": 4,
+      "sha256": "d914ddf250b263e02917b8cd65e3ef77833fb9f20f084476cfaff4ef0e3dd660"
+    },
+    {
+      "file": "903750e6-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "66",
+      "burst": "805",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "8c61930f33d9913378555539e8c8db8318ee59c70f4c4d43d661f05e602baaed"
+    },
+    {
+      "file": "91b7a61e-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "66",
+      "burst": "913",
+      "y": 116,
+      "individual": 153,
+      "mean": 153,
+      "shrink": 153,
+      "sha256": "0dae390c315d26e06ee40fad638c6b552d7c293fcab62c665d622747d09f8fc4"
+    },
+    {
+      "file": "8f9e5580-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "66",
+      "burst": "913",
+      "y": 116,
+      "individual": 2,
+      "mean": 153,
+      "shrink": 2,
+      "sha256": "24f6fa6d982f6d2e4bd3a9e3459ccb0fbf15aacac676651a0b0c62d5bae60292"
+    },
+    {
+      "file": "90d26ee6-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "66",
+      "burst": "913",
+      "y": 116,
+      "individual": 153,
+      "mean": 153,
+      "shrink": 153,
+      "sha256": "ee230ca7aec5c49999671c4fbcac113958b118bfaf1d92042c000dd3ca50ff16"
+    },
+    {
+      "file": "87e4b758-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "79",
+      "burst": "13539",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "ae57b3af02061ca08042b293d5ac2b41bfbf3330c6352c44fac254d6c0c408ce"
+    },
+    {
+      "file": "8a2d0b82-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "79",
+      "burst": "13539",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "22b31d12171ee056218ba2c6babc937d5ea954a0c178977892536bacfdf21ecd"
+    },
+    {
+      "file": "920d280a-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "79",
+      "burst": "25421",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "a36e906ee0294edf7f82a8b7e22576d9a45915c8ca710a8735551b1154839211"
+    },
+    {
+      "file": "9527f8c6-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "79",
+      "burst": "25421",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "ca22f268648b33920f2bdfa8c2dfa7003d92637ee7e170bfc054ecd31c8a5f9a"
+    },
+    {
+      "file": "8821f668-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "79",
+      "burst": "32734",
+      "y": 0,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "66c71dec1d3815d5d2014ad4912dbe52057b0e26c25139ce27732e0f0038e3df"
+    },
+    {
+      "file": "89c542b8-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "79",
+      "burst": "32734",
+      "y": 0,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "093665002077da755622ccc9b2309ee5d8a12723df1f75226289b1c83f22b175"
+    },
+    {
+      "file": "89672f34-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "79",
+      "burst": "35289",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "6a084544832c95121246fc40a2da70c687708f122348c82c593a4f5f72d9e7e9"
+    },
+    {
+      "file": "98fe35be-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "79",
+      "burst": "35289",
+      "y": 0,
+      "individual": 0,
+      "mean": 0,
+      "shrink": 0,
+      "sha256": "087d38f903188b075a4546140b1ed3cea6aa9337e2f7e8eba32cebadf5b22639"
+    },
+    {
+      "file": "89c8acd2-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "81",
+      "burst": "1084",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "63a16ba6bf9994da585587b98c1517de0af6cc05583ac1ec02b9a5ad7b0efa03"
+    },
+    {
+      "file": "92262396-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "81",
+      "burst": "1084",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "7b70b9f6a782f075f5e03a63603bc4c7914c42b64c316fcf80be5f5d550dd182"
+    },
+    {
+      "file": "8ef03040-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "81",
+      "burst": "1085",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "135db2b9fa413991e105785e207c72b02cef223684e0e17d39ce375c5729c6ef"
+    },
+    {
+      "file": "86e470d2-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "81",
+      "burst": "1085",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "a274073ef9c35bd4ea218f2f54acb66dac027f22ac47e36bcd4e12fdadc099be"
+    },
+    {
+      "file": "93b118a6-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "81",
+      "burst": "1085",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "f9dfd4a3ca879b855f8a4d792054c3b3292ced152f4795088aa05f54a0086e9b"
+    },
+    {
+      "file": "871c1f50-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "81",
+      "burst": "1086",
+      "y": 116,
+      "individual": 116,
+      "mean": 116,
+      "shrink": 116,
+      "sha256": "1791e85e8209967d3b4736fc04149303457ec003ca07d4431b609d4e45766dc0"
+    },
+    {
+      "file": "96aa110c-21bc-11ea-a13a-137349068a90.jpg",
+      "camera": "81",
+      "burst": "1086",
+      "y": 116,
+      "individual": 120,
+      "mean": 116,
+      "shrink": 120,
+      "sha256": "2422a8958dc27a43ffb0a20047e698961178a67e602fe3568c8b8b86f39c7c1f"
+    }
+  ]
+}
