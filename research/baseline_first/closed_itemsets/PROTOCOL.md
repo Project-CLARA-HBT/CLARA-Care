@@ -1,0 +1,5 @@
+# Closed itemset development screen
+
+Predeclared before measurement: use MovieLens 25M ratings.csv, first 5,000 user IDs (1–5000), retaining the 50 movies most frequently rated by those users (ties by movie ID). Each user is one set of rated movies; ratings and timestamps are ignored. Keep empty transactions. Use absolute minimum support counts 500, 1000 and 1500, inclusive. No UCI data are accessed.
+
+Use pyfim's native `fim(target='c')`, one fresh process per measurement, three repetitions, including CSV parsing, transaction construction, mining and sorted canonical output materialization in timing. Record phase wall times, peak process RSS, output count and SHA-256 of canonical itemsets and supports. Empty itemsets follow pyfim output and are checked against an independent exhaustive subset oracle on small slices; output hashes must agree between repetitions. A generous, non-attainable speedup ceiling assumes the entire mining phase disappears while parsing and materialization remain; compare this with the 20% end-to-end threshold. This is a screen, not the planned full benchmark of LCM, CHARM, dCHARM or density heuristics. Do not distribute MovieLens data.
