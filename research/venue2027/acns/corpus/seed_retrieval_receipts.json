@@ -1,0 +1,124 @@
+{
+  "scope": "registered seed acquisition only; prov-dm is a protocol seed absent from the shared registry",
+  "retrieved_utc": "2026-11-21T06:35:51.619448+00:00",
+  "seed_register_sha256": "414a43a178755ff13433a626c484e4c1d0e512a186a7302e2f335b6759833986",
+  "documents": [
+    {
+      "seed": "rats9334",
+      "requested_url": "https://www.rfc-editor.org/rfc/rfc9334.txt",
+      "identity_phrase": "RATS Architecture",
+      "resolved_url": "https://www.rfc-editor.org/rfc/rfc9334.txt",
+      "http_status": 200,
+      "sha256": "b80d035fb64a00a637d4888d2855772412246230913231301727ef78d4b00540",
+      "bytes": 121810,
+      "status": "retrieved"
+    },
+    {
+      "seed": "ct9162",
+      "requested_url": "https://www.rfc-editor.org/rfc/rfc9162.txt",
+      "identity_phrase": "Certificate Transparency Version 2.0",
+      "resolved_url": "https://www.rfc-editor.org/rfc/rfc9162.txt",
+      "http_status": 200,
+      "sha256": "a0e432ce7580c99fcc8faf0cf3f6191f9ce6b4864f949158e020d4ecb295081f",
+      "bytes": 128266,
+      "status": "retrieved"
+    },
+    {
+      "seed": "macaroons14",
+      "requested_url": "https://www.ndss-symposium.org/wp-content/uploads/2017/09/04_3_1.pdf",
+      "identity_phrase": "Macaroons: Cookies with Contextual Caveats",
+      "status": "unverified",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "seed": "zanzibar19",
+      "requested_url": "https://www.usenix.org/system/files/atc19-pang.pdf",
+      "identity_phrase": "Global Authorization System",
+      "resolved_url": "https://www.usenix.org/system/files/atc19-pang.pdf",
+      "http_status": 200,
+      "sha256": "c57af6886593e778916b7ca60dcf049d90f75aee3eb07cf7e78f8565f93e0b0a",
+      "bytes": 522256,
+      "status": "retrieved"
+    },
+    {
+      "seed": "agentdojo24",
+      "requested_url": "https://proceedings.nips.cc/paper_files/paper/2024/file/97091a5177d8dc64b1da8bf3e1f6fb54-Paper-Datasets_and_Benchmarks_Track.pdf",
+      "identity_phrase": "AgentDojo: A Dynamic Environment",
+      "resolved_url": "https://proceedings.nips.cc/paper_files/paper/2024/file/97091a5177d8dc64b1da8bf3e1f6fb54-Paper-Datasets_and_Benchmarks_Track.pdf",
+      "http_status": 200,
+      "sha256": "26a3f0426ee1d533e4dd9f62d1343a7a1d231fe718cfaf3a362cc7de829ae913",
+      "bytes": 900328,
+      "status": "retrieved"
+    },
+    {
+      "seed": "toolemu24",
+      "requested_url": "https://proceedings.iclr.cc/paper_files/paper/2024/file/7274ed909a312d4d869cc328ad1c5f04-Paper-Conference.pdf",
+      "identity_phrase": "LM-Emulated Sandbox",
+      "resolved_url": "https://proceedings.iclr.cc/paper_files/paper/2024/file/7274ed909a312d4d869cc328ad1c5f04-Paper-Conference.pdf",
+      "http_status": 200,
+      "sha256": "c7802d68a37cc13bc24ef07370c3d290351888495ae3e8b4ecd25cacab0c061b",
+      "bytes": 2323605,
+      "status": "retrieved"
+    },
+    {
+      "seed": "tauben25",
+      "requested_url": "https://proceedings.iclr.cc/paper_files/paper/2025/file/1b126cc38b8638e07bef37e7b2bb72bf-Paper-Conference.pdf",
+      "identity_phrase": "Interaction in Real-World Domains",
+      "resolved_url": "https://proceedings.iclr.cc/paper_files/paper/2025/file/1b126cc38b8638e07bef37e7b2bb72bf-Paper-Conference.pdf",
+      "http_status": 200,
+      "sha256": "e2d45d573e1fce753ead1a44cc468ad386dd384e2668450d0a9c0e2c7920ada0",
+      "bytes": 519645,
+      "status": "retrieved"
+    },
+    {
+      "seed": "fhir5",
+      "requested_url": "https://hl7.org/fhir/R5/consent.html",
+      "identity_phrase": "Resource consent",
+      "resolved_url": "https://hl7.org/fhir/R5/consent.html",
+      "http_status": 200,
+      "sha256": "9cefa81d1a6885d0d466330104d0441b88e5e51fc5bd011a03be2c9ddf8ea25b",
+      "bytes": 446188,
+      "status": "retrieved"
+    },
+    {
+      "seed": "fhir5",
+      "requested_url": "https://hl7.org/fhir/R5/auditevent.html",
+      "identity_phrase": "Resource auditevent",
+      "resolved_url": "https://hl7.org/fhir/R5/auditevent.html",
+      "http_status": 200,
+      "sha256": "07b9783a9555cba55855718efc419c5ba06038c377b7b5eeb3a30d6fd9ebbf8c",
+      "bytes": 456103,
+      "status": "retrieved"
+    },
+    {
+      "seed": "fhir5",
+      "requested_url": "https://hl7.org/fhir/R5/provenance.html",
+      "identity_phrase": "Resource provenance",
+      "resolved_url": "https://hl7.org/fhir/R5/provenance.html",
+      "http_status": 200,
+      "sha256": "3124befd937fa142245f09f1db724c524a82f9ce2831e29aff9185dae62487a6",
+      "bytes": 277558,
+      "status": "retrieved"
+    },
+    {
+      "seed": "prov-dm",
+      "requested_url": "https://www.w3.org/TR/2013/REC-prov-dm-20130430/",
+      "identity_phrase": "PROV-DM: The PROV Data Model",
+      "status": "unverified",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "seed": "macaroons14",
+      "requested_url": "https://research.google.com/pubs/archive/41892.pdf",
+      "identity_phrase": "Macaroons: Cookies with Contextual Caveats",
+      "resolved_url": "https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/41892.pdf",
+      "http_status": 200,
+      "sha256": "1bbb26fbbae6f8a148595a3539decafc3459d256d5639b1e559c4c1796b828d7",
+      "bytes": 717532,
+      "status": "retrieved"
+    }
+  ],
+  "complete_seeds": 8,
+  "planned_seeds": 9,
+  "screening_decisions": 0
+}
