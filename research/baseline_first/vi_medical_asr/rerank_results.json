@@ -1,0 +1,92 @@
+[
+  {
+    "recording": 0,
+    "lm_weight": 0.1,
+    "tuned_lm": 101,
+    "matched": 99,
+    "with_consensus": 96,
+    "rank1": 97,
+    "medoid": 96
+  },
+  {
+    "recording": 1,
+    "lm_weight": 0.1,
+    "tuned_lm": 27,
+    "matched": 26,
+    "with_consensus": 29,
+    "rank1": 31,
+    "medoid": 30
+  },
+  {
+    "recording": 2,
+    "lm_weight": 0.1,
+    "tuned_lm": 31,
+    "matched": 32,
+    "with_consensus": 33,
+    "rank1": 33,
+    "medoid": 33
+  },
+  {
+    "recording": 3,
+    "lm_weight": 0.1,
+    "tuned_lm": 68,
+    "matched": 71,
+    "with_consensus": 68,
+    "rank1": 69,
+    "medoid": 68
+  },
+  {
+    "recording": 4,
+    "lm_weight": 0.1,
+    "tuned_lm": 94,
+    "matched": 98,
+    "with_consensus": 97,
+    "rank1": 96,
+    "medoid": 96
+  },
+  {
+    "recording": 5,
+    "lm_weight": 0.1,
+    "tuned_lm": 97,
+    "matched": 99,
+    "with_consensus": 101,
+    "rank1": 100,
+    "medoid": 105
+  },
+  {
+    "recording": 6,
+    "lm_weight": 0.1,
+    "tuned_lm": 42,
+    "matched": 41,
+    "with_consensus": 41,
+    "rank1": 44,
+    "medoid": 41
+  },
+  {
+    "recording": 7,
+    "lm_weight": 0.1,
+    "tuned_lm": 43,
+    "matched": 43,
+    "with_consensus": 46,
+    "rank1": 45,
+    "medoid": 45
+  },
+  {
+    "recording": 8,
+    "lm_weight": 0.1,
+    "tuned_lm": 13,
+    "matched": 13,
+    "with_consensus": 11,
+    "rank1": 11,
+    "medoid": 8
+  },
+  {
+    "recording": 9,
+    "lm_weight": 0.1,
+    "tuned_lm": 25,
+    "matched": 26,
+    "with_consensus": 27,
+    "rank1": 27,
+    "medoid": 28
+  }
+]

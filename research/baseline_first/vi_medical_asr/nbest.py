@@ -26,7 +26,7 @@ def score(ref, hypotheses):
     }
 
 
-def run(data, model_dir, out):
+def run(data, model_dir, out, feature_fn=None):
     if out.exists():
         raise FileExistsError(out)
     catalog, selected, _ = audit(data)
@@ -57,7 +57,10 @@ def run(data, model_dir, out):
             sequences = generation.sequences_ids
             if len(sequences) != 5:
                 raise RuntimeError("Incomplete N-best list")
-            result.update(score(row["normalized"], [tokens(tokenizer.decode(s)) for s in sequences]))
+            hypotheses = [tokens(tokenizer.decode(s)) for s in sequences]
+            result.update(score(row["normalized"], hypotheses))
+            if feature_fn:
+                result["features"] = feature_fn(hypotheses, generation.scores)
         except Exception as exc:
             result["failure_class"] = type(exc).__name__
         results.append(result)
