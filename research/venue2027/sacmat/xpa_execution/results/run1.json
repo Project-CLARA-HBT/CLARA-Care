@@ -1,0 +1,1562 @@
+{
+  "reference": [
+    [
+      "request1.txt",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request2.txt",
+      "IDP",
+      "IDP"
+    ],
+    [
+      "request3.txt",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request4.txt",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request5.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request6.txt",
+      "IDP",
+      "IDP"
+    ],
+    [
+      "request7.txt",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request8.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request9.txt",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request10.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request11.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request12.txt",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request13.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request14.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request15.txt",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request16.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request17.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request18.txt",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request19.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request20.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request21.txt",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request22.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request23.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request24.txt",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request25.txt",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request26.txt",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request27.txt",
+      "Permit",
+      "Permit"
+    ]
+  ],
+  "generated": [
+    [
+      "request-001.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-002.xml",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request-003.xml",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request-004.xml",
+      "IDP",
+      "IDP"
+    ],
+    [
+      "request-005.xml",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request-006.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-007.xml",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request-008.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-009.xml",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request-010.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-011.xml",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request-012.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-013.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-014.xml",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request-015.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-016.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-017.xml",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request-018.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-019.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-020.xml",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request-021.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-022.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-023.xml",
+      "Deny",
+      "Deny"
+    ],
+    [
+      "request-024.xml",
+      "Permit",
+      "Permit"
+    ],
+    [
+      "request-025.xml",
+      "Permit",
+      "Permit"
+    ]
+  ],
+  "byte_distinct": 25,
+  "attribute_map_distinct": 25,
+  "solver_calls": {
+    "smt.string_solver=z3str3 -smt2 ./Z3_input": 25
+  },
+  "method_entries": {},
+  "rules": [
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule0",
+      "truths_by_request": {
+        "request-001.xml": [
+          true,
+          true
+        ],
+        "request-002.xml": [
+          false,
+          true
+        ],
+        "request-003.xml": [
+          true,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-006.xml": [
+          false,
+          true
+        ],
+        "request-007.xml": [
+          false,
+          false
+        ],
+        "request-008.xml": [
+          false,
+          true
+        ],
+        "request-009.xml": [
+          false,
+          false
+        ],
+        "request-010.xml": [
+          false,
+          false
+        ],
+        "request-011.xml": [
+          false,
+          false
+        ],
+        "request-012.xml": [
+          false,
+          true
+        ],
+        "request-013.xml": [
+          false,
+          false
+        ],
+        "request-014.xml": [
+          false,
+          false
+        ],
+        "request-015.xml": [
+          false,
+          true
+        ],
+        "request-016.xml": [
+          false,
+          false
+        ],
+        "request-017.xml": [
+          false,
+          false
+        ],
+        "request-018.xml": [
+          false,
+          true
+        ],
+        "request-019.xml": [
+          false,
+          false
+        ],
+        "request-020.xml": [
+          false,
+          false
+        ],
+        "request-021.xml": [
+          false,
+          true
+        ],
+        "request-022.xml": [
+          false,
+          false
+        ],
+        "request-023.xml": [
+          false,
+          false
+        ],
+        "request-024.xml": [
+          false,
+          true
+        ],
+        "request-025.xml": [
+          false,
+          false
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-001.xml",
+          "request-002.xml"
+        ],
+        "1": [
+          "request-001.xml",
+          "request-003.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule1",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          true
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          true,
+          false
+        ],
+        "request-006.xml": [
+          true,
+          true
+        ],
+        "request-007.xml": [
+          false,
+          false
+        ],
+        "request-008.xml": [
+          false,
+          true
+        ],
+        "request-009.xml": [
+          false,
+          false
+        ],
+        "request-010.xml": [
+          false,
+          false
+        ],
+        "request-011.xml": [
+          false,
+          false
+        ],
+        "request-012.xml": [
+          false,
+          true
+        ],
+        "request-013.xml": [
+          false,
+          false
+        ],
+        "request-014.xml": [
+          false,
+          false
+        ],
+        "request-015.xml": [
+          false,
+          true
+        ],
+        "request-016.xml": [
+          false,
+          false
+        ],
+        "request-017.xml": [
+          false,
+          false
+        ],
+        "request-018.xml": [
+          false,
+          true
+        ],
+        "request-019.xml": [
+          false,
+          false
+        ],
+        "request-020.xml": [
+          false,
+          false
+        ],
+        "request-021.xml": [
+          false,
+          true
+        ],
+        "request-022.xml": [
+          false,
+          false
+        ],
+        "request-023.xml": [
+          false,
+          false
+        ],
+        "request-024.xml": [
+          false,
+          true
+        ],
+        "request-025.xml": [
+          false,
+          false
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-002.xml",
+          "request-006.xml"
+        ],
+        "1": [
+          "request-005.xml",
+          "request-006.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule2",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          true
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-007.xml": [
+          true,
+          false
+        ],
+        "request-008.xml": [
+          true,
+          true
+        ],
+        "request-009.xml": [
+          false,
+          false
+        ],
+        "request-010.xml": [
+          true,
+          false
+        ],
+        "request-011.xml": [
+          false,
+          false
+        ],
+        "request-012.xml": [
+          false,
+          true
+        ],
+        "request-013.xml": [
+          false,
+          false
+        ],
+        "request-014.xml": [
+          false,
+          false
+        ],
+        "request-015.xml": [
+          false,
+          true
+        ],
+        "request-016.xml": [
+          false,
+          false
+        ],
+        "request-017.xml": [
+          false,
+          false
+        ],
+        "request-018.xml": [
+          false,
+          true
+        ],
+        "request-019.xml": [
+          false,
+          false
+        ],
+        "request-020.xml": [
+          false,
+          false
+        ],
+        "request-021.xml": [
+          false,
+          true
+        ],
+        "request-022.xml": [
+          false,
+          false
+        ],
+        "request-023.xml": [
+          false,
+          false
+        ],
+        "request-024.xml": [
+          false,
+          true
+        ],
+        "request-025.xml": [
+          false,
+          false
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-002.xml",
+          "request-008.xml"
+        ],
+        "1": [
+          "request-007.xml",
+          "request-008.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule3",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          false
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-007.xml": [
+          true,
+          false
+        ],
+        "request-009.xml": [
+          false,
+          true
+        ],
+        "request-010.xml": [
+          true,
+          true
+        ],
+        "request-011.xml": [
+          false,
+          false
+        ],
+        "request-012.xml": [
+          false,
+          false
+        ],
+        "request-013.xml": [
+          false,
+          true
+        ],
+        "request-014.xml": [
+          false,
+          false
+        ],
+        "request-015.xml": [
+          false,
+          false
+        ],
+        "request-016.xml": [
+          false,
+          true
+        ],
+        "request-017.xml": [
+          false,
+          false
+        ],
+        "request-018.xml": [
+          false,
+          false
+        ],
+        "request-019.xml": [
+          false,
+          true
+        ],
+        "request-020.xml": [
+          false,
+          false
+        ],
+        "request-021.xml": [
+          false,
+          false
+        ],
+        "request-022.xml": [
+          false,
+          true
+        ],
+        "request-023.xml": [
+          false,
+          false
+        ],
+        "request-024.xml": [
+          false,
+          false
+        ],
+        "request-025.xml": [
+          false,
+          true
+        ]
+      },
+      "independent_witnesses": {
+        "1": [
+          "request-007.xml",
+          "request-010.xml"
+        ],
+        "0": [
+          "request-009.xml",
+          "request-010.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule4",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          true
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-007.xml": [
+          false,
+          false
+        ],
+        "request-009.xml": [
+          false,
+          false
+        ],
+        "request-011.xml": [
+          true,
+          false
+        ],
+        "request-012.xml": [
+          true,
+          true
+        ],
+        "request-013.xml": [
+          true,
+          false
+        ],
+        "request-014.xml": [
+          false,
+          false
+        ],
+        "request-015.xml": [
+          false,
+          true
+        ],
+        "request-016.xml": [
+          false,
+          false
+        ],
+        "request-017.xml": [
+          false,
+          false
+        ],
+        "request-018.xml": [
+          false,
+          true
+        ],
+        "request-019.xml": [
+          false,
+          false
+        ],
+        "request-020.xml": [
+          false,
+          false
+        ],
+        "request-021.xml": [
+          false,
+          true
+        ],
+        "request-022.xml": [
+          false,
+          false
+        ],
+        "request-023.xml": [
+          false,
+          false
+        ],
+        "request-024.xml": [
+          false,
+          true
+        ],
+        "request-025.xml": [
+          false,
+          false
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-002.xml",
+          "request-012.xml"
+        ],
+        "1": [
+          "request-011.xml",
+          "request-012.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule5",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          false
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-007.xml": [
+          false,
+          false
+        ],
+        "request-009.xml": [
+          false,
+          true
+        ],
+        "request-011.xml": [
+          true,
+          false
+        ],
+        "request-013.xml": [
+          true,
+          true
+        ],
+        "request-014.xml": [
+          false,
+          false
+        ],
+        "request-015.xml": [
+          false,
+          false
+        ],
+        "request-016.xml": [
+          false,
+          true
+        ],
+        "request-017.xml": [
+          false,
+          false
+        ],
+        "request-018.xml": [
+          false,
+          false
+        ],
+        "request-019.xml": [
+          false,
+          true
+        ],
+        "request-020.xml": [
+          false,
+          false
+        ],
+        "request-021.xml": [
+          false,
+          false
+        ],
+        "request-022.xml": [
+          false,
+          true
+        ],
+        "request-023.xml": [
+          false,
+          false
+        ],
+        "request-024.xml": [
+          false,
+          false
+        ],
+        "request-025.xml": [
+          false,
+          true
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-009.xml",
+          "request-013.xml"
+        ],
+        "1": [
+          "request-011.xml",
+          "request-013.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule6",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          true
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-007.xml": [
+          false,
+          false
+        ],
+        "request-009.xml": [
+          false,
+          false
+        ],
+        "request-011.xml": [
+          false,
+          false
+        ],
+        "request-014.xml": [
+          true,
+          false
+        ],
+        "request-015.xml": [
+          true,
+          true
+        ],
+        "request-016.xml": [
+          true,
+          false
+        ],
+        "request-017.xml": [
+          false,
+          false
+        ],
+        "request-018.xml": [
+          false,
+          true
+        ],
+        "request-019.xml": [
+          false,
+          false
+        ],
+        "request-020.xml": [
+          false,
+          false
+        ],
+        "request-021.xml": [
+          false,
+          true
+        ],
+        "request-022.xml": [
+          false,
+          false
+        ],
+        "request-023.xml": [
+          false,
+          false
+        ],
+        "request-024.xml": [
+          false,
+          true
+        ],
+        "request-025.xml": [
+          false,
+          false
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-002.xml",
+          "request-015.xml"
+        ],
+        "1": [
+          "request-014.xml",
+          "request-015.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule7",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          false
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-007.xml": [
+          false,
+          false
+        ],
+        "request-009.xml": [
+          false,
+          true
+        ],
+        "request-011.xml": [
+          false,
+          false
+        ],
+        "request-014.xml": [
+          true,
+          false
+        ],
+        "request-016.xml": [
+          true,
+          true
+        ],
+        "request-017.xml": [
+          false,
+          false
+        ],
+        "request-018.xml": [
+          false,
+          false
+        ],
+        "request-019.xml": [
+          false,
+          true
+        ],
+        "request-020.xml": [
+          false,
+          false
+        ],
+        "request-021.xml": [
+          false,
+          false
+        ],
+        "request-022.xml": [
+          false,
+          true
+        ],
+        "request-023.xml": [
+          false,
+          false
+        ],
+        "request-024.xml": [
+          false,
+          false
+        ],
+        "request-025.xml": [
+          false,
+          true
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-009.xml",
+          "request-016.xml"
+        ],
+        "1": [
+          "request-014.xml",
+          "request-016.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule8",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          true
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-007.xml": [
+          false,
+          false
+        ],
+        "request-009.xml": [
+          false,
+          false
+        ],
+        "request-011.xml": [
+          false,
+          false
+        ],
+        "request-014.xml": [
+          false,
+          false
+        ],
+        "request-017.xml": [
+          true,
+          false
+        ],
+        "request-018.xml": [
+          true,
+          true
+        ],
+        "request-019.xml": [
+          true,
+          false
+        ],
+        "request-020.xml": [
+          false,
+          false
+        ],
+        "request-021.xml": [
+          false,
+          true
+        ],
+        "request-022.xml": [
+          false,
+          false
+        ],
+        "request-023.xml": [
+          false,
+          false
+        ],
+        "request-024.xml": [
+          false,
+          true
+        ],
+        "request-025.xml": [
+          false,
+          false
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-002.xml",
+          "request-018.xml"
+        ],
+        "1": [
+          "request-017.xml",
+          "request-018.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule9",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          false
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-007.xml": [
+          false,
+          false
+        ],
+        "request-009.xml": [
+          false,
+          true
+        ],
+        "request-011.xml": [
+          false,
+          false
+        ],
+        "request-014.xml": [
+          false,
+          false
+        ],
+        "request-017.xml": [
+          true,
+          false
+        ],
+        "request-019.xml": [
+          true,
+          true
+        ],
+        "request-020.xml": [
+          false,
+          false
+        ],
+        "request-021.xml": [
+          false,
+          false
+        ],
+        "request-022.xml": [
+          false,
+          true
+        ],
+        "request-023.xml": [
+          false,
+          false
+        ],
+        "request-024.xml": [
+          false,
+          false
+        ],
+        "request-025.xml": [
+          false,
+          true
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-009.xml",
+          "request-019.xml"
+        ],
+        "1": [
+          "request-017.xml",
+          "request-019.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule10",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          true
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-007.xml": [
+          false,
+          false
+        ],
+        "request-009.xml": [
+          false,
+          false
+        ],
+        "request-011.xml": [
+          false,
+          false
+        ],
+        "request-014.xml": [
+          false,
+          false
+        ],
+        "request-017.xml": [
+          false,
+          false
+        ],
+        "request-020.xml": [
+          true,
+          false
+        ],
+        "request-021.xml": [
+          true,
+          true
+        ],
+        "request-022.xml": [
+          true,
+          false
+        ],
+        "request-023.xml": [
+          false,
+          false
+        ],
+        "request-024.xml": [
+          false,
+          true
+        ],
+        "request-025.xml": [
+          false,
+          false
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-002.xml",
+          "request-021.xml"
+        ],
+        "1": [
+          "request-020.xml",
+          "request-021.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule11",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          false
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-007.xml": [
+          false,
+          false
+        ],
+        "request-009.xml": [
+          false,
+          true
+        ],
+        "request-011.xml": [
+          false,
+          false
+        ],
+        "request-014.xml": [
+          false,
+          false
+        ],
+        "request-017.xml": [
+          false,
+          false
+        ],
+        "request-020.xml": [
+          true,
+          false
+        ],
+        "request-022.xml": [
+          true,
+          true
+        ],
+        "request-023.xml": [
+          false,
+          false
+        ],
+        "request-024.xml": [
+          false,
+          false
+        ],
+        "request-025.xml": [
+          false,
+          true
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-009.xml",
+          "request-022.xml"
+        ],
+        "1": [
+          "request-020.xml",
+          "request-022.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule12",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          true
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-007.xml": [
+          false,
+          false
+        ],
+        "request-009.xml": [
+          false,
+          false
+        ],
+        "request-011.xml": [
+          false,
+          false
+        ],
+        "request-014.xml": [
+          false,
+          false
+        ],
+        "request-017.xml": [
+          false,
+          false
+        ],
+        "request-020.xml": [
+          false,
+          false
+        ],
+        "request-023.xml": [
+          true,
+          false
+        ],
+        "request-024.xml": [
+          true,
+          true
+        ],
+        "request-025.xml": [
+          true,
+          false
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-002.xml",
+          "request-024.xml"
+        ],
+        "1": [
+          "request-023.xml",
+          "request-024.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule13",
+      "truths_by_request": {
+        "request-002.xml": [
+          false,
+          false
+        ],
+        "request-003.xml": [
+          false,
+          false
+        ],
+        "request-004.xml": [
+          null,
+          null
+        ],
+        "request-005.xml": [
+          false,
+          false
+        ],
+        "request-007.xml": [
+          false,
+          false
+        ],
+        "request-009.xml": [
+          false,
+          true
+        ],
+        "request-011.xml": [
+          false,
+          false
+        ],
+        "request-014.xml": [
+          false,
+          false
+        ],
+        "request-017.xml": [
+          false,
+          false
+        ],
+        "request-020.xml": [
+          false,
+          false
+        ],
+        "request-023.xml": [
+          true,
+          false
+        ],
+        "request-025.xml": [
+          true,
+          true
+        ]
+      },
+      "independent_witnesses": {
+        "0": [
+          "request-009.xml",
+          "request-025.xml"
+        ],
+        "1": [
+          "request-023.xml",
+          "request-025.xml"
+        ]
+      },
+      "error_witnesses": [
+        "request-004.xml"
+      ]
+    }
+  ]
+}

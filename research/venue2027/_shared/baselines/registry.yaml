@@ -660,26 +660,25 @@ baselines:
 
   - name: mc-dc-xacml-policy-testing
     venues: [sacmat]
-    upstream_url: "https://doi.org/10.1145/3205977.3205979"
-    upstream_revision: UNAVAILABLE
-    license: "ACM publication (DL access terms); algorithm from paper; no official reference implementation"
-    algorithm_class: "MC/DC-inspired XACML policy test generation and mutation-adequacy scoring (Xu et al., SACMAT 2018)"
+    upstream_url: "https://github.com/dianxiangxu/XPA"
+    upstream_revision: "89c000495d81a1a82ca8de2ab0fc73fecfc4e440"
+    license: "No repository-wide license identified at this revision; third-party components have separate terms. Reproduction fetches the author source."
+    algorithm_class: "XPA MC/DC generation over static XACML policies (Xu et al., SACMAT 2018)"
     config: >-
-      MC/DC-driven rule-pair test generation over XACML policies translated
-      to the study's ABAC encoding; mutation score at fixed oracle budget.
-      Paper verified via Crossref (title "Automated Coverage-Based Testing of
-      XACML Policies", SACMAT 2018, DOI 10.1145/3205977.3205979, issued
-      2018-06-07) on 2026-11-15. No upstream code exists to pin; port only.
-    data_rights: "Synthetic dataset synthetic-sacmat-2027; project-internal-synthetic license."
-    parity_fixture: "evaluation/venue2027/sacmat/fixtures/mcdc_xacml_parity.json"
-    exec_command: "python3 -m evaluation.venue2027.sacmat.baselines --baseline mc-dc-xacml-policy-testing --config configs/venue2027/sacmat/mcdc.toml"
-    fidelity_status: UNAVAILABLE_NOT_RUN
+      Author MC/DC generator with errors enabled, Balana, OpenJDK 8 and Z3 4.8.7.
+      The original source was executed on conference3. The solver binary differs
+      from the pinned gitlink. Rule-pair coverage is a separate criterion.
+    data_rights: "Public author test inputs remain upstream. This repo contains derived outcomes and wrappers."
+    parity_fixture: "research/venue2027/sacmat/coverage_fidelity/result.json"
+    exec_command: 'bash "$REPO/research/venue2027/sacmat/xpa_execution/run.sh"'
+    fidelity_status: ORIGINAL_UPSTREAM
     notes: >-
-      Arm B1 strong coverage baseline. The ledger warns "must not compare
-      naive only": this arm must be the MC/DC-faithful port, not a naive
-      random generator wearing the same name. No upstream code exists to
-      pin; entry remains UNAVAILABLE_NOT_RUN until the port is implemented
-      and its parity fixture demonstrates the paper's MC/DC semantics.
+      Verified on 2026-11-21 at the recorded source revision. The archived
+      27 author requests reproduced their decisions. The original generator
+      produced 25 requests after 25 solver calls and 217 target evaluations.
+      See sacmat/xpa_execution/RESULTS.md for environment variables, the
+      compile-only GUI shim and the scope of the fidelity check. The
+      equal-budget comparison with PolicyTrace on temporal histories is open.
 
   - name: xacbench-profile-driven-tests
     venues: [sacmat]
