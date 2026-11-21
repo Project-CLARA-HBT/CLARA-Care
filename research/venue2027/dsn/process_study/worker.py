@@ -89,6 +89,19 @@ def produce_journal(db, op, cut):
         enqueue(db, op)
 
 
+def record_applied(db, key):
+    append(
+        db,
+        chain(db, key),
+        key,
+        b3.EFFECT_APPLIED,
+        {
+            "attempt": 1,
+            "effect_receipt_digest": b3._effect_digest(key),
+        },
+    )
+
+
 def consume(sink, op, payload, cut):
     with sink.transaction():
         accepted = sink.execute(
@@ -104,7 +117,7 @@ def run(arm, cut, op):
         psycopg.connect(dbname="source", autocommit=True) as db,
         psycopg.connect(dbname="sink", autocommit=True) as sink,
     ):
-        if arm == "journal":
+        if arm in {"journal", "confirmed"}:
             produce_journal(db, op, cut)
         else:
             produce_atomic(db, op, cut)
@@ -112,20 +125,14 @@ def run(arm, cut, op):
         # Scan durable pending work. Relay only acknowledges after the independent sink commits.
         for key, payload in db.execute("select op,payload from outbox where not ack").fetchall():
             if arm == "journal":
-                append(
-                    db,
-                    chain(db, key),
-                    key,
-                    b3.EFFECT_APPLIED,
-                    {
-                        "attempt": 1,
-                        "effect_receipt_digest": b3._effect_digest(key),
-                    },
-                )
+                record_applied(db, key)
             for _ in range(2):
                 consume(sink, key, payload, cut)
                 checkpoint(cut, "sink_committed")
-            db.execute("update outbox set ack=true where op=%s", (key,))
+            with db.transaction():
+                if arm == "confirmed":
+                    record_applied(db, key)
+                db.execute("update outbox set ack=true where op=%s", (key,))
             checkpoint(cut, "ack_durable")
 
 

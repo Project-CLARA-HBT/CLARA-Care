@@ -50,7 +50,7 @@ def observe(db, sink, arm, op):
     message = db.execute("select op,payload,ack from outbox").fetchall()
     orders = sink.execute("select op,payload from orders order by id").fetchall()
     processed = sink.execute("select op from processed").fetchall()
-    if arm == "journal":
+    if arm in {"journal", "confirmed"}:
         journal = chain(db, op)
         status = b3.recoverable_outcome(journal, intent(op)).reason_code
         entries = db.execute("select op,entry from journal order by seq").fetchall()
@@ -98,12 +98,13 @@ def setup(db, sink):
     )
 
 
-def study(out):
+def study(out, repair=False):
     out.mkdir(parents=True, exist_ok=False)
     with psycopg.connect(dbname="postgres", autocommit=True) as admin:
         for name in ("source", "sink"):
             admin.execute(f"create database {name}")
-    counts = {arm: Counter() for arm in ("atomic", "journal")}
+    registered = ("atomic", "journal", "confirmed") if repair else ("atomic", "journal")
+    counts = {arm: Counter() for arm in registered}
     with (
         psycopg.connect(dbname="source", autocommit=True) as db,
         psycopg.connect(dbname="sink", autocommit=True) as sink,
@@ -116,7 +117,10 @@ def study(out):
         }
         assert settings["fsync"] == settings["synchronous_commit"] == "on"
         for repetition in range(3):
-            arms = ("atomic", "journal") if repetition % 2 == 0 else ("journal", "atomic")
+            arms = (
+                registered[repetition % len(registered) :]
+                + registered[: repetition % len(registered)]
+            )
             for cut in CUTS:
                 op = f"booking-{repetition}-{cut}"
                 for arm in arms:
@@ -152,7 +156,7 @@ def study(out):
         psycopg=psycopg.__version__,
         postgres_image=os.environ["STUDY_IMAGE"],
         source_commit=subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
-        protocol_commit="b85e8e6d",
+        protocol_commit="e826954b" if repair else "b85e8e6d",
         histories_sha256=hashlib.sha256((out / "histories.jsonl").read_bytes()).hexdigest(),
     )
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
@@ -160,4 +164,4 @@ def study(out):
 
 
 if __name__ == "__main__":
-    study(Path(sys.argv[1]))
+    study(Path(sys.argv[1]), repair=os.environ.get("STUDY_REPAIR") == "1")
