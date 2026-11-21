@@ -478,9 +478,9 @@ def compile_rego_module(history: PolicyHistory) -> str:
         "# Encoding: final-state compiled delegated-consent policy,"
         " deny-overrides precedence.",
         f"# Limitations: {'; '.join(KNOWN_ENCODING_LIMITATIONS)}",
-        "import rego.v1",
-        "",
         f"package {REGO_PACKAGE}",
+        "",
+        "import rego.v1",
         "",
         'default decision := "NOT_APPLICABLE"',
         "",

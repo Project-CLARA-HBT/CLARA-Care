@@ -258,8 +258,8 @@ def test_real_binary_string_decision_contract() -> None:
     assert binary is not None
     module = "\n".join(
         [
-            "import rego.v1",
             f"package {REGO_PACKAGE}",
+            "import rego.v1",
             'decision := "PERMIT" if input.actor_id == "patient-a"',
             "",
         ]
@@ -313,7 +313,7 @@ def test_binary_execution_failure_is_indeterminate(tmp_path: object) -> None:
     fake = shutil.which("python3")
     assert fake is not None
     verdict = run_opa_eval(
-        "import rego.v1\npackage nope\np := true\n",
+        "package nope\nimport rego.v1\np := true\n",
         {"a": 1},
         opa_binary=fake,
         timeout_seconds=10.0,
@@ -335,7 +335,7 @@ def test_binary_invalid_output_is_indeterminate(tmp_path: object) -> None:
     )
     fake.chmod(0o755)
     verdict = run_opa_eval(
-        "import rego.v1\npackage nope\np := true\n",
+        "package nope\nimport rego.v1\np := true\n",
         {"a": 1},
         opa_binary=str(fake),
         timeout_seconds=10.0,
@@ -350,7 +350,7 @@ def test_undefined_query_maps_to_not_applicable(tmp_path: object) -> None:
     binary = detect_opa()
     if binary is None:
         pytest.skip("real opa binary not installed on PATH")
-    module = "import rego.v1\npackage empty.test\n\nother := true\n"
+    module = "package empty.test\nimport rego.v1\n\nother := true\n"
     verdict = run_opa_eval(module, {"a": 1}, opa_binary=binary)
     assert verdict.verdict == baselines.NOT_APPLICABLE
 
