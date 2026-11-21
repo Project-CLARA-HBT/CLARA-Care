@@ -79,9 +79,9 @@ def prepare(operation, before):
     trace = TraceConnection(before)
     try:
         pg_smallbank.procedure(trace, "ssi", operation, 0, [])
-    except pg_smallbank.InsufficientSavings:
+    except pg_smallbank.InsufficientSavings as err:
         if trace.instruction is not None:
-            raise ValueError("unexpected write before refusal")
+            raise ValueError("unexpected write before refusal") from err
         trace.instruction = ("refused", 0)
     return trace
 
