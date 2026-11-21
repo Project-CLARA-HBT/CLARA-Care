@@ -1,0 +1,616 @@
+{
+  "summaries": {
+    "Magellan": {
+      "header": 1,
+      "cupid": 0.6805162256290076,
+      "coma_schema": 1,
+      "coma_values": 1,
+      "all_values": 1,
+      "rare_values": 1
+    },
+    "Wikidata": {
+      "header": 0.20807453416149066,
+      "cupid": 0.31867007672634273,
+      "coma_schema": 0.6194078947368421,
+      "coma_values": 0.7869152046783625,
+      "all_values": 0.7869152046783625,
+      "rare_values": 0.7869152046783625
+    }
+  },
+  "cells": [
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/amazon_google_exp/amazon_google_exp",
+      "arm": "header",
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/amazon_google_exp/amazon_google_exp",
+      "arm": "cupid",
+      "tp": 2,
+      "fp": 0,
+      "fn": 2,
+      "f1": 0.6666666666666666
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/amazon_google_exp/amazon_google_exp",
+      "arm": "coma_schema",
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/amazon_google_exp/amazon_google_exp",
+      "arm": "coma_values",
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/amazon_google_exp/amazon_google_exp",
+      "arm": "all_values",
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/amazon_google_exp/amazon_google_exp",
+      "arm": "rare_values",
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/beeradvo_ratebeer/beeradvo_ratebeer",
+      "arm": "header",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/beeradvo_ratebeer/beeradvo_ratebeer",
+      "arm": "cupid",
+      "tp": 4,
+      "fp": 2,
+      "fn": 1,
+      "f1": 0.7272727272727273
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/beeradvo_ratebeer/beeradvo_ratebeer",
+      "arm": "coma_schema",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/beeradvo_ratebeer/beeradvo_ratebeer",
+      "arm": "coma_values",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/beeradvo_ratebeer/beeradvo_ratebeer",
+      "arm": "all_values",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/beeradvo_ratebeer/beeradvo_ratebeer",
+      "arm": "rare_values",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/dblp_acm/dblp_acm",
+      "arm": "header",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/dblp_acm/dblp_acm",
+      "arm": "cupid",
+      "tp": 3,
+      "fp": 0,
+      "fn": 2,
+      "f1": 0.75
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/dblp_acm/dblp_acm",
+      "arm": "coma_schema",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/dblp_acm/dblp_acm",
+      "arm": "coma_values",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/dblp_acm/dblp_acm",
+      "arm": "all_values",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/dblp_acm/dblp_acm",
+      "arm": "rare_values",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/dblp_scholar/dblp_scholar",
+      "arm": "header",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/dblp_scholar/dblp_scholar",
+      "arm": "cupid",
+      "tp": 3,
+      "fp": 0,
+      "fn": 2,
+      "f1": 0.75
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/dblp_scholar/dblp_scholar",
+      "arm": "coma_schema",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/dblp_scholar/dblp_scholar",
+      "arm": "coma_values",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/dblp_scholar/dblp_scholar",
+      "arm": "all_values",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/dblp_scholar/dblp_scholar",
+      "arm": "rare_values",
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/fodors_zagats/fodors_zagats",
+      "arm": "header",
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/fodors_zagats/fodors_zagats",
+      "arm": "cupid",
+      "tp": 5,
+      "fp": 3,
+      "fn": 2,
+      "f1": 0.6666666666666666
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/fodors_zagats/fodors_zagats",
+      "arm": "coma_schema",
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/fodors_zagats/fodors_zagats",
+      "arm": "coma_values",
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/fodors_zagats/fodors_zagats",
+      "arm": "all_values",
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/fodors_zagats/fodors_zagats",
+      "arm": "rare_values",
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/itunes_amazon/itunes_amazon",
+      "arm": "header",
+      "tp": 9,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/itunes_amazon/itunes_amazon",
+      "arm": "cupid",
+      "tp": 6,
+      "fp": 4,
+      "fn": 3,
+      "f1": 0.631578947368421
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/itunes_amazon/itunes_amazon",
+      "arm": "coma_schema",
+      "tp": 9,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/itunes_amazon/itunes_amazon",
+      "arm": "coma_values",
+      "tp": 9,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/itunes_amazon/itunes_amazon",
+      "arm": "all_values",
+      "tp": 9,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/itunes_amazon/itunes_amazon",
+      "arm": "rare_values",
+      "tp": 9,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/walmart_amazon/walmart_amazon",
+      "arm": "header",
+      "tp": 6,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/walmart_amazon/walmart_amazon",
+      "arm": "cupid",
+      "tp": 4,
+      "fp": 4,
+      "fn": 2,
+      "f1": 0.5714285714285714
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/walmart_amazon/walmart_amazon",
+      "arm": "coma_schema",
+      "tp": 6,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/walmart_amazon/walmart_amazon",
+      "arm": "coma_values",
+      "tp": 6,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/walmart_amazon/walmart_amazon",
+      "arm": "all_values",
+      "tp": 6,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Magellan",
+      "pair": "Valentine-datasets/Magellan/walmart_amazon/walmart_amazon",
+      "arm": "rare_values",
+      "tp": 6,
+      "fp": 0,
+      "fn": 0,
+      "f1": 1
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_joinable/musicians_joinable",
+      "arm": "header",
+      "tp": 1,
+      "fp": 0,
+      "fn": 5,
+      "f1": 0.2857142857142857
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_joinable/musicians_joinable",
+      "arm": "cupid",
+      "tp": 3,
+      "fp": 14,
+      "fn": 3,
+      "f1": 0.2608695652173913
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_joinable/musicians_joinable",
+      "arm": "coma_schema",
+      "tp": 5,
+      "fp": 8,
+      "fn": 1,
+      "f1": 0.5263157894736842
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_joinable/musicians_joinable",
+      "arm": "coma_values",
+      "tp": 6,
+      "fp": 3,
+      "fn": 0,
+      "f1": 0.8
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_joinable/musicians_joinable",
+      "arm": "all_values",
+      "tp": 6,
+      "fp": 3,
+      "fn": 0,
+      "f1": 0.8
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_joinable/musicians_joinable",
+      "arm": "rare_values",
+      "tp": 6,
+      "fp": 3,
+      "fn": 0,
+      "f1": 0.8
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_semjoinable/musicians_semjoinable",
+      "arm": "header",
+      "tp": 0,
+      "fp": 0,
+      "fn": 8,
+      "f1": 0
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_semjoinable/musicians_semjoinable",
+      "arm": "cupid",
+      "tp": 5,
+      "fp": 12,
+      "fn": 3,
+      "f1": 0.4
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_semjoinable/musicians_semjoinable",
+      "arm": "coma_schema",
+      "tp": 5,
+      "fp": 3,
+      "fn": 3,
+      "f1": 0.625
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_semjoinable/musicians_semjoinable",
+      "arm": "coma_values",
+      "tp": 8,
+      "fp": 3,
+      "fn": 0,
+      "f1": 0.8421052631578947
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_semjoinable/musicians_semjoinable",
+      "arm": "all_values",
+      "tp": 8,
+      "fp": 3,
+      "fn": 0,
+      "f1": 0.8421052631578947
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_semjoinable/musicians_semjoinable",
+      "arm": "rare_values",
+      "tp": 8,
+      "fp": 3,
+      "fn": 0,
+      "f1": 0.8421052631578947
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_unionable/musicians_unionable",
+      "arm": "header",
+      "tp": 3,
+      "fp": 0,
+      "fn": 17,
+      "f1": 0.2608695652173913
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_unionable/musicians_unionable",
+      "arm": "cupid",
+      "tp": 12,
+      "fp": 36,
+      "fn": 8,
+      "f1": 0.35294117647058826
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_unionable/musicians_unionable",
+      "arm": "coma_schema",
+      "tp": 14,
+      "fp": 1,
+      "fn": 6,
+      "f1": 0.8
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_unionable/musicians_unionable",
+      "arm": "coma_values",
+      "tp": 19,
+      "fp": 1,
+      "fn": 1,
+      "f1": 0.95
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_unionable/musicians_unionable",
+      "arm": "all_values",
+      "tp": 19,
+      "fp": 1,
+      "fn": 1,
+      "f1": 0.95
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_unionable/musicians_unionable",
+      "arm": "rare_values",
+      "tp": 19,
+      "fp": 1,
+      "fn": 1,
+      "f1": 0.95
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_viewunion/musicians_viewunion",
+      "arm": "header",
+      "tp": 1,
+      "fp": 0,
+      "fn": 5,
+      "f1": 0.2857142857142857
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_viewunion/musicians_viewunion",
+      "arm": "cupid",
+      "tp": 3,
+      "fp": 14,
+      "fn": 3,
+      "f1": 0.2608695652173913
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_viewunion/musicians_viewunion",
+      "arm": "coma_schema",
+      "tp": 5,
+      "fp": 8,
+      "fn": 1,
+      "f1": 0.5263157894736842
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_viewunion/musicians_viewunion",
+      "arm": "coma_values",
+      "tp": 5,
+      "fp": 7,
+      "fn": 1,
+      "f1": 0.5555555555555556
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_viewunion/musicians_viewunion",
+      "arm": "all_values",
+      "tp": 5,
+      "fp": 7,
+      "fn": 1,
+      "f1": 0.5555555555555556
+    },
+    {
+      "group": "Wikidata",
+      "pair": "Valentine-datasets/Wikidata/Musicians/Musicians_viewunion/musicians_viewunion",
+      "arm": "rare_values",
+      "tp": 5,
+      "fp": 7,
+      "fn": 1,
+      "f1": 0.5555555555555556
+    }
+  ]
+}
