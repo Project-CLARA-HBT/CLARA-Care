@@ -11,6 +11,7 @@ Use a dedicated empty clara_research database. Tables are created under a new
 schema for each invocation and removed on completion.
 """
 
+import hashlib
 import json
 import random
 import sys
@@ -65,6 +66,7 @@ def campaign(admin, dsn, schema, arm, workers, fanout, seed):
     admin.execute(
         "INSERT INTO evidence SELECT i,0 FROM generate_series(1,%s) AS i", (OPS + fanout,)
     )
+    admin.execute("ANALYZE evidence")
     targets = list(range(fanout + 1, fanout + OPS + 1))
     random.Random(seed).shuffle(targets)
     deps = list(range(1, fanout + 1))
@@ -77,9 +79,14 @@ def campaign(admin, dsn, schema, arm, workers, fanout, seed):
         with psycopg.connect(**dsn, autocommit=True) as conn:
             conn.execute(sql.SQL("SET search_path TO {}").format(sql.Identifier(schema)))
             start.wait()
-            counts = Counter(
-                attempt(conn, arm, target, deps, int(target % 8 == 0)) for target in shard
-            )
+            counts = Counter()
+            for target in shard:
+                for retry in range(3):
+                    outcome = attempt(conn, arm, target, deps, int(target % 8 == 0))
+                    if outcome != "serialization_abort" or retry == 2:
+                        break
+                    counts["retries"] += 1
+                counts[outcome] += 1
             return counts, perf_counter()
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
@@ -93,7 +100,7 @@ def campaign(admin, dsn, schema, arm, workers, fanout, seed):
     installed = {i for (i,) in admin.execute("SELECT id FROM evidence WHERE version=1")}
     valid = {t for t in targets if t % 8}
     forbidden = len(installed - valid)
-    if len(installed) != counts["committed"] or sum(counts.values()) != OPS:
+    if len(installed) != counts["committed"] or sum(counts.values()) - counts["retries"] != OPS:
         raise ValueError("attempt_readback_mismatch")
     return dict(
         counts=counts,
@@ -136,6 +143,9 @@ def main(socket):
     return dict(
         scope="development_disjoint_targets_shared_dependencies",
         server_version_num=version,
+        retry_limit=2,
+        planner_statistics="ANALYZE after each population",
+        runner_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         operations_per_campaign=OPS,
         rows=rows,
     )
