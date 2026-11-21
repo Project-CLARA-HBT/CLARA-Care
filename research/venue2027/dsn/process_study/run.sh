@@ -8,7 +8,7 @@ mkdir "$scratch/socket"
 export STUDY_IMAGE=postgres@sha256:e62fbf9d3e2b49816a32c400ed2dba83e3b361e6833e624024309c35d334b412
 container=$(docker run -d --network none -v "$scratch/socket:/var/run/postgresql" \
     -e POSTGRES_HOST_AUTH_METHOD=trust "$STUDY_IMAGE" -c listen_addresses='')
-trap 'docker rm -fv "$container" >/dev/null; rm -rf "$scratch"' EXIT
+trap 'docker stop -t 10 "$container" >/dev/null || true; docker rm -fv "$container" >/dev/null; rm -rf "$scratch"' EXIT
 export PGHOST="$scratch/socket" PGUSER=postgres PGPORT=5432 PGCONNECT_TIMEOUT=3
 # Wait for the final postgres PID 1, past the temporary initialization server.
 for _ in {1..120}; do

@@ -1,0 +1,33 @@
+{
+  "counts": {
+    "atomic": {
+      "histories": 21,
+      "execution_errors": 0,
+      "primary_losses": 0,
+      "false_applied": 0
+    },
+    "journal": {
+      "histories": 21,
+      "execution_errors": 0,
+      "primary_losses": 0,
+      "false_applied": 3
+    },
+    "confirmed": {
+      "histories": 21,
+      "execution_errors": 0,
+      "primary_losses": 0,
+      "false_applied": 0
+    }
+  },
+  "settings": {
+    "server_version": "16.4 (Debian 16.4-1.pgdg120+2)",
+    "fsync": "on",
+    "synchronous_commit": "on"
+  },
+  "python": "3.12.3",
+  "psycopg": "3.3.5",
+  "postgres_image": "postgres@sha256:e62fbf9d3e2b49816a32c400ed2dba83e3b361e6833e624024309c35d334b412",
+  "source_commit": "12f7f5a0a465a53d873a88509a0a5793a012c731",
+  "protocol_commit": "e826954b",
+  "histories_sha256": "f0ce1081bdf305c027675ff7d85033ded1a401f15d5e7ad7a6d5c18873aa5ac6"
+}
