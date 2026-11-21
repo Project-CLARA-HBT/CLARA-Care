@@ -17,3 +17,7 @@ A separate reader checks the durable operation key, payload, reservation, decisi
 ## Binding decision
 
 Advance only with a reproducible strict primary win against every matched baseline, no secondary regression, and a mechanism-level witness. A tie with B1 on the primary endpoint eliminates the DSN superiority claim. Stop before further baselines if B1 ties or wins. A win here would require subsequent comparison with a real durable-workflow engine. Beldi and Olive receive design comparisons only. No clinical, database-server-crash, power-loss, arbitrary-external-effect or general equivalence inference.
+
+## Development repair after elimination
+
+The two original runs tied on recovery and exposed premature application claims in the journal arm. Retire the original superiority claim under its registered rule. As a separate engineering question, retain both original arms and add a journal arm that writes EFFECT_APPLIED and the source acknowledgment in one source transaction **after** the idempotent sink commits. The old marker was written before delivery. Freeze the same schedules, three repetitions per arm, deadlines and independent observations. The repair succeeds only if it removes every observed premature claim and preserves exact recovery. A tie with the outbox still excludes a superiority paper.
