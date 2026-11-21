@@ -1,0 +1,1541 @@
+{
+  "decisions": [
+    {
+      "request": "request1.txt",
+      "published": "Deny",
+      "replay": "Deny"
+    },
+    {
+      "request": "request2.txt",
+      "published": "IDP",
+      "replay": "IDP"
+    },
+    {
+      "request": "request3.txt",
+      "published": "Deny",
+      "replay": "Deny"
+    },
+    {
+      "request": "request4.txt",
+      "published": "Deny",
+      "replay": "Deny"
+    },
+    {
+      "request": "request5.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request6.txt",
+      "published": "IDP",
+      "replay": "IDP"
+    },
+    {
+      "request": "request7.txt",
+      "published": "Deny",
+      "replay": "Deny"
+    },
+    {
+      "request": "request8.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request9.txt",
+      "published": "Deny",
+      "replay": "Deny"
+    },
+    {
+      "request": "request10.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request11.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request12.txt",
+      "published": "Deny",
+      "replay": "Deny"
+    },
+    {
+      "request": "request13.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request14.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request15.txt",
+      "published": "Deny",
+      "replay": "Deny"
+    },
+    {
+      "request": "request16.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request17.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request18.txt",
+      "published": "Deny",
+      "replay": "Deny"
+    },
+    {
+      "request": "request19.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request20.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request21.txt",
+      "published": "Deny",
+      "replay": "Deny"
+    },
+    {
+      "request": "request22.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request23.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request24.txt",
+      "published": "Deny",
+      "replay": "Deny"
+    },
+    {
+      "request": "request25.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    },
+    {
+      "request": "request26.txt",
+      "published": "Deny",
+      "replay": "Deny"
+    },
+    {
+      "request": "request27.txt",
+      "published": "Permit",
+      "replay": "Permit"
+    }
+  ],
+  "targets": [
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule0",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          false
+        ],
+        "request3.txt": [
+          false,
+          false
+        ],
+        "request4.txt": [
+          false,
+          false
+        ],
+        "request5.txt": [
+          false,
+          false
+        ],
+        "request6.txt": [
+          null,
+          true
+        ],
+        "request7.txt": [
+          false,
+          true
+        ],
+        "request8.txt": [
+          false,
+          true
+        ],
+        "request9.txt": [
+          false,
+          false
+        ],
+        "request10.txt": [
+          false,
+          false
+        ],
+        "request11.txt": [
+          false,
+          true
+        ],
+        "request12.txt": [
+          false,
+          false
+        ],
+        "request13.txt": [
+          false,
+          false
+        ],
+        "request14.txt": [
+          false,
+          true
+        ],
+        "request15.txt": [
+          false,
+          false
+        ],
+        "request16.txt": [
+          false,
+          false
+        ],
+        "request17.txt": [
+          false,
+          true
+        ],
+        "request18.txt": [
+          false,
+          false
+        ],
+        "request19.txt": [
+          false,
+          false
+        ],
+        "request20.txt": [
+          false,
+          true
+        ],
+        "request21.txt": [
+          false,
+          false
+        ],
+        "request22.txt": [
+          false,
+          false
+        ],
+        "request23.txt": [
+          false,
+          true
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request25.txt": [
+          false,
+          true
+        ],
+        "request26.txt": [
+          true,
+          false
+        ],
+        "request27.txt": [
+          true,
+          true
+        ]
+      },
+      "witnesses": {
+        "0": [
+          "request7.txt",
+          "request27.txt"
+        ],
+        "1": [
+          "request26.txt",
+          "request27.txt"
+        ]
+      },
+      "errors": [
+        "request6.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule1",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          false
+        ],
+        "request3.txt": [
+          false,
+          false
+        ],
+        "request4.txt": [
+          false,
+          false
+        ],
+        "request5.txt": [
+          false,
+          false
+        ],
+        "request6.txt": [
+          null,
+          true
+        ],
+        "request7.txt": [
+          false,
+          true
+        ],
+        "request8.txt": [
+          false,
+          true
+        ],
+        "request9.txt": [
+          false,
+          false
+        ],
+        "request10.txt": [
+          false,
+          false
+        ],
+        "request11.txt": [
+          false,
+          true
+        ],
+        "request12.txt": [
+          false,
+          false
+        ],
+        "request13.txt": [
+          false,
+          false
+        ],
+        "request14.txt": [
+          false,
+          true
+        ],
+        "request15.txt": [
+          false,
+          false
+        ],
+        "request16.txt": [
+          false,
+          false
+        ],
+        "request17.txt": [
+          false,
+          true
+        ],
+        "request18.txt": [
+          false,
+          false
+        ],
+        "request19.txt": [
+          false,
+          false
+        ],
+        "request20.txt": [
+          false,
+          true
+        ],
+        "request21.txt": [
+          false,
+          false
+        ],
+        "request22.txt": [
+          false,
+          false
+        ],
+        "request23.txt": [
+          false,
+          true
+        ],
+        "request24.txt": [
+          true,
+          false
+        ],
+        "request25.txt": [
+          true,
+          true
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "0": [
+          "request7.txt",
+          "request25.txt"
+        ],
+        "1": [
+          "request24.txt",
+          "request25.txt"
+        ]
+      },
+      "errors": [
+        "request6.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule2",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          false
+        ],
+        "request3.txt": [
+          false,
+          false
+        ],
+        "request4.txt": [
+          false,
+          false
+        ],
+        "request5.txt": [
+          false,
+          false
+        ],
+        "request6.txt": [
+          null,
+          true
+        ],
+        "request7.txt": [
+          false,
+          true
+        ],
+        "request8.txt": [
+          false,
+          true
+        ],
+        "request9.txt": [
+          false,
+          false
+        ],
+        "request10.txt": [
+          false,
+          false
+        ],
+        "request11.txt": [
+          false,
+          true
+        ],
+        "request12.txt": [
+          false,
+          false
+        ],
+        "request13.txt": [
+          false,
+          false
+        ],
+        "request14.txt": [
+          false,
+          true
+        ],
+        "request15.txt": [
+          false,
+          false
+        ],
+        "request16.txt": [
+          false,
+          false
+        ],
+        "request17.txt": [
+          false,
+          true
+        ],
+        "request18.txt": [
+          false,
+          false
+        ],
+        "request19.txt": [
+          false,
+          false
+        ],
+        "request20.txt": [
+          false,
+          true
+        ],
+        "request21.txt": [
+          true,
+          false
+        ],
+        "request22.txt": [
+          true,
+          false
+        ],
+        "request23.txt": [
+          true,
+          true
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "0": [
+          "request7.txt",
+          "request23.txt"
+        ],
+        "1": [
+          "request21.txt",
+          "request23.txt"
+        ]
+      },
+      "errors": [
+        "request6.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule3",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          true
+        ],
+        "request3.txt": [
+          false,
+          false
+        ],
+        "request4.txt": [
+          false,
+          true
+        ],
+        "request5.txt": [
+          false,
+          true
+        ],
+        "request6.txt": [
+          null,
+          false
+        ],
+        "request7.txt": [
+          false,
+          false
+        ],
+        "request8.txt": [
+          false,
+          false
+        ],
+        "request9.txt": [
+          false,
+          false
+        ],
+        "request10.txt": [
+          false,
+          true
+        ],
+        "request11.txt": [
+          false,
+          false
+        ],
+        "request12.txt": [
+          false,
+          false
+        ],
+        "request13.txt": [
+          false,
+          true
+        ],
+        "request14.txt": [
+          false,
+          false
+        ],
+        "request15.txt": [
+          false,
+          false
+        ],
+        "request16.txt": [
+          false,
+          true
+        ],
+        "request17.txt": [
+          false,
+          false
+        ],
+        "request18.txt": [
+          false,
+          false
+        ],
+        "request19.txt": [
+          false,
+          true
+        ],
+        "request20.txt": [
+          false,
+          false
+        ],
+        "request21.txt": [
+          true,
+          false
+        ],
+        "request22.txt": [
+          true,
+          true
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "0": [
+          "request4.txt",
+          "request22.txt"
+        ],
+        "1": [
+          "request21.txt",
+          "request22.txt"
+        ]
+      },
+      "errors": [
+        "request2.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule4",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          false
+        ],
+        "request3.txt": [
+          false,
+          false
+        ],
+        "request4.txt": [
+          false,
+          false
+        ],
+        "request5.txt": [
+          false,
+          false
+        ],
+        "request6.txt": [
+          null,
+          true
+        ],
+        "request7.txt": [
+          false,
+          true
+        ],
+        "request8.txt": [
+          false,
+          true
+        ],
+        "request9.txt": [
+          false,
+          false
+        ],
+        "request10.txt": [
+          false,
+          false
+        ],
+        "request11.txt": [
+          false,
+          true
+        ],
+        "request12.txt": [
+          false,
+          false
+        ],
+        "request13.txt": [
+          false,
+          false
+        ],
+        "request14.txt": [
+          false,
+          true
+        ],
+        "request15.txt": [
+          false,
+          false
+        ],
+        "request16.txt": [
+          false,
+          false
+        ],
+        "request17.txt": [
+          false,
+          true
+        ],
+        "request18.txt": [
+          true,
+          false
+        ],
+        "request19.txt": [
+          true,
+          false
+        ],
+        "request20.txt": [
+          true,
+          true
+        ],
+        "request21.txt": [
+          false,
+          false
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "0": [
+          "request7.txt",
+          "request20.txt"
+        ],
+        "1": [
+          "request18.txt",
+          "request20.txt"
+        ]
+      },
+      "errors": [
+        "request6.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule5",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          true
+        ],
+        "request3.txt": [
+          false,
+          false
+        ],
+        "request4.txt": [
+          false,
+          true
+        ],
+        "request5.txt": [
+          false,
+          true
+        ],
+        "request6.txt": [
+          null,
+          false
+        ],
+        "request7.txt": [
+          false,
+          false
+        ],
+        "request8.txt": [
+          false,
+          false
+        ],
+        "request9.txt": [
+          false,
+          false
+        ],
+        "request10.txt": [
+          false,
+          true
+        ],
+        "request11.txt": [
+          false,
+          false
+        ],
+        "request12.txt": [
+          false,
+          false
+        ],
+        "request13.txt": [
+          false,
+          true
+        ],
+        "request14.txt": [
+          false,
+          false
+        ],
+        "request15.txt": [
+          false,
+          false
+        ],
+        "request16.txt": [
+          false,
+          true
+        ],
+        "request17.txt": [
+          false,
+          false
+        ],
+        "request18.txt": [
+          true,
+          false
+        ],
+        "request19.txt": [
+          true,
+          true
+        ],
+        "request21.txt": [
+          false,
+          false
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "0": [
+          "request4.txt",
+          "request19.txt"
+        ],
+        "1": [
+          "request18.txt",
+          "request19.txt"
+        ]
+      },
+      "errors": [
+        "request2.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule6",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          false
+        ],
+        "request3.txt": [
+          false,
+          false
+        ],
+        "request4.txt": [
+          false,
+          false
+        ],
+        "request5.txt": [
+          false,
+          false
+        ],
+        "request6.txt": [
+          null,
+          true
+        ],
+        "request7.txt": [
+          false,
+          true
+        ],
+        "request8.txt": [
+          false,
+          true
+        ],
+        "request9.txt": [
+          false,
+          false
+        ],
+        "request10.txt": [
+          false,
+          false
+        ],
+        "request11.txt": [
+          false,
+          true
+        ],
+        "request12.txt": [
+          false,
+          false
+        ],
+        "request13.txt": [
+          false,
+          false
+        ],
+        "request14.txt": [
+          false,
+          true
+        ],
+        "request15.txt": [
+          true,
+          false
+        ],
+        "request16.txt": [
+          true,
+          false
+        ],
+        "request17.txt": [
+          true,
+          true
+        ],
+        "request18.txt": [
+          false,
+          false
+        ],
+        "request21.txt": [
+          false,
+          false
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "0": [
+          "request7.txt",
+          "request17.txt"
+        ],
+        "1": [
+          "request15.txt",
+          "request17.txt"
+        ]
+      },
+      "errors": [
+        "request6.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule7",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          true
+        ],
+        "request3.txt": [
+          false,
+          false
+        ],
+        "request4.txt": [
+          false,
+          true
+        ],
+        "request5.txt": [
+          false,
+          true
+        ],
+        "request6.txt": [
+          null,
+          false
+        ],
+        "request7.txt": [
+          false,
+          false
+        ],
+        "request8.txt": [
+          false,
+          false
+        ],
+        "request9.txt": [
+          false,
+          false
+        ],
+        "request10.txt": [
+          false,
+          true
+        ],
+        "request11.txt": [
+          false,
+          false
+        ],
+        "request12.txt": [
+          false,
+          false
+        ],
+        "request13.txt": [
+          false,
+          true
+        ],
+        "request14.txt": [
+          false,
+          false
+        ],
+        "request15.txt": [
+          true,
+          false
+        ],
+        "request16.txt": [
+          true,
+          true
+        ],
+        "request18.txt": [
+          false,
+          false
+        ],
+        "request21.txt": [
+          false,
+          false
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "0": [
+          "request4.txt",
+          "request16.txt"
+        ],
+        "1": [
+          "request15.txt",
+          "request16.txt"
+        ]
+      },
+      "errors": [
+        "request2.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule8",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          false
+        ],
+        "request3.txt": [
+          false,
+          false
+        ],
+        "request4.txt": [
+          false,
+          false
+        ],
+        "request5.txt": [
+          false,
+          false
+        ],
+        "request6.txt": [
+          null,
+          true
+        ],
+        "request7.txt": [
+          false,
+          true
+        ],
+        "request8.txt": [
+          false,
+          true
+        ],
+        "request9.txt": [
+          false,
+          false
+        ],
+        "request10.txt": [
+          false,
+          false
+        ],
+        "request11.txt": [
+          false,
+          true
+        ],
+        "request12.txt": [
+          true,
+          false
+        ],
+        "request13.txt": [
+          true,
+          false
+        ],
+        "request14.txt": [
+          true,
+          true
+        ],
+        "request15.txt": [
+          false,
+          false
+        ],
+        "request18.txt": [
+          false,
+          false
+        ],
+        "request21.txt": [
+          false,
+          false
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "0": [
+          "request7.txt",
+          "request14.txt"
+        ],
+        "1": [
+          "request12.txt",
+          "request14.txt"
+        ]
+      },
+      "errors": [
+        "request6.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule9",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          true
+        ],
+        "request3.txt": [
+          false,
+          false
+        ],
+        "request4.txt": [
+          false,
+          true
+        ],
+        "request5.txt": [
+          false,
+          true
+        ],
+        "request6.txt": [
+          null,
+          false
+        ],
+        "request7.txt": [
+          false,
+          false
+        ],
+        "request8.txt": [
+          false,
+          false
+        ],
+        "request9.txt": [
+          false,
+          false
+        ],
+        "request10.txt": [
+          false,
+          true
+        ],
+        "request11.txt": [
+          false,
+          false
+        ],
+        "request12.txt": [
+          true,
+          false
+        ],
+        "request13.txt": [
+          true,
+          true
+        ],
+        "request15.txt": [
+          false,
+          false
+        ],
+        "request18.txt": [
+          false,
+          false
+        ],
+        "request21.txt": [
+          false,
+          false
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "0": [
+          "request4.txt",
+          "request13.txt"
+        ],
+        "1": [
+          "request12.txt",
+          "request13.txt"
+        ]
+      },
+      "errors": [
+        "request2.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule10",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          false
+        ],
+        "request3.txt": [
+          false,
+          false
+        ],
+        "request4.txt": [
+          false,
+          false
+        ],
+        "request5.txt": [
+          false,
+          false
+        ],
+        "request6.txt": [
+          null,
+          true
+        ],
+        "request7.txt": [
+          false,
+          true
+        ],
+        "request8.txt": [
+          false,
+          true
+        ],
+        "request9.txt": [
+          true,
+          false
+        ],
+        "request10.txt": [
+          true,
+          false
+        ],
+        "request11.txt": [
+          true,
+          true
+        ],
+        "request12.txt": [
+          false,
+          false
+        ],
+        "request15.txt": [
+          false,
+          false
+        ],
+        "request18.txt": [
+          false,
+          false
+        ],
+        "request21.txt": [
+          false,
+          false
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "0": [
+          "request7.txt",
+          "request11.txt"
+        ],
+        "1": [
+          "request9.txt",
+          "request11.txt"
+        ]
+      },
+      "errors": [
+        "request6.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule11",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          true
+        ],
+        "request3.txt": [
+          false,
+          false
+        ],
+        "request4.txt": [
+          false,
+          true
+        ],
+        "request5.txt": [
+          false,
+          true
+        ],
+        "request6.txt": [
+          null,
+          false
+        ],
+        "request7.txt": [
+          false,
+          false
+        ],
+        "request8.txt": [
+          false,
+          false
+        ],
+        "request9.txt": [
+          true,
+          false
+        ],
+        "request10.txt": [
+          true,
+          true
+        ],
+        "request12.txt": [
+          false,
+          false
+        ],
+        "request15.txt": [
+          false,
+          false
+        ],
+        "request18.txt": [
+          false,
+          false
+        ],
+        "request21.txt": [
+          false,
+          false
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "0": [
+          "request4.txt",
+          "request10.txt"
+        ],
+        "1": [
+          "request9.txt",
+          "request10.txt"
+        ]
+      },
+      "errors": [
+        "request2.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule12",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          false
+        ],
+        "request3.txt": [
+          true,
+          false
+        ],
+        "request4.txt": [
+          false,
+          false
+        ],
+        "request5.txt": [
+          true,
+          false
+        ],
+        "request6.txt": [
+          null,
+          true
+        ],
+        "request7.txt": [
+          false,
+          true
+        ],
+        "request8.txt": [
+          true,
+          true
+        ],
+        "request9.txt": [
+          false,
+          false
+        ],
+        "request12.txt": [
+          false,
+          false
+        ],
+        "request15.txt": [
+          false,
+          false
+        ],
+        "request18.txt": [
+          false,
+          false
+        ],
+        "request21.txt": [
+          false,
+          false
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "1": [
+          "request3.txt",
+          "request8.txt"
+        ],
+        "0": [
+          "request7.txt",
+          "request8.txt"
+        ]
+      },
+      "errors": [
+        "request6.txt"
+      ]
+    },
+    {
+      "rule": "urn:oasis:names:tc:xacml:1.0:Rule13",
+      "rows": {
+        "request1.txt": [
+          false,
+          false
+        ],
+        "request2.txt": [
+          null,
+          true
+        ],
+        "request3.txt": [
+          true,
+          false
+        ],
+        "request4.txt": [
+          false,
+          true
+        ],
+        "request5.txt": [
+          true,
+          true
+        ],
+        "request6.txt": [
+          null,
+          false
+        ],
+        "request7.txt": [
+          false,
+          false
+        ],
+        "request9.txt": [
+          false,
+          false
+        ],
+        "request12.txt": [
+          false,
+          false
+        ],
+        "request15.txt": [
+          false,
+          false
+        ],
+        "request18.txt": [
+          false,
+          false
+        ],
+        "request21.txt": [
+          false,
+          false
+        ],
+        "request24.txt": [
+          false,
+          false
+        ],
+        "request26.txt": [
+          false,
+          false
+        ]
+      },
+      "witnesses": {
+        "1": [
+          "request3.txt",
+          "request5.txt"
+        ],
+        "0": [
+          "request4.txt",
+          "request5.txt"
+        ]
+      },
+      "errors": [
+        "request2.txt"
+      ]
+    }
+  ]
+}
