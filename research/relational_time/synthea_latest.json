@@ -1,0 +1,70 @@
+{
+  "source_sha256": "ce211a05f27022ff1038000243a9291825ceb0107394e399b14c967948c030c3",
+  "dataset": "synthea",
+  "rows": 8054,
+  "missing_parent": 0,
+  "missing_end": 371,
+  "pyarrow": "24.0.0",
+  "block_size": 4096,
+  "methods": [
+    "absolute/plain",
+    "absolute/dict",
+    "absolute/delta",
+    "duration/plain",
+    "duration/dict",
+    "duration/delta",
+    "parent/plain",
+    "parent/dict",
+    "parent/delta",
+    "by_type/plain",
+    "by_type/dict",
+    "by_type/delta"
+  ],
+  "whole_bytes": [
+    29761,
+    49554,
+    30815,
+    20242,
+    28895,
+    24385,
+    11664,
+    12562,
+    18280,
+    12267,
+    14285,
+    18713
+  ],
+  "frame_bytes": [
+    [
+      13519,
+      23321,
+      13663,
+      9304,
+      14254,
+      10978,
+      5643,
+      6559,
+      8411,
+      5905,
+      6420,
+      8409
+    ],
+    [
+      16173,
+      26244,
+      16458,
+      11227,
+      15747,
+      13330,
+      6454,
+      7137,
+      9864,
+      6927,
+      8285,
+      10218
+    ]
+  ],
+  "best_fixed_whole_bytes": 11664,
+  "best_fixed_framed_bytes": 12097,
+  "selected_bytes": 12097
+}
