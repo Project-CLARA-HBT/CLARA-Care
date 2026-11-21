@@ -18,9 +18,10 @@ Use Python 3.12 and the pinned dependency files. Run the following commands from
 
 ```sh
 bash fetch.sh "$ASR_CACHE"
-ct2-transformers-converter --model "$ASR_CACHE/pho-source" --output_dir "$ASR_CACHE/pho-model" --copy_files tokenizer.json preprocessor_config.json --quantization int8
+ct2-transformers-converter --model "$ASR_CACHE/pho-source" --output_dir "$ASR_CACHE/pho-model" --copy_files tokenizer.json preprocessor_config.json --quantization float16
 python decode.py "$ASR_CACHE" "$ASR_CACHE/whisper.jsonl"
 python decode.py "$ASR_CACHE" "$ASR_CACHE/pho.jsonl" --model-dir "$ASR_CACHE/pho-model"
+python check_pairs.py "$ASR_CACHE/dev.tsv" "$ASR_CACHE/whisper.jsonl" "$ASR_CACHE/pho.jsonl"
 python selection.py "$ASR_CACHE/pho.jsonl" > "$ASR_CACHE/pho.json"
 python selection.py "$ASR_CACHE/whisper.jsonl" > "$ASR_CACHE/whisper.json"
 node report.mjs "$ASR_CACHE/pho.json" "$ASR_CACHE/whisper.json"
